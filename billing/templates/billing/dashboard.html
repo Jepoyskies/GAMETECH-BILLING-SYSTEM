@@ -1,0 +1,516 @@
+{% extends 'billing/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-3">
+
+  {% if request.user.is_authenticated %}
+    <div class="alert alert-primary d-flex align-items-center mb-3" style="font-size:1.05rem;">
+      <i class="fas fa-hand-sparkles me-2"></i>
+      Welcome, <strong>{{ request.user.username }}</strong>!
+    </div>
+  {% endif %}
+
+  <!-- Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h2 class="fw-bold mb-0 text-primary">
+      <i class="fas fa-chart-pie"></i> Dashboard
+    </h2>
+
+    <div class="clock-tile">
+      <div class="small text-muted mb-1" style="letter-spacing:1px;">Manila Time</div>
+      <div class="clock-display fw-bold" id="live-clock-square">--:--:--</div>
+    </div>
+  </div>
+
+  <!-- KPI Row 1 -->
+  <div class="row g-3 mb-2">
+    <div class="col-12 col-md-6 col-xl-4">
+      <div class="kpi-card h-100">
+        <div class="kpi-icon icon-gray" style="color:{% if growth_percent >= 0 %}#198754{% else %}#dc3545{% endif %};">
+          <i class="fas {{ growth_icon }}"></i>
+        </div>
+        <div>
+          <div class="kpi-label">Revenue Growth</div>
+          <div class="kpi-value {{ growth_color }}">{{ growth_percent_formatted }}%</div>
+          <div class="kpi-sub">vs last month</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="kpi-card h-100">
+        <div class="kpi-icon icon-blue"><i class="fas fa-user-plus"></i></div>
+        <div>
+          <div class="kpi-label">New Customers</div>
+          <div class="kpi-value">{{ new_customers_this_month }}</div>
+          <div class="kpi-sub">This month</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="kpi-card h-100">
+        <div class="kpi-icon icon-purple"><i class="fas fa-coins"></i></div>
+        <div>
+          <div class="kpi-label">Collection Rate</div>
+          <div class="kpi-value">{{ collection_rate_formatted }}%</div>
+          <div class="kpi-sub">This month ({{ distinct_payers_this_month }}/{{ total_customers }})</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Revenue Summary -->
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md-2">
+      <div class="kpi-card h-100">
+        <div class="kpi-icon icon-blue"><i class="fas fa-calendar-day"></i></div>
+        <div>
+          <div class="kpi-label">Today</div>
+          <div class="kpi-value">₱{{ totals.today|default:"0.00" }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="kpi-card h-100">
+        <div class="kpi-icon icon-purple"><i class="fas fa-calendar-minus"></i></div>
+        <div>
+          <div class="kpi-label">Yesterday</div>
+          <div class="kpi-value">₱{{ totals.yesterday|default:"0.00" }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="kpi-card h-100">
+        <div class="kpi-icon icon-green"><i class="fas fa-calendar-week"></i></div>
+        <div>
+          <div class="kpi-label">This Week</div>
+          <div class="kpi-value">₱{{ totals.week|default:"0.00" }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="kpi-card h-100">
+        <div class="kpi-icon icon-orange"><i class="fas fa-calendar-alt"></i></div>
+        <div>
+          <div class="kpi-label">This Month</div>
+          <div class="kpi-value">₱{{ totals.month|default:"0.00" }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="kpi-card h-100">
+        <div class="kpi-icon icon-red"><i class="fas fa-calendar"></i></div>
+        <div>
+          <div class="kpi-label">This Year</div>
+          <div class="kpi-value">₱{{ totals.year|default:"0.00" }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Charts (full width / whole page) -->
+  <div class="row g-3 mb-3 align-items-stretch">
+    <div class="col-12 d-flex">
+      <div class="dashboard-card flex-fill d-flex flex-column w-100">
+        <div class="card-header text-center">Sales (Last 12 Months)</div>
+        <div class="chart-container flex-grow-1">
+          <canvas id="salesMonthChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts + Admin logins -->
+  <div class="row g-3 mb-3 align-items-stretch">
+    <div class="col-12 col-lg-8 d-flex flex-column gap-3">
+      <div class="dashboard-card flex-fill d-flex flex-column">
+        <div class="card-header text-center">Sales (Last 7 Days)</div>
+        <div class="chart-container flex-grow-1">
+          <canvas id="salesWeekChart"></canvas>
+        </div>
+      </div>
+
+      <div class="dashboard-card flex-fill d-flex flex-column">
+        <div class="card-header d-flex align-items-center justify-content-center gap-2">
+          <i class="fas fa-credit-card text-primary"></i>
+          Sales by Payment Method
+        </div>
+        <div class="chart-container flex-grow-1">
+          <canvas id="salesPieChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-4 d-flex">
+      <div class="dashboard-card flex-fill d-flex flex-column">
+        <div class="card-header d-flex align-items-center gap-2">
+          <i class="fas fa-user-shield text-primary"></i> Recent Admin Logins
+        </div>
+
+        <div class="table-responsive">
+          <table class="table mini-table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Event</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in recent_admin_logins %}
+                <tr>
+                  <td>
+                    <!-- The color code should be passed from backend (e.g. row.color) -->
+                    <span class="avatar" style="background:{{ row.color|default:'#0d6efd' }};">
+                      {{ row.username|make_list|first|upper }}
+                    </span>
+                    {{ row.username }}
+                  </td>
+                  <td>
+                    <span class="badge bg-{% if row.event_type == 'login' %}success{% else %}warning{% endif %} text-uppercase fw-semibold" style="font-size:.87em;">
+                      {{ row.event_type }}
+                    </span>
+                  </td>
+                  <td>
+                    <span title="{{ row.login_time|date:'l, F j, Y, g:i A' }}">
+                      {{ row.login_time|date:'Y-m-d H:i' }}
+                    </span>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="3" class="text-center text-muted py-3">No login records found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mt-3 pt-2 border-top d-flex align-items-center justify-content-between">
+          <div>
+            <div class="kpi-label mb-1">System Uptime</div>
+            <div class="kpi-value" id="uptime-display">00:00:00</div>
+            <div class="kpi-sub" id="uptime-sub"></div>
+          </div>
+          <button class="btn btn-outline-secondary btn-sm" id="uptime-reset" title="Reset Uptime">
+            <i class="fas fa-redo"></i>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom row: Top paying clients + Top service plans -->
+  <div class="row g-3 mb-4 align-items-stretch">
+    <div class="col-12 col-lg-6 d-flex">
+      <div class="dashboard-card flex-fill d-flex flex-column">
+        <div class="card-header d-flex align-items-center gap-2">
+          <i class="fas fa-crown text-warning"></i> Top Paying Clients
+        </div>
+        <div class="table-responsive">
+          <table class="table mini-table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Total Paid</th>
+                <th>Last Payment</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in top_clients %}
+                <tr>
+                  <td>
+                    {% if forloop.counter == 1 %}<i class="fas fa-crown text-warning me-1" title="Top Client"></i>{% endif %}
+                    <span class="avatar" style="background:{{ c.color|default:'#198754' }};">
+                      {{ c.username|make_list|first|upper }}
+                    </span>
+                    {{ c.username }}
+                  </td>
+                  <td><span class="badge bg-primary">₱{{ c.total_paid|floatformat:2 }}</span></td>
+                  <td>
+                    {% if c.last_payment %}
+                      <span title="{{ c.last_payment|date:'l, F j, Y, g:i A' }}">
+                        {{ c.last_payment|date:'Y-m-d' }}
+                      </span>
+                    {% else %}
+                      <span class="text-muted">N/A</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="3" class="text-center text-muted py-3">No paying clients found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-6 d-flex">
+      <div class="dashboard-card flex-fill d-flex flex-column">
+        <div class="card-header d-flex align-items-center gap-2">
+          <i class="fas fa-wifi text-success"></i> Top Service Plans
+        </div>
+        <div class="table-responsive">
+          <table class="table mini-table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Plan</th>
+                <th class="text-end">Customers</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in top_plans %}
+                <tr>
+                  <td><span class="badge bg-success-subtle text-success border border-success-subtle">{{ p.plan_name }}</span></td>
+                  <td class="text-end fw-semibold">{{ p.cnt }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="2" class="text-center text-muted py-3">No plans found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="kpi-sub mt-2">
+          Based on customers.plan_name
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Expiring Users (full width / whole page) -->
+  <div class="row g-3 mb-3 align-items-stretch">
+    <div class="col-12 d-flex">
+      <div class="dashboard-card flex-fill d-flex flex-column w-100">
+        <div class="card-header d-flex align-items-center gap-2">
+          <i class="fas fa-clock text-danger"></i> Expiring Users (Today)
+        </div>
+
+        <div class="table-responsive">
+          <table class="table mini-table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Plan</th>
+                <th>Expires At</th>
+                <th>Left</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for u in expiring_users %}
+                <tr>
+                  <td>{{ u.username }}</td>
+                  <td><span class="badge bg-warning text-dark">{{ u.plan_name }}</span></td>
+                  <td>{{ u.expires_at|date:'Y-m-d H:i:s' }}</td>
+                  <td>
+                    {% if u.expires_at %}
+                      {% if u.is_expired %}
+                        <span class="text-danger">Expired</span>
+                      {% else %}
+                        <span class="countdown" data-expire="{{ u.expires_at_epoch }}"></span>
+                      {% endif %}
+                    {% else %}
+                      <span class="text-muted">N/A</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="4" class="text-center text-muted py-3">No expiring users today.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // Variables passed from Django context
+    const months = {{ months_js|safe|default:"[]" }};
+    const salesByMonth = {{ sales_by_month_js|safe|default:"[]" }};
+    const days = {{ days_js|safe|default:"[]" }};
+    const salesByDay = {{ sales_by_day_js|safe|default:"[]" }};
+    const pieLabels = {{ pie_labels_js|safe|default:"[]" }};
+    const pieData = {{ pie_data_js|safe|default:"[]" }};
+
+    const monthChartCtx = document.getElementById('salesMonthChart');
+    if(monthChartCtx) {
+      new Chart(monthChartCtx.getContext('2d'), {
+        type: 'bar',
+        data: { labels: months, datasets: [{ label: '₱ Sales', data: salesByMonth, backgroundColor: '#0d6efd' }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }},
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    }
+
+    const weekChartCtx = document.getElementById('salesWeekChart');
+    if(weekChartCtx) {
+      new Chart(weekChartCtx.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: days,
+          datasets: [{
+            label: '₱ Sales',
+            data: salesByDay,
+            fill: false,
+            borderColor: '#198754',
+            tension: 0.3,
+            pointBackgroundColor: '#198754',
+            pointRadius: 4
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }},
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    }
+
+    const pieChartCtx = document.getElementById('salesPieChart');
+    if(pieChartCtx) {
+      new Chart(pieChartCtx.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: pieLabels,
+          datasets: [{
+            label: '₱ Sales',
+            data: pieData,
+            backgroundColor: [
+              '#0d6efd', '#198754', '#0dcaf0', '#6f42c1', 
+              '#ffc107', '#fd7e14', '#dc3545', '#20c997'
+            ],
+            borderRadius: 8,
+            barThickness: 18
+          }]
+        },
+        options: {
+          indexAxis: 'y', // makes it horizontal
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  let total = context.dataset.data.reduce((a, b) => a + b, 0);
+                  let value = context.raw;
+                  let percent = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                  return `₱${value.toLocaleString()} (${percent}%)`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              grid: { color: '#eef2f7' },
+              ticks: {
+                callback: function(value) { return '₱' + value.toLocaleString(); }
+              }
+            },
+            y: {
+              grid: { display: false },
+              ticks: { font: { weight: '600' } }
+            }
+          }
+        }
+      });
+    }
+
+    // Countdown timers (uses epoch provided by server; display is consistent)
+    function updateCountdowns() {
+      const now = Math.floor(Date.now() / 1000);
+      document.querySelectorAll('.countdown').forEach(function(el) {
+        const expire = parseInt(el.getAttribute('data-expire'), 10);
+        if(!isNaN(expire)) {
+            const diff = expire - now;
+            if (diff > 0) {
+            const d = Math.floor(diff / 86400);
+            const h = Math.floor((diff % 86400) / 3600);
+            const m = Math.floor((diff % 3600) / 60);
+            const s = diff % 60;
+            el.textContent = (d>0 ? d+'d ' : '') + (h>0 ? h+'h ' : '') + (m>0 ? m+'m ' : '') + s + 's';
+            el.classList.remove('text-danger');
+            } else {
+            el.textContent = 'Expired';
+            el.classList.add('text-danger');
+            }
+        }
+      });
+    }
+    setInterval(updateCountdowns, 1000);
+    updateCountdowns();
+
+    // Digital Clock (Manila)
+    function updateDigitalClock() {
+      const now = new Date();
+      const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const manila = new Date(utc + (3600000 * 8));
+      const pad = n => (n < 10 ? '0' + n : n);
+      const clockEl = document.getElementById('live-clock-square');
+      if (clockEl) {
+        const h = pad(manila.getHours());
+        const m = pad(manila.getMinutes());
+        const s = pad(manila.getSeconds());
+        const date = manila.toLocaleDateString('en-PH', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+        clockEl.textContent = `${date} ${h}:${m}:${s}`;
+      }
+    }
+    setInterval(updateDigitalClock, 1000);
+    updateDigitalClock();
+
+    // Uptime
+    (function() {
+      function pad(n) { return n < 10 ? '0' + n : n; }
+      function formatHMS(totalSec) {
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+        return pad(h) + ':' + pad(m) + ':' + pad(s);
+      }
+      const uptimeEl = document.getElementById('uptime-display');
+      const resetBtn = document.getElementById('uptime-reset');
+      const uptimeSub = document.getElementById('uptime-sub');
+      const STORAGE_KEY = 'dashboard_uptime_start';
+
+      let startEpoch = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+      if (!startEpoch) {
+        startEpoch = Math.floor(Date.now() / 1000);
+        localStorage.setItem(STORAGE_KEY, String(startEpoch));
+      }
+
+      function updateUptime() {
+        const nowSecs = Math.floor(Date.now() / 1000);
+        const diff = Math.max(0, nowSecs - startEpoch);
+        if (uptimeEl) uptimeEl.textContent = formatHMS(diff);
+        if (uptimeSub) uptimeSub.textContent = 'Uptime since ' + new Date(startEpoch * 1000).toLocaleString();
+      }
+
+      function resetUptime() {
+        startEpoch = Math.floor(Date.now() / 1000);
+        localStorage.setItem(STORAGE_KEY, String(startEpoch));
+        updateUptime();
+      }
+
+      if (resetBtn) resetBtn.addEventListener('click', function(e){
+        e.preventDefault();
+        resetUptime();
+      });
+
+      setInterval(updateUptime, 1000);
+      updateUptime();
+    })();
+  </script>
+{% endblock %}
