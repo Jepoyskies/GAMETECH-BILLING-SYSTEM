@@ -26,6 +26,21 @@ class ServicePlan(models.Model):
     def __str__(self):
         return self.plan_name
 
+class Agent(models.Model):
+    name = models.CharField(max_length=100)
+    email = models.EmailField(max_length=100, null=True, blank=True)
+    phone = models.CharField(max_length=20, null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+
+class Barangay(models.Model):
+    name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.name
+
+
 class CustomerStatus(models.TextChoices):
     ACTIVE = 'active', 'Active'
     INACTIVE = 'inactive', 'Inactive'
@@ -45,6 +60,7 @@ class Customer(models.Model):
     email = models.EmailField(max_length=100, unique=True, null=True, blank=True)
     phone = models.CharField(max_length=20, null=True, blank=True)
     address = models.CharField(max_length=255, null=True, blank=True)
+    barangay = models.ForeignKey(Barangay, on_delete=models.SET_NULL, null=True, blank=True, related_name='customers')
     status = models.CharField(max_length=20, choices=CustomerStatus.choices, default=CustomerStatus.ACTIVE)
     created_at = models.DateTimeField(auto_now_add=True)
     
@@ -59,7 +75,7 @@ class Customer(models.Model):
     
     sms_sent_at = models.DateTimeField(null=True, blank=True)
     mac_address = models.CharField(max_length=32, null=True, blank=True)
-    agent = models.CharField(max_length=100, null=True, blank=True)
+    agent = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True, blank=True, related_name='customers')
     referral_received = models.CharField(max_length=250, null=True, blank=True)
     last_sms_due = models.DateTimeField(null=True, blank=True)
     

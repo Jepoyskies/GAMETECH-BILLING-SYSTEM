@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import AccountType, ServicePlan, Customer
+from .models import AccountType, ServicePlan, Customer, Agent, Barangay
 
 @admin.register(AccountType)
 class AccountTypeAdmin(admin.ModelAdmin):
@@ -17,3 +17,13 @@ class CustomerAdmin(admin.ModelAdmin):
     search_fields = ('username', 'full_name', 'email', 'phone', 'mac_address')
     list_filter = ('status', 'service_plan', 'account_type', 'mikrotik_device')
     autocomplete_fields = ('service_plan', 'account_type', 'mikrotik_device')
+
+@admin.register(Agent)
+class AgentAdmin(admin.ModelAdmin):
+    list_display = ('name', 'email', 'phone')
+    search_fields = ('name', 'email')
+
+@admin.register(Barangay)
+class BarangayAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+    search_fields = ('name',)

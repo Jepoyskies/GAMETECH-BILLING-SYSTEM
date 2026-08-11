@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
-from .models import Customer, ServicePlan, AccountType
+from .models import AccountType, ServicePlan, Customer, CustomerStatus, Agent, Barangay
 from network_manager.models import MikrotikDevice
 from network_manager.services import MikrotikAPI
 from django.contrib.auth.models import User
@@ -86,12 +86,13 @@ def add_customer_view(request):
     if request.method == 'POST':
         # Retrieve form data
         plan_id = request.POST.get('plan_name')
-        agent = request.POST.get('agent')
+        agent_id = request.POST.get('agent')
         full_name = request.POST.get('full_name')
         account_type_id = request.POST.get('account_type')
         email = request.POST.get('email')
         phone = request.POST.get('phone')
         address = request.POST.get('address')
+        barangay_id = request.POST.get('barangay_id')
         status = request.POST.get('status')
         created_at = request.POST.get('created_at')
         latitude = request.POST.get('latitude')
@@ -110,6 +111,8 @@ def add_customer_view(request):
             
         plan_obj = ServicePlan.objects.filter(id=plan_id).first()
         acct_obj = AccountType.objects.filter(id=account_type_id).first()
+        agent_obj = Agent.objects.filter(id=agent_id).first() if agent_id else None
+        barangay_obj = Barangay.objects.filter(id=barangay_id).first() if barangay_id else None
         
         # For new customers, they might not have an expiry yet if they haven't paid
         # But we need to save the customer.
@@ -120,8 +123,9 @@ def add_customer_view(request):
                 email=email,
                 phone=phone,
                 address=address,
+                barangay=barangay_obj,
                 status=status,
-                agent=agent,
+                agent=agent_obj,
                 latitude=float(latitude) if latitude else None,
                 longitude=float(longitude) if longitude else None,
                 service_plan=plan_obj,
@@ -143,9 +147,9 @@ def add_customer_view(request):
         'plans': ServicePlan.objects.all(),
         'accountTypes': AccountType.objects.all(),
         'devices': MikrotikDevice.objects.all(),
-        'agents': ['Agent 1', 'Agent 2', 'Internal'], # Mock agents list for now
+        'agents': Agent.objects.all(),
         'current_ph_time': timezone.localtime().strftime('%Y-%m-%dT%H:%M'),
-        'barangays': [], # Mock empty for now
+        'barangays': Barangay.objects.all(),
     }
     
     return render(request, 'billing/add_customer.html', context)
