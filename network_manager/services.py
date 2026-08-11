@@ -63,6 +63,28 @@ class MikrotikAPI:
             logger.error(f"Failed to get active PPPoE users from {self.device.device_name}: {e}")
             return []
 
+    def remove_active_pppoe_user(self, name):
+        """
+        Forcibly disconnects an active PPPoE user from the Mikrotik device.
+        Useful when a user's status changes to expired or suspended.
+        """
+        try:
+            api = self._get_api()
+            active_ppp = api.get_resource('/ppp/active')
+            
+            # Find the active session by name
+            active_sessions = active_ppp.get(name=name)
+            for session in active_sessions:
+                active_ppp.remove(id=session['id'])
+                logger.info(f"Disconnected active PPPoE user {name} on {self.device.device_name}")
+                
+            self.connection.disconnect()
+            return True, "User disconnected."
+        except Exception as e:
+            logger.error(f"Failed to disconnect PPPoE user {name} from {self.device.device_name}: {e}")
+            return False, f"Mikrotik API Error: {str(e)}"
+
+
     def add_pppoe_user(self, name, password, profile, service="pppoe"):
         """
         Creates a PPPoE user (secret) on the Mikrotik device.

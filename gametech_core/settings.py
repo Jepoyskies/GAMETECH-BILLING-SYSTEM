@@ -131,3 +131,7 @@ MAILERS = {
     },
 }
 # Forced reload to detect new templates folder
+
+# Authentication Redirects
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = '/'

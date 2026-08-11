@@ -127,20 +127,11 @@ def add_customer_view(request):
                 service_plan=plan_obj,
                 account_type=acct_obj,
                 mikrotik_device=device_obj,
-                expires_at=None  # Since they just signed up
+                expires_at=None,  # Since they just signed up
+                pppoe_password=pppoe_password,
+                pppoe_profile=pppoe_profile
             )
-            messages.success(request, f"Customer {full_name} created in database successfully!")
-            
-            # Now add PPPoE user to all selected routers
-            for dev_id in mikrotik_device_ids:
-                dev = MikrotikDevice.objects.filter(id=dev_id).first()
-                if dev:
-                    api = MikrotikAPI(dev)
-                    success, msg = api.add_pppoe_user(pppoe_username, pppoe_password, pppoe_profile)
-                    if success:
-                        messages.success(request, f"PPPoE user {pppoe_username} added to router {dev.device_name}!")
-                    else:
-                        messages.error(request, f"Failed to add PPPoE user to {dev.device_name}: {msg}")
+            messages.success(request, f"Customer {full_name} created in database successfully and synced to router!")
                         
         except Exception as e:
             messages.error(request, f"Error saving customer: {str(e)}")

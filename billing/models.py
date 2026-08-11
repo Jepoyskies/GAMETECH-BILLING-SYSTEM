@@ -60,8 +60,13 @@ class Customer(models.Model):
     sms_sent_at = models.DateTimeField(null=True, blank=True)
     mac_address = models.CharField(max_length=32, null=True, blank=True)
     agent = models.CharField(max_length=100, null=True, blank=True)
-    referral_received = models.CharField(max_length=250)
+    referral_received = models.CharField(max_length=250, null=True, blank=True)
     last_sms_due = models.DateTimeField(null=True, blank=True)
+    
+    # PPPoE Mikrotik Fields
+    pppoe_password = models.CharField(max_length=128, null=True, blank=True)
+    pppoe_profile = models.CharField(max_length=100, default='default', null=True, blank=True)
+
     connection = models.CharField(max_length=20)
     created_form_by = models.CharField(max_length=250)
     
