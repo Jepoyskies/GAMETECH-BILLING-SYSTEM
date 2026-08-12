@@ -3,142 +3,219 @@
 
 {% block title %}MikroTik Devices{% endblock %}
 
+{% block extra_css %}
+<style>
+    @media (max-width: 576px) {
+        .action-btns {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        table, th, td { font-size: 0.95rem; }
+    }
+    /* Hide table on mobile, hide cards on desktop */
+    @media (max-width: 767.98px) {
+        #devices-table-wrapper { display:none; }
+        #devices-cards-wrapper { display:block; }
+    }
+    @media (min-width: 768px) {
+        #devices-table-wrapper { display:block; }
+        #devices-cards-wrapper { display:none; }
+    }
+    /* Ensure dark mode colors propagate properly */
+    .dark-mode .card {
+        background-color: #1e293b;
+        border-color: rgba(255,255,255,0.05);
+    }
+    .dark-mode .text-muted {
+        color: #94a3b8 !important;
+    }
+
+    .page-title-container { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:24px; }
+    .page-title { display:flex; align-items:center; gap:12px; font-size:1.6em; font-weight:700; color:#1e293b; margin:0; }
+    .dark-mode .page-title { color:#f1f5f9; }
+    .page-title .title-icon { width:44px; height:44px; background:linear-gradient(135deg,#38bdf8,#0284c7); border-radius:12px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.2rem; box-shadow:0 4px 12px rgba(56,189,248,0.3); }
+    
+    /* Global Dark Mode Fix for this page */
+    .dark-mode body { background-color: #0f172a !important; color: #e2e8f0 !important; }
+    .dark-mode .topbar { background-color: #1e293b !important; border-bottom: 1px solid #334155 !important; }
+    .dark-mode .topbar .topbar-title { color: #f8fafc !important; }
+    .dark-mode .topbar .menu-btn, .dark-mode .topbar .hide-btn, .dark-mode .topbar .show-btn { color: #94a3b8 !important; }
+    .dark-mode .topbar .menu-btn:hover, .dark-mode .topbar .hide-btn:hover, .dark-mode .topbar .show-btn:hover { color: #F9B233 !important; }
+    .dark-mode .topbar-right { color: #e2e8f0 !important; }
+    
+    /* Dashboard Brand Utilities */
+    .dark-mode .text-primary { color: #38bdf8 !important; }
+    .dark-mode .text-muted { color: #64748b !important; }
+
+    .dashboard-card { background:#fff; border-radius:16px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); border:1px solid rgba(0,0,0,0.05); overflow:hidden; margin-bottom:28px; }
+    .dark-mode .dashboard-card { background:#1e293b; box-shadow:0 4px 6px -1px rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.05); }
+    .dashboard-card .card-header { background:rgba(0,0,0,0.03); border-bottom:1px solid rgba(0,0,0,0.05); padding:1rem 1.25rem; font-weight:600; color:#0f172a; display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0; }
+    .dark-mode .dashboard-card .card-header { background:rgba(15,23,42,0.4); border-bottom:1px solid rgba(255,255,255,0.05); color:#f8fafc; }
+
+    /* Table */
+    .custom-table { width:100%; border-collapse:collapse; }
+    .custom-table thead tr { background:transparent; border-bottom:1px solid rgba(0,0,0,0.1); }
+    .dark-mode .custom-table thead tr { background:transparent; border-bottom:1px solid rgba(255,255,255,0.1); }
+    .custom-table th { padding:12px 16px; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; font-weight:600; white-space:nowrap; }
+    .dark-mode .custom-table th { color:#94a3b8; }
+    .custom-table td { padding:14px 16px; font-size:0.9rem; color:#334155; border-bottom:1px solid rgba(0,0,0,0.04); vertical-align:middle; white-space:nowrap; }
+    .dark-mode .custom-table td { color:#cbd5e1; border-bottom:1px solid rgba(255,255,255,0.04); }
+    .custom-table tbody tr:last-child td { border-bottom:none; }
+    .custom-table tbody tr:hover { background:rgba(56,189,248,0.05); }
+    .dark-mode .custom-table tbody tr:hover { background:rgba(255,255,255,0.05); }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container py-4">
-    <div class="row">
-        <div class="col-12 mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                <h2 class="mb-0 fw-bold text-primary"><i class="fa fa-mobile"></i> Mikrotik Devices</h2>
-                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addDeviceModal">
-                    <i class="fas fa-plus"></i> Add Device
-                </button>
+<div class="container-fluid py-3 px-3 px-md-4">
+    <div class="page-title-container">
+        <h2 class="page-title text-primary">
+            <div class="title-icon"><i class="fa fa-mobile"></i></div>
+            MikroTik Devices
+        </h2>
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addDeviceModal">
+            <i class="fas fa-plus"></i> Add Device
+        </button>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
+        {% endfor %}
+    {% endif %}
 
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <div class="dashboard-card">
+        <div class="card-header">
+            <div><i class="fas fa-network-wired text-primary"></i> Configured Routers</div>
+        </div>
+        <div class="card-body p-0">
+            
+            <!-- TABLE VIEW (desktop / tablet) -->
+            <div id="devices-table-wrapper">
+                <div class="table-responsive">
+                    <table class="custom-table" id="devices-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:40px;">#</th>
+                                        <th>Device Name</th>
+                                        <th>IP Address</th>
+                                        <th class="d-none d-md-table-cell">API Username</th>
+                                        <th class="d-none d-md-table-cell">API Port</th>
+                                        <th class="d-none d-md-table-cell">API Port 8700</th>
+                                        <th style="min-width:150px;">Actions</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for device in devices %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td class="fw-semibold">{{ device.device_name }}</td>
+                                        <td>{{ device.ip_address }}</td>
+                                        <td class="d-none d-md-table-cell">{{ device.api_username }}</td>
+                                        <td class="d-none d-md-table-cell">{{ device.api_port }}</td>
+                                        <td class="d-none d-md-table-cell">{{ device.api_port_8700 }}</td>
+                                        <td>
+                                            <div class="d-flex flex-wrap gap-1">
+                                                <button class="btn btn-info btn-sm test-btn" 
+                                                        data-id="{{ device.id }}" 
+                                                        id="test-btn-{{ device.id }}"
+                                                        title="Test Connection">
+                                                    <i class="fas fa-plug"></i>
+                                                </button>
+                                                <button class="btn btn-primary btn-sm" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#editDeviceModal{{ device.id }}"
+                                                        title="Edit Device">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-danger btn-sm" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#deleteDeviceModal{{ device.id }}"
+                                                        title="Delete Device">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                        <td id="status-{{ device.id }}">
+                                            <span class="text-muted">Not tested</span>
+                                        </td>
+                                    </tr>
+
+
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="8" class="text-center text-muted py-4">No MikroTik devices found.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                {% endfor %}
-            {% endif %}
 
-            <div class="card shadow-sm border-0">
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover align-middle mb-0" id="devices-table">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width:40px;">#</th>
-                                    <th>Device Name</th>
-                                    <th>IP Address</th>
-                                    <th class="d-none d-md-table-cell">API Username</th>
-                                    <th class="d-none d-md-table-cell">API Port</th>
-                                    <th style="min-width:150px;">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                    <!-- CARD VIEW (mobile) -->
+                    <div id="devices-cards-wrapper" class="p-3">
+                        {% if not devices %}
+                            <p class="text-center text-muted mb-0">No MikroTik devices found.</p>
+                        {% else %}
+                            <div class="row g-3">
                                 {% for device in devices %}
-                                <tr>
-                                    <td>{{ forloop.counter }}</td>
-                                    <td class="fw-semibold">{{ device.device_name }}</td>
-                                    <td>{{ device.ip_address }}</td>
-                                    <td class="d-none d-md-table-cell">{{ device.api_username }}</td>
-                                    <td class="d-none d-md-table-cell">{{ device.api_port }}</td>
-                                    <td>
-                                        <div class="d-flex flex-wrap gap-1">
-                                            <button class="btn btn-info btn-sm test-btn" 
-                                                    data-id="{{ device.id }}" 
-                                                    title="Test Connection">
-                                                <i class="fas fa-plug"></i>
-                                            </button>
-                                            <button class="btn btn-primary btn-sm" 
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#editDeviceModal{{ device.id }}"
-                                                    title="Edit Device">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button class="btn btn-danger btn-sm" 
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#deleteDeviceModal{{ device.id }}"
-                                                    title="Delete Device">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
+                                    <div class="col-12" id="device-card-{{ device.id }}">
+                                        <div class="card border">
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                                    <div>
+                                                        <h6 class="card-title mb-1">
+                                                            #{{ forloop.counter }} - {{ device.device_name }}
+                                                        </h6>
+                                                        <small class="text-muted">IP: {{ device.ip_address }}</small>
+                                                    </div>
+                                                    <span id="status-card-{{ device.id }}" class="ms-2 small text-muted">
+                                                        Not tested
+                                                    </span>
+                                                </div>
+                                                <div class="mb-2">
+                                                    <small class="d-block">
+                                                        <strong>API User:</strong> {{ device.api_username }}
+                                                    </small>
+                                                    <small class="d-block">
+                                                        <strong>API Port:</strong> {{ device.api_port }}
+                                                    </small>
+                                                    <small class="d-block">
+                                                        <strong>API Port 8700:</strong> {{ device.api_port_8700|default:'8700' }}
+                                                    </small>
+                                                </div>
 
-                                <!-- Edit Modal -->
-                                <div class="modal fade" id="editDeviceModal{{ device.id }}" tabindex="-1" aria-hidden="true">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content">
-                                            <form action="{% url 'edit_device' device.id %}" method="POST">
-                                                {% csrf_token %}
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">Edit Device: {{ device.device_name }}</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                <div class="action-btns d-flex flex-wrap gap-1 mt-2">
+                                                    <button class="btn btn-info btn-sm test-btn" 
+                                                            data-id="{{ device.id }}" 
+                                                            id="test-btn-card-{{ device.id }}"
+                                                            title="Test Connection">
+                                                        <i class="fas fa-plug"></i> Test
+                                                    </button>
+                                                    <button class="btn btn-primary btn-sm"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#editDeviceModal{{ device.id }}"
+                                                            title="Edit Device">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </button>
+                                                    <button class="btn btn-danger btn-sm"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#deleteDeviceModal{{ device.id }}"
+                                                            title="Delete Device">
+                                                        <i class="fas fa-trash"></i> Delete
+                                                    </button>
                                                 </div>
-                                                <div class="modal-body">
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Device Name</label>
-                                                        <input type="text" name="device_name" class="form-control" value="{{ device.device_name }}" required>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label">IP Address</label>
-                                                        <input type="text" name="ip_address" class="form-control" value="{{ device.ip_address }}" required>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label">API Username</label>
-                                                        <input type="text" name="api_username" class="form-control" value="{{ device.api_username }}" required>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label">API Password <small class="text-muted">(Leave blank to keep current)</small></label>
-                                                        <input type="password" name="api_password" class="form-control">
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label">API Port</label>
-                                                        <input type="text" name="api_port" class="form-control" value="{{ device.api_port }}" required>
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                                                </div>
-                                            </form>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-
-                                <!-- Delete Modal -->
-                                <div class="modal fade" id="deleteDeviceModal{{ device.id }}" tabindex="-1" aria-hidden="true">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content border-danger">
-                                            <form action="{% url 'delete_device' device.id %}" method="POST">
-                                                {% csrf_token %}
-                                                <div class="modal-header bg-danger text-white">
-                                                    <h5 class="modal-title">Confirm Delete</h5>
-                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <p>Are you sure you want to delete the device <strong>{{ device.device_name }}</strong>?</p>
-                                                    <p class="text-danger small">This action cannot be undone.</p>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                    <button type="submit" class="btn btn-danger">Delete Device</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {% empty %}
-                                <tr>
-                                    <td colspan="6" class="text-center text-muted py-4">No MikroTik devices found.</td>
-                                </tr>
                                 {% endfor %}
-                            </tbody>
-                        </table>
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -146,14 +223,87 @@
     </div>
 </div>
 
+<!-- Modals for Devices (Outside table to ensure they work on mobile) -->
+{% for device in devices %}
+<!-- Edit Modal -->
+<div class="modal fade" id="editDeviceModal{{ device.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{% url 'edit_device' device.id %}" method="POST" autocomplete="off">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit"></i> Edit Device: {{ device.device_name }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Device Name</label>
+                        <input type="text" name="device_name" class="form-control" value="{{ device.device_name }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">IP Address</label>
+                        <input type="text" name="ip_address" class="form-control" value="{{ device.ip_address }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">API Username</label>
+                        <input type="text" name="api_username" class="form-control" value="{{ device.api_username }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">API Password <small class="text-muted">(Leave blank to keep current)</small></label>
+                        <input type="password" name="api_password" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">API Port</label>
+                        <input type="number" name="api_port" class="form-control" value="{{ device.api_port }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">API Port 8700</label>
+                        <input type="number" name="api_port_8700" class="form-control" value="{{ device.api_port_8700|default:'8700' }}" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteDeviceModal{{ device.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-danger">
+            <form action="{% url 'delete_device' device.id %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fas fa-trash"></i> Confirm Delete</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete <strong>{{ device.device_name }}</strong>?</p>
+                    <div class="alert alert-danger mb-0 py-2 px-3 small">
+                        <i class="fas fa-exclamation-triangle"></i> This action cannot be undone.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
 <!-- Add Modal -->
 <div class="modal fade" id="addDeviceModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form action="{% url 'add_device' %}" method="POST">
+            <form action="{% url 'add_device' %}" method="POST" autocomplete="off">
                 {% csrf_token %}
                 <div class="modal-header">
-                    <h5 class="modal-title">Add MikroTik Device</h5>
+                    <h5 class="modal-title"><i class="fas fa-plus"></i> Add MikroTik Device</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -171,16 +321,20 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">API Password</label>
-                        <input type="password" name="api_password" class="form-control">
+                        <input type="password" name="api_password" class="form-control" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">API Port</label>
-                        <input type="text" name="api_port" class="form-control" value="8728" required>
+                        <input type="number" name="api_port" class="form-control" value="8728" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">API Port 8700</label>
+                        <input type="number" name="api_port_8700" class="form-control" value="8700" required>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success">Add Device</button>
+                    <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Add Device</button>
                 </div>
             </form>
         </div>
@@ -197,8 +351,13 @@
             var deviceId = btn.data('id');
             var originalHtml = btn.html();
             
+            var statusTd = $('#status-' + deviceId);
+            var statusCard = $('#status-card-' + deviceId);
+            
             btn.html('<i class="fas fa-spinner fa-spin"></i>');
             btn.prop('disabled', true);
+            statusTd.html('<span class="text-info"><i class="fas fa-spinner fa-spin"></i> Testing...</span>');
+            statusCard.html('<span class="text-info"><i class="fas fa-spinner fa-spin"></i> Testing...</span>');
             
             $.ajax({
                 url: '/devices/test-connection/' + deviceId + '/',
@@ -208,19 +367,22 @@
                 },
                 success: function(response) {
                     if(response.status === 'success') {
-                        btn.removeClass('btn-info').addClass('btn-success');
+                        btn.removeClass('btn-info btn-danger').addClass('btn-success');
                         btn.html('<i class="fas fa-check"></i>');
-                        alert("Connection successful!");
+                        statusTd.html('<span class="badge bg-success"><i class="fas fa-check-circle"></i> Connected</span>');
+                        statusCard.html('<span class="badge bg-success"><i class="fas fa-check-circle"></i> Connected</span>');
                     } else {
-                        btn.removeClass('btn-info').addClass('btn-danger');
+                        btn.removeClass('btn-info btn-success').addClass('btn-danger');
                         btn.html('<i class="fas fa-times"></i>');
-                        alert("Connection failed: " + response.error);
+                        statusTd.html('<span class="badge bg-danger"><i class="fas fa-times-circle"></i> Not Connected</span><br><span class="text-danger small">' + response.error + '</span>');
+                        statusCard.html('<span class="badge bg-danger"><i class="fas fa-times-circle"></i> Not Connected</span>');
                     }
                 },
                 error: function() {
-                    btn.removeClass('btn-info').addClass('btn-danger');
+                    btn.removeClass('btn-info btn-success').addClass('btn-danger');
                     btn.html('<i class="fas fa-times"></i>');
-                    alert("Server error during connection test.");
+                    statusTd.html('<span class="badge bg-warning">AJAX error</span>');
+                    statusCard.html('<span class="badge bg-warning">AJAX error</span>');
                 },
                 complete: function() {
                     setTimeout(function() {

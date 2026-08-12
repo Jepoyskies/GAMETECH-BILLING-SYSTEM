@@ -18,13 +18,15 @@ def add_device_view(request):
         username = request.POST.get('api_username')
         password = request.POST.get('api_password')
         port = request.POST.get('api_port', '8728')
+        port_8700 = request.POST.get('api_port_8700', '8700')
         
         MikrotikDevice.objects.create(
             device_name=name,
             ip_address=ip,
             api_username=username,
             api_password=password,
-            api_port=port
+            api_port=port,
+            api_port_8700=port_8700
         )
         messages.success(request, f"Device {name} added successfully!")
     return redirect('device_list')
@@ -41,6 +43,7 @@ def edit_device_view(request, device_id):
         if new_password:
             device.api_password = new_password
         device.api_port = request.POST.get('api_port', '8728')
+        device.api_port_8700 = request.POST.get('api_port_8700', '8700')
         device.save()
         messages.success(request, f"Device {device.device_name} updated successfully!")
     return redirect('device_list')
