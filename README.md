@@ -44,6 +44,8 @@ If you prefer to use the command line manually, follow these steps:
 2. **Activate it**:
    ```cmd
    venv\Scripts\activate.bat
+   .\venv\Scripts\Activate.ps1
+
    ```
 3. **Install dependencies**:
    ```cmd

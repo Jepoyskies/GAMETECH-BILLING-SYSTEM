@@ -1,0 +1,169 @@
+{% extends 'billing/base.html' %}
+
+{% block title %}Agent Details - Mikrotik Billing System{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+<style>
+    @media (max-width: 768px) {
+        .table-responsive {
+            display: none;
+        }
+
+        .card-view {
+            display: block;
+        }
+    }
+
+    @media (min-width: 769px) {
+        .card-view {
+            display: none;
+        }
+    }
+
+    #customersTable {
+        font-size: 0.875rem;
+    }
+
+    #customersTable td,
+    #customersTable th {
+        padding: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="container py-4">
+    {% if agent %}
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <h2 class="card-title mb-0">
+                {{ agent.name }}
+            </h2>
+            <ul class="list-unstyled mb-0 mt-2">
+                <li><strong>Email:</strong> {{ agent.email }}</li>
+                <li><strong>Phone:</strong> {{ agent.phone|default_if_none:"" }}</li>
+            </ul>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if customers %}
+    <h4 class="mt-2 mb-2">Customers handled by this agent</h4>
+
+    <div class="table-responsive">
+        <table id="customersTable" class="table table-bordered table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>Created At</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Account Type</th>
+                    <th>Plan Name</th>
+                    <th>Full Name</th>
+                    <th>Referral</th>
+                    <th>Adjusted By</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cust in customers %}
+                <tr>
+                    <td>{{ cust.created_at|date:"Y-m-d H:i:s" }}</td>
+                    <td>{{ cust.username|default_if_none:"" }}</td>
+                    <td>{{ cust.email|default_if_none:"" }}</td>
+                    <td>{{ cust.account_type.type_name|default_if_none:"" }}</td>
+                    <td>{{ cust.service_plan.plan_name|default_if_none:"" }}</td>
+                    <td>{{ cust.full_name|default_if_none:"" }}</td>
+                    <td>
+                        {% if cust.referral_received == '1' or cust.referral_received|lower == 'true' or cust.referral_received|lower == 'paid' %}
+                        <span class="badge bg-success" aria-label="Referral paid">✓ Paid</span>
+                        {% else %}
+                        <span class="badge bg-secondary" aria-label="Referral not paid">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ cust.adjusted_by_referral|default_if_none:"N/A" }}</td>
+                    <td>
+                        <form method="post" action="{% url 'view_agent' agent.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="cust_id" value="{{ cust.id }}">
+                            <select name="referral_value" class="form-select form-select-sm d-inline-block w-auto" onchange="this.form.submit()">
+                                <option value="0" {% if not cust.referral_received or cust.referral_received == '0' or cust.referral_received|lower == 'false' or cust.referral_received|lower == 'pending' %}selected{% endif %}>Pending</option>
+                                <option value="1" {% if cust.referral_received == '1' or cust.referral_received|lower == 'true' or cust.referral_received|lower == 'paid' %}selected{% endif %}>Paid</option>
+                            </select>
+                            <input type="hidden" name="update_referral" value="1">
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Card View for Mobile -->
+    <div class="card-view">
+        {% for cust in customers %}
+        <div class="card mb-3 shadow-sm">
+            <div class="card-body">
+                <p class="card-text"><strong>Created At:</strong> {{ cust.created_at|date:"Y-m-d H:i:s" }}</p>
+                <h5 class="card-title"><strong>Username:</strong> {{ cust.username|default_if_none:"" }}</h5>
+                <p class="card-text"><strong>Email:</strong> {{ cust.email|default_if_none:"" }}</p>
+                <p class="card-text"><strong>Account Type:</strong> {{ cust.account_type.type_name|default_if_none:"" }}</p>
+                <p class="card-text"><strong>Plan Name:</strong> {{ cust.service_plan.plan_name|default_if_none:"" }}</p>
+                <p class="card-text"><strong>Full Name:</strong> {{ cust.full_name|default_if_none:"" }}</p>
+                <p class="card-text"><strong>Referral:</strong>
+                    {% if cust.referral_received == '1' or cust.referral_received|lower == 'true' or cust.referral_received|lower == 'paid' %}
+                    <span class="badge bg-success">✓ Paid</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Pending</span>
+                    {% endif %}
+                </p>
+                <p class="card-text"><strong>Adjusted By:</strong> {{ cust.adjusted_by_referral|default_if_none:"N/A" }}</p>
+                <form method="post" action="{% url 'view_agent' agent.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="cust_id" value="{{ cust.id }}">
+                    <div class="mb-2">
+                        <select name="referral_value" class="form-select" onchange="this.form.submit()">
+                            <option value="0" {% if not cust.referral_received or cust.referral_received == '0' or cust.referral_received|lower == 'false' or cust.referral_received|lower == 'pending' %}selected{% endif %}>Pending</option>
+                            <option value="1" {% if cust.referral_received == '1' or cust.referral_received|lower == 'true' or cust.referral_received|lower == 'paid' %}selected{% endif %}>Paid</option>
+                        </select>
+                    </div>
+                    <input type="hidden" name="update_referral" value="1">
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <p class="text-muted mt-2">No customers found for this agent.</p>
+    {% endif %}
+    
+    {% else %}
+    <div class="alert alert-warning">Agent not found.</div>
+    {% endif %}
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $('#customersTable').DataTable({
+            "paging": true,
+            "searching": true,
+            "ordering": true,
+            "info": true
+        });
+    });
+</script>
+{% endblock %}

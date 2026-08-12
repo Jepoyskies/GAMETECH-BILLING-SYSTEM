@@ -23,4 +23,9 @@ urlpatterns = [
     
     # Auth route
     path('login/', auth_views.LoginView.as_view(template_name='billing/login.html'), name='login'),
+    path('agents/', views.agent_list, name='agent_list'),
+    path('agents/add/', views.add_agent, name='add_agent'),
+    path('agents/edit/<int:agent_id>/', views.edit_agent, name='edit_agent'),
+    path('agents/view/<int:agent_id>/', views.view_agent, name='view_agent'),
+    path('agents/delete/<int:agent_id>/', views.delete_agent, name='delete_agent'),
 ]

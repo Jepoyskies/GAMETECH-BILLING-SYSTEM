@@ -1,0 +1,81 @@
+{% extends 'billing/base.html' %}
+
+{% block title %}Add Agent - Mikrotik Billing System{% endblock %}
+
+{% block content %}
+<main class="container py-4">
+    <h2 class="mb-4">Add Agent</h2>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Card-style form -->
+    <div class="card border-primary mb-4 shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <strong>New Agent Details</strong>
+        </div>
+        <div class="card-body">
+            <form method="post" action="{% url 'add_agent' %}" class="needs-validation" novalidate>
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="name">Name</label>
+                        <input id="name" name="name" class="form-control" type="text" required
+                            value="{{ request.POST.name|default_if_none:'' }}">
+                        <div class="invalid-feedback">Please provide the agent's name.</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label" for="email">Email</label>
+                        <input id="email" name="email" class="form-control" type="email" required
+                            value="{{ request.POST.email|default_if_none:'' }}">
+                        <div class="invalid-feedback">Please provide a valid email address.</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label" for="phone">Phone</label>
+                        <input id="phone" name="phone" class="form-control" type="text"
+                            value="{{ request.POST.phone|default_if_none:'' }}">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label" for="password">Password</label>
+                        <input id="password" name="password" class="form-control" type="password" required
+                            placeholder="Enter a password">
+                        <div class="invalid-feedback">Please provide a password.</div>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex justify-content-end">
+                    <a href="{% url 'agent_list' %}" class="btn btn-outline-secondary me-2">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Add Agent</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+
+<script>
+    // Bootstrap validation
+    (function () {
+        'use strict'
+        var forms = document.querySelectorAll('.needs-validation')
+        Array.prototype.slice.call(forms)
+            .forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                    }
+                    form.classList.add('was-validated')
+                }, false)
+            })
+    })()
+</script>
+{% endblock %}
