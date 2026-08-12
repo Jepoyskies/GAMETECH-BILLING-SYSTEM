@@ -1,236 +1,127 @@
-﻿{% extends 'billing/base.html' %}
+{% extends "billing/base.html" %}
 {% load static %}
 
-{% block title %}Subscription Plans{% endblock %}
+{% block title %}Service Plans{% endblock %}
 
 {% block extra_css %}
+<!-- DataTables Bootstrap 5 CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
 <style>
-.plans-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:24px; }
-.plans-title { display:flex; align-items:center; gap:12px; font-size:1.6em; font-weight:700; color:#1e293b; }
-.dark-mode .plans-title { color:#f1f5f9; }
-.plans-title .title-icon { width:44px; height:44px; background:linear-gradient(135deg,#2151A1,#38bdf8); border-radius:12px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.2rem; box-shadow:0 4px 12px rgba(33,81,161,0.3); }
-.plans-summary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:28px; }
-.plan-sum-card { background:#fff; border:1px solid rgba(0,0,0,0.06); border-radius:16px; padding:20px; display:flex; align-items:center; gap:16px; box-shadow:0 2px 8px rgba(0,0,0,0.06); transition:transform 0.2s,box-shadow 0.2s; }
-.dark-mode .plan-sum-card { background:#1e293b; border:1px solid rgba(255,255,255,0.06); }
-.plan-sum-card:hover { transform:translateY(-3px); box-shadow:0 6px 20px rgba(0,0,0,0.12); }
-.plan-sum-card .card-icon { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; flex-shrink:0; }
-.plan-sum-card .card-label { font-size:0.78rem; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; margin-bottom:4px; }
-.dark-mode .plan-sum-card .card-label { color:#94a3b8; }
-.plan-sum-card .card-value { font-size:1.5rem; font-weight:700; color:#0f172a; line-height:1; }
-.dark-mode .plan-sum-card .card-value { color:#f1f5f9; }
-.plans-table-card { background:#fff; border:1px solid rgba(0,0,0,0.06); border-radius:18px; overflow:hidden; box-shadow:0 2px 12px rgba(0,0,0,0.07); }
-.dark-mode .plans-table-card { background:#1e293b; border:1px solid rgba(255,255,255,0.06); }
-.plans-table-toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:18px 20px 14px; border-bottom:1px solid rgba(0,0,0,0.06); }
-.dark-mode .plans-table-toolbar { border-bottom:1px solid rgba(255,255,255,0.06); }
-.table-search-input { padding:8px 14px 8px 36px; border-radius:10px; border:1px solid rgba(0,0,0,0.1); background:#f8fafc; color:#334155; font-size:0.9rem; transition:border 0.2s; min-width:220px; }
-.dark-mode .table-search-input { background:rgba(15,23,42,0.5); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; }
-.table-search-input:focus { outline:none; border-color:#38bdf8; }
-.search-wrapper { position:relative; }
-.search-wrapper .search-icon { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:0.85rem; }
-.plans-table { width:100%; border-collapse:collapse; }
-.plans-table thead tr { background:#f8fafc; border-bottom:2px solid rgba(0,0,0,0.06); }
-.dark-mode .plans-table thead tr { background:rgba(255,255,255,0.03); border-bottom:2px solid rgba(255,255,255,0.06); }
-.plans-table th { padding:12px 16px; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; font-weight:600; white-space:nowrap; }
-.dark-mode .plans-table th { color:#94a3b8; }
-.plans-table td { padding:14px 16px; font-size:0.93rem; color:#334155; border-bottom:1px solid rgba(0,0,0,0.04); vertical-align:middle; }
-.dark-mode .plans-table td { color:#cbd5e1; border-bottom:1px solid rgba(255,255,255,0.04); }
-.plans-table tbody tr:last-child td { border-bottom:none; }
-.plans-table tbody tr { transition:background 0.15s; }
-.plans-table tbody tr:hover { background:rgba(56,189,248,0.05); }
-.dark-mode .plans-table tbody tr:hover { background:rgba(56,189,248,0.07); }
-.plan-name-cell { display:flex; align-items:center; gap:10px; }
-.plan-avatar { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#2151A1,#38bdf8); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:0.85rem; flex-shrink:0; }
-.plan-name-text { font-weight:600; color:#0f172a; }
-.dark-mode .plan-name-text { color:#f1f5f9; }
-.speed-badge { display:inline-flex; align-items:center; gap:4px; background:rgba(56,189,248,0.1); color:#0284c7; border:1px solid rgba(56,189,248,0.25); border-radius:8px; padding:4px 10px; font-size:0.82rem; font-weight:600; white-space:nowrap; }
-.dark-mode .speed-badge { background:rgba(56,189,248,0.15); color:#38bdf8; }
-.price-cell { font-weight:700; color:#16a34a; font-size:1rem; }
-.dark-mode .price-cell { color:#34d399; }
-.validity-badge { background:rgba(251,146,60,0.1); color:#ea580c; border:1px solid rgba(251,146,60,0.25); border-radius:8px; padding:4px 10px; font-size:0.82rem; font-weight:600; }
-.dark-mode .validity-badge { background:rgba(251,146,60,0.15); color:#fb923c; }
-.desc-cell { font-size:0.85rem; color:#64748b; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.dark-mode .desc-cell { color:#94a3b8; }
-.action-btn { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:8px; border:none; cursor:pointer; transition:background 0.2s,transform 0.15s; font-size:0.85rem; }
-.action-btn:hover { transform:scale(1.1); }
-.btn-edit { background:rgba(56,189,248,0.12); color:#0284c7; }
-.btn-edit:hover { background:rgba(56,189,248,0.25); }
-.dark-mode .btn-edit { background:rgba(56,189,248,0.15); color:#38bdf8; }
-.btn-delete { background:rgba(239,68,68,0.12); color:#dc2626; }
-.btn-delete:hover { background:rgba(239,68,68,0.25); }
-.dark-mode .btn-delete { background:rgba(239,68,68,0.15); color:#f87171; }
-.empty-state { text-align:center; padding:60px 20px; color:#64748b; }
-.dark-mode .empty-state { color:#94a3b8; }
-.empty-state i { font-size:3rem; margin-bottom:12px; opacity:0.4; }
-.plans-toast { position:fixed; bottom:24px; right:24px; z-index:9999; padding:14px 20px; border-radius:12px; font-size:0.93rem; font-weight:500; color:#fff; box-shadow:0 8px 24px rgba(0,0,0,0.2); transform:translateY(100px); opacity:0; transition:all 0.35s cubic-bezier(0.34,1.56,0.64,1); display:flex; align-items:center; gap:10px; }
-.plans-toast.show { transform:translateY(0); opacity:1; }
-.plans-toast.success { background:linear-gradient(135deg,#16a34a,#15803d); }
-.plans-toast.error { background:linear-gradient(135deg,#dc2626,#b91c1c); }
-.plans-pagination { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; padding:14px 20px; border-top:1px solid rgba(0,0,0,0.05); font-size:0.88rem; color:#64748b; }
-.dark-mode .plans-pagination { border-top:1px solid rgba(255,255,255,0.05); color:#94a3b8; }
+    #plansTable th,
+    #plansTable td {
+        padding: 0.45rem 0.6rem !important;
+        font-size: 0.97rem;
+    }
+
+    .dataTables_length,
+    .dataTables_filter {
+        margin-bottom: 1rem;
+    }
+
+    .toast {
+        z-index: 1060;
+        min-width: 200px;
+    }
+
+    @media (max-width: 767.98px) {
+        #plansTable {
+            font-size: 0.94rem;
+        }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-3 px-3 px-md-4">
+<main class="container-fluid py-4 px-3 px-md-4">
 
-    {% if success_msg == 'added' %}<div id="redirectToast" data-msg="Plan added successfully!" data-type="success"></div>{% endif %}
-    {% if success_msg == 'updated' %}<div id="redirectToast" data-msg="Plan updated successfully!" data-type="success"></div>{% endif %}
+    <!-- Messages / Notifications -->
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
 
-    <div class="plans-header">
-        <div class="plans-title">
-            <div class="title-icon"><i class="fas fa-network-wired"></i></div>
-            Subscription Plans
-        </div>
-        <a href="{% url 'add_plan' %}" class="btn btn-primary d-flex align-items-center gap-2" style="border-radius:12px;padding:10px 20px;font-weight:600;background:linear-gradient(135deg,#2151A1,#38bdf8);border:none;box-shadow:0 4px 12px rgba(33,81,161,0.3);">
-            <i class="fas fa-plus"></i> Add Plan
+    <div class="d-flex align-items-center mb-4">
+        <h2 class="mb-0 fw-bold text-primary">
+            <i class="fa-solid fa-network-wired"></i> Service Plans
+        </h2>
+    </div>
+
+    <div class="mb-3">
+        <a href="{% url 'add_plan' %}" class="btn btn-outline-secondary me-2" title="Add Plan">
+            <i class="fa-solid fa-plus"></i> Add Plan
         </a>
     </div>
 
-    <div class="plans-summary-grid">
-        <div class="plan-sum-card">
-            <div class="card-icon" style="background:rgba(33,81,161,0.1);color:#2151A1;"><i class="fas fa-layer-group"></i></div>
-            <div><div class="card-label">Total Plans</div><div class="card-value">{{ total_plans }}</div></div>
-        </div>
-        <div class="plan-sum-card">
-            <div class="card-icon" style="background:rgba(22,163,74,0.1);color:#16a34a;"><i class="fas fa-peso-sign"></i></div>
-            <div><div class="card-label">Avg. Price</div><div class="card-value">&#8369;{{ avg_price }}</div></div>
-        </div>
-        <div class="plan-sum-card">
-            <div class="card-icon" style="background:rgba(234,88,12,0.1);color:#ea580c;"><i class="fas fa-crown"></i></div>
-            <div><div class="card-label">Most Subscribed</div><div class="card-value" style="font-size:1rem;">{{ top_plan_name|default:"N/A" }}</div></div>
-        </div>
-    </div>
-
-    <div class="plans-table-card">
-        <div class="plans-table-toolbar">
-            <div style="font-weight:600;font-size:0.95rem;color:#334155;">
-                <i class="fas fa-list me-2 text-primary"></i> All Plans
-                <span style="font-size:0.82rem;color:#94a3b8;font-weight:400;" id="rowCount"></span>
-            </div>
-            <div class="search-wrapper">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" id="planSearch" class="table-search-input" placeholder="Search plans...">
-            </div>
-        </div>
-
-        <div class="table-responsive">
-            <table class="plans-table" id="plansTable">
-                <thead>
+    <div class="card shadow-sm border-0">
+        <div class="card-body table-responsive">
+            <table id="plansTable" class="table table-sm table-hover table-bordered align-middle" style="width:100%">
+                <thead class="table-primary">
                     <tr>
-                        <th>#</th>
+                        <th>ID</th>
                         <th>Plan Name</th>
-                        <th>Upload &#8593;</th>
-                        <th>Download &#8595;</th>
-                        <th>Price (&#8369;)</th>
-                        <th>Validity</th>
+                        <th>Up (Mbps)</th>
+                        <th>Down (Mbps)</th>
+                        <th>Price (₱)</th>
+                        <th>Validity (days)</th>
                         <th>Description</th>
-                        <th style="text-align:center;">Actions</th>
+                        <th style="min-width:110px;">Actions</th>
                     </tr>
                 </thead>
-                <tbody id="plansTbody">
+                <tbody>
                     {% for plan in plans %}
-                    <tr data-search="{{ plan.plan_name|lower }} {{ plan.description|lower|default:'' }}">
-                        <td style="color:#94a3b8;font-size:0.82rem;">{{ forloop.counter }}</td>
+                    <tr>
+                        <td>{{ plan.id }}</td>
+                        <td><b>{{ plan.name }}</b></td>
+                        <td>{{ plan.speed_up }}</td>
+                        <td>{{ plan.speed_down }}</td>
+                        <td>₱{{ plan.price|floatformat:2 }}</td>
+                        <td>{{ plan.validity_days }}</td>
+                        <td style="max-width:180px; white-space:pre-line;">{{ plan.description|default:"-" }}</td>
                         <td>
-                            <div class="plan-name-cell">
-                                <div class="plan-avatar">{{ plan.plan_name|make_list|first|upper }}</div>
-                                <span class="plan-name-text">{{ plan.plan_name }}</span>
-                            </div>
-                        </td>
-                        <td><span class="speed-badge"><i class="fas fa-arrow-up" style="font-size:0.7rem;"></i> {{ plan.speed_up }} Mbps</span></td>
-                        <td><span class="speed-badge" style="background:rgba(52,211,153,0.1);color:#059669;border-color:rgba(52,211,153,0.25);"><i class="fas fa-arrow-down" style="font-size:0.7rem;"></i> {{ plan.speed_down }} Mbps</span></td>
-                        <td class="price-cell">&#8369;{{ plan.price|floatformat:2 }}</td>
-                        <td><span class="validity-badge">{{ plan.validity_days }} days</span></td>
-                        <td class="desc-cell" title="{{ plan.description }}">{{ plan.description|default:"&mdash;" }}</td>
-                        <td style="text-align:center;">
-                            <div class="d-flex justify-content-center gap-1">
-                                <a href="{% url 'edit_plan' plan.id %}" class="action-btn btn-edit" title="Edit"><i class="fas fa-edit"></i></a>
-                                <button class="action-btn btn-delete" title="Delete" onclick="deletePlan({{ plan.id }}, this)"><i class="fas fa-trash-alt"></i></button>
-                            </div>
+                            <a href="{% url 'edit_plan' plan.id %}" class="btn btn-sm btn-outline-info mb-1"
+                                title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <!-- Using a mini form for secure deletion with CSRF token -->
+                            <form action="{% url 'delete_plan' plan.id %}" method="POST" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger mb-1"
+                                    onclick="return confirm('Are you sure you want to delete this plan?');"
+                                    title="Delete">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </form>
                         </td>
                     </tr>
-                    {% empty %}
-                    <tr><td colspan="8">
-                        <div class="empty-state">
-                            <i class="fas fa-network-wired d-block"></i>
-                            No subscription plans found.<br>
-                            <a href="{% url 'add_plan' %}" class="btn btn-primary btn-sm mt-3">Add your first plan</a>
-                        </div>
-                    </td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-
-        <div class="plans-pagination">
-            <span id="pageInfo"></span>
-        </div>
     </div>
-</div>
 
-<div class="plans-toast" id="plansToast"><i class="fas fa-check-circle"></i><span id="plansToastMsg"></span></div>
-<form id="csrfForm" style="display:none;">{% csrf_token %}</form>
+</main>
 {% endblock %}
 
 {% block extra_js %}
+<!-- JS dependencies for DataTables -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
 <script>
-function showToast(msg, type) {
-    var t = document.getElementById('plansToast');
-    document.getElementById('plansToastMsg').textContent = msg;
-    t.className = 'plans-toast ' + type;
-    t.classList.add('show');
-    setTimeout(function() { t.classList.remove('show'); }, 3200);
-}
-var rd = document.getElementById('redirectToast');
-if (rd) { setTimeout(function(){ showToast(rd.dataset.msg, rd.dataset.type); }, 300); }
-
-document.getElementById('planSearch').addEventListener('input', function() {
-    var q = this.value.toLowerCase();
-    var visible = 0;
-    document.querySelectorAll('#plansTbody tr[data-search]').forEach(function(row) {
-        var match = row.dataset.search.includes(q);
-        row.style.display = match ? '' : 'none';
-        if (match) visible++;
+    $(document).ready(function () {
+        $('#plansTable').DataTable({
+            "lengthMenu": [5, 10, 25, 50, 100],
+            "pageLength": 10,
+            "order": [[0, "asc"]],
+            "columnDefs": [
+                { "orderable": false, "targets": 7 } // Actions column not sortable
+            ]
+        });
     });
-    document.getElementById('rowCount').textContent = ' \u2014 showing ' + visible + ' plan(s)';
-    document.getElementById('pageInfo').textContent = 'Showing ' + visible + ' plans';
-});
-
-var total = document.querySelectorAll('#plansTbody tr[data-search]').length;
-document.getElementById('rowCount').textContent = ' \u2014 ' + total + ' plan(s)';
-document.getElementById('pageInfo').textContent = 'Showing ' + total + ' of ' + total + ' plans';
-
-function deletePlan(id, btn) {
-    if (!confirm('Delete this plan? This cannot be undone.')) return;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    var csrf = document.querySelector('#csrfForm [name=csrfmiddlewaretoken]').value;
-    fetch('/plans/delete/' + id + '/', { method: 'POST', headers: { 'X-CSRFToken': csrf } })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-        if (data.success) {
-            var row = btn.closest('tr');
-            row.style.transition = 'opacity 0.3s, transform 0.3s';
-            row.style.opacity = '0';
-            row.style.transform = 'translateX(30px)';
-            setTimeout(function() {
-                row.remove();
-                var rem = document.querySelectorAll('#plansTbody tr[data-search]').length;
-                document.getElementById('rowCount').textContent = ' \u2014 ' + rem + ' plan(s)';
-                document.getElementById('pageInfo').textContent = 'Showing ' + rem + ' of ' + rem + ' plans';
-                showToast('Plan deleted successfully!', 'success');
-            }, 300);
-        } else {
-            showToast(data.message || 'Delete failed.', 'error');
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-        }
-    })
-    .catch(function() {
-        showToast('Network error.', 'error');
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-    });
-}
 </script>
 {% endblock %}

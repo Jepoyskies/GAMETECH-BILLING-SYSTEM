@@ -1,0 +1,147 @@
+{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}Mikrotik Devices{% endblock %}
+
+{% block extra_css %}
+<!-- DataTables Bootstrap 5 CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+<style>
+    #deviceTable th,
+    #deviceTable td {
+        padding: 0.6rem !important;
+        font-size: 0.95rem;
+    }
+
+    .dataTables_length,
+    .dataTables_filter {
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="container-fluid py-4 px-3 px-md-4">
+
+    <!-- Messages / Notifications -->
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="d-flex align-items-center mb-4">
+        <h2 class="mb-0 fw-bold text-primary">
+            <i class="fa-solid fa-server"></i> Mikrotik Devices
+        </h2>
+    </div>
+
+    <div class="mb-3">
+        <a href="{% url 'add_device' %}" class="btn btn-outline-secondary me-2" title="Add Device">
+            <i class="fa-solid fa-plus"></i> Add Device
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body table-responsive">
+            <table id="deviceTable" class="table table-hover table-bordered align-middle" style="width:100%">
+                <thead class="table-primary">
+                    <tr>
+                        <th>Device Name</th>
+                        <th>IP Address</th>
+                        <th>API Port</th>
+                        <th>API Port (8700)</th>
+                        <th>Created At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for device in devices %}
+                    <tr>
+                        <td><b>{{ device.device_name }}</b></td>
+                        <td>{{ device.ip_address }}</td>
+                        <td>{{ device.api_port }}</td>
+                        <td>{{ device.api_port_8700 }}</td>
+                        <td>{{ device.created_at|date:"M d, Y" }}</td>
+                        <td>
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'edit_device' device.id %}" class="btn btn-sm btn-outline-primary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form method="post" action="{% url 'delete_device' device.id %}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this device?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                                <button class="btn btn-sm btn-outline-info test-connection-btn" data-url="{% url 'test_device' device.id %}">
+                                    <i class="fas fa-wifi"></i> Test Connection
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- We need a CSRF token for the AJAX POST request -->
+    {% csrf_token %}
+
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<!-- JS dependencies for DataTables -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        $('#deviceTable').DataTable({
+            "lengthMenu": [10, 25, 50],
+            "pageLength": 10,
+            "order": [[4, "desc"]] // Sort by Created At descending
+        });
+
+        $('.test-connection-btn').click(function() {
+            const btn = $(this);
+            const url = btn.data('url');
+            const csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
+
+            // Save original button content
+            const originalContent = '<i class="fas fa-wifi"></i> Test Connection';
+            
+            btn.html('<i class="fas fa-spinner fa-spin"></i>').prop('disabled', true);
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        btn.html('<i class="fas fa-check"></i>').removeClass('btn-outline-info').addClass('btn-success');
+                    } else {
+                        btn.html('<i class="fas fa-times"></i>').removeClass('btn-outline-info').addClass('btn-danger');
+                        alert("Error: " + response.error);
+                    }
+                },
+                error: function(xhr) {
+                    btn.html('<i class="fas fa-times"></i>').removeClass('btn-outline-info').addClass('btn-danger');
+                    alert("A server error occurred during the request.");
+                },
+                complete: function() {
+                    setTimeout(() => {
+                        btn.html(originalContent).removeClass('btn-success btn-danger').addClass('btn-outline-info').prop('disabled', false);
+                    }, 3000);
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

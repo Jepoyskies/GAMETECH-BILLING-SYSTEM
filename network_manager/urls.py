@@ -2,9 +2,11 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('', views.device_list_view, name='device_list'),
-    path('add/', views.add_device_view, name='add_device'),
-    path('edit/<int:device_id>/', views.edit_device_view, name='edit_device'),
-    path('delete/<int:device_id>/', views.delete_device_view, name='delete_device'),
-    path('test-connection/<int:device_id>/', views.test_connection_view, name='test_connection'),
+    path('devices/', views.device_list, name='device_list'),
+    path('devices/add/', views.add_device, name='add_device'),
+    path('devices/edit/<int:device_id>/', views.edit_device, name='edit_device'),
+    path('devices/delete/<int:device_id>/', views.delete_device, name='delete_device'),
+    
+    # This is for the "Test Connection" AJAX button!
+    path('devices/test/<int:device_id>/', views.test_device_connection, name='test_device'),
 ]
