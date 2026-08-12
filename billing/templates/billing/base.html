@@ -86,8 +86,32 @@
 .sidebar nav { overflow-y: auto; }
 .sidebar nav::-webkit-scrollbar { width: 6px; }
 .sidebar nav::-webkit-scrollbar-thumb { background: #19407A; border-radius: 2px; }
+
+/* Mobile Optimization - Global */
+@media (max-width: 767.98px) {
+    /* Reduce global paddings to maximize screen estate */
+    .content-wrapper { padding: 0.5rem !important; }
+    
+    /* Ensure tables don't wrap awkwardly in .table-responsive */
+    .table-responsive th, .table-responsive td { white-space: nowrap; }
+
+    /* Topbar adjustments for smaller screens */
+    .topbar { padding: 0.6rem 1rem; min-height: 54px; }
+    .topbar-title { font-size: 1.1rem; }
+    
+    /* Adjust global fonts slightly on small screens */
+    body { font-size: 0.95rem; }
+    h2 { font-size: 1.5rem !important; }
+}
     </style>
     {% block extra_css %}{% endblock %}
+    
+    <script>
+        // Check and apply theme immediately to prevent flash
+        if (localStorage.getItem('theme') === 'dark') {
+            document.documentElement.classList.add('dark-mode');
+        }
+    </script>
 </head>
 <body>
 <div class="sidebar" id="sidebar">
@@ -99,7 +123,7 @@
         <ul>
             <li><a href="{% url 'dashboard' %}" class="menu-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"><span class="icon"><i class="fas fa-chart-pie"></i></span> <span>Dashboard</span></a></li>
             <li><a href="{% url 'add_customer' %}" class="menu-link {% if 'customer' in request.resolver_match.url_name %}active{% endif %}"><span class="icon"><i class="fas fa-users"></i></span> <span>Customers</span></a></li>
-            <li><a href="#" class="menu-link"><span class="icon"><i class="fa-brands fa-creative-commons-sampling-plus"></i></span> <span>Live Monitoring</span></a></li>        
+            <li><a href="{% url 'live_monitoring' %}" class="menu-link {% if request.resolver_match.url_name == 'live_monitoring' %}active{% endif %}"><span class="icon"><i class="fa-brands fa-creative-commons-sampling-plus"></i></span> <span>Live Monitoring</span></a></li>
             <li><a href="#" class="menu-link"><span class="icon"><i class="fa-regular fa-address-book"></i></span> <span>Subscription Plans</span></a></li>        
             <li><a href="#" class="menu-link"><span class="icon"><i class="fa-solid fa-cash-register"></i></span> <span>Payments</span></a></li>        
             <li><a href="#" class="menu-link"><span class="icon"><i class="fas fa-file-invoice-dollar"></i></span> <span>Payment logs</span></a></li>
@@ -132,7 +156,10 @@
                 <i class="fas fa-bars"></i>
             </button>
         </div>
-        <div class="topbar-right">
+        <div class="topbar-right d-flex align-items-center gap-2">
+            <button id="themeToggle" class="btn btn-sm" style="background:transparent; border:none; font-size:1.25rem; color:inherit;" title="Toggle Dark/Light Mode">
+                <i class="fas fa-moon" id="themeIcon"></i>
+            </button>
             {% block topbar_right %}{% endblock %}
         </div>
     </header>
@@ -215,7 +242,39 @@ document.addEventListener("DOMContentLoaded", function() {
     if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
     if (hideSidebarBtn) hideSidebarBtn.addEventListener('click', hideSidebar);
     if (showSidebarBtn) showSidebarBtn.addEventListener('click', showSidebar);
-});
+    });
+
+    // Theme Toggle Logic
+    const themeToggleBtn = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    const htmlEl = document.documentElement;
+
+    function updateThemeIcon() {
+        if (htmlEl.classList.contains('dark-mode')) {
+            themeIcon.classList.remove('fa-moon');
+            themeIcon.classList.add('fa-sun');
+            themeIcon.style.color = '#F9B233'; // Sun color
+        } else {
+            themeIcon.classList.remove('fa-sun');
+            themeIcon.classList.add('fa-moon');
+            themeIcon.style.color = 'inherit';
+        }
+    }
+
+    if (themeToggleBtn) {
+        // Initial setup
+        updateThemeIcon();
+
+        themeToggleBtn.addEventListener('click', () => {
+            htmlEl.classList.toggle('dark-mode');
+            const isDark = htmlEl.classList.contains('dark-mode');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            updateThemeIcon();
+            
+            // Dispatch a custom event so dashboard/live charts can listen
+            window.dispatchEvent(new Event('themeChanged'));
+        });
+    }
 </script>
 {% block extra_js %}{% endblock %}
 </body>

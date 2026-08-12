@@ -1,0 +1,614 @@
+{% extends 'billing/base.html' %}
+{% load static %}
+
+{% block title %}Live Monitoring{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Theme Styles for Live Monitoring */
+.dark-mode body {
+    background-color: #0f172a !important;
+    color: #e2e8f0 !important;
+}
+.dark-mode .topbar {
+    background-color: #1e293b !important;
+    border-bottom: 1px solid #334155 !important;
+}
+.dark-mode .topbar .topbar-title { color: #f8fafc !important; }
+.dark-mode .topbar .menu-btn, .dark-mode .topbar .hide-btn, .dark-mode .topbar .show-btn { color: #94a3b8 !important; }
+.dark-mode .topbar .menu-btn:hover, .dark-mode .topbar .hide-btn:hover, .dark-mode .topbar .show-btn:hover { color: #F9B233 !important; }
+.dark-mode .topbar-right { color: #e2e8f0 !important; }
+
+.live-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+.live-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #334155;
+    margin: 0;
+}
+.dark-mode .live-title { color: #e2e8f0; }
+
+@media (max-width: 600px) {
+    .live-title { font-size: 1.2em; }
+}
+
+/* LIVE DOT */
+.live-dot {
+    width: 12px;
+    height: 12px;
+    background: #10b981;
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+    flex-shrink: 0;
+}
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+}
+
+/* CONTROLS */
+.controls-container {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.controls-container input,
+.controls-container select {
+    min-width: 140px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(0,0,0,0.1);
+    background: #f8fafc;
+    color: #334155;
+    font-size: 0.95em;
+    transition: border .2s;
+}
+.dark-mode .controls-container input,
+.dark-mode .controls-container select {
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(15, 23, 42, 0.6);
+    color: #e2e8f0;
+}
+.controls-container input:focus, .controls-container select:focus {
+    border: 1.5px solid #38bdf8;
+    outline: none;
+}
+.controls-container input::placeholder { color: #94a3b8; }
+.dark-mode .controls-container input::placeholder { color: #64748b; }
+
+/* SUMMARY */
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+    margin-bottom: 24px;
+}
+.sum-box {
+    padding: 16px;
+    border-radius: 16px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    transition: 0.25s;
+    min-height: 120px;
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+.dark-mode .sum-box {
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2);
+}
+.sum-box:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.15);
+}
+.dark-mode .sum-box:hover {
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+}
+
+.box-rx { border-left: 4px solid #38bdf8; }
+.box-tx { border-left: 4px solid #34d399; }
+.box-net { border-left: 4px solid #c084fc; }
+.box-users { border-left: 4px solid #fb923c; }
+.box-top { border-left: 4px solid #f87171; }
+
+.dark-mode .box-rx { background: linear-gradient(135deg, rgba(56,189,248,0.2) 0%, rgba(2,132,199,0.4) 100%); border: 1px solid rgba(56,189,248,0.3); }
+.dark-mode .box-tx { background: linear-gradient(135deg, rgba(52,211,153,0.2) 0%, rgba(5,150,105,0.4) 100%); border: 1px solid rgba(52,211,153,0.3); }
+.dark-mode .box-net { background: linear-gradient(135deg, rgba(192,132,252,0.2) 0%, rgba(124,58,237,0.4) 100%); border: 1px solid rgba(192,132,252,0.3); }
+.dark-mode .box-users { background: linear-gradient(135deg, rgba(251,146,60,0.2) 0%, rgba(217,119,6,0.4) 100%); border: 1px solid rgba(251,146,60,0.3); }
+.dark-mode .box-top { background: linear-gradient(135deg, rgba(248,113,113,0.2) 0%, rgba(220,38,38,0.4) 100%); border: 1px solid rgba(248,113,113,0.3); }
+
+.sum-box h3 {
+    margin: 0 0 6px 0;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b;
+}
+.dark-mode .sum-box h3 { color: #94a3b8; }
+.sum-box p {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #0f172a;
+}
+.dark-mode .sum-box p { color: #f8fafc; }
+
+.gauge-canvas {
+    width: 62px !important;
+    height: 62px !important;
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: transparent;
+    pointer-events: none;
+}
+
+/* USER CARDS */
+.users-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+}
+.user-card {
+    padding: 16px;
+    border-radius: 16px;
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.05);
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    transition: 0.2s;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.dark-mode .user-card {
+    background: #1e293b;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+.user-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(0,0,0,0.15);
+}
+.dark-mode .user-card:hover {
+    border-color: rgba(255,255,255,0.15);
+}
+.user-card.heavy {
+    border: 1px solid #ef4444;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+}
+
+.user-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+.user-card .username {
+    font-weight: bold;
+    color: #0284c7;
+    font-size: 1.1em;
+    word-break: break-all;
+    line-height: 1.2;
+}
+.dark-mode .user-card .username { color: #38bdf8; }
+.user-card .ip {
+    color: #8b5cf6;
+    font-size: 0.85em;
+    margin-left: 8px;
+}
+.dark-mode .user-card .ip { color: #a78bfa; }
+.user-card .speed-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.user-card .speed-number {
+    display: flex;
+    align-items: center;
+    font-size: 1.25em;
+    font-weight: bold;
+    width: 90px;
+}
+.user-card .speed-number.upload { color: #0284c7; }
+.dark-mode .user-card .speed-number.upload { color: #38bdf8; }
+.user-card .speed-number.download { color: #10b981; }
+.dark-mode .user-card .speed-number.download { color: #34d399; }
+.user-card .speed-icon {
+    font-size: 0.9em;
+    margin-right: 6px;
+}
+.user-card .stat-label {
+    font-size: 0.85em;
+    color: #64748b;
+}
+.dark-mode .user-card .stat-label { color: #94a3b8; }
+.speed-badge {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    color: #fff;
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+}
+.user-card .legend {
+    position: absolute;
+    bottom: 12px;
+    right: 14px;
+    font-size: 0.7rem;
+    background: rgba(255, 255, 255, 0.8);
+    color: #64748b;
+    border-radius: 6px;
+    padding: 2px 6px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+.dark-mode .user-card .legend {
+    background: rgba(15, 23, 42, 0.8);
+    color: #94a3b8;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+.user-card .legend span {
+    display: inline-block;
+    width: 10px;
+    height: 3px;
+    border-radius: 2px;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+.user-card .legend .ul { background: #0284c7; }
+.dark-mode .user-card .legend .ul { background: #38bdf8; }
+.user-card .legend .dl { background: #10b981; }
+.dark-mode .user-card .legend .dl { background: #34d399; }
+
+.user-card.heavy {
+    border: 1px solid #ef4444;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+}
+
+.user-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+.user-graph-canvas {
+    margin-top: 8px;
+    width: 100%;
+    height: 60px;
+    background: transparent;
+    border-radius: 8px;
+    display: block;
+}
+
+@media (max-width: 600px) {
+    .summary-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    .users-grid { 
+        grid-template-columns: 1fr; 
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+
+    <div class="live-header-row">
+        <h2 class="live-title">
+            <span class="live-dot"></span>
+            Live Monitoring
+        </h2>
+        
+        <div class="controls-container">
+            <input type="text" id="search" placeholder="Search user or IP...">
+            <select id="interval">
+                <option value="1000">Refresh: 1s</option>
+                <option value="2000">Refresh: 2s</option>
+                <option value="5000" selected>Refresh: 5s</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="summary-grid">
+        <div class="sum-box box-rx" title="Total upload from all active simple queues">
+            <h3>Total Upload</h3>
+            <p id="totalRx">0</p>
+            <canvas class="gauge-canvas" id="gauge-rx" width="62" height="62"></canvas>
+        </div>
+        <div class="sum-box box-tx" title="Total download from all active simple queues">
+            <h3>Total Download</h3>
+            <p id="totalTx">0</p>
+            <canvas class="gauge-canvas" id="gauge-tx" width="62" height="62"></canvas>
+        </div>
+        <div class="sum-box box-net" title="Upload + Download Combined">
+            <h3>Total Bandwidth</h3>
+            <p id="totalNet">0</p>
+            <canvas class="gauge-canvas" id="gauge-net" width="62" height="62"></canvas>
+        </div>
+        <div class="sum-box box-users" title="Active users being monitored">
+            <h3>Active Users</h3>
+            <p id="activeUsers">0</p>
+        </div>
+        <div class="sum-box box-top" title="Top user by current bandwidth">
+            <h3>Top User</h3>
+            <p id="topUser">-</p>
+        </div>
+    </div>
+
+    <div class="users-grid" id="users">
+        <div class="text-muted w-100 p-3 text-center">
+            <i class="fas fa-spinner fa-spin me-2"></i> Connecting to routers...
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let allData = [];
+let historyObj = {}; // {user: {rx:[], tx:[]}}
+let timer = null;
+let maxRx = 100, maxTx = 100, maxNet = 200; // Gauge scaling
+let heavyMap = {}; 
+
+// --- GAUGE ---
+function drawGauge(canvas, value, max, color) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0,0,w,h);
+    let pct = Math.min(value/max, 1.0), r = 27, cx = w/2, cy = h/2;
+    const isDark = document.documentElement.classList.contains('dark-mode');
+
+    // background
+    ctx.beginPath();
+    ctx.arc(cx,cy,r,0,2*Math.PI);
+    ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
+    ctx.lineWidth = 6;
+    ctx.stroke();
+
+    // arc
+    ctx.beginPath();
+    ctx.arc(cx,cy,r,-Math.PI/2,-Math.PI/2 + pct*2*Math.PI);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // value
+    ctx.font = "bold 13px 'Montserrat', sans-serif";
+    ctx.fillStyle = isDark ? '#f8fafc' : '#0f172a';
+    ctx.textAlign = "center";
+    ctx.fillText(value.toFixed(1), cx, cy+4);
+}
+
+// --- ANIMATION ---
+function animateValue(el, start, end, unit=" Mbps") {
+    let duration = 400;
+    let startTime = null;
+    function step(t) {
+        if (!startTime) startTime = t;
+        let p = Math.min((t - startTime)/duration,1);
+        let val = start + (end - start)*p;
+        el.innerText = val.toFixed(2) + unit;
+        if(p<1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+}
+
+// --- GRAPH ---
+function drawGraph(canvas, rxData, txData, isHeavy) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width = canvas.offsetWidth;
+    const h = canvas.height = 60;
+    ctx.clearRect(0,0,w,h);
+    if(rxData.length < 2 && txData.length < 2) return;
+    const isDark = document.documentElement.classList.contains('dark-mode');
+
+    // Grid
+    ctx.save();
+    ctx.strokeStyle = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)";
+    ctx.lineWidth = 1;
+    for(let i=1; i<=3; ++i) {
+        let y = h*i/4;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+    }
+    ctx.restore();
+
+    const max = Math.max(...rxData, ...txData, 1);
+
+    // Draw RX (Upload) - Blue
+    ctx.beginPath();
+    rxData.forEach((v,i)=>{
+        const x=(i/(rxData.length-1||1))*w;
+        const y=h-(v/max)*h;
+        i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+    });
+    ctx.strokeStyle="#38bdf8";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Draw TX (Download) - Green
+    ctx.beginPath();
+    txData.forEach((v,i)=>{
+        const x=(i/(txData.length-1||1))*w;
+        const y=h-(v/max)*h;
+        i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+    });
+    ctx.strokeStyle="#34d399";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+}
+
+function getColor(val, avg){
+    if(val > avg*1.5) return "#ef4444"; // Red for heavy
+    if(val > avg) return "#f59e0b"; // Orange
+    return "#10b981"; // Green
+}
+
+function updateSummary(){
+    let rx=0, tx=0, net=0, top=null;
+    allData.forEach(u=>{
+        let t = (+u.rx_mbps||0) + (+u.tx_mbps||0);
+        rx += +u.rx_mbps||0;
+        tx += +u.tx_mbps||0;
+        net += t;
+        if(!top || t>top.t) top={name:u.user, t:t};
+    });
+    
+    animateValue(totalRxEl, parseFloat(totalRxEl.innerText)||0, rx);
+    animateValue(totalTxEl, parseFloat(totalTxEl.innerText)||0, tx);
+    animateValue(totalNetEl, parseFloat(totalNetEl.innerText)||0, net);
+    activeUsers.innerText = allData.length;
+    topUserEl.innerText = top ? top.name : "-";
+    
+    drawGauge(document.getElementById('gauge-rx'), rx, maxRx, "#38bdf8");
+    drawGauge(document.getElementById('gauge-tx'), tx, maxTx, "#34d399");
+    drawGauge(document.getElementById('gauge-net'), net, maxNet, "#c084fc");
+}
+
+function render(filtered){
+    if(!filtered.length){
+        users.innerHTML="<div class='text-muted w-100 p-3 text-center'>No active users found.</div>";
+        return;
+    }
+    
+    let avg = filtered.reduce((s,u)=>s+(+u.rx_mbps + +u.tx_mbps),0) / filtered.length;
+    filtered.sort((a,b) => (b.rx_mbps+b.tx_mbps) - (a.rx_mbps+a.tx_mbps)); // Sort by bandwidth
+    
+    let html = '';
+    heavyMap = {};
+    
+    filtered.forEach(u => {
+        let rx = +u.rx_mbps||0;
+        let tx = +u.tx_mbps||0;
+        let total = rx+tx;
+        
+        if(!historyObj[u.user]) historyObj[u.user] = {rx:[], tx:[]};
+        historyObj[u.user].rx.push(rx);
+        historyObj[u.user].tx.push(tx);
+        
+        if(historyObj[u.user].rx.length > 20) historyObj[u.user].rx.shift();
+        if(historyObj[u.user].tx.length > 20) historyObj[u.user].tx.shift();
+        
+        let heavy = total > (avg*1.5);
+        if(heavy) heavyMap[u.user] = true;
+        let color = getColor(total, avg);
+
+        html += `
+        <div class="user-card ${heavy ? 'heavy' : ''}">
+            <div class="user-card-header">
+                <div>
+                    <span class="username">${u.user}</span>
+                    ${u.device_ip ? `<span class="ip" title="Router IP">${u.device_ip}</span>` : ''}
+                </div>
+                <span class="speed-badge" style="background:${color}" title="Total bandwidth">
+                    ${total.toFixed(2)} Mbps
+                </span>
+            </div>
+            
+            <div class="speed-row mt-2">
+                <span class="speed-number upload"><span class="speed-icon"><i class="fas fa-arrow-up"></i></span>${rx.toFixed(2)}</span>
+                <span class="stat-label">Mbps Upload</span>
+            </div>
+            <div class="speed-row">
+                <span class="speed-number download"><span class="speed-icon"><i class="fas fa-arrow-down"></i></span>${tx.toFixed(2)}</span>
+                <span class="stat-label">Mbps Download</span>
+            </div>
+            
+            <canvas class="user-graph-canvas" id="g-${u.user}"></canvas>
+            
+            <div class="legend">
+                <span class="ul"></span>Upload
+                <span class="dl"></span>Download
+            </div>
+        </div>`;
+    });
+    
+    users.innerHTML = html;
+    
+    // Draw canvas after injecting HTML
+    filtered.forEach(u => {
+        let c = document.getElementById(`g-${u.user}`);
+        if(c) drawGraph(c, historyObj[u.user].rx, historyObj[u.user].tx, !!heavyMap[u.user]);
+    });
+}
+
+function loadData(){
+    // Fetch from Django API endpoint
+    fetch("{% url 'api_live_monitoring' %}")
+    .then(r => r.json())
+    .then(d => {
+        allData = d;
+        // Dynamic Gauge Scaling
+        let rx = allData.reduce((s,u)=>s+ +u.rx_mbps,0);
+        let tx = allData.reduce((s,u)=>s+ +u.tx_mbps,0);
+        let net = allData.reduce((s,u)=>s+ (+u.rx_mbps)+(+u.tx_mbps),0);
+        
+        maxRx = Math.max(maxRx, rx*1.3, 30);
+        maxTx = Math.max(maxTx, tx*1.3, 30);
+        maxNet = Math.max(maxNet, net*1.3, 60);
+        
+        updateSummary();
+        applyFilter();
+    })
+    .catch(err => {
+        console.error("Live monitoring fetch error:", err);
+    });
+}
+
+function applyFilter(){
+    let search = document.getElementById('search').value.toLowerCase();
+    let filtered = allData.filter(u => 
+        u.user.toLowerCase().includes(search) || 
+        (u.device_ip && u.device_ip.toLowerCase().includes(search))
+    );
+    render(filtered);
+}
+
+function startInterval(){
+    if(timer) clearInterval(timer);
+    timer = setInterval(loadData, document.getElementById('interval').value);
+}
+
+const users = document.getElementById('users');
+const totalRxEl = document.getElementById('totalRx');
+const totalTxEl = document.getElementById('totalTx');
+const totalNetEl = document.getElementById('totalNet');
+const activeUsers = document.getElementById('activeUsers');
+const topUserEl = document.getElementById('topUser');
+
+document.getElementById('search').addEventListener('input', applyFilter);
+document.getElementById('interval').addEventListener('change', startInterval);
+
+// Initial Load
+startInterval();
+loadData();
+
+// Listen for theme changes to redraw gauges and graphs
+window.addEventListener('themeChanged', () => {
+    updateSummary();
+    if(allData.length > 0) {
+        applyFilter(); // re-renders graphs
+    }
+});
+</script>
+{% endblock %}

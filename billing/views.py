@@ -1,4 +1,6 @@
 from django.shortcuts import render, redirect
+from django.http import JsonResponse
+from django.core.cache import cache
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
@@ -176,3 +178,48 @@ def mikrotik_active_users_view(request):
         'total_active': len(all_active_users)
     }
     return render(request, 'billing/mikrotik_active_users.html', context)
+
+
+@login_required
+def live_monitoring_view(request):
+    return render(request, 'billing/live_monitoring.html')
+
+@login_required
+def api_live_monitoring_data(request):
+    cache_key = 'live_monitoring_data'
+    data = cache.get(cache_key)
+    
+    if not data:
+        data = []
+        devices = MikrotikDevice.objects.all()
+        for device in devices:
+            try:
+                api = MikrotikAPI(device)
+                queues = api.get_simple_queues()
+                
+                for q in queues:
+                    rate = q.get('rate', '0/0')
+                    # rate format is usually "rx_bps/tx_bps" e.g., "150000/300000"
+                    try:
+                        rx_bps, tx_bps = rate.split('/')
+                        rx_mbps = round(int(rx_bps) / 1000000, 2)
+                        tx_mbps = round(int(tx_bps) / 1000000, 2)
+                    except ValueError:
+                        rx_mbps = 0
+                        tx_mbps = 0
+                        
+                    data.append({
+                        'device_name': device.device_name,
+                        'device_ip': device.ip_address,
+                        'user': q.get('name', 'Unknown'),
+                        'rx_mbps': rx_mbps,
+                        'tx_mbps': tx_mbps,
+                    })
+            except Exception as e:
+                # If a device is unreachable, we can skip it or log it
+                pass
+                
+        # Cache for 2 seconds to prevent spamming routers
+        cache.set(cache_key, data, 2)
+        
+    return JsonResponse(data, safe=False)

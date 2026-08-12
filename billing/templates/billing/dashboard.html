@@ -1,6 +1,226 @@
 {% extends 'billing/base.html' %}
 {% load static %}
 
+{% block extra_css %}
+<style>
+  /* Soft Dark Theme for Dashboard */
+  .dark-mode body {
+    background-color: #0f172a !important;
+    color: #e2e8f0 !important;
+  }
+  .dark-mode .topbar {
+    background-color: #1e293b !important;
+    border-bottom: 1px solid #334155 !important;
+  }
+  .dark-mode .topbar .topbar-title { color: #f8fafc !important; }
+  .dark-mode .topbar .menu-btn, .dark-mode .topbar .hide-btn, .dark-mode .topbar .show-btn { color: #94a3b8 !important; }
+  .dark-mode .topbar .menu-btn:hover, .dark-mode .topbar .hide-btn:hover, .dark-mode .topbar .show-btn:hover { color: #F9B233 !important; }
+  .dark-mode .topbar-right { color: #e2e8f0 !important; }
+  
+  /* KPI and Dashboard Cards */
+  .kpi-card {
+    border-radius: 16px;
+    padding: 1.25rem;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0,0,0,0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+    background: #fff;
+  }
+  .dark-mode .kpi-card {
+    background: #1e293b;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+  .dark-mode .kpi-card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.15);
+  }
+  .kpi-icon {
+    font-size: 1.75rem;
+    margin-right: 1rem;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    background: rgba(0, 0, 0, 0.05);
+  }
+  .dark-mode .kpi-icon { background: rgba(255, 255, 255, 0.05); }
+  .kpi-label {
+    font-size: 0.85rem;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .dark-mode .kpi-label { color: #94a3b8; }
+  .kpi-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-top: 0.2rem;
+  }
+  .dark-mode .kpi-value { color: #f8fafc; }
+  .kpi-sub {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin-top: 0.2rem;
+  }
+  .dark-mode .kpi-sub { color: #64748b; }
+
+  /* Specific Icon Colors (Work on both modes due to alpha transparency) */
+  .icon-blue { color: #38bdf8; background: rgba(56, 189, 248, 0.15) !important; }
+  .icon-purple { color: #c084fc; background: rgba(192, 132, 252, 0.15) !important; }
+  .icon-green { color: #34d399; background: rgba(52, 211, 153, 0.15) !important; }
+  .icon-orange { color: #fb923c; background: rgba(251, 146, 60, 0.15) !important; }
+  .icon-red { color: #f87171; background: rgba(248, 113, 113, 0.15) !important; }
+  .icon-gray { color: #94a3b8; background: rgba(148, 163, 184, 0.15) !important; }
+
+  .dashboard-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0,0,0,0.05);
+    overflow: hidden;
+  }
+  .dark-mode .dashboard-card {
+    background: #1e293b;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .dashboard-card .card-header {
+    background: rgba(0,0,0,0.03);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    padding: 1rem 1.25rem;
+    font-weight: 600;
+    color: #0f172a;
+  }
+  .dark-mode .dashboard-card .card-header {
+    background: rgba(15, 23, 42, 0.4);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: #f8fafc;
+  }
+  .chart-container {
+    padding: 1rem;
+    position: relative;
+    height: 300px;
+    width: 100%;
+  }
+
+  /* Tables */
+  .dark-mode .table {
+    color: #e2e8f0;
+    --bs-table-bg: transparent;
+    --bs-table-color: #e2e8f0;
+  }
+  .dark-mode .table-hover tbody tr:hover {
+    color: #f8fafc;
+    background-color: rgba(255,255,255,0.05);
+  }
+  .table thead th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+  }
+  .dark-mode .table thead th {
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    color: #94a3b8;
+  }
+  .dark-mode .table td {
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    vertical-align: middle;
+  }
+  .badge {
+    padding: 0.4em 0.6em;
+    font-weight: 500;
+  }
+  .avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: #fff;
+    font-weight: bold;
+    margin-right: 8px;
+    font-size: 0.85rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+  
+  .clock-tile {
+    background: #f8fafc;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 12px;
+    padding: 0.5rem 1rem;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+  .dark-mode .clock-tile {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .clock-display {
+    color: #0284c7;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+  }
+  .dark-mode .clock-display { color: #38bdf8; }
+  
+  /* Utilities */
+  .dark-mode .text-primary { color: #38bdf8 !important; }
+  .dark-mode .text-muted { color: #64748b !important; }
+  .dark-mode .text-danger { color: #f87171 !important; }
+  .dark-mode .text-warning { color: #fbbf24 !important; }
+  .dark-mode .text-success { color: #34d399 !important; }
+  
+  .dark-mode .alert-primary {
+    background-color: rgba(56, 189, 248, 0.15) !important;
+    border-color: rgba(56, 189, 248, 0.3) !important;
+    color: #e0f2fe !important;
+  }
+  .dark-mode .bg-primary { background-color: #0284c7 !important; }
+  .dark-mode .bg-warning { background-color: #fbbf24 !important; color: #78350f !important; }
+  .dark-mode .bg-success-subtle { background-color: rgba(52, 211, 153, 0.15) !important; }
+  .dark-mode .border-success-subtle { border-color: rgba(52, 211, 153, 0.3) !important; }
+
+  /* Mobile Optimization - Dashboard */
+  @media (max-width: 767.98px) {
+    .kpi-icon {
+      width: 40px;
+      height: 40px;
+      font-size: 1.25rem;
+      margin-right: 0.75rem;
+    }
+    .kpi-value {
+      font-size: 1.2rem;
+    }
+    .kpi-label {
+      font-size: 0.75rem;
+    }
+    .kpi-card {
+      padding: 1rem;
+    }
+    .chart-container {
+      height: 220px !important;
+    }
+    .card-header {
+      padding: 0.75rem 1rem;
+      font-size: 0.95rem;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-3">
 
@@ -333,6 +553,17 @@
 {% block extra_js %}
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
+    // Theme setup for charts
+    function applyChartTheme() {
+      const isDark = document.documentElement.classList.contains('dark-mode');
+      Chart.defaults.color = isDark ? '#94a3b8' : '#64748b';
+      Chart.defaults.scale.grid.color = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+      Chart.defaults.scale.grid.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+      return isDark;
+    }
+    Chart.defaults.font.family = "'Montserrat', sans-serif";
+    applyChartTheme();
+    
     // Variables passed from Django context
     const months = {{ months_js|safe|default:"[]" }};
     const salesByMonth = {{ sales_by_month_js|safe|default:"[]" }};
@@ -341,11 +572,13 @@
     const pieLabels = {{ pie_labels_js|safe|default:"[]" }};
     const pieData = {{ pie_data_js|safe|default:"[]" }};
 
+    let monthChart, weekChart, planChart;
+
     const monthChartCtx = document.getElementById('salesMonthChart');
     if(monthChartCtx) {
-      new Chart(monthChartCtx.getContext('2d'), {
+      monthChart = new Chart(monthChartCtx.getContext('2d'), {
         type: 'bar',
-        data: { labels: months, datasets: [{ label: '₱ Sales', data: salesByMonth, backgroundColor: '#0d6efd' }] },
+        data: { labels: months, datasets: [{ label: '₱ Sales', data: salesByMonth, backgroundColor: '#38bdf8', borderRadius: 6 }] },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { display: false }},
@@ -356,18 +589,24 @@
 
     const weekChartCtx = document.getElementById('salesWeekChart');
     if(weekChartCtx) {
-      new Chart(weekChartCtx.getContext('2d'), {
+      const isDark = applyChartTheme();
+      weekChart = new Chart(weekChartCtx.getContext('2d'), {
         type: 'line',
         data: {
           labels: days,
           datasets: [{
             label: '₱ Sales',
             data: salesByDay,
-            fill: false,
-            borderColor: '#198754',
-            tension: 0.3,
-            pointBackgroundColor: '#198754',
-            pointRadius: 4
+            fill: true,
+            backgroundColor: 'rgba(52, 211, 153, 0.1)',
+            borderColor: '#34d399',
+            borderWidth: 2,
+            tension: 0.4,
+            pointBackgroundColor: isDark ? '#1e293b' : '#ffffff',
+            pointBorderColor: '#34d399',
+            pointBorderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6
           }]
         },
         options: {
@@ -378,25 +617,26 @@
       });
     }
 
-    const pieChartCtx = document.getElementById('salesPieChart');
-    if(pieChartCtx) {
-      new Chart(pieChartCtx.getContext('2d'), {
+    const planChartCtx = document.getElementById('planDistributionChart');
+    if(planChartCtx && pieLabels.length > 0) {
+      planChart = new Chart(planChartCtx.getContext('2d'), {
         type: 'bar',
         data: {
           labels: pieLabels,
           datasets: [{
-            label: '₱ Sales',
+            label: 'Total Paid',
             data: pieData,
             backgroundColor: [
-              '#0d6efd', '#198754', '#0dcaf0', '#6f42c1', 
-              '#ffc107', '#fd7e14', '#dc3545', '#20c997'
+              '#38bdf8', '#34d399', '#c084fc', '#fb923c', 
+              '#f472b6', '#a3e635', '#f87171', '#2dd4bf'
             ],
             borderRadius: 8,
-            barThickness: 18
+            barThickness: 18,
+            borderWidth: 0
           }]
         },
         options: {
-          indexAxis: 'y', // makes it horizontal
+          indexAxis: 'y',
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
@@ -415,7 +655,6 @@
           scales: {
             x: {
               beginAtZero: true,
-              grid: { color: '#eef2f7' },
               ticks: {
                 callback: function(value) { return '₱' + value.toLocaleString(); }
               }
@@ -428,6 +667,16 @@
         }
       });
     }
+
+    window.addEventListener('themeChanged', () => {
+      const isDark = applyChartTheme();
+      if (weekChart && weekChart.data.datasets[0]) {
+        weekChart.data.datasets[0].pointBackgroundColor = isDark ? '#1e293b' : '#ffffff';
+      }
+      [monthChart, weekChart, planChart].forEach(chart => {
+        if (chart) chart.update();
+      });
+    });
 
     // Countdown timers (uses epoch provided by server; display is consistent)
     function updateCountdowns() {

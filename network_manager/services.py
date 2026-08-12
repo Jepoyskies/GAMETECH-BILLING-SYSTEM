@@ -107,3 +107,24 @@ class MikrotikAPI:
         except Exception as e:
             logger.error(f"Failed to add PPPoE user {name} to {self.device.device_name}: {e}")
             return False, f"Mikrotik API Error: {str(e)}"
+
+    def get_simple_queues(self):
+        """
+        Retrieves simple queues from the Mikrotik device.
+        Useful for monitoring live bandwidth usage of PPPoE users.
+        """
+        try:
+            api = self._get_api()
+            
+            # Access the /queue/simple endpoint with stats
+            queues_api = api.get_resource('/queue/simple')
+            
+            # 'stats' attribute might not be retrieved by default without specifying it, 
+            # but usually routeros_api gets all attributes.
+            queues = queues_api.get()
+            
+            self.connection.disconnect()
+            return queues
+        except Exception as e:
+            logger.error(f"Failed to get simple queues from {self.device.device_name}: {e}")
+            return []
