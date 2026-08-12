@@ -226,7 +226,6 @@ def api_live_monitoring_data(request):
         
     return JsonResponse(data, safe=False)
 
-<<<<<<< HEAD
 
 # ─────────────────────────────────────────────────
 #  Subscription / Service Plans
@@ -524,7 +523,7 @@ def subscription_plans_view(request):
     
     return render(request, 'billing/subscription_plans.html', context)
 
-=======
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.hashers import make_password
@@ -597,4 +596,4 @@ def view_agent(request, agent_id):
     customers = Customer.objects.filter(agent=agent)
     
     return render(request, 'billing/view_agent.html', {'agent': agent, 'customers': customers})
->>>>>>> fb034e131a6ec8d92bc5b38dfa14a75f8909eccb
+
