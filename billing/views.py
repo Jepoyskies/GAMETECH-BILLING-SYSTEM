@@ -11,6 +11,8 @@ from django.contrib.auth.models import User
 from django.db.models import Count, Sum
 import json
 from datetime import timedelta
+from django.core.paginator import Paginator
+from django.db.models import Q
 
 @login_required
 def dashboard_view(request):
@@ -223,3 +225,301 @@ def api_live_monitoring_data(request):
         cache.set(cache_key, data, 2)
         
     return JsonResponse(data, safe=False)
+
+
+# ─────────────────────────────────────────────────
+#  Subscription / Service Plans
+# ─────────────────────────────────────────────────
+
+@login_required
+def service_plans_view(request):
+    """List all service plans."""
+    plans = ServicePlan.objects.all().order_by('plan_name')
+    total_plans = plans.count()
+    avg_price = plans.aggregate(avg=Sum('price'))['avg']
+    if total_plans > 0 and avg_price is not None:
+        avg_price = round(float(avg_price) / total_plans, 2)
+    else:
+        avg_price = 0.00
+
+    # Most subscribed plan
+    top_plan_qs = Customer.objects.values('service_plan__plan_name').annotate(cnt=Count('id')).order_by('-cnt').first()
+    top_plan_name = top_plan_qs['service_plan__plan_name'] if top_plan_qs else 'N/A'
+
+    success_msg = request.GET.get('success')
+    return render(request, 'billing/service_plans.html', {
+        'plans': plans,
+        'total_plans': total_plans,
+        'avg_price': avg_price,
+        'top_plan_name': top_plan_name,
+        'success_msg': success_msg,
+    })
+
+
+@login_required
+def add_plan_view(request):
+    """Add a new service plan."""
+    error = None
+    data = {}
+    if request.method == 'POST':
+        plan_name    = request.POST.get('plan_name', '').strip()
+        speed_up     = request.POST.get('speed_up', '').strip()
+        speed_down   = request.POST.get('speed_down', '').strip()
+        price        = request.POST.get('price', '').strip()
+        validity_days = request.POST.get('validity_days', '').strip()
+        description  = request.POST.get('description', '').strip()
+
+        if not all([plan_name, speed_up, speed_down, price, validity_days]):
+            error = 'Please fill in all required fields.'
+            data = request.POST
+        else:
+            try:
+                ServicePlan.objects.create(
+                    plan_name=plan_name,
+                    plan_code=plan_name.lower().replace(' ', '_'),
+                    speed_up=int(speed_up),
+                    speed_down=int(speed_down),
+                    price=float(price),
+                    price_monthly=float(price),
+                    validity_days=int(validity_days),
+                    description=description,
+                )
+                return redirect('/plans/?success=added')
+            except Exception as e:
+                error = f'Failed to add plan: {e}'
+                data = request.POST
+
+    return render(request, 'billing/add_plan.html', {'error': error, 'data': data})
+
+
+@login_required
+def edit_plan_view(request, plan_id):
+    """Edit an existing service plan."""
+    try:
+        plan = ServicePlan.objects.get(pk=plan_id)
+    except ServicePlan.DoesNotExist:
+        return redirect('/plans/')
+
+    error = None
+    if request.method == 'POST':
+        plan_name    = request.POST.get('plan_name', '').strip()
+        speed_up     = request.POST.get('speed_up', '').strip()
+        speed_down   = request.POST.get('speed_down', '').strip()
+        price        = request.POST.get('price', '').strip()
+        validity_days = request.POST.get('validity_days', '').strip()
+        description  = request.POST.get('description', '').strip()
+
+        if not all([plan_name, speed_up, speed_down, price, validity_days]):
+            error = 'Please fill in all required fields.'
+        else:
+            try:
+                plan.plan_name     = plan_name
+                plan.plan_code     = plan_name.lower().replace(' ', '_')
+                plan.speed_up      = int(speed_up)
+                plan.speed_down    = int(speed_down)
+                plan.price         = float(price)
+                plan.price_monthly = float(price)
+                plan.validity_days = int(validity_days)
+                plan.description   = description
+                plan.save()
+                return redirect('/plans/?success=updated')
+            except Exception as e:
+                error = f'Failed to update plan: {e}'
+
+    return render(request, 'billing/edit_plan.html', {'plan': plan, 'error': error})
+
+
+@login_required
+def delete_plan_view(request, plan_id):
+    """AJAX endpoint to delete a plan."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    try:
+        plan = ServicePlan.objects.get(pk=plan_id)
+        plan.delete()
+        return JsonResponse({'success': True})
+    except ServicePlan.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Plan not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# ─────────────────────────────────────────────────
+#  Customer Subscriptions
+# ─────────────────────────────────────────────────
+
+@login_required
+def subscription_plans_view(request):
+    """Customer Subscriptions Dashboard."""
+    # 1. Base Query
+    customers = Customer.objects.select_related('service_plan', 'mikrotik_device').filter(
+        username__isnull=False,
+    ).exclude(username='').exclude(status='pull out')
+
+    # 2. Extract Filters
+    search = request.GET.get('search', '').strip()
+    status_filter = request.GET.get('status', '')
+    device_filter = request.GET.get('device', '')
+    connection_filter = request.GET.get('connection', '')
+    
+    # Sorting
+    sort_column = request.GET.get('sort', 'expires_at')
+    order = request.GET.get('order', 'desc').lower()
+    
+    valid_sorts = {
+        'id': 'id',
+        'username': 'username',
+        'full_name': 'full_name',
+        'address': 'address',
+        'expires_at': 'expires_at',
+        'plan_name': 'service_plan__plan_name',
+        'price': 'service_plan__price',
+        'device_name': 'mikrotik_device__device_name'
+    }
+    
+    sort_field = valid_sorts.get(sort_column, 'expires_at')
+    if order == 'desc':
+        sort_field = f'-{sort_field}'
+
+    # 3. Time bounds
+    now = timezone.now()
+    soon = now + timedelta(days=7)
+    one_month_ago = now - timedelta(days=30)
+
+    # 4. Apply Filters (except connection, which requires live MT data)
+    if search:
+        customers = customers.filter(
+            Q(username__icontains=search) | 
+            Q(full_name__icontains=search) | 
+            Q(address__icontains=search)
+        )
+
+    if status_filter == 'active':
+        customers = customers.filter(expires_at__gt=soon)
+    elif status_filter == 'expiring':
+        customers = customers.filter(expires_at__gt=now, expires_at__lte=soon)
+    elif status_filter == 'expired':
+        customers = customers.filter(
+            Q(expires_at__isnull=True) | 
+            Q(expires_at__lte=now, expires_at__gt=one_month_ago)
+        )
+    elif status_filter == 'inactive':
+        customers = customers.filter(expires_at__lte=one_month_ago)
+
+    if device_filter:
+        customers = customers.filter(mikrotik_device__device_name=device_filter)
+
+    # 5. Fetch MT Data
+    connected_usernames = {}
+    ppp_users_status = {}
+    
+    devices = MikrotikDevice.objects.all()
+    for device in devices:
+        try:
+            api = MikrotikAPI(device)
+            # Active Users
+            active_users = api.get_active_pppoe_users()
+            for au in active_users:
+                name = au.get('name')
+                if name:
+                    connected_usernames[name] = {'uptime': au.get('uptime', '')}
+                    
+            # PPP Secrets
+            secrets = api.get_ppp_secrets()
+            for sec in secrets:
+                name = sec.get('name')
+                if name:
+                    ppp_users_status[name] = {
+                        'profile': sec.get('profile', ''),
+                        'last_logged_out': sec.get('last-logged-out', '')
+                    }
+        except Exception:
+            pass
+
+    # Apply connection filter manually (since it requires live data)
+    customer_list = list(customers.order_by(sort_field))
+    
+    if connection_filter == 'Connected':
+        customer_list = [c for c in customer_list if c.username in connected_usernames]
+    elif connection_filter == 'Not Connected':
+        customer_list = [c for c in customer_list if c.username not in connected_usernames]
+
+    # Calculate Summaries (based on filtered list)
+    count_active = 0
+    count_expiring = 0
+    count_expired = 0
+    count_inactive = 0
+    count_connected = 0
+    count_not_connected = 0
+    
+    for c in customer_list:
+        # Connection
+        if c.username in connected_usernames:
+            count_connected += 1
+        else:
+            count_not_connected += 1
+            
+        # Status
+        if not c.expires_at:
+            count_expired += 1
+        elif c.expires_at <= one_month_ago:
+            count_inactive += 1
+        elif c.expires_at <= now:
+            count_expired += 1
+        elif c.expires_at <= soon:
+            count_expiring += 1
+        else:
+            count_active += 1
+
+    # 6. Pagination
+    per_page = int(request.GET.get('per_page', 35))
+    paginator = Paginator(customer_list, per_page)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    # Append MT data to page objects
+    for c in page_obj:
+        c.mt_connected = c.username in connected_usernames
+        c.mt_uptime = connected_usernames.get(c.username, {}).get('uptime', '')
+        c_secret = ppp_users_status.get(c.username, {})
+        c.mt_profile = c_secret.get('profile', '')
+        c.mt_last_logged_out = c_secret.get('last_logged_out', '')
+        
+        # Calculate downtime if applicable
+        c.mt_downtime = ''
+        if not c.mt_connected and c.mt_last_logged_out:
+            # MicroTik formats dates like "dec/31/2025 23:59:59" or similar
+            # parsing is complex so we'll just display it as is or try to format
+            # In the original PHP they rely on strtotime, Python needs more robust parsing
+            c.mt_downtime = c.mt_last_logged_out
+
+    # Unique devices for filter dropdown
+    unique_devices = Customer.objects.filter(
+        mikrotik_device__isnull=False
+    ).values_list('mikrotik_device__device_name', flat=True).distinct()
+
+    context = {
+        'page_obj': page_obj,
+        'search': search,
+        'status_filter': status_filter,
+        'device_filter': device_filter,
+        'connection_filter': connection_filter,
+        'per_page': per_page,
+        'sort': sort_column,
+        'order': order.upper(),
+        'unique_devices': unique_devices,
+        
+        'count_active': count_active,
+        'count_expiring': count_expiring,
+        'count_expired': count_expired,
+        'count_inactive': count_inactive,
+        'count_connected': count_connected,
+        'count_not_connected': count_not_connected,
+        
+        'now': now,
+        'soon': soon,
+        'one_month_ago': one_month_ago,
+    }
+    
+    return render(request, 'billing/subscription_plans.html', context)
+

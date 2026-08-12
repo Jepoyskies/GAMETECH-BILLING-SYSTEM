@@ -63,6 +63,28 @@ class MikrotikAPI:
             logger.error(f"Failed to get active PPPoE users from {self.device.device_name}: {e}")
             return []
 
+    def get_ppp_secrets(self):
+        """
+        Connects via Mikrotik API and retrieves all PPP secrets.
+        Returns a list of dictionaries containing user secrets (profiles, last-logged-out, etc).
+        """
+        try:
+            api = self._get_api()
+            
+            # Access the /ppp/secret endpoint
+            secrets_api = api.get_resource('/ppp/secret')
+            
+            # Retrieve all secrets
+            secrets = secrets_api.get()
+            
+            # Safely disconnect the pool when done
+            self.connection.disconnect()
+            
+            return secrets
+        except Exception as e:
+            logger.error(f"Failed to get PPP secrets from {self.device.device_name}: {e}")
+            return []
+
     def remove_active_pppoe_user(self, name):
         """
         Forcibly disconnects an active PPPoE user from the Mikrotik device.

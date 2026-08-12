@@ -1,0 +1,107 @@
+﻿{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}Add Subscription Plan{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-card { background:#fff; border:1px solid rgba(0,0,0,0.06); border-radius:20px; padding:36px; box-shadow:0 4px 24px rgba(0,0,0,0.08); max-width:640px; margin:0 auto; }
+.dark-mode .form-card { background:#1e293b; border:1px solid rgba(255,255,255,0.06); box-shadow:0 4px 24px rgba(0,0,0,0.3); }
+.form-page-title { display:flex; align-items:center; gap:12px; font-size:1.5em; font-weight:700; color:#1e293b; margin-bottom:28px; }
+.dark-mode .form-page-title { color:#f1f5f9; }
+.form-page-title .title-icon { width:44px; height:44px; background:linear-gradient(135deg,#2151A1,#38bdf8); border-radius:12px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.2rem; box-shadow:0 4px 12px rgba(33,81,161,0.3); }
+.form-section-label { font-size:0.75rem; text-transform:uppercase; letter-spacing:1px; color:#94a3b8; font-weight:600; margin-bottom:16px; padding-bottom:8px; border-bottom:1px solid rgba(0,0,0,0.06); }
+.dark-mode .form-section-label { border-bottom:1px solid rgba(255,255,255,0.06); }
+.plan-form-control { display:block; width:100%; padding:10px 14px; border-radius:10px; border:1px solid rgba(0,0,0,0.12); background:#f8fafc; color:#334155; font-size:0.95rem; transition:border 0.2s, box-shadow 0.2s; }
+.dark-mode .plan-form-control { background:rgba(15,23,42,0.5); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; }
+.plan-form-control:focus { outline:none; border-color:#38bdf8; box-shadow:0 0 0 3px rgba(56,189,248,0.12); }
+.plan-form-control::placeholder { color:#94a3b8; }
+.plan-form-label { display:block; font-size:0.88rem; font-weight:600; color:#475569; margin-bottom:6px; }
+.dark-mode .plan-form-label { color:#94a3b8; }
+.plan-form-label .req { color:#ef4444; margin-left:2px; }
+.input-icon-wrapper { position:relative; }
+.input-icon-wrapper .i-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:0.9rem; pointer-events:none; }
+.input-icon-wrapper .plan-form-control { padding-left:36px; }
+.btn-submit { background:linear-gradient(135deg,#2151A1,#38bdf8); color:#fff; border:none; border-radius:12px; padding:12px 28px; font-weight:600; font-size:0.95rem; cursor:pointer; transition:opacity 0.2s, transform 0.15s; box-shadow:0 4px 12px rgba(33,81,161,0.3); }
+.btn-submit:hover { opacity:0.9; transform:translateY(-1px); }
+.btn-cancel { background:transparent; color:#64748b; border:1px solid rgba(0,0,0,0.12); border-radius:12px; padding:12px 24px; font-weight:500; text-decoration:none; font-size:0.95rem; transition:background 0.2s; }
+.dark-mode .btn-cancel { color:#94a3b8; border-color:rgba(255,255,255,0.1); }
+.btn-cancel:hover { background:rgba(0,0,0,0.05); }
+.dark-mode .btn-cancel:hover { background:rgba(255,255,255,0.05); }
+.error-alert { background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#dc2626; border-radius:12px; padding:12px 16px; margin-bottom:20px; font-size:0.9rem; display:flex; align-items:center; gap:10px; }
+.dark-mode .error-alert { color:#f87171; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3 px-3 px-md-4">
+    <div class="form-card">
+        <div class="form-page-title">
+            <div class="title-icon"><i class="fas fa-plus"></i></div>
+            Add Subscription Plan
+        </div>
+
+        {% if error %}
+        <div class="error-alert"><i class="fas fa-exclamation-circle"></i> {{ error }}</div>
+        {% endif %}
+
+        <form method="post" autocomplete="off">
+            {% csrf_token %}
+
+            <div class="form-section-label"><i class="fas fa-info-circle me-1"></i> Plan Details</div>
+
+            <div class="mb-3">
+                <label class="plan-form-label">Plan Name <span class="req">*</span></label>
+                <div class="input-icon-wrapper">
+                    <i class="fas fa-tag i-icon"></i>
+                    <input type="text" name="plan_name" class="plan-form-control" required placeholder="e.g. Basic 10Mbps" value="{{ data.plan_name|default:'' }}">
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-6">
+                    <label class="plan-form-label">Upload Speed (Mbps) <span class="req">*</span></label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-arrow-up i-icon"></i>
+                        <input type="number" name="speed_up" class="plan-form-control" required min="1" placeholder="e.g. 10" value="{{ data.speed_up|default:'' }}">
+                    </div>
+                </div>
+                <div class="col-6">
+                    <label class="plan-form-label">Download Speed (Mbps) <span class="req">*</span></label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-arrow-down i-icon"></i>
+                        <input type="number" name="speed_down" class="plan-form-control" required min="1" placeholder="e.g. 10" value="{{ data.speed_down|default:'' }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-6">
+                    <label class="plan-form-label">Price (&#8369;) <span class="req">*</span></label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-peso-sign i-icon"></i>
+                        <input type="number" name="price" class="plan-form-control" required min="0" step="0.01" placeholder="e.g. 999.00" value="{{ data.price|default:'' }}">
+                    </div>
+                </div>
+                <div class="col-6">
+                    <label class="plan-form-label">Validity (days) <span class="req">*</span></label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-calendar-days i-icon"></i>
+                        <input type="number" name="validity_days" class="plan-form-control" required min="1" placeholder="e.g. 30" value="{{ data.validity_days|default:'' }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="plan-form-label">Description</label>
+                <textarea name="description" class="plan-form-control" rows="3" placeholder="Optional description of this plan...">{{ data.description|default:'' }}</textarea>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-between gap-2">
+                <a href="{% url 'service_plans' %}" class="btn-cancel">Cancel</a>
+                <button type="submit" class="btn-submit"><i class="fas fa-save me-2"></i>Add Plan</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

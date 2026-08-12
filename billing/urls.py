@@ -14,6 +14,13 @@ urlpatterns = [
     path('live-monitoring/', views.live_monitoring_view, name='live_monitoring'),
     path('api/live-monitoring/', views.api_live_monitoring_data, name='api_live_monitoring'),
     
+    # Subscription / Service Plans routes
+    path('subscriptions/', views.subscription_plans_view, name='subscription_plans'),
+    path('plans/', views.service_plans_view, name='service_plans'),
+    path('plans/add/', views.add_plan_view, name='add_plan'),
+    path('plans/edit/<int:plan_id>/', views.edit_plan_view, name='edit_plan'),
+    path('plans/delete/<int:plan_id>/', views.delete_plan_view, name='delete_plan'),
+    
     # Auth route
     path('login/', auth_views.LoginView.as_view(template_name='billing/login.html'), name='login'),
 ]

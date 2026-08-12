@@ -1,0 +1,321 @@
+{% extends 'billing/base.html' %}
+{% load static %}
+
+{% block title %}Customer Subscriptions{% endblock %}
+
+{% block extra_css %}
+<style>
+.subscriptions-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:24px; }
+.subscriptions-title { display:flex; align-items:center; gap:12px; font-size:1.6em; font-weight:700; color:#1e293b; }
+.dark-mode .subscriptions-title { color:#f1f5f9; }
+.subscriptions-title .title-icon { width:44px; height:44px; background:linear-gradient(135deg,#16a34a,#10b981); border-radius:12px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.2rem; box-shadow:0 4px 12px rgba(22,163,74,0.3); }
+
+/* SUMMARY CARDS */
+.summary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:28px; }
+.sum-card { background:#fff; border:1px solid rgba(0,0,0,0.06); border-radius:16px; padding:20px; display:flex; align-items:center; gap:16px; box-shadow:0 2px 8px rgba(0,0,0,0.06); transition:transform 0.2s,box-shadow 0.2s; }
+.dark-mode .sum-card { background:#1e293b; border:1px solid rgba(255,255,255,0.06); }
+.sum-card:hover { transform:translateY(-3px); box-shadow:0 6px 20px rgba(0,0,0,0.12); }
+.sum-card .card-icon { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; flex-shrink:0; }
+.sum-card .card-label { font-size:0.78rem; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; margin-bottom:4px; }
+.dark-mode .sum-card .card-label { color:#94a3b8; }
+.sum-card .card-value { font-size:1.5rem; font-weight:700; color:#0f172a; line-height:1; }
+.dark-mode .sum-card .card-value { color:#f1f5f9; }
+
+/* Connection Cards */
+.conn-card { background:#fff; border:1px solid rgba(0,0,0,0.06); border-radius:16px; padding:20px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:28px;}
+.dark-mode .conn-card { background:#1e293b; border:1px solid rgba(255,255,255,0.06); }
+.conn-card-active { border-left: 5px solid #10b981; }
+.conn-card-inactive { border-left: 5px solid #64748b; }
+
+/* Filter Bar */
+.filter-card { background:#fff; border:1px solid rgba(0,0,0,0.06); border-radius:16px; padding:20px; margin-bottom:28px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+.dark-mode .filter-card { background:#1e293b; border:1px solid rgba(255,255,255,0.06); }
+.filter-input, .filter-select { padding:10px 14px; border-radius:10px; border:1px solid rgba(0,0,0,0.1); background:#f8fafc; color:#334155; font-size:0.9rem; transition:border 0.2s; width:100%; }
+.dark-mode .filter-input, .dark-mode .filter-select { background:rgba(15,23,42,0.5); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; }
+.filter-input:focus, .filter-select:focus { outline:none; border-color:#38bdf8; }
+.btn-filter { background:linear-gradient(135deg,#2151A1,#38bdf8); color:#fff; border:none; border-radius:10px; padding:10px; font-weight:600; width:100%; transition:opacity 0.2s; }
+.btn-filter:hover { opacity:0.9; }
+
+/* Table */
+.subs-table-card { background:#fff; border:1px solid rgba(0,0,0,0.06); border-radius:18px; overflow:hidden; box-shadow:0 2px 12px rgba(0,0,0,0.07); }
+.dark-mode .subs-table-card { background:#1e293b; border:1px solid rgba(255,255,255,0.06); }
+.subs-table { width:100%; border-collapse:collapse; }
+.subs-table thead tr { background:#f8fafc; border-bottom:2px solid rgba(0,0,0,0.06); }
+.dark-mode .subs-table thead tr { background:rgba(255,255,255,0.03); border-bottom:2px solid rgba(255,255,255,0.06); }
+.subs-table th { padding:12px 16px; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; font-weight:600; white-space:nowrap; }
+.dark-mode .subs-table th { color:#94a3b8; }
+.subs-table th a { color: inherit; text-decoration: none; }
+.subs-table td { padding:14px 16px; font-size:0.9rem; color:#334155; border-bottom:1px solid rgba(0,0,0,0.04); vertical-align:middle; white-space:nowrap; }
+.dark-mode .subs-table td { color:#cbd5e1; border-bottom:1px solid rgba(255,255,255,0.04); }
+.subs-table tbody tr:last-child td { border-bottom:none; }
+.subs-table tbody tr:hover { background:rgba(56,189,248,0.05); }
+.dark-mode .subs-table tbody tr:hover { background:rgba(56,189,248,0.07); }
+
+/* Badges */
+.status-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:8px; font-size:0.8rem; font-weight:600; }
+.status-active { background:rgba(16,185,129,0.1); color:#10b981; }
+.status-warning { background:rgba(245,158,11,0.1); color:#f59e0b; }
+.status-danger { background:rgba(239,68,68,0.1); color:#ef4444; }
+.status-secondary { background:rgba(100,116,139,0.1); color:#64748b; }
+.dark-mode .status-active { background:rgba(16,185,129,0.15); color:#34d399; }
+.dark-mode .status-warning { background:rgba(245,158,11,0.15); color:#fbbf24; }
+.dark-mode .status-danger { background:rgba(239,68,68,0.15); color:#f87171; }
+.dark-mode .status-secondary { background:rgba(100,116,139,0.15); color:#94a3b8; }
+
+.action-btn { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:6px; color:#fff; border:none; margin-right:4px; font-size:0.8rem; transition:transform 0.15s; text-decoration:none; }
+.action-btn:hover { transform:scale(1.1); color:#fff; }
+.btn-view { background:#0ea5e9; }
+.btn-pay { background:#10b981; }
+.btn-rebate { background:#f59e0b; }
+.btn-adjust { background:#ef4444; }
+.btn-soa { background:#16a34a; }
+.btn-log { background:#64748b; }
+
+/* Pagination */
+.pagination-container { padding: 14px 20px; display: flex; justify-content: center; border-top: 1px solid rgba(0,0,0,0.05); }
+.dark-mode .pagination-container { border-top: 1px solid rgba(255,255,255,0.05); }
+.pagination { display: flex; list-style: none; padding: 0; margin: 0; gap: 5px; }
+.page-item .page-link { padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.1); color: #334155; text-decoration: none; }
+.dark-mode .page-item .page-link { border-color: rgba(255,255,255,0.1); color: #e2e8f0; }
+.page-item.active .page-link { background: #38bdf8; color: white; border-color: #38bdf8; }
+.page-item.disabled .page-link { opacity: 0.5; pointer-events: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3 px-3 px-md-4">
+    <div class="subscriptions-header">
+        <div class="subscriptions-title">
+            <div class="title-icon"><i class="fa-regular fa-address-book"></i></div>
+            Customer Subscriptions
+        </div>
+    </div>
+
+    <!-- STATUS SUMMARY -->
+    <div class="summary-grid">
+        <div class="sum-card">
+            <div class="card-icon" style="background:rgba(16,185,129,0.1);color:#10b981;"><i class="fas fa-check-circle"></i></div>
+            <div><div class="card-label">Active</div><div class="card-value">{{ count_active }}</div></div>
+        </div>
+        <div class="sum-card">
+            <div class="card-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b;"><i class="fas fa-exclamation-triangle"></i></div>
+            <div><div class="card-label">Expiring Soon</div><div class="card-value">{{ count_expiring }}</div></div>
+        </div>
+        <div class="sum-card">
+            <div class="card-icon" style="background:rgba(239,68,68,0.1);color:#ef4444;"><i class="fas fa-times-circle"></i></div>
+            <div><div class="card-label">Expired</div><div class="card-value">{{ count_expired }}</div></div>
+        </div>
+        <div class="sum-card">
+            <div class="card-icon" style="background:rgba(100,116,139,0.1);color:#64748b;"><i class="fas fa-user-slash"></i></div>
+            <div><div class="card-label">Inactive</div><div class="card-value">{{ count_inactive }}</div></div>
+        </div>
+    </div>
+
+    <!-- CONNECTION SUMMARY -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="conn-card conn-card-active">
+                <i class="fas fa-link fs-3 text-success mb-2"></i>
+                <h3 class="fw-bold fs-2 mb-1">{{ count_connected }}</h3>
+                <div class="text-muted text-uppercase" style="font-size:0.8rem; letter-spacing:1px; font-weight:600;">Connected</div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="conn-card conn-card-inactive">
+                <i class="fas fa-unlink fs-3 text-secondary mb-2"></i>
+                <h3 class="fw-bold fs-2 mb-1">{{ count_not_connected }}</h3>
+                <div class="text-muted text-uppercase" style="font-size:0.8rem; letter-spacing:1px; font-weight:600;">Not Connected</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FILTER BAR -->
+    <div class="filter-card">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <input type="text" name="search" class="filter-input" placeholder="Search username, name, address..." value="{{ search }}">
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="filter-select">
+                    <option value="">All Statuses</option>
+                    <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                    <option value="expiring" {% if status_filter == 'expiring' %}selected{% endif %}>Expiring Soon</option>
+                    <option value="expired" {% if status_filter == 'expired' %}selected{% endif %}>Expired</option>
+                    <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="device" class="filter-select">
+                    <option value="">All MT Devices</option>
+                    {% for d in unique_devices %}
+                    <option value="{{ d }}" {% if device_filter == d %}selected{% endif %}>{{ d }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="connection" class="filter-select">
+                    <option value="">All Connections</option>
+                    <option value="Connected" {% if connection_filter == 'Connected' %}selected{% endif %}>Connected</option>
+                    <option value="Not Connected" {% if connection_filter == 'Not Connected' %}selected{% endif %}>Not Connected</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="per_page" class="filter-select">
+                    <option value="10" {% if per_page == 10 %}selected{% endif %}>10 per page</option>
+                    <option value="35" {% if per_page == 35 %}selected{% endif %}>35 per page</option>
+                    <option value="50" {% if per_page == 50 %}selected{% endif %}>50 per page</option>
+                    <option value="100" {% if per_page == 100 %}selected{% endif %}>100 per page</option>
+                </select>
+            </div>
+            <div class="col-md-1 d-flex gap-2">
+                <button type="submit" class="btn-filter"><i class="fas fa-search"></i></button>
+            </div>
+            <!-- Keep sorting fields when filtering -->
+            <input type="hidden" name="sort" value="{{ sort }}">
+            <input type="hidden" name="order" value="{{ order }}">
+        </form>
+    </div>
+
+    <!-- DATA TABLE -->
+    <div class="subs-table-card">
+        <div class="table-responsive">
+            <table class="subs-table">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>
+                            <a href="?search={{ search }}&status={{ status_filter }}&device={{ device_filter }}&connection={{ connection_filter }}&per_page={{ per_page }}&sort=expires_at&order={% if sort == 'expires_at' and order == 'ASC' %}desc{% else %}asc{% endif %}">
+                                Expires At {% if sort == 'expires_at' %}<i class="fas fa-sort-{{ order|lower }}"></i>{% endif %}
+                            </a>
+                        </th>
+                        <th>Router Status</th>
+                        <th>Account Type</th>
+                        <th>Uptime / Downtime</th>
+                        <th>Profile</th>
+                        <th>Actions</th>
+                        <th>
+                            <a href="?search={{ search }}&status={{ status_filter }}&device={{ device_filter }}&connection={{ connection_filter }}&per_page={{ per_page }}&sort=username&order={% if sort == 'username' and order == 'ASC' %}desc{% else %}asc{% endif %}">
+                                Username {% if sort == 'username' %}<i class="fas fa-sort-{{ order|lower }}"></i>{% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="?search={{ search }}&status={{ status_filter }}&device={{ device_filter }}&connection={{ connection_filter }}&per_page={{ per_page }}&sort=full_name&order={% if sort == 'full_name' and order == 'ASC' %}desc{% else %}asc{% endif %}">
+                                Full Name {% if sort == 'full_name' %}<i class="fas fa-sort-{{ order|lower }}"></i>{% endif %}
+                            </a>
+                        </th>
+                        <th>MT Device</th>
+                        <th>
+                            <a href="?search={{ search }}&status={{ status_filter }}&device={{ device_filter }}&connection={{ connection_filter }}&per_page={{ per_page }}&sort=plan_name&order={% if sort == 'plan_name' and order == 'ASC' %}desc{% else %}asc{% endif %}">
+                                Plan Name {% if sort == 'plan_name' %}<i class="fas fa-sort-{{ order|lower }}"></i>{% endif %}
+                            </a>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for customer in page_obj %}
+                    <tr>
+                        <td>
+                            {% if not customer.expires_at %}
+                                <span class="status-badge status-danger"><i class="fas fa-times-circle"></i> Expired</span>
+                            {% elif customer.expires_at <= one_month_ago %}
+                                <span class="status-badge status-secondary"><i class="fas fa-user-slash"></i> Inactive</span>
+                            {% elif customer.expires_at <= now %}
+                                <span class="status-badge status-danger"><i class="fas fa-times-circle"></i> Expired</span>
+                            {% elif customer.expires_at <= soon %}
+                                <span class="status-badge status-warning"><i class="fas fa-exclamation-triangle"></i> Expiring Soon</span>
+                            {% else %}
+                                <span class="status-badge status-active"><i class="fas fa-check-circle"></i> Active</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ customer.expires_at|date:"Y-m-d H:i"|default:"N/A" }}</td>
+                        <td>
+                            {% if customer.mt_connected %}
+                                <span class="status-badge status-active"><i class="fas fa-link"></i> Connected</span>
+                            {% else %}
+                                <span class="status-badge status-danger"><i class="fas fa-unlink"></i> Not Connected</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if customer.account_type %}
+                                <span class="badge bg-primary">{{ customer.account_type.type_name }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if customer.mt_connected %}
+                                <span class="badge bg-success">Uptime: {{ customer.mt_uptime }}</span>
+                            {% elif customer.mt_downtime %}
+                                <span class="badge bg-danger">Down: {{ customer.mt_downtime }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Unknown</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if customer.mt_profile %}
+                                <span class="badge bg-info text-dark">{{ customer.mt_profile }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="#" class="action-btn btn-view" title="View"><i class="fas fa-eye"></i></a>
+                            <a href="#" class="action-btn btn-pay" title="Pay"><i class="fas fa-credit-card"></i></a>
+                            <a href="#" class="action-btn btn-rebate" title="Rebates"><i class="fa-solid fa-coins"></i></a>
+                            <a href="#" class="action-btn btn-adjust" title="Re-Adjustments"><i class="fa-regular fa-face-meh"></i></a>
+                            <a href="#" class="action-btn btn-soa" title="SOA"><i class="bi bi-file-earmark-text"></i></a>
+                            <a href="#" class="action-btn btn-log" title="User Log"><i class="fas fa-clipboard-list"></i></a>
+                        </td>
+                        <td class="fw-bold">{{ customer.username }}</td>
+                        <td>{{ customer.full_name }}</td>
+                        <td>
+                            {% if customer.mikrotik_device %}
+                                <span class="badge bg-warning text-dark">{{ customer.mikrotik_device.device_name }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">None</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ customer.service_plan.plan_name|default:"N/A" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="11" class="text-center py-4 text-muted">No results found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- PAGINATION -->
+        {% if page_obj.has_other_pages %}
+        <div class="pagination-container">
+            <ul class="pagination">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?search={{ search }}&status={{ status_filter }}&device={{ device_filter }}&connection={{ connection_filter }}&per_page={{ per_page }}&sort={{ sort }}&order={{ order }}&page={{ page_obj.previous_page_number }}">&laquo;</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+                {% endif %}
+
+                {% for i in page_obj.paginator.page_range %}
+                    {% if page_obj.number == i %}
+                        <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                    {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                        <li class="page-item"><a class="page-link" href="?search={{ search }}&status={{ status_filter }}&device={{ device_filter }}&connection={{ connection_filter }}&per_page={{ per_page }}&sort={{ sort }}&order={{ order }}&page={{ i }}">{{ i }}</a></li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?search={{ search }}&status={{ status_filter }}&device={{ device_filter }}&connection={{ connection_filter }}&per_page={{ per_page }}&sort={{ sort }}&order={{ order }}&page={{ page_obj.next_page_number }}">&raquo;</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
