@@ -4,7 +4,7 @@ from django.core.cache import cache
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
-from .models import AccountType, ServicePlan, Customer, CustomerStatus, Agent, Barangay
+from .models import AccountType, ServicePlan, Customer, Agent, Barangay
 from network_manager.models import MikrotikDevice
 from network_manager.services import MikrotikAPI
 from django.contrib.auth.models import User
@@ -44,8 +44,8 @@ def dashboard_view(request):
         })
         
     # Top Service Plans
-    top_plans_qs = Customer.objects.values('service_plan__plan_name').annotate(cnt=Count('id')).order_by('-cnt')[:5]
-    top_plans = [{'plan_name': p['service_plan__plan_name'] or 'None', 'cnt': p['cnt']} for p in top_plans_qs]
+    top_plans_qs = Customer.objects.values('plan__name').annotate(cnt=Count('id')).order_by('-cnt')[:5]
+    top_plans = [{'plan_name': p['plan__name'] or 'None', 'cnt': p['cnt']} for p in top_plans_qs]
     
     # Expiring Users
     expiring_qs = Customer.objects.filter(expires_at__date=today)
@@ -53,8 +53,8 @@ def dashboard_view(request):
     for u in expiring_qs:
         is_expired = u.expires_at < now
         expiring_users.append({
-            'username': u.username or u.full_name,
-            'plan_name': u.service_plan.plan_name if u.service_plan else 'N/A',
+            'username': u.pppoe_username or u.full_name,
+            'plan_name': u.plan.name if u.plan else 'N/A',
             'expires_at': u.expires_at,
             'is_expired': is_expired,
             'expires_at_epoch': int(u.expires_at.timestamp())
@@ -84,79 +84,6 @@ def dashboard_view(request):
     
     return render(request, 'billing/dashboard.html', context)
 
-
-@login_required
-def add_customer_view(request):
-    if request.method == 'POST':
-        # Retrieve form data
-        plan_id = request.POST.get('plan_name')
-        agent_id = request.POST.get('agent')
-        full_name = request.POST.get('full_name')
-        account_type_id = request.POST.get('account_type')
-        email = request.POST.get('email')
-        phone = request.POST.get('phone')
-        address = request.POST.get('address')
-        barangay_id = request.POST.get('barangay_id')
-        status = request.POST.get('status')
-        created_at = request.POST.get('created_at')
-        latitude = request.POST.get('latitude')
-        longitude = request.POST.get('longitude')
-        
-        mikrotik_device_ids = request.POST.getlist('mikrotik_devices[]')
-        pppoe_username = request.POST.get('pppoe_username')
-        pppoe_password = request.POST.get('pppoe_password')
-        pppoe_profile = request.POST.get('pppoe_profile')
-        
-        # We will grab the first Mikrotik device for the model relationship
-        first_device_id = mikrotik_device_ids[0] if mikrotik_device_ids else None
-        device_obj = None
-        if first_device_id:
-            device_obj = MikrotikDevice.objects.filter(id=first_device_id).first()
-            
-        plan_obj = ServicePlan.objects.filter(id=plan_id).first()
-        acct_obj = AccountType.objects.filter(id=account_type_id).first()
-        agent_obj = Agent.objects.filter(id=agent_id).first() if agent_id else None
-        barangay_obj = Barangay.objects.filter(id=barangay_id).first() if barangay_id else None
-        
-        # For new customers, they might not have an expiry yet if they haven't paid
-        # But we need to save the customer.
-        try:
-            customer = Customer.objects.create(
-                username=pppoe_username, # usually username is PPPoE username
-                full_name=full_name,
-                email=email,
-                phone=phone,
-                address=address,
-                barangay=barangay_obj,
-                status=status,
-                agent=agent_obj,
-                latitude=float(latitude) if latitude else None,
-                longitude=float(longitude) if longitude else None,
-                service_plan=plan_obj,
-                account_type=acct_obj,
-                mikrotik_device=device_obj,
-                expires_at=None,  # Since they just signed up
-                pppoe_password=pppoe_password,
-                pppoe_profile=pppoe_profile
-            )
-            messages.success(request, f"Customer {full_name} created in database successfully and synced to router!")
-                        
-        except Exception as e:
-            messages.error(request, f"Error saving customer: {str(e)}")
-            
-        return redirect('add_customer')
-        
-    # GET request
-    context = {
-        'plans': ServicePlan.objects.all(),
-        'accountTypes': AccountType.objects.all(),
-        'devices': MikrotikDevice.objects.all(),
-        'agents': Agent.objects.all(),
-        'current_ph_time': timezone.localtime().strftime('%Y-%m-%dT%H:%M'),
-        'barangays': Barangay.objects.all(),
-    }
-    
-    return render(request, 'billing/add_customer.html', context)
 
 @login_required
 def mikrotik_active_users_view(request):
@@ -243,8 +170,8 @@ def service_plans_view(request):
         avg_price = 0.00
 
     # Most subscribed plan
-    top_plan_qs = Customer.objects.values('service_plan__plan_name').annotate(cnt=Count('id')).order_by('-cnt').first()
-    top_plan_name = top_plan_qs['service_plan__plan_name'] if top_plan_qs else 'N/A'
+    top_plan_qs = Customer.objects.values('plan__name').annotate(cnt=Count('id')).order_by('-cnt').first()
+    top_plan_name = top_plan_qs['plan__name'] if top_plan_qs else 'N/A'
 
     success_msg = request.GET.get('success')
     return render(request, 'billing/service_plans.html', {
@@ -352,9 +279,9 @@ def delete_plan_view(request, plan_id):
 def subscription_plans_view(request):
     """Customer Subscriptions Dashboard."""
     # 1. Base Query
-    customers = Customer.objects.select_related('service_plan', 'mikrotik_device').filter(
-        username__isnull=False,
-    ).exclude(username='').exclude(status='pull out')
+    customers = Customer.objects.select_related('plan', 'mikrotik_device').filter(
+        pppoe_username__isnull=False,
+    ).exclude(pppoe_username='').exclude(status='pull out')
 
     # 2. Extract Filters
     search = request.GET.get('search', '').strip()
@@ -368,12 +295,12 @@ def subscription_plans_view(request):
     
     valid_sorts = {
         'id': 'id',
-        'username': 'username',
+        'username': 'pppoe_username',
         'full_name': 'full_name',
         'address': 'address',
         'expires_at': 'expires_at',
-        'plan_name': 'service_plan__plan_name',
-        'price': 'service_plan__price',
+        'plan_name': 'plan__name',
+        'price': 'plan__price',
         'device_name': 'mikrotik_device__device_name'
     }
     
@@ -389,7 +316,7 @@ def subscription_plans_view(request):
     # 4. Apply Filters (except connection, which requires live MT data)
     if search:
         customers = customers.filter(
-            Q(username__icontains=search) | 
+            Q(pppoe_username__icontains=search) | 
             Q(full_name__icontains=search) | 
             Q(address__icontains=search)
         )
@@ -440,9 +367,9 @@ def subscription_plans_view(request):
     customer_list = list(customers.order_by(sort_field))
     
     if connection_filter == 'Connected':
-        customer_list = [c for c in customer_list if c.username in connected_usernames]
+        customer_list = [c for c in customer_list if c.pppoe_username in connected_usernames]
     elif connection_filter == 'Not Connected':
-        customer_list = [c for c in customer_list if c.username not in connected_usernames]
+        customer_list = [c for c in customer_list if c.pppoe_username not in connected_usernames]
 
     # Calculate Summaries (based on filtered list)
     count_active = 0
@@ -454,7 +381,7 @@ def subscription_plans_view(request):
     
     for c in customer_list:
         # Connection
-        if c.username in connected_usernames:
+        if c.pppoe_username in connected_usernames:
             count_connected += 1
         else:
             count_not_connected += 1
@@ -479,9 +406,9 @@ def subscription_plans_view(request):
     
     # Append MT data to page objects
     for c in page_obj:
-        c.mt_connected = c.username in connected_usernames
-        c.mt_uptime = connected_usernames.get(c.username, {}).get('uptime', '')
-        c_secret = ppp_users_status.get(c.username, {})
+        c.mt_connected = c.pppoe_username in connected_usernames
+        c.mt_uptime = connected_usernames.get(c.pppoe_username, {}).get('uptime', '')
+        c_secret = ppp_users_status.get(c.pppoe_username, {})
         c.mt_profile = c_secret.get('profile', '')
         c.mt_last_logged_out = c_secret.get('last_logged_out', '')
         
@@ -532,7 +459,7 @@ from .models import Agent
 # Replaces agents.php
 def agent_list(request):
     agents = Agent.objects.all().order_by('name')
-    return render(request, 'billing/agent_list.html', {'agents': agents})
+    return render(request, 'billing/agents.html', {'agents': agents})
 
 # Replaces add_agent.php
 def add_agent(request):
@@ -584,10 +511,9 @@ def view_agent(request, agent_id):
         
         try:
             cust = Customer.objects.get(id=cust_id, agent=agent)
-            cust.referral_received = '1' if referral_value == '1' else '0'
             cust.adjusted_by_referral = request.user.username if request.user.is_authenticated else 'unknown'
             cust.save()
-            messages.success(request, f"Referral status updated for {cust.username or cust.full_name}.")
+            messages.success(request, f"Referral status updated for {cust.pppoe_username or cust.full_name}.")
         except Customer.DoesNotExist:
             messages.error(request, "Customer not found.")
             
@@ -603,7 +529,7 @@ from .models import SubscriptionPlan
 
 def plan_list(request):
     plans = SubscriptionPlan.objects.all().order_by('price')
-    return render(request, 'billing/plan_list.html', {'plans': plans})
+    return render(request, 'billing/service_plans.html', {'plans': plans})
 
 def add_plan(request):
     if request.method == 'POST':
@@ -657,7 +583,7 @@ from .models import SystemAdmin
 def staff_list(request):
     # Fetch all admins, ordered by the newest created
     staff_members = SystemAdmin.objects.all().order_by('-created_at')
-    return render(request, 'billing/staff_list.html', {'staff_members': staff_members})
+    return render(request, 'billing/staff_and_admins.html', {'staff_members': staff_members})
 
 def add_staff(request):
     if request.method == 'POST':
@@ -694,3 +620,50 @@ def add_staff(request):
         return redirect('staff_list')
         
     return render(request, 'billing/add_staff.html')
+@login_required
+def customer_list(request):
+    customers = Customer.objects.select_related('plan', 'agent', 'barangay', 'mikrotik_device').all()
+    return render(request, 'billing/customer_list.html', {'customers': customers})
+
+@login_required
+def add_customer(request):
+    if request.method == 'POST':
+        Customer.objects.create(
+            full_name=request.POST.get('full_name'),
+            email=request.POST.get('email'),
+            phone=request.POST.get('phone'),
+            address=request.POST.get('address'),
+            pppoe_username=request.POST.get('pppoe_username'),
+            pppoe_password=request.POST.get('pppoe_password'),
+            status=request.POST.get('status', 'active'),
+            plan_id=request.POST.get('plan_id'),
+            mikrotik_device_id=request.POST.get('device_id'),
+            agent_id=request.POST.get('agent_id'),
+            barangay_id=request.POST.get('barangay_id'),
+            account_type_id=request.POST.get('account_type_id'),
+            latitude=request.POST.get('latitude') or None,
+            longitude=request.POST.get('longitude') or None,
+            created_form_by=request.user.username
+        )
+        messages.success(request, 'Customer added successfully!')
+        return redirect('customer_list')
+    context = {
+        'plans': ServicePlan.objects.all(),
+        'devices': MikrotikDevice.objects.all(),
+        'agents': Agent.objects.all(),
+        'barangays': Barangay.objects.all(),
+        'accountTypes': AccountType.objects.all()
+    }
+    return render(request, 'billing/add_customer.html', context)
+
+@login_required
+def edit_customer(request, customer_id):
+    pass
+
+@login_required
+def view_customer(request, customer_id):
+    pass
+
+@login_required
+def delete_customer(request, customer_id):
+    pass

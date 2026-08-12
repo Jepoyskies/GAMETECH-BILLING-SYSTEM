@@ -13,10 +13,9 @@ class ServicePlanAdmin(admin.ModelAdmin):
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ('username', 'full_name', 'email', 'phone', 'service_plan', 'status', 'mikrotik_device', 'expires_at')
-    search_fields = ('username', 'full_name', 'email', 'phone', 'mac_address')
-    list_filter = ('status', 'service_plan', 'account_type', 'mikrotik_device')
-    autocomplete_fields = ('service_plan', 'account_type', 'mikrotik_device')
+    list_display = ('full_name', 'email', 'phone', 'plan', 'status', 'mikrotik_device')
+    search_fields = ('full_name', 'email', 'phone', 'mac_address')
+    list_filter = ('status', 'plan', 'account_type', 'mikrotik_device')
 
 @admin.register(Agent)
 class AgentAdmin(admin.ModelAdmin):

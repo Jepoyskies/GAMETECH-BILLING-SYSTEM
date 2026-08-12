@@ -1,285 +1,237 @@
-{% extends 'billing/base.html' %}
+{% extends "billing/base.html" %}
 {% load static %}
 
-{% block title %}Add Customer & PPPoE User{% endblock %}
+{% block title %}Add Customer{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <style>
-        #map { height: 250px; border: 1px solid #eee; }
-        .created-by-info {
-            font-size: 1rem;
-            color: #6c757d;
-        }
-        .section-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #3a3a3a;
-            margin-top: 2rem;
-            margin-bottom: .5rem;
-        }
-        .card {
-            border-radius: 12px;
-            border: 1px solid #eee;
-        }
-    </style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+.form-card { background:#fff; border:1px solid rgba(0,0,0,0.06); border-radius:20px; padding:36px; box-shadow:0 4px 24px rgba(0,0,0,0.08); max-width:800px; margin:0 auto; }
+.dark-mode .form-card { background:#1e293b; border:1px solid rgba(255,255,255,0.06); box-shadow:0 4px 24px rgba(0,0,0,0.3); }
+.form-page-title { display:flex; align-items:center; gap:12px; font-size:1.5em; font-weight:700; color:#1e293b; margin-bottom:28px; }
+.dark-mode .form-page-title { color:#f1f5f9; }
+.form-page-title .title-icon { width:44px; height:44px; background:linear-gradient(135deg,#2151A1,#38bdf8); border-radius:12px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.2rem; box-shadow:0 4px 12px rgba(33,81,161,0.3); }
+.form-section-label { font-size:0.75rem; text-transform:uppercase; letter-spacing:1px; color:#94a3b8; font-weight:600; margin-bottom:16px; padding-bottom:8px; border-bottom:1px solid rgba(0,0,0,0.06); }
+.dark-mode .form-section-label { border-bottom:1px solid rgba(255,255,255,0.06); }
+.plan-form-control { display:block; width:100%; padding:10px 14px; border-radius:10px; border:1px solid rgba(0,0,0,0.12); background:#f8fafc; color:#334155; font-size:0.95rem; transition:border 0.2s, box-shadow 0.2s; }
+.dark-mode .plan-form-control { background:rgba(15,23,42,0.5); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; }
+.plan-form-control:focus { outline:none; border-color:#38bdf8; box-shadow:0 0 0 3px rgba(56,189,248,0.12); }
+.plan-form-control::placeholder { color:#94a3b8; }
+.plan-form-label { display:block; font-size:0.88rem; font-weight:600; color:#475569; margin-bottom:6px; }
+.dark-mode .plan-form-label { color:#94a3b8; }
+.plan-form-label .req { color:#ef4444; margin-left:2px; }
+.input-icon-wrapper { position:relative; }
+.input-icon-wrapper .i-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:0.9rem; pointer-events:none; }
+.input-icon-wrapper .plan-form-control { padding-left:36px; }
+.btn-submit { background:linear-gradient(135deg,#2151A1,#38bdf8); color:#fff; border:none; border-radius:12px; padding:12px 28px; font-weight:600; font-size:0.95rem; cursor:pointer; transition:opacity 0.2s, transform 0.15s; box-shadow:0 4px 12px rgba(33,81,161,0.3); }
+.btn-submit:hover { opacity:0.9; transform:translateY(-1px); }
+.btn-cancel { background:transparent; color:#64748b; border:1px solid rgba(0,0,0,0.12); border-radius:12px; padding:12px 24px; font-weight:500; text-decoration:none; font-size:0.95rem; transition:background 0.2s; }
+.dark-mode .btn-cancel { color:#94a3b8; border-color:rgba(255,255,255,0.1); }
+.btn-cancel:hover { background:rgba(0,0,0,0.05); }
+.dark-mode .btn-cancel:hover { background:rgba(255,255,255,0.05); }
+.error-alert { background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#dc2626; border-radius:12px; padding:12px 16px; margin-bottom:20px; font-size:0.9rem; display:flex; align-items:center; gap:10px; }
+.dark-mode .error-alert { color:#f87171; }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="row justify-content-center">
-        <div class="col-12 col-md-10 col-lg-8">
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-            
-            {% if pppoe_message %}
-                {{ pppoe_message|safe }}
-            {% endif %}
+<div class="container-fluid py-3 px-3 px-md-4">
+    <div class="form-card">
+        <div class="form-page-title">
+            <div class="title-icon"><i class="fas fa-user-plus"></i></div>
+            Add Customer
+        </div>
 
-            <div class="card p-3 shadow-sm border-0">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div>
-                        <h5 class="mb-0">Add Customer & PPPoE User</h5>
-                    </div>
-                    <div class="created-by-info">
-                        <i class="fa fa-user"></i>
-                        Created Form By: <span>{{ request.user.username }}</span>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="error-alert"><i class="fas fa-exclamation-circle"></i> {{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post" autocomplete="off">
+            {% csrf_token %}
+
+            <div class="form-section-label"><i class="fas fa-id-card me-1"></i> Basic Information</div>
+
+            <div class="mb-3">
+                <label class="plan-form-label">Full Name <span class="req">*</span></label>
+                <div class="input-icon-wrapper">
+                    <i class="fas fa-user i-icon"></i>
+                    <input type="text" name="full_name" class="plan-form-control" required placeholder="Juan Dela Cruz">
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="plan-form-label">Email Address <span class="req">*</span></label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-envelope i-icon"></i>
+                        <input type="email" name="email" class="plan-form-control" required placeholder="juan@example.com">
                     </div>
                 </div>
-                <hr>
-                <form action="" method="POST" id="customerForm">
-                    {% csrf_token %}
-                    <input type="hidden" name="created_form_by" value="{{ request.user.username }}">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label for="plan_name" class="form-label">Plan Name</label>
-                            <select name="plan_name" id="plan_name" class="form-select" required>
-                                <option value="">Select Plan</option>
-                                {% for plan in plans %}
-                                    <option value="{{ plan.id }}">{{ plan.plan_name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="agent" class="form-label">Agent</label>
-                            <select name="agent" id="agent" class="form-select" required>
-                                <option value="">Select Agent</option>
-                                {% for agentOpt in agents %}
-                                    <option value="{{ agentOpt.id }}">{{ agentOpt.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="full_name" class="form-label">Full Name</label>
-                            <input type="text" name="full_name" id="full_name" class="form-control" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="account_type" class="form-label">Account Type</label>
-                            <select name="account_type" id="account_type" class="form-select" required>
-                                <option value="">Select Account Type</option>
-                                {% for acct in accountTypes %}
-                                    <option value="{{ acct.id }}">{{ acct.type_name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="email" class="form-label">Email</label>
-                            <input type="email" name="email" id="email" class="form-control" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="phone" class="form-label">Phone</label>
-                            <div class="input-group">
-                                <span class="input-group-text">63</span>
-                                <input type="text" name="phone" id="phone" maxlength="10" pattern="\d{10}" inputmode="numeric"
-                                       class="form-control" placeholder="e.g. 9454261242">
-                            </div>
-                            <small class="text-muted">10-digit mobile number (e.g. 9454261242)</small>
-                        </div>
-                        <div class="col-12">
-                            <label for="address" class="form-label">Address</label>
-                            <input type="text" name="address" id="address" class="form-control">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="barangay_id" class="form-label">Barangay</label>
-                            <select name="barangay_id" id="barangay_id" class="form-select" required>
-                                <option value="">Select Barangay</option>
-                                {% for b in barangays %}
-                                    <option value="{{ b.id }}">{{ b.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="status" class="form-label">Status</label>
-                            <select name="status" id="status" class="form-select" required>
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                                <option value="suspended">Suspended</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="created_at" class="form-label">Created At</label>
-                            <!-- Django passes standard dates format strings to value -->
-                            <input type="datetime-local" name="created_at" id="created_at" class="form-control" value="{{ current_ph_time }}" required>
-                            <small class="form-text text-muted">PH time: Asia/Manila</small>
-                        </div>
+                <div class="col-md-6">
+                    <label class="plan-form-label">Phone Number <span class="req">*</span></label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-phone i-icon"></i>
+                        <input type="text" name="phone" class="plan-form-control" required placeholder="e.g. 9123456789">
                     </div>
-                    <div class="section-title">Location</div>
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label for="latitude" class="form-label">Latitude</label>
-                            <input type="number" step="any" name="latitude" id="latitude" class="form-control" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="longitude" class="form-label">Longitude</label>
-                            <input type="number" step="any" name="longitude" id="longitude" class="form-control" required>
-                        </div>
-                        <div class="col-12">
-                            <div id="map" class="mb-2"></div>
-                            <div class="d-flex justify-content-between">
-                                <small class="text-muted">
-                                    Click or drag marker on map, or type coordinates.
-                                </small>
-                                <button type="button" class="btn btn-sm btn-outline-info" id="useLocationBtn">
-                                    <i class="fas fa-location-crosshairs"></i> Use Current Location
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="section-title">MikroTik Device(s) & PPPoE</div>
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <label for="mikrotik_devices" class="form-label">Select MikroTik Device(s) <span class="text-danger">*</span></label>
-                            <select name="mikrotik_devices[]" id="mikrotik_devices" class="form-select" multiple required>
-                                {% for device in devices %}
-                                    <option value="{{ device.id }}">{{ device.device_name }} ({{ device.ip_address }})</option>
-                                {% endfor %}
-                            </select>
-                            <small class="form-text text-muted">Hold Ctrl (Windows) or Command (Mac) for multiple selection.</small>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="pppoe_username" class="form-label">PPPoE Username <span class="text-danger">*</span></label>
-                            <input type="text" name="pppoe_username" id="pppoe_username" class="form-control" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="pppoe_password" class="form-label">PPPoE Password <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                                <input type="password" name="pppoe_password" id="pppoe_password"
-                                       class="form-control" required>
-                                <button type="button" class="btn btn-outline-secondary" id="togglePppoePassword" tabindex="-1">
-                                    <i class="fa fa-eye" id="togglePppoePasswordIcon"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="pppoe_profile" class="form-label">PPPoE Profile <span class="text-danger">*</span></label>
-                            <select name="pppoe_profile" id="pppoe_profile" class="form-select" required>
-                                <option value="expired">expired</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="d-flex gap-2 justify-content-end mt-4">
-                        <button type="button" class="btn btn-outline-secondary" onclick="window.history.back();">
-                            <i class="fas fa-arrow-left"></i> Back
-                        </button>
-                        <button type="button" class="btn btn-outline-info" onclick="location.reload();">
-                            <i class="fas fa-sync-alt"></i> Refresh
-                        </button>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-plus me-1"></i> Add Customer
-                        </button>
-                    </div>
-                </form>
+                </div>
             </div>
-        </div>
+
+            <div class="form-section-label mt-4"><i class="fas fa-network-wired me-1"></i> Subscription & Network</div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="plan-form-label">Subscription Plan <span class="req">*</span></label>
+                    <select name="plan_id" class="plan-form-control" required>
+                        <option value="">-- Select Plan --</option>
+                        {% for plan in plans %}
+                        <option value="{{ plan.id }}">{{ plan.name }} (₱{{ plan.price }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="plan-form-label">Account Type <span class="req">*</span></label>
+                    <select name="account_type_id" class="plan-form-control" required>
+                        <option value="">-- Select Type --</option>
+                        {% for type in account_types %}
+                        <option value="{{ type.id }}">{{ type.type_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="plan-form-label">Agent <span class="req">*</span></label>
+                    <select name="agent_id" class="plan-form-control" required>
+                        <option value="">-- Select Agent --</option>
+                        {% for agent in agents %}
+                        <option value="{{ agent.id }}">{{ agent.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="plan-form-label">Mikrotik Device <span class="req">*</span></label>
+                    <select name="device_id" class="plan-form-control" required>
+                        <option value="">-- Select Router --</option>
+                        {% for device in devices %}
+                        <option value="{{ device.id }}">{{ device.device_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="plan-form-label">PPPoE Username</label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-wifi i-icon"></i>
+                        <input type="text" name="pppoe_username" class="plan-form-control" placeholder="Optional">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="plan-form-label">PPPoE Password</label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-lock i-icon"></i>
+                        <input type="password" name="pppoe_password" class="plan-form-control" placeholder="Optional">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label class="plan-form-label">Status <span class="req">*</span></label>
+                <select name="status" class="plan-form-control" required>
+                    <option value="active" selected>Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="pending">Pending</option>
+                    <option value="suspended">Suspended</option>
+                    <option value="pull out">Pull Out</option>
+                </select>
+            </div>
+
+            <div class="form-section-label mt-4"><i class="fas fa-map-marker-alt me-1"></i> Location Details</div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-12">
+                    <label class="plan-form-label">Full Address</label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-home i-icon"></i>
+                        <input type="text" name="address" class="plan-form-control" placeholder="Street Address">
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <label class="plan-form-label">Barangay <span class="req">*</span></label>
+                    <select name="barangay_id" class="plan-form-control" required>
+                        <option value="">-- Select Barangay --</option>
+                        {% for barangay in barangays %}
+                        <option value="{{ barangay.id }}">{{ barangay.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="plan-form-label">Map Pin Location (Drag to update)</label>
+                <div id="map" style="height: 300px; border-radius: 12px; margin-bottom: 15px; border: 1px solid rgba(0,0,0,0.1);"></div>
+                <div class="row g-3">
+                    <div class="col-6">
+                        <label class="plan-form-label">Latitude</label>
+                        <input type="text" id="latitude" name="latitude" class="plan-form-control" readonly>
+                    </div>
+                    <div class="col-6">
+                        <label class="plan-form-label">Longitude</label>
+                        <input type="text" id="longitude" name="longitude" class="plan-form-control" readonly>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-between gap-2 mt-4">
+                <a href="{% url 'customer_list' %}" class="btn-cancel">Cancel</a>
+                <button type="submit" class="btn-submit"><i class="fas fa-save me-2"></i>Save Customer</button>
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    const DEFAULT_LAT = 8.484274;
-    const DEFAULT_LNG = 124.623878;
+    document.addEventListener("DOMContentLoaded", function() {
+        // Initialize Map
+        var defaultLat = 14.5995; // Default coordinates (Manila)
+        var defaultLng = 120.9842;
+        
+        var map = L.map('map').setView([defaultLat, defaultLng], 13);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
 
-    const latInput = document.getElementById('latitude');
-    const lngInput = document.getElementById('longitude');
-    const useLocationBtn = document.getElementById('useLocationBtn');
+        var marker = L.marker([defaultLat, defaultLng], {
+            draggable: true
+        }).addTo(map);
 
-    let lat = parseFloat(latInput.value) || DEFAULT_LAT;
-    let lng = parseFloat(lngInput.value) || DEFAULT_LNG;
+        function updateInputs(lat, lng) {
+            document.getElementById('latitude').value = lat.toFixed(8);
+            document.getElementById('longitude').value = lng.toFixed(8);
+        }
 
-    const map = L.map('map').setView([lat, lng], 16);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a>',
-    }).addTo(map);
+        // Set initial values
+        updateInputs(defaultLat, defaultLng);
 
-    let marker = null;
-    function addOrMoveMarker(lat, lng, center = true) {
-        if (marker) map.removeLayer(marker);
-        marker = L.marker([lat, lng], { draggable: true }).addTo(map);
-        marker.on('dragend', function (e) {
-            const pos = e.target.getLatLng();
-            latInput.value = pos.lat.toFixed(6);
-            lngInput.value = pos.lng.toFixed(6);
-            if (center) map.setView([pos.lat, pos.lng], map.getZoom());
+        // Update when marker is dragged
+        marker.on('dragend', function(e) {
+            var position = marker.getLatLng();
+            updateInputs(position.lat, position.lng);
         });
-        if (center) map.setView([lat, lng], Math.max(map.getZoom(), 16));
-    }
-    if (!isNaN(lat) && !isNaN(lng)) addOrMoveMarker(lat, lng, false);
 
-    map.on('click', function (e) {
-        const { lat, lng } = e.latlng;
-        latInput.value = lat.toFixed(6);
-        lngInput.value = lng.toFixed(6);
-        addOrMoveMarker(lat, lng);
-    });
-
-    function syncMapFromInputs() {
-        const lat = parseFloat(latInput.value);
-        const lng = parseFloat(lngInput.value);
-        if (!isNaN(lat) && !isNaN(lng)) addOrMoveMarker(lat, lng);
-    }
-    latInput.addEventListener('change', syncMapFromInputs);
-    lngInput.addEventListener('change', syncMapFromInputs);
-
-    useLocationBtn.addEventListener('click', function () {
-        latInput.value = DEFAULT_LAT.toFixed(6);
-        lngInput.value = DEFAULT_LNG.toFixed(6);
-        addOrMoveMarker(DEFAULT_LAT, DEFAULT_LNG);
-        map.setView([DEFAULT_LAT, DEFAULT_LNG], 16);
-    });
-});
-</script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    // Note: The AJAX validation for username and email was removed because the API endpoints 
-    // ('check_pppoe_username.php', 'check_email.php') need to be rewritten in Django views first. 
-    // You can re-add them using Django URLs later e.g., fetch('/check-email/?email=...')
-
-    // PPPoE password show/hide
-    const pwdInput = document.getElementById('pppoe_password');
-    const toggleBtn = document.getElementById('togglePppoePassword');
-    const icon = document.getElementById('togglePppoePasswordIcon');
-    if (pwdInput && toggleBtn) {
-        toggleBtn.addEventListener('click', function () {
-            const isHidden = pwdInput.type === 'password';
-            pwdInput.type = isHidden ? 'text' : 'password';
-            if (icon) {
-                icon.classList.toggle('fa-eye', !isHidden);
-                icon.classList.toggle('fa-eye-slash', isHidden);
-            }
+        // Update when map is clicked
+        map.on('click', function(e) {
+            marker.setLatLng(e.latlng);
+            updateInputs(e.latlng.lat, e.latlng.lng);
         });
-    }
-});
+    });
 </script>
-
 {% endblock %}

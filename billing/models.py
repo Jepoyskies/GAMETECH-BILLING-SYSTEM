@@ -77,55 +77,50 @@ class Barangay(models.Model):
         return self.name
 
 
-class CustomerStatus(models.TextChoices):
-    ACTIVE = 'active', 'Active'
-    INACTIVE = 'inactive', 'Inactive'
-    SUSPENDED = 'suspended', 'Suspended'
-    PENDING = 'pending', 'Pending'
-    PULL_OUT = 'pull out', 'Pull Out'
-    EXPIRED = 'expired', 'Expired'
-    PAST_DUE = 'past_due', 'Past Due'
-
 class Customer(models.Model):
-    username = models.CharField(max_length=255, null=True, blank=True, db_index=True)
-    account_type = models.ForeignKey(AccountType, on_delete=models.SET_NULL, null=True, blank=True, related_name='customers')
-    service_plan = models.ForeignKey(ServicePlan, on_delete=models.SET_NULL, null=True, blank=True, related_name='customers')
-    
-    expires_at = models.DateTimeField(null=True, blank=True)
-    full_name = models.CharField(max_length=100)
-    email = models.EmailField(max_length=100, unique=True, null=True, blank=True)
-    phone = models.CharField(max_length=20, null=True, blank=True)
-    address = models.CharField(max_length=255, null=True, blank=True)
-    barangay = models.ForeignKey(Barangay, on_delete=models.SET_NULL, null=True, blank=True, related_name='customers')
-    status = models.CharField(max_length=20, choices=CustomerStatus.choices, default=CustomerStatus.ACTIVE)
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    latitude = models.FloatField(null=True, blank=True)
-    longitude = models.FloatField(null=True, blank=True)
-    
-    adjusted_by_router = models.CharField(max_length=100, null=True, blank=True)
-    adjusted_by_referral = models.CharField(max_length=250, null=True, blank=True)
-    last_expiry_sms_sent = models.DateTimeField(null=True, blank=True)
-    
-    mikrotik_device = models.ForeignKey(MikrotikDevice, on_delete=models.SET_NULL, null=True, blank=True, related_name='customers')
-    
-    sms_sent_at = models.DateTimeField(null=True, blank=True)
-    mac_address = models.CharField(max_length=32, null=True, blank=True)
-    agent = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True, blank=True, related_name='customers')
-    referral_received = models.CharField(max_length=250, null=True, blank=True)
-    last_sms_due = models.DateTimeField(null=True, blank=True)
-    
-    # PPPoE Mikrotik Fields
-    pppoe_password = models.CharField(max_length=128, null=True, blank=True)
-    pppoe_profile = models.CharField(max_length=100, default='default', null=True, blank=True)
+    STATUS_CHOICES = (
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+        ('pending', 'Pending'),
+        ('suspended', 'Suspended'),
+        ('pull out', 'Pull Out'),
+    )
 
-    connection = models.CharField(max_length=20)
-    created_form_by = models.CharField(max_length=250)
+    # --- THE SUPERPOWER: Foreign Keys tying the system together ---
+    plan = models.ForeignKey('SubscriptionPlan', on_delete=models.SET_NULL, null=True)
+    agent = models.ForeignKey('Agent', on_delete=models.SET_NULL, null=True)
+    barangay = models.ForeignKey('Barangay', on_delete=models.SET_NULL, null=True)
+    account_type = models.ForeignKey('AccountType', on_delete=models.SET_NULL, null=True)
+    mikrotik_device = models.ForeignKey(MikrotikDevice, on_delete=models.SET_NULL, null=True)
+
+    # --- Core Details ---
+    full_name = models.CharField(max_length=255)
+    email = models.EmailField(unique=True, null=True, blank=True)
+    phone = models.CharField(max_length=20, null=True, blank=True) # We will store the 639... format
+    address = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
     
-    cignalplay_no = models.CharField(max_length=64, null=True, blank=True)
-    cignalplay_date = models.DateField(null=True, blank=True)
+    # --- Location (For the Map) ---
+    latitude = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+
+    # --- PPPoE Details ---
+    pppoe_username = models.CharField(max_length=255, unique=True, null=True, blank=True)
+    pppoe_password = models.CharField(max_length=255, null=True, blank=True)
+    mac_address = models.CharField(max_length=100, null=True, blank=True)
+    
+    # --- Cignal Play Integration ---
+    cignalplay_no = models.CharField(max_length=100, null=True, blank=True)
+    cignalplay_date = models.DateTimeField(null=True, blank=True)
+
+    # --- Audit Logs ---
+    created_form_by = models.CharField(max_length=100, null=True, blank=True)
+    adjusted_by_router = models.CharField(max_length=100, null=True, blank=True)
     cignalplay_adjustedby = models.CharField(max_length=100, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    sms_sent_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
-        return self.username or self.full_name
+        return f"{self.full_name} ({self.pppoe_username})"
 
