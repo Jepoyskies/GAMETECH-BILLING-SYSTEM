@@ -51,17 +51,20 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='customer',
             name='plan',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to='billing.subscriptionplan'),
+            field=models.ForeignKey(
+                null=True, on_delete=django.db.models.deletion.SET_NULL, to='billing.subscriptionplan'),
         ),
         migrations.AddField(
             model_name='customer',
             name='pppoe_username',
-            field=models.CharField(blank=True, max_length=255, null=True, unique=True),
+            field=models.CharField(
+                blank=True, max_length=255, null=True, unique=True),
         ),
         migrations.AlterField(
             model_name='customer',
             name='account_type',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to='billing.accounttype'),
+            field=models.ForeignKey(
+                null=True, on_delete=django.db.models.deletion.SET_NULL, to='billing.accounttype'),
         ),
         migrations.AlterField(
             model_name='customer',
@@ -71,12 +74,14 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='customer',
             name='agent',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to='billing.agent'),
+            field=models.ForeignKey(
+                null=True, on_delete=django.db.models.deletion.SET_NULL, to='billing.agent'),
         ),
         migrations.AlterField(
             model_name='customer',
             name='barangay',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to='billing.barangay'),
+            field=models.ForeignKey(
+                null=True, on_delete=django.db.models.deletion.SET_NULL, to='billing.barangay'),
         ),
         migrations.AlterField(
             model_name='customer',
@@ -96,7 +101,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='customer',
             name='email',
-            field=models.EmailField(blank=True, max_length=254, null=True, unique=True),
+            field=models.EmailField(
+                blank=True, max_length=254, null=True, unique=True),
         ),
         migrations.AlterField(
             model_name='customer',
@@ -106,12 +112,14 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='customer',
             name='latitude',
-            field=models.DecimalField(blank=True, decimal_places=8, max_digits=12, null=True),
+            field=models.DecimalField(
+                blank=True, decimal_places=8, max_digits=12, null=True),
         ),
         migrations.AlterField(
             model_name='customer',
             name='longitude',
-            field=models.DecimalField(blank=True, decimal_places=8, max_digits=12, null=True),
+            field=models.DecimalField(
+                blank=True, decimal_places=8, max_digits=12, null=True),
         ),
         migrations.AlterField(
             model_name='customer',
@@ -121,7 +129,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='customer',
             name='mikrotik_device',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to='network_manager.mikrotikdevice'),
+            field=models.ForeignKey(
+                null=True, on_delete=django.db.models.deletion.SET_NULL, to='network_manager.mikrotikdevice'),
         ),
         migrations.AlterField(
             model_name='customer',
@@ -131,6 +140,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='customer',
             name='status',
-            field=models.CharField(choices=[('active', 'Active'), ('inactive', 'Inactive'), ('pending', 'Pending'), ('suspended', 'Suspended'), ('pull out', 'Pull Out')], default='active', max_length=20),
+            field=models.CharField(choices=[('active', 'Active'), ('inactive', 'Inactive'), ('pending', 'Pending'), (
+                'suspended', 'Suspended'), ('pull out', 'Pull Out')], default='active', max_length=20),
         ),
     ]

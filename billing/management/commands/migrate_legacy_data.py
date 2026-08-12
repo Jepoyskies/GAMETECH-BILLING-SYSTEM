@@ -8,11 +8,13 @@ from network_manager.models import MikrotikDevice
 from django.utils.dateparse import parse_datetime, parse_date
 from django.utils.timezone import make_aware
 
+
 class Command(BaseCommand):
     help = 'Migrates legacy data from gametech sql dump'
 
     def add_arguments(self, parser):
-        parser.add_argument('sql_file', type=str, help='Path to the SQL dump file')
+        parser.add_argument('sql_file', type=str,
+                            help='Path to the SQL dump file')
 
     def parse_sql_line(self, line):
         line = line.strip()
@@ -22,14 +24,15 @@ class Command(BaseCommand):
             line = line[:-2]
         elif line.endswith('),'):
             line = line[:-2]
-        
+
         # Parse as CSV row
-        reader = csv.reader(io.StringIO(line), quotechar="'", skipinitialspace=True)
+        reader = csv.reader(io.StringIO(
+            line), quotechar="'", skipinitialspace=True)
         try:
             row = next(reader)
         except StopIteration:
             return []
-        
+
         # Convert 'NULL' string to None
         return [None if col == 'NULL' else col for col in row]
 
@@ -48,12 +51,14 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         sql_file_path = kwargs['sql_file']
-        
+
         if not os.path.exists(sql_file_path):
-            self.stdout.write(self.style.ERROR(f'File "{sql_file_path}" does not exist.'))
+            self.stdout.write(self.style.ERROR(
+                f'File "{sql_file_path}" does not exist.'))
             return
 
-        self.stdout.write(self.style.SUCCESS(f'Reading from {sql_file_path} ...'))
+        self.stdout.write(self.style.SUCCESS(
+            f'Reading from {sql_file_path} ...'))
 
         current_table = None
 
@@ -79,7 +84,7 @@ class Command(BaseCommand):
                 elif line.startswith('INSERT INTO'):
                     current_table = None
                     continue
-                
+
                 if not current_table:
                     continue
 
@@ -110,19 +115,24 @@ class Command(BaseCommand):
                         )
                         device_map[device_name] = obj
                         if created:
-                            self.stdout.write(f'Created MikrotikDevice: {device_name}')
+                            self.stdout.write(
+                                f'Created MikrotikDevice: {device_name}')
                     except Exception as e:
-                        self.stderr.write(f'Error MikrotikDevice {device_name}: {e}')
+                        self.stderr.write(
+                            f'Error MikrotikDevice {device_name}: {e}')
 
                 elif current_table == 'account_type' and len(row) >= 2:
                     type_name = row[1]
                     try:
-                        obj, created = AccountType.objects.get_or_create(type_name=type_name)
+                        obj, created = AccountType.objects.get_or_create(
+                            type_name=type_name)
                         account_type_map[type_name] = obj
                         if created:
-                            self.stdout.write(f'Created AccountType: {type_name}')
+                            self.stdout.write(
+                                f'Created AccountType: {type_name}')
                     except Exception as e:
-                        self.stderr.write(f'Error AccountType {type_name}: {e}')
+                        self.stderr.write(
+                            f'Error AccountType {type_name}: {e}')
 
                 elif current_table == 'service_plans' and len(row) >= 13:
                     plan_name = row[2]
@@ -145,34 +155,43 @@ class Command(BaseCommand):
                         )
                         plan_map[plan_name] = obj
                         if created:
-                            self.stdout.write(f'Created ServicePlan: {plan_name}')
+                            self.stdout.write(
+                                f'Created ServicePlan: {plan_name}')
                     except Exception as e:
-                        self.stderr.write(f'Error ServicePlan {plan_name}: {e}')
+                        self.stderr.write(
+                            f'Error ServicePlan {plan_name}: {e}')
 
                 elif current_table == 'customers' and len(row) >= 27:
                     username = row[1]
                     full_name = row[5]
                     email = row[6] if row[6] else None
-                    if email == '': email = None
-                    
+                    if email == '':
+                        email = None
+
                     acct_type_str = row[2]
                     plan_name_str = row[3]
                     device_name_str = row[16]
 
                     acct_obj = account_type_map.get(acct_type_str)
                     if not acct_obj and acct_type_str:
-                        acct_obj = AccountType.objects.filter(type_name=acct_type_str).first()
-                        if acct_obj: account_type_map[acct_type_str] = acct_obj
+                        acct_obj = AccountType.objects.filter(
+                            type_name=acct_type_str).first()
+                        if acct_obj:
+                            account_type_map[acct_type_str] = acct_obj
 
                     plan_obj = plan_map.get(plan_name_str)
                     if not plan_obj and plan_name_str:
-                        plan_obj = ServicePlan.objects.filter(plan_name=plan_name_str).first()
-                        if plan_obj: plan_map[plan_name_str] = plan_obj
-                        
+                        plan_obj = ServicePlan.objects.filter(
+                            plan_name=plan_name_str).first()
+                        if plan_obj:
+                            plan_map[plan_name_str] = plan_obj
+
                     device_obj = device_map.get(device_name_str)
                     if not device_obj and device_name_str:
-                        device_obj = MikrotikDevice.objects.filter(device_name=device_name_str).first()
-                        if device_obj: device_map[device_name_str] = device_obj
+                        device_obj = MikrotikDevice.objects.filter(
+                            device_name=device_name_str).first()
+                        if device_obj:
+                            device_map[device_name_str] = device_obj
 
                     expires_at = self.parse_datetime_safe(row[4])
                     if not expires_at:
@@ -208,14 +227,18 @@ class Command(BaseCommand):
 
                         if username:
                             defaults['email'] = email
-                            customer, created = Customer.objects.get_or_create(username=username, defaults=defaults)
+                            customer, created = Customer.objects.get_or_create(
+                                username=username, defaults=defaults)
                         else:
                             defaults['username'] = username
-                            customer, created = Customer.objects.get_or_create(full_name=full_name, email=email, defaults=defaults)
-                        
+                            customer, created = Customer.objects.get_or_create(
+                                full_name=full_name, email=email, defaults=defaults)
+
                         if created:
-                            self.stdout.write(f'Created Customer: {username or full_name}')
+                            self.stdout.write(
+                                f'Created Customer: {username or full_name}')
                     except Exception as e:
-                        self.stderr.write(f'Error Customer {username or full_name}: {e}')
+                        self.stderr.write(
+                            f'Error Customer {username or full_name}: {e}')
 
         self.stdout.write(self.style.SUCCESS('Migration complete!'))

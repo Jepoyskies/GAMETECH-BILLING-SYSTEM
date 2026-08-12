@@ -13,6 +13,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='mikrotikdevice',
             name='api_port_8700',
-            field=models.CharField(blank=True, default='8700', max_length=50, null=True),
+            field=models.CharField(
+                blank=True, default='8700', max_length=50, null=True),
         ),
     ]

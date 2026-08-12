@@ -18,7 +18,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='customer',
             name='pppoe_profile',
-            field=models.CharField(blank=True, default='default', max_length=100, null=True),
+            field=models.CharField(
+                blank=True, default='default', max_length=100, null=True),
         ),
         migrations.AlterField(
             model_name='customer',

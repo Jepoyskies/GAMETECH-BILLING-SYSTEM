@@ -1,6 +1,7 @@
 from django.contrib import admin
 from .models import MikrotikDevice
 
+
 @admin.register(MikrotikDevice)
 class MikrotikDeviceAdmin(admin.ModelAdmin):
     list_display = ('device_name', 'ip_address', 'api_username', 'api_port')

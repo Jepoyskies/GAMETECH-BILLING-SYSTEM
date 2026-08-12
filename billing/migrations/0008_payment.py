@@ -14,21 +14,27 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Payment',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.BigAutoField(auto_created=True,
+                 primary_key=True, serialize=False, verbose_name='ID')),
                 ('username', models.CharField(blank=True, max_length=255, null=True)),
-                ('plan_name', models.CharField(blank=True, max_length=100, null=True)),
-                ('mikrotik_device_name', models.CharField(blank=True, max_length=100, null=True)),
+                ('plan_name', models.CharField(
+                    blank=True, max_length=100, null=True)),
+                ('mikrotik_device_name', models.CharField(
+                    blank=True, max_length=100, null=True)),
                 ('amount', models.DecimalField(decimal_places=2, max_digits=10)),
                 ('days_paid', models.FloatField(blank=True, null=True)),
                 ('payment_method', models.CharField(max_length=50)),
-                ('reference_no', models.CharField(blank=True, max_length=100, null=True)),
+                ('reference_no', models.CharField(
+                    blank=True, max_length=100, null=True)),
                 ('reason', models.CharField(blank=True, max_length=255, null=True)),
                 ('expires_at', models.DateTimeField(blank=True, null=True)),
                 ('payment_date_received', models.DateTimeField(blank=True, null=True)),
                 ('paid_at', models.DateTimeField(blank=True, null=True)),
-                ('adjusted_by', models.CharField(blank=True, max_length=100, null=True)),
+                ('adjusted_by', models.CharField(
+                    blank=True, max_length=100, null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('customer', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='payments', to='billing.customer')),
+                ('customer', models.ForeignKey(blank=True, null=True,
+                 on_delete=django.db.models.deletion.SET_NULL, related_name='payments', to='billing.customer')),
             ],
         ),
     ]

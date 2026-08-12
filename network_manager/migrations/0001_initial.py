@@ -14,7 +14,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='MikrotikDevice',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.BigAutoField(auto_created=True,
+                 primary_key=True, serialize=False, verbose_name='ID')),
                 ('device_name', models.CharField(max_length=100)),
                 ('ip_address', models.GenericIPAddressField()),
                 ('api_username', models.CharField(max_length=50)),

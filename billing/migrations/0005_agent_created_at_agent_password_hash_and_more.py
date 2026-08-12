@@ -14,7 +14,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='agent',
             name='created_at',
-            field=models.DateTimeField(auto_now_add=True, default=django.utils.timezone.now),
+            field=models.DateTimeField(
+                auto_now_add=True, default=django.utils.timezone.now),
             preserve_default=False,
         ),
         migrations.AddField(
@@ -25,7 +26,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='agent',
             name='email',
-            field=models.EmailField(default='unknown@example.com', max_length=254, unique=True),
+            field=models.EmailField(
+                default='unknown@example.com', max_length=254, unique=True),
             preserve_default=False,
         ),
         migrations.AlterField(

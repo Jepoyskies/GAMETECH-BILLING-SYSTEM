@@ -13,12 +13,15 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='SystemAdmin',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.BigAutoField(auto_created=True,
+                 primary_key=True, serialize=False, verbose_name='ID')),
                 ('username', models.CharField(max_length=150, unique=True)),
                 ('full_name', models.CharField(max_length=255)),
                 ('email', models.EmailField(max_length=254, unique=True)),
-                ('role', models.CharField(choices=[('Admin', 'Admin'), ('Editor', 'Editor'), ('Viewer', 'Viewer')], default='Admin', max_length=50)),
-                ('status', models.CharField(choices=[('Active', 'Active'), ('Inactive', 'Inactive')], default='Active', max_length=20)),
+                ('role', models.CharField(choices=[('Admin', 'Admin'), ('Editor', 'Editor'), (
+                    'Viewer', 'Viewer')], default='Admin', max_length=50)),
+                ('status', models.CharField(choices=[
+                 ('Active', 'Active'), ('Inactive', 'Inactive')], default='Active', max_length=20)),
                 ('password_hash', models.CharField(max_length=255)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
             ],

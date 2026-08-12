@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class MikrotikDevice(models.Model):
     device_name = models.CharField(max_length=255, unique=True)
     ip_address = models.GenericIPAddressField()
