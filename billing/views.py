@@ -223,3 +223,76 @@ def api_live_monitoring_data(request):
         cache.set(cache_key, data, 2)
         
     return JsonResponse(data, safe=False)
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.contrib.auth.hashers import make_password
+from .models import Agent
+
+# Replaces agents.php
+def agent_list(request):
+    agents = Agent.objects.all().order_by('name')
+    return render(request, 'billing/agent_list.html', {'agents': agents})
+
+# Replaces add_agent.php
+def add_agent(request):
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        email = request.POST.get('email')
+        phone = request.POST.get('phone')
+        password = request.POST.get('password')
+        
+        # Hash password if provided, just like PHP's password_hash()
+        hashed_pw = make_password(password) if password else None
+        
+        Agent.objects.create(name=name, email=email, phone=phone, password_hash=hashed_pw)
+        messages.success(request, f"Agent {name} added successfully.")
+        return redirect('agent_list')
+        
+    return render(request, 'billing/add_agent.html')
+
+# Replaces edit_agent.php
+def edit_agent(request, agent_id):
+    agent = get_object_or_404(Agent, id=agent_id)
+    if request.method == 'POST':
+        agent.name = request.POST.get('name')
+        agent.email = request.POST.get('email')
+        agent.phone = request.POST.get('phone')
+        agent.save()
+        
+        messages.success(request, "Agent updated successfully.")
+        return redirect('agent_list')
+        
+    return render(request, 'billing/edit_agent.html', {'agent': agent})
+
+# Replaces the delete portion inside agents.php
+def delete_agent(request, agent_id):
+    if request.method == 'POST':
+        agent = get_object_or_404(Agent, id=agent_id)
+        agent.delete()
+        messages.success(request, "Agent deleted successfully.")
+    return redirect('agent_list')
+
+# Replaces view_agent.php
+def view_agent(request, agent_id):
+    agent = get_object_or_404(Agent, id=agent_id)
+    from .models import Customer 
+    
+    if request.method == 'POST' and 'update_referral' in request.POST:
+        cust_id = request.POST.get('cust_id')
+        referral_value = request.POST.get('referral_value', '0')
+        
+        try:
+            cust = Customer.objects.get(id=cust_id, agent=agent)
+            cust.referral_received = '1' if referral_value == '1' else '0'
+            cust.adjusted_by_referral = request.user.username if request.user.is_authenticated else 'unknown'
+            cust.save()
+            messages.success(request, f"Referral status updated for {cust.username or cust.full_name}.")
+        except Customer.DoesNotExist:
+            messages.error(request, "Customer not found.")
+            
+        return redirect('view_agent', agent_id=agent.id)
+
+    customers = Customer.objects.filter(agent=agent)
+    
+    return render(request, 'billing/view_agent.html', {'agent': agent, 'customers': customers})
