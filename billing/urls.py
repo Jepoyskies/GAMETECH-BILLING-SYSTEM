@@ -16,10 +16,7 @@ urlpatterns = [
     
     # Subscription / Service Plans routes
     path('subscriptions/', views.subscription_plans_view, name='subscription_plans'),
-    path('plans/', views.service_plans_view, name='service_plans'),
-    path('plans/add/', views.add_plan_view, name='add_plan'),
-    path('plans/edit/<int:plan_id>/', views.edit_plan_view, name='edit_plan'),
-    path('plans/delete/<int:plan_id>/', views.delete_plan_view, name='delete_plan'),
+
     
     # Auth route
     path('login/', auth_views.LoginView.as_view(template_name='billing/login.html'), name='login'),
@@ -28,4 +25,10 @@ urlpatterns = [
     path('agents/edit/<int:agent_id>/', views.edit_agent, name='edit_agent'),
     path('agents/view/<int:agent_id>/', views.view_agent, name='view_agent'),
     path('agents/delete/<int:agent_id>/', views.delete_agent, name='delete_agent'),
+    path('plans/', views.plan_list, name='plan_list'),
+    path('plans/add/', views.add_plan, name='add_plan'),
+    path('plans/edit/<int:plan_id>/', views.edit_plan, name='edit_plan'),
+    path('plans/delete/<int:plan_id>/', views.delete_plan, name='delete_plan'),
+    path('staff/', views.staff_list, name='staff_list'),
+    path('staff/add/', views.add_staff, name='add_staff'),
 ]

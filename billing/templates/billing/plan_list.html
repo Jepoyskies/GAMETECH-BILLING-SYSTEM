@@ -1,0 +1,127 @@
+{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}Service Plans{% endblock %}
+
+{% block extra_css %}
+<!-- DataTables Bootstrap 5 CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+<style>
+    #plansTable th,
+    #plansTable td {
+        padding: 0.45rem 0.6rem !important;
+        font-size: 0.97rem;
+    }
+
+    .dataTables_length,
+    .dataTables_filter {
+        margin-bottom: 1rem;
+    }
+
+    .toast {
+        z-index: 1060;
+        min-width: 200px;
+    }
+
+    @media (max-width: 767.98px) {
+        #plansTable {
+            font-size: 0.94rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="container-fluid py-4 px-3 px-md-4">
+
+    <!-- Messages / Notifications -->
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="d-flex align-items-center mb-4">
+        <h2 class="mb-0 fw-bold text-primary">
+            <i class="fa-solid fa-network-wired"></i> Service Plans
+        </h2>
+    </div>
+
+    <div class="mb-3">
+        <a href="{% url 'add_plan' %}" class="btn btn-outline-secondary me-2" title="Add Plan">
+            <i class="fa-solid fa-plus"></i> Add Plan
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body table-responsive">
+            <table id="plansTable" class="table table-sm table-hover table-bordered align-middle" style="width:100%">
+                <thead class="table-primary">
+                    <tr>
+                        <th>ID</th>
+                        <th>Plan Name</th>
+                        <th>Up (Mbps)</th>
+                        <th>Down (Mbps)</th>
+                        <th>Price (₱)</th>
+                        <th>Validity (days)</th>
+                        <th>Description</th>
+                        <th style="min-width:110px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for plan in plans %}
+                    <tr>
+                        <td>{{ plan.id }}</td>
+                        <td><b>{{ plan.name }}</b></td>
+                        <td>{{ plan.speed_up }}</td>
+                        <td>{{ plan.speed_down }}</td>
+                        <td>₱{{ plan.price|floatformat:2 }}</td>
+                        <td>{{ plan.validity_days }}</td>
+                        <td style="max-width:180px; white-space:pre-line;">{{ plan.description|default:"-" }}</td>
+                        <td>
+                            <a href="{% url 'edit_plan' plan.id %}" class="btn btn-sm btn-outline-info mb-1"
+                                title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <!-- Using a mini form for secure deletion with CSRF token -->
+                            <form action="{% url 'delete_plan' plan.id %}" method="POST" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger mb-1"
+                                    onclick="return confirm('Are you sure you want to delete this plan?');"
+                                    title="Delete">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<!-- JS dependencies for DataTables -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        $('#plansTable').DataTable({
+            "lengthMenu": [5, 10, 25, 50, 100],
+            "pageLength": 10,
+            "order": [[0, "asc"]],
+            "columnDefs": [
+                { "orderable": false, "targets": 7 } // Actions column not sortable
+            ]
+        });
+    });
+</script>
+{% endblock %}

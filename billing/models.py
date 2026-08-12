@@ -36,6 +36,40 @@ class Agent(models.Model):
     def __str__(self):
         return self.name
 
+class SubscriptionPlan(models.Model):
+    name = models.CharField(max_length=255) # Maps to plan_name
+    speed_up = models.CharField(max_length=100) # e.g. "50 Mbps"
+    speed_down = models.CharField(max_length=100) # e.g. "50 Mbps"
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    validity_days = models.IntegerField(default=30)
+    description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} (₱{self.price})"
+
+class SystemAdmin(models.Model):
+    ROLE_CHOICES = (
+        ('Admin', 'Admin'),
+        ('Editor', 'Editor'),
+        ('Viewer', 'Viewer'),
+    )
+    STATUS_CHOICES = (
+        ('Active', 'Active'),
+        ('Inactive', 'Inactive'),
+    )
+
+    username = models.CharField(max_length=150, unique=True)
+    full_name = models.CharField(max_length=255)
+    email = models.EmailField(unique=True)
+    role = models.CharField(max_length=50, choices=ROLE_CHOICES, default='Admin')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Active')
+    password_hash = models.CharField(max_length=255) # We will hash this securely!
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.full_name
+
 class Barangay(models.Model):
     name = models.CharField(max_length=100)
 

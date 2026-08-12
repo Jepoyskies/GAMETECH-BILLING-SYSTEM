@@ -1,0 +1,134 @@
+{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}Staff & Admins{% endblock %}
+
+{% block extra_css %}
+<!-- DataTables Bootstrap 5 CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+<style>
+    #staffTable th,
+    #staffTable td {
+        padding: 0.6rem !important;
+        font-size: 0.95rem;
+    }
+
+    .dataTables_length,
+    .dataTables_filter {
+        margin-bottom: 1rem;
+    }
+
+    .badge-admin {
+        background-color: #6366f1;
+        color: white;
+    }
+
+    .badge-editor {
+        background-color: #14b8a6;
+        color: white;
+    }
+
+    .badge-viewer {
+        background-color: #94a3b8;
+        color: white;
+    }
+
+    .badge-active {
+        background-color: #22c55e;
+        color: white;
+    }
+
+    .badge-inactive {
+        background-color: #ef4444;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="container-fluid py-4 px-3 px-md-4">
+
+    <!-- Messages / Notifications -->
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="d-flex align-items-center mb-4">
+        <h2 class="mb-0 fw-bold text-primary">
+            <i class="fa-solid fa-users-cog"></i> Staff & Admins
+        </h2>
+    </div>
+
+    <div class="mb-3">
+        <a href="{% url 'add_staff' %}" class="btn btn-outline-secondary me-2" title="Add Staff">
+            <i class="fa-solid fa-user-plus"></i> Add Staff
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body table-responsive">
+            <table id="staffTable" class="table table-hover table-bordered align-middle" style="width:100%">
+                <thead class="table-primary">
+                    <tr>
+                        <th>Username</th>
+                        <th>Full Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Date Added</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for staff in staff_members %}
+                    <tr>
+                        <td><b>{{ staff.username }}</b></td>
+                        <td>{{ staff.full_name }}</td>
+                        <td>{{ staff.email }}</td>
+                        <td>
+                            {% if staff.role == 'Admin' %}
+                            <span class="badge badge-admin">Admin</span>
+                            {% elif staff.role == 'Editor' %}
+                            <span class="badge badge-editor">Editor</span>
+                            {% else %}
+                            <span class="badge badge-viewer">Viewer</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if staff.status == 'Active' %}
+                            <span class="badge badge-active">Active</span>
+                            {% else %}
+                            <span class="badge badge-inactive">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ staff.created_at|date:"M d, Y" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<!-- JS dependencies for DataTables -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        $('#staffTable').DataTable({
+            "lengthMenu": [10, 25, 50],
+            "pageLength": 10,
+            "order": [[5, "desc"]] // Sort by Date Added descending
+        });
+    });
+</script>
+{% endblock %}

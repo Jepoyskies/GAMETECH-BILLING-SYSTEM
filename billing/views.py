@@ -597,3 +597,100 @@ def view_agent(request, agent_id):
     
     return render(request, 'billing/view_agent.html', {'agent': agent, 'customers': customers})
 
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from .models import SubscriptionPlan
+
+def plan_list(request):
+    plans = SubscriptionPlan.objects.all().order_by('price')
+    return render(request, 'billing/plan_list.html', {'plans': plans})
+
+def add_plan(request):
+    if request.method == 'POST':
+        name = request.POST.get('plan_name')
+        speed_up = request.POST.get('speed_up')
+        speed_down = request.POST.get('speed_down')
+        price = request.POST.get('price')
+        validity_days = request.POST.get('validity_days')
+        description = request.POST.get('description')
+        
+        SubscriptionPlan.objects.create(
+            name=name,
+            speed_up=speed_up,
+            speed_down=speed_down,
+            price=price,
+            validity_days=validity_days,
+            description=description
+        )
+        messages.success(request, f"Service plan '{name}' added successfully!")
+        return redirect('plan_list')
+        
+    return render(request, 'billing/add_plan.html')
+
+def edit_plan(request, plan_id):
+    plan = get_object_or_404(SubscriptionPlan, id=plan_id)
+    if request.method == 'POST':
+        plan.name = request.POST.get('plan_name')
+        plan.speed_up = request.POST.get('speed_up')
+        plan.speed_down = request.POST.get('speed_down')
+        plan.price = request.POST.get('price')
+        plan.validity_days = request.POST.get('validity_days')
+        plan.description = request.POST.get('description')
+        plan.save()
+        
+        messages.success(request, "Service plan updated successfully!")
+        return redirect('plan_list')
+        
+    return render(request, 'billing/edit_plan.html', {'plan': plan})
+
+def delete_plan(request, plan_id):
+    plan = get_object_or_404(SubscriptionPlan, id=plan_id)
+    plan.delete()
+    messages.success(request, "Service plan deleted successfully!")
+    return redirect('plan_list')
+
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth.hashers import make_password
+from .models import SystemAdmin
+
+def staff_list(request):
+    # Fetch all admins, ordered by the newest created
+    staff_members = SystemAdmin.objects.all().order_by('-created_at')
+    return render(request, 'billing/staff_list.html', {'staff_members': staff_members})
+
+def add_staff(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        full_name = request.POST.get('full_name')
+        email = request.POST.get('email')
+        role = request.POST.get('role')
+        status = request.POST.get('status')
+        raw_password = request.POST.get('password')
+
+        # Check if username or email already exists to prevent errors
+        if SystemAdmin.objects.filter(username=username).exists():
+            messages.error(request, "That username is already taken.")
+            return redirect('add_staff')
+        
+        if SystemAdmin.objects.filter(email=email).exists():
+            messages.error(request, "That email is already registered.")
+            return redirect('add_staff')
+
+        # Securely hash the password
+        hashed_password = make_password(raw_password)
+
+        # Create the new staff user
+        SystemAdmin.objects.create(
+            username=username,
+            full_name=full_name,
+            email=email,
+            role=role,
+            status=status,
+            password_hash=hashed_password
+        )
+        
+        messages.success(request, f"Staff member '{full_name}' added successfully!")
+        return redirect('staff_list')
+        
+    return render(request, 'billing/add_staff.html')
