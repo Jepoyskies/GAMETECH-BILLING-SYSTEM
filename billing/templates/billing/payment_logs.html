@@ -1,0 +1,268 @@
+{% extends 'billing/base.html' %}
+{% load static %}
+
+{% block title %}Payment Logs{% endblock %}
+
+{% block content %}
+<style>
+    /* Premium aesthetics for payment logs */
+    .mini-card { background: var(--card-bg); border-radius: 12px; padding: 1.25rem; box-shadow: 0 4px 6px rgba(0,0,0,0.04); border: 1px solid var(--border-color); display: flex; flex-direction: column; height: 100%; transition: transform 0.2s; }
+    .mini-card:hover { transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.08); }
+    .mini-card .label { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem; font-weight: 600; }
+    .mini-card .value { font-size: 1.5rem; font-weight: 700; color: var(--text-color); margin-top: auto; }
+    
+    .bg-grand { background: linear-gradient(135deg, rgba(255,193,7,0.1) 0%, rgba(255,236,179,0.2) 100%); border-left: 4px solid #ffc107; }
+    .bg-range { background: linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(167,243,208,0.2) 100%); border-left: 4px solid #10b981; }
+    .bg-today { background: linear-gradient(135deg, rgba(59,130,246,0.1) 0%, rgba(191,219,254,0.2) 100%); border-left: 4px solid #3b82f6; }
+    
+    .filter-card { background: var(--card-bg); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border-color); margin-bottom: 1.5rem; }
+    .filter-label { font-size: 0.85rem; font-weight: 600; color: var(--text-color); margin-bottom: 0.4rem; }
+    
+    .table-wrapper { background: var(--card-bg); border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: rgba(0,0,0,0.02); padding: 1rem; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; text-align: left; border-bottom: 1px solid var(--border-color); }
+    td { padding: 1rem; font-size: 0.9rem; color: var(--text-color); border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover { background: rgba(0,0,0,0.01); }
+    
+    .chart-container { background: var(--card-bg); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border-color); margin-bottom: 1.5rem; height: 300px; }
+    
+    .btn-action { padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500; text-decoration: none; display: inline-block; transition: all 0.2s; }
+    .btn-primary-action { background: var(--primary-color); color: #fff; border: none; }
+    .btn-primary-action:hover { background: var(--primary-hover); color: #fff; }
+    
+    .pagination { display: flex; justify-content: center; gap: 0.5rem; margin-top: 1.5rem; }
+    .page-link { padding: 0.5rem 0.85rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color); text-decoration: none; }
+    .page-link.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+    .page-link:hover:not(.active) { background: rgba(0,0,0,0.05); }
+    
+    .badge-method { padding: 0.35rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; background: #e2e8f0; color: #475569; }
+
+    /* Global Dark Mode Fix for this page */
+    .dark-mode body { background-color: #0f172a !important; color: #e2e8f0 !important; }
+    .dark-mode .topbar { background-color: #1e293b !important; border-bottom: 1px solid #334155 !important; }
+    .dark-mode .topbar .topbar-title { color: #f8fafc !important; }
+    .dark-mode .topbar .menu-btn, .dark-mode .topbar .hide-btn, .dark-mode .topbar .show-btn { color: #94a3b8 !important; }
+    .dark-mode .topbar .menu-btn:hover, .dark-mode .topbar .hide-btn:hover, .dark-mode .topbar .show-btn:hover { color: #F9B233 !important; }
+    .dark-mode .topbar-right { color: #e2e8f0 !important; }
+
+    /* Dark Mode styles for payment logs */
+    .dark-mode .h3, .dark-mode h5, .dark-mode h6 { color: #f8fafc !important; }
+    .dark-mode .mini-card, .dark-mode .filter-card, .dark-mode .chart-container, .dark-mode .table-wrapper { 
+        background: #1e293b; border-color: rgba(255,255,255,0.05); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); 
+    }
+    .dark-mode .mini-card .label, .dark-mode .filter-label, .dark-mode th { color: #94a3b8; }
+    .dark-mode .mini-card .value, .dark-mode td { color: #f8fafc; }
+    .dark-mode th, .dark-mode td { border-color: rgba(255,255,255,0.05); }
+    .dark-mode th { background: rgba(15,23,42,0.4); }
+    .dark-mode tr:hover { background: rgba(255,255,255,0.05); }
+    
+    .dark-mode .form-control, .dark-mode .form-select { 
+        background: rgba(15,23,42,0.5); border-color: rgba(255,255,255,0.1); color: #e2e8f0; 
+    }
+    .dark-mode .form-control:focus, .dark-mode .form-select:focus { outline: none; border-color: #38bdf8; }
+    
+    .dark-mode .table-wrapper .p-3 { background: #1e293b !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; }
+    .dark-mode .badge-method { background: rgba(255,255,255,0.1); color: #cbd5e1; }
+
+    .dark-mode .page-link { background: #1e293b; border-color: rgba(255,255,255,0.1); color: #e2e8f0; }
+    .dark-mode .page-link.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+    .dark-mode .page-link:hover:not(.active) { background: rgba(255,255,255,0.05); }
+    .dark-mode .text-muted { color: #94a3b8 !important; }
+</style>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h3 mb-0 fw-bold text-gray-800"><i class="fas fa-file-invoice-dollar text-primary"></i> Payment Logs</h2>
+    </div>
+
+    <!-- SUMMARY CARDS -->
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="mini-card bg-grand">
+                <div class="label">Grand Total</div>
+                <div class="value">₱{{ grand_total|floatformat:2 }}</div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="mini-card bg-range">
+                <div class="label">Sales (Filtered Range)</div>
+                <div class="value">₱{{ filtered_range_total|floatformat:2 }}</div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="mini-card bg-today">
+                <div class="label">Today</div>
+                <div class="value">₱{{ total_today|floatformat:2 }}</div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="mini-card">
+                <div class="label">Yesterday</div>
+                <div class="value">₱{{ total_yesterday|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FILTERS -->
+    <div class="filter-card">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-2">
+                <div class="filter-label">From Date</div>
+                <input type="date" name="from" value="{{ filter_from }}" class="form-control">
+            </div>
+            <div class="col-md-2">
+                <div class="filter-label">To Date</div>
+                <input type="date" name="to" value="{{ filter_to }}" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <div class="filter-label">Search (User/Ref)</div>
+                <input type="text" name="search" value="{{ filter_search }}" class="form-control" placeholder="Username or reference no...">
+            </div>
+            <div class="col-md-2">
+                <div class="filter-label">Payment Method</div>
+                <select name="method" class="form-select">
+                    <option value="">All Methods</option>
+                    {% for m in methods %}
+                    <option value="{{ m }}" {% if filter_method == m %}selected{% endif %}>{{ m|title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary-action w-100"><i class="fas fa-filter"></i> Apply Filters</button>
+                <a href="{% url 'payment_logs' %}" class="btn btn-outline-secondary w-100">Clear</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- CHART -->
+    <div class="chart-container">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0 fw-bold">Last 14 Days Sales</h6>
+        </div>
+        <canvas id="salesChart"></canvas>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-wrapper shadow-sm">
+        <div class="p-3 border-bottom d-flex justify-content-between align-items-center" style="background: var(--card-bg);">
+            <h5 class="mb-0 fw-bold">Recent Payments</h5>
+            <span class="text-muted small">{{ page_obj.paginator.count }} records found</span>
+        </div>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date Paid</th>
+                        <th>Username</th>
+                        <th>Amount</th>
+                        <th>Method</th>
+                        <th>Reference</th>
+                        <th>Plan</th>
+                        <th>New Expiry</th>
+                        <th>Adjusted By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in page_obj %}
+                    <tr>
+                        <td>{{ p.paid_at|date:"M d, Y H:i" }}</td>
+                        <td class="fw-bold text-primary">{{ p.username }}</td>
+                        <td class="fw-bold text-success">₱{{ p.amount|floatformat:2 }}</td>
+                        <td><span class="badge-method">{{ p.payment_method|title }}</span></td>
+                        <td><code class="text-muted">{{ p.reference_no|default:"-" }}</code></td>
+                        <td>{{ p.plan_name }}</td>
+                        <td>{{ p.expires_at|date:"M d, Y" }}</td>
+                        <td>{{ p.adjusted_by }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4 text-muted">No payments found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- PAGINATION -->
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="pagination">
+        {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}&from={{ filter_from }}&to={{ filter_to }}&search={{ filter_search }}&method={{ filter_method }}" class="page-link">&laquo; Prev</a>
+        {% endif %}
+        
+        <span class="page-link active">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}&from={{ filter_from }}&to={{ filter_to }}&search={{ filter_search }}&method={{ filter_method }}" class="page-link">Next &raquo;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- CHART.JS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('salesChart').getContext('2d');
+    const chartLabels = JSON.parse('{{ chart_labels_js|escapejs }}');
+    const chartValues = JSON.parse('{{ chart_values_js|escapejs }}');
+    
+    function getChartTheme() {
+        const isDark = document.documentElement.classList.contains('dark-mode');
+        return {
+            grid: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+            ticks: isDark ? '#94a3b8' : '#64748b'
+        };
+    }
+
+    let theme = getChartTheme();
+    
+    let salesChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                label: 'Sales (₱)',
+                data: chartValues,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                tension: 0.3,
+                pointRadius: 3,
+                pointBackgroundColor: '#10b981',
+                borderWidth: 2,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: theme.ticks, maxRotation: 45, autoSkip: true, maxTicksLimit: 7 }
+                },
+                y: { 
+                    beginAtZero: true,
+                    grid: { color: theme.grid },
+                    ticks: { color: theme.ticks }
+                }
+            }
+        }
+    });
+
+    window.addEventListener('themeChanged', () => {
+        let newTheme = getChartTheme();
+        salesChart.options.scales.x.ticks.color = newTheme.ticks;
+        salesChart.options.scales.y.ticks.color = newTheme.ticks;
+        salesChart.options.scales.y.grid.color = newTheme.grid;
+        salesChart.update();
+    });
+});
+</script>
+{% endblock %}

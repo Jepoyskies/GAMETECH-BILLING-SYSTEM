@@ -1,0 +1,260 @@
+{% extends 'billing/base.html' %}
+{% load static %}
+
+{% block title %}Pay for {{ customer.username|default:customer.full_name }}{% endblock %}
+
+{% block content %}
+<style>
+    .pay-form { max-width: 500px; margin: 2rem auto; padding: 2rem; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .pay-form label { font-weight: 600; color: var(--text-color); margin-bottom: 0.5rem; display: block; font-size: 0.9rem; }
+    .pay-form input[type="text"], .pay-form input[type="datetime-local"], .pay-form input[type="number"], .pay-form select { width: 100%; padding: 0.75rem; margin-bottom: 1.2rem; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; background: var(--bg-color); color: var(--text-color); font-size: 0.95rem; transition: border-color 0.2s; }
+    .pay-form input:focus, .pay-form select:focus { border-color: var(--primary-color); outline: none; }
+    .pay-form button, .pay-form a.btn { width: 100%; padding: 0.85rem; border: none; border-radius: 8px; font-size: 1.05rem; font-weight: 600; text-align: center; display: block; text-decoration: none; margin-top: 10px; transition: transform 0.1s, opacity 0.2s; }
+    .pay-form button:hover, .pay-form a.btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-success { background: #10b981; color: #fff; }
+    .btn-secondary { background: #64748b; color: #fff; }
+    .due-label { margin-top: -0.5rem; margin-bottom: 0.2rem; color: var(--primary-color); font-weight: 600; font-size: 0.95rem; }
+    .due-date { color: #10b981; font-size: 1.1rem; font-weight: bold; margin-bottom: 1.2rem; }
+    #amount-note { color: #64748b; font-size: 0.85rem; margin-bottom: 0.8rem; }
+    #reason-block label { font-weight: 500; }
+    .readonly-field { background: var(--bg-color) !important; opacity: 0.8; cursor: not-allowed; }
+    
+    /* Global Dark Mode Fix for this page */
+    .dark-mode body { background-color: #0f172a !important; color: #e2e8f0 !important; }
+    .dark-mode .topbar { background-color: #1e293b !important; border-bottom: 1px solid #334155 !important; }
+    .dark-mode .topbar .topbar-title { color: #f8fafc !important; }
+    .dark-mode .topbar .menu-btn, .dark-mode .topbar .hide-btn, .dark-mode .topbar .show-btn { color: #94a3b8 !important; }
+    .dark-mode .topbar .menu-btn:hover, .dark-mode .topbar .hide-btn:hover, .dark-mode .topbar .show-btn:hover { color: #F9B233 !important; }
+    .dark-mode .topbar-right { color: #e2e8f0 !important; }
+
+    .dark-mode .pay-form { background: #1e293b; border-color: rgba(255,255,255,0.05); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); }
+    .dark-mode .pay-form label, .dark-mode .pay-form h3, .dark-mode #amount-question span { color: #f8fafc !important; }
+    .dark-mode .pay-form input, .dark-mode .pay-form select { background: rgba(15,23,42,0.5); border-color: rgba(255,255,255,0.1); color: #e2e8f0 !important; }
+    .dark-mode .pay-form input:focus, .dark-mode .pay-form select:focus { border-color: #38bdf8; }
+    .dark-mode .readonly-field { background: rgba(15,23,42,0.2) !important; color: #94a3b8 !important; }
+</style>
+
+<div class="container-fluid py-4">
+    <div class="pay-form">
+        <h3 class="mb-4 text-center fw-bold" style="color: var(--text-color);">Renew Subscription</h3>
+        
+        <form action="{% url 'pay_customer' customer.id %}" method="post" autocomplete="off" id="renew-form">
+            {% csrf_token %}
+            
+            <label for="username">Username / Name</label>
+            <input type="text" id="username" class="readonly-field" value="{{ customer.username|default:customer.full_name }}" readonly>
+
+            <label for="mikrotik_devices">Mikrotik Device</label>
+            <input type="text" id="mikrotik_devices_show" class="readonly-field" value="{{ customer.mikrotik_device.device_name|default:'N/A' }}" readonly>
+
+            <label for="current_expiry">Current Expiry</label>
+            <input type="text" id="current_expiry" class="readonly-field" value="{{ customer.expires_at|date:'Y-m-d H:i:s'|default:'None' }}" readonly>
+
+            <label for="start_date">Start Date</label>
+            <input type="datetime-local" id="start_date" name="start_date" required step="1">
+
+            <label for="end_date">End Date</label>
+            <input type="datetime-local" id="end_date" name="end_date" required step="1">
+
+            <label for="days">Days Adjusted</label>
+            <input type="number" id="days" name="days" min="0" value="" required readonly class="readonly-field">
+
+            <div class="due-label">New Expiry Date:</div>
+            <div class="due-date" id="due-date"></div>
+
+            <label for="plan_name">Plan</label>
+            <input type="text" id="plan_name_show" class="readonly-field" value="{{ customer.service_plan.plan_name|default:'N/A' }}" readonly>
+
+            <label for="amount">Amount (₱)</label>
+            <div id="amount-confirm-block">
+                <input type="text" id="amount" name="amount" value="" readonly class="readonly-field mb-2">
+                <div id="amount-question" style="display: flex; align-items: center; gap: 15px; margin-bottom: 1rem;">
+                    <span style="font-size: 0.9rem; font-weight: 500; color: var(--text-color);">Is this amount correct?</span>
+                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.9rem; color: var(--text-color);">
+                        <input type="radio" name="amount_correct" id="amount_yes" value="yes" checked> Yes
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.9rem; color: var(--text-color);">
+                        <input type="radio" name="amount_correct" id="amount_no" value="no"> No
+                    </label>
+                </div>
+                <div id="reason-block" style="display:none; margin-bottom: 1.2rem;">
+                    <label for="reason">Reason why?</label>
+                    <input type="text" id="reason" name="reason" maxlength="255" placeholder="Please specify reason">
+                </div>
+            </div>
+
+            <label for="payment_method">Payment Method</label>
+            <select name="payment_method" id="payment_method" required>
+                <option value="">-- Select --</option>
+                <option value="cash">Cash</option>
+                <option value="bank_transfer">Bank Transfer</option>
+                <option value="e-wallet">E-Wallet</option>
+                <option value="payment_center">Payment Center</option>
+                <option value="online_banking">Online Banking</option>
+            </select>
+
+            <label for="reference_no">Reference No.</label>
+            <input type="text" name="reference_no" id="reference_no" maxlength="64" placeholder="Required for non-cash">
+
+            <label for="payment_date_received">Payment Date Received</label>
+            <input type="datetime-local" name="payment_date_received" id="payment_date_received" step="1" required>
+
+            <button type="submit" class="btn-success mt-4">Pay & Renew</button>
+            <a href="{% url 'subscription_plans' %}" class="btn-secondary">Cancel / Back</a>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Basic helper to pad numbers
+    function pad(n) { return n < 10 ? '0'+n : n; }
+    
+    // Format Date object to YYYY-MM-DDTHH:MM:SS (local time for input type="datetime-local")
+    function formatInputDatetime(dt) {
+        return dt.getFullYear() + '-' +
+               pad(dt.getMonth()+1) + '-' +
+               pad(dt.getDate()) + 'T' +
+               pad(dt.getHours()) + ':' +
+               pad(dt.getMinutes()) + ':' +
+               pad(dt.getSeconds());
+    }
+
+    const currentExpiry = "{{ customer.expires_at|date:'c' }}";
+    const monthlyPrice = parseFloat("{{ customer.service_plan.price|default:0 }}");
+
+    let initialDate = new Date();
+    if (currentExpiry && currentExpiry !== 'None') {
+        let parsed = new Date(currentExpiry);
+        if (!isNaN(parsed.getTime())) {
+            initialDate = parsed;
+        }
+    }
+    
+    const startInput = document.getElementById('start_date');
+    const endInput = document.getElementById('end_date');
+    const daysInput = document.getElementById('days');
+    const dueDateDiv = document.getElementById('due-date');
+    const amountInput = document.getElementById('amount');
+    
+    // Initialize Start Date
+    startInput.value = formatInputDatetime(initialDate);
+    
+    function addOneMonth(dt) {
+        let next = new Date(dt.getTime());
+        next.setMonth(next.getMonth() + 1);
+        if (next.getDate() !== dt.getDate()) {
+            next.setDate(0); // handle edge cases like Jan 31 -> Feb 28
+        }
+        return next;
+    }
+
+    function isExactlyOneMonth(sd, ed) {
+        let exactlyOne = addOneMonth(sd);
+        return Math.abs(ed.getTime() - exactlyOne.getTime()) < 2000;
+    }
+
+    function calculateValues(source) {
+        let sdStr = startInput.value;
+        let edStr = endInput.value;
+        if (!sdStr) return;
+        
+        let sd = new Date(sdStr);
+        let ed = edStr ? new Date(edStr) : null;
+        
+        if (source === 'start') {
+            ed = addOneMonth(sd);
+            endInput.value = formatInputDatetime(ed);
+        }
+        
+        if (ed <= sd) {
+            ed = new Date(sd.getTime() + 1000);
+            endInput.value = formatInputDatetime(ed);
+        }
+        
+        let diffMs = ed - sd;
+        let days = diffMs / (1000 * 60 * 60 * 24);
+        daysInput.value = parseFloat(days.toFixed(4));
+        
+        dueDateDiv.textContent = ed.toLocaleString();
+        
+        let amount = 0;
+        if (isExactlyOneMonth(sd, ed)) {
+            amount = monthlyPrice;
+        } else {
+            amount = (monthlyPrice / 30) * days;
+        }
+        amountInput.value = amount.toFixed(2);
+    }
+    
+    startInput.addEventListener('change', () => calculateValues('start'));
+    endInput.addEventListener('change', () => calculateValues('end'));
+    
+    // Trigger initial calculations
+    calculateValues('start');
+    
+    // Set payment date received to now
+    document.getElementById('payment_date_received').value = formatInputDatetime(new Date());
+
+    // Amount radio toggle
+    const yesRadio = document.getElementById('amount_yes');
+    const noRadio = document.getElementById('amount_no');
+    const reasonBlock = document.getElementById('reason-block');
+    const reasonInput = document.getElementById('reason');
+    
+    function handleRadio() {
+        if (yesRadio.checked) {
+            amountInput.classList.add('readonly-field');
+            amountInput.readOnly = true;
+            reasonBlock.style.display = 'none';
+            reasonInput.required = false;
+            reasonInput.value = '';
+            let n = document.getElementById('amount-note');
+            if (n) n.remove();
+        } else {
+            amountInput.classList.remove('readonly-field');
+            amountInput.readOnly = false;
+            reasonBlock.style.display = 'block';
+            reasonInput.required = true;
+            if (!document.getElementById('amount-note')) {
+                let note = document.createElement('div');
+                note.id = 'amount-note';
+                note.textContent = "Please enter the correct amount and specify the reason.";
+                amountInput.parentNode.insertBefore(note, amountInput);
+            }
+            amountInput.focus();
+        }
+    }
+    
+    yesRadio.addEventListener('change', handleRadio);
+    noRadio.addEventListener('change', handleRadio);
+    handleRadio();
+    
+    // Payment method logic
+    const paymentMethod = document.getElementById('payment_method');
+    const refNo = document.getElementById('reference_no');
+    
+    paymentMethod.addEventListener('change', () => {
+        if (paymentMethod.value === 'cash') {
+            refNo.disabled = true;
+            refNo.required = false;
+            refNo.value = '';
+            refNo.classList.add('readonly-field');
+        } else {
+            refNo.disabled = false;
+            refNo.required = true;
+            refNo.classList.remove('readonly-field');
+        }
+    });
+    paymentMethod.dispatchEvent(new Event('change'));
+    
+    // Validation before submit
+    document.getElementById('renew-form').addEventListener('submit', (e) => {
+        if (noRadio.checked && reasonInput.value.trim() === '') {
+            alert('Reason is required when amount is modified.');
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -129,3 +129,25 @@ class Customer(models.Model):
     def __str__(self):
         return self.username or self.full_name
 
+class Payment(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True, related_name='payments')
+    username = models.CharField(max_length=255, null=True, blank=True)
+    plan_name = models.CharField(max_length=100, null=True, blank=True)
+    mikrotik_device_name = models.CharField(max_length=100, null=True, blank=True)
+    
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    days_paid = models.FloatField(null=True, blank=True)
+    payment_method = models.CharField(max_length=50)
+    reference_no = models.CharField(max_length=100, null=True, blank=True)
+    reason = models.CharField(max_length=255, null=True, blank=True)
+    
+    expires_at = models.DateTimeField(null=True, blank=True)
+    payment_date_received = models.DateTimeField(null=True, blank=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    
+    adjusted_by = models.CharField(max_length=100, null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"Payment by {self.username} - ₱{self.amount}"

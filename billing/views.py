@@ -4,7 +4,7 @@ from django.core.cache import cache
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
-from .models import AccountType, ServicePlan, Customer, CustomerStatus, Agent, Barangay
+from .models import AccountType, ServicePlan, Customer, CustomerStatus, Agent, Barangay, Payment
 from network_manager.models import MikrotikDevice
 from network_manager.services import MikrotikAPI
 from django.contrib.auth.models import User
@@ -694,3 +694,139 @@ def add_staff(request):
         return redirect('staff_list')
         
     return render(request, 'billing/add_staff.html')
+
+# ─────────────────────────────────────────────────
+#  Payments
+# ─────────────────────────────────────────────────
+
+@login_required
+def payment_logs_view(request):
+    payments = Payment.objects.all().order_by('-paid_at')
+    
+    # Filtering
+    filter_from = request.GET.get('from', '')
+    filter_to = request.GET.get('to', '')
+    filter_search = request.GET.get('search', '')
+    filter_method = request.GET.get('method', '')
+    
+    if filter_from:
+        payments = payments.filter(paid_at__gte=filter_from + ' 00:00:00')
+    if filter_to:
+        payments = payments.filter(paid_at__lte=filter_to + ' 23:59:59')
+    if filter_search:
+        payments = payments.filter(
+            Q(username__icontains=filter_search) | 
+            Q(reference_no__icontains=filter_search)
+        )
+    if filter_method:
+        payments = payments.filter(payment_method=filter_method)
+        
+    # Summaries (mocked logic based on PHP)
+    now = timezone.now()
+    today = now.date()
+    yesterday = today - timedelta(days=1)
+    
+    grand_total = Payment.objects.aggregate(t=Sum('amount'))['t'] or 0
+    filtered_range_total = payments.aggregate(t=Sum('amount'))['t'] or 0
+    
+    total_today = payments.filter(paid_at__date=today).aggregate(t=Sum('amount'))['t'] or 0
+    total_yesterday = payments.filter(paid_at__date=yesterday).aggregate(t=Sum('amount'))['t'] or 0
+    
+    # 14 days chart data
+    chart_labels = []
+    chart_values = []
+    for i in range(13, -1, -1):
+        d = today - timedelta(days=i)
+        chart_labels.append(d.strftime('%Y-%m-%d'))
+        daily_total = payments.filter(paid_at__date=d).aggregate(t=Sum('amount'))['t'] or 0
+        chart_values.append(float(daily_total))
+        
+    # Pagination
+    per_page = int(request.GET.get('per_page', 35))
+    paginator = Paginator(payments, per_page)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    methods = Payment.objects.exclude(payment_method__isnull=True).exclude(payment_method='').values_list('payment_method', flat=True).distinct().order_by('payment_method')
+    
+    context = {
+        'page_obj': page_obj,
+        'filter_from': filter_from,
+        'filter_to': filter_to,
+        'filter_search': filter_search,
+        'filter_method': filter_method,
+        'methods': methods,
+        
+        'grand_total': grand_total,
+        'filtered_range_total': filtered_range_total,
+        'total_today': total_today,
+        'total_yesterday': total_yesterday,
+        
+        'chart_labels_js': json.dumps(chart_labels),
+        'chart_values_js': json.dumps(chart_values),
+    }
+    
+    return render(request, 'billing/payment_logs.html', context)
+
+
+@login_required
+def create_payment_view(request, customer_id):
+    customer = get_object_or_404(Customer, id=customer_id)
+    
+    if request.method == 'POST':
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        amount = request.POST.get('amount')
+        payment_method = request.POST.get('payment_method')
+        reference_no = request.POST.get('reference_no')
+        payment_date_received = request.POST.get('payment_date_received')
+        reason = request.POST.get('reason')
+        
+        # Calculate days paid
+        from datetime import datetime
+        try:
+            # Simple handling if provided in YYYY-MM-DDTHH:MM:SS format
+            sd = datetime.fromisoformat(start_date.replace('Z', '')) if start_date else timezone.now()
+            ed = datetime.fromisoformat(end_date.replace('Z', '')) if end_date else timezone.now()
+            
+            # ensure aware datetime
+            if timezone.is_naive(sd): sd = timezone.make_aware(sd)
+            if timezone.is_naive(ed): ed = timezone.make_aware(ed)
+            
+            days_paid = round((ed - sd).total_seconds() / (24*3600), 4)
+        except Exception as e:
+            print("Date parse err:", e)
+            days_paid = 0
+            ed = timezone.now()
+            
+        try:
+            pdr = datetime.fromisoformat(payment_date_received.replace('Z', ''))
+            if timezone.is_naive(pdr): pdr = timezone.make_aware(pdr)
+        except:
+            pdr = timezone.now()
+            
+        Payment.objects.create(
+            customer=customer,
+            username=customer.username or customer.full_name,
+            plan_name=customer.service_plan.plan_name if customer.service_plan else '',
+            mikrotik_device_name=customer.mikrotik_device.device_name if customer.mikrotik_device else '',
+            amount=amount,
+            days_paid=days_paid,
+            payment_method=payment_method,
+            reference_no=reference_no,
+            reason=reason,
+            expires_at=ed,
+            payment_date_received=pdr,
+            paid_at=timezone.now(),
+            adjusted_by=request.user.username if request.user.is_authenticated else 'system'
+        )
+        
+        customer.expires_at = ed
+        customer.save()
+        
+        # Optional: Sync to Mikrotik if needed, for now we assume it's updated correctly
+        
+        messages.success(request, f"Payment for {customer.username or customer.full_name} processed successfully.")
+        return redirect('payment_logs')
+        
+    return render(request, 'billing/pay.html', {'customer': customer})

@@ -16,7 +16,9 @@ urlpatterns = [
     
     # Subscription / Service Plans routes
     path('subscriptions/', views.subscription_plans_view, name='subscription_plans'),
-
+    # Payments
+    path('payments/', views.payment_logs_view, name='payment_logs'),
+    path('payments/pay/<int:customer_id>/', views.create_payment_view, name='pay_customer'),
     
     # Auth route
     path('login/', auth_views.LoginView.as_view(template_name='billing/login.html'), name='login'),
