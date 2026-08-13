@@ -45,4 +45,11 @@ urlpatterns = [
     path('plans/delete/<int:plan_id>/', views.delete_plan, name='delete_plan'),
     path('staff/', views.staff_list, name='staff_list'),
     path('staff/add/', views.add_staff, name='add_staff'),
+
+    # Logs route
+    path('logs/', views.system_logs_view, name='system_logs'),
+
+    # Geo Map routes
+    path('geomap/', views.geomap_view, name='geomap'),
+    path('geomap/save/', views.save_marker_positions, name='save_marker_positions'),
 ]

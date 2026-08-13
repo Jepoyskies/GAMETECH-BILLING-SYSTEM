@@ -1,0 +1,281 @@
+{% extends 'billing/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .logs-card {
+        border: none;
+        border-radius: 1rem;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.1);
+        overflow: hidden;
+    }
+    .dark-mode .logs-card {
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+    }
+    
+    .table-responsive {
+        max-height: 70vh;
+    }
+
+    table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #f9fafb;
+        border-bottom: 1px solid #e5e7eb;
+        white-space: nowrap;
+    }
+    .dark-mode table thead th {
+        background: #1e293b;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .badge-action {
+        text-transform: uppercase;
+        font-size: 0.7rem;
+        letter-spacing: 0.03em;
+    }
+    .badge-action-insert {
+        background-color: #22c55e1a;
+        color: #15803d;
+    }
+    .dark-mode .badge-action-insert {
+        background-color: rgba(34, 197, 94, 0.15);
+        color: #4ade80;
+    }
+    .badge-action-update {
+        background-color: #f973161a;
+        color: #c2410c;
+    }
+    .dark-mode .badge-action-update {
+        background-color: rgba(249, 115, 22, 0.15);
+        color: #fb923c;
+    }
+    .badge-action-delete {
+        background-color: #ef44441a;
+        color: #b91c1c;
+    }
+    .dark-mode .badge-action-delete {
+        background-color: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+    }
+
+    .log-json {
+        max-height: 180px;
+        overflow: auto;
+        background: #0f172a;
+        color: #e5e7eb;
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.75rem;
+        line-height: 1.4;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+    .log-json.empty {
+        font-style: italic;
+        color: #9ca3af;
+        background: #f3f4f6;
+    }
+    .dark-mode .log-json.empty {
+        background: #334155;
+        color: #94a3b8;
+    }
+
+    .log-meta {
+        font-size: 0.75rem;
+        color: #6b7280;
+    }
+
+    .search-input { max-width: 260px; }
+    .date-filter-input { max-width: 170px; }
+
+    @media (max-width: 991.98px) {
+        .table-responsive { max-height: none; }
+        .search-input, .date-filter-input {
+            width: 100%;
+            max-width: none;
+        }
+        table thead { display: none; }
+        table tbody tr {
+            display: block;
+            margin-bottom: 0.85rem;
+            border-radius: 0.75rem;
+            border: 1px solid #e5e7eb;
+            padding: 0.5rem 0.75rem;
+            background: #fff;
+        }
+        .dark-mode table tbody tr {
+            background: #1e293b;
+            border-color: rgba(255,255,255,0.05);
+        }
+        table tbody td {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.25rem 0;
+            border: none;
+            font-size: 0.8rem;
+        }
+        table tbody td::before {
+            content: attr(data-label);
+            font-weight: 600;
+            color: #4b5563;
+            margin-right: 0.75rem;
+        }
+        .dark-mode table tbody td::before { color: #94a3b8; }
+        .log-json { width: 100%; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card dashboard-card logs-card">
+            <div class="card-header d-flex flex-column flex-md-row align-items-md-center gap-2">
+                <div>
+                    <h2 class="mb-0 fw-bold text-primary">
+                        <i class="fa fa-gavel"></i> System Logs
+                    </h2>
+                    <small class="text-muted">
+                        Showing {{ logs.start_index }}–{{ logs.end_index }} of {{ logs.paginator.count }} records
+                    </small>
+                </div>
+
+                <form method="get" class="ms-md-auto d-flex flex-wrap gap-2 align-items-center">
+                    <input type="text" name="search" value="{{ search }}" class="form-control form-control-sm search-input" placeholder="Search table / user / action / data..." autocomplete="off">
+                    
+                    <select name="action_filter" class="form-select form-select-sm" style="max-width: 150px;">
+                        <option value="">All Actions</option>
+                        <option value="ADD" {% if action_filter == 'ADD' %}selected{% endif %}>ADD</option>
+                        <option value="UPDATE" {% if action_filter == 'UPDATE' %}selected{% endif %}>UPDATE</option>
+                        <option value="DELETE" {% if action_filter == 'DELETE' %}selected{% endif %}>DELETE</option>
+                    </select>
+
+                    <input type="date" name="date_from" value="{{ date_from }}" class="form-control form-control-sm date-filter-input" placeholder="From">
+                    <input type="date" name="date_to" value="{{ date_to }}" class="form-control form-control-sm date-filter-input" placeholder="To">
+                    
+                    <input type="hidden" name="sort" value="{{ sort }}">
+                    <input type="hidden" name="dir" value="{{ dir }}">
+                    
+                    <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                    <a href="{% url 'system_logs' %}" class="btn btn-secondary btn-sm">Reset</a>
+                </form>
+            </div>
+
+            <div class="card-body p-0">
+                {% if not logs %}
+                    <div class="p-4 text-center text-muted">
+                        No logs available for current filters.
+                    </div>
+                {% else %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="logsTable">
+                            <thead>
+                                <tr>
+                                    <th>
+                                        <a href="?sort=changed_at&dir={% if sort == 'changed_at' and dir == 'asc' %}desc{% else %}asc{% endif %}&{{ query_params }}" class="text-decoration-none">
+                                            Date {% if sort == 'changed_at' %}{% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a href="?sort=table_name&dir={% if sort == 'table_name' and dir == 'asc' %}desc{% else %}asc{% endif %}&{{ query_params }}" class="text-decoration-none">
+                                            Table {% if sort == 'table_name' %}{% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a href="?sort=record_id&dir={% if sort == 'record_id' and dir == 'asc' %}desc{% else %}asc{% endif %}&{{ query_params }}" class="text-decoration-none">
+                                            Record ID {% if sort == 'record_id' %}{% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a href="?sort=action&dir={% if sort == 'action' and dir == 'asc' %}desc{% else %}asc{% endif %}&{{ query_params }}" class="text-decoration-none">
+                                            Action {% if sort == 'action' %}{% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a href="?sort=changed_by&dir={% if sort == 'changed_by' and dir == 'asc' %}desc{% else %}asc{% endif %}&{{ query_params }}" class="text-decoration-none">
+                                            User {% if sort == 'changed_by' %}{% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}
+                                        </a>
+                                    </th>
+                                    <th style="min-width: 200px;">Old Data</th>
+                                    <th style="min-width: 200px;">New Data</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in logs %}
+                                <tr>
+                                    <td data-label="Date">
+                                        <div class="fw-semibold">{{ log.changed_at|date:"Y-m-d H:i:s" }}</div>
+                                        <div class="log-meta">Log ID: {{ log.id }}</div>
+                                    </td>
+                                    <td data-label="Table">
+                                        <span class="fw-semibold">{{ log.table_name }}</span>
+                                    </td>
+                                    <td data-label="Record ID">
+                                        {{ log.record_id }}
+                                    </td>
+                                    <td data-label="Action">
+                                        {% if log.action|lower == 'add' or log.action|lower == 'insert' or log.action|lower == 'create' %}
+                                            <span class="badge badge-action badge-action-insert">{{ log.action }}</span>
+                                        {% elif log.action|lower == 'delete' or log.action|lower == 'remove' %}
+                                            <span class="badge badge-action badge-action-delete">{{ log.action }}</span>
+                                        {% else %}
+                                            <span class="badge badge-action badge-action-update">{{ log.action }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td data-label="User">
+                                        {{ log.changed_by }}
+                                    </td>
+                                    <td data-label="Old Data">
+                                        {% if not log.old_data or log.old_data == 'null' %}
+                                            <div class="log-json empty">No previous data</div>
+                                        {% else %}
+                                            <pre class="log-json mb-0">{{ log.old_data }}</pre>
+                                        {% endif %}
+                                    </td>
+                                    <td data-label="New Data">
+                                        {% if not log.new_data or log.new_data == 'null' %}
+                                            <div class="log-json empty">No new data</div>
+                                        {% else %}
+                                            <pre class="log-json mb-0">{{ log.new_data }}</pre>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    {% if logs.has_other_pages %}
+                    <nav class="p-3 border-top">
+                        <ul class="pagination pagination-sm mb-0 justify-content-center flex-wrap">
+                            {% if logs.has_previous %}
+                                <li class="page-item"><a class="page-link" href="?page={{ logs.previous_page_number }}&sort={{ sort }}&dir={{ dir }}&{{ query_params }}">&laquo;</a></li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+                            {% endif %}
+                            
+                            {% for i in logs.paginator.page_range %}
+                                {% if logs.number == i %}
+                                    <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                                {% elif i > logs.number|add:'-3' and i < logs.number|add:'3' %}
+                                    <li class="page-item"><a class="page-link" href="?page={{ i }}&sort={{ sort }}&dir={{ dir }}&{{ query_params }}">{{ i }}</a></li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if logs.has_next %}
+                                <li class="page-item"><a class="page-link" href="?page={{ logs.next_page_number }}&sort={{ sort }}&dir={{ dir }}&{{ query_params }}">&raquo;</a></li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -174,3 +174,19 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"Payment by {self.username} - ₱{self.amount}"
+
+class SystemLog(models.Model):
+    table_name = models.CharField(max_length=255)
+    record_id = models.CharField(max_length=255)
+    action = models.CharField(max_length=50) # ADD, UPDATE, DELETE
+    changed_by = models.CharField(max_length=255)
+    changed_at = models.DateTimeField(auto_now_add=True)
+    old_data = models.TextField(null=True, blank=True)
+    new_data = models.TextField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-changed_at']
+        db_table = 'system_logs'
+
+    def __str__(self):
+        return f"{self.action} on {self.table_name} by {self.changed_by} at {self.changed_at}"

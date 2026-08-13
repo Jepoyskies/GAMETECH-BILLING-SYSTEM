@@ -13,9 +13,9 @@ from datetime import timedelta, datetime
 
 from .models import (
     SystemAdmin, SubscriptionPlan, Agent, AccountType, ServicePlan,
-    Customer, Barangay, Payment
+    Customer, Barangay, Payment, SystemLog
 )
-from network_manager.models import MikrotikDevice
+from network_manager.models import MikrotikDevice, NapBox
 from network_manager.services import MikrotikAPI
 
 
@@ -844,3 +844,145 @@ def create_payment_view(request, customer_id):
         return redirect('payment_logs')
 
     return render(request, 'billing/pay.html', {'customer': customer})
+
+
+# ─────────────────────────────────────────────────
+#  Geo Map
+# ─────────────────────────────────────────────────
+
+@login_required
+def geomap_view(request):
+    # Fetch NAP boxes
+    napboxes = list(NapBox.objects.values('id', 'napbox_no', 'latitude', 'longitude', 'marker_color'))
+    
+    # Rename keys to match the JS expected by the original template
+    # Original template expects nap_latitude and nap_longitude
+    for nap in napboxes:
+        nap['nap_latitude'] = nap.pop('latitude')
+        nap['nap_longitude'] = nap.pop('longitude')
+
+    # Fetch Customers with lat/lng
+    customers_qs = Customer.objects.filter(latitude__isnull=False, longitude__isnull=False)
+    customers = []
+    
+    now = timezone.now()
+    
+    for c in customers_qs:
+        # Determine status. If expires_at is in the future, it's connected (active).
+        is_connected = 1 if (c.status == 'active' and (not c.expires_at or c.expires_at > now)) else 0
+        customers.append({
+            'id': c.id,
+            'full_name': c.full_name,
+            'username': c.pppoe_username or c.full_name,
+            'latitude': c.latitude,
+            'longitude': c.longitude,
+            'is_connected': is_connected,
+        })
+        
+    context = {
+        'napboxesJson': json.dumps(napboxes, default=str),
+        'customersJson': json.dumps(customers, default=str),
+    }
+    return render(request, 'billing/geomap.html', context)
+
+
+@login_required
+def save_marker_positions(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            # data is a list of changes
+            for item in data:
+                item_type = item.get('type')
+                item_id = item.get('id')
+                lat = item.get('lat')
+                lng = item.get('lng')
+                
+                if item_type == 'nap':
+                    try:
+                        nap = NapBox.objects.get(id=item_id)
+                        nap.latitude = lat
+                        nap.longitude = lng
+                        nap.save()
+                    except NapBox.DoesNotExist:
+                        pass
+                elif item_type == 'customer':
+                    try:
+                        customer = Customer.objects.get(id=item_id)
+                        customer.latitude = lat
+                        customer.longitude = lng
+                        customer.save()
+                    except Customer.DoesNotExist:
+                        pass
+                        
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)})
+            
+    return JsonResponse({'success': False, 'message': 'Invalid request method.'}, status=405)
+
+
+@login_required
+def system_logs_view(request):
+    logs = SystemLog.objects.all()
+
+    # Search filter
+    search_query = request.GET.get('search', '').strip()
+    if search_query:
+        logs = logs.filter(
+            Q(table_name__icontains=search_query) |
+            Q(changed_by__icontains=search_query) |
+            Q(action__icontains=search_query) |
+            Q(old_data__icontains=search_query) |
+            Q(new_data__icontains=search_query)
+        )
+
+    # Action filter
+    action_filter = request.GET.get('action_filter', '').strip().upper()
+    if action_filter == 'ADD':
+        logs = logs.filter(action__iexact='ADD')
+    elif action_filter == 'UPDATE':
+        logs = logs.filter(action__iexact='UPDATE')
+    elif action_filter == 'DELETE':
+        logs = logs.filter(action__iexact='DELETE')
+
+    # Date filter
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
+    if date_from:
+        logs = logs.filter(changed_at__gte=f"{date_from} 00:00:00")
+    if date_to:
+        logs = logs.filter(changed_at__lte=f"{date_to} 23:59:59")
+
+    # Sorting
+    sort_column = request.GET.get('sort', 'changed_at')
+    sort_dir = request.GET.get('dir', 'desc').lower()
+    
+    allowed_sort_columns = ['changed_at', 'table_name', 'record_id', 'action', 'changed_by']
+    if sort_column not in allowed_sort_columns:
+        sort_column = 'changed_at'
+        
+    order_prefix = '-' if sort_dir == 'desc' else ''
+    logs = logs.order_by(f"{order_prefix}{sort_column}")
+
+    # Pagination
+    paginator = Paginator(logs, 10)  # 10 logs per page
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+
+    # Reconstruct query string for pagination links
+    query_params = request.GET.copy()
+    if 'page' in query_params:
+        del query_params['page']
+    
+    context = {
+        'logs': page_obj,
+        'search': search_query,
+        'action_filter': action_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'sort': sort_column,
+        'dir': sort_dir,
+        'query_params': query_params.urlencode()
+    }
+    return render(request, 'billing/logs.html', context)

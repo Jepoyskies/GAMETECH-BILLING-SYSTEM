@@ -1,0 +1,361 @@
+{% extends 'billing/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    #map-search-wrapper {
+        margin-bottom: 1rem;
+    }
+    .leaflet-popup-content a.btn-view-mt {
+        display: inline-block;
+        width: 100%;
+        text-align: center;
+        font-weight: bold;
+        color: #000;
+        background-color: #ffc107;
+        border: 2px solid #ff9800;
+        border-radius: .25rem;
+        box-shadow: 0 0 6px rgba(0,0,0,.3);
+        text-decoration: none;
+    }
+    .leaflet-popup-content a.btn-view-mt:hover {
+        background-color: #ffb300;
+        border-color: #fb8c00;
+        text-decoration: none;
+        color: #000;
+    }
+    .leaflet-popup-content small.coord-info {
+        display: block;
+        margin-top: .35rem;
+        font-size: .75rem;
+        color: #555;
+    }
+    .save-status {
+        font-size: 0.85rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-transparent border-0 pt-4 pb-0">
+                <h2 class="mb-0 fw-bold text-primary">
+                    <i class="fa-solid fa-map-location"></i> Geo Nap & Customer Map
+                </h2>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    The map below shows:<br>
+                    - <strong>Blue pins</strong>: Customers (Active)<br>
+                    - <strong>Black pins</strong>: Customers (Inactive)<br>
+                    - <strong>Red/Green/Violet pins</strong>: NAP Boxes<br>
+                    Drag a pin to move it, then click <strong>Save Changes</strong> to store the new coordinates.
+                </p>
+
+                <div class="row align-items-center mb-3" id="map-search-wrapper">
+                    <div class="col-md-9">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-6 col-lg-7">
+                                <input
+                                    type="text"
+                                    id="map-search-input"
+                                    class="form-control"
+                                    placeholder="Search by NAP, customer name, or username..."
+                                >
+                            </div>
+                            <div class="col-3 col-lg-2 d-flex">
+                                <button id="map-search-btn" class="btn btn-primary w-100">
+                                    Search
+                                </button>
+                            </div>
+                            <div class="col-3 col-lg-3 d-flex">
+                                <button id="save-changes-btn" class="btn btn-success w-100">
+                                    Save Changes
+                                </button>
+                            </div>
+                            <div class="col-12 mt-1">
+                                <small id="map-search-msg" class="text-muted"></small>
+                                <span id="save-status" class="ms-2 save-status text-muted"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="map" style="width: 100%; height: 600px; border-radius: .25rem; border: 1px solid #ddd;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// Prevent auto-escaping of JSON in template output
+const napboxes = {{ napboxesJson|safe }};
+const customers = {{ customersJson|safe }};
+
+function computeCenterFromBoth(napArr, custArr) {
+    const all = [];
+    napArr.forEach(n => {
+        if (n.nap_latitude && n.nap_longitude) {
+            all.push({lat: parseFloat(n.nap_latitude), lng: parseFloat(n.nap_longitude)});
+        }
+    });
+    custArr.forEach(c => {
+        if (c.latitude && c.longitude) {
+            all.push({lat: parseFloat(c.latitude), lng: parseFloat(c.longitude)});
+        }
+    });
+    // Default fallback center
+    if (!all.length) return {lat: 8.483800, lng: 124.626868};
+    let sumLat = 0, sumLng = 0;
+    all.forEach(p => {
+        sumLat += p.lat;
+        sumLng += p.lng;
+    });
+    return {lat: sumLat / all.length, lng: sumLng / all.length};
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const center = computeCenterFromBoth(napboxes, customers);
+    const hasAny = napboxes.length || customers.length;
+
+    const map = L.map('map').setView([center.lat, center.lng], hasAny ? 13 : 8);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const allowedColors = ['red', 'blue', 'green', 'orange', 'yellow', 'violet', 'grey', 'black'];
+    const napIconsByColor = {};
+
+    function getNapIconByColor(color) {
+        let c = (color || '').toLowerCase().trim();
+        if (!allowedColors.includes(c)) {
+            c = 'red';
+        }
+        if (!napIconsByColor[c]) {
+            napIconsByColor[c] = new L.Icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-' + c + '.png',
+                shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+                iconSize:     [25, 41],
+                iconAnchor:   [12, 41],
+                popupAnchor:  [1, -34],
+                shadowSize:   [41, 41]
+            });
+        }
+        return napIconsByColor[c];
+    }
+
+    // Customer marker icons
+    const blueIcon = new L.Icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+        iconSize:     [25, 41],
+        iconAnchor:   [12, 41],
+        popupAnchor:  [1, -34],
+        shadowSize:   [41, 41]
+    });
+    const blackIcon = new L.Icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-black.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+        iconSize:     [25, 41],
+        iconAnchor:   [12, 41],
+        popupAnchor:  [1, -34],
+        shadowSize:   [41, 41]
+    });
+
+    const bounds  = [];
+    const markers = [];
+    const dirty   = {};
+
+    function makeDirtyKey(type, id) {
+        return type + ':' + id;
+    }
+
+    // --- NAP BOX MARKERS ---
+    napboxes.forEach(n => {
+        const lat = parseFloat(n.nap_latitude);
+        const lng = parseFloat(n.nap_longitude);
+        if (isNaN(lat) || isNaN(lng)) return;
+
+        const icon = getNapIconByColor(n.marker_color);
+        const marker = L.marker([lat, lng], {
+            icon,
+            draggable: true
+        }).addTo(map);
+
+        const popupHtml = (latNow, lngNow) =>
+            '<strong>NAP: ' + (n.napbox_no || '-') + '</strong><br>' +
+            'Lat: ' + latNow.toFixed(6) + '<br>' +
+            'Lng: ' + lngNow.toFixed(6) + '<br>' +
+            'Color: ' + (n.marker_color || 'default (red)') +
+            '<small class="coord-info">(Drag pin to change position, then click "Save Changes")</small>';
+
+        marker.bindPopup(popupHtml(lat, lng));
+
+        marker.on('dragend', function (e) {
+            const newPos = e.target.getLatLng();
+            dirty[makeDirtyKey('nap', n.id)] = {
+                type: 'nap',
+                id: n.id,
+                lat: newPos.lat,
+                lng: newPos.lng
+            };
+            marker.setPopupContent(popupHtml(newPos.lat, newPos.lng));
+            document.getElementById('save-status').textContent = 'You have unsaved changes.';
+        });
+
+        markers.push({ type: 'nap', marker, data: n, lat, lng });
+        bounds.push([lat, lng]);
+    });
+
+    // --- CUSTOMER MARKERS ---
+    customers.forEach(c => {
+        const lat = parseFloat(c.latitude);
+        const lng = parseFloat(c.longitude);
+        if (isNaN(lat) || isNaN(lng)) return;
+
+        const isConnected = (String(c.is_connected) === '1');
+        const icon = isConnected ? blueIcon : blackIcon;
+
+        const marker = L.marker([lat, lng], {
+            icon,
+            draggable: true
+        }).addTo(map);
+
+        const detailUrl = '/customers/edit/' + encodeURIComponent(c.id) + '/';
+
+        const popupHtml = (latNow, lngNow) =>
+            '<strong>' + (c.full_name || 'Unknown') + '</strong><br>' +
+            'Username: ' + (c.username || '-') + '<br>' +
+            'Lat: ' + latNow.toFixed(6) + '<br>' +
+            'Lng: ' + lngNow.toFixed(6) + '<br>' +
+            '<span>Status: <b>' + (isConnected ? 'Active' : 'Inactive') + '</b></span><br>' +
+            '<a href="' + detailUrl + '" class="btn-view-mt mt-2">➡ View Details</a>' +
+            '<small class="coord-info">(Drag pin to change position, then click "Save Changes")</small>';
+
+        marker.bindPopup(popupHtml(lat, lng));
+
+        marker.on('dblclick', function () {
+            window.location.href = detailUrl;
+        });
+
+        marker.on('dragend', function (e) {
+            const newPos = e.target.getLatLng();
+            dirty[makeDirtyKey('customer', c.id)] = {
+                type: 'customer',
+                id: c.id,
+                lat: newPos.lat,
+                lng: newPos.lng
+            };
+            marker.setPopupContent(popupHtml(newPos.lat, newPos.lng));
+            document.getElementById('save-status').textContent = 'You have unsaved changes.';
+        });
+
+        markers.push({ type: 'customer', marker, data: c, lat, lng });
+        bounds.push([lat, lng]);
+    });
+
+    if (bounds.length > 1) {
+        map.fitBounds(bounds, {padding: [30, 30]});
+    }
+
+    // --- SEARCH LOGIC ---
+    const searchInput = document.getElementById('map-search-input');
+    const searchBtn   = document.getElementById('map-search-btn');
+    const searchMsg   = document.getElementById('map-search-msg');
+
+    function runSearch() {
+        const q = (searchInput.value || '').trim().toLowerCase();
+        searchMsg.textContent = '';
+
+        if (!q) {
+            searchMsg.textContent = 'Type NAP, customer name, or username to search.';
+            return;
+        }
+
+        let match = markers.find(m => {
+            if (m.type !== 'customer') return false;
+            const name = (m.data.full_name || '').toLowerCase();
+            const user = (m.data.username || '').toLowerCase();
+            return name.includes(q) || user.includes(q);
+        });
+
+        if (!match) {
+            match = markers.find(m => {
+                if (m.type !== 'nap') return false;
+                const nb = (m.data.napbox_no || '').toLowerCase();
+                return nb.includes(q);
+            });
+        }
+
+        if (!match) {
+            searchMsg.textContent = 'No matching record found.';
+            return;
+        }
+
+        map.setView([match.lat, match.lng], 15);
+        match.marker.openPopup();
+
+        if (match.type === 'customer') {
+            searchMsg.textContent = 'Showing customer: ' + (match.data.full_name || match.data.username || 'Unknown');
+        } else {
+            searchMsg.textContent = 'Showing NAP: ' + (match.data.napbox_no || '-');
+        }
+    }
+
+    searchBtn.addEventListener('click', runSearch);
+    searchInput.addEventListener('keyup', function (e) {
+        if (e.key === 'Enter') runSearch();
+    });
+
+    // --- SAVE CHANGES ---
+    const saveBtn    = document.getElementById('save-changes-btn');
+    const saveStatus = document.getElementById('save-status');
+
+    saveBtn.addEventListener('click', function () {
+        const changes = Object.values(dirty);
+        if (!changes.length) {
+            saveStatus.textContent = 'No changes to save.';
+            return;
+        }
+
+        if (!confirm('Are you sure you want to save the changes?')) {
+            return;
+        }
+
+        saveStatus.textContent = 'Saving...';
+
+        fetch('{% url "save_marker_positions" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(changes)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data && data.success) {
+                for (const k in dirty) {
+                    if (Object.hasOwn(dirty, k)) delete dirty[k];
+                }
+                saveStatus.textContent = 'Changes saved successfully.';
+            } else {
+                saveStatus.textContent = data && data.message ? 'Error: ' + data.message : 'Error saving changes.';
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            saveStatus.textContent = 'Error saving changes (network/server).';
+        });
+    });
+});
+</script>
+{% endblock %}
