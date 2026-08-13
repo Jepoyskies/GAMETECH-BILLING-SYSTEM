@@ -1,0 +1,66 @@
+{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}My Profile{% endblock %}
+
+{% block extra_css %}
+<style>
+.profile-card { background:#fff; border-radius:20px; padding:40px; box-shadow:0 4px 24px rgba(0,0,0,0.06); max-width:600px; margin:0 auto; text-align:center; }
+.dark-mode .profile-card { background:#1e293b; box-shadow:0 4px 24px rgba(0,0,0,0.3); }
+.profile-avatar { width:120px; height:120px; background:linear-gradient(135deg,#2151A1,#38bdf8); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:3rem; margin:0 auto 20px; box-shadow:0 10px 20px rgba(33,81,161,0.2); }
+.profile-name { font-size:1.8rem; font-weight:700; color:#1e293b; margin-bottom:5px; }
+.dark-mode .profile-name { color:#f1f5f9; }
+.profile-role { color:#64748b; font-size:1rem; font-weight:500; margin-bottom:30px; display:inline-block; padding:5px 15px; background:rgba(0,0,0,0.04); border-radius:30px; }
+.dark-mode .profile-role { color:#94a3b8; background:rgba(255,255,255,0.05); }
+
+.profile-detail { display:flex; justify-content:space-between; padding:15px 0; border-bottom:1px solid rgba(0,0,0,0.05); text-align:left; }
+.dark-mode .profile-detail { border-bottom-color:rgba(255,255,255,0.05); }
+.profile-detail:last-child { border-bottom:none; }
+.detail-label { color:#64748b; font-size:0.9rem; font-weight:600; }
+.dark-mode .detail-label { color:#94a3b8; }
+.detail-value { color:#1e293b; font-size:1rem; font-weight:600; }
+.dark-mode .detail-value { color:#e2e8f0; }
+
+.btn-pwd { display:inline-block; background:linear-gradient(135deg,#F9B233,#f59e0b); color:#fff; padding:12px 24px; border-radius:12px; font-weight:600; text-decoration:none; transition:all 0.2s; margin-top:30px; width:100%; box-shadow:0 4px 12px rgba(249,178,51,0.3); }
+.btn-pwd:hover { transform:translateY(-2px); color:#fff; box-shadow:0 6px 16px rgba(249,178,51,0.4); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    {% if request.GET.password_changed %}
+        <div class="alert alert-success border-0 rounded-4 shadow-sm mb-4" style="background:#ecfdf5; color:#059669; max-width:600px; margin:0 auto;">
+            <i class="fas fa-check-circle me-2"></i>Password updated successfully.
+        </div>
+    {% endif %}
+
+    <div class="profile-card">
+        <div class="profile-avatar">
+            <i class="fas fa-user-shield"></i>
+        </div>
+        <h1 class="profile-name">{{ request.user.get_full_name|default:request.user.username }}</h1>
+        <div class="profile-role">System Administrator</div>
+
+        <div class="profile-detail mt-2">
+            <span class="detail-label">Username</span>
+            <span class="detail-value">{{ request.user.username }}</span>
+        </div>
+        <div class="profile-detail">
+            <span class="detail-label">Email Address</span>
+            <span class="detail-value">{{ request.user.email|default:"No email provided" }}</span>
+        </div>
+        <div class="profile-detail">
+            <span class="detail-label">Status</span>
+            <span class="detail-value text-success">Active</span>
+        </div>
+        <div class="profile-detail">
+            <span class="detail-label">Last Login</span>
+            <span class="detail-value">{{ request.user.last_login|date:"M d, Y h:i A" }}</span>
+        </div>
+
+        <a href="{% url 'change_password' %}" class="btn-pwd">
+            <i class="fas fa-lock me-2"></i>Change Password
+        </a>
+    </div>
+</div>
+{% endblock %}

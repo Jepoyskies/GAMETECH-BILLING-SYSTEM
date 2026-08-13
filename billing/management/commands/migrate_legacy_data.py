@@ -3,7 +3,8 @@ import io
 import os
 import datetime
 from django.core.management.base import BaseCommand
-from billing.models import Customer, ServicePlan, AccountType, CustomerStatus
+from billing.models import Customer, SubscriptionPlan, AccountType
+
 from network_manager.models import MikrotikDevice
 from django.utils.dateparse import parse_datetime, parse_date
 from django.utils.timezone import make_aware
@@ -137,18 +138,12 @@ class Command(BaseCommand):
                 elif current_table == 'service_plans' and len(row) >= 13:
                     plan_name = row[2]
                     try:
-                        obj, created = ServicePlan.objects.get_or_create(
-                            plan_name=plan_name,
+                        obj, created = SubscriptionPlan.objects.get_or_create(
+                            name=plan_name,
                             defaults={
-                                'plan_code': row[1],
-                                'speed_up': int(row[3]) if row[3] else None,
-                                'speed_down': int(row[4]) if row[4] else None,
-                                'price': row[5],
-                                'price_monthly': row[6],
-                                'price_30': row[7],
-                                'price_15': row[8],
-                                'price_3': row[9],
-                                'price_1': row[10],
+                                'speed_up': str(row[3]) if row[3] else '',
+                                'speed_down': str(row[4]) if row[4] else '',
+                                'price': row[5] or 0.00,
                                 'validity_days': int(row[11]) if row[11] else 30,
                                 'description': row[12],
                             }
@@ -156,10 +151,10 @@ class Command(BaseCommand):
                         plan_map[plan_name] = obj
                         if created:
                             self.stdout.write(
-                                f'Created ServicePlan: {plan_name}')
+                                f'Created SubscriptionPlan: {plan_name}')
                     except Exception as e:
                         self.stderr.write(
-                            f'Error ServicePlan {plan_name}: {e}')
+                            f'Error SubscriptionPlan {plan_name}: {e}')
 
                 elif current_table == 'customers' and len(row) >= 27:
                     username = row[1]
@@ -181,8 +176,8 @@ class Command(BaseCommand):
 
                     plan_obj = plan_map.get(plan_name_str)
                     if not plan_obj and plan_name_str:
-                        plan_obj = ServicePlan.objects.filter(
-                            plan_name=plan_name_str).first()
+                        plan_obj = SubscriptionPlan.objects.filter(
+                            name=plan_name_str).first()
                         if plan_obj:
                             plan_map[plan_name_str] = plan_obj
 
@@ -200,7 +195,7 @@ class Command(BaseCommand):
                     try:
                         defaults = {
                             'account_type': acct_obj,
-                            'service_plan': plan_obj,
+                            'plan': plan_obj,
                             'mikrotik_device': device_obj,
                             'expires_at': expires_at,
                             'full_name': full_name,
@@ -228,9 +223,9 @@ class Command(BaseCommand):
                         if username:
                             defaults['email'] = email
                             customer, created = Customer.objects.get_or_create(
-                                username=username, defaults=defaults)
+                                pppoe_username=username, defaults=defaults)
                         else:
-                            defaults['username'] = username
+                            defaults['pppoe_username'] = username
                             customer, created = Customer.objects.get_or_create(
                                 full_name=full_name, email=email, defaults=defaults)
 

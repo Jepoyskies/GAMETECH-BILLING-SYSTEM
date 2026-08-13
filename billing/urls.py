@@ -45,4 +45,17 @@ urlpatterns = [
     path('plans/delete/<int:plan_id>/', views.delete_plan, name='delete_plan'),
     path('staff/', views.staff_list, name='staff_list'),
     path('staff/add/', views.add_staff, name='add_staff'),
+
+    # Core UI & Placeholders
+    path('profile/', views.profile_view, name='profile'),
+    path('geomap/', views.geomap_view, name='geomap'),
+    path('logs/', views.logs_view, name='logs'),
+    path('settings/', views.settings_view, name='settings'),
+    
+    # Auth Extensions
+    path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
+    path('change-password/', auth_views.PasswordChangeView.as_view(
+        template_name='billing/change_password.html',
+        success_url='/profile/?password_changed=1'
+    ), name='change_password'),
 ]

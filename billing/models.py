@@ -10,27 +10,6 @@ class AccountType(models.Model):
         return self.type_name
 
 
-class ServicePlan(models.Model):
-    plan_code = models.CharField(max_length=64)
-    plan_name = models.CharField(max_length=50)
-    speed_up = models.IntegerField(null=True, blank=True)
-    speed_down = models.IntegerField(null=True, blank=True)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    price_monthly = models.DecimalField(max_digits=10, decimal_places=2)
-    price_30 = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0.00)
-    price_15 = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0.00)
-    price_3 = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0.00)
-    price_1 = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0.00)
-    validity_days = models.IntegerField()
-    description = models.TextField(null=True, blank=True)
-
-    def __str__(self):
-        return self.plan_name
-
 
 class Agent(models.Model):
     name = models.CharField(max_length=255)

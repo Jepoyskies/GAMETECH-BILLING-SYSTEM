@@ -6,82 +6,14 @@ from .models import MikrotikDevice
 from .services import MikrotikAPI
 
 
-@login_required
-def device_list_view(request):
-    devices = MikrotikDevice.objects.all().order_by('device_name')
-    return render(request, 'network_manager/mikrotik_devices.html', {'devices': devices})
-
 
 @login_required
-def add_device_view(request):
-    if request.method == 'POST':
-        name = request.POST.get('device_name')
-        ip = request.POST.get('ip_address')
-        username = request.POST.get('api_username')
-        password = request.POST.get('api_password')
-        port = request.POST.get('api_port', '8728')
-        port_8700 = request.POST.get('api_port_8700', '8700')
-
-        MikrotikDevice.objects.create(
-            device_name=name,
-            ip_address=ip,
-            api_username=username,
-            api_password=password,
-            api_port=port,
-            api_port_8700=port_8700
-        )
-        messages.success(request, f"Device {name} added successfully!")
-    return redirect('device_list')
-
-
-@login_required
-def edit_device_view(request, device_id):
-    if request.method == 'POST':
-        device = get_object_or_404(MikrotikDevice, id=device_id)
-        device.device_name = request.POST.get('device_name')
-        device.ip_address = request.POST.get('ip_address')
-        device.api_username = request.POST.get('api_username')
-        # Only update password if a new one is provided
-        new_password = request.POST.get('api_password')
-        if new_password:
-            device.api_password = new_password
-        device.api_port = request.POST.get('api_port', '8728')
-        device.api_port_8700 = request.POST.get('api_port_8700', '8700')
-        device.save()
-        messages.success(
-            request, f"Device {device.device_name} updated successfully!")
-    return redirect('device_list')
-
-
-@login_required
-def delete_device_view(request, device_id):
-    if request.method == 'POST':
-        device = get_object_or_404(MikrotikDevice, id=device_id)
-        name = device.device_name
-        device.delete()
-        messages.success(request, f"Device {name} deleted successfully!")
-    return redirect('device_list')
-
-
-@login_required
-def test_connection_view(request, device_id):
-    if request.method == 'POST':
-        device = get_object_or_404(MikrotikDevice, id=device_id)
-        try:
-            api = MikrotikAPI(device)
-            # Just fetching active users as a connection test
-            api._get_api().get_resource('/system/resource').get()
-            return JsonResponse({'status': 'success'})
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'error': str(e)})
-    return JsonResponse({'status': 'error', 'error': 'Invalid request'})
-
-
 def device_list(request):
     devices = MikrotikDevice.objects.all().order_by('device_name')
     return render(request, 'network_manager/device_list.html', {'devices': devices})
 
 
+@login_required
 def add_device(request):
     if request.method == 'POST':
         device_name = request.POST.get('device_name')
@@ -106,6 +38,7 @@ def add_device(request):
     return render(request, 'network_manager/add_device.html')
 
 
+@login_required
 def edit_device(request, device_id):
     device = get_object_or_404(MikrotikDevice, id=device_id)
     if request.method == 'POST':
@@ -128,6 +61,7 @@ def edit_device(request, device_id):
     return render(request, 'network_manager/edit_device.html', {'device': device})
 
 
+@login_required
 def delete_device(request, device_id):
     if request.method == 'POST':
         device = get_object_or_404(MikrotikDevice, id=device_id)
@@ -140,6 +74,7 @@ def delete_device(request, device_id):
 # AJAX Connection Test
 
 
+@login_required
 def test_device_connection(request, device_id):
     if request.method == 'POST':
         device = get_object_or_404(MikrotikDevice, id=device_id)

@@ -130,11 +130,19 @@
             <li><a href="{% url 'agent_list' %}" class="menu-link {% if 'agent' in request.path %}active{% endif %}"><span class="icon"><i class="fa fa-address-card"></i></span> <span>Agents</span></a></li>
             <li><a href="{% url 'device_list' %}" class="menu-link {% if 'devices' in request.path %}active{% endif %}"><span class="icon"><i class="fa fa-mobile"></i></span> <span>Mikrotik Devices</span></a></li>
             <li><a href="{% url 'mikrotik_active_users' %}" class="menu-link {% if request.resolver_match.url_name == 'mikrotik_active_users' %}active{% endif %}"><span class="icon"><i class="fa-solid fa-computer"></i></span> <span>Mikrotik Active Users</span></a></li>
-            <li><a href="#" class="menu-link"><span class="icon"><i class="fa-solid fa-map-location"></i></span> <span>GeoMap</span></a></li>
-            <li><a href="#" class="menu-link"><span class="icon"><i class="fa fa-gavel"></i></span> <span>Logs</span></a></li>
+            <li><a href="{% url 'geomap' %}" class="menu-link {% if request.resolver_match.url_name == 'geomap' %}active{% endif %}"><span class="icon"><i class="fa-solid fa-map-location"></i></span> <span>GeoMap</span></a></li>
+            <li><a href="{% url 'logs' %}" class="menu-link {% if request.resolver_match.url_name == 'logs' %}active{% endif %}"><span class="icon"><i class="fa fa-gavel"></i></span> <span>Logs</span></a></li>
             <li><a href="{% url 'staff_list' %}" class="menu-link {% if 'staff' in request.path %}active{% endif %}"><span class="icon"><i class="fas fa-user-shield"></i></span> <span>Admin Panel</span></a></li>
-            <li><a href="#" class="menu-link"><span class="icon"><i class="fas fa-cog"></i></span> <span>Settings</span></a></li>
-            <li><a href="#" class="menu-link"><span class="icon"><i class="fas fa-sign-out-alt me-1"></i></span> <span>Logout</span></a></li>
+            <li><a href="{% url 'settings' %}" class="menu-link {% if request.resolver_match.url_name == 'settings' %}active{% endif %}"><span class="icon"><i class="fas fa-cog"></i></span> <span>Settings</span></a></li>
+            
+            <li>
+                <form action="{% url 'logout' %}" method="post" class="d-inline w-100">
+                    {% csrf_token %}
+                    <button type="submit" class="menu-link w-100 text-start" style="background:none; border:none; padding:0.85rem 1.5rem; display:flex; align-items:center;">
+                        <span class="icon"><i class="fas fa-sign-out-alt me-1"></i></span> <span>Logout</span>
+                    </button>
+                </form>
+            </li>
         </ul>
     </nav>
     <div class="sidebar-footer text-center mt-auto mb-2">
@@ -161,6 +169,9 @@
             <button id="themeToggle" class="btn btn-sm" style="background:transparent; border:none; font-size:1.25rem; color:inherit;" title="Toggle Dark/Light Mode">
                 <i class="fas fa-moon" id="themeIcon"></i>
             </button>
+            <a href="{% url 'profile' %}" class="btn btn-sm" style="background:transparent; border:none; font-size:1.25rem; color:inherit; text-decoration:none;" title="My Profile">
+                <i class="fas fa-user-circle"></i>
+            </a>
             {% block topbar_right %}{% endblock %}
         </div>
     </header>

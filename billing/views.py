@@ -12,7 +12,7 @@ import json
 from datetime import timedelta, datetime
 
 from .models import (
-    SystemAdmin, SubscriptionPlan, Agent, AccountType, ServicePlan,
+    SystemAdmin, SubscriptionPlan, Agent, AccountType,
     Customer, Barangay, Payment
 )
 from network_manager.models import MikrotikDevice
@@ -170,118 +170,6 @@ def api_live_monitoring_data(request):
 #  Subscription / Service Plans
 # ─────────────────────────────────────────────────
 
-@login_required
-def service_plans_view(request):
-    """List all service plans."""
-    plans = ServicePlan.objects.all().order_by('plan_name')
-    total_plans = plans.count()
-    avg_price = plans.aggregate(avg=Sum('price'))['avg']
-    if total_plans > 0 and avg_price is not None:
-        avg_price = round(float(avg_price) / total_plans, 2)
-    else:
-        avg_price = 0.00
-
-    # Most subscribed plan
-    top_plan_qs = Customer.objects.values('plan__name').annotate(
-        cnt=Count('id')).order_by('-cnt').first()
-    top_plan_name = top_plan_qs['plan__name'] if top_plan_qs else 'N/A'
-
-    success_msg = request.GET.get('success')
-    return render(request, 'billing/service_plans.html', {
-        'plans': plans,
-        'total_plans': total_plans,
-        'avg_price': avg_price,
-        'top_plan_name': top_plan_name,
-        'success_msg': success_msg,
-    })
-
-
-@login_required
-def add_plan_view(request):
-    """Add a new service plan."""
-    error = None
-    data = {}
-    if request.method == 'POST':
-        plan_name = request.POST.get('plan_name', '').strip()
-        speed_up = request.POST.get('speed_up', '').strip()
-        speed_down = request.POST.get('speed_down', '').strip()
-        price = request.POST.get('price', '').strip()
-        validity_days = request.POST.get('validity_days', '').strip()
-        description = request.POST.get('description', '').strip()
-
-        if not all([plan_name, speed_up, speed_down, price, validity_days]):
-            error = 'Please fill in all required fields.'
-            data = request.POST
-        else:
-            try:
-                ServicePlan.objects.create(
-                    plan_name=plan_name,
-                    plan_code=plan_name.lower().replace(' ', '_'),
-                    speed_up=int(speed_up),
-                    speed_down=int(speed_down),
-                    price=float(price),
-                    price_monthly=float(price),
-                    validity_days=int(validity_days),
-                    description=description,
-                )
-                return redirect('/plans/?success=added')
-            except Exception as e:
-                error = f'Failed to add plan: {e}'
-                data = request.POST
-
-    return render(request, 'billing/add_plan.html', {'error': error, 'data': data})
-
-
-@login_required
-def edit_plan_view(request, plan_id):
-    """Edit an existing service plan."""
-    try:
-        plan = ServicePlan.objects.get(pk=plan_id)
-    except ServicePlan.DoesNotExist:
-        return redirect('/plans/')
-
-    error = None
-    if request.method == 'POST':
-        plan_name = request.POST.get('plan_name', '').strip()
-        speed_up = request.POST.get('speed_up', '').strip()
-        speed_down = request.POST.get('speed_down', '').strip()
-        price = request.POST.get('price', '').strip()
-        validity_days = request.POST.get('validity_days', '').strip()
-        description = request.POST.get('description', '').strip()
-
-        if not all([plan_name, speed_up, speed_down, price, validity_days]):
-            error = 'Please fill in all required fields.'
-        else:
-            try:
-                plan.plan_name = plan_name
-                plan.plan_code = plan_name.lower().replace(' ', '_')
-                plan.speed_up = int(speed_up)
-                plan.speed_down = int(speed_down)
-                plan.price = float(price)
-                plan.price_monthly = float(price)
-                plan.validity_days = int(validity_days)
-                plan.description = description
-                plan.save()
-                return redirect('/plans/?success=updated')
-            except Exception as e:
-                error = f'Failed to update plan: {e}'
-
-    return render(request, 'billing/edit_plan.html', {'plan': plan, 'error': error})
-
-
-@login_required
-def delete_plan_view(request, plan_id):
-    """AJAX endpoint to delete a plan."""
-    if request.method != 'POST':
-        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
-    try:
-        plan = ServicePlan.objects.get(pk=plan_id)
-        plan.delete()
-        return JsonResponse({'success': True})
-    except ServicePlan.DoesNotExist:
-        return JsonResponse({'success': False, 'message': 'Plan not found.'}, status=404)
-    except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 
 # ─────────────────────────────────────────────────
@@ -661,7 +549,7 @@ def add_customer(request):
             email=request.POST.get('email'),
             phone=request.POST.get('phone'),
             address=request.POST.get('address'),
-            pppoe_username=request.POST.get('pppoe_username'),
+            pppoe_username=request.POST.get('pppoe_username') or None,
             pppoe_password=request.POST.get('pppoe_password'),
             status=request.POST.get('status', 'active'),
             plan_id=request.POST.get('plan_id'),
@@ -671,12 +559,14 @@ def add_customer(request):
             account_type_id=request.POST.get('account_type_id'),
             latitude=request.POST.get('latitude') or None,
             longitude=request.POST.get('longitude') or None,
+            cignalplay_no=request.POST.get('cignalplay_no'),
+            cignalplay_date=request.POST.get('cignalplay_date') or None,
             created_form_by=request.user.username
         )
         messages.success(request, 'Customer added successfully!')
         return redirect('customer_list')
     context = {
-        'plans': ServicePlan.objects.all(),
+        'plans': SubscriptionPlan.objects.all(),
         'devices': MikrotikDevice.objects.all(),
         'agents': Agent.objects.all(),
         'barangays': Barangay.objects.all(),
@@ -687,17 +577,103 @@ def add_customer(request):
 
 @login_required
 def edit_customer(request, customer_id):
-    pass
+    customer = get_object_or_404(Customer, id=customer_id)
+    if request.method == 'POST':
+        customer.full_name = request.POST.get('full_name')
+        customer.email = request.POST.get('email')
+        customer.phone = request.POST.get('phone')
+        customer.address = request.POST.get('address')
+        customer.pppoe_username = request.POST.get('pppoe_username') or None
+        
+        new_password = request.POST.get('pppoe_password')
+        if new_password:
+            customer.pppoe_password = new_password
+            
+        customer.status = request.POST.get('status', 'active')
+        
+        # Handle ForeignKeys (using _id allows us to assign None if empty string, or the ID directly)
+        plan_id = request.POST.get('plan_id')
+        customer.plan_id = plan_id if plan_id else None
+        
+        device_id = request.POST.get('device_id')
+        customer.mikrotik_device_id = device_id if device_id else None
+        
+        agent_id = request.POST.get('agent_id')
+        customer.agent_id = agent_id if agent_id else None
+        
+        barangay_id = request.POST.get('barangay_id')
+        customer.barangay_id = barangay_id if barangay_id else None
+        
+        account_type_id = request.POST.get('account_type_id')
+        customer.account_type_id = account_type_id if account_type_id else None
+        
+        # Cignal Play Integration
+        customer.cignalplay_no = request.POST.get('cignalplay_no')
+        cignal_date = request.POST.get('cignalplay_date')
+        if cignal_date:
+            customer.cignalplay_date = cignal_date
+            
+        latitude = request.POST.get('latitude')
+        if latitude:
+            customer.latitude = latitude
+            
+        longitude = request.POST.get('longitude')
+        if longitude:
+            customer.longitude = longitude
+            
+        customer.save()
+        messages.success(request, f'Customer {customer.full_name} updated successfully!')
+        return redirect('view_customer', customer_id=customer.id)
+
+    context = {
+        'customer': customer,
+        'plans': SubscriptionPlan.objects.all(),
+        'devices': MikrotikDevice.objects.all(),
+        'agents': Agent.objects.all(),
+        'barangays': Barangay.objects.all(),
+        'account_types': AccountType.objects.all()
+    }
+    return render(request, 'billing/edit_customer.html', context)
 
 
 @login_required
 def view_customer(request, customer_id):
-    pass
+    customer = get_object_or_404(Customer, id=customer_id)
+    payments = customer.payments.all().order_by('-paid_at')
+    
+    # Try to fetch live MT connection status if they have a router
+    mt_status = "Disconnected"
+    uptime = "N/A"
+    if customer.mikrotik_device and customer.pppoe_username:
+        try:
+            from network_manager.services import MikrotikAPI
+            api = MikrotikAPI(customer.mikrotik_device)
+            active_users = api.get_active_pppoe_users()
+            for au in active_users:
+                if au.get('name') == customer.pppoe_username:
+                    mt_status = "Connected"
+                    uptime = au.get('uptime', 'N/A')
+                    break
+        except Exception:
+            pass
+            
+    context = {
+        'customer': customer,
+        'payments': payments,
+        'mt_status': mt_status,
+        'uptime': uptime,
+    }
+    return render(request, 'billing/view_customer.html', context)
 
 
 @login_required
 def delete_customer(request, customer_id):
-    pass
+    if request.method == 'POST':
+        customer = get_object_or_404(Customer, id=customer_id)
+        name = customer.full_name
+        customer.delete()
+        messages.success(request, f'Customer {name} deleted successfully!')
+    return redirect('customer_list')
 
 # ─────────────────────────────────────────────────
 #  Payments
@@ -844,3 +820,24 @@ def create_payment_view(request, customer_id):
         return redirect('payment_logs')
 
     return render(request, 'billing/pay.html', {'customer': customer})
+
+
+# ─────────────────────────────────────────────────
+#  Core UI & Placeholders
+# ─────────────────────────────────────────────────
+
+@login_required
+def profile_view(request):
+    return render(request, 'billing/profile.html')
+
+@login_required
+def geomap_view(request):
+    return render(request, 'billing/geomap.html')
+
+@login_required
+def logs_view(request):
+    return render(request, 'billing/logs.html')
+
+@login_required
+def settings_view(request):
+    return render(request, 'billing/settings.html')

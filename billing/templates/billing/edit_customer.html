@@ -1,7 +1,7 @@
 {% extends "billing/base.html" %}
 {% load static %}
 
-{% block title %}Add Customer{% endblock %}
+{% block title %}Edit Customer{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -38,8 +38,8 @@
 <div class="container-fluid py-3 px-3 px-md-4">
     <div class="form-card">
         <div class="form-page-title">
-            <div class="title-icon"><i class="fas fa-user-plus"></i></div>
-            Add Customer
+            <div class="title-icon"><i class="fas fa-user-edit"></i></div>
+            Edit Customer
         </div>
 
         {% if messages %}
@@ -57,23 +57,23 @@
                 <label class="plan-form-label">Full Name <span class="req">*</span></label>
                 <div class="input-icon-wrapper">
                     <i class="fas fa-user i-icon"></i>
-                    <input type="text" name="full_name" class="plan-form-control" required placeholder="Juan Dela Cruz">
+                    <input type="text" name="full_name" class="plan-form-control" required value="{{ customer.full_name|default:'' }}">
                 </div>
             </div>
 
             <div class="row g-3 mb-3">
                 <div class="col-md-6">
-                    <label class="plan-form-label">Email Address <span class="req">*</span></label>
+                    <label class="plan-form-label">Email Address</label>
                     <div class="input-icon-wrapper">
                         <i class="fas fa-envelope i-icon"></i>
-                        <input type="email" name="email" class="plan-form-control" required placeholder="juan@example.com">
+                        <input type="email" name="email" class="plan-form-control" value="{{ customer.email|default:'' }}">
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <label class="plan-form-label">Phone Number <span class="req">*</span></label>
+                    <label class="plan-form-label">Phone Number</label>
                     <div class="input-icon-wrapper">
                         <i class="fas fa-phone i-icon"></i>
-                        <input type="text" name="phone" class="plan-form-control" required placeholder="e.g. 9123456789">
+                        <input type="text" name="phone" class="plan-form-control" value="{{ customer.phone|default:'' }}">
                     </div>
                 </div>
             </div>
@@ -82,20 +82,20 @@
 
             <div class="row g-3 mb-3">
                 <div class="col-md-6">
-                    <label class="plan-form-label">Subscription Plan <span class="req">*</span></label>
-                    <select name="plan_id" class="plan-form-control" required>
+                    <label class="plan-form-label">Subscription Plan</label>
+                    <select name="plan_id" class="plan-form-control">
                         <option value="">-- Select Plan --</option>
                         {% for plan in plans %}
-                        <option value="{{ plan.id }}">{{ plan.name }} (₱{{ plan.price }})</option>
+                        <option value="{{ plan.id }}" {% if customer.plan_id == plan.id %}selected{% endif %}>{{ plan.name }} (₱{{ plan.price }})</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <label class="plan-form-label">Account Type <span class="req">*</span></label>
-                    <select name="account_type_id" class="plan-form-control" required>
+                    <label class="plan-form-label">Account Type</label>
+                    <select name="account_type_id" class="plan-form-control">
                         <option value="">-- Select Type --</option>
                         {% for type in account_types %}
-                        <option value="{{ type.id }}">{{ type.type_name }}</option>
+                        <option value="{{ type.id }}" {% if customer.account_type_id == type.id %}selected{% endif %}>{{ type.type_name }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -103,20 +103,20 @@
 
             <div class="row g-3 mb-3">
                 <div class="col-md-6">
-                    <label class="plan-form-label">Agent <span class="req">*</span></label>
-                    <select name="agent_id" class="plan-form-control" required>
+                    <label class="plan-form-label">Agent</label>
+                    <select name="agent_id" class="plan-form-control">
                         <option value="">-- Select Agent --</option>
                         {% for agent in agents %}
-                        <option value="{{ agent.id }}">{{ agent.name }}</option>
+                        <option value="{{ agent.id }}" {% if customer.agent_id == agent.id %}selected{% endif %}>{{ agent.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <label class="plan-form-label">Mikrotik Device <span class="req">*</span></label>
-                    <select name="device_id" class="plan-form-control" required>
+                    <label class="plan-form-label">Mikrotik Device</label>
+                    <select name="device_id" class="plan-form-control">
                         <option value="">-- Select Router --</option>
                         {% for device in devices %}
-                        <option value="{{ device.id }}">{{ device.device_name }}</option>
+                        <option value="{{ device.id }}" {% if customer.mikrotik_device_id == device.id %}selected{% endif %}>{{ device.device_name }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -127,14 +127,14 @@
                     <label class="plan-form-label">PPPoE Username</label>
                     <div class="input-icon-wrapper">
                         <i class="fas fa-wifi i-icon"></i>
-                        <input type="text" name="pppoe_username" class="plan-form-control" placeholder="Optional">
+                        <input type="text" name="pppoe_username" class="plan-form-control" placeholder="Optional" value="{{ customer.pppoe_username|default:'' }}">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <label class="plan-form-label">PPPoE Password</label>
                     <div class="input-icon-wrapper">
                         <i class="fas fa-lock i-icon"></i>
-                        <input type="password" name="pppoe_password" class="plan-form-control" placeholder="Optional">
+                        <input type="password" name="pppoe_password" class="plan-form-control" placeholder="Leave blank to keep unchanged">
                     </div>
                 </div>
             </div>
@@ -142,11 +142,11 @@
             <div class="mb-4">
                 <label class="plan-form-label">Status <span class="req">*</span></label>
                 <select name="status" class="plan-form-control" required>
-                    <option value="active" selected>Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="pending">Pending</option>
-                    <option value="suspended">Suspended</option>
-                    <option value="pull out">Pull Out</option>
+                    <option value="active" {% if customer.status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="inactive" {% if customer.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                    <option value="pending" {% if customer.status == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="suspended" {% if customer.status == 'suspended' %}selected{% endif %}>Suspended</option>
+                    <option value="pull out" {% if customer.status == 'pull out' %}selected{% endif %}>Pull Out</option>
                 </select>
             </div>
 
@@ -157,14 +157,14 @@
                     <label class="plan-form-label">Cignal Play No.</label>
                     <div class="input-icon-wrapper">
                         <i class="fas fa-hashtag i-icon"></i>
-                        <input type="text" name="cignalplay_no" class="plan-form-control" placeholder="Optional">
+                        <input type="text" name="cignalplay_no" class="plan-form-control" placeholder="Optional" value="{{ customer.cignalplay_no|default:'' }}">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <label class="plan-form-label">Cignal Play Date</label>
                     <div class="input-icon-wrapper">
                         <i class="fas fa-calendar i-icon"></i>
-                        <input type="date" name="cignalplay_date" class="plan-form-control">
+                        <input type="date" name="cignalplay_date" class="plan-form-control" value="{% if customer.cignalplay_date %}{{ customer.cignalplay_date|date:'Y-m-d' }}{% endif %}">
                     </div>
                 </div>
             </div>
@@ -176,15 +176,15 @@
                     <label class="plan-form-label">Full Address</label>
                     <div class="input-icon-wrapper">
                         <i class="fas fa-home i-icon"></i>
-                        <input type="text" name="address" class="plan-form-control" placeholder="Street Address">
+                        <input type="text" name="address" class="plan-form-control" placeholder="Street Address" value="{{ customer.address|default:'' }}">
                     </div>
                 </div>
                 <div class="col-md-12">
-                    <label class="plan-form-label">Barangay <span class="req">*</span></label>
-                    <select name="barangay_id" class="plan-form-control" required>
+                    <label class="plan-form-label">Barangay</label>
+                    <select name="barangay_id" class="plan-form-control">
                         <option value="">-- Select Barangay --</option>
                         {% for barangay in barangays %}
-                        <option value="{{ barangay.id }}">{{ barangay.name }}</option>
+                        <option value="{{ barangay.id }}" {% if customer.barangay_id == barangay.id %}selected{% endif %}>{{ barangay.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -206,8 +206,8 @@
             </div>
 
             <div class="d-flex align-items-center justify-content-between gap-2 mt-4">
-                <a href="{% url 'customer_list' %}" class="btn-cancel">Cancel</a>
-                <button type="submit" class="btn-submit"><i class="fas fa-save me-2"></i>Save Customer</button>
+                <a href="{% url 'view_customer' customer.id %}" class="btn-cancel">Cancel</a>
+                <button type="submit" class="btn-submit"><i class="fas fa-save me-2"></i>Save Changes</button>
             </div>
         </form>
     </div>
@@ -218,11 +218,10 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // Initialize Map
-        var defaultLat = 14.5995; // Default coordinates (Manila)
-        var defaultLng = 120.9842;
+        var defaultLat = {{ customer.latitude|default:"14.5995" }};
+        var defaultLng = {{ customer.longitude|default:"120.9842" }};
         
-        var map = L.map('map').setView([defaultLat, defaultLng], 13);
+        var map = L.map('map').setView([defaultLat, defaultLng], 15);
         
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors'
@@ -237,16 +236,13 @@
             document.getElementById('longitude').value = lng.toFixed(8);
         }
 
-        // Set initial values
         updateInputs(defaultLat, defaultLng);
 
-        // Update when marker is dragged
         marker.on('dragend', function(e) {
             var position = marker.getLatLng();
             updateInputs(position.lat, position.lng);
         });
 
-        // Update when map is clicked
         map.on('click', function(e) {
             marker.setLatLng(e.latlng);
             updateInputs(e.latlng.lat, e.latlng.lng);
