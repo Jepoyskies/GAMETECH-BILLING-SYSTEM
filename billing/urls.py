@@ -48,8 +48,6 @@ urlpatterns = [
 
     # Core UI & Placeholders
     path('profile/', views.profile_view, name='profile'),
-    path('geomap/', views.geomap_view, name='geomap'),
-    path('logs/', views.logs_view, name='logs'),
     path('settings/', views.settings_view, name='settings'),
     
     # Auth Extensions
@@ -58,4 +56,11 @@ urlpatterns = [
         template_name='billing/change_password.html',
         success_url='/profile/?password_changed=1'
     ), name='change_password'),
+
+    # Logs route
+    path('logs/', views.system_logs_view, name='system_logs'),
+
+    # Geo Map routes
+    path('geomap/', views.geomap_view, name='geomap'),
+    path('geomap/save/', views.save_marker_positions, name='save_marker_positions'),
 ]
