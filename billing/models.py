@@ -140,6 +140,8 @@ class Customer(models.Model):
         max_length=100, null=True, blank=True)
     cignalplay_adjustedby = models.CharField(
         max_length=100, null=True, blank=True)
+    referral_received = models.CharField(max_length=50, null=True, blank=True, default='0')
+    adjusted_by_referral = models.CharField(max_length=100, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     sms_sent_at = models.DateTimeField(null=True, blank=True)
     expires_at = models.DateTimeField(null=True, blank=True)

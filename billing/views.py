@@ -530,9 +530,12 @@ def view_agent(request, agent_id):
 
     if request.method == 'POST' and 'update_referral' in request.POST:
         cust_id = request.POST.get('cust_id')
+        referral_value = request.POST.get('referral_value')
 
         try:
             cust = Customer.objects.get(id=cust_id, agent=agent)
+            if referral_value is not None:
+                cust.referral_received = referral_value
             cust.adjusted_by_referral = request.user.username if request.user.is_authenticated else 'unknown'
             cust.save()
             messages.success(
