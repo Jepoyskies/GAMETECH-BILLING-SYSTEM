@@ -1,5 +1,6 @@
 # pyrefly: ignore [missing-import]
 from django.db import models
+from django.utils import timezone
 from network_manager.models import MikrotikDevice
 
 
@@ -169,3 +170,30 @@ class SystemLog(models.Model):
 
     def __str__(self):
         return f"{self.action} on {self.table_name} by {self.changed_by} at {self.changed_at}"
+
+class CustomerMacHistory(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='mac_history')
+    mac_address = models.CharField(max_length=100)
+    detected_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-detected_at']
+        db_table = 'customer_mac_history'
+
+    def __str__(self):
+        return f"{self.mac_address} for {self.customer.full_name}"
+
+class Rebate(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, related_name='rebates')
+    username = models.CharField(max_length=255, null=True, blank=True)
+    plan_name = models.CharField(max_length=255, null=True, blank=True)
+    days = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    current_expiry = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    paid_at = models.DateTimeField(default=timezone.now)
+    adjusted_by = models.CharField(max_length=255, null=True, blank=True)
+    note = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Rebate for {self.username}"

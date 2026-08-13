@@ -1,0 +1,54 @@
+{% extends 'billing/base.html' %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="fw-bold text-primary"><i class="fas fa-award"></i> Payment Add-on Logs</h2>
+        <div>
+            <span class="badge bg-success">Active: {{ active_count }}</span>
+            <span class="badge bg-danger">Expired: {{ expired_count }}</span>
+            <span class="badge bg-secondary">No Plan: {{ no_plan_count }}</span>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Username</th>
+                            <th>Full Name</th>
+                            <th>Current Plan</th>
+                            <th>Expiry Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in customers %}
+                        <tr>
+                            <td class="fw-bold">{{ c.pppoe_username|default:"<span class='badge bg-danger'>Not
+                                    Connected</span>" }}</td>
+                            <td>{{ c.full_name }}</td>
+                            <td>{{ c.plan.name|default:"N/A" }}</td>
+                            <td>{{ c.expires_at|date:"M d, Y H:i"|default:"N/A" }}</td>
+                            <td>
+                                {% if not c.expires_at %}
+                                <span class="badge bg-secondary">No Plan</span>
+                                {% elif c.expires_at < now %} <span class="badge bg-danger">Expired</span>
+                                    {% else %}
+                                    <span class="badge bg-success">Active</span>
+                                    {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-3 text-muted">No records found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

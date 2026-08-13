@@ -1,0 +1,545 @@
+{% extends 'billing/base.html' %}
+
+{% block content %}
+<style>
+    .splitter-hero {
+        background: linear-gradient(135deg, #9f272b 0%, #06aedc 100%);
+        color: white;
+        padding: 1.5rem 0;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+
+    .splitter-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        opacity: 0.5;
+    }
+
+    .splitter-hero-content {
+        position: relative;
+        z-index: 1;
+    }
+
+    .splitter-hero h1 {
+        font-size: 1.75rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .splitter-hero p {
+        font-size: 0.95rem;
+        opacity: 0.95;
+        margin: 0 auto;
+    }
+
+    .config-panel {
+        background: var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color);
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .config-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+
+    /* Network Tree Builder */
+    .network-builder {
+        background: var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color);
+        border-radius: 8px;
+        padding: 1.5rem;
+        min-height: 300px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .tree-node {
+        margin-bottom: 1rem;
+    }
+
+    .node-card {
+        background: var(--bs-body-bg);
+        border: 2px solid var(--bs-border-color);
+        border-radius: 8px;
+        padding: 1rem;
+        position: relative;
+        transition: all 0.3s ease;
+    }
+
+    .node-card:hover {
+        border-color: #06aedc;
+        box-shadow: 0 4px 12px rgba(6, 174, 220, 0.15);
+    }
+
+    .node-card.pon-node {
+        border-color: #f59e0b;
+        border-left-width: 4px;
+    }
+
+    .node-card.plc-node {
+        border-color: #06aedc;
+        border-left-width: 4px;
+    }
+
+    .node-card.fbt-node {
+        border-color: #9f272b;
+        border-left-width: 4px;
+    }
+
+    .node-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .node-title {
+        font-size: 1rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .node-power {
+        font-size: 1.1rem;
+        font-weight: 800;
+    }
+
+    .node-power.excellent {
+        color: #10b981;
+    }
+
+    .node-power.good {
+        color: #3b82f6;
+    }
+
+    .node-power.acceptable {
+        color: #f59e0b;
+    }
+
+    .node-power.marginal {
+        color: #ef4444;
+    }
+
+    .node-power.poor {
+        color: #991b1b;
+    }
+
+    .node-details {
+        display: flex;
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .node-detail-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .node-detail-label {
+        font-size: 0.75rem;
+        color: var(--bs-secondary);
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+
+    .node-detail-value {
+        font-size: 0.9rem;
+        font-weight: 700;
+    }
+
+    .child-nodes {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1rem;
+        padding-left: 1.5rem;
+        flex-wrap: wrap;
+        border-left: 2px dashed var(--bs-border-color);
+    }
+
+    .child-nodes .tree-node {
+        flex: 1;
+        min-width: 250px;
+        margin-bottom: 0;
+    }
+
+    /* Modal Customizations */
+    .splitter-type-tabs {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .type-tab {
+        flex: 1;
+        padding: 1rem;
+        border: 2px solid var(--bs-border-color);
+        border-radius: 8px;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .type-tab.active {
+        border-color: #06aedc;
+        background: rgba(6, 174, 220, 0.1);
+    }
+
+    .type-tab.fbt-tab.active {
+        border-color: #9f272b;
+        background: rgba(159, 39, 43, 0.1);
+    }
+
+    .splitter-options {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1rem;
+    }
+
+    .splitter-option {
+        padding: 1rem;
+        border: 2px solid var(--bs-border-color);
+        border-radius: 8px;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .splitter-option:hover {
+        border-color: #06aedc;
+        transform: translateY(-2px);
+    }
+
+    .splitter-option-ratio {
+        font-size: 1.25rem;
+        font-weight: 800;
+        margin-bottom: 0.25rem;
+    }
+</style>
+
+<div class="container-fluid">
+
+    <div class="splitter-hero">
+        <div class="splitter-hero-content">
+            <h1>🔌 Dynamic Fiber Network Calculator</h1>
+            <p>Build your PON network with unlimited cascading | FBT Tap Couplers & PLC Splitters</p>
+        </div>
+    </div>
+
+    <div class="config-panel">
+        <div class="config-grid">
+            <div class="form-group">
+                <label for="ponPower" class="form-label fw-bold">PON OLT Output Power (dBm)</label>
+                <input type="number" class="form-control" id="ponPower" value="6" step="0.1" oninput="recalculateAll()">
+            </div>
+            <div class="form-group">
+                <label for="defaultCableLoss" class="form-label fw-bold">Default Cable Loss per Connection (dB)</label>
+                <input type="number" class="form-control" id="defaultCableLoss" value="0.5" step="0.1"
+                    oninput="recalculateAll()">
+            </div>
+            <div class="form-group">
+                <label class="form-label fw-bold">Network Statistics</label>
+                <div class="p-2 rounded bg-light text-dark border">
+                    <small>
+                        Total Endpoints: <strong id="totalEndpoints">1</strong> |
+                        Avg Power: <strong id="avgPower" class="text-success">+6.0 dBm</strong>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="network-builder">
+        <div id="networkTree">
+            <!-- PON Root Node -->
+            <div class="tree-node" id="pon-root">
+                <div class="node-card pon-node">
+                    <div class="node-header">
+                        <div class="node-title">
+                            <span class="node-icon">📡</span>
+                            <span>PON OLT Root</span>
+                        </div>
+                        <div class="node-power excellent" id="pon-power">+6.0 dBm</div>
+                    </div>
+                    <div class="node-details">
+                        <div class="node-detail-item">
+                            <span class="node-detail-label">Output Power</span>
+                            <span class="node-detail-value" id="pon-power-detail">+6.0 dBm</span>
+                        </div>
+                        <div class="node-detail-item">
+                            <span class="node-detail-label">Status</span>
+                            <span class="node-detail-value text-success">🟢 Active</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-sm fw-bold" onclick="openSplitterModal('pon-root')">
+                        ➕ Add Splitter / FBT
+                    </button>
+                </div>
+                <div class="child-nodes" id="pon-root-children"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Splitter Selection Modal (Bootstrap 5) -->
+<div class="modal fade" id="splitterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Select Splitter Type</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="splitter-type-tabs">
+                    <div class="type-tab active" onclick="switchSplitterTab('plc')">
+                        <div class="fw-bold">PLC Splitter</div>
+                        <small class="text-muted">Equal split, low loss</small>
+                    </div>
+                    <div class="type-tab fbt-tab" onclick="switchSplitterTab('fbt')">
+                        <div class="fw-bold">FBT Tap Coupler</div>
+                        <small class="text-muted">Tap ratios, flexible</small>
+                    </div>
+                </div>
+
+                <div id="plc-options" class="splitter-options"></div>
+                <div id="fbt-options" class="splitter-options" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // Core Data Config
+    let nextNodeId = 1;
+    let currentModalParent = null;
+    const splitterModal = new bootstrap.Modal(document.getElementById('splitterModal'));
+
+    const splitterConfig = {
+        plc: {
+            '1:2': { ports: 2, loss: 3.3, desc: 'Low loss, 2 outputs' },
+            '1:4': { ports: 4, loss: 6.8, desc: 'Medium density' },
+            '1:8': { ports: 8, loss: 10.5, desc: 'Standard deployment' },
+            '1:16': { ports: 16, loss: 13.7, desc: 'High density' },
+            '1:32': { ports: 32, loss: 17.0, desc: 'Very high density' },
+            '1:64': { ports: 64, loss: 20.5, desc: 'Maximum split' }
+        },
+        fbt: {
+            '90/10': { through: 90, tap: 10, throughLoss: 0.8, tapLoss: 10.5, desc: '10% tap, 90% through' },
+            '80/20': { through: 80, tap: 20, throughLoss: 1.3, tapLoss: 7.5, desc: '20% tap, 80% through' },
+            '70/30': { through: 70, tap: 30, throughLoss: 2.0, tapLoss: 5.5, desc: '30% tap, 70% through' },
+            '50/50': { through: 50, tap: 50, throughLoss: 3.5, tapLoss: 3.5, desc: '50/50 equal split' },
+            '30/70': { through: 30, tap: 70, throughLoss: 5.5, tapLoss: 2.0, desc: '70% tap, 30% through' },
+            '20/80': { through: 20, tap: 80, throughLoss: 7.5, tapLoss: 1.3, desc: '80% tap, 20% through' },
+            '10/90': { through: 10, tap: 90, throughLoss: 10.5, tapLoss: 0.8, desc: '90% tap, 10% through' }
+        }
+    };
+
+    function initializeModalOptions() {
+        const plcContainer = document.getElementById('plc-options');
+        Object.keys(splitterConfig.plc).forEach(ratio => {
+            const c = splitterConfig.plc[ratio];
+            plcContainer.innerHTML += `
+        <div class="splitter-option" onclick="addSplitter('plc', '${ratio}')">
+          <div class="splitter-option-ratio">${ratio}</div>
+          <small class="text-danger">-${c.loss} dB</small><br>
+          <small class="text-muted">${c.desc}</small>
+        </div>`;
+        });
+
+        const fbtContainer = document.getElementById('fbt-options');
+        Object.keys(splitterConfig.fbt).forEach(ratio => {
+            const c = splitterConfig.fbt[ratio];
+            fbtContainer.innerHTML += `
+        <div class="splitter-option" onclick="addSplitter('fbt', '${ratio}')">
+          <div class="splitter-option-ratio">${ratio}</div>
+          <small class="text-muted">T: -${c.throughLoss}dB | Tap: -${c.tapLoss}dB</small>
+        </div>`;
+        });
+    }
+
+    function switchSplitterTab(type) {
+        document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+        document.getElementById('plc-options').style.display = type === 'plc' ? 'grid' : 'none';
+        document.getElementById('fbt-options').style.display = type === 'fbt' ? 'grid' : 'none';
+    }
+
+    function openSplitterModal(parentId) {
+        currentModalParent = parentId;
+        splitterModal.show();
+    }
+
+    function addSplitter(type, ratio) {
+        if (!currentModalParent) return;
+        const nodeId = `node-${nextNodeId++}`;
+        const config = splitterConfig[type][ratio];
+        const parentEl = document.getElementById(`${currentModalParent}-children`);
+
+        if (type === 'plc') {
+            parentEl.insertAdjacentHTML('beforeend', createPLCNode(nodeId, ratio, config, currentModalParent));
+        } else {
+            parentEl.insertAdjacentHTML('beforeend', createFBTNode(nodeId, ratio, config, currentModalParent));
+        }
+
+        splitterModal.hide();
+        recalculateAll();
+    }
+
+    function createPLCNode(nodeId, ratio, config, parentId) {
+        let childrenHTML = '';
+        for (let i = 1; i <= config.ports; i++) {
+            childrenHTML += `
+        <div class="tree-node" id="${nodeId}-port${i}" data-parent="${nodeId}">
+          <div class="node-card">
+            <div class="node-header">
+              <div class="fw-bold">🔌 Port ${i}</div>
+              <div class="node-power" id="${nodeId}-port${i}-power">0.0</div>
+            </div>
+            <button class="btn btn-outline-primary btn-sm mt-2" onclick="openSplitterModal('${nodeId}-port${i}')">➕ Add Node</button>
+          </div>
+          <div class="child-nodes" id="${nodeId}-port${i}-children"></div>
+        </div>`;
+        }
+        return `
+      <div class="tree-node" id="${nodeId}" data-type="plc" data-ratio="${ratio}" data-parent="${parentId}">
+        <div class="node-card plc-node">
+          <div class="node-header">
+            <div class="fw-bold">🔀 PLC ${ratio}</div>
+            <div class="node-power" id="${nodeId}-power">0.0</div>
+          </div>
+          <small class="text-muted d-block mb-2">Loss: ${config.loss} dB | Ports: ${config.ports}</small>
+          <button class="btn btn-danger btn-sm" onclick="removeNode('${nodeId}')">🗑️ Remove</button>
+        </div>
+        <div class="child-nodes" id="${nodeId}-children">${childrenHTML}</div>
+      </div>`;
+    }
+
+    function createFBTNode(nodeId, ratio, config, parentId) {
+        return `
+      <div class="tree-node" id="${nodeId}" data-type="fbt" data-ratio="${ratio}" data-parent="${parentId}">
+        <div class="node-card fbt-node">
+          <div class="node-header">
+            <div class="fw-bold">↔️ FBT ${ratio}</div>
+            <div class="node-power" id="${nodeId}-power">0.0</div>
+          </div>
+          <button class="btn btn-danger btn-sm mt-2" onclick="removeNode('${nodeId}')">🗑️ Remove</button>
+        </div>
+        <div class="child-nodes" id="${nodeId}-children">
+          <div class="tree-node" id="${nodeId}-through">
+            <div class="node-card">
+              <div class="node-header">
+                <div class="fw-bold">➡️ Through (${config.through}%)</div>
+                <div class="node-power" id="${nodeId}-through-power">0.0</div>
+              </div>
+              <button class="btn btn-outline-primary btn-sm mt-2" onclick="openSplitterModal('${nodeId}-through')">➕ Add</button>
+            </div>
+            <div class="child-nodes" id="${nodeId}-through-children"></div>
+          </div>
+          <div class="tree-node" id="${nodeId}-tap">
+            <div class="node-card">
+              <div class="node-header">
+                <div class="fw-bold">📡 Tap (${config.tap}%)</div>
+                <div class="node-power" id="${nodeId}-tap-power">0.0</div>
+              </div>
+              <button class="btn btn-outline-primary btn-sm mt-2" onclick="openSplitterModal('${nodeId}-tap')">➕ Add</button>
+            </div>
+            <div class="child-nodes" id="${nodeId}-tap-children"></div>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    function removeNode(nodeId) {
+        if (confirm('Remove this splitter and all connected nodes?')) {
+            document.getElementById(nodeId).remove();
+            recalculateAll();
+        }
+    }
+
+    function formatPower(power) { return `${power >= 0 ? '+' : ''}${power.toFixed(1)} dBm`; }
+
+    function updatePowerClass(element, power) {
+        element.className = 'node-power';
+        if (power >= -8) element.classList.add('text-success');
+        else if (power >= -15) element.classList.add('text-warning');
+        else element.classList.add('text-danger');
+    }
+
+    function recalculateAll() {
+        const ponPower = parseFloat(document.getElementById('ponPower').value) || 0;
+        const cableLoss = parseFloat(document.getElementById('defaultCableLoss').value) || 0;
+
+        document.getElementById('pon-power').textContent = formatPower(ponPower);
+        document.getElementById('pon-power-detail').textContent = formatPower(ponPower);
+
+        calculateNodePower(document.getElementById('pon-root-children'), ponPower, cableLoss);
+        updateStatistics(ponPower);
+    }
+
+    function calculateNodePower(container, inputPower, cableLoss) {
+        for (let child of container.children) {
+            const type = child.dataset.type, ratio = child.dataset.ratio, nodeId = child.id;
+
+            if (!type) {
+                const el = document.getElementById(`${nodeId}-power`);
+                if (el) { el.textContent = formatPower(inputPower); updatePowerClass(el, inputPower); }
+                if (document.getElementById(`${nodeId}-children`)) calculateNodePower(document.getElementById(`${nodeId}-children`), inputPower, cableLoss);
+            } else if (type === 'plc') {
+                const out = inputPower - splitterConfig.plc[ratio].loss - cableLoss;
+                document.getElementById(`${nodeId}-power`).textContent = formatPower(out);
+                calculateNodePower(document.getElementById(`${nodeId}-children`), out, cableLoss);
+            } else if (type === 'fbt') {
+                const conf = splitterConfig.fbt[ratio];
+                const tPower = inputPower - conf.throughLoss - cableLoss;
+                const tapPower = inputPower - conf.tapLoss - cableLoss;
+
+                const thEl = document.getElementById(`${nodeId}-through-power`);
+                const tapEl = document.getElementById(`${nodeId}-tap-power`);
+
+                if (thEl) { thEl.textContent = formatPower(tPower); updatePowerClass(thEl, tPower); }
+                if (tapEl) { tapEl.textContent = formatPower(tapPower); updatePowerClass(tapEl, tapPower); }
+
+                calculateNodePower(document.getElementById(`${nodeId}-through-children`), tPower, cableLoss);
+                calculateNodePower(document.getElementById(`${nodeId}-tap-children`), tapPower, cableLoss);
+            }
+        }
+    }
+
+    function updateStatistics(basePower) {
+        let endpoints = 0, total = 0;
+        document.querySelectorAll('[id$="-power"]').forEach(el => {
+            const nodeId = el.id.replace('-power', '');
+            const children = document.getElementById(`${nodeId}-children`);
+            if (children && children.children.length === 0) {
+                endpoints++;
+                total += parseFloat(el.textContent.replace(/[^-\d.]/g, ''));
+            }
+        });
+        document.getElementById('totalEndpoints').textContent = endpoints || 1;
+        document.getElementById('avgPower').textContent = formatPower(endpoints > 0 ? total / endpoints : basePower);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initializeModalOptions();
+        recalculateAll();
+    });
+</script>
+{% endblock extra_js %}
+{% endblock content %}

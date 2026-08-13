@@ -87,3 +87,66 @@ def test_device_connection(request, device_id):
             return JsonResponse({'status': 'success', 'message': f'Connected successfully to {device.device_name}'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': f'Connection failed: {e}'})
+
+
+@login_required
+def nap_list_view(request):
+    from .models import NapBox
+    naps = NapBox.objects.all().order_by('-created_at')
+    return render(request, 'network_manager/nap_list.html', {'naps': naps})
+
+
+@login_required
+def add_nap_view(request):
+    from .models import NapBox
+    if request.method == 'POST':
+        napbox_no = request.POST.get('napbox_no')
+        nap_latitude = request.POST.get('nap_latitude')
+        nap_longitude = request.POST.get('nap_longitude')
+        marker_color = request.POST.get('marker_color', 'red')
+        NapBox.objects.create(
+            napbox_no=napbox_no,
+            latitude=nap_latitude if nap_latitude else None,
+            longitude=nap_longitude if nap_longitude else None,
+            marker_color=marker_color
+        )
+        messages.success(request, 'NAP Box mapping saved successfully.')
+        return redirect('nap_list')
+    return render(request, 'network_manager/nap_form.html')
+
+
+@login_required
+def edit_nap_view(request, nap_id):
+    from .models import NapBox
+    nap = get_object_or_404(NapBox, id=nap_id)
+    if request.method == 'POST':
+        nap.napbox_no = request.POST.get('napbox_no')
+        nap_latitude = request.POST.get('nap_latitude')
+        nap_longitude = request.POST.get('nap_longitude')
+        if nap_latitude:
+            nap.latitude = nap_latitude
+        if nap_longitude:
+            nap.longitude = nap_longitude
+        nap.marker_color = request.POST.get('marker_color', 'red')
+        nap.save()
+        messages.success(request, 'NAP Box mapping updated successfully.')
+        return redirect('nap_list')
+    return render(request, 'network_manager/nap_form.html', {'nap': nap})
+
+
+@login_required
+def delete_nap_view(request, nap_id):
+    from .models import NapBox
+    if request.method == 'POST':
+        nap = get_object_or_404(NapBox, id=nap_id)
+        nap.delete()
+        messages.success(request, 'NAP Box deleted successfully.')
+    return redirect('nap_list')
+
+@login_required
+def fbt_plc_calculator_view(request):
+    """
+    Renders the standalone Fiber Network (FBT/PLC) Calculator tool.
+    No database context required.
+    """
+    return render(request, 'network_manager/fbt_plc_calculator.html')

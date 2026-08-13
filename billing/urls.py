@@ -27,7 +27,7 @@ urlpatterns = [
     path('subscriptions/', views.subscription_plans_view,
          name='subscription_plans'),
     # Payments
-    path('payments/', views.payment_logs_view, name='payment_logs'),
+    # (payments/ path removed since we use logs/payments/ below)
     path('payments/pay/<int:customer_id>/',
          views.create_payment_view, name='pay_customer'),
 
@@ -63,4 +63,17 @@ urlpatterns = [
     # Geo Map routes
     path('geomap/', views.geomap_view, name='geomap'),
     path('geomap/save/', views.save_marker_positions, name='save_marker_positions'),
+
+    # MAC History
+    path('mac-history/', views.mac_history_view, name='mac_history'),
+    # Financial Engine: Rebates & Rollbacks
+    path('customer/<str:username>/rebate/', views.customer_rebate_view, name='customer_rebate'),
+    path('customer/<str:username>/rollback/', views.customer_rollback_view, name='customer_rollback'),
+    path('payment/success/', views.payment_success_view, name='payment_success'),
+    path('logs/payments/', views.payment_logs_view, name='payment_logs'),
+    path('logs/payment-addons/', views.payment_addon_logs_view, name='payment_addon_logs'),
+    # Payment Processing
+    path('payment-portal/', views.payment_portal_view, name='payment_portal'),
+    path('customer/<str:username>/pay/', views.pay_customer_view, name='pay_customer'),
+    path('logs/rebates/', views.rebates_logs_view, name='rebates_logs'),
 ]

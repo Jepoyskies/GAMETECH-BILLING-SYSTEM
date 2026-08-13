@@ -13,7 +13,7 @@ from datetime import timedelta, datetime
 
 from .models import (
     SystemAdmin, SubscriptionPlan, Agent, AccountType,
-    Customer, Barangay, Payment, SystemLog
+    Customer, Barangay, Payment, Rebate, SystemLog
 )
 from network_manager.models import MikrotikDevice, NapBox
 from network_manager.services import MikrotikAPI
@@ -911,6 +911,27 @@ def save_marker_positions(request):
 
 
 @login_required
+def rebates_logs_view(request):
+    from .models import Rebate
+    rebates = Rebate.objects.all().order_by('-paid_at')
+
+    search = request.GET.get('search', '').strip()
+    if search:
+        rebates = rebates.filter(
+            Q(username__icontains=search) |
+            Q(plan_name__icontains=search) |
+            Q(adjusted_by__icontains=search) |
+            Q(note__icontains=search)
+        )
+
+    context = {
+        'rebates': rebates,
+        'search': search,
+    }
+    return render(request, 'billing/rebates_logs.html', context)
+
+
+@login_required
 def system_logs_view(request):
     logs = SystemLog.objects.all()
 
@@ -974,3 +995,222 @@ def system_logs_view(request):
         'query_params': query_params.urlencode()
     }
     return render(request, 'billing/logs.html', context)
+
+
+@login_required
+def mac_history_view(request):
+    from .models import CustomerMacHistory
+    history = CustomerMacHistory.objects.select_related('customer').all()
+    search = request.GET.get('search', '').strip()
+    if search:
+        history = history.filter(
+            Q(customer__full_name__icontains=search) |
+            Q(mac_address__icontains=search) |
+            Q(customer__id__icontains=search)
+        )
+    return render(request, 'billing/mac_history.html', {'history': history})
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from .models import Customer
+from datetime import datetime
+
+@login_required
+def customer_rebate_view(request, username):
+    # Depending on how Antigravity named your field, it might be 'username' or 'pppoe_username'
+    customer = get_object_or_404(Customer, pppoe_username=username) 
+
+    if request.method == 'POST':
+        new_expiry_str = request.POST.get('new_due_date_time')
+        note = request.POST.get('note')
+        
+        if new_expiry_str:
+            # Convert HTML datetime-local string to timezone-aware Python datetime
+            new_expiry = timezone.datetime.fromisoformat(new_expiry_str)
+            if timezone.is_naive(new_expiry):
+                new_expiry = timezone.make_aware(new_expiry)
+
+            old_expiry = customer.expires_at
+
+            # 1. Update Customer Expiry
+            customer.expires_at = new_expiry
+            # customer.sms_sent_at = None  # TODO: Uncomment when SMS is added
+            customer.save()
+
+            # 2. Log the Rebate
+            from .models import Rebate
+            Rebate.objects.create(
+                customer=customer,
+                username=customer.pppoe_username,
+                plan_name=customer.plan.name if customer.plan else None,
+                current_expiry=old_expiry,
+                expires_at=new_expiry,
+                note=note,
+                adjusted_by=request.user.username
+            )
+
+            # 3. TODO: Sprint 4 - Call Mikrotik API to update PPPoE comment/disconnect
+            
+            # 4. Pass data to success page for copying
+            context = {
+                'customer': customer,
+                'new_expiry': new_expiry.strftime('%Y-%m-%d %H:%M:%S'),
+                'adjusted_by': request.user.username,
+                'action_type': 'Rebate',
+                'amount': '0.00'
+            }
+            return render(request, 'billing/payment_success.html', context)
+
+    context = {
+        'customer': customer,
+        'current_expiry_js': customer.expires_at.strftime('%Y-%m-%dT%H:%M:%S') if customer.expires_at else timezone.now().strftime('%Y-%m-%dT%H:%M:%S')
+    }
+    return render(request, 'billing/customer_rebate.html', context)
+
+@login_required
+def customer_rollback_view(request, username):
+    customer = get_object_or_404(Customer, pppoe_username=username)
+
+    if request.method == 'POST':
+        rollback_to_str = request.POST.get('rollback_to')
+        note = request.POST.get('note')
+        
+        if rollback_to_str:
+            new_expiry = timezone.datetime.fromisoformat(rollback_to_str)
+            if timezone.is_naive(new_expiry):
+                new_expiry = timezone.make_aware(new_expiry)
+
+            old_expiry = customer.expires_at
+
+            # 1. Update Customer Expiry (Rollback)
+            customer.expires_at = new_expiry
+            customer.save()
+
+            # 2. Log the Rollback
+            from .models import Rebate
+            Rebate.objects.create(
+                customer=customer,
+                username=customer.pppoe_username,
+                plan_name=customer.plan.name if customer.plan else None,
+                current_expiry=old_expiry,
+                expires_at=new_expiry,
+                note=f"Rollback: {note}",
+                adjusted_by=request.user.username
+            )
+
+            # 3. TODO: Sprint 4 - Mikrotik API Sync
+
+            context = {
+                'customer': customer,
+                'new_expiry': new_expiry.strftime('%Y-%m-%d %H:%M:%S'),
+                'adjusted_by': request.user.username,
+                'action_type': 'Rollback Expiry',
+                'amount': '0.00'
+            }
+            return render(request, 'billing/payment_success.html', context)
+
+    context = {
+        'customer': customer,
+        'current_expiry_js': customer.expires_at.strftime('%Y-%m-%dT%H:%M') if customer.expires_at else ''
+    }
+    return render(request, 'billing/customer_rollback.html', context)
+
+@login_required
+def payment_success_view(request):
+    """Fallback view if someone accesses the URL directly"""
+    return redirect('customer_list')
+
+@login_required
+def payment_addon_logs_view(request):
+    """
+    Replicates the legacy 'payment_addon_logs.php' view showing
+    customers and their current plan status.
+    """
+    customers = Customer.objects.select_related('plan').all().order_by('-created_at')
+    
+    # Calculate simple stats
+    now = timezone.now()
+    active_count = customers.filter(expires_at__gte=now).count()
+    expired_count = customers.filter(expires_at__lt=now).count()
+    no_plan_count = customers.filter(plan__isnull=True).count()
+
+    context = {
+        'customers': customers,
+        'active_count': active_count,
+        'expired_count': expired_count,
+        'no_plan_count': no_plan_count,
+    }
+    return render(request, 'billing/payment_addon_logs.html', context)
+
+@login_required
+def payment_portal_view(request):
+    """A centralized dashboard for cashiers to search and select a customer to pay."""
+    customers = Customer.objects.select_related('plan').all().order_by('-created_at')
+    return render(request, 'billing/payment_portal.html', {'customers': customers})
+
+@login_required
+def pay_customer_view(request, username):
+    customer = get_object_or_404(Customer, pppoe_username=username)
+    
+    # Calculate Monthly Price
+    monthly_price = float(customer.plan.price) if customer.plan else 0.0
+
+    if request.method == 'POST':
+        start_date_str = request.POST.get('start_date')
+        end_date_str = request.POST.get('end_date')
+        amount = request.POST.get('amount')
+        payment_method = request.POST.get('payment_method')
+        reference_no = request.POST.get('reference_no', '')
+        reason = request.POST.get('reason', '')
+        
+        if end_date_str:
+            new_expiry = timezone.datetime.fromisoformat(end_date_str)
+            if timezone.is_naive(new_expiry):
+                new_expiry = timezone.make_aware(new_expiry)
+
+            # 1. Update Customer Expiry
+            customer.expires_at = new_expiry
+            # customer.sms_sent_at = None  # Reset SMS trigger
+            customer.save()
+
+            # 2. Log the Payment
+            Payment.objects.create(
+                customer=customer,
+                username=customer.pppoe_username,
+                plan_name=customer.plan.name if customer.plan else None,
+                amount=amount, 
+                payment_method=payment_method, 
+                reference_no=reference_no, 
+                reason=reason, 
+                expires_at=new_expiry,
+                adjusted_by=request.user.username
+            )
+
+            # 3. TODO: Sprint 4 - Mikrotik API Sync
+
+            # 4. Success Output
+            context = {
+                'customer': customer,
+                'new_expiry': new_expiry.strftime('%Y-%m-%d %H:%M:%S'),
+                'adjusted_by': request.user.username,
+                'action_type': 'Standard Renewal',
+                'amount': amount
+            }
+            return render(request, 'billing/payment_success.html', context)
+
+    # GET Request: Setup defaults
+    current_expiry = customer.expires_at or timezone.now()
+    start_default_str = current_expiry.strftime('%Y-%m-%dT%H:%M:%S')
+    
+    # Add roughly one month for the default end date
+    end_default = current_expiry + timezone.timedelta(days=30)
+    end_default_str = end_default.strftime('%Y-%m-%dT%H:%M:%S')
+
+    context = {
+        'customer': customer,
+        'current_expiry_display': current_expiry.strftime('%Y-%m-%d %H:%M:%S'),
+        'start_default_str': start_default_str,
+        'end_default_str': end_default_str,
+        'monthly_price': monthly_price,
+    }
+    return render(request, 'billing/pay_customer.html', context)

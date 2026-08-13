@@ -1,0 +1,42 @@
+{% extends 'billing/base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <div class="alert alert-success shadow-sm mx-auto text-center p-4" style="max-width: 600px; border-radius: 12px;">
+        <h4 class="alert-heading fw-bold mb-3">✅ Transaction Successful!</h4>
+
+        <div id="receiptContent" class="text-start bg-light p-3 rounded border mb-4">
+            <p class="mb-1">Hello <strong>{{ customer.pppoe_username }}</strong>,</p>
+            <p class="mb-2">Your internet subscription has been successfully updated via <strong>{{ action_type
+                    }}</strong>.</p>
+
+            <ul class="list-unstyled mb-2 ms-2">
+                <li>📌 <strong>Plan:</strong> {{ customer.plan.name|default:"N/A" }}</li>
+                <li>💵 <strong>Amount Paid:</strong> ₱{{ amount }}</li>
+                <li>⏰ <strong>New Expiry:</strong> {{ new_expiry }}</li>
+            </ul>
+
+            <small class="text-muted">
+                Processed by: {{ adjusted_by }} <br>
+                System Status: 🟢 Database Updated (Mikrotik sync pending)
+            </small>
+        </div>
+
+        <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+            <button class="btn btn-primary fw-bold" onclick="copyReceipt()">📋 Copy to Clipboard</button>
+            <a href="{% url 'customer_list' %}" class="btn btn-secondary fw-bold">Back to Customers</a>
+        </div>
+        <p id="copyStatus" class="text-success mt-2 fw-bold" style="display:none;">Copied to clipboard!</p>
+    </div>
+</div>
+
+<script>
+    function copyReceipt() {
+        const text = document.getElementById('receiptContent').innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            const status = document.getElementById('copyStatus');
+            status.style.display = 'block';
+            setTimeout(() => status.style.display = 'none', 3000);
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends 'billing/base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm mx-auto" style="max-width: 500px;">
+        <div class="card-header bg-success text-white fw-bold">
+            🎁 Issue Rebate for {{ customer.pppoe_username }}
+        </div>
+        <div class="card-body">
+            <form method="post" autocomplete="off">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Current Expiry</label>
+                    <input type="text" class="form-control bg-light" value="{{ customer.expires_at|default:'N/A' }}"
+                        readonly>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Set New Expiry (Rebate)</label>
+                    <input type="datetime-local" name="new_due_date_time" class="form-control" id="new_due_date_time"
+                        value="{{ current_expiry_js }}" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Reason for Rebate</label>
+                    <textarea name="note" class="form-control" rows="3" placeholder="Power outage, downtime, etc."
+                        required></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-success w-100 fw-bold mb-2">Apply Rebate</button>
+                <a href="{% url 'customer_list' %}" class="btn btn-outline-secondary w-100">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

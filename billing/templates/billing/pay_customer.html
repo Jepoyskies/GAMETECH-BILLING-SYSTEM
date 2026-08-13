@@ -1,0 +1,184 @@
+{% extends 'billing/base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm mx-auto" style="max-width: 500px;">
+        <div class="card-header bg-success text-white fw-bold">
+            💵 Renew Subscription: {{ customer.pppoe_username }}
+        </div>
+        <div class="card-body">
+            <form method="post" autocomplete="off" id="renew-form">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Mikrotik Device</label>
+                    <input type="text" class="form-control bg-light"
+                        value="{{ customer.mikrotik_device.name|default:'N/A' }}" readonly>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Current Expiry (UTC, 24h)</label>
+                    <input type="text" class="form-control bg-light" value="{{ current_expiry_display }}" readonly>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Start Date (UTC Time)</label>
+                    <input type="datetime-local" id="start_date" name="start_date" class="form-control"
+                        value="{{ start_default_str }}" step="1" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">End Date (UTC Time)</label>
+                    <input type="datetime-local" id="end_date" name="end_date" class="form-control"
+                        value="{{ end_default_str }}" step="1" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-primary">Days Adjusted</label>
+                    <input type="number" id="days" name="days" class="form-control bg-light" readonly>
+                </div>
+
+                <div class="alert alert-info py-2">
+                    <strong>New Expiry Date:</strong> <span id="due-date" class="text-success fw-bold"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Amount (₱)</label>
+                    <input type="text" id="amount" name="amount" class="form-control fw-bold text-success fs-5"
+                        readonly>
+
+                    <div class="mt-2 d-flex align-items-center gap-2">
+                        <span>Is this amount correct?</span>
+                        <div class="form-check form-check-inline mb-0">
+                            <input class="form-check-input" type="radio" name="amount_correct" id="amount_yes"
+                                value="yes" checked>
+                            <label class="form-check-label" for="amount_yes">Yes</label>
+                        </div>
+                        <div class="form-check form-check-inline mb-0">
+                            <input class="form-check-input" type="radio" name="amount_correct" id="amount_no"
+                                value="no">
+                            <label class="form-check-label" for="amount_no">No</label>
+                        </div>
+                    </div>
+
+                    <div id="reason-block" class="mt-2" style="display:none;">
+                        <input type="text" id="reason" name="reason" class="form-control"
+                            placeholder="Specify reason for amount change...">
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Payment Method</label>
+                    <select name="payment_method" id="payment_method" class="form-select" required>
+                        <option value="">-- Select --</option>
+                        <option value="cash">Cash</option>
+                        <option value="bank_transfer">Bank Transfer</option>
+                        <option value="e-wallet">E-Wallet</option>
+                        <option value="payment_center">Payment Center</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Reference No.</label>
+                    <input type="text" name="reference_no" id="reference_no" class="form-control">
+                </div>
+
+                <button type="submit" class="btn btn-success w-100 fw-bold mb-2">Pay & Renew</button>
+                <a href="{% url 'payment_portal' %}" class="btn btn-outline-secondary w-100">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Legacy JavaScript Logic Ported 1-to-1
+        function pad(n) { return n < 10 ? '0' + n : n; }
+        function formatUtcDatetime(dt) {
+            return dt.getUTCFullYear() + '-' + pad(dt.getUTCMonth() + 1) + '-' + pad(dt.getUTCDate()) + ' ' +
+                pad(dt.getUTCHours()) + ':' + pad(dt.getUTCMinutes()) + ':' + pad(dt.getUTCSeconds());
+        }
+        function formatInputDatetime(dt) {
+            return dt.getUTCFullYear() + '-' + pad(dt.getUTCMonth() + 1) + '-' + pad(dt.getUTCDate()) + 'T' +
+                pad(dt.getUTCHours()) + ':' + pad(dt.getUTCMinutes()) + ':' + pad(dt.getUTCSeconds());
+        }
+
+        function handleAmountRadioChange() {
+            var yesChecked = document.getElementById('amount_yes').checked;
+            var amountInput = document.getElementById('amount');
+            var reasonBlock = document.getElementById('reason-block');
+            var reasonInput = document.getElementById('reason');
+            if (yesChecked) {
+                amountInput.readOnly = true;
+                reasonBlock.style.display = 'none';
+                reasonInput.required = false;
+                reasonInput.value = '';
+            } else {
+                amountInput.readOnly = false;
+                amountInput.focus();
+                reasonBlock.style.display = 'block';
+                reasonInput.required = true;
+            }
+        }
+        document.getElementById('amount_yes').addEventListener('change', handleAmountRadioChange);
+        document.getElementById('amount_no').addEventListener('change', handleAmountRadioChange);
+
+        const startInput = document.getElementById('start_date');
+        const endInput = document.getElementById('end_date');
+        const daysInput = document.getElementById('days');
+        const dueDateDiv = document.getElementById('due-date');
+        const amountInput = document.getElementById('amount');
+        const monthlyPrice = {{ monthly_price }};
+
+    function getDateFromInput(str) {
+        if (!str) return null;
+        return new Date(str.replace('T', ' ') + 'Z');
+    }
+
+    function addOneMonthUTC(dt) {
+        let nextMonth = new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate(), dt.getUTCHours(), dt.getUTCMinutes(), dt.getUTCSeconds()));
+        if (nextMonth.getUTCDate() !== dt.getUTCDate()) nextMonth.setUTCDate(0);
+        return nextMonth;
+    }
+
+    function updateDueDaysAmount() {
+        let startDate = getDateFromInput(startInput.value);
+        let endDate = getDateFromInput(endInput.value);
+        if (!startDate || !endDate) return;
+
+        let diffMs = endDate - startDate;
+        let days = diffMs / (1000 * 60 * 60 * 24);
+        daysInput.value = days.toFixed(2);
+        dueDateDiv.textContent = formatUtcDatetime(endDate) + " (UTC)";
+
+        let exactlyOneMonth = addOneMonthUTC(startDate);
+        if (Math.abs(endDate.getTime() - exactlyOneMonth.getTime()) < 2000) {
+            amountInput.value = monthlyPrice.toFixed(2);
+        } else {
+            amountInput.value = ((monthlyPrice / 30) * days).toFixed(2);
+        }
+    }
+
+    startInput.addEventListener('change', function () {
+        let sd = getDateFromInput(startInput.value);
+        if (sd) endInput.value = formatInputDatetime(addOneMonthUTC(sd));
+        updateDueDaysAmount();
+    });
+    endInput.addEventListener('change', updateDueDaysAmount);
+
+    var paymentMethodSelect = document.getElementById('payment_method');
+    var referenceNoInput = document.getElementById('reference_no');
+    paymentMethodSelect.addEventListener('change', function () {
+        if (this.value === 'cash') {
+            referenceNoInput.disabled = true;
+            referenceNoInput.required = false;
+            referenceNoInput.value = '';
+        } else {
+            referenceNoInput.disabled = false;
+            referenceNoInput.required = true;
+        }
+    });
+
+    updateDueDaysAmount();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends 'billing/base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm mx-auto" style="max-width: 500px;">
+        <div class="card-header bg-danger text-white fw-bold">
+            ⏪ Rollback Expiry for {{ customer.pppoe_username }}
+        </div>
+        <div class="card-body">
+            <form method="post" autocomplete="off">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Current Expiry</label>
+                    <input type="text" class="form-control bg-light" value="{{ customer.expires_at|default:'N/A' }}"
+                        readonly>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-danger">Rollback To (Penalty / Adjustment)</label>
+                    <input type="datetime-local" name="rollback_to" class="form-control" value="{{ current_expiry_js }}"
+                        required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Reason for Rollback</label>
+                    <textarea name="note" class="form-control" rows="3"
+                        placeholder="Bounced payment, error adjustment..." required></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-danger w-100 fw-bold mb-2">Confirm Rollback</button>
+                <a href="{% url 'customer_list' %}" class="btn btn-outline-secondary w-100">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

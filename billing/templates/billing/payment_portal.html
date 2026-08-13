@@ -1,0 +1,46 @@
+{% extends 'billing/base.html' %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="fw-bold text-success"><i class="fa-solid fa-cash-register"></i> Process Payments</h2>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body">
+            <table class="table table-hover table-striped align-middle" id="paymentTable">
+                <thead class="bg-light">
+                    <tr>
+                        <th>Username</th>
+                        <th>Full Name</th>
+                        <th>Plan</th>
+                        <th>Expiry Date</th>
+                        <th class="text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in customers %}
+                    <tr>
+                        <td class="fw-bold">{{ c.pppoe_username }}</td>
+                        <td>{{ c.full_name }}</td>
+                        <td>{{ c.plan.name|default:"No Plan" }}</td>
+                        <td>{{ c.expires_at|date:"M d, Y H:i"|default:"N/A" }}</td>
+                        <td class="text-center">
+                            <a href="{% url 'pay_customer' c.pppoe_username %}" class="btn btn-success btn-sm fw-bold">
+                                💵 Take Payment
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">
+                            <i class="fas fa-users-slash fs-4 mb-2 d-block opacity-50"></i>
+                            No customers found in the database.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
