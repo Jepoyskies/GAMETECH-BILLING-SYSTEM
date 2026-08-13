@@ -317,9 +317,9 @@
         <div class="controls-container">
             <input type="text" id="search" placeholder="Search user or IP...">
             <select id="interval">
-                <option value="1000">Refresh: 1s</option>
+                <option value="1000" selected>Refresh: 1s</option>
                 <option value="2000">Refresh: 2s</option>
-                <option value="5000" selected>Refresh: 5s</option>
+                <option value="5000">Refresh: 5s</option>
             </select>
         </div>
     </div>
@@ -350,6 +350,39 @@
         </div>
     </div>
 
+    <!-- Hardware Status Section -->
+    <div class="mb-5">
+        <h4 class="mb-3 text-secondary" style="font-size: 1.1rem; font-weight: 600;"><i class="fas fa-microchip me-2"></i>Router Hardware Status</h4>
+        
+        {% for device in devices %}
+        <div class="mb-2 d-flex align-items-center justify-content-between px-1">
+            <h5 class="mb-0" style="color: #334155; font-weight: 700;">{{ device.device_name }} <span class="text-muted" style="font-size: 0.85em; font-weight: 500; margin-left: 5px;">{{ device.ip_address }}</span></h5>
+            <span class="badge bg-secondary" style="font-size: 0.85em; padding: 6px 10px; border-radius: 8px;" id="hw-status-{{ device.id }}">Loading...</span>
+        </div>
+        <div class="summary-grid mb-4">
+            <div class="sum-box box-rx">
+                <h3>CPU Load</h3>
+                <p id="hw-cpu-{{ device.id }}">-</p>
+            </div>
+            <div class="sum-box box-tx">
+                <h3>Memory Usage</h3>
+                <p id="hw-ram-{{ device.id }}">-</p>
+            </div>
+            <div class="sum-box box-net">
+                <h3>Uptime</h3>
+                <p id="hw-uptime-{{ device.id }}" style="font-size: 1.3rem;">-</p>
+            </div>
+            <div class="sum-box box-users">
+                <h3>RouterOS</h3>
+                <p id="hw-version-{{ device.id }}" style="font-size: 1.3rem;">-</p>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-muted text-center w-100 py-3">No MikroTik devices configured.</div>
+        {% endfor %}
+    </div>
+
+    <h4 class="mb-3 text-secondary mt-4" style="font-size: 1.1rem; font-weight: 600;"><i class="fas fa-users me-2"></i>Active PPPoE Users</h4>
     <div class="users-grid" id="users">
         <div class="text-muted w-100 p-3 text-center">
             <i class="fas fa-spinner fa-spin me-2"></i> Connecting to routers...
@@ -586,7 +619,10 @@ function applyFilter(){
 
 function startInterval(){
     if(timer) clearInterval(timer);
-    timer = setInterval(loadData, document.getElementById('interval').value);
+    timer = setInterval(() => {
+        loadData();
+        loadHardwareData();
+    }, document.getElementById('interval').value);
 }
 
 const users = document.getElementById('users');
@@ -596,12 +632,56 @@ const totalNetEl = document.getElementById('totalNet');
 const activeUsers = document.getElementById('activeUsers');
 const topUserEl = document.getElementById('topUser');
 
+// List of devices to poll for hardware stats
+const hwDevices = [
+    {% for device in devices %}
+    { id: {{ device.id }}, url: "{% url 'device_hardware_api' device.id %}" }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
+
+function loadHardwareData() {
+    hwDevices.forEach(device => {
+        fetch(device.url)
+        .then(r => r.json())
+        .then(res => {
+            let statusBadge = document.getElementById(`hw-status-${device.id}`);
+            if (res.status === 'success') {
+                statusBadge.className = 'speed-badge bg-success';
+                statusBadge.innerText = 'Online';
+                
+                let hw = res.resource;
+                document.getElementById(`hw-cpu-${device.id}`).innerText = (hw['cpu-load'] || 0) + '%';
+                
+                let freeMem = parseInt(hw['free-memory'] || 0);
+                let totMem = parseInt(hw['total-memory'] || 0);
+                let usedMem = totMem - freeMem;
+                let memPct = totMem > 0 ? ((usedMem / totMem) * 100).toFixed(1) : 0;
+                
+                document.getElementById(`hw-ram-${device.id}`).innerText = memPct + '%';
+                document.getElementById(`hw-uptime-${device.id}`).innerText = hw['uptime'] || '-';
+                document.getElementById(`hw-version-${device.id}`).innerText = hw['version'] || '-';
+            } else {
+                statusBadge.className = 'speed-badge bg-danger';
+                statusBadge.innerText = 'Offline';
+            }
+        })
+        .catch(err => {
+            let statusBadge = document.getElementById(`hw-status-${device.id}`);
+            if(statusBadge) {
+                statusBadge.className = 'speed-badge bg-danger';
+                statusBadge.innerText = 'Error';
+            }
+        });
+    });
+}
+
 document.getElementById('search').addEventListener('input', applyFilter);
 document.getElementById('interval').addEventListener('change', startInterval);
 
 // Initial Load
 startInterval();
 loadData();
+loadHardwareData();
 
 // Listen for theme changes to redraw gauges and graphs
 window.addEventListener('themeChanged', () => {

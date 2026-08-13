@@ -197,3 +197,16 @@ class Rebate(models.Model):
 
     def __str__(self):
         return f"Rebate for {self.username}"
+class SmsLog(models.Model):
+    phone = models.CharField(max_length=20)
+    message = models.TextField()
+    response = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=20, default='success')
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'sms_log'
+        ordering = ['-sent_at']
+
+    def __str__(self):
+        return f"{self.phone} - {self.status}"

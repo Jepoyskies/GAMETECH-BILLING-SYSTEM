@@ -22,27 +22,47 @@ class MikrotikAPI:
         except (ValueError, TypeError):
             port = 8728
 
+        # Handle empty/None passwords for test routers
+        password = device.api_password if device.api_password else ""
+
         # We set up the API connection pool
         self.connection = routeros_api.RouterOsApiPool(
             host=device.ip_address,
             username=device.api_username,
-            password=device.api_password,
+            password=password,
             port=port,
             plaintext_login=True,  # Modern RouterOS versions use plain login sequence for API
             use_ssl=False  # Set to True if using secure port (e.g., 8729)
         )
 
     def _get_api(self):
-        """Handles connection securely with timeouts and returns the API instance."""
+        """Handles connection securely with timeouts and returns the API instance, with automatic fallback for older RouterOS versions."""
         try:
-            # get_api() will attempt connection. The library handles socket timeouts natively.
-            api = self.connection.get_api()
-            return api
+            # First attempt with plaintext_login (RouterOS v6.43+)
+            return self.connection.get_api()
+        except routeros_api.exceptions.RouterOsApiCommunicationError as e:
+            # If the error string contains "invalid user name or password (6)" and we were using plaintext login,
+            # it might actually be an older RouterOS version expecting a challenge-response (plaintext_login=False).
+            logger.warning(f"Plaintext login failed for {self.device.device_name}, retrying with legacy authentication...")
+            
+            try:
+                # Re-create connection with legacy auth
+                self.connection = routeros_api.RouterOsApiPool(
+                    host=self.device.ip_address,
+                    username=self.device.api_username,
+                    password=self.device.api_password if self.device.api_password else "",
+                    port=self.connection.port,
+                    plaintext_login=False,
+                    use_ssl=self.connection.use_ssl
+                )
+                return self.connection.get_api()
+            except Exception as retry_e:
+                logger.error(f"Legacy Auth Failed for {self.device.device_name}: {retry_e}")
+                raise ConnectionError(f"Could not authenticate to {self.device.device_name} API. Check credentials.") from retry_e
+                
         except Exception as e:
-            logger.error(
-                f"Timeout/Error connecting to Mikrotik API on {self.device.ip_address}: {e}")
-            raise ConnectionError(
-                f"Could not connect to {self.device.device_name} API. Check IP/Port and credentials.") from e
+            logger.error(f"Timeout/Error connecting to Mikrotik API on {self.device.ip_address}: {e}")
+            raise ConnectionError(f"Could not connect to {self.device.device_name} API. Check IP/Port and credentials.") from e
 
     def get_active_pppoe_users(self):
         """
@@ -111,6 +131,33 @@ class MikrotikAPI:
         except Exception as e:
             logger.error(
                 f"Failed to disconnect PPPoE user {name} from {self.device.device_name}: {e}")
+            return False, f"Mikrotik API Error: {str(e)}"
+
+    def suspend_pppoe_user(self, name):
+        """
+        Changes a user's profile to 'expired' and drops their active session.
+        """
+        try:
+            api = self._get_api()
+            ppp_secret = api.get_resource('/ppp/secret')
+            
+            # Find the user by name
+            secrets = ppp_secret.get(name=name)
+            if not secrets:
+                return False, f"User {name} not found on MikroTik."
+                
+            user_id = secrets[0]['id']
+            ppp_secret.set(id=user_id, profile="expired")
+            logger.info(f"Changed profile for PPPoE user {name} to 'expired'")
+            
+            # Use existing method to drop active session
+            self.remove_active_pppoe_user(name)
+            
+            # Note: remove_active_pppoe_user might close the connection, 
+            # but since it's the last action, it's fine.
+            return True, "User suspended and disconnected."
+        except Exception as e:
+            logger.error(f"Failed to suspend user {name}: {e}")
             return False, f"Mikrotik API Error: {str(e)}"
 
     def add_pppoe_user(self, name, password, profile, service="pppoe"):

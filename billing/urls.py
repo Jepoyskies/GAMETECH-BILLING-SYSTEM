@@ -76,4 +76,18 @@ urlpatterns = [
     path('payment-portal/', views.payment_portal_view, name='payment_portal'),
     path('customer/<str:username>/pay/', views.pay_customer_view, name='pay_customer'),
     path('logs/rebates/', views.rebates_logs_view, name='rebates_logs'),
+    
+    path('auto-suspend/', views.auto_suspend_view, name='auto_suspend'),
+    path('sms/', views.sms_view, name='sms_messaging'),
+    
+    # Master Data Management (Settings)
+    path('settings/account-types/', views.account_type_list, name='account_type_list'),
+    path('settings/account-types/add/', views.create_account_type, name='create_account_type'),
+    path('settings/account-types/edit/<int:pk>/', views.edit_account_type, name='edit_account_type'),
+    path('settings/account-types/delete/<int:pk>/', views.delete_account_type, name='delete_account_type'),
+    
+    path('settings/barangays/', views.barangay_list, name='barangay_list'),
+    path('settings/barangays/add/', views.create_barangay, name='create_barangay'),
+    path('settings/barangays/edit/<int:pk>/', views.edit_barangay, name='edit_barangay'),
+    path('settings/barangays/delete/<int:pk>/', views.delete_barangay, name='delete_barangay'),
 ]

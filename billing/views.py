@@ -13,8 +13,9 @@ from datetime import timedelta, datetime
 
 from .models import (
     SystemAdmin, SubscriptionPlan, Agent, AccountType,
-    Customer, Barangay, Payment, Rebate, SystemLog
+    Customer, Barangay, Payment, Rebate, SystemLog, SmsLog
 )
+import requests
 from network_manager.models import MikrotikDevice, NapBox
 from network_manager.services import MikrotikAPI
 
@@ -122,46 +123,68 @@ def mikrotik_active_users_view(request):
 
 @login_required
 def live_monitoring_view(request):
-    return render(request, 'billing/live_monitoring.html')
+    devices = MikrotikDevice.objects.all().order_by('device_name')
+    return render(request, 'billing/live_monitoring.html', {'devices': devices})
 
 
 @login_required
 def api_live_monitoring_data(request):
-    cache_key = 'live_monitoring_data'
-    data = cache.get(cache_key)
+    data = []
+    devices = MikrotikDevice.objects.all()
+    for device in devices:
+        try:
+            active_users = MikrotikAPI(device).get_active_pppoe_users()
+            queues = MikrotikAPI(device).get_simple_queues()
+            
+            processed_users = set()
+            
+            # 1. Process all queues first
+            for q in queues:
+                rate = q.get('rate', '0/0')
+                try:
+                    rx_bps, tx_bps = rate.split('/')
+                    rx_mbps = round(int(rx_bps) / 1000000, 2)
+                    tx_mbps = round(int(tx_bps) / 1000000, 2)
+                except ValueError:
+                    rx_mbps = 0
+                    tx_mbps = 0
 
-    if not data:
-        data = []
-        devices = MikrotikDevice.objects.all()
-        for device in devices:
-            try:
-                api = MikrotikAPI(device)
-                queues = api.get_simple_queues()
+                user_name = q.get('name', 'Unknown')
+                # Strip < and > if it's a dynamic PPPoE queue
+                clean_name = user_name.strip('<>')
+                processed_users.add(clean_name)
 
-                for q in queues:
-                    rate = q.get('rate', '0/0')
-                    # rate format is usually "rx_bps/tx_bps" e.g., "150000/300000"
-                    try:
-                        rx_bps, tx_bps = rate.split('/')
-                        rx_mbps = round(int(rx_bps) / 1000000, 2)
-                        tx_mbps = round(int(tx_bps) / 1000000, 2)
-                    except ValueError:
-                        rx_mbps = 0
-                        tx_mbps = 0
+                # Match uptime if user is in active PPPoE sessions
+                uptime = '0s'
+                for au in active_users:
+                    if au.get('name') == clean_name:
+                        uptime = au.get('uptime', '0s')
+                        break
 
+                data.append({
+                    'device_name': device.device_name,
+                    'device_ip': device.ip_address,
+                    'user': user_name,
+                    'rx_mbps': rx_mbps,
+                    'tx_mbps': tx_mbps,
+                    'uptime': uptime
+                })
+            
+            # 2. Process active users that did NOT have a queue
+            for au in active_users:
+                u_name = au.get('name', 'Unknown')
+                if u_name not in processed_users:
                     data.append({
                         'device_name': device.device_name,
                         'device_ip': device.ip_address,
-                        'user': q.get('name', 'Unknown'),
-                        'rx_mbps': rx_mbps,
-                        'tx_mbps': tx_mbps,
+                        'user': u_name,
+                        'rx_mbps': 0,
+                        'tx_mbps': 0,
+                        'uptime': au.get('uptime', '0s')
                     })
-            except Exception:
-                # If a device is unreachable, we can skip it or log it
-                pass
-
-        # Cache for 2 seconds to prevent spamming routers
-        cache.set(cache_key, data, 2)
+        except Exception:
+            # Skip unreachable devices
+            pass
 
     return JsonResponse(data, safe=False)
 
@@ -570,7 +593,7 @@ def add_customer(request):
         'devices': MikrotikDevice.objects.all(),
         'agents': Agent.objects.all(),
         'barangays': Barangay.objects.all(),
-        'accountTypes': AccountType.objects.all()
+        'account_types': AccountType.objects.all()
     }
     return render(request, 'billing/add_customer.html', context)
 
@@ -644,15 +667,29 @@ def view_customer(request, customer_id):
     # Try to fetch live MT connection status if they have a router
     mt_status = "Disconnected"
     uptime = "N/A"
+    live_mac = "N/A"
+    last_logged_out = "N/A"
     if customer.mikrotik_device and customer.pppoe_username:
         try:
             from network_manager.services import MikrotikAPI
             api = MikrotikAPI(customer.mikrotik_device)
+            
+            # Fetch active users
             active_users = api.get_active_pppoe_users()
             for au in active_users:
                 if au.get('name') == customer.pppoe_username:
                     mt_status = "Connected"
                     uptime = au.get('uptime', 'N/A')
+                    live_mac = au.get('caller-id', 'N/A')
+                    break
+            
+            # Fetch secrets to get last-logged-out if disconnected
+            secrets = api.get_ppp_secrets()
+            for secret in secrets:
+                if secret.get('name') == customer.pppoe_username:
+                    last_logged_out = secret.get('last-logged-out', 'N/A')
+                    if mt_status == "Disconnected" and not customer.mac_address:
+                        live_mac = secret.get('caller-id', 'N/A')
                     break
         except Exception:
             pass
@@ -662,6 +699,8 @@ def view_customer(request, customer_id):
         'payments': payments,
         'mt_status': mt_status,
         'uptime': uptime,
+        'live_mac': live_mac,
+        'last_logged_out': last_logged_out,
     }
     return render(request, 'billing/view_customer.html', context)
 
@@ -1214,3 +1253,248 @@ def pay_customer_view(request, username):
         'monthly_price': monthly_price,
     }
     return render(request, 'billing/pay_customer.html', context)
+
+# ==========================================
+# MASTER DATA MANAGEMENT (Settings)
+# ==========================================
+from .models import AccountType, Barangay
+from .forms import AccountTypeForm, BarangayForm
+
+@login_required
+def account_type_list(request):
+    account_types = AccountType.objects.all().order_by('type_name')
+    return render(request, 'billing/settings_list.html', {
+        'items': account_types,
+        'title': 'Manage Account Types',
+        'item_name': 'Account Type',
+        'create_url': 'create_account_type',
+        'edit_url_name': 'edit_account_type',
+        'delete_url_name': 'delete_account_type',
+    })
+
+@login_required
+def create_account_type(request):
+    if request.method == 'POST':
+        form = AccountTypeForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Account Type created successfully!")
+            return redirect('account_type_list')
+    else:
+        form = AccountTypeForm()
+    return render(request, 'billing/settings_form.html', {'form': form, 'title': 'Create Account Type', 'back_url': 'account_type_list'})
+
+@login_required
+def edit_account_type(request, pk):
+    obj = get_object_or_404(AccountType, pk=pk)
+    if request.method == 'POST':
+        form = AccountTypeForm(request.POST, instance=obj)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Account Type updated successfully!")
+            return redirect('account_type_list')
+    else:
+        form = AccountTypeForm(instance=obj)
+    return render(request, 'billing/settings_form.html', {'form': form, 'title': 'Edit Account Type', 'back_url': 'account_type_list'})
+
+@login_required
+def delete_account_type(request, pk):
+    obj = get_object_or_404(AccountType, pk=pk)
+    if request.method == 'POST':
+        obj.delete()
+        messages.success(request, "Account Type deleted successfully!")
+    return redirect('account_type_list')
+
+
+@login_required
+def barangay_list(request):
+    barangays = Barangay.objects.all().order_by('name')
+    return render(request, 'billing/settings_list.html', {
+        'items': barangays,
+        'title': 'Manage Barangays',
+        'item_name': 'Barangay',
+        'create_url': 'create_barangay',
+        'edit_url_name': 'edit_barangay',
+        'delete_url_name': 'delete_barangay',
+    })
+
+@login_required
+def create_barangay(request):
+    if request.method == 'POST':
+        form = BarangayForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Barangay created successfully!")
+            return redirect('barangay_list')
+    else:
+        form = BarangayForm()
+    return render(request, 'billing/settings_form.html', {'form': form, 'title': 'Create Barangay', 'back_url': 'barangay_list'})
+
+@login_required
+def edit_barangay(request, pk):
+    obj = get_object_or_404(Barangay, pk=pk)
+    if request.method == 'POST':
+        form = BarangayForm(request.POST, instance=obj)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Barangay updated successfully!")
+            return redirect('barangay_list')
+    else:
+        form = BarangayForm(instance=obj)
+    return render(request, 'billing/settings_form.html', {'form': form, 'title': 'Edit Barangay', 'back_url': 'barangay_list'})
+
+@login_required
+def delete_barangay(request, pk):
+    obj = get_object_or_404(Barangay, pk=pk)
+    if request.method == 'POST':
+        obj.delete()
+        messages.success(request, "Barangay deleted successfully!")
+    return redirect('barangay_list')
+def send_semaphore_sms(phone, message):
+    api_key = 'a1be64e85146a946d40aeb1677d37a48'
+    url = 'https://api.semaphore.co/api/v4/messages'
+    payload = {
+        'apikey': api_key,
+        'number': phone,
+        'message': message,
+        'sendername': 'SEMAPHORE'
+    }
+    try:
+        response = requests.post(url, data=payload, timeout=10)
+        return response.text, response.status_code == 200
+    except Exception as e:
+        return str(e), False
+
+@login_required
+def sms_view(request):
+    if request.method == 'POST':
+        if 'send_sms_custom' in request.POST:
+            phone = request.POST.get('phone')
+            message = request.POST.get('message')
+            
+            response_text, is_success = send_semaphore_sms(phone, message)
+            status = 'success' if is_success else 'error'
+            
+            SmsLog.objects.create(
+                phone=phone,
+                message=message,
+                response=response_text,
+                status=status
+            )
+            messages.info(request, f"SMS sent to {phone}. Response: {response_text}")
+            
+        elif 'bulk_send_sms' in request.POST:
+            phones_str = request.POST.get('selected_phones', '')
+            bulk_message = request.POST.get('bulk_message')
+            phones = [p.strip() for p in phones_str.split(',') if p.strip()]
+            
+            for phone in phones:
+                response_text, is_success = send_semaphore_sms(phone, bulk_message)
+                status = 'success' if is_success else 'error'
+                SmsLog.objects.create(
+                    phone=phone,
+                    message=bulk_message,
+                    response=response_text,
+                    status=status
+                )
+            messages.info(request, f"Bulk SMS sent to {len(phones)} recipients.")
+            
+        return redirect('sms_messaging')
+
+    search = request.GET.get('search', '')
+    customers = Customer.objects.exclude(username__isnull=True).exclude(username='')
+    
+    if search:
+        customers = customers.filter(
+            Q(username__icontains=search) |
+            Q(full_name__icontains=search) |
+            Q(phone__icontains=search) |
+            Q(address__icontains=search) |
+            Q(status__icontains=search)
+        )
+    
+    customers = customers.order_by('full_name')
+    paginator = Paginator(customers, 10)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    sms_logs = SmsLog.objects.all()[:100]
+    
+    context = {
+        'page_obj': page_obj,
+        'search': search,
+        'sms_logs': sms_logs
+    }
+    return render(request, 'billing/sms_messaging.html', context)
+
+@login_required
+def auto_suspend_view(request):
+    if request.method == 'POST':
+        usernames = request.POST.getlist('usernames')
+        if not usernames:
+            messages.error(request, 'No users selected for suspension.')
+            return redirect('auto_suspend')
+            
+        suspended_count = 0
+        errors = []
+        
+        # Group by device to minimize connections
+        customers_to_suspend = Customer.objects.filter(username__in=usernames).select_related('mikrotik_device')
+        device_users = {}
+        for c in customers_to_suspend:
+            if c.mikrotik_device:
+                if c.mikrotik_device not in device_users:
+                    device_users[c.mikrotik_device] = []
+                device_users[c.mikrotik_device].append(c)
+                
+        for device, users in device_users.items():
+            api = MikrotikAPI(device)
+            for user in users:
+                success, msg = api.suspend_pppoe_user(user.username)
+                if success:
+                    suspended_count += 1
+                else:
+                    errors.append(f"Failed to suspend {user.username}: {msg}")
+                    
+        if suspended_count > 0:
+            messages.success(request, f'Successfully suspended {suspended_count} users.')
+        if errors:
+            for err in errors:
+                messages.error(request, err)
+                
+        return redirect('auto_suspend')
+
+    # GET request: fetch past due customers
+    past_due_customers = Customer.objects.filter(
+        expires_at__lte=timezone.now(),
+        mikrotik_device__isnull=False
+    ).exclude(username__isnull=True).exclude(username='').select_related('mikrotik_device')
+
+    display_customers = []
+    
+    # Group by device for efficient querying
+    device_customers = {}
+    for c in past_due_customers:
+        if c.mikrotik_device not in device_customers:
+            device_customers[c.mikrotik_device] = []
+        device_customers[c.mikrotik_device].append(c)
+        
+    for device, customers in device_customers.items():
+        api = MikrotikAPI(device)
+        secrets = api.get_ppp_secrets()
+        
+        # Build lookup dict
+        secret_dict = {s.get('name'): s.get('profile', 'N/A') for s in secrets}
+        
+        for c in customers:
+            profile = secret_dict.get(c.username, 'Not Found')
+            if str(profile).lower() != 'expired':
+                c.mikrotik_profile = profile
+                display_customers.append(c)
+
+    display_customers.sort(key=lambda x: x.full_name)
+    
+    context = {
+        'due_customers': display_customers
+    }
+    return render(request, 'billing/auto_suspend.html', context)

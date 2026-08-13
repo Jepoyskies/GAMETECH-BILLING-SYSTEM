@@ -12,6 +12,10 @@ urlpatterns = [
     # This is for the "Test Connection" AJAX button!
     path('devices/test/<int:device_id>/',
          views.test_device_connection, name='test_device'),
+    path('devices/sync/<int:device_id>/',
+         views.sync_device_users, name='sync_device_users'),
+    path('devices/hardware/<int:device_id>/',
+         views.device_hardware_api, name='device_hardware_api'),
          
     # NAP Box URLs
     path('napboxes/', views.nap_list_view, name='nap_list'),

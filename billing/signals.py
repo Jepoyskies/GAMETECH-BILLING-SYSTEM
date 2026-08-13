@@ -14,14 +14,15 @@ def sync_customer_to_mikrotik(sender, instance, created, **kwargs):
     If the customer is active, they get their standard profile.
     If they are expired/suspended, they get the 'expired' profile, and any active session is dropped.
     """
-    if not instance.mikrotik_device or not instance.username or not instance.pppoe_password:
+    if not instance.mikrotik_device or not instance.pppoe_username or not instance.pppoe_password:
         return  # Missing critical info, can't sync
 
     try:
         api = MikrotikAPI(instance.mikrotik_device)
 
         # Determine the target profile based on status
-        target_profile = instance.pppoe_profile or 'default'
+        # Fallback to 'default' if the model doesn't have pppoe_profile
+        target_profile = getattr(instance, 'pppoe_profile', 'default') or 'default'
 
         # Override profile for restricted statuses
         if instance.status in ['expired', 'suspended', 'inactive', 'past_due']:
@@ -29,21 +30,21 @@ def sync_customer_to_mikrotik(sender, instance, created, **kwargs):
 
         # 1. Update the secret on the router
         success, msg = api.add_pppoe_user(
-            name=instance.username,
+            name=instance.pppoe_username,
             password=instance.pppoe_password,
             profile=target_profile
         )
 
         if success:
             logger.info(
-                f"Successfully synced {instance.username} to {target_profile} profile.")
+                f"Successfully synced {instance.pppoe_username} to {target_profile} profile.")
         else:
-            logger.error(f"Failed to sync {instance.username}: {msg}")
+            logger.error(f"Failed to sync {instance.pppoe_username}: {msg}")
 
         # 2. If they are restricted now, forcibly kick any active session so they get the new profile
         if target_profile == 'expired':
-            api.remove_active_pppoe_user(instance.username)
+            api.remove_active_pppoe_user(instance.pppoe_username)
 
     except Exception as e:
         logger.error(
-            f"Error syncing customer {instance.username} to Mikrotik: {e}")
+            f"Error syncing customer {instance.pppoe_username} to Mikrotik: {e}")

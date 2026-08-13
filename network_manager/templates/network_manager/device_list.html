@@ -80,6 +80,12 @@
                                 <button class="btn btn-sm btn-outline-info test-connection-btn" data-url="{% url 'test_device' device.id %}">
                                     <i class="fas fa-wifi"></i> Test Connection
                                 </button>
+                                <button class="btn btn-sm btn-outline-success sync-users-btn" data-url="{% url 'sync_device_users' device.id %}">
+                                    <i class="fas fa-sync-alt"></i> Sync Users
+                                </button>
+                                <button class="btn btn-sm btn-outline-warning hardware-btn" data-url="{% url 'device_hardware_api' device.id %}" data-name="{{ device.device_name }}">
+                                    <i class="fas fa-microchip"></i> Hardware
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -89,6 +95,76 @@
         </div>
     </div>
     
+    <div class="modal fade" id="hardwareModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-primary text-white border-0">
+                    <h5 class="modal-title"><i class="fas fa-microchip"></i> Hardware Status: <span id="hw-device-name"></span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    <div id="hw-loading" class="text-center py-4">
+                        <i class="fas fa-spinner fa-spin fa-2x text-primary mb-2"></i>
+                        <p class="text-muted mb-0">Connecting to router...</p>
+                    </div>
+                    <div id="hw-content" style="display: none;">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-body text-center p-3">
+                                        <h6 class="text-muted mb-2 text-uppercase" style="font-size: 0.8rem;">CPU Load</h6>
+                                        <h3 class="mb-0 text-primary fw-bold" id="hw-cpu">0%</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-body text-center p-3">
+                                        <h6 class="text-muted mb-2 text-uppercase" style="font-size: 0.8rem;">Memory Usage</h6>
+                                        <h3 class="mb-0 text-info fw-bold" id="hw-ram">0%</h3>
+                                        <div class="text-muted" style="font-size: 0.75rem;" id="hw-ram-details">0 / 0 MB</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="card border-0 shadow-sm">
+                                    <div class="card-body p-3">
+                                        <ul class="list-unstyled mb-0" style="font-size: 0.9rem;">
+                                            <li class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                                                <span class="text-muted">Uptime</span>
+                                                <span class="fw-bold text-dark" id="hw-uptime">-</span>
+                                            </li>
+                                            <li class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                                                <span class="text-muted">Board Name</span>
+                                                <span class="fw-bold text-dark" id="hw-board">-</span>
+                                            </li>
+                                            <li class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                                                <span class="text-muted">RouterOS Version</span>
+                                                <span class="fw-bold text-dark" id="hw-version">-</span>
+                                            </li>
+                                            <li class="d-flex justify-content-between pb-2 mb-2" id="hw-temp-row" style="display: none !important;">
+                                                <span class="text-muted">Temperature</span>
+                                                <span class="fw-bold text-danger" id="hw-temp">-</span>
+                                            </li>
+                                            <li class="d-flex justify-content-between border-top pt-2" id="hw-voltage-row" style="display: none !important;">
+                                                <span class="text-muted">Voltage</span>
+                                                <span class="fw-bold text-warning" id="hw-voltage">-</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="hw-error" class="text-center py-3 text-danger" style="display: none;">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                        <p class="mb-0" id="hw-error-msg">Failed to load hardware status.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- We need a CSRF token for the AJAX POST request -->
     {% csrf_token %}
 
@@ -141,6 +217,128 @@
                     }, 3000);
                 }
             });
+        });
+
+        $('.sync-users-btn').click(function() {
+            if (!confirm('This will import missing customers from the MikroTik device. Proceed?')) return;
+
+            const btn = $(this);
+            const url = btn.data('url');
+            const csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
+
+            // Save original button content
+            const originalContent = '<i class="fas fa-sync-alt"></i> Sync Users';
+            
+            btn.html('<i class="fas fa-spinner fa-spin"></i> Syncing...').prop('disabled', true);
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        btn.html('<i class="fas fa-check"></i> Success').removeClass('btn-outline-success').addClass('btn-success');
+                        alert(response.message);
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        btn.html('<i class="fas fa-times"></i> Failed').removeClass('btn-outline-success').addClass('btn-danger');
+                        alert("Error: " + response.message);
+                    }
+                },
+                error: function(xhr) {
+                    btn.html('<i class="fas fa-times"></i> Error').removeClass('btn-outline-success').addClass('btn-danger');
+                    alert("A server error occurred during the request.");
+                },
+                complete: function() {
+                    if (!btn.hasClass('btn-success')) {
+                        setTimeout(() => {
+                            btn.html(originalContent).removeClass('btn-danger').addClass('btn-outline-success').prop('disabled', false);
+                        }, 3000);
+                    }
+                }
+            });
+        });
+
+        let hwPollInterval = null;
+
+        function fetchHardwareStatus(url) {
+            $.ajax({
+                url: url,
+                type: 'GET',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        $('#hw-loading').hide();
+                        $('#hw-error').hide();
+                        $('#hw-content').fadeIn();
+
+                        let res = response.resource;
+                        let health = response.health;
+
+                        $('#hw-cpu').text((res['cpu-load'] || 0) + '%');
+                        
+                        let freeMem = parseInt(res['free-memory'] || 0);
+                        let totMem = parseInt(res['total-memory'] || 0);
+                        let usedMem = totMem - freeMem;
+                        let memPct = totMem > 0 ? ((usedMem / totMem) * 100).toFixed(1) : 0;
+                        
+                        $('#hw-ram').text(memPct + '%');
+                        $('#hw-ram-details').text((usedMem / 1048576).toFixed(0) + ' / ' + (totMem / 1048576).toFixed(0) + ' MB');
+
+                        $('#hw-uptime').text(res['uptime'] || '-');
+                        $('#hw-board').text(res['board-name'] || '-');
+                        $('#hw-version').text(res['version'] || '-');
+
+                        if (health && health.length > 0) {
+                            let temp = health.find(h => h.name === 'temperature');
+                            let volt = health.find(h => h.name === 'voltage');
+                            
+                            if (temp) {
+                                $('#hw-temp').text(temp.value + ' °C');
+                                $('#hw-temp-row').attr('style', 'display: flex !important;');
+                            }
+                            if (volt) {
+                                $('#hw-voltage').text(volt.value + ' V');
+                                $('#hw-voltage-row').attr('style', 'display: flex !important;');
+                            }
+                        }
+                    } else {
+                        $('#hw-loading').hide();
+                        $('#hw-content').hide();
+                        $('#hw-error').show();
+                        $('#hw-error-msg').text(response.message);
+                    }
+                },
+                error: function() {
+                    $('#hw-loading').hide();
+                    $('#hw-content').hide();
+                    $('#hw-error').show();
+                    $('#hw-error-msg').text('Server communication error.');
+                }
+            });
+        }
+
+        $('.hardware-btn').click(function() {
+            const url = $(this).data('url');
+            const name = $(this).data('name');
+
+            $('#hw-device-name').text(name);
+            $('#hw-loading').show();
+            $('#hw-content').hide();
+            $('#hw-error').hide();
+            $('#hw-temp-row').attr('style', 'display: none !important;');
+            $('#hw-voltage-row').attr('style', 'display: none !important;');
+
+            let hwModal = new bootstrap.Modal(document.getElementById('hardwareModal'));
+            hwModal.show();
+
+            // Fetch immediately, then poll every 3 seconds
+            fetchHardwareStatus(url);
+            if (hwPollInterval) clearInterval(hwPollInterval);
+            hwPollInterval = setInterval(() => fetchHardwareStatus(url), 3000);
+        });
+
+        $('#hardwareModal').on('hidden.bs.modal', function () {
+            if (hwPollInterval) clearInterval(hwPollInterval);
         });
     });
 </script>

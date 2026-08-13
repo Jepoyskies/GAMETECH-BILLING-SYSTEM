@@ -193,7 +193,6 @@
         border-radius: 8px;
         cursor: pointer;
         text-align: center;
-        transition: all 0.3s ease;
     }
 
     .type-tab.active {
@@ -307,11 +306,11 @@
             </div>
             <div class="modal-body">
                 <div class="splitter-type-tabs">
-                    <div class="type-tab active" onclick="switchSplitterTab('plc')">
+                    <div class="type-tab active" onclick="switchSplitterTab('plc', this)">
                         <div class="fw-bold">PLC Splitter</div>
                         <small class="text-muted">Equal split, low loss</small>
                     </div>
-                    <div class="type-tab fbt-tab" onclick="switchSplitterTab('fbt')">
+                    <div class="type-tab fbt-tab" onclick="switchSplitterTab('fbt', this)">
                         <div class="fw-bold">FBT Tap Coupler</div>
                         <small class="text-muted">Tap ratios, flexible</small>
                     </div>
@@ -374,9 +373,18 @@
         });
     }
 
-    function switchSplitterTab(type) {
+    function switchSplitterTab(type, el) {
         document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
-        event.currentTarget.classList.add('active');
+        if (el) {
+            el.classList.add('active');
+        } else {
+            // fallback if not provided
+            if (type === 'plc') {
+                document.querySelector('.type-tab:not(.fbt-tab)').classList.add('active');
+            } else {
+                document.querySelector('.type-tab.fbt-tab').classList.add('active');
+            }
+        }
         document.getElementById('plc-options').style.display = type === 'plc' ? 'grid' : 'none';
         document.getElementById('fbt-options').style.display = type === 'fbt' ? 'grid' : 'none';
     }

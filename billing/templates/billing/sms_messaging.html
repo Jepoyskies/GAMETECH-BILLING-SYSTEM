@@ -1,0 +1,492 @@
+{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}SMS Reminder{% endblock %}
+
+{% block extra_css %}
+<style>
+    .sms-preview { font-family: monospace; background: #f8f9fa; padding: 12px; border-radius: 8px; min-height: 60px; border: 1px solid #e2e8f0; }
+    .dark-mode .sms-preview { background: #1e293b; border-color: #334155; color: #f8fafc; }
+    
+    .sms-counter { font-size: 0.9em; color: #64748b; }
+    .dark-mode .sms-counter { color: #94a3b8; }
+    .sms-counter.warn { color: #ef4444 !important; font-weight: bold; }
+    
+    .table th, .table td { vertical-align: middle !important; }
+    
+    /* Card Styles */
+    .card-table { border-radius: 1rem; overflow: hidden; }
+    .dark-mode .card-table { background: #1e293b; border: 1px solid #334155 !important; }
+    .dark-mode .table { color: #f8fafc; }
+    .dark-mode .table-light { background-color: #0f172a; color: #e2e8f0; }
+    
+    /* Tabs */
+    .nav-tabs .nav-link { color: #64748b; font-weight: 500; border-radius: 10px 10px 0 0; border: none; padding: 12px 20px; transition: all 0.2s; }
+    .dark-mode .nav-tabs .nav-link { color: #94a3b8; }
+    .nav-tabs .nav-link:hover { color: #2151A1; background: rgba(33,81,161,0.05); border: none; }
+    .nav-tabs .nav-link.active { color: #2151A1; background: #fff; border-bottom: 2px solid #2151A1; font-weight: 600; }
+    .dark-mode .nav-tabs .nav-link.active { background: #1e293b; color: #38bdf8; border-bottom: 2px solid #38bdf8; }
+    .nav-tabs { border-bottom: 1px solid #e2e8f0; }
+    .dark-mode .nav-tabs { border-bottom-color: #334155; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-3 px-md-4">
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}info{% endif %} alert-dismissible fade show shadow-sm" role="alert" style="border-radius: 12px; border-left: 4px solid {% if message.tags == 'error' %}#ef4444{% else %}#3b82f6{% endif %};">
+                <i class="fas fa-info-circle me-2"></i> {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="mb-4 d-flex align-items-center gap-3">
+        <div style="font-size: 2rem; color: #f59e0b;">
+            <i class="fa-solid fa-message"></i>
+        </div>
+        <div>
+            <h2 class="mb-0 fw-bold text-dark" style="font-size: 1.8rem;">Auto SMS Reminder</h2>
+            <p class="text-muted mb-0">Send individual or bulk notifications via Semaphore API.</p>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs mb-4" id="smsTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="reminder-tab" data-bs-toggle="tab" data-bs-target="#reminder" type="button" role="tab"><i class="fa fa-user-clock me-1"></i> Reminders</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="log-tab" data-bs-toggle="tab" data-bs-target="#log" type="button" role="tab"><i class="fa fa-list me-1"></i> SMS Log</button>
+      </li>
+    </ul>
+
+    <div class="tab-content" id="smsTabsContent">
+      <!-- Reminders Tab -->
+      <div class="tab-pane fade show active" id="reminder" role="tabpanel">
+        
+        <!-- Search and Bulk Bar -->
+        <div class="row mb-4 align-items-center">
+            <div class="col-md-7 mb-2 mb-md-0">
+                <form class="input-group shadow-sm rounded-3" method="get" action="{% url 'sms_messaging' %}" style="overflow: hidden;">
+                    <input type="search" name="search" class="form-control border-0 px-4 py-2"
+                           placeholder="Search by name, username, phone, address..."
+                           value="{{ search }}">
+                    <button class="btn btn-primary px-4" type="submit" style="background: linear-gradient(135deg, #2151A1, #38bdf8); border: none;">
+                        <i class="fas fa-search me-1"></i> Search
+                    </button>
+                </form>
+            </div>
+            <div class="col-md-5 text-end">
+                <form id="bulkForm" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="selected_phones" id="bulkPhones">
+                    <input type="hidden" name="bulk_message" id="bulkMessage">
+                    <div class="d-flex justify-content-end gap-2 align-items-center" id="bulkBar" style="display:none !important;">
+                        <span id="bulkCount" class="badge bg-secondary rounded-pill px-3 py-2 fw-normal fs-6"></span>
+                        <button type="button" class="btn btn-danger btn-sm rounded-pill" id="bulkClearBtn"><i class="fas fa-times"></i></button>
+                        <button type="button" class="btn btn-success shadow-sm rounded-pill px-4" id="bulkSendBtn" style="font-weight: 500;">
+                            <i class="fa fa-paper-plane me-1"></i> Bulk Send
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Users Table -->
+        <div class="card card-table shadow-sm border-0 mb-4">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                        <tr>
+                            <th class="ps-4 py-3"><input type="checkbox" class="form-check-input" id="selectAll"></th>
+                            <th class="py-3 text-secondary">Username</th>
+                            <th class="py-3 text-secondary">Full Name</th>
+                            <th class="py-3 text-secondary">Status</th>
+                            <th class="py-3 text-secondary">Phone</th>
+                            <th class="pe-4 py-3 text-end text-secondary">Action</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% if page_obj %}
+                            {% for row in page_obj %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <input type="checkbox" class="form-check-input row-checkbox" data-phone="{{ row.phone }}">
+                                    </td>
+                                    <td><span class="fw-bold text-primary">{{ row.username }}</span></td>
+                                    <td>{{ row.full_name }}</td>
+                                    <td>
+                                        {% if row.status|lower == 'active' %}
+                                            <span class="badge bg-success rounded-pill px-3">{{ row.status|title }}</span>
+                                        {% elif row.status|lower == 'inactive' %}
+                                            <span class="badge bg-secondary rounded-pill px-3">{{ row.status|title }}</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark rounded-pill px-3">{{ row.status|title }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="text-muted"><i class="fa fa-phone me-1"></i> {{ row.phone }}</span>
+                                            <button type="button" class="btn btn-sm btn-light border-0 btn-copy" data-phone="{{ row.phone }}" title="Copy phone">
+                                                <i class="fa fa-copy text-secondary"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td class="pe-4 text-end">
+                                        <button type="button"
+                                            class="btn btn-sm btn-primary btn-edit-sms shadow-sm" style="border-radius: 8px;"
+                                            data-phone="{{ row.phone }}"
+                                            data-full_name="{{ row.full_name }}"
+                                            data-default_message="Hello {{ row.full_name }}! Kindly renew your subscription. Thank you!">
+                                            <i class="fa fa-paper-plane me-1"></i> Edit &amp; Send
+                                        </button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                          <tr>
+                              <td colspan="6" class="text-center text-muted py-5">
+                                  <i class="fas fa-user-slash fa-3x mb-3 text-secondary opacity-50"></i><br>
+                                  <h5 class="fw-normal">No customers found</h5>
+                              </td>
+                          </tr>
+                        {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link shadow-sm border-0" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}" style="border-radius: 8px 0 0 8px;">&laquo; Prev</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link border-0" style="border-radius: 8px 0 0 8px;">&laquo; Prev</span>
+                    </li>
+                    {% endif %}
+                    
+                    {% for i in page_obj.paginator.page_range %}
+                        {% if page_obj.number == i %}
+                            <li class="page-item active"><span class="page-link border-0" style="background: linear-gradient(135deg, #2151A1, #38bdf8);">{{ i }}</span></li>
+                        {% else %}
+                            <li class="page-item"><a class="page-link border-0" href="?page={{ i }}{% if search %}&search={{ search }}{% endif %}">{{ i }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link shadow-sm border-0" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}" style="border-radius: 0 8px 8px 0;">Next &raquo;</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link border-0" style="border-radius: 0 8px 8px 0;">Next &raquo;</span>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+      </div>
+
+      <!-- SMS Log Tab -->
+      <div class="tab-pane fade" id="log" role="tabpanel">
+          <div class="card shadow-sm border-0 mb-4 card-table">
+              <div class="card-body p-0">
+                  <div class="table-responsive">
+                      <table class="table table-hover mb-0">
+                          <thead class="table-light">
+                              <tr>
+                                  <th class="ps-4 py-3 text-secondary">Sent At</th>
+                                  <th class="py-3 text-secondary">Phone</th>
+                                  <th class="py-3 text-secondary">Message</th>
+                                  <th class="pe-4 py-3 text-secondary">API Response</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              {% if sms_logs %}
+                                  {% for log in sms_logs %}
+                                      <tr>
+                                          <td class="ps-4 text-muted" style="white-space: nowrap;">{{ log.sent_at|date:"M d, Y h:i A" }}</td>
+                                          <td class="fw-semibold text-dark">{{ log.phone }}</td>
+                                          <td><div style="max-width:300px; max-height:80px; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;">{{ log.message }}</div></td>
+                                          <td class="pe-4">
+                                              {% if log.status == 'success' %}
+                                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 mb-1 px-2 rounded-pill"><i class="fas fa-check-circle me-1"></i> Success</span>
+                                              {% else %}
+                                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 mb-1 px-2 rounded-pill"><i class="fas fa-times-circle me-1"></i> Error</span>
+                                              {% endif %}
+                                              <div class="small text-muted" style="max-width:200px; word-break:break-word;">{{ log.response|truncatechars:50 }}</div>
+                                          </td>
+                                      </tr>
+                                  {% endfor %}
+                              {% else %}
+                                  <tr>
+                                      <td colspan="4" class="text-center text-muted py-5">
+                                          <i class="fas fa-inbox fa-3x mb-3 text-secondary opacity-50"></i><br>
+                                          <h5 class="fw-normal">No SMS logs yet</h5>
+                                      </td>
+                                  </tr>
+                              {% endif %}
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+          </div>
+      </div>
+    </div>
+</div>
+
+<!-- SMS Edit Modal -->
+<div class="modal fade" id="editSmsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form id="editSmsForm" method="post" action="{% url 'sms_messaging' %}">
+      {% csrf_token %}
+      <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+        <div class="modal-header border-0 pb-0 mt-3 mx-3">
+          <h5 class="modal-title fw-bold text-dark"><i class="fa fa-paper-plane text-primary me-2"></i> Edit and Send SMS</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body px-4 py-4">
+          <input type="hidden" name="phone" id="smsPhone">
+          
+          <div class="mb-3">
+            <label class="form-label text-secondary fw-semibold small text-uppercase">To:</label>
+            <div id="smsPhoneDisplay" class="form-control bg-light border-0 fw-bold text-dark"></div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label text-secondary fw-semibold small text-uppercase">Templates</label>
+            <select id="smsTemplates" class="form-select bg-light border-0">
+              <option value="">-- Choose a template --</option>
+              <option value="Hello {name}! Kindly renew your subscription. Thank you!">Default Renewal</option>
+              <option value="Dear {name}, please renew your account to continue services.">Polite Notice</option>
+              <option value="Hi {name}, renew now to avoid interruption.">Short Notice</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label text-secondary fw-semibold small text-uppercase">Message</label>
+            <textarea class="form-control" name="message" id="smsMessage" rows="4" required style="border-color: #e2e8f0;"></textarea>
+            <div class="d-flex justify-content-between mt-2">
+              <span id="smsCharCount" class="sms-counter"><i class="fas fa-pencil-alt me-1"></i> 0/160</span>
+              <span id="smsCharWarning" class="sms-counter warn d-none"><i class="fa fa-exclamation-triangle"></i> Over 160 chars!</span>
+            </div>
+          </div>
+          
+          <div class="mb-2">
+            <label class="form-label text-secondary fw-semibold small text-uppercase">Preview</label>
+            <div class="sms-preview text-dark" id="smsPreview"></div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 px-4 pb-4">
+          <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" name="send_sms_custom" class="btn btn-primary rounded-pill px-4 shadow-sm"><i class="fa fa-paper-plane me-1"></i> Send SMS</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Bulk SMS Modal -->
+<div class="modal fade" id="bulkSmsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form id="bulkSmsForm" method="post" action="{% url 'sms_messaging' %}">
+      {% csrf_token %}
+      <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+        <div class="modal-header border-0 pb-0 mt-3 mx-3">
+          <h5 class="modal-title fw-bold text-dark"><i class="fa fa-paper-plane text-success me-2"></i> Send Bulk SMS</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body px-4 py-4">
+          <input type="hidden" name="selected_phones" id="bulkModalPhones">
+          
+          <div class="mb-3">
+            <label class="form-label text-secondary fw-semibold small text-uppercase">Recipients:</label>
+            <div id="bulkPhoneCountDisplay" class="form-control bg-success bg-opacity-10 text-success border-0 fw-bold"></div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label text-secondary fw-semibold small text-uppercase">Templates</label>
+            <select id="bulkSmsTemplates" class="form-select bg-light border-0">
+              <option value="">-- Choose a template --</option>
+              <option value="Hello! Kindly renew your subscription. Thank you!">Default Renewal</option>
+              <option value="Dear customer, please renew your account to continue services.">Polite Notice</option>
+              <option value="Hi, renew now to avoid interruption.">Short Notice</option>
+              <option value="Network maintenance will occur tonight from 12AM-2AM. We apologize for the inconvenience.">System Maintenance</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label text-secondary fw-semibold small text-uppercase">Message</label>
+            <textarea class="form-control" name="bulk_message" id="bulkSmsMessage" rows="4" required style="border-color: #e2e8f0;"></textarea>
+            <div class="d-flex justify-content-between mt-2">
+              <span id="bulkSmsCharCount" class="sms-counter"><i class="fas fa-pencil-alt me-1"></i> 0/160</span>
+              <span id="bulkSmsCharWarning" class="sms-counter warn d-none"><i class="fa fa-exclamation-triangle"></i> Over 160 chars!</span>
+            </div>
+          </div>
+          
+          <div class="mb-2">
+            <label class="form-label text-secondary fw-semibold small text-uppercase">Preview</label>
+            <div class="sms-preview text-dark" id="bulkSmsPreview"></div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 px-4 pb-4">
+          <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" name="bulk_send_sms" class="btn btn-success rounded-pill px-4 shadow-sm"><i class="fa fa-paper-plane me-1"></i> Confirm & Send Bulk</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.btn-copy').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var phone = btn.getAttribute('data-phone');
+        navigator.clipboard.writeText(phone);
+        btn.innerHTML = '<i class="fa fa-check text-success"></i>';
+        setTimeout(function() { btn.innerHTML = '<i class="fa fa-copy text-secondary"></i>'; }, 1000);
+    });
+});
+
+let lastSmsMessage = '';
+document.querySelectorAll('.btn-edit-sms').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var phone = btn.getAttribute('data-phone');
+        var full_name = btn.getAttribute('data-full_name');
+        var default_message = btn.getAttribute('data-default_message');
+        
+        document.getElementById('smsPhone').value = phone;
+        document.getElementById('smsPhoneDisplay').innerText = full_name + " (" + phone + ")";
+        
+        let msg = lastSmsMessage || default_message;
+        document.getElementById('smsMessage').value = msg;
+        document.getElementById('smsPreview').innerText = msg;
+        updateCharCount('smsMessage', 'smsCharCount', 'smsCharWarning');
+        
+        document.getElementById('smsMessage').dataset.fullName = full_name;
+        document.getElementById('smsTemplates').selectedIndex = 0;
+        
+        new bootstrap.Modal(document.getElementById('editSmsModal')).show();
+    });
+});
+
+document.getElementById('smsTemplates').addEventListener('change', function() {
+    let template = this.value;
+    let msgField = document.getElementById('smsMessage');
+    let fullName = msgField.dataset.fullName || '';
+    if (template) {
+        template = template.replace('{name}', fullName);
+        msgField.value = template;
+        msgField.dispatchEvent(new Event('input'));
+    }
+});
+
+document.getElementById('smsMessage').addEventListener('input', function() {
+    updateCharCount('smsMessage', 'smsCharCount', 'smsCharWarning');
+    document.getElementById('smsPreview').innerText = this.value;
+    lastSmsMessage = this.value;
+});
+
+// Bulk selection logic
+let selectedPhones = new Set();
+document.querySelectorAll('.row-checkbox').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+        let phone = cb.getAttribute('data-phone');
+        if (cb.checked && phone && phone !== 'None' && phone.trim() !== '') {
+            selectedPhones.add(phone);
+        } else {
+            selectedPhones.delete(phone);
+        }
+        updateBulkBar();
+    });
+});
+
+document.getElementById('selectAll')?.addEventListener('change', function() {
+    let allChecked = this.checked;
+    document.querySelectorAll('.row-checkbox').forEach(function(cb) {
+        let phone = cb.getAttribute('data-phone');
+        if (phone && phone !== 'None' && phone.trim() !== '') {
+            cb.checked = allChecked;
+            if (allChecked) {
+                selectedPhones.add(phone);
+            } else {
+                selectedPhones.delete(phone);
+            }
+        } else {
+            cb.checked = false; // Never check empty phones
+        }
+    });
+    updateBulkBar();
+});
+
+function updateBulkBar() {
+    let bar = document.getElementById('bulkBar');
+    let count = document.getElementById('bulkCount');
+    if (selectedPhones.size > 0) {
+        bar.style.setProperty('display', 'flex', 'important');
+        count.textContent = `${selectedPhones.size} selected`;
+    } else {
+        bar.style.setProperty('display', 'none', 'important');
+    }
+}
+
+document.getElementById('bulkClearBtn').addEventListener('click', function() {
+    selectedPhones.clear();
+    document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
+    if(document.getElementById('selectAll')) {
+        document.getElementById('selectAll').checked = false;
+    }
+    updateBulkBar();
+});
+
+document.getElementById('bulkSendBtn').addEventListener('click', function() {
+    document.getElementById('bulkModalPhones').value = Array.from(selectedPhones).join(',');
+    document.getElementById('bulkPhoneCountDisplay').innerText = selectedPhones.size + " Recipients Selected";
+    
+    let msg = localStorage.getItem('lastBulkMessage') || "Hello! Kindly renew your subscription. Thank you!";
+    document.getElementById('bulkSmsMessage').value = msg;
+    document.getElementById('bulkSmsPreview').innerText = msg;
+    updateCharCount('bulkSmsMessage', 'bulkSmsCharCount', 'bulkSmsCharWarning');
+    
+    document.getElementById('bulkSmsTemplates').selectedIndex = 0;
+    
+    new bootstrap.Modal(document.getElementById('bulkSmsModal')).show();
+});
+
+document.getElementById('bulkSmsTemplates').addEventListener('change', function() {
+    let template = this.value;
+    let msgField = document.getElementById('bulkSmsMessage');
+    if (template) {
+        msgField.value = template;
+        msgField.dispatchEvent(new Event('input'));
+    }
+});
+
+document.getElementById('bulkSmsMessage').addEventListener('input', function() {
+    updateCharCount('bulkSmsMessage', 'bulkSmsCharCount', 'bulkSmsCharWarning');
+    document.getElementById('bulkSmsPreview').innerText = this.value;
+    localStorage.setItem('lastBulkMessage', this.value);
+});
+
+function updateCharCount(textareaId, counterId, warningId) {
+    let len = document.getElementById(textareaId).value.length;
+    document.getElementById(counterId).innerHTML = '<i class="fas fa-pencil-alt me-1"></i> ' + len + '/160';
+    if (len > 160) {
+        document.getElementById(warningId).classList.remove('d-none');
+    } else {
+        document.getElementById(warningId).classList.add('d-none');
+    }
+}
+</script>
+{% endblock %}
+{% endblock %}

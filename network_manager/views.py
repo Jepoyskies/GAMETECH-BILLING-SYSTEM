@@ -83,10 +83,87 @@ def test_device_connection(request, device_id):
             from .services import MikrotikAPI
             api = MikrotikAPI(device)
             # Try to fetch something simple to confirm connection
-            api.get_system_resource()
-            return JsonResponse({'status': 'success', 'message': f'Connected successfully to {device.device_name}'})
+            api_conn = api._get_api()
+            system_identity = api_conn.get_resource('/system/identity')
+            identity = system_identity.get()[0]['name']
+            api.connection.disconnect()
+            
+            return JsonResponse({'status': 'success', 'message': f'Connected successfully to {device.device_name} ({identity})'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': f'Connection failed: {e}'})
+
+@login_required
+def sync_device_users(request, device_id):
+    if request.method == 'POST':
+        device = get_object_or_404(MikrotikDevice, id=device_id)
+
+        try:
+            from .services import MikrotikAPI
+            from billing.models import Customer, SubscriptionPlan
+            
+            api = MikrotikAPI(device)
+            secrets = api.get_ppp_secrets()
+            
+            added = 0
+            for secret in secrets:
+                name = secret.get('name')
+                if name and not Customer.objects.filter(pppoe_username=name).exists():
+                    status = 'inactive' if secret.get('disabled') == 'true' else 'active'
+                    
+                    # Extract full name from comment if available
+                    comment = secret.get('comment', '').strip()
+                    full_name = comment if comment else name
+                    
+                    # Try to map profile to SubscriptionPlan
+                    profile_name = secret.get('profile', '')
+                    plan = SubscriptionPlan.objects.filter(name__iexact=profile_name).first()
+                    
+                    Customer.objects.create(
+                        full_name=full_name,
+                        pppoe_username=name,
+                        pppoe_password=secret.get('password', ''),
+                        mac_address=secret.get('caller-id', ''),
+                        mikrotik_device=device,
+                        plan=plan,
+                        status=status,
+                        created_form_by='MikroTik Sync'
+                    )
+                    added += 1
+            
+            return JsonResponse({'status': 'success', 'message': f'Synced successfully. Imported {added} new customers from {device.device_name}.'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f'Sync failed: {e}'})
+
+@login_required
+def device_hardware_api(request, device_id):
+    device = get_object_or_404(MikrotikDevice, id=device_id)
+    try:
+        from .services import MikrotikAPI
+        api = MikrotikAPI(device)
+        api_conn = api._get_api()
+        
+        # Get System Resources (CPU, Memory, Uptime)
+        resource_data = api_conn.get_resource('/system/resource').get()[0]
+        
+        # Get Routerboard info for temperature/voltage (if supported)
+        health_data = []
+        try:
+            health_data = api_conn.get_resource('/system/health').get()
+        except Exception:
+            pass # Not all routers support /system/health
+
+        api.connection.disconnect()
+        
+        return JsonResponse({
+            'status': 'success',
+            'resource': resource_data,
+            'health': health_data
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+
+
 
 
 @login_required
