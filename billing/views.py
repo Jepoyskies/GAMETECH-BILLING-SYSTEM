@@ -134,54 +134,45 @@ def api_live_monitoring_data(request):
     for device in devices:
         try:
             active_users = MikrotikAPI(device).get_active_pppoe_users()
-            queues = MikrotikAPI(device).get_simple_queues()
             
-            processed_users = set()
+            # Fetch traffic for all active PPPoE users directly from their dynamic interfaces
+            interface_names = [f"<pppoe-{au.get('name')}>" for au in active_users if au.get('name')]
+            traffic_data = MikrotikAPI(device).get_interfaces_traffic(interface_names)
             
-            # 1. Process all queues first
-            for q in queues:
-                rate = q.get('rate', '0/0')
+            # Map traffic data by clean username
+            traffic_dict = {}
+            for t in traffic_data:
+                name = t.get('name', '')
+                # Strip `<pppoe-` prefix and `>` suffix
+                clean_name = name.strip('<>').replace('pppoe-', '', 1)
+                
                 try:
-                    rx_bps, tx_bps = rate.split('/')
-                    rx_mbps = round(int(rx_bps) / 1000000, 2)
-                    tx_mbps = round(int(tx_bps) / 1000000, 2)
+                    rx_bps = int(t.get('rx-bits-per-second', 0))
+                    tx_bps = int(t.get('tx-bits-per-second', 0))
+                    rx_mbps = round(rx_bps / 1000000, 2)
+                    tx_mbps = round(tx_bps / 1000000, 2)
                 except ValueError:
                     rx_mbps = 0
                     tx_mbps = 0
+                    
+                traffic_dict[clean_name] = {'rx_mbps': rx_mbps, 'tx_mbps': tx_mbps}
 
-                user_name = q.get('name', 'Unknown')
-                # Strip < and > if it's a dynamic PPPoE queue
-                clean_name = user_name.strip('<>')
-                processed_users.add(clean_name)
-
-                # Match uptime if user is in active PPPoE sessions
-                uptime = '0s'
-                for au in active_users:
-                    if au.get('name') == clean_name:
-                        uptime = au.get('uptime', '0s')
-                        break
-
+            # Build the output data
+            for au in active_users:
+                u_name = au.get('name', 'Unknown')
+                user_ip = au.get('address', device.ip_address) # Actual assigned IP
+                
+                stats = traffic_dict.get(u_name, {'rx_mbps': 0, 'tx_mbps': 0})
+                
                 data.append({
                     'device_name': device.device_name,
                     'device_ip': device.ip_address,
-                    'user': user_name,
-                    'rx_mbps': rx_mbps,
-                    'tx_mbps': tx_mbps,
-                    'uptime': uptime
+                    'ip': user_ip,
+                    'user': u_name,
+                    'rx_mbps': stats['rx_mbps'],
+                    'tx_mbps': stats['tx_mbps'],
+                    'uptime': au.get('uptime', '0s')
                 })
-            
-            # 2. Process active users that did NOT have a queue
-            for au in active_users:
-                u_name = au.get('name', 'Unknown')
-                if u_name not in processed_users:
-                    data.append({
-                        'device_name': device.device_name,
-                        'device_ip': device.ip_address,
-                        'user': u_name,
-                        'rx_mbps': 0,
-                        'tx_mbps': 0,
-                        'uptime': au.get('uptime', '0s')
-                    })
         except Exception:
             # Skip unreachable devices
             pass

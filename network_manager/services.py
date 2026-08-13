@@ -209,3 +209,24 @@ class MikrotikAPI:
             logger.error(
                 f"Failed to get simple queues from {self.device.device_name}: {e}")
             return []
+
+    def get_interfaces_traffic(self, interface_names):
+        """
+        Retrieves live traffic from specified interfaces.
+        interface_names: list of interface names
+        """
+        if not interface_names:
+            return []
+        try:
+            api = self._get_api()
+            interfaces_str = ",".join(interface_names)
+            interfaces_api = api.get_resource('/interface')
+            traffic = interfaces_api.call('monitor-traffic', {
+                'interface': interfaces_str,
+                'once': ''
+            })
+            self.connection.disconnect()
+            return traffic
+        except Exception as e:
+            logger.error(f"Failed to get interface traffic from {self.device.device_name}: {e}")
+            return []
