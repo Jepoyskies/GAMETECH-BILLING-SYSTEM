@@ -3,54 +3,59 @@
 {% block title %}Edit Agent - Mikrotik Billing System{% endblock %}
 
 {% block content %}
-<main class="container py-4">
-    <h2 class="mb-4">Edit Agent</h2>
-
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        {% endfor %}
-    {% endif %}
-
-    <!-- Card-form layout -->
-    <div class="card border-primary mb-4 shadow-sm">
-        <div class="card-header bg-primary text-white">
-            <strong>Edit Agent Details</strong>
+<main class="container-fluid py-3 px-3 px-md-4">
+    <div class="form-card">
+        <div class="form-page-title">
+            <div class="title-icon"><i class="fa fa-user-edit"></i></div>
+            Edit Agent
         </div>
-        <div class="card-body">
-            <form method="post" action="{% url 'edit_agent' agent.id %}" class="needs-validation" novalidate>
-                {% csrf_token %}
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label" for="name">Name</label>
-                        <input id="name" name="name" class="form-control" type="text" required
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="error-alert">
+                    <i class="fas fa-exclamation-circle"></i> {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post" action="{% url 'edit_agent' agent.id %}" class="needs-validation" novalidate>
+            {% csrf_token %}
+            <div class="form-section-label"><i class="fas fa-id-badge me-1"></i> Agent Details</div>
+            
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <label class="plan-form-label" for="name">Name <span class="req">*</span></label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-user i-icon"></i>
+                        <input id="name" name="name" class="plan-form-control" type="text" required
                             value="{{ agent.name|default_if_none:'' }}">
-                        <div class="invalid-feedback">Please provide the agent's name.</div>
                     </div>
+                </div>
 
-                    <div class="col-md-6">
-                        <label class="form-label" for="email">Email</label>
-                        <input id="email" name="email" class="form-control" type="email" required
+                <div class="col-md-6">
+                    <label class="plan-form-label" for="email">Email <span class="req">*</span></label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-envelope i-icon"></i>
+                        <input id="email" name="email" class="plan-form-control" type="email" required
                             value="{{ agent.email|default_if_none:'' }}">
-                        <div class="invalid-feedback">Please provide a valid email address.</div>
                     </div>
+                </div>
 
-                    <div class="col-md-6">
-                        <label class="form-label" for="phone">Phone</label>
-                        <input id="phone" name="phone" class="form-control" type="text"
+                <div class="col-md-6">
+                    <label class="plan-form-label" for="phone">Phone</label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-phone i-icon"></i>
+                        <input id="phone" name="phone" class="plan-form-control" type="text"
                             value="{{ agent.phone|default_if_none:'' }}">
                     </div>
                 </div>
+            </div>
 
-                <div class="mt-4 d-flex justify-content-end">
-                    <a href="{% url 'agent_list' %}" class="btn btn-outline-secondary me-2">Cancel</a>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                </div>
-            </form>
-        </div>
+            <div class="d-flex justify-content-end gap-2 mt-4 pt-3" style="border-top:1px solid rgba(0,0,0,0.05);">
+                <a href="{% url 'agent_list' %}" class="btn-cancel">Cancel</a>
+                <button type="submit" class="btn-submit"><i class="fas fa-save me-1"></i> Save Changes</button>
+            </div>
+        </form>
     </div>
 </main>
 

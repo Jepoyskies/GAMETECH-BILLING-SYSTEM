@@ -80,6 +80,14 @@ urlpatterns = [
     path('auto-suspend/', views.auto_suspend_view, name='auto_suspend'),
     path('sms/', views.sms_view, name='sms_messaging'),
     
+    # Cignal Play Integration
+    path('cignal-play/', views.cignal_play_list_view, name='cignal_play_list'),
+    path('add-ons/', views.add_on_payments_view, name='add_on_payments'),
+    path('customer/<int:customer_id>/cignalplay-form/', views.cignalplay_form_view, name='cignalplay_form'),
+    path('customer/<int:customer_id>/cignal-logs/', views.user_cignal_logs_view, name='user_cignal_logs'),
+    
+    path('customer/<int:customer_id>/soa/', views.statement_of_account_view, name='statement_of_account'),
+    
     # Master Data Management (Settings)
     path('settings/account-types/', views.account_type_list, name='account_type_list'),
     path('settings/account-types/add/', views.create_account_type, name='create_account_type'),
@@ -90,4 +98,6 @@ urlpatterns = [
     path('settings/barangays/add/', views.create_barangay, name='create_barangay'),
     path('settings/barangays/edit/<int:pk>/', views.edit_barangay, name='edit_barangay'),
     path('settings/barangays/delete/<int:pk>/', views.delete_barangay, name='delete_barangay'),
+    
+    path('settings/backup/', views.backup_database_view, name='backup_database'),
 ]

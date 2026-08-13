@@ -1,168 +1,45 @@
-
 {% extends 'billing/base.html' %}
 {% load static %}
 
-{% block extra_css %}
-<style>
-    .logs-card {
-        border: none;
-        border-radius: 1rem;
-        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.1);
-        overflow: hidden;
-    }
-    .dark-mode .logs-card {
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
-    }
-    
-    .table-responsive {
-        max-height: 70vh;
-    }
-
-    table thead th {
-        position: sticky;
-        top: 0;
-        z-index: 2;
-        background: #f9fafb;
-        border-bottom: 1px solid #e5e7eb;
-        white-space: nowrap;
-    }
-    .dark-mode table thead th {
-        background: #1e293b;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .badge-action {
-        text-transform: uppercase;
-        font-size: 0.7rem;
-        letter-spacing: 0.03em;
-    }
-    .badge-action-insert {
-        background-color: #22c55e1a;
-        color: #15803d;
-    }
-    .dark-mode .badge-action-insert {
-        background-color: rgba(34, 197, 94, 0.15);
-        color: #4ade80;
-    }
-    .badge-action-update {
-        background-color: #f973161a;
-        color: #c2410c;
-    }
-    .dark-mode .badge-action-update {
-        background-color: rgba(249, 115, 22, 0.15);
-        color: #fb923c;
-    }
-    .badge-action-delete {
-        background-color: #ef44441a;
-        color: #b91c1c;
-    }
-    .dark-mode .badge-action-delete {
-        background-color: rgba(239, 68, 68, 0.15);
-        color: #f87171;
-    }
-
-    .log-json {
-        max-height: 180px;
-        overflow: auto;
-        background: #0f172a;
-        color: #e5e7eb;
-        border-radius: 0.5rem;
-        padding: 0.5rem 0.75rem;
-        font-size: 0.75rem;
-        line-height: 1.4;
-        white-space: pre-wrap;
-        word-break: break-word;
-    }
-    .log-json.empty {
-        font-style: italic;
-        color: #9ca3af;
-        background: #f3f4f6;
-    }
-    .dark-mode .log-json.empty {
-        background: #334155;
-        color: #94a3b8;
-    }
-
-    .log-meta {
-        font-size: 0.75rem;
-        color: #6b7280;
-    }
-
-    .search-input { max-width: 260px; }
-    .date-filter-input { max-width: 170px; }
-
-    @media (max-width: 991.98px) {
-        .table-responsive { max-height: none; }
-        .search-input, .date-filter-input {
-            width: 100%;
-            max-width: none;
-        }
-        table thead { display: none; }
-        table tbody tr {
-            display: block;
-            margin-bottom: 0.85rem;
-            border-radius: 0.75rem;
-            border: 1px solid #e5e7eb;
-            padding: 0.5rem 0.75rem;
-            background: #fff;
-        }
-        .dark-mode table tbody tr {
-            background: #1e293b;
-            border-color: rgba(255,255,255,0.05);
-        }
-        table tbody td {
-            display: flex;
-            justify-content: space-between;
-            padding: 0.25rem 0;
-            border: none;
-            font-size: 0.8rem;
-        }
-        table tbody td::before {
-            content: attr(data-label);
-            font-weight: 600;
-            color: #4b5563;
-            margin-right: 0.75rem;
-        }
-        .dark-mode table tbody td::before { color: #94a3b8; }
-        .log-json { width: 100%; }
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <div class="card dashboard-card logs-card">
-            <div class="card-header d-flex flex-column flex-md-row align-items-md-center gap-2">
-                <div>
-                    <h2 class="mb-0 fw-bold text-primary">
-                        <i class="fa fa-gavel"></i> System Logs
-                    </h2>
-                    <small class="text-muted">
-                        Showing {{ logs.start_index }}–{{ logs.end_index }} of {{ logs.paginator.count }} records
-                    </small>
-                </div>
-
-                <form method="get" class="ms-md-auto d-flex flex-wrap gap-2 align-items-center">
-                    <input type="text" name="search" value="{{ search }}" class="form-control form-control-sm search-input" placeholder="Search table / user / action / data..." autocomplete="off">
-                    
-                    <select name="action_filter" class="form-select form-select-sm" style="max-width: 150px;">
-                        <option value="">All Actions</option>
-                        <option value="ADD" {% if action_filter == 'ADD' %}selected{% endif %}>ADD</option>
-                        <option value="UPDATE" {% if action_filter == 'UPDATE' %}selected{% endif %}>UPDATE</option>
-                        <option value="DELETE" {% if action_filter == 'DELETE' %}selected{% endif %}>DELETE</option>
-                    </select>
-
-                    <input type="date" name="date_from" value="{{ date_from }}" class="form-control form-control-sm date-filter-input" placeholder="From">
-                    <input type="date" name="date_to" value="{{ date_to }}" class="form-control form-control-sm date-filter-input" placeholder="To">
-                    
-                    <input type="hidden" name="sort" value="{{ sort }}">
-                    <input type="hidden" name="dir" value="{{ dir }}">
-                    
-                    <button type="submit" class="btn btn-primary btn-sm">Filter</button>
-                    <a href="{% url 'system_logs' %}" class="btn btn-secondary btn-sm">Reset</a>
-                </form>
+<div class="container-fluid py-3 px-3 px-md-4">
+    <div class="live-header-row mb-4">
+        <h2 class="live-title">
+            <div class="kpi-icon icon-purple" style="width: 48px; height: 48px; font-size: 1.4rem; margin-right: 0;">
+                <i class="fa fa-gavel"></i>
             </div>
+            System Logs
+        </h2>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3" style="background:transparent; border-bottom:1px solid rgba(0,0,0,0.05); padding: 1.25rem;">
+            <div>
+                <small class="text-muted fw-semibold">
+                    Showing {{ logs.start_index }}–{{ logs.end_index }} of {{ logs.paginator.count }} records
+                </small>
+            </div>
+
+            <form method="get" class="d-flex flex-wrap gap-2 align-items-center">
+                <input type="text" name="search" value="{{ search }}" class="filter-input" style="width: 250px;" placeholder="Search logs..." autocomplete="off">
+                
+                <select name="action_filter" class="filter-select" style="width: auto;">
+                    <option value="">All Actions</option>
+                    <option value="ADD" {% if action_filter == 'ADD' %}selected{% endif %}>ADD</option>
+                    <option value="UPDATE" {% if action_filter == 'UPDATE' %}selected{% endif %}>UPDATE</option>
+                    <option value="DELETE" {% if action_filter == 'DELETE' %}selected{% endif %}>DELETE</option>
+                </select>
+
+                <input type="date" name="date_from" value="{{ date_from }}" class="filter-input" style="width: 140px;" placeholder="From">
+                <input type="date" name="date_to" value="{{ date_to }}" class="filter-input" style="width: 140px;" placeholder="To">
+                
+                <input type="hidden" name="sort" value="{{ sort }}">
+                <input type="hidden" name="dir" value="{{ dir }}">
+                
+                <button type="submit" class="btn-filter" style="width: auto;"><i class="fas fa-filter"></i></button>
+                <a href="{% url 'system_logs' %}" class="btn-filter" style="width: auto; background: #64748b;"><i class="fas fa-undo"></i></a>
+            </form>
+        </div>
 
             <div class="card-body p-0">
                 {% if not logs %}
@@ -275,7 +152,6 @@
                     </nav>
                     {% endif %}
                 {% endif %}
-            </div>
         </div>
     </div>
 </div>

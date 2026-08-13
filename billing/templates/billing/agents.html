@@ -5,10 +5,15 @@
 {% block content %}
 <main class="container py-4">
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="mb-0 fw-bold text-primary"><i class="fa fa-address-card"></i> Agents</h2>
-        <a href="{% url 'add_agent' %}" class="btn btn-success">
-            <i class="fa fa-plus-circle"></i> Add Agent
+    <div class="live-header-row mb-4">
+        <h2 class="live-title">
+            <div class="kpi-icon icon-purple" style="width: 48px; height: 48px; font-size: 1.4rem; margin-right: 0;">
+                <i class="fa fa-address-card"></i>
+            </div>
+            Agents
+        </h2>
+        <a href="{% url 'add_agent' %}" class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold">
+            <i class="fa fa-plus-circle me-2"></i> Add Agent
         </a>
     </div>
 
@@ -26,7 +31,7 @@
         {% if agents %}
             {% for agent in agents %}
             <div class="col-12">
-                <div class="card h-100 shadow-sm">
+                <div class="dashboard-card h-100">
                     <div class="card-body d-flex flex-column">
                         <h5 class="card-title mb-2">{{ agent.name }}</h5>
                         <p class="card-text mb-1"><strong>Email:</strong> {{ agent.email }}</p>
@@ -50,24 +55,40 @@
     </div>
 
     <!-- Table view (desktop) -->
-    <div class="table-responsive d-none d-md-block" id="agents-table">
-        <table id="agentsDataTable" class="table table-striped table-bordered table-sm small">
-            <thead class="thead-dark">
+    <div class="dashboard-card d-none d-md-block" id="agents-table">
+        <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3" style="background:transparent; border-bottom:1px solid rgba(0,0,0,0.05); padding: 1.25rem;">
+            <div>
+                <small class="text-muted fw-semibold" id="agents-info">
+                    Loading agents...
+                </small>
+            </div>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <select id="agents-length" class="filter-select" style="width: auto;">
+                    <option value="10">10 per page</option>
+                    <option value="25">25 per page</option>
+                    <option value="50">50 per page</option>
+                    <option value="-1">All</option>
+                </select>
+                <input type="text" id="agents-search" class="filter-input" style="width: 250px;" placeholder="Search agents..." autocomplete="off">
+            </div>
+        </div>
+        <div class="card-body p-0 table-responsive">
+        <table id="agentsDataTable" class="subs-table table-hover align-middle mb-0" style="width:100%;">
+            <thead>
                 <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th style="width: 230px;">Actions</th>
+                    <th class="ps-4">NAME</th>
+                    <th>EMAIL</th>
+                    <th>PHONE</th>
+                    <th class="text-center pe-4">ACTIONS</th>
                 </tr>
             </thead>
             <tbody>
-                {% if agents %}
-                    {% for agent in agents %}
+                {% for agent in agents %}
                     <tr>
                         <td>{{ agent.name }}</td>
                         <td>{{ agent.email }}</td>
                         <td>{{ agent.phone|default_if_none:"" }}</td>
-                        <td>
+                        <td class="text-center pe-4">
                             <a href="{% url 'view_agent' agent.id %}" class="btn btn-sm btn-info me-1">View</a>
                             <a href="{% url 'edit_agent' agent.id %}" class="btn btn-sm btn-primary me-1">Edit</a>
                             <form method="post" action="{% url 'delete_agent' agent.id %}" onsubmit="return confirm('Are you sure you want to delete this agent?');" style="display:inline-block;">
@@ -77,9 +98,9 @@
                         </td>
                     </tr>
                     {% endfor %}
-                {% endif %}
             </tbody>
         </table>
+        </div>
     </div>
 
 </main>
@@ -94,12 +115,40 @@
 <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
 <script>
     $(document).ready(function () {
-        $('#agentsDataTable').DataTable({
+        var table = $('#agentsDataTable').DataTable({
             "paging": true,
             "searching": true,
             "ordering": true,
-            "info": true
+            "info": true,
+            "dom": 't<"pagination-container"p>'
         });
+
+        // Wire custom search
+        $('#agents-search').on('keyup', function() {
+            table.search(this.value).draw();
+            updateInfo();
+        });
+
+        // Wire custom length
+        $('#agents-length').on('change', function() {
+            table.page.len(this.value).draw();
+            updateInfo();
+        });
+
+        // Custom Info text
+        function updateInfo() {
+            var info = table.page.info();
+            $('#agents-info').html(
+                'Showing ' + (info.start + 1) + '–' + info.end + ' of ' + info.recordsDisplay + ' records'
+            );
+        }
+        
+        table.on('draw', function() {
+            updateInfo();
+        });
+        
+        // Init
+        updateInfo();
     });
 </script>
 {% endblock %}

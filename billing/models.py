@@ -210,3 +210,19 @@ class SmsLog(models.Model):
 
     def __str__(self):
         return f"{self.phone} - {self.status}"
+
+
+class CignalPlay(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='cignal_plans')
+    plan_name = models.CharField(max_length=255)
+    start_date = models.DateTimeField(null=True, blank=True)
+    end_date = models.DateTimeField(null=True, blank=True)
+    adjusted_by = models.CharField(max_length=100, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'cignal_play'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.plan_name} for {self.customer.full_name}"

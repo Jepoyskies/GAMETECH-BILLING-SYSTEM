@@ -1,73 +1,72 @@
 {% extends 'billing/base.html' %}
 
 {% block content %}
-<div class="container-fluid px-4 py-4">
-    <div class="row justify-content-center">
-        <div class="col-12 col-lg-8">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        {% if nap %}Edit{% else %}Add{% endif %} NAP Box Mapping
-                    </h6>
+<div class="container-fluid py-3 px-3 px-md-4">
+    <div class="form-card">
+        <div class="form-page-title">
+            <div class="title-icon"><i class="fa-solid fa-map-pin"></i></div>
+            {% if nap %}Edit{% else %}Add{% endif %} NAP Box
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="error-alert">
+                    <i class="fas fa-exclamation-circle"></i> {{ message }}
                 </div>
-                <div class="card-body">
-                    {% if messages %}
-                        {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                        {% endfor %}
-                    {% endif %}
+            {% endfor %}
+        {% endif %}
 
-                    <div class="mb-4">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <label class="form-label mb-0 fw-bold">Location</label>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="btnLocate">
-                                <i class="fas fa-location-arrow"></i> Use My Location
-                            </button>
-                        </div>
-                        <div id="map" style="width: 100%; height: 350px; border-radius: 0.35rem; border: 1px solid #dee2e6;"></div>
-                        <small class="text-muted">
-                            Click on the map to place/move the pin, or use "Use My Location" to auto-detect.
-                        </small>
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="plan-form-label mb-0">Location</label>
+                <button type="button" class="btn btn-sm btn-outline-primary shadow-sm rounded-pill px-3" id="btnLocate">
+                    <i class="fas fa-location-arrow"></i> Use My Location
+                </button>
+            </div>
+            <div id="map" style="width: 100%; height: 350px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1);"></div>
+            <small class="text-muted mt-2 d-block">
+                Click on the map to place/move the pin, or use "Use My Location" to auto-detect.
+            </small>
+        </div>
+
+        <form method="POST">
+            {% csrf_token %}
+            <div class="form-section-label"><i class="fas fa-box me-1"></i> Box Details</div>
+            
+            <div class="row g-3 mb-4">
+                <div class="col-md-12">
+                    <label class="plan-form-label" for="napbox_no">NAP Box No <span class="req">*</span></label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-hashtag i-icon"></i>
+                        <input type="text" class="plan-form-control" id="napbox_no" name="napbox_no" value="{{ nap.napbox_no|default:'' }}" required>
                     </div>
+                </div>
 
-                    <form method="POST">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="napbox_no" class="form-label fw-bold">NAP Box No</label>
-                            <input type="text" class="form-control" id="napbox_no" name="napbox_no" value="{{ nap.napbox_no|default:'' }}" required>
-                        </div>
+                <div class="col-md-4">
+                    <label class="plan-form-label" for="nap_latitude">Latitude <span class="req">*</span></label>
+                    <input type="text" class="plan-form-control" id="nap_latitude" name="nap_latitude" value="{{ nap.latitude|default:'' }}" placeholder="-6.200000" required>
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="plan-form-label" for="nap_longitude">Longitude <span class="req">*</span></label>
+                    <input type="text" class="plan-form-control" id="nap_longitude" name="nap_longitude" value="{{ nap.longitude|default:'' }}" placeholder="106.816666" required>
+                </div>
 
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="nap_latitude" class="form-label fw-bold">Latitude</label>
-                                <input type="text" class="form-control" id="nap_latitude" name="nap_latitude" value="{{ nap.latitude|default:'' }}" placeholder="e.g. -6.200000" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="nap_longitude" class="form-label fw-bold">Longitude</label>
-                                <input type="text" class="form-control" id="nap_longitude" name="nap_longitude" value="{{ nap.longitude|default:'' }}" placeholder="e.g. 106.816666" required>
-                            </div>
-                        </div>
-
-                        <div class="mb-4">
-                            <label for="marker_color" class="form-label fw-bold">Marker Color</label>
-                            <select class="form-select" id="marker_color" name="marker_color" required>
-                                <option value="red" {% if nap.marker_color == 'red' %}selected{% endif %}>Red</option>
-                                <option value="green" {% if nap.marker_color == 'green' %}selected{% endif %}>Green</option>
-                                <option value="violet" {% if nap.marker_color == 'violet' %}selected{% endif %}>Violet</option>
-                            </select>
-                            <small class="text-muted">This color will be used for this NAP Box pin on the GeoMap.</small>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary w-100 shadow-sm">
-                            <i class="fas fa-save"></i> {% if nap %}Update{% else %}Save{% endif %} NAP Box
-                        </button>
-                    </form>
+                <div class="col-md-4">
+                    <label class="plan-form-label" for="marker_color">Marker Color <span class="req">*</span></label>
+                    <select class="plan-form-control" id="marker_color" name="marker_color" required style="padding-left:14px;">
+                        <option value="red" {% if nap.marker_color == 'red' %}selected{% endif %}>Red</option>
+                        <option value="green" {% if nap.marker_color == 'green' %}selected{% endif %}>Green</option>
+                        <option value="violet" {% if nap.marker_color == 'violet' %}selected{% endif %}>Violet</option>
+                    </select>
                 </div>
             </div>
-        </div>
+
+            <div class="d-flex justify-content-end gap-2 mt-4 pt-3" style="border-top:1px solid rgba(0,0,0,0.05);">
+                <a href="{% url 'nap_list' %}" class="btn-cancel">Cancel</a>
+                <button type="submit" class="btn-submit"><i class="fas fa-save me-1"></i> {% if nap %}Update{% else %}Save{% endif %} NAP Box</button>
+            </div>
+        </form>
     </div>
 </div>
 

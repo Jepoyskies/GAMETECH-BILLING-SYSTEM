@@ -4,76 +4,14 @@
 {% block title %}Payment Logs{% endblock %}
 
 {% block content %}
-<style>
-    /* Premium aesthetics for payment logs */
-    .mini-card { background: var(--card-bg); border-radius: 12px; padding: 1.25rem; box-shadow: 0 4px 6px rgba(0,0,0,0.04); border: 1px solid var(--border-color); display: flex; flex-direction: column; height: 100%; transition: transform 0.2s; }
-    .mini-card:hover { transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.08); }
-    .mini-card .label { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem; font-weight: 600; }
-    .mini-card .value { font-size: 1.5rem; font-weight: 700; color: var(--text-color); margin-top: auto; }
-    
-    .bg-grand { background: linear-gradient(135deg, rgba(255,193,7,0.1) 0%, rgba(255,236,179,0.2) 100%); border-left: 4px solid #ffc107; }
-    .bg-range { background: linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(167,243,208,0.2) 100%); border-left: 4px solid #10b981; }
-    .bg-today { background: linear-gradient(135deg, rgba(59,130,246,0.1) 0%, rgba(191,219,254,0.2) 100%); border-left: 4px solid #3b82f6; }
-    
-    .filter-card { background: var(--card-bg); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border-color); margin-bottom: 1.5rem; }
-    .filter-label { font-size: 0.85rem; font-weight: 600; color: var(--text-color); margin-bottom: 0.4rem; }
-    
-    .table-wrapper { background: var(--card-bg); border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); }
-    table { width: 100%; border-collapse: collapse; }
-    th { background: rgba(0,0,0,0.02); padding: 1rem; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; text-align: left; border-bottom: 1px solid var(--border-color); }
-    td { padding: 1rem; font-size: 0.9rem; color: var(--text-color); border-bottom: 1px solid var(--border-color); vertical-align: middle; }
-    tr:last-child td { border-bottom: none; }
-    tr:hover { background: rgba(0,0,0,0.01); }
-    
-    .chart-container { background: var(--card-bg); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border-color); margin-bottom: 1.5rem; height: 300px; }
-    
-    .btn-action { padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500; text-decoration: none; display: inline-block; transition: all 0.2s; }
-    .btn-primary-action { background: var(--primary-color); color: #fff; border: none; }
-    .btn-primary-action:hover { background: var(--primary-hover); color: #fff; }
-    
-    .pagination { display: flex; justify-content: center; gap: 0.5rem; margin-top: 1.5rem; }
-    .page-link { padding: 0.5rem 0.85rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color); text-decoration: none; }
-    .page-link.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
-    .page-link:hover:not(.active) { background: rgba(0,0,0,0.05); }
-    
-    .badge-method { padding: 0.35rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; background: #e2e8f0; color: #475569; }
-
-    /* Global Dark Mode Fix for this page */
-    .dark-mode body { background-color: #0f172a !important; color: #e2e8f0 !important; }
-    .dark-mode .topbar { background-color: #1e293b !important; border-bottom: 1px solid #334155 !important; }
-    .dark-mode .topbar .topbar-title { color: #f8fafc !important; }
-    .dark-mode .topbar .menu-btn, .dark-mode .topbar .hide-btn, .dark-mode .topbar .show-btn { color: #94a3b8 !important; }
-    .dark-mode .topbar .menu-btn:hover, .dark-mode .topbar .hide-btn:hover, .dark-mode .topbar .show-btn:hover { color: #F9B233 !important; }
-    .dark-mode .topbar-right { color: #e2e8f0 !important; }
-
-    /* Dark Mode styles for payment logs */
-    .dark-mode .h3, .dark-mode h5, .dark-mode h6 { color: #f8fafc !important; }
-    .dark-mode .mini-card, .dark-mode .filter-card, .dark-mode .chart-container, .dark-mode .table-wrapper { 
-        background: #1e293b; border-color: rgba(255,255,255,0.05); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); 
-    }
-    .dark-mode .mini-card .label, .dark-mode .filter-label, .dark-mode th { color: #94a3b8; }
-    .dark-mode .mini-card .value, .dark-mode td { color: #f8fafc; }
-    .dark-mode th, .dark-mode td { border-color: rgba(255,255,255,0.05); }
-    .dark-mode th { background: rgba(15,23,42,0.4); }
-    .dark-mode tr:hover { background: rgba(255,255,255,0.05); }
-    
-    .dark-mode .form-control, .dark-mode .form-select { 
-        background: rgba(15,23,42,0.5); border-color: rgba(255,255,255,0.1); color: #e2e8f0; 
-    }
-    .dark-mode .form-control:focus, .dark-mode .form-select:focus { outline: none; border-color: #38bdf8; }
-    
-    .dark-mode .table-wrapper .p-3 { background: #1e293b !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; }
-    .dark-mode .badge-method { background: rgba(255,255,255,0.1); color: #cbd5e1; }
-
-    .dark-mode .page-link { background: #1e293b; border-color: rgba(255,255,255,0.1); color: #e2e8f0; }
-    .dark-mode .page-link.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
-    .dark-mode .page-link:hover:not(.active) { background: rgba(255,255,255,0.05); }
-    .dark-mode .text-muted { color: #94a3b8 !important; }
-</style>
-
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="h3 mb-0 fw-bold text-gray-800"><i class="fas fa-file-invoice-dollar text-primary"></i> Payment Logs</h2>
+<div class="container-fluid py-3 px-3 px-md-4">
+    <div class="live-header-row mb-4">
+        <h2 class="live-title">
+            <div class="kpi-icon icon-blue" style="width: 48px; height: 48px; font-size: 1.4rem; margin-right: 0;">
+                <i class="fas fa-file-invoice-dollar"></i>
+            </div>
+            Payment Logs
+        </h2>
     </div>
 
     <!-- SUMMARY CARDS -->

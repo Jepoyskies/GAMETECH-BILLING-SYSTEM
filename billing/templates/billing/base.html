@@ -40,26 +40,26 @@
 .sidebar nav { flex: 1 1 auto; }
 .sidebar ul { list-style: none; margin: 0; padding: 0; }
 .sidebar ul li { margin: 0.2rem 0; }
-.sidebar ul li a {
+.sidebar ul li .menu-link {
     display: flex; align-items: center; color: #fff;
     padding: 0.85rem 1.5rem; transition: background 0.2s, color 0.2s;
     font-weight: 500; border-left: 4px solid transparent; text-decoration: none;
     font-size: 1rem; border-radius: 0 24px 24px 0;
 }
-.sidebar ul li a .icon {
+.sidebar ul li .menu-link .icon {
     display: inline-flex; width: 2rem; justify-content: center;
     margin-right: 1rem; font-size: 1.2rem; transition: margin 0.3s;
     color: #F9B233;
 }
-.sidebar.collapsed ul li a .icon { margin-right: 0; }
-.sidebar.collapsed ul li a span:not(.icon) { display: none; }
-.sidebar ul li a.active, .sidebar ul li a:hover {
+.sidebar.collapsed ul li .menu-link .icon { margin-right: 0; }
+.sidebar.collapsed ul li .menu-link span:not(.icon) { display: none; }
+.sidebar ul li .menu-link.active, .sidebar ul li .menu-link:hover {
     background: linear-gradient(90deg, #F9B23322 0%, #2151A1 90%);
     color: #F9B233;
     border-left: 4px solid #F9B233;
 }
-.sidebar ul li a.active .icon,
-.sidebar ul li a:hover .icon {
+.sidebar ul li .menu-link.active .icon,
+.sidebar ul li .menu-link:hover .icon {
     color: #F9B233;
 }
 .sidebar-footer {
@@ -104,7 +104,7 @@
     h2 { font-size: 1.5rem !important; }
 }
     </style>
-    <link rel="stylesheet" href="{% static 'css/theme.css' %}">
+    <link rel="stylesheet" href="{% static 'css/theme.css' %}?v=1.1">
     {% block extra_css %}{% endblock %}
     
     <script>
@@ -126,29 +126,20 @@
             <li><a href="{% url 'customer_list' %}" class="menu-link {% if 'customer' in request.resolver_match.url_name %}active{% endif %}"><span class="icon"><i class="fas fa-users"></i></span> <span>Customers</span></a></li>
             <li><a href="{% url 'live_monitoring' %}" class="menu-link {% if request.resolver_match.url_name == 'live_monitoring' %}active{% endif %}"><span class="icon"><i class="fa-brands fa-creative-commons-sampling-plus"></i></span> <span>Live Monitoring</span></a></li>
             <li><a href="{% url 'subscription_plans' %}" class="menu-link {% if 'subscription' in request.resolver_match.url_name %}active{% endif %}"><span class="icon"><i class="fa-regular fa-address-book"></i></span> <span>Subscription Plans</span></a></li>
-            <li><a href="{% url 'plan_list' %}" class="menu-link {% if 'plan' in request.resolver_match.url_name and 'subscription' not in request.resolver_match.url_name %}active{% endif %}"><span class="icon"><i class="fa-solid fa-network-wired"></i></span> <span>Service Plans</span></a></li>        
-            <li><a href="{% url 'payment_portal' %}" class="menu-link {% if 'payment_portal' == request.resolver_match.url_name %}active{% endif %}"><span class="icon"><i class="fa-solid fa-cash-register"></i></span> <span>Payments</span></a></li>
+            <li><a href="{% url 'add_on_payments' %}" class="menu-link {% if request.resolver_match.url_name == 'add_on_payments' %}active{% endif %}"><span class="icon"><i class="fa-solid fa-cash-register"></i></span> <span>Payments</span></a></li>
             <li><a href="{% url 'payment_logs' %}" class="menu-link {% if 'payment_logs' == request.resolver_match.url_name %}active{% endif %}"><span class="icon"><i class="fas fa-file-invoice-dollar"></i></span> <span>Payment logs</span></a></li>
-            <li><a href="{% url 'payment_addon_logs' %}" class="menu-link {% if request.resolver_match.url_name == 'payment_addon_logs' %}active{% endif %}"><span class="icon"><i class="fas fa-award"></i></span> <span>Add-on Logs</span></a></li>
-            <li><a href="{% url 'rebates_logs' %}" class="menu-link {% if 'rebates_logs' == request.resolver_match.url_name %}active{% endif %}"><span class="icon"><i class="fas fa-hand-holding-usd"></i></span> <span>Rebates Logs</span></a></li>
             <li><a href="{% url 'agent_list' %}" class="menu-link {% if 'agent' in request.path %}active{% endif %}"><span class="icon"><i class="fa fa-address-card"></i></span> <span>Agents</span></a></li>
             <li><a href="{% url 'device_list' %}" class="menu-link {% if request.resolver_match.url_name and 'device' in request.resolver_match.url_name %}active{% endif %}"><span class="icon"><i class="fa fa-mobile"></i></span> <span>Mikrotik Devices</span></a></li>
-            <li><a href="{% url 'nap_list' %}" class="menu-link {% if request.resolver_match.url_name and 'nap' in request.resolver_match.url_name %}active{% endif %}"><span class="icon"><i class="fa-solid fa-box"></i></span> <span>NAP Boxes</span></a></li>
-            <li><a href="{% url 'fbt_plc_calculator' %}" class="menu-link {% if request.resolver_match.url_name and 'calculator' in request.resolver_match.url_name %}active{% endif %}"><span class="icon"><i class="fa-solid fa-calculator"></i></span> <span>Fiber Calculator</span></a></li>
-            <li><a href="{% url 'mac_history' %}" class="menu-link {% if 'mac-history' in request.path %}active{% endif %}"><span class="icon"><i class="fa-solid fa-network-wired"></i></span> <span>MAC History</span></a></li>
             <li><a href="{% url 'mikrotik_active_users' %}" class="menu-link {% if request.resolver_match.url_name == 'mikrotik_active_users' %}active{% endif %}"><span class="icon"><i class="fa-solid fa-computer"></i></span> <span>Mikrotik Active Users</span></a></li>
             <li><a href="{% url 'geomap' %}" class="menu-link {% if request.resolver_match.url_name == 'geomap' %}active{% endif %}"><span class="icon"><i class="fa-solid fa-map-location"></i></span> <span>GeoMap</span></a></li>
             <li><a href="{% url 'system_logs' %}" class="menu-link {% if request.resolver_match.url_name == 'system_logs' %}active{% endif %}"><span class="icon"><i class="fa fa-gavel"></i></span> <span>Logs</span></a></li>
-            <li><a href="{% url 'staff_list' %}" class="menu-link {% if 'staff' in request.path %}active{% endif %}"><span class="icon"><i class="fas fa-user-shield"></i></span> <span>Admin Panel</span></a></li>
-            <li><a href="{% url 'account_type_list' %}" class="menu-link {% if 'account-types' in request.path %}active{% endif %}"><span class="icon"><i class="fas fa-tags"></i></span> <span>Account Types</span></a></li>
-            <li><a href="{% url 'barangay_list' %}" class="menu-link {% if 'barangays' in request.path %}active{% endif %}"><span class="icon"><i class="fas fa-map-marked-alt"></i></span> <span>Barangays</span></a></li>
             <li><a href="{% url 'settings' %}" class="menu-link {% if request.resolver_match.url_name == 'settings' %}active{% endif %}"><span class="icon"><i class="fas fa-cog"></i></span> <span>Settings</span></a></li>
             
-            <li>
-                <form action="{% url 'logout' %}" method="post" class="d-inline w-100">
+            <li class="mt-2">
+                <form action="{% url 'logout' %}" method="post" class="d-inline w-100 m-0 p-0">
                     {% csrf_token %}
-                    <button type="submit" class="menu-link w-100 text-start" style="background:none; border:none; padding:0.85rem 1.5rem; display:flex; align-items:center;">
-                        <span class="icon"><i class="fas fa-sign-out-alt me-1"></i></span> <span>Logout</span>
+                    <button type="submit" class="menu-link w-100 text-start" style="background:none; border:none;">
+                        <span class="icon"><i class="fas fa-sign-out-alt"></i></span> <span>Logout</span>
                     </button>
                 </form>
             </li>
@@ -296,6 +287,44 @@ document.addEventListener("DOMContentLoaded", function() {
             window.dispatchEvent(new Event('themeChanged'));
         });
     }
+
+    // Global DataTables Placeholder & Icon Injector
+    document.addEventListener("DOMContentLoaded", function() {
+        const observer = new MutationObserver(function() {
+            // Safely remove text node from labels so the input stays visible
+            document.querySelectorAll('.dataTables_filter label').forEach(label => {
+                Array.from(label.childNodes).forEach(node => {
+                    if (node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '') {
+                        node.textContent = '';
+                    }
+                });
+            });
+            document.querySelectorAll('.dataTables_length label').forEach(label => {
+                Array.from(label.childNodes).forEach(node => {
+                    if (node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '') {
+                        node.textContent = '';
+                    }
+                });
+            });
+
+            const dtInputs = document.querySelectorAll('.dataTables_filter input:not([placeholder])');
+            dtInputs.forEach(input => {
+                input.setAttribute('placeholder', 'Search records...');
+                input.classList.add('dt-premium-search');
+            });
+            const dtSelects = document.querySelectorAll('.dataTables_length select:not(.dt-premium-select)');
+            dtSelects.forEach(select => {
+                select.classList.add('dt-premium-select');
+                // Replace default text if possible
+                Array.from(select.options).forEach(opt => {
+                    if (!opt.text.includes('per page')) {
+                        opt.text = opt.value + ' per page';
+                    }
+                });
+            });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    });
 </script>
 {% block extra_js %}{% endblock %}
 </body>

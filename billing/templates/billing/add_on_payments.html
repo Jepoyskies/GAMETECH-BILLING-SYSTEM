@@ -1,0 +1,78 @@
+{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}Add-on Payments{% endblock %}
+
+{% block content %}
+<main class="container-fluid py-3 px-3 px-md-4">
+    <div class="live-header-row mb-4">
+        <h2 class="live-title">
+            <div class="kpi-icon icon-blue" style="width: 48px; height: 48px; font-size: 1.4rem; margin-right: 0;">
+                <i class="fa-solid fa-puzzle-piece"></i>
+            </div>
+            Payment Add-ons
+        </h2>
+    </div>
+
+    <div class="filter-card">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-12 col-lg-8">
+                <div class="filter-label">Search Add-ons</div>
+                <div class="input-group">
+                    <input type="text" name="search" class="form-control" placeholder="Search customer, username, cignal play no..." value="{{ search }}">
+                    <button type="submit" class="btn btn-primary fw-bold px-4">Search</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-body p-0 table-responsive">
+            <table class="table table-hover align-middle mb-0" style="width:100%; border-collapse: collapse;">
+                <thead style="background: rgba(0,0,0,0.03);">
+                    <tr>
+                        <th class="text-center">Actions</th>
+                        <th>Created at</th>
+                        <th>Username</th>
+                        <th>CignalPlay No</th>
+                        <th>Adjusted By</th>
+                        <th>Full Name</th>
+                        <th>Account Type</th>
+                        <th>Address</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for customer in page_obj %}
+                    <tr>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'edit_customer' customer.id %}" class="btn btn-outline-info" title="Edit Customer">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'cignalplay_form' customer.id %}" class="btn btn-outline-success" title="Payment">
+                                    <i class="fas fa-money-bill"></i>
+                                </a>
+                                <a href="{% url 'user_cignal_logs' customer.id %}" class="btn btn-outline-dark" title="Transaction Logs">
+                                    <i class="fas fa-receipt"></i>
+                                </a>
+                            </div>
+                        </td>
+                        <td>{{ customer.created_at|date:"M d, Y" }}</td>
+                        <td>{{ customer.username|default:"Not Connected" }}</td>
+                        <td><span class="badge bg-warning text-dark">{{ customer.cignalplay_no }}</span></td>
+                        <td>{{ customer.cignalplay_adjustedby|default:"-" }}</td>
+                        <td><strong>{{ customer.full_name }}</strong></td>
+                        <td>{{ customer.account_type|default:"-" }}</td>
+                        <td>{{ customer.address|default:"-" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">No Add-on customers found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+{% endblock %}

@@ -1,6 +1,8 @@
 from django.contrib.auth.hashers import make_password
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse, HttpResponse
+import os
+from django.conf import settings
 from django.core.cache import cache
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -13,7 +15,7 @@ from datetime import timedelta, datetime
 
 from .models import (
     SystemAdmin, SubscriptionPlan, Agent, AccountType,
-    Customer, Barangay, Payment, Rebate, SystemLog, SmsLog
+    Customer, Barangay, Payment, Rebate, SystemLog, SmsLog, CignalPlay
 )
 import requests
 from network_manager.models import MikrotikDevice, NapBox
@@ -1489,3 +1491,138 @@ def auto_suspend_view(request):
         'due_customers': display_customers
     }
     return render(request, 'billing/auto_suspend.html', context)
+
+
+@login_required
+def cignal_play_list_view(request):
+    search = request.GET.get('search', '')
+    status_filter = request.GET.get('status', 'all')
+    
+    customers = Customer.objects.exclude(cignalplay_no__isnull=True).exclude(cignalplay_no__exact='')
+
+    if search:
+        customers = customers.filter(
+            Q(full_name__icontains=search) |
+            Q(username__icontains=search) |
+            Q(cignalplay_no__icontains=search) |
+            Q(cignalplay_adjustedby__icontains=search)
+        )
+        
+    customers = customers.order_by('-created_at')
+    
+    # We will pass this to template and handle basic status filtering in Python if needed, 
+    # but for now let's just pass the raw customers.
+    paginator = Paginator(customers, 25)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'search': search,
+        'status_filter': status_filter,
+    }
+    return render(request, 'billing/cignal_play_list.html', context)
+
+
+@login_required
+def add_on_payments_view(request):
+    search = request.GET.get('search', '')
+    
+    # Very similar to cignal_play_list but might show all with add-on plans in CignalPlay table
+    customers_with_addons = Customer.objects.filter(cignal_plans__isnull=False).distinct()
+
+    if search:
+        customers_with_addons = customers_with_addons.filter(
+            Q(full_name__icontains=search) |
+            Q(username__icontains=search) |
+            Q(cignalplay_no__icontains=search)
+        )
+        
+    customers_with_addons = customers_with_addons.order_by('-created_at')
+    
+    paginator = Paginator(customers_with_addons, 25)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'search': search,
+    }
+    return render(request, 'billing/add_on_payments.html', context)
+
+
+@login_required
+def cignalplay_form_view(request, customer_id):
+    customer = get_object_or_404(Customer, id=customer_id)
+    if request.method == 'POST':
+        plan_name = request.POST.get('plan_name')
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        adjusted_by = request.POST.get('adjusted_by')
+        
+        CignalPlay.objects.create(
+            customer=customer,
+            plan_name=plan_name,
+            start_date=start_date if start_date else None,
+            end_date=end_date if end_date else None,
+            adjusted_by=adjusted_by
+        )
+        
+        # Also update the customer's cignalplay_adjustedby field
+        customer.cignalplay_adjustedby = adjusted_by
+        customer.save()
+        
+        messages.success(request, f"Successfully recorded Cignal Play / Add-on payment for {customer.full_name}.")
+        return redirect('user_cignal_logs', customer_id=customer.id)
+        
+    context = {
+        'customer': customer
+    }
+    return render(request, 'billing/cignalplay_form.html', context)
+
+
+@login_required
+def user_cignal_logs_view(request, customer_id):
+    customer = get_object_or_404(Customer, id=customer_id)
+    logs = customer.cignal_plans.all()
+    
+    context = {
+        'customer': customer,
+        'logs': logs
+    }
+    return render(request, 'billing/user_cignal_logs.html', context)
+
+
+@login_required
+def statement_of_account_view(request, customer_id):
+    customer = get_object_or_404(Customer, id=customer_id)
+    payments = customer.payments.all().order_by('-paid_at')
+    
+    date_from = request.GET.get('from')
+    date_to = request.GET.get('to')
+    
+    if date_from and date_to:
+        payments = payments.filter(paid_at__date__gte=date_from, paid_at__date__lte=date_to)
+        
+    total_paid = sum(p.amount for p in payments)
+    
+    context = {
+        'customer': customer,
+        'payments': payments,
+        'date_from': date_from,
+        'date_to': date_to,
+        'total_paid': total_paid,
+        'current_date': timezone.now()
+    }
+    return render(request, 'billing/statement_of_account.html', context)
+
+
+@login_required
+def backup_database_view(request):
+    db_path = settings.DATABASES['default']['NAME']
+    if os.path.exists(db_path):
+        response = FileResponse(open(db_path, 'rb'), as_attachment=True, filename=f"gametech_backup_{timezone.now().strftime('%Y%m%d_%H%M%S')}.sqlite3")
+        return response
+    
+    messages.error(request, "Database file not found.")
+    return redirect('settings')
