@@ -458,6 +458,74 @@ def plan_list(request):
     plans = SubscriptionPlan.objects.all().order_by('price')
     return render(request, 'billing/service_plans.html', {'plans': plans})
 
+@login_required
+def sync_plans_from_mikrotik(request):
+    from network_manager.models import MikrotikDevice
+    from network_manager.services import MikrotikAPI
+    import re
+    
+    device = MikrotikDevice.objects.first()
+    if not device:
+        messages.error(request, "No active MikroTik device found for sync.")
+        return redirect('plan_list')
+        
+    try:
+        api = MikrotikAPI(device)
+        router_api = api._get_api()
+        profiles = router_api.get_resource('/ppp/profile').get()
+        api.connection.disconnect()
+        
+        synced_count = 0
+        ignored_profiles = ['default', 'expired', 'default-encryption']
+        
+        for p in profiles:
+            name = p.get('name')
+            if name in ignored_profiles:
+                continue
+                
+            rate_limit = p.get('rate-limit', '')
+            speed_up = "1 Mbps"
+            speed_down = "1 Mbps"
+            
+            if rate_limit:
+                parts = rate_limit.split('/')
+                if len(parts) == 2:
+                    # convert 10M to 10 Mbps
+                    def format_speed(s):
+                        s = s.upper()
+                        if 'M' in s:
+                            return f"{s.replace('M', '')} Mbps"
+                        if 'K' in s:
+                            return f"{s.replace('K', '')} Kbps"
+                        if 'G' in s:
+                            return f"{s.replace('G', '')} Gbps"
+                        return f"{s} bps"
+                    speed_up = format_speed(parts[0])
+                    speed_down = format_speed(parts[1])
+            
+            # Create or update plan
+            plan, created = SubscriptionPlan.objects.get_or_create(
+                name=name,
+                defaults={
+                    'speed_up': speed_up,
+                    'speed_down': speed_down,
+                    'price': 0.00,
+                    'validity_days': 30
+                }
+            )
+            if not created:
+                plan.speed_up = speed_up
+                plan.speed_down = speed_down
+                plan.save()
+                
+            synced_count += 1
+            
+        messages.success(request, f"Successfully synced {synced_count} profiles from MikroTik.")
+    except Exception as e:
+        messages.error(request, f"MikroTik API Error during sync: {str(e)}")
+        
+    return redirect('plan_list')
+
 
 def add_plan(request):
     if request.method == 'POST':
@@ -705,6 +773,103 @@ def delete_customer(request, customer_id):
         name = customer.full_name
         customer.delete()
         messages.success(request, f'Customer {name} deleted successfully!')
+    return redirect('customer_list')
+
+@login_required
+def customer_force_suspend(request, username):
+    """Manually force suspends a customer (updates profile, kicks session, and updates DB status)"""
+    if request.method == 'POST':
+        customer = get_object_or_404(Customer, pppoe_username=username)
+        if customer.mikrotik_device:
+            from network_manager.services import MikrotikAPI
+            api = MikrotikAPI(customer.mikrotik_device)
+            success, msg = api.suspend_pppoe_user(username)
+            if success:
+                customer.status = 'suspended'
+                customer.save()
+                messages.success(request, f"Customer {username} has been forcefully suspended.")
+            else:
+                messages.error(request, f"Failed to suspend {username}: {msg}")
+        else:
+            messages.error(request, "Customer has no Mikrotik device assigned.")
+        return redirect('view_customer', customer_id=customer.id)
+    return redirect('customer_list')
+
+@login_required
+def customer_kick_session(request, username):
+    """Manually kicks the active PPPoE session without altering their billing status"""
+    if request.method == 'POST':
+        customer = get_object_or_404(Customer, pppoe_username=username)
+        if customer.mikrotik_device:
+            from network_manager.services import MikrotikAPI
+            api = MikrotikAPI(customer.mikrotik_device)
+            success, msg = api.kick_active_user(username)
+            if success:
+                messages.success(request, f"Active session for {username} was kicked successfully.")
+            else:
+                messages.error(request, f"Failed to kick session for {username}: {msg}")
+        else:
+            messages.error(request, "Customer has no Mikrotik device assigned.")
+        return redirect('view_customer', customer_id=customer.id)
+    return redirect('customer_list')
+
+@login_required
+def customer_force_reactivate(request, username):
+    """Manually force reactivates a customer (updates profile back to plan, kicks session, and updates DB status)"""
+    if request.method == 'POST':
+        admin_password = request.POST.get('admin_password', '')
+        customer = get_object_or_404(Customer, pppoe_username=username)
+        
+        # Verify Admin Override Password (must match any active superuser's password)
+        from django.contrib.auth.models import User
+        is_valid_admin = False
+        for admin in User.objects.filter(is_superuser=True, is_active=True):
+            if admin.check_password(admin_password):
+                is_valid_admin = True
+                break
+                
+        if not is_valid_admin:
+            messages.error(request, "Admin Override Failed: Invalid authorization password.")
+            return redirect('view_customer', customer_id=customer.id)
+            
+        if customer.mikrotik_device:
+            from network_manager.services import MikrotikAPI
+            api = MikrotikAPI(customer.mikrotik_device)
+            
+            # Use their plan name as the profile, or "default" if no plan is assigned
+            target_profile = customer.plan.name if customer.plan else "default"
+            
+            # 1. Enable User
+            enable_success, enable_msg = api.enable_pppoe_user(username)
+            if enable_success:
+                # 2. Update Profile
+                prof_success, prof_msg = api.set_user_pppoe_profile(username, target_profile)
+                if prof_success:
+                    # 3. Kick Session
+                    kick_success, kick_msg = api.kick_active_user(username)
+                    
+                    # 4. Update DB
+                    customer.status = 'active'
+                    customer.save()
+                    
+                    # 5. Log the override
+                    from billing.models import SystemLog
+                    SystemLog.objects.create(
+                        table_name='Customer',
+                        record_id=customer.id,
+                        action='ADMIN_OVERRIDE_REACTIVATE',
+                        changed_by=request.user.username,
+                        old_data=f"Status: suspended",
+                        new_data=f"Status: active, Profile: {target_profile}"
+                    )
+                    messages.success(request, f"Customer {username} reactivated with profile '{target_profile}'.")
+                else:
+                    messages.error(request, f"Failed to restore profile for {username}: {prof_msg}")
+            else:
+                messages.error(request, f"Failed to enable user {username}: {enable_msg}")
+        else:
+            messages.error(request, "Customer has no Mikrotik device assigned.")
+        return redirect('view_customer', customer_id=customer.id)
     return redirect('customer_list')
 
 # ─────────────────────────────────────────────────
@@ -1219,6 +1384,20 @@ def pay_customer_view(request, username):
             )
 
             # 3. TODO: Sprint 4 - Mikrotik API Sync
+            if customer.mikrotik_device and customer.plan and customer.plan.name:
+                try:
+                    from network_manager.services import MikrotikAPI
+                    api = MikrotikAPI(customer.mikrotik_device)
+                    # 1. Enable the user
+                    api.enable_pppoe_user(customer.pppoe_username)
+                    # 2. Update the profile back to their plan
+                    api.set_user_pppoe_profile(customer.pppoe_username, customer.plan.name)
+                    # 3. Kick them so they reconnect and get the new profile
+                    api.kick_active_user(customer.pppoe_username)
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Failed to sync renewal for {customer.pppoe_username} on MikroTik: {e}")
 
             # 4. Success Output
             context = {

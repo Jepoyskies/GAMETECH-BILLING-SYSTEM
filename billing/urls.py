@@ -15,6 +15,12 @@ urlpatterns = [
          views.view_customer, name='view_customer'),
     path('customers/delete/<int:customer_id>/',
          views.delete_customer, name='delete_customer'),
+    path('customer/force-suspend/<str:username>/', 
+         views.customer_force_suspend, name='customer_force_suspend'),
+    path('customer/kick-session/<str:username>/', 
+         views.customer_kick_session, name='customer_kick_session'),
+    path('customer/force-reactivate/<str:username>/', 
+         views.customer_force_reactivate, name='customer_force_reactivate'),
     path('mikrotik-active-users/', views.mikrotik_active_users_view,
          name='mikrotik_active_users'),
 
@@ -43,6 +49,7 @@ urlpatterns = [
     path('plans/add/', views.add_plan, name='add_plan'),
     path('plans/edit/<int:plan_id>/', views.edit_plan, name='edit_plan'),
     path('plans/delete/<int:plan_id>/', views.delete_plan, name='delete_plan'),
+    path('plans/sync/', views.sync_plans_from_mikrotik, name='sync_plans_from_mikrotik'),
     path('staff/', views.staff_list, name='staff_list'),
     path('staff/add/', views.add_staff, name='add_staff'),
 

@@ -133,36 +133,289 @@ class MikrotikAPI:
                 f"Failed to disconnect PPPoE user {name} from {self.device.device_name}: {e}")
             return False, f"Mikrotik API Error: {str(e)}"
 
-    def suspend_pppoe_user(self, name):
+    def kick_active_user(self, username):
         """
-        Changes a user's profile to 'expired' and drops their active session.
+        Queries /ppp/active using the RouterOS API, finds the entry where name == username,
+        and issues a .remove command. This forces the client's modem to immediately redial.
+        """
+        try:
+            api = self._get_api()
+            active_ppp = api.get_resource('/ppp/active')
+
+            # Find the active session by name
+            active_sessions = active_ppp.get(name=username)
+            
+            # DEBUG logging for troubleshooting
+            print(f"DEBUG: kick_active_user - Found {len(active_sessions)} active sessions for {username}: {active_sessions}")
+            logger.info(f"DEBUG: kick_active_user - Found {len(active_sessions)} active sessions for {username}: {active_sessions}")
+            
+            if not active_sessions:
+                self.connection.disconnect()
+                return False, f"No active session found for {username}"
+
+            for session in active_sessions:
+                # Some API versions return 'id', others might return '.id'
+                session_id = session.get('id') or session.get('.id')
+                
+                print(f"DEBUG: kick_active_user - Attempting to remove session with internal id: {session_id}")
+                logger.info(f"DEBUG: kick_active_user - Attempting to remove session with internal id: {session_id}")
+                
+                if session_id:
+                    active_ppp.remove(id=session_id)
+                    logger.info(
+                        f"Kicked active PPPoE user {username} on {self.device.device_name}")
+                else:
+                    logger.error(f"Could not find an 'id' or '.id' in session data: {session}")
+
+            self.connection.disconnect()
+            return True, "User kicked successfully."
+        except Exception as e:
+            # DEBUG logging for the exception
+            print(f"DEBUG: API Error in kick_active_user: {str(e)}")
+            logger.error(
+                f"Failed to kick PPPoE user {username} from {self.device.device_name}: {e}")
+            return False, f"Mikrotik API Error: {str(e)}"
+
+    def set_user_pppoe_profile(self, username, profile_name):
+        """
+        Finds the user in /ppp/secret and updates their profile attribute.
         """
         try:
             api = self._get_api()
             ppp_secret = api.get_resource('/ppp/secret')
             
             # Find the user by name
-            secrets = ppp_secret.get(name=name)
+            secrets = ppp_secret.get(name=username)
+            
+            print(f"DEBUG: set_user_pppoe_profile - Found {len(secrets)} secrets for {username}: {secrets}")
+            logger.info(f"DEBUG: set_user_pppoe_profile - Found {len(secrets)} secrets for {username}: {secrets}")
+            
             if not secrets:
+                self.connection.disconnect()
+                return False, f"User {username} not found on MikroTik."
+                
+            user_id = secrets[0].get('id') or secrets[0].get('.id')
+            
+            print(f"DEBUG: set_user_pppoe_profile - Attempting to set profile to {profile_name} with internal id: {user_id}")
+            logger.info(f"DEBUG: set_user_pppoe_profile - Attempting to set profile to {profile_name} with internal id: {user_id}")
+            
+            if user_id:
+                ppp_secret.set(id=user_id, profile=profile_name)
+                logger.info(f"Changed profile for PPPoE user {username} to '{profile_name}'")
+            else:
+                logger.error(f"Could not find an 'id' or '.id' in secret data: {secrets[0]}")
+            
+            self.connection.disconnect()
+            return True, "User profile updated."
+        except Exception as e:
+            print(f"DEBUG: API Error in set_user_pppoe_profile: {str(e)}")
+            logger.error(f"Failed to set profile for user {username}: {e}")
+            return False, f"Mikrotik API Error: {str(e)}"
+
+    def suspend_pppoe_user(self, name):
+        """
+        Suspends a user using MAC-level bridge dropping.
+        If MAC cannot be found, falls back to disabling the PPP secret.
+        """
+        try:
+            api = self._get_api()
+            ppp_secret = api.get_resource('/ppp/secret')
+            secrets = ppp_secret.get(name=name)
+            
+            if not secrets:
+                self.connection.disconnect()
                 return False, f"User {name} not found on MikroTik."
                 
-            user_id = secrets[0]['id']
-            ppp_secret.set(id=user_id, profile="expired")
-            logger.info(f"Changed profile for PPPoE user {name} to 'expired'")
+            user_id = secrets[0].get('id') or secrets[0].get('.id')
             
-            # Use existing method to drop active session
-            self.remove_active_pppoe_user(name)
+            if not user_id:
+                self.connection.disconnect()
+                return False, "Could not find internal ID for user."
+
+            # 1. Fetch MAC address
+            mac = None
+            # Import Customer model lazily to avoid circular imports
+            from billing.models import Customer
+            customer = Customer.objects.filter(pppoe_username=name).first()
             
-            # Note: remove_active_pppoe_user might close the connection, 
-            # but since it's the last action, it's fine.
+            if customer and customer.mac_address:
+                mac = customer.mac_address
+            else:
+                # Try to get from active session
+                active_ppp = api.get_resource('/ppp/active')
+                active_sessions = active_ppp.get(name=name)
+                if active_sessions:
+                    mac = active_sessions[0].get('caller-id')
+                    if mac and customer:
+                        customer.mac_address = mac
+                        customer.save()
+
+            if mac:
+                # Implement MAC-level Bridge Drop (Option C)
+                bridge_filter = api.get_resource('/interface/bridge/filter')
+                
+                # Check if rule already exists to avoid duplicates
+                existing_rules = bridge_filter.get(comment=f"Suspended: {name}")
+                if not existing_rules:
+                    bridge_filter.add(
+                        chain="input",
+                        **{"src-mac-address": f"{mac}/FF:FF:FF:FF:FF:FF"},
+                        **{"mac-protocol": "pppoe-discovery"},
+                        action="drop",
+                        comment=f"Suspended: {name}"
+                    )
+                
+                # Ensure secret is NOT disabled
+                ppp_secret.set(id=user_id, disabled="no")
+                logger.info(f"Suspended PPPoE user {name} (MAC Bridge Drop)")
+            else:
+                # Fallback to Option B if MAC is unknown
+                ppp_secret.set(id=user_id, disabled="yes")
+                logger.info(f"Suspended PPPoE user {name} (Fallback: PPP Secret Disabled)")
+                
+            self.connection.disconnect()
+            
+            # Kick active session
+            self.kick_active_user(name)
+            
             return True, "User suspended and disconnected."
         except Exception as e:
             logger.error(f"Failed to suspend user {name}: {e}")
             return False, f"Mikrotik API Error: {str(e)}"
 
-    def add_pppoe_user(self, name, password, profile, service="pppoe"):
+    def enable_pppoe_user(self, name):
         """
-        Creates a PPPoE user (secret) on the Mikrotik device.
+        Enables a user's PPP secret and removes any MAC-level bridge drops.
+        """
+        try:
+            api = self._get_api()
+            ppp_secret = api.get_resource('/ppp/secret')
+            secrets = ppp_secret.get(name=name)
+            
+            if not secrets:
+                self.connection.disconnect()
+                return False, f"User {name} not found on MikroTik."
+                
+            user_id = secrets[0].get('id') or secrets[0].get('.id')
+            
+            if user_id:
+                # Ensure PPP secret is enabled
+                ppp_secret.set(id=user_id, disabled="no")
+                
+                # Remove Bridge Filter Drop rules if they exist
+                bridge_filter = api.get_resource('/interface/bridge/filter')
+                rules = bridge_filter.get(comment=f"Suspended: {name}")
+                for rule in rules:
+                    rule_id = rule.get('id') or rule.get('.id')
+                    if rule_id:
+                        bridge_filter.remove(id=rule_id)
+
+                logger.info(f"Enabled PPPoE user {name} (Removed Bridge Drop)")
+                self.connection.disconnect()
+                return True, "User enabled."
+            else:
+                self.connection.disconnect()
+                return False, "Could not find internal ID for user."
+        except Exception as e:
+            logger.error(f"Failed to enable user {name}: {e}")
+            return False, f"Mikrotik API Error: {str(e)}"
+
+    def delete_pppoe_user(self, name):
+        """
+        Deletes a PPPoE user from the Mikrotik device.
+        """
+        try:
+            api = self._get_api()
+            secrets = api.get_resource('/ppp/secret')
+
+            existing = secrets.get(name=name)
+            if not existing:
+                self.connection.disconnect()
+                return False, f"User {name} does not exist."
+            
+            user_id = existing[0].get('id') or existing[0].get('.id')
+            secrets.remove(id=user_id)
+            logger.info(f"Deleted PPPoE user: {name}")
+            self.connection.disconnect()
+            
+            # Kick session if they are currently online
+            self.kick_active_user(name)
+            return True, "User deleted successfully."
+        except Exception as e:
+            logger.error(f"Failed to delete user {name}: {e}")
+            return False, str(e)
+            
+    def sync_plan_to_mikrotik(self, plan_name, speed_up, speed_down):
+        """
+        Creates or updates a /ppp/profile on the Mikrotik router based on the Django SubscriptionPlan.
+        Converts human readable speeds like '10 Mbps' to '10M/10M'.
+        """
+        import re
+        
+        # Helper to convert "10 Mbps" or "10Mbps" to "10M"
+        def parse_speed(speed_str):
+            if not speed_str:
+                return "1M" # fallback
+            s = speed_str.lower().strip()
+            # Extract number
+            match = re.search(r'(\d+)', s)
+            if not match:
+                return "1M"
+            num = match.group(1)
+            if 'k' in s:
+                return f"{num}k"
+            elif 'g' in s:
+                return f"{num}G"
+            return f"{num}M"
+            
+        rate_limit = f"{parse_speed(speed_up)}/{parse_speed(speed_down)}"
+        
+        try:
+            api = self._get_api()
+            profiles = api.get_resource('/ppp/profile')
+            existing = profiles.get(name=plan_name)
+            
+            if existing:
+                prof_id = existing[0].get('id') or existing[0].get('.id')
+                profiles.set(id=prof_id, **{'rate-limit': rate_limit})
+                logger.info(f"Updated MikroTik profile '{plan_name}' to {rate_limit}")
+            else:
+                # Basic profile creation
+                profiles.add(
+                    name=plan_name,
+                    **{'local-address': '100.64.224.1'}, # standard internal routing ip used in other profiles
+                    **{'remote-address': 'pppoe-pool'}, 
+                    **{'rate-limit': rate_limit}
+                )
+                logger.info(f"Created MikroTik profile '{plan_name}' at {rate_limit}")
+            self.connection.disconnect()
+            return True, "Profile synced successfully"
+        except Exception as e:
+            logger.error(f"Failed to sync profile {plan_name}: {e}")
+            return False, str(e)
+
+    def delete_plan_from_mikrotik(self, plan_name):
+        """
+        Deletes a /ppp/profile on the Mikrotik router.
+        """
+        try:
+            api = self._get_api()
+            profiles = api.get_resource('/ppp/profile')
+            existing = profiles.get(name=plan_name)
+            
+            if existing:
+                prof_id = existing[0].get('id') or existing[0].get('.id')
+                profiles.remove(id=prof_id)
+                logger.info(f"Deleted MikroTik profile '{plan_name}'")
+            self.connection.disconnect()
+            return True, "Profile deleted successfully"
+        except Exception as e:
+            logger.error(f"Failed to delete profile {plan_name}: {e}")
+            return False, str(e)
+
+    def add_pppoe_user(self, name, password, profile, service="pppoe", disabled="no"):
+        """
+        Creates or updates a PPPoE user (secret) on the Mikrotik device.
         """
         try:
             api = self._get_api()
@@ -172,12 +425,12 @@ class MikrotikAPI:
             existing = secrets.get(name=name)
             if existing:
                 secrets.set(
-                    id=existing[0]['id'], password=password, profile=profile, service=service)
+                    id=existing[0]['id'], password=password, profile=profile, service=service, disabled=disabled)
                 logger.info(
                     f"Updated existing PPPoE user {name} on {self.device.device_name}")
             else:
                 secrets.add(name=name, password=password,
-                            profile=profile, service=service)
+                            profile=profile, service=service, disabled=disabled)
                 logger.info(
                     f"Added new PPPoE user {name} to {self.device.device_name}")
 
