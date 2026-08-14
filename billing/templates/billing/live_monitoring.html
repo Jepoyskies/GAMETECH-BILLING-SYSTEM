@@ -609,11 +609,23 @@ function loadData(){
 }
 
 function applyFilter(){
-    let search = document.getElementById('search').value.toLowerCase();
-    let filtered = allData.filter(u => 
-        u.user.toLowerCase().includes(search) || 
-        (u.device_ip && u.device_ip.toLowerCase().includes(search))
-    );
+    let search = document.getElementById('search').value.trim().toLowerCase();
+    
+    // Sort all data by total bandwidth to identify the top user
+    let sortedData = [...allData].sort((a,b) => (b.rx_mbps+b.tx_mbps) - (a.rx_mbps+a.tx_mbps));
+    
+    let filtered;
+    if (search === "") {
+        // By default, only show the top 1 user to prevent overwhelming the page
+        filtered = sortedData.slice(0, 1);
+    } else {
+        // If searching, show all matching users
+        filtered = sortedData.filter(u => 
+            u.user.toLowerCase().includes(search) || 
+            (u.device_ip && u.device_ip.toLowerCase().includes(search))
+        );
+    }
+    
     render(filtered);
 }
 
