@@ -45,10 +45,12 @@ urlpatterns = [
     path('plans/delete/<int:plan_id>/', views.delete_plan, name='delete_plan'),
     path('staff/', views.staff_list, name='staff_list'),
     path('staff/add/', views.add_staff, name='add_staff'),
+    path('staff/edit/<int:pk>/', views.edit_staff, name='edit_staff'),
 
     # Core UI & Placeholders
     path('profile/', views.profile_view, name='profile'),
     path('settings/', views.settings_view, name='settings'),
+    path('admin-panel/', views.admin_panel_view, name='admin_panel'),
     
     # Auth Extensions
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),

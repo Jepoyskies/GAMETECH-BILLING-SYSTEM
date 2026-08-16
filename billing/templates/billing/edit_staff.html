@@ -1,7 +1,7 @@
 {% extends "billing/base.html" %}
 {% load static %}
 
-{% block title %}Add Staff Member{% endblock %}
+{% block title %}Edit Staff Member{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -170,8 +170,8 @@
 <div class="container-fluid py-3 px-3 px-md-4">
     <div class="form-card">
         <div class="form-page-title">
-            <div class="title-icon"><i class="fas fa-user-shield"></i></div>
-            Add Staff Member
+            <div class="title-icon"><i class="fas fa-user-edit"></i></div>
+            Edit Staff Member
         </div>
 
         {% if messages %}
@@ -190,49 +190,52 @@
             <div class="row g-3 mb-3">
                 <div class="col-md-6">
                     <label class="plan-form-label">Username <span class="req">*</span></label>
-                    <input type="text" name="username" class="plan-form-control" required placeholder="Enter username" autocomplete="off">
+                    <input type="text" name="username" class="plan-form-control" required placeholder="Enter username" autocomplete="off" value="{{ staff.username }}">
                 </div>
                 <div class="col-md-6">
                     <label class="plan-form-label">Full Name <span class="req">*</span></label>
                     <input type="text" name="full_name" class="plan-form-control" required
-                        placeholder="e.g. Juan Dela Cruz">
+                        placeholder="e.g. Juan Dela Cruz" value="{{ staff.full_name }}">
                 </div>
             </div>
 
             <div class="mb-3">
                 <label class="plan-form-label">Email Address <span class="req">*</span></label>
-                <input type="email" name="email" class="plan-form-control" required placeholder="name@gametech.com">
+                <input type="email" name="email" class="plan-form-control" required placeholder="name@gametech.com" value="{{ staff.email }}">
             </div>
 
-            <div class="row g-3 mb-3">
+            <div class="row g-3 mb-4">
                 <div class="col-md-6">
                     <label class="plan-form-label">Role <span class="req">*</span></label>
                     <select name="role" class="form-select" required>
-                        <option value="" disabled selected>Select a Role...</option>
-                        <option value="Admin">Admin</option>
-                        <option value="Editor">Editor</option>
-                        <option value="Viewer">Viewer</option>
+                        <option value="" disabled>Select a Role...</option>
+                        <option value="Admin" {% if staff.role == 'Admin' %}selected{% endif %}>Admin</option>
+                        <option value="Editor" {% if staff.role == 'Editor' %}selected{% endif %}>Editor</option>
+                        <option value="Viewer" {% if staff.role == 'Viewer' %}selected{% endif %}>Viewer</option>
                     </select>
                 </div>
                 <div class="col-md-6">
                     <label class="plan-form-label">Status <span class="req">*</span></label>
                     <select name="status" class="form-select" required>
-                        <option value="" disabled selected>Select Status...</option>
-                        <option value="Active">Active</option>
-                        <option value="Inactive">Inactive</option>
+                        <option value="" disabled>Select Status...</option>
+                        <option value="Active" {% if staff.status == 'Active' %}selected{% endif %}>Active</option>
+                        <option value="Inactive" {% if staff.status == 'Inactive' %}selected{% endif %}>Inactive</option>
                     </select>
                 </div>
             </div>
 
+            {% if request.user.role == 'Admin' %}
             <div class="mb-4">
-                <label class="plan-form-label">Password <span class="req">*</span></label>
-                <input type="password" name="password" class="plan-form-control" required
-                    placeholder="Create a secure password" autocomplete="new-password">
+                <label class="plan-form-label">Override Password</label>
+                <input type="password" name="password" class="plan-form-control"
+                    placeholder="Enter new password" autocomplete="new-password">
+                <div class="small text-muted mt-1"><i class="fas fa-info-circle"></i> Leave blank to keep the current password.</div>
             </div>
+            {% endif %}
 
             <div class="d-flex align-items-center justify-content-between gap-2">
                 <a href="{% url 'staff_list' %}" class="btn-cancel">Cancel</a>
-                <button type="submit" class="btn-submit"><i class="fas fa-user-plus me-2"></i>Add Staff</button>
+                <button type="submit" class="btn-submit"><i class="fas fa-save me-2"></i>Save Changes</button>
             </div>
         </form>
     </div>

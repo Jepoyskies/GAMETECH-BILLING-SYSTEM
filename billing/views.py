@@ -550,6 +550,52 @@ def add_staff(request):
     return render(request, 'billing/add_staff.html')
 
 
+def edit_staff(request, pk):
+    # Retrieve user role safely (fallback to Viewer to be safe)
+    user_role = getattr(request.user, 'role', 'Viewer')
+    
+    # Strictly prohibit Viewers
+    if user_role == 'Viewer':
+        messages.error(request, "Access denied. Viewers are not permitted to edit staff details.")
+        return redirect('staff_list')
+
+    staff = get_object_or_404(SystemAdmin, pk=pk)
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        full_name = request.POST.get('full_name')
+        email = request.POST.get('email')
+        role = request.POST.get('role')
+        status = request.POST.get('status')
+        raw_password = request.POST.get('password')
+
+        # Check if username or email already exists to prevent errors
+        if SystemAdmin.objects.filter(username=username).exclude(pk=pk).exists():
+            messages.error(request, "That username is already taken.")
+            return redirect('edit_staff', pk=pk)
+
+        if SystemAdmin.objects.filter(email=email).exclude(pk=pk).exists():
+            messages.error(request, "That email is already registered.")
+            return redirect('edit_staff', pk=pk)
+
+        # Update staff user
+        staff.username = username
+        staff.full_name = full_name
+        staff.email = email
+        staff.role = role
+        staff.status = status
+
+        # Admins only: Override password if one is provided
+        if user_role == 'Admin' and raw_password:
+            staff.password_hash = make_password(raw_password)
+
+        staff.save()
+
+        messages.success(request, f"Staff member '{full_name}' updated successfully!")
+        return redirect('staff_list')
+
+    return render(request, 'billing/edit_staff.html', {'staff': staff})
+
+
 @login_required
 def customer_list(request):
     customers = Customer.objects.select_related(
@@ -867,6 +913,15 @@ def profile_view(request):
 @login_required
 def settings_view(request):
     return render(request, 'billing/settings.html')
+
+@login_required
+def admin_panel_view(request):
+    user_role = getattr(request.user, 'role', 'Viewer')
+    if user_role != 'Admin':
+        messages.error(request, "Access denied. Only Admins can access the Admin Panel.")
+        return redirect('dashboard')
+        
+    return render(request, 'billing/admin_panel.html')
 
 
 @login_required
