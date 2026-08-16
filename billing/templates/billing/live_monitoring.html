@@ -377,6 +377,9 @@
                 <p id="hw-version-{{ device.id }}" style="font-size: 1.3rem;">-</p>
             </div>
         </div>
+        <div id="hw-optical-{{ device.id }}" class="mb-4">
+            <!-- Optical readings injected via JS -->
+        </div>
         {% empty %}
         <div class="text-muted text-center w-100 py-3">No MikroTik devices configured.</div>
         {% endfor %}
@@ -672,6 +675,34 @@ function loadHardwareData() {
                 document.getElementById(`hw-ram-${device.id}`).innerText = memPct + '%';
                 document.getElementById(`hw-uptime-${device.id}`).innerText = hw['uptime'] || '-';
                 document.getElementById(`hw-version-${device.id}`).innerText = hw['version'] || '-';
+                
+                let optHtml = '';
+                if (res.optical && res.optical.length > 0) {
+                    res.optical.forEach(opt => {
+                        let rx = parseFloat(opt['sfp-rx-power'] || 0);
+                        let tx = opt['sfp-tx-power'] || '-';
+                        let colorClass = 'bg-success'; // > -24
+                        if (rx <= -28) colorClass = 'bg-danger';
+                        else if (rx <= -25) colorClass = 'bg-warning text-dark';
+                        
+                        optHtml += `
+                        <div class="d-inline-flex align-items-center bg-white border rounded p-2 me-2 shadow-sm">
+                            <i class="fas fa-network-wired text-secondary me-2"></i>
+                            <div class="me-3">
+                                <small class="d-block text-muted" style="line-height: 1;">${opt.name || 'SFP'}</small>
+                                <strong>Tx: ${tx} dBm</strong>
+                            </div>
+                            <div>
+                                <span class="badge ${colorClass}" style="font-size: 0.9em;">Rx: ${rx.toFixed(2)} dBm</span>
+                            </div>
+                        </div>`;
+                    });
+                }
+                let opticalContainer = document.getElementById(`hw-optical-${device.id}`);
+                if (opticalContainer) {
+                    opticalContainer.innerHTML = optHtml;
+                }
+                
             } else {
                 statusBadge.className = 'speed-badge bg-danger';
                 statusBadge.innerText = 'Offline';

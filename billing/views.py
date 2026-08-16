@@ -4,7 +4,7 @@ from django.http import JsonResponse, FileResponse, HttpResponse
 import os
 from django.conf import settings
 from django.core.cache import cache
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -20,6 +20,31 @@ from .models import (
 import requests
 from network_manager.models import MikrotikDevice, NapBox
 from network_manager.services import MikrotikAPI
+from django.db import transaction
+import calendar
+
+def add_one_month(dt: datetime) -> datetime:
+    """Adds exactly one calendar month to a datetime object."""
+    month = dt.month
+    year = dt.year + month // 12
+    month = month % 12 + 1
+    day = min(dt.day, calendar.monthrange(year, month)[1])
+    return dt.replace(year=year, month=month, day=day)
+
+def calculate_new_expiration_date(current_expiration_date: datetime, payment_amount: float, plan_monthly_price: float) -> datetime:
+    if plan_monthly_price <= 0 or payment_amount <= 0:
+        return current_expiration_date
+
+    # 1. Full Month Exception
+    if payment_amount == plan_monthly_price:
+        return add_one_month(current_expiration_date)
+
+    # 2. Price Per Day Calculation
+    price_per_day = plan_monthly_price / 30.0
+
+    # 3. Prorated Days Granted
+    days_granted = payment_amount / price_per_day
+    return current_expiration_date + timedelta(days=days_granted)
 
 
 @login_required
@@ -98,7 +123,7 @@ def dashboard_view(request):
 
 
 @login_required
-def mikrotik_active_users_view(request):
+def mikrotik_active_users_data_api(request):
     devices = MikrotikDevice.objects.all()
     all_active_users = []
 
@@ -120,7 +145,13 @@ def mikrotik_active_users_view(request):
         'active_users': all_active_users,
         'total_active': len(all_active_users)
     }
-    return render(request, 'billing/mikrotik_active_users.html', context)
+    return render(request, 'billing/partials/active_users_table.html', context)
+
+
+@login_required
+def mikrotik_active_users_view(request):
+    """Skeleton view for Mikrotik Active Users."""
+    return render(request, 'billing/mikrotik_active_users.html')
 
 
 @login_required
@@ -193,8 +224,8 @@ def api_live_monitoring_data(request):
 # ─────────────────────────────────────────────────
 
 @login_required
-def subscription_plans_view(request):
-    """Customer Subscriptions Dashboard."""
+def subscription_plans_data_api(request):
+    """Customer Subscriptions Dashboard API Data (Returns HTML Partial)."""
     # 1. Base Query
     customers = Customer.objects.select_related('plan', 'mikrotik_device').filter(
         pppoe_username__isnull=False,
@@ -370,6 +401,34 @@ def subscription_plans_view(request):
         'one_month_ago': one_month_ago,
     }
 
+    return render(request, 'billing/partials/subscription_plans_table.html', context)
+
+
+@login_required
+def subscription_plans_view(request):
+    """Customer Subscriptions Dashboard Skeleton View."""
+    search = request.GET.get('search', '').strip()
+    status_filter = request.GET.get('status', '')
+    device_filter = request.GET.get('device', '')
+    connection_filter = request.GET.get('connection', '')
+    per_page = int(request.GET.get('per_page', 10))
+    sort = request.GET.get('sort', 'expires_at')
+    order = request.GET.get('order', 'desc').lower()
+    
+    unique_devices = Customer.objects.filter(
+        mikrotik_device__isnull=False
+    ).values_list('mikrotik_device__device_name', flat=True).distinct()
+    
+    context = {
+        'search': search,
+        'status_filter': status_filter,
+        'device_filter': device_filter,
+        'connection_filter': connection_filter,
+        'per_page': per_page,
+        'sort': sort,
+        'order': order.upper(),
+        'unique_devices': unique_devices,
+    }
     return render(request, 'billing/subscription_plans.html', context)
 
 
@@ -672,6 +731,7 @@ def customer_list(request):
 
 
 @login_required
+@permission_required('billing.add_customer', raise_exception=True)
 def add_customer(request):
     if request.method == 'POST':
         Customer.objects.create(
@@ -772,34 +832,10 @@ def view_customer(request, customer_id):
     payments = customer.payments.all().order_by('-paid_at')
     
     # Try to fetch live MT connection status if they have a router
-    mt_status = "Disconnected"
-    uptime = "N/A"
-    live_mac = "N/A"
-    last_logged_out = "N/A"
-    if customer.mikrotik_device and customer.pppoe_username:
-        try:
-            from network_manager.services import MikrotikAPI
-            api = MikrotikAPI(customer.mikrotik_device)
-            
-            # Fetch active users
-            active_users = api.get_active_pppoe_users()
-            for au in active_users:
-                if au.get('name') == customer.pppoe_username:
-                    mt_status = "Connected"
-                    uptime = au.get('uptime', 'N/A')
-                    live_mac = au.get('caller-id', 'N/A')
-                    break
-            
-            # Fetch secrets to get last-logged-out if disconnected
-            secrets = api.get_ppp_secrets()
-            for secret in secrets:
-                if secret.get('name') == customer.pppoe_username:
-                    last_logged_out = secret.get('last-logged-out', 'N/A')
-                    if mt_status == "Disconnected" and not customer.mac_address:
-                        live_mac = secret.get('caller-id', 'N/A')
-                    break
-        except Exception:
-            pass
+    mt_status = "Loading..."
+    uptime = "Loading..."
+    live_mac = "Loading..."
+    last_logged_out = "Loading..."
             
     context = {
         'customer': customer,
@@ -813,6 +849,47 @@ def view_customer(request, customer_id):
 
 
 @login_required
+def api_customer_mikrotik_status(request, customer_id):
+    customer = get_object_or_404(Customer, id=customer_id)
+    
+    data = {
+        'mt_status': 'Disconnected',
+        'uptime': 'N/A',
+        'live_mac': customer.mac_address if customer.mac_address else 'N/A',
+        'last_logged_out': 'N/A'
+    }
+    
+    if customer.mikrotik_device and customer.pppoe_username:
+        try:
+            from network_manager.services import MikrotikAPI
+            api = MikrotikAPI(customer.mikrotik_device)
+            
+            # Fetch active users
+            active_users = api.get_active_pppoe_users()
+            for au in active_users:
+                if au.get('name') == customer.pppoe_username:
+                    data['mt_status'] = "Connected"
+                    data['uptime'] = au.get('uptime', 'N/A')
+                    data['live_mac'] = au.get('caller-id', 'N/A')
+                    break
+            
+            # Fetch secrets to get last-logged-out if disconnected
+            secrets = api.get_ppp_secrets()
+            for secret in secrets:
+                if secret.get('name') == customer.pppoe_username:
+                    data['last_logged_out'] = secret.get('last-logged-out', 'N/A')
+                    if data['mt_status'] == "Disconnected" and not customer.mac_address:
+                        data['live_mac'] = secret.get('caller-id', 'N/A')
+                    break
+        except Exception:
+            pass
+            
+    from django.http import JsonResponse
+    return JsonResponse(data)
+
+
+@login_required
+@permission_required('billing.delete_customer', raise_exception=True)
 def delete_customer(request, customer_id):
     if request.method == 'POST':
         customer = get_object_or_404(Customer, id=customer_id)
@@ -822,6 +899,7 @@ def delete_customer(request, customer_id):
     return redirect('customer_list')
 
 @login_required
+@permission_required('billing.change_customer', raise_exception=True)
 def customer_force_suspend(request, username):
     """Manually force suspends a customer (updates profile, kicks session, and updates DB status)"""
     if request.method == 'POST':
@@ -860,22 +938,23 @@ def customer_kick_session(request, username):
     return redirect('customer_list')
 
 @login_required
+@permission_required('billing.change_customer', raise_exception=True)
 def customer_force_reactivate(request, username):
-    """Manually force reactivates a customer (updates profile back to plan, kicks session, and updates DB status)"""
+    """Manually force reactivates a customer using Master Password and logs it to AuditLog"""
     if request.method == 'POST':
+        import os
         admin_password = request.POST.get('admin_password', '')
+        reason = request.POST.get('override_reason', '')
         customer = get_object_or_404(Customer, pppoe_username=username)
         
-        # Verify Admin Override Password (must match any active superuser's password)
-        from django.contrib.auth.models import User
-        is_valid_admin = False
-        for admin in User.objects.filter(is_superuser=True, is_active=True):
-            if admin.check_password(admin_password):
-                is_valid_admin = True
-                break
-                
-        if not is_valid_admin:
-            messages.error(request, "Admin Override Failed: Invalid authorization password.")
+        # Verify Master Override Password against environment variable
+        master_password = os.environ.get('MASTER_OVERRIDE_PASSWORD')
+        if not master_password or admin_password != master_password:
+            messages.error(request, "Admin Override Failed: Invalid Master Password.")
+            return redirect('view_customer', customer_id=customer.id)
+            
+        if not reason.strip():
+            messages.error(request, "Admin Override Failed: Reason for override is required.")
             return redirect('view_customer', customer_id=customer.id)
             
         if customer.mikrotik_device:
@@ -885,30 +964,30 @@ def customer_force_reactivate(request, username):
             # Use their plan name as the profile, or "default" if no plan is assigned
             target_profile = customer.plan.name if customer.plan else "default"
             
-            # 1. Enable User
+            # 1. Enable User (removes bridge drop rule and enables ppp secret)
             enable_success, enable_msg = api.enable_pppoe_user(username)
             if enable_success:
                 # 2. Update Profile
                 prof_success, prof_msg = api.set_user_pppoe_profile(username, target_profile)
                 if prof_success:
-                    # 3. Kick Session
+                    # 3. Kick Session (allows modem to redial and gain internet)
                     kick_success, kick_msg = api.kick_active_user(username)
                     
                     # 4. Update DB
                     customer.status = 'active'
+                    # DO NOT update expiration date or outstanding balance
                     customer.save()
                     
-                    # 5. Log the override
-                    from billing.models import SystemLog
-                    SystemLog.objects.create(
-                        table_name='Customer',
-                        record_id=customer.id,
-                        action='ADMIN_OVERRIDE_REACTIVATE',
-                        changed_by=request.user.username,
-                        old_data=f"Status: suspended",
-                        new_data=f"Status: active, Profile: {target_profile}"
+                    # 5. Log the override in the new AuditLog model
+                    from billing.models import AuditLog
+                    AuditLog.objects.create(
+                        admin_user=request.user if request.user.is_authenticated else None,
+                        customer=customer,
+                        action_type='FORCE_REACTIVATE',
+                        remarks=reason
                     )
-                    messages.success(request, f"Customer {username} reactivated with profile '{target_profile}'.")
+                    
+                    messages.success(request, f"Customer {username} force-reactivated via Master Override.")
                 else:
                     messages.error(request, f"Failed to restore profile for {username}: {prof_msg}")
             else:
@@ -1262,7 +1341,7 @@ def mac_history_view(request):
         )
     return render(request, 'billing/mac_history.html', {'history': history})
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.utils import timezone
 from .models import Customer
 from datetime import datetime
@@ -1401,54 +1480,87 @@ def payment_portal_view(request):
     return render(request, 'billing/payment_portal.html', {'customers': customers})
 
 @login_required
+@permission_required('billing.add_payment', raise_exception=True)
 def pay_customer_view(request, username):
     customer = get_object_or_404(Customer, pppoe_username=username)
     
     # Calculate Monthly Price
     monthly_price = float(customer.plan.price) if customer.plan else 0.0
 
+    # Capture dynamic redirect URL
+    next_url = request.GET.get('next') or request.POST.get('next_url') or request.META.get('HTTP_REFERER') or reverse('payment_portal')
+
     if request.method == 'POST':
         start_date_str = request.POST.get('start_date')
-        end_date_str = request.POST.get('end_date')
         amount = request.POST.get('amount')
         payment_method = request.POST.get('payment_method')
         reference_no = request.POST.get('reference_no', '')
         reason = request.POST.get('reason', '')
         
-        if end_date_str:
-            new_expiry = timezone.datetime.fromisoformat(end_date_str)
-            if timezone.is_naive(new_expiry):
-                new_expiry = timezone.make_aware(new_expiry)
+        if amount:
+            from decimal import Decimal
+            amount_float = float(amount)
+            
+            # Determine baseline current expiration
+            if start_date_str:
+                current_exp = timezone.datetime.fromisoformat(start_date_str.replace('Z', ''))
+                if timezone.is_naive(current_exp):
+                    current_exp = timezone.make_aware(current_exp)
+            elif customer.expires_at and customer.expires_at > timezone.now():
+                current_exp = customer.expires_at
+            else:
+                current_exp = timezone.now()
 
-            # 1. Update Customer Expiry
-            customer.expires_at = new_expiry
-            # customer.sms_sent_at = None  # Reset SMS trigger
-            customer.save()
+            # Calculate new expiration using the staggered logic
+            new_expiry = calculate_new_expiration_date(current_exp, amount_float, monthly_price)
 
-            # 2. Log the Payment
-            Payment.objects.create(
-                customer=customer,
-                username=customer.pppoe_username,
-                plan_name=customer.plan.name if customer.plan else None,
-                amount=amount, 
-                payment_method=payment_method, 
-                reference_no=reference_no, 
-                reason=reason, 
-                expires_at=new_expiry,
-                adjusted_by=request.user.username
-            )
+            with transaction.atomic():
+                # Lock the customer row for atomic update
+                locked_customer = Customer.objects.select_for_update().get(pk=customer.pk)
+                was_suspended = locked_customer.status in ['suspended', 'inactive', 'expired']
+                
+                # 1. Update Customer Expiry
+                locked_customer.expires_at = new_expiry
+                
+                # 2. Deduct from outstanding balance
+                locked_customer.outstanding_balance -= Decimal(amount)
+                
+                # 3. Update Status if suspended
+                if was_suspended:
+                    locked_customer.status = 'active'
+                
+                locked_customer.save()
 
-            # 3. TODO: Sprint 4 - Mikrotik API Sync
-            if customer.mikrotik_device and customer.plan and customer.plan.name:
+                # 4. Log the Payment
+                Payment.objects.create(
+                    customer=locked_customer,
+                    username=locked_customer.pppoe_username,
+                    plan_name=locked_customer.plan.name if locked_customer.plan else None,
+                    amount=amount, 
+                    payment_method=payment_method, 
+                    reference_no=reference_no, 
+                    reason=reason, 
+                    expires_at=new_expiry,
+                    adjusted_by=request.user.username
+                )
+
+            # 5. Mikrotik API Reactivation & Comments
+            if customer.mikrotik_device:
                 try:
                     from network_manager.services import MikrotikAPI
                     api = MikrotikAPI(customer.mikrotik_device)
-                    # 1. Enable the user
-                    api.enable_pppoe_user(customer.pppoe_username)
-                    # 2. Update the profile back to their plan
-                    api.set_user_pppoe_profile(customer.pppoe_username, customer.plan.name)
-                    # 3. Kick them so they reconnect and get the new profile
-                    api.kick_active_user(customer.pppoe_username)
+                    
+                    # Push Payment Comment
+                    comment_text = f"Paid {amount} PHP on {timezone.now().strftime('%b %d, %Y')}. Expires: {new_expiry.strftime('%b %d, %Y')}"
+                    api.set_pppoe_comment(customer.pppoe_username, comment_text)
+                    
+                    if was_suspended and customer.plan and customer.plan.name:
+                        # 1. Enable the user (Removes bridge drop and enables secret)
+                        api.enable_pppoe_user(customer.pppoe_username)
+                        # 2. Update the profile back to their plan
+                        api.set_user_pppoe_profile(customer.pppoe_username, customer.plan.name)
+                        # 3. Kick them so they reconnect and get the new profile
+                        api.kick_active_user(customer.pppoe_username)
                 except Exception as e:
                     import logging
                     logger = logging.getLogger(__name__)
@@ -1460,7 +1572,8 @@ def pay_customer_view(request, username):
                 'new_expiry': new_expiry.strftime('%Y-%m-%d %H:%M:%S'),
                 'adjusted_by': request.user.username,
                 'action_type': 'Standard Renewal',
-                'amount': amount
+                'amount': amount,
+                'next_url': next_url,
             }
             return render(request, 'billing/payment_success.html', context)
 
@@ -1478,6 +1591,7 @@ def pay_customer_view(request, username):
         'start_default_str': start_default_str,
         'end_default_str': end_default_str,
         'monthly_price': monthly_price,
+        'next_url': next_url,
     }
     return render(request, 'billing/pay_customer.html', context)
 

@@ -13,6 +13,8 @@ urlpatterns = [
          views.edit_customer, name='edit_customer'),
     path('customers/view/<int:customer_id>/',
          views.view_customer, name='view_customer'),
+    path('customers/api/status/<int:customer_id>/',
+         views.api_customer_mikrotik_status, name='api_customer_mikrotik_status'),
     path('customers/delete/<int:customer_id>/',
          views.delete_customer, name='delete_customer'),
     path('customer/force-suspend/<str:username>/', 
@@ -23,7 +25,9 @@ urlpatterns = [
          views.customer_force_reactivate, name='customer_force_reactivate'),
     path('mikrotik-active-users/', views.mikrotik_active_users_view,
          name='mikrotik_active_users'),
-
+    path('mikrotik-active-users/api/data/', views.mikrotik_active_users_data_api,
+         name='mikrotik_active_users_data_api'),
+    
     # Live Monitoring routes
     path('live-monitoring/', views.live_monitoring_view, name='live_monitoring'),
     path('api/live-monitoring/', views.api_live_monitoring_data,
@@ -32,10 +36,10 @@ urlpatterns = [
     # Subscription / Service Plans routes
     path('subscriptions/', views.subscription_plans_view,
          name='subscription_plans'),
-    # Payments
-    # (payments/ path removed since we use logs/payments/ below)
-    path('payments/pay/<int:customer_id>/',
-         views.create_payment_view, name='pay_customer'),
+    path('subscriptions/api/data/', views.subscription_plans_data_api,
+         name='subscription_plans_data_api'),
+    
+
 
     # Auth route
     path('login/', auth_views.LoginView.as_view(template_name='billing/login.html'), name='login'),

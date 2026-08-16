@@ -49,32 +49,52 @@
     <div class="row mb-3">
         <div class="col-12 d-flex justify-content-end gap-2">
             <a href="{% url 'customer_list' %}" class="btn-action btn-edit"><i class="fas fa-arrow-left"></i> Back to List</a>
-            <a href="{% url 'edit_customer' customer.id %}" class="btn-action btn-edit"><i class="fas fa-edit"></i> Edit Profile</a>
-            <a href="{% url 'statement_of_account' customer.id %}" class="btn-action" style="background:#e0f2fe; color:#0369a1;"><i class="fas fa-print"></i> Print SOA</a>
-            {% if customer.pppoe_username %}
-            <a href="{% url 'pay_customer' customer.pppoe_username %}" class="btn-action" style="background:#d1fae5; color:#065f46;"><i class="fas fa-money-bill-wave"></i> Renew / Pay Bill</a>
-            <a href="{% url 'customer_rebate' customer.pppoe_username %}" class="btn-action" style="background:#dcfce7; color:#166534;"><i class="fas fa-gift"></i> Rebate</a>
-            <a href="{% url 'customer_rollback' customer.pppoe_username %}" class="btn-action" style="background:#fee2e2; color:#991b1b;"><i class="fas fa-backward"></i> Rollback</a>
             
-            <!-- Manual Network Controls -->
-            <form action="{% url 'customer_kick_session' customer.pppoe_username %}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to kick the active session? This will force their router to redial.');">
-                {% csrf_token %}
-                <button type="submit" class="btn-action" style="background:#cffafe; color:#0369a1; border:none;"><i class="fas fa-bolt"></i> Kick Session</button>
-            </form>
-            <form action="{% url 'customer_force_suspend' customer.pppoe_username %}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to force suspend this customer? This will set them to expired on the router and drop their session.');">
-                {% csrf_token %}
-                <button type="submit" class="btn-action" style="background:#ffedd5; color:#c2410c; border:none;"><i class="fas fa-power-off"></i> Force Suspend</button>
-            </form>
-            <button type="button" class="btn-action" style="background:#dcfce7; color:#166534; border:none;" data-bs-toggle="modal" data-bs-target="#forceReactivateModal">
-                <i class="fas fa-play"></i> Force Reactivate
-            </button>
+            {% if perms.billing.change_customer %}
+            <a href="{% url 'edit_customer' customer.id %}" class="btn-action btn-edit"><i class="fas fa-edit"></i> Edit Profile</a>
             {% endif %}
+            
+            <a href="{% url 'statement_of_account' customer.id %}" class="btn-action" style="background:#e0f2fe; color:#0369a1;"><i class="fas fa-print"></i> Print SOA</a>
+            
+            {% if customer.pppoe_username %}
+                {% if perms.billing.add_payment %}
+                <a href="{% url 'pay_customer' customer.pppoe_username %}?next={{ request.get_full_path|urlencode }}" class="btn-action" style="background:#d1fae5; color:#065f46;"><i class="fas fa-money-bill-wave"></i> Renew / Pay Bill</a>
+                {% endif %}
+                
+                {% if perms.billing.change_customer %}
+                <a href="{% url 'customer_rebate' customer.pppoe_username %}" class="btn-action" style="background:#dcfce7; color:#166534;"><i class="fas fa-gift"></i> Rebate</a>
+                <a href="{% url 'customer_rollback' customer.pppoe_username %}" class="btn-action" style="background:#fee2e2; color:#991b1b;"><i class="fas fa-backward"></i> Rollback</a>
+                
+                <!-- Manual Network Controls -->
+                <form action="{% url 'customer_kick_session' customer.pppoe_username %}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to kick the active session? This will force their router to redial.');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-action" style="background:#cffafe; color:#0369a1; border:none;"><i class="fas fa-bolt"></i> Kick Session</button>
+                </form>
+                <form action="{% url 'customer_force_suspend' customer.pppoe_username %}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to force suspend this customer? This will set them to expired on the router and drop their session.');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-action" style="background:#ffedd5; color:#c2410c; border:none;"><i class="fas fa-power-off"></i> Force Suspend</button>
+                </form>
+                <button type="button" class="btn-action" style="background:#fef3c7; color:#b45309; border:none; font-weight: bold;" data-bs-toggle="modal" data-bs-target="#forceReactivateModal">
+                    <i class="fas fa-exclamation-triangle"></i> Force Reactivate
+                </button>
+                {% endif %}
+            {% endif %}
+            
+            {% if perms.billing.delete_customer %}
             <form action="{% url 'delete_customer' customer.id %}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this customer? This cannot be undone.');">
                 {% csrf_token %}
                 <button type="submit" class="btn-action btn-delete"><i class="fas fa-trash-alt"></i> Delete</button>
             </form>
+            {% endif %}
         </div>
     </div>
+
+    {% if customer.sync_status == 'Failed' %}
+    <div class="alert alert-danger shadow-sm border-0 rounded-4 mb-4">
+        <i class="fas fa-exclamation-circle me-2"></i><strong>Router Out of Sync!</strong> 
+        The MikroTik router was unreachable during the last update. Their actual network speeds/status may not match this profile. Please save the profile again when the router is online.
+    </div>
+    {% endif %}
 
     {% if messages %}
         {% for message in messages %}
@@ -137,30 +157,28 @@
                     </li>
                     <li>
                         <span class="info-label">Live MT Status</span>
-                        <span class="info-value">
-                            {% if mt_status == 'Connected' %}
+                        <span class="info-value" id="mt-status-container">
+                            {% if mt_status == 'Loading...' %}
+                                <span class="text-secondary"><i class="fas fa-spinner fa-spin me-1" style="font-size:0.6rem;"></i>Loading...</span>
+                            {% elif mt_status == 'Connected' %}
                                 <span class="text-success"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Connected</span>
                             {% else %}
                                 <span class="text-danger"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Disconnected</span>
                             {% endif %}
                         </span>
                     </li>
-                    {% if mt_status == 'Connected' %}
-                    <li>
+                    <li id="uptime-container">
                         <span class="info-label">Uptime</span>
-                        <span class="info-value">{{ uptime }}</span>
+                        <span class="info-value" id="mt-uptime">{{ uptime }}</span>
                     </li>
-                    {% endif %}
                     <li>
                         <span class="info-label">MAC Address</span>
-                        <span class="info-value">{{ customer.mac_address|default:live_mac }}</span>
+                        <span class="info-value" id="mt-live-mac">{{ customer.mac_address|default:live_mac }}</span>
                     </li>
-                    {% if mt_status == 'Disconnected' and last_logged_out != 'N/A' %}
-                    <li>
+                    <li id="last-logged-out-container">
                         <span class="info-label">Last Logged Out</span>
-                        <span class="info-value">{{ last_logged_out }}</span>
+                        <span class="info-value" id="mt-last-logged-out">{{ last_logged_out }}</span>
                     </li>
-                    {% endif %}
                 </ul>
             </div>
         </div>
@@ -237,11 +255,17 @@
       <form action="{% url 'customer_force_reactivate' customer.pppoe_username %}" method="post">
         {% csrf_token %}
         <div class="modal-body">
-          <p>You are about to force reactivate <strong>{{ customer.pppoe_username }}</strong> and bypass standard billing.</p>
-          <p>This will set their router profile back to default and bounce their connection.</p>
+          <div class="alert alert-warning border-0 rounded-3 shadow-sm mb-4">
+            <i class="fas fa-exclamation-triangle me-2"></i><strong>Warning:</strong> You are about to force-reactivate this account without a payment.
+          </div>
+          <p>This action will remove the suspension block and reconnect their PPPoE session.</p>
           <div class="mb-3">
-            <label for="admin_password" class="form-label fw-bold">Admin Authorization Password</label>
-            <input type="password" class="form-control" id="admin_password" name="admin_password" required placeholder="Enter master password">
+            <label for="admin_password" class="form-label fw-bold">Master Password</label>
+            <input type="password" class="form-control" id="admin_password" name="admin_password" required placeholder="Enter Master Override Password">
+          </div>
+          <div class="mb-3">
+            <label for="override_reason" class="form-label fw-bold">Reason for Override</label>
+            <textarea class="form-control" id="override_reason" name="override_reason" rows="3" required placeholder="e.g. VIP client, grace period extension, dispute resolution..."></textarea>
           </div>
         </div>
         <div class="modal-footer">
@@ -275,6 +299,50 @@
             document.getElementById('map').innerHTML = '<div class="h-100 d-flex align-items-center justify-content-center text-muted">No coordinates provided for this customer.</div>';
             document.getElementById('map').style.background = '#f8fafc';
         }
+    });
+
+    // Fetch live Mikrotik status asynchronously
+    document.addEventListener("DOMContentLoaded", function() {
+        const customerId = "{{ customer.id }}";
+        fetch(`/customers/api/status/${customerId}/`)
+            .then(response => response.json())
+            .then(data => {
+                // Update Status
+                const statusContainer = document.getElementById('mt-status-container');
+                if (data.mt_status === 'Connected') {
+                    statusContainer.innerHTML = '<span class="text-success"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Connected</span>';
+                } else {
+                    statusContainer.innerHTML = '<span class="text-danger"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Disconnected</span>';
+                }
+
+                // Update MAC
+                document.getElementById('mt-live-mac').innerText = data.live_mac;
+
+                // Handle Uptime/Last Logged Out Visibility
+                const uptimeContainer = document.getElementById('uptime-container');
+                const lastLoggedOutContainer = document.getElementById('last-logged-out-container');
+
+                if (data.mt_status === 'Connected') {
+                    document.getElementById('mt-uptime').innerText = data.uptime;
+                    uptimeContainer.style.display = 'flex';
+                    lastLoggedOutContainer.style.display = 'none';
+                } else {
+                    if (data.last_logged_out !== 'N/A') {
+                        document.getElementById('mt-last-logged-out').innerText = data.last_logged_out;
+                        lastLoggedOutContainer.style.display = 'flex';
+                    } else {
+                        lastLoggedOutContainer.style.display = 'none';
+                    }
+                    uptimeContainer.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching Mikrotik status:", error);
+                document.getElementById('mt-status-container').innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-triangle me-1" style="font-size:0.6rem;"></i>Error</span>';
+                document.getElementById('uptime-container').style.display = 'none';
+                document.getElementById('last-logged-out-container').style.display = 'none';
+                document.getElementById('mt-live-mac').innerText = 'N/A';
+            });
     });
 </script>
 {% endblock %}

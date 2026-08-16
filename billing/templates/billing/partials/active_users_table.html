@@ -1,0 +1,44 @@
+<!-- ACTIVE USERS DATA -->
+<div class="mb-3 d-flex align-items-center justify-content-between">
+    <span class="badge bg-success fs-6 rounded-pill px-3 py-2 shadow-sm">Total Active: {{ total_active }}</span>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} shadow-sm">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="dashboard-card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="activeUsersTable" style="width:100%; border-collapse: collapse;">
+                <thead style="background: rgba(0,0,0,0.03);">
+                    <tr>
+                        <th>Username</th>
+                        <th>IP Address</th>
+                        <th>Router</th>
+                        <th>MAC Address</th>
+                        <th>Uptime</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in active_users %}
+                    <tr>
+                        <td class="fw-semibold text-primary">{{ user.name }}</td>
+                        <td>{{ user.address }}</td>
+                        <td>
+                            <span class="badge bg-secondary">{{ user.router_name }}</span><br>
+                            <small class="text-muted">{{ user.router_ip }}</small>
+                        </td>
+                        <td>{{ user.caller_id|default:"N/A" }}</td>
+                        <td>{{ user.uptime }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -78,6 +78,12 @@ class Customer(models.Model):
         ('pull out', 'Pull Out'),
     )
 
+    SYNC_CHOICES = (
+        ('Synced', 'Synced'),
+        ('Failed', 'Failed'),
+    )
+    sync_status = models.CharField(max_length=20, choices=SYNC_CHOICES, default='Synced')
+
     # --- THE SUPERPOWER: Foreign Keys tying the system together ---
     plan = models.ForeignKey(
         'SubscriptionPlan', on_delete=models.SET_NULL, null=True)
@@ -86,6 +92,7 @@ class Customer(models.Model):
         'Barangay', on_delete=models.SET_NULL, null=True)
     account_type = models.ForeignKey(
         'AccountType', on_delete=models.SET_NULL, null=True)
+    outstanding_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     mikrotik_device = models.ForeignKey(
         MikrotikDevice, on_delete=models.SET_NULL, null=True)
 
@@ -226,3 +233,16 @@ class CignalPlay(models.Model):
 
     def __str__(self):
         return f"{self.plan_name} for {self.customer.full_name}"
+
+class AuditLog(models.Model):
+    timestamp = models.DateTimeField(auto_now_add=True)
+    admin_user = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='audit_logs')
+    action_type = models.CharField(max_length=100)
+    remarks = models.TextField()
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"{self.action_type} on {self.customer.full_name} at {self.timestamp}"

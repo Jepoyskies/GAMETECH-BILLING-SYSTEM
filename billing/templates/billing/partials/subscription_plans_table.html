@@ -1,0 +1,206 @@
+<!-- STATUS SUMMARY -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="kpi-card h-100">
+            <div class="kpi-icon icon-green"><i class="fas fa-check-circle"></i></div>
+            <div>
+                <div class="kpi-label">Active</div>
+                <div class="kpi-value text-success">{{ count_active }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="kpi-card h-100">
+            <div class="kpi-icon icon-orange"><i class="fas fa-exclamation-triangle"></i></div>
+            <div>
+                <div class="kpi-label">Expiring Soon</div>
+                <div class="kpi-value text-warning">{{ count_expiring }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="kpi-card h-100">
+            <div class="kpi-icon icon-red"><i class="fas fa-times-circle"></i></div>
+            <div>
+                <div class="kpi-label">Expired</div>
+                <div class="kpi-value text-danger">{{ count_expired }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="kpi-card h-100">
+            <div class="kpi-icon icon-gray"><i class="fas fa-user-slash"></i></div>
+            <div>
+                <div class="kpi-label">Inactive</div>
+                <div class="kpi-value text-muted">{{ count_inactive }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CONNECTION SUMMARY -->
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="kpi-card h-100">
+            <div class="kpi-icon icon-blue"><i class="fas fa-link"></i></div>
+            <div>
+                <div class="kpi-label">Connected to Router</div>
+                <div class="kpi-value">{{ count_connected }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="kpi-card h-100">
+            <div class="kpi-icon icon-gray"><i class="fas fa-unlink"></i></div>
+            <div>
+                <div class="kpi-label">Not Connected</div>
+                <div class="kpi-value">{{ count_not_connected }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- DATA TABLE -->
+<div class="dashboard-card">
+    <div class="card-header">
+        <i class="fas fa-users text-primary"></i> Subscriptions List
+    </div>
+    <div class="table-responsive">
+        <table class="subs-table">
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>
+                        <a href="?search={{ search }}&status={{ status_filter }}&device={{ device_filter }}&connection={{ connection_filter }}&per_page={{ per_page }}&sort=expires_at&order={% if sort == 'expires_at' and order == 'ASC' %}desc{% else %}asc{% endif %}">
+                            Expires At {% if sort == 'expires_at' %}<i class="fas fa-sort-{{ order|lower }}"></i>{% endif %}
+                        </a>
+                    </th>
+                    <th>Router Status</th>
+                    <th>Account Type</th>
+                    <th>Uptime / Downtime</th>
+                    <th>Profile</th>
+                    <th>Actions</th>
+                    <th>
+                        <a href="?search={{ search }}&status={{ status_filter }}&device={{ device_filter }}&connection={{ connection_filter }}&per_page={{ per_page }}&sort=username&order={% if sort == 'username' and order == 'ASC' %}desc{% else %}asc{% endif %}">
+                            Username {% if sort == 'username' %}<i class="fas fa-sort-{{ order|lower }}"></i>{% endif %}
+                        </a>
+                    </th>
+                    <th>
+                        <a href="?search={{ search }}&status={{ status_filter }}&device={{ device_filter }}&connection={{ connection_filter }}&per_page={{ per_page }}&sort=full_name&order={% if sort == 'full_name' and order == 'ASC' %}desc{% else %}asc{% endif %}">
+                            Full Name {% if sort == 'full_name' %}<i class="fas fa-sort-{{ order|lower }}"></i>{% endif %}
+                        </a>
+                    </th>
+                    <th>MT Device</th>
+                    <th>
+                        <a href="?search={{ search }}&status={{ status_filter }}&device={{ device_filter }}&connection={{ connection_filter }}&per_page={{ per_page }}&sort=plan_name&order={% if sort == 'plan_name' and order == 'ASC' %}desc{% else %}asc{% endif %}">
+                            Plan Name {% if sort == 'plan_name' %}<i class="fas fa-sort-{{ order|lower }}"></i>{% endif %}
+                        </a>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for customer in page_obj %}
+                <tr>
+                    <td>
+                        {% if not customer.expires_at %}
+                            <span class="status-badge status-danger"><i class="fas fa-times-circle"></i> Expired</span>
+                        {% elif customer.expires_at <= one_month_ago %}
+                            <span class="status-badge status-secondary"><i class="fas fa-user-slash"></i> Inactive</span>
+                        {% elif customer.expires_at <= now %}
+                            <span class="status-badge status-danger"><i class="fas fa-times-circle"></i> Expired</span>
+                        {% elif customer.expires_at <= soon %}
+                            <span class="status-badge status-warning"><i class="fas fa-exclamation-triangle"></i> Expiring Soon</span>
+                        {% else %}
+                            <span class="status-badge status-active"><i class="fas fa-check-circle"></i> Active</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ customer.expires_at|date:"Y-m-d H:i"|default:"N/A" }}</td>
+                    <td>
+                        {% if customer.mt_connected %}
+                            <span class="status-badge status-active"><i class="fas fa-link"></i> Connected</span>
+                        {% else %}
+                            <span class="status-badge status-danger"><i class="fas fa-unlink"></i> Not Connected</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if customer.account_type %}
+                            <span class="badge bg-primary">{{ customer.account_type.type_name }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if customer.mt_connected %}
+                            <span class="badge bg-success">Uptime: {{ customer.mt_uptime }}</span>
+                        {% elif customer.mt_downtime %}
+                            <span class="badge bg-danger">Down: {{ customer.mt_downtime }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Unknown</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if customer.mt_profile %}
+                            <span class="badge bg-info text-dark">{{ customer.mt_profile }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'view_customer' customer.id %}" class="action-btn btn-view" title="View"><i class="fas fa-eye"></i></a>
+                        <a href="{% url 'pay_customer' customer.pppoe_username %}?next={{ request.get_full_path|urlencode }}" class="action-btn btn-pay" title="Pay"><i class="fas fa-credit-card"></i></a>
+                        <a href="{% url 'customer_rebate' customer.pppoe_username %}" class="action-btn btn-rebate" title="Rebates"><i class="fa-solid fa-coins"></i></a>
+                        <a href="{% url 'customer_rollback' customer.pppoe_username %}" class="action-btn btn-adjust" title="Re-Adjustments"><i class="fa-regular fa-face-meh"></i></a>
+                        <a href="{% url 'statement_of_account' customer.id %}" class="action-btn btn-soa" title="SOA"><i class="bi bi-file-earmark-text"></i></a>
+                        <a href="{% url 'system_logs' %}?search={{ customer.pppoe_username }}" class="action-btn btn-log" title="User Log"><i class="fas fa-clipboard-list"></i></a>
+                    </td>
+                    <td class="fw-bold">{{ customer.pppoe_username|default:"-" }}</td>
+                    <td>{{ customer.full_name }}</td>
+                    <td>
+                        {% if customer.mikrotik_device %}
+                            <span class="badge bg-warning text-dark">{{ customer.mikrotik_device.device_name }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary">None</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ customer.service_plan.plan_name|default:"N/A" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="11" class="text-center py-4 text-muted">No results found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- PAGINATION -->
+    {% if page_obj.has_other_pages %}
+    <div class="pagination-container">
+        <ul class="pagination">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?search={{ search }}&status={{ status_filter }}&device={{ device_filter }}&connection={{ connection_filter }}&per_page={{ per_page }}&sort={{ sort }}&order={{ order }}&page={{ page_obj.previous_page_number }}">&laquo;</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+            {% endif %}
+
+            {% for i in page_obj.paginator.page_range %}
+                {% if page_obj.number == i %}
+                    <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                    <li class="page-item"><a class="page-link" href="?search={{ search }}&status={{ status_filter }}&device={{ device_filter }}&connection={{ connection_filter }}&per_page={{ per_page }}&sort={{ sort }}&order={{ order }}&page={{ i }}">{{ i }}</a></li>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?search={{ search }}&status={{ status_filter }}&device={{ device_filter }}&connection={{ connection_filter }}&per_page={{ per_page }}&sort={{ sort }}&order={{ order }}&page={{ page_obj.next_page_number }}">&raquo;</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+</div>

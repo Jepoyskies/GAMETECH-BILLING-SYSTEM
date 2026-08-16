@@ -154,10 +154,15 @@ def device_hardware_api(request, device_id):
 
         api.connection.disconnect()
         
+        # We can also call our new wrapper method if needed, but the above is fine.
+        # Let's get the optical readings via the wrapper.
+        optical_data = api.get_optical_readings()
+        
         return JsonResponse({
             'status': 'success',
             'resource': resource_data,
-            'health': health_data
+            'health': health_data,
+            'optical': optical_data
         })
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)})

@@ -1,4 +1,5 @@
 import logging
+import socket
 import routeros_api
 from .models import MikrotikDevice
 
@@ -25,42 +26,64 @@ class MikrotikAPI:
         # Handle empty/None passwords for test routers
         password = device.api_password if device.api_password else ""
 
-        # We set up the API connection pool
-        self.connection = routeros_api.RouterOsApiPool(
-            host=device.ip_address,
-            username=device.api_username,
-            password=password,
-            port=port,
-            plaintext_login=True,  # Modern RouterOS versions use plain login sequence for API
-            use_ssl=False  # Set to True if using secure port (e.g., 8729)
-        )
+        # Set a default timeout for this thread's sockets to prevent infinite hangs
+        old_timeout = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(3.0)
+        try:
+            # We set up the API connection pool
+            self.connection = routeros_api.RouterOsApiPool(
+                host=device.ip_address,
+                username=device.api_username,
+                password=password,
+                port=port,
+                plaintext_login=True,  # Modern RouterOS versions use plain login sequence for API
+                use_ssl=False  # Set to True if using secure port (e.g., 8729)
+            )
+        finally:
+            socket.setdefaulttimeout(old_timeout)
+        self._connection_failed = False
 
     def _get_api(self):
         """Handles connection securely with timeouts and returns the API instance, with automatic fallback for older RouterOS versions."""
+        if getattr(self, '_connection_failed', False):
+            raise ConnectionError(f"Previous connection attempt to {self.device.ip_address} failed, skipping retry.")
+
         try:
             # First attempt with plaintext_login (RouterOS v6.43+)
-            return self.connection.get_api()
+            old_timeout = socket.getdefaulttimeout()
+            socket.setdefaulttimeout(3.0)
+            try:
+                return self.connection.get_api()
+            finally:
+                socket.setdefaulttimeout(old_timeout)
         except routeros_api.exceptions.RouterOsApiCommunicationError as e:
             # If the error string contains "invalid user name or password (6)" and we were using plaintext login,
             # it might actually be an older RouterOS version expecting a challenge-response (plaintext_login=False).
             logger.warning(f"Plaintext login failed for {self.device.device_name}, retrying with legacy authentication...")
             
             try:
-                # Re-create connection with legacy auth
-                self.connection = routeros_api.RouterOsApiPool(
-                    host=self.device.ip_address,
-                    username=self.device.api_username,
-                    password=self.device.api_password if self.device.api_password else "",
-                    port=self.connection.port,
-                    plaintext_login=False,
-                    use_ssl=self.connection.use_ssl
-                )
-                return self.connection.get_api()
+                old_timeout = socket.getdefaulttimeout()
+                socket.setdefaulttimeout(3.0)
+                try:
+                    # Re-create connection with legacy auth
+                    self.connection = routeros_api.RouterOsApiPool(
+                        host=self.device.ip_address,
+                        username=self.device.api_username,
+                        password=self.device.api_password if self.device.api_password else "",
+                        port=self.connection.port,
+                        plaintext_login=False,
+                        use_ssl=self.connection.use_ssl
+                    )
+                    return self.connection.get_api()
+                finally:
+                    socket.setdefaulttimeout(old_timeout)
             except Exception as retry_e:
+                self._connection_failed = True
                 logger.error(f"Legacy Auth Failed for {self.device.device_name}: {retry_e}")
                 raise ConnectionError(f"Could not authenticate to {self.device.device_name} API. Check credentials.") from retry_e
                 
         except Exception as e:
+            self._connection_failed = True
             logger.error(f"Timeout/Error connecting to Mikrotik API on {self.device.ip_address}: {e}")
             raise ConnectionError(f"Could not connect to {self.device.device_name} API. Check IP/Port and credentials.") from e
 
@@ -110,6 +133,61 @@ class MikrotikAPI:
                 f"Failed to get PPP secrets from {self.device.device_name}: {e}")
             return []
 
+    def get_system_resources(self):
+        """
+        Retrieves CPU, RAM, and version info.
+        """
+        try:
+            api = self._get_api()
+            resources = api.get_resource('/system/resource').get()
+            self.connection.disconnect()
+            return resources[0] if resources else {}
+        except Exception as e:
+            logger.error(f"Failed to get system resources from {self.device.device_name}: {e}")
+            return {}
+
+    def get_optical_readings(self):
+        """
+        Retrieves SFP optical power readings.
+        """
+        try:
+            api = self._get_api()
+            eth_api = api.get_resource('/interface/ethernet')
+            interfaces = eth_api.get()
+            sfp_interfaces = [i['name'] for i in interfaces if 'sfp' in i.get('name', '').lower()]
+            
+            readings = []
+            for name in sfp_interfaces:
+                try:
+                    monitor = eth_api.call('monitor', {'numbers': name, 'once': ''})
+                    if monitor:
+                        monitor[0]['name'] = name
+                        readings.append(monitor[0])
+                except Exception:
+                    pass
+            self.connection.disconnect()
+            return readings
+        except Exception as e:
+            logger.error(f"Failed to get optical readings from {self.device.device_name}: {e}")
+            return []
+
+    def set_pppoe_comment(self, username, comment_text):
+        """
+        Updates the comment on a PPPoE secret.
+        """
+        try:
+            api = self._get_api()
+            ppp_secret = api.get_resource('/ppp/secret')
+            users = ppp_secret.get(name=username)
+            if users:
+                user_id = users[0]['id']
+                ppp_secret.set(id=user_id, comment=comment_text)
+                self.connection.disconnect()
+                return True, "Comment updated"
+            return False, "User not found"
+        except Exception as e:
+            logger.error(f"Error setting comment for {username} on {self.device.device_name}: {e}")
+            return False, f"API Error: {str(e)}"
     def remove_active_pppoe_user(self, name):
         """
         Forcibly disconnects an active PPPoE user from the Mikrotik device.
@@ -333,6 +411,17 @@ class MikrotikAPI:
                 self.connection.disconnect()
                 return False, f"User {name} does not exist."
             
+            # Clean up any MAC-level bridge drop rules just in case they were suspended
+            try:
+                bridge_filter = api.get_resource('/interface/bridge/filter')
+                rules = bridge_filter.get(comment=f"Suspended: {name}")
+                for rule in rules:
+                    rule_id = rule.get('id') or rule.get('.id')
+                    if rule_id:
+                        bridge_filter.remove(id=rule_id)
+            except Exception as e:
+                logger.error(f"Failed to remove bridge filter during user deletion for {name}: {e}")
+
             user_id = existing[0].get('id') or existing[0].get('.id')
             secrets.remove(id=user_id)
             logger.info(f"Deleted PPPoE user: {name}")
