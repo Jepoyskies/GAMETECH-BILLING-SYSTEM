@@ -151,14 +151,127 @@ def mikrotik_active_users_data_api(request):
 @login_required
 def mikrotik_active_users_view(request):
     from network_manager.models import MikrotikDevice
+    from .models import Barangay
     devices = MikrotikDevice.objects.all().order_by('device_name')
-    return render(request, 'billing/mikrotik_active_users.html', {'devices': devices})
+    barangays = Barangay.objects.all().order_by('name')
+    
+    active_device_alerts = MikrotikDevice.objects.exclude(health_status='Excellent')
+    active_barangay_alerts = Barangay.objects.exclude(health_status='Excellent')
+    
+    return render(request, 'billing/mikrotik_active_users.html', {
+        'devices': devices, 
+        'barangays': barangays,
+        'active_device_alerts': active_device_alerts,
+        'active_barangay_alerts': active_barangay_alerts
+    })
+
+@login_required
+def update_network_health(request):
+    if request.method == 'POST':
+        scope = request.POST.get('scope')
+        health_status = request.POST.get('health_status')
+        health_reason = request.POST.get('health_reason')
+
+        if scope == 'router':
+            router_id = request.POST.get('router_id')
+            if router_id:
+                from network_manager.models import MikrotikDevice
+                device = get_object_or_404(MikrotikDevice, id=router_id)
+                device.health_status = health_status
+                device.health_reason = health_reason
+                device.save()
+                messages.success(request, f"Health updated for router {device.device_name}.")
+                
+                send_sms = request.POST.get('send_sms') == '1'
+                if send_sms and health_status in ['Outage', 'Poor', 'Moderate'] and health_reason:
+                    message = f"Gametech Unli Fiber Advisory: {health_reason}"
+                    from .models import Customer
+                    affected_customers = Customer.objects.filter(mikrotik_device_id=device.id, status='active').exclude(phone__isnull=True).exclude(phone__exact='')
+                    for customer in affected_customers:
+                        send_semaphore_sms(customer.phone, message)
+                        
+        elif scope == 'barangay':
+            barangay_ids = request.POST.getlist('barangay_id')
+            if barangay_ids:
+                from .models import Barangay
+                barangays = Barangay.objects.filter(id__in=barangay_ids)
+                names = []
+                for barangay in barangays:
+                    barangay.health_status = health_status
+                    barangay.health_reason = health_reason
+                    barangay.save()
+                    names.append(barangay.name)
+                    
+                messages.success(request, f"Health updated for barangays: {', '.join(names)}.")
+                
+                send_sms = request.POST.get('send_sms') == '1'
+                if send_sms and health_status in ['Outage', 'Poor', 'Moderate'] and health_reason:
+                    message = f"Gametech Unli Fiber Advisory: {health_reason}"
+                    from .models import Customer
+                    affected_customers = Customer.objects.filter(barangay_id__in=barangay_ids, status='active').exclude(phone__isnull=True).exclude(phone__exact='')
+                    for customer in affected_customers:
+                        send_semaphore_sms(customer.phone, message)
+                        
+        elif scope == 'customer':
+            customer_id = request.POST.get('customer_id')
+            if customer_id:
+                from .models import Customer
+                customer = get_object_or_404(Customer, id=customer_id)
+                customer.health_status = health_status
+                customer.health_reason = health_reason
+                customer.save()
+                messages.success(request, f"Health updated for customer {customer.full_name}.")
+                
+                send_sms = request.POST.get('send_sms') == '1'
+                if send_sms and health_status in ['Outage', 'Poor', 'Moderate'] and health_reason and customer.phone:
+                    message = f"Gametech Unli Fiber Advisory: {health_reason}"
+                    send_semaphore_sms(customer.phone, message)
+                
+    return redirect(request.META.get('HTTP_REFERER', 'live_monitoring'))
+
+@login_required
+def resolve_network_health(request, scope, item_id):
+    if scope == 'router':
+        from network_manager.models import MikrotikDevice
+        device = get_object_or_404(MikrotikDevice, id=item_id)
+        device.health_status = 'Excellent'
+        device.health_reason = ''
+        device.save()
+        messages.success(request, f"Resolved network health for router {device.device_name}.")
+    elif scope == 'barangay':
+        from .models import Barangay
+        barangay = get_object_or_404(Barangay, id=item_id)
+        barangay.health_status = 'Excellent'
+        barangay.health_reason = ''
+        barangay.save()
+        messages.success(request, f"Resolved network health for barangay {barangay.name}.")
+    elif scope == 'customer':
+        from .models import Customer
+        customer = get_object_or_404(Customer, id=item_id)
+        customer.health_status = 'Excellent'
+        customer.health_reason = ''
+        customer.save()
+        messages.success(request, f"Resolved network health for customer {customer.full_name}.")
+    return redirect(request.META.get('HTTP_REFERER', 'live_monitoring'))
 
 
 @login_required
 def live_monitoring_view(request):
+    from .models import Barangay, Customer
     devices = MikrotikDevice.objects.all().order_by('device_name')
-    return render(request, 'billing/live_monitoring.html', {'devices': devices})
+    barangays = Barangay.objects.all().order_by('name')
+    customers = Customer.objects.filter(status='active').order_by('full_name')
+    active_device_alerts = MikrotikDevice.objects.exclude(health_status='Excellent')
+    active_barangay_alerts = Barangay.objects.exclude(health_status='Excellent')
+    active_customer_alerts = Customer.objects.exclude(health_status='Excellent').filter(status='active')
+    return render(request, 'billing/live_monitoring.html', {
+        'devices': devices,
+        'barangays': barangays,
+        'customers': customers,
+        'active_device_alerts': active_device_alerts,
+        'active_barangay_alerts': active_barangay_alerts,
+        'active_customer_alerts': active_customer_alerts
+    })
 
 
 @login_required
@@ -823,6 +936,9 @@ def edit_customer(request, customer_id):
         longitude = request.POST.get('longitude')
         if longitude:
             customer.longitude = longitude
+            
+        customer.health_status = request.POST.get('health_status', 'Excellent')
+        customer.health_reason = request.POST.get('health_reason')
             
         customer.save()
         messages.success(request, f'Customer {customer.full_name} updated successfully!')

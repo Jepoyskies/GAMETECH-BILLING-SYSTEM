@@ -52,6 +52,7 @@
             
             {% if perms.billing.change_customer %}
             <a href="{% url 'edit_customer' customer.id %}" class="btn-action btn-edit"><i class="fas fa-edit"></i> Edit Profile</a>
+            <button type="button" class="btn-action" style="background:#fef9c3; color:#a16207; border:none;" data-bs-toggle="modal" data-bs-target="#customerHealthModal"><i class="fas fa-heartbeat"></i> Update Health</button>
             {% endif %}
             
             <a href="{% url 'statement_of_account' customer.id %}" class="btn-action" style="background:#e0f2fe; color:#0369a1;"><i class="fas fa-print"></i> Print SOA</a>
@@ -281,6 +282,52 @@
   </div>
 </div>
 {% endif %}
+
+<!-- Customer Health Modal -->
+<div class="modal fade" id="customerHealthModal" tabindex="-1" aria-labelledby="customerHealthModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-warning text-dark border-0">
+        <h5 class="modal-title fw-bold" id="customerHealthModalLabel"><i class="fas fa-heartbeat"></i> Update Customer Health</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="{% url 'update_network_health' %}" method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="scope" value="customer">
+        <input type="hidden" name="customer_id" value="{{ customer.id }}">
+        <div class="modal-body p-4">
+            <div class="alert alert-info border-0 rounded-3 shadow-sm mb-4">
+                Updating health status for <strong>{{ customer.full_name }}</strong>.
+            </div>
+            
+            <div class="mb-3">
+                <label for="health_status" class="form-label fw-bold">Health Status</label>
+                <select class="form-select" id="health_status" name="health_status" required>
+                    <option value="Excellent" {% if customer.health_status == 'Excellent' %}selected{% endif %}>Excellent - Normal Operations</option>
+                    <option value="Moderate" {% if customer.health_status == 'Moderate' %}selected{% endif %}>Moderate - Slow Connections</option>
+                    <option value="Poor" {% if customer.health_status == 'Poor' %}selected{% endif %}>Poor - Frequent Disconnects</option>
+                    <option value="Outage" {% if customer.health_status == 'Outage' %}selected{% endif %}>Outage - Total Loss of Service</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="health_reason" class="form-label fw-bold">Reason / Details</label>
+                <textarea class="form-control" id="health_reason" name="health_reason" rows="3" placeholder="E.g., Drop wire cut...">{{ customer.health_reason|default:'' }}</textarea>
+            </div>
+
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="send_sms" name="send_sms" value="1">
+                <label class="form-check-label fw-bold text-primary" for="send_sms">Send SMS notification to customer</label>
+            </div>
+        </div>
+        <div class="modal-footer bg-light border-0">
+          <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-warning rounded-pill px-4 fw-bold">Update Health</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}

@@ -294,14 +294,53 @@
     display: block;
 }
 
-@media (max-width: 600px) {
-    .summary-grid {
-        grid-template-columns: 1fr 1fr;
+    @media (max-width: 600px) {
+        .summary-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+        .users-grid { 
+            grid-template-columns: 1fr; 
+        }
     }
-    .users-grid { 
-        grid-template-columns: 1fr; 
+
+    /* Active Alerts UI */
+    .network-alert-card {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        border-top: 4px solid #f59e0b;
+        margin-bottom: 24px;
     }
-}
+    .dark-mode .network-alert-card {
+        background: #1e293b;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2);
+    }
+    .network-alert-header {
+        padding: 20px 24px 10px 24px;
+    }
+    .network-alert-body {
+        padding: 10px 24px 20px 24px;
+    }
+    .network-alert-item {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        border: 1px solid rgba(0,0,0,0.05);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .dark-mode .network-alert-item {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(255,255,255,0.05);
+    }
+    .network-alert-item.alert-router { border-left: 4px solid #ef4444; }
+    .network-alert-item.alert-barangay { border-left: 4px solid #f59e0b; }
+    .network-alert-item h6 { color: #334155; }
+    .dark-mode .network-alert-item h6 { color: #f8fafc; }
+    .network-alert-item p { color: #64748b; margin: 0; font-size: 0.9em; }
+    .dark-mode .network-alert-item p { color: #94a3b8; }
 </style>
 {% endblock %}
 
@@ -314,7 +353,10 @@
             Live Monitoring
         </h2>
         
-        <div class="controls-container">
+        <div class="controls-container align-items-center">
+            <button type="button" class="btn btn-warning rounded-pill fw-bold px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#networkHealthModal">
+                <i class="fas fa-heartbeat me-1"></i> Update Network Health
+            </button>
             <input type="text" id="search" placeholder="Search user or IP...">
             <select id="interval">
                 <option value="1000" selected>Refresh: 1s</option>
@@ -347,6 +389,68 @@
         <div class="sum-box box-top" title="Top user by current bandwidth">
             <h3>Top User</h3>
             <p id="topUser">-</p>
+        </div>
+    </div>
+
+    <!-- Active Network Alerts -->
+    <div class="row">
+        <div class="col-12">
+            <div class="network-alert-card">
+                <div class="network-alert-header">
+                    <h5 class="fw-bold mb-0 text-warning"><i class="fas fa-exclamation-triangle me-2"></i>Active Network Alerts</h5>
+                </div>
+                <div class="network-alert-body">
+                    {% if not active_device_alerts and not active_barangay_alerts and not active_customer_alerts %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-check-circle text-success" style="font-size: 3rem; opacity: 0.8; margin-bottom: 10px;"></i>
+                            <h5 class="text-success fw-bold">All Systems Operational</h5>
+                            <p class="text-muted mb-0">There are no active network outages or connection issues.</p>
+                        </div>
+                    {% else %}
+                        {% for alert in active_device_alerts %}
+                        <div class="network-alert-item alert-router">
+                            <div>
+                                <h6 class="mb-1 fw-bold"><i class="fas fa-server me-2 text-secondary"></i>{{ alert.device_name }} (Router)
+                                    <span class="badge bg-danger ms-2">{{ alert.health_status }}</span>
+                                </h6>
+                                <p>{{ alert.health_reason }}</p>
+                            </div>
+                            <div>
+                                <a href="{% url 'resolve_network_health' 'router' alert.id %}" class="btn btn-sm btn-outline-success rounded-pill fw-bold"><i class="fas fa-check me-1"></i>Resolve</a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        
+                        {% for alert in active_barangay_alerts %}
+                        <div class="network-alert-item alert-barangay">
+                            <div>
+                                <h6 class="mb-1 fw-bold"><i class="fas fa-map-marker-alt me-2 text-secondary"></i>{{ alert.name }} (Barangay)
+                                    <span class="badge bg-warning text-dark ms-2">{{ alert.health_status }}</span>
+                                </h6>
+                                <p>{{ alert.health_reason }}</p>
+                            </div>
+                            <div>
+                                <a href="{% url 'resolve_network_health' 'barangay' alert.id %}" class="btn btn-sm btn-outline-success rounded-pill fw-bold"><i class="fas fa-check me-1"></i>Resolve</a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        
+                        {% for alert in active_customer_alerts %}
+                        <div class="network-alert-item" style="border-left: 4px solid #3b82f6;">
+                            <div>
+                                <h6 class="mb-1 fw-bold"><i class="fas fa-user-exclamation me-2 text-secondary"></i><a href="{% url 'view_customer' alert.id %}" style="text-decoration:none; color:inherit;">{{ alert.full_name }}</a> (Customer)
+                                    <span class="badge bg-primary ms-2">{{ alert.health_status }}</span>
+                                </h6>
+                                <p>{{ alert.health_reason }}</p>
+                            </div>
+                            <div>
+                                <a href="{% url 'resolve_network_health' 'customer' alert.id %}" class="btn btn-sm btn-outline-success rounded-pill fw-bold"><i class="fas fa-check me-1"></i>Resolve</a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
 
@@ -393,10 +497,115 @@
     </div>
 
 </div>
+
+<!-- Network Health Modal -->
+<div class="modal fade" id="networkHealthModal" tabindex="-1" aria-labelledby="networkHealthModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-warning text-dark border-0">
+        <h5 class="modal-title fw-bold" id="networkHealthModalLabel"><i class="fas fa-heartbeat"></i> Update Network Health</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="{% url 'update_network_health' %}" method="POST">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+            <div class="mb-3">
+                <label class="form-label fw-bold">Scope</label>
+                <div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="scope" id="scopeRouter" value="router" checked onchange="toggleScope()">
+                        <label class="form-check-label" for="scopeRouter">Entire Router</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="scope" id="scopeBarangay" value="barangay" onchange="toggleScope()">
+                        <label class="form-check-label" for="scopeBarangay">Specific Barangay</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="scope" id="scopeCustomer" value="customer" onchange="toggleScope()">
+                        <label class="form-check-label" for="scopeCustomer">Individual Customer</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3" id="routerSelectDiv">
+                <label for="router_id" class="form-label fw-bold">Select Router</label>
+                <select class="form-select" id="router_id" name="router_id">
+                    {% for device in devices %}
+                    <option value="{{ device.id }}">{{ device.device_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3 d-none" id="barangaySelectDiv">
+                <label for="barangay_id" class="form-label fw-bold">Select Barangay(s)</label>
+                <select class="form-select" id="barangay_id" name="barangay_id" multiple size="4">
+                    {% for barangay in barangays %}
+                    <option value="{{ barangay.id }}">{{ barangay.name }}</option>
+                    {% endfor %}
+                </select>
+                <div class="form-text"><i class="fas fa-info-circle"></i> Hold Ctrl (or Cmd) to select multiple barangays.</div>
+            </div>
+
+            <div class="mb-3 d-none" id="customerSelectDiv">
+                <label for="customer_id" class="form-label fw-bold">Select Customer</label>
+                <select class="form-select" id="customer_id" name="customer_id">
+                    {% for cust in customers %}
+                    <option value="{{ cust.id }}">{{ cust.full_name }} ({{ cust.pppoe_username }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="health_status" class="form-label fw-bold">Health Status</label>
+                <select class="form-select" id="health_status" name="health_status" required>
+                    <option value="Excellent">Excellent - Normal Operations</option>
+                    <option value="Moderate">Moderate - Slow Connections</option>
+                    <option value="Poor">Poor - Frequent Disconnects</option>
+                    <option value="Outage">Outage - Total Loss of Service</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="health_reason" class="form-label fw-bold">Reason / Details</label>
+                <textarea class="form-control" id="health_reason" name="health_reason" rows="3" placeholder="E.g., Fiber cut in main highway..."></textarea>
+            </div>
+
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="send_sms" name="send_sms" value="1">
+                <label class="form-check-label fw-bold text-primary" for="send_sms">Broadcast SMS to affected customers</label>
+            </div>
+        </div>
+        <div class="modal-footer bg-light border-0">
+          <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-warning rounded-pill px-4 fw-bold">Update Health</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+    function toggleScope() {
+        const isRouter = document.getElementById('scopeRouter').checked;
+        const isBarangay = document.getElementById('scopeBarangay').checked;
+        
+        if (isRouter) {
+            document.getElementById('routerSelectDiv').classList.remove('d-none');
+            document.getElementById('barangaySelectDiv').classList.add('d-none');
+            document.getElementById('customerSelectDiv').classList.add('d-none');
+        } else if (isBarangay) {
+            document.getElementById('routerSelectDiv').classList.add('d-none');
+            document.getElementById('barangaySelectDiv').classList.remove('d-none');
+            document.getElementById('customerSelectDiv').classList.add('d-none');
+        } else {
+            document.getElementById('routerSelectDiv').classList.add('d-none');
+            document.getElementById('barangaySelectDiv').classList.add('d-none');
+            document.getElementById('customerSelectDiv').classList.remove('d-none');
+        }
+    }
+
 let allData = [];
 let historyObj = {}; // {user: {rx:[], tx:[]}}
 let timer = null;

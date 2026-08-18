@@ -8,6 +8,8 @@ class MikrotikDevice(models.Model):
     api_password = models.CharField(max_length=255)
     api_port = models.IntegerField(default=8728)
     api_port_8700 = models.IntegerField(default=8700)
+    health_status = models.CharField(max_length=20, choices=[('Excellent', 'Excellent'), ('Moderate', 'Moderate'), ('Poor', 'Poor'), ('Outage', 'Outage')], default='Excellent')
+    health_reason = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
