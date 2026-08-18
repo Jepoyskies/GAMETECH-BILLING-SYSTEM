@@ -43,6 +43,13 @@ def sync_customer_to_mikrotik(sender, instance, created, **kwargs):
     try:
         api = MikrotikAPI(instance.mikrotik_device)
 
+        # --- NEW LOGIC: Handle Offboarding / Pull Out ---
+        if instance.status == 'pull out':
+            api.delete_pppoe_user(instance.pppoe_username)
+            Customer.objects.filter(pk=instance.pk).update(sync_status='Synced')
+            return
+        # ------------------------------------------------
+
         # 1. Determine target profile from SubscriptionPlan
         target_profile = instance.plan.name if instance.plan else "default"
         is_disabled = "no"

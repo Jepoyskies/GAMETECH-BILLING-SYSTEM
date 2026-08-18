@@ -19,7 +19,15 @@
                     </div>
                     Mikrotik Active Users
                 </h2>
-            <!-- ASYNC DATA CONTAINER -->
+                <div class="d-inline-flex gap-2 align-items-center">
+                    <select id="routerFilter" class="form-select rounded-pill px-3 shadow-sm w-auto d-inline-block border-primary text-primary fw-bold">
+                        <option value="">All Routers</option>
+                        {% for device in devices %}
+                        <option value="{{ device.device_name }}">{{ device.device_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
             <div id="async-data-container">
                 <div class="d-flex flex-column align-items-center justify-content-center py-5">
                     <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
@@ -54,12 +62,16 @@
                 container.innerHTML = html;
                 
                 // Initialize DataTables AFTER the table is injected
-                $('#activeUsersTable').DataTable({
+                var table = $('#activeUsersTable').DataTable({
                     "order": [[ 0, "asc" ]], // Sort by username by default
                     "pageLength": 10,
                     "language": {
                         "search": "Quick Search:"
                     }
+                });
+
+                $('#routerFilter').on('change', function () {
+                    table.column(2).search(this.value).draw();
                 });
             })
             .catch(error => {

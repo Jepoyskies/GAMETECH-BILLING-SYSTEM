@@ -150,8 +150,9 @@ def mikrotik_active_users_data_api(request):
 
 @login_required
 def mikrotik_active_users_view(request):
-    """Skeleton view for Mikrotik Active Users."""
-    return render(request, 'billing/mikrotik_active_users.html')
+    from network_manager.models import MikrotikDevice
+    devices = MikrotikDevice.objects.all().order_by('device_name')
+    return render(request, 'billing/mikrotik_active_users.html', {'devices': devices})
 
 
 @login_required
@@ -586,6 +587,7 @@ def sync_plans_from_mikrotik(request):
     return redirect('plan_list')
 
 
+@login_required
 def add_plan(request):
     if request.method == 'POST':
         name = request.POST.get('plan_name')
@@ -609,6 +611,7 @@ def add_plan(request):
     return render(request, 'billing/add_plan.html')
 
 
+@login_required
 def edit_plan(request, plan_id):
     plan = get_object_or_404(SubscriptionPlan, id=plan_id)
     if request.method == 'POST':
@@ -626,6 +629,7 @@ def edit_plan(request, plan_id):
     return render(request, 'billing/edit_plan.html', {'plan': plan})
 
 
+@login_required
 def delete_plan(request, plan_id):
     plan = get_object_or_404(SubscriptionPlan, id=plan_id)
     plan.delete()
@@ -633,12 +637,14 @@ def delete_plan(request, plan_id):
     return redirect('plan_list')
 
 
+@login_required
 def staff_list(request):
     # Fetch all admins, ordered by the newest created
     staff_members = SystemAdmin.objects.all().order_by('-created_at')
     return render(request, 'billing/staff_and_admins.html', {'staff_members': staff_members})
 
 
+@login_required
 def add_staff(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -677,6 +683,7 @@ def add_staff(request):
     return render(request, 'billing/add_staff.html')
 
 
+@login_required
 def edit_staff(request, pk):
     # Retrieve user role safely (fallback to Viewer to be safe)
     user_role = getattr(request.user, 'role', 'Viewer')
@@ -725,9 +732,14 @@ def edit_staff(request, pk):
 
 @login_required
 def customer_list(request):
+    from network_manager.models import MikrotikDevice
     customers = Customer.objects.select_related(
         'plan', 'agent', 'barangay', 'mikrotik_device').all()
-    return render(request, 'billing/customer_list.html', {'customers': customers})
+    devices = MikrotikDevice.objects.all().order_by('device_name')
+    return render(request, 'billing/customer_list.html', {
+        'customers': customers,
+        'devices': devices
+    })
 
 
 @login_required
@@ -760,7 +772,8 @@ def add_customer(request):
         'devices': MikrotikDevice.objects.all(),
         'agents': Agent.objects.all(),
         'barangays': Barangay.objects.all(),
-        'account_types': AccountType.objects.all()
+        'account_types': AccountType.objects.all(),
+        'prefill_username': request.GET.get('pppoe_username', '')
     }
     return render(request, 'billing/add_customer.html', context)
 
@@ -1347,6 +1360,7 @@ from .models import Customer
 from datetime import datetime
 
 @login_required
+@permission_required('billing.add_rebate', raise_exception=True)
 def customer_rebate_view(request, username):
     # Depending on how Antigravity named your field, it might be 'username' or 'pppoe_username'
     customer = get_object_or_404(Customer, pppoe_username=username) 
@@ -1399,6 +1413,7 @@ def customer_rebate_view(request, username):
     return render(request, 'billing/customer_rebate.html', context)
 
 @login_required
+@permission_required('billing.add_rollback', raise_exception=True)
 def customer_rollback_view(request, username):
     customer = get_object_or_404(Customer, pppoe_username=username)
 

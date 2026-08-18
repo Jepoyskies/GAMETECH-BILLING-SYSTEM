@@ -1,0 +1,214 @@
+{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}Sync Manager: {{ device.device_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+<style>
+    .sync-card {
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        margin-bottom: 24px;
+        overflow: hidden;
+    }
+    .sync-card .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #edf2f9;
+        padding: 16px 20px;
+        font-weight: 600;
+    }
+    .sync-card .table th {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+        background: rgba(0,0,0,0.02);
+        padding: 12px 20px;
+    }
+    .sync-card .table td {
+        padding: 12px 20px;
+        vertical-align: middle;
+    }
+    .badge-custom {
+        padding: 6px 10px;
+        font-weight: 500;
+        border-radius: 6px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="container-fluid py-4 px-3 px-md-4">
+    <!-- Messages / Notifications -->
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="live-header-row mb-4">
+        <h2 class="live-title">
+            <div class="kpi-icon icon-purple" style="width: 48px; height: 48px; font-size: 1.4rem; margin-right: 0;">
+                <i class="fas fa-exchange-alt"></i>
+            </div>
+            Sync Manager: {{ device.device_name }}
+        </h2>
+        <a href="{% url 'device_list' %}" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm fw-bold">
+            <i class="fas fa-arrow-left me-2"></i> Back to Devices
+        </a>
+    </div>
+
+    {% if not api_success %}
+    <div class="alert alert-danger shadow-sm">
+        <i class="fas fa-exclamation-triangle me-2"></i> Failed to connect to the Mikrotik API. Please ensure the device is online and API credentials are correct.
+    </div>
+    {% else %}
+    
+    <div class="row">
+        <div class="col-12">
+            <!-- Unknown/Orphaned Users -->
+            <div class="card sync-card border-warning">
+                <div class="card-header text-warning bg-white d-flex justify-content-between align-items-center border-warning border-bottom">
+                    <h5 class="mb-0"><i class="fas fa-question-circle me-2"></i> Unknown/Orphaned Users on Router ({{ orphans|length }})</h5>
+                    <small class="text-muted">On Mikrotik, but NOT in Django</small>
+                </div>
+                <div class="card-body p-0 table-responsive">
+                    <table class="table table-hover mb-0 datatable">
+                        <thead>
+                            <tr>
+                                <th>PPPoE Username</th>
+                                <th>Profile</th>
+                                <th>Comment</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in orphans %}
+                            <tr>
+                                <td><span class="fw-bold">{{ user.name }}</span></td>
+                                <td><span class="badge bg-secondary badge-custom">{{ user.profile }}</span></td>
+                                <td class="text-muted">{{ user.comment|default:"-" }}</td>
+                                <td class="text-end">
+                                    <a href="{% url 'add_customer' %}?pppoe_username={{ user.name }}" class="btn btn-sm btn-outline-success">
+                                        <i class="fas fa-file-import"></i> Import to Django
+                                    </a>
+                                    <form method="POST" action="{% url 'sync_delete_user' device.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="pppoe_username" value="{{ user.name }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger ms-1" onclick="return confirm('Are you sure you want to delete this user from the Mikrotik router?');">
+                                            <i class="fas fa-trash-alt"></i> Delete from Router
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">No orphaned users found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Missing on Router -->
+            <div class="card sync-card border-danger">
+                <div class="card-header text-danger bg-white d-flex justify-content-between align-items-center border-danger border-bottom">
+                    <h5 class="mb-0"><i class="fas fa-cloud-download-alt me-2"></i> Missing on Router ({{ missing_on_router|length }})</h5>
+                    <small class="text-muted">In Django, but NOT on Mikrotik</small>
+                </div>
+                <div class="card-body p-0 table-responsive">
+                    <table class="table table-hover mb-0 datatable">
+                        <thead>
+                            <tr>
+                                <th>PPPoE Username</th>
+                                <th>Customer Name</th>
+                                <th>Plan</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for customer in missing_on_router %}
+                            <tr>
+                                <td><span class="fw-bold">{{ customer.pppoe_username }}</span></td>
+                                <td>{{ customer.full_name }}</td>
+                                <td><span class="badge bg-info badge-custom">{{ customer.plan.name|default:"None" }}</span></td>
+                                <td class="text-end">
+                                    <form method="POST" action="{% url 'sync_push_user' device.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="pppoe_username" value="{{ customer.pppoe_username }}">
+                                        <button type="submit" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-cloud-upload-alt"></i> Push to Router
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">No missing users found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Synced Users -->
+            <div class="card sync-card border-success">
+                <div class="card-header text-success bg-white d-flex justify-content-between align-items-center border-success border-bottom">
+                    <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i> Synced Users ({{ synced|length }})</h5>
+                    <small class="text-muted">Present in both Django and Mikrotik</small>
+                </div>
+                <div class="card-body p-0 table-responsive">
+                    <table class="table table-hover mb-0 datatable">
+                        <thead>
+                            <tr>
+                                <th>PPPoE Username</th>
+                                <th>Profile</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in synced %}
+                            <tr>
+                                <td><span class="fw-bold">{{ user.name }}</span></td>
+                                <td><span class="badge bg-primary badge-custom">{{ user.profile }}</span></td>
+                                <td><span class="text-success"><i class="fas fa-check"></i> Synced</span></td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted py-4">No synced users found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        $('.datatable').DataTable({
+            "pageLength": 10,
+            "lengthChange": false,
+            "info": true,
+            "searching": true,
+            "order": [] // Disable initial sorting
+        });
+    });
+</script>
+{% endblock %}
