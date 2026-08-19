@@ -346,4 +346,83 @@ def sync_delete_user(request, device_id):
             messages.error(request, f"Failed to delete user: {result.get('error')}")
             
     return redirect('sync_manager', device_id=device_id)
-
+
+@login_required
+def sync_bulk_action(request, device_id):
+    if request.method == 'POST':
+        action = request.POST.get('bulk_action')
+        usernames = request.POST.getlist('selected_users')
+        device = get_object_or_404(MikrotikDevice, id=device_id)
+        
+        if not usernames:
+            messages.warning(request, "No users selected for bulk action.")
+            return redirect('sync_manager', device_id=device_id)
+
+        from billing.models import Customer
+        from .sync_services import MikrotikAPI as MikrotikSyncAPI
+        
+        api = MikrotikSyncAPI(
+            ip_address=device.ip_address,
+            username=device.api_username,
+            password=device.api_password,
+            port=device.api_port
+        )
+
+        success_count = 0
+        error_count = 0
+
+        if action == 'bulk_delete':
+            for uname in usernames:
+                res = api.delete_pppoe_user(name=uname)
+                if res.get('success'):
+                    success_count += 1
+                else:
+                    error_count += 1
+            messages.success(request, f"Bulk Delete: {success_count} deleted, {error_count} failed.")
+
+        elif action == 'bulk_push':
+            for uname in usernames:
+                customer = Customer.objects.filter(pppoe_username=uname, mikrotik_device=device).first()
+                if customer:
+                    profile = customer.plan.name if customer.plan else "default"
+                    res = api.add_pppoe_user(
+                        name=customer.pppoe_username,
+                        password=customer.pppoe_password,
+                        profile=profile,
+                        comment=customer.full_name
+                    )
+                    if res.get('success'):
+                        success_count += 1
+                    else:
+                        error_count += 1
+            messages.success(request, f"Bulk Push: {success_count} pushed, {error_count} failed.")
+
+        elif action == 'bulk_import':
+            # Note: The import action redirects to the add_customer page or creates them automatically?
+            # Creating them automatically requires default values (password, plan). 
+            # We'll just create them as inactive with a default plan if possible, or redirect to a mass import form.
+            # But "import to Django" usually needs manual fields. If they want Bulk Import, we'll auto-create them.
+            # Let's fetch secrets to get passwords:
+            all_users_res = api.get_all_pppoe_users()
+            router_users_dict = {u['name']: u for u in all_users_res.get('data', [])} if all_users_res.get('success') else {}
+            
+            for uname in usernames:
+                ru = router_users_dict.get(uname, {})
+                if not Customer.objects.filter(pppoe_username=uname).exists():
+                    Customer.objects.create(
+                        full_name=ru.get('comment') or uname,
+                        pppoe_username=uname,
+                        pppoe_password=ru.get('password', ''),
+                        mikrotik_device=device,
+                        status='inactive',
+                        created_form_by='Bulk Import'
+                    )
+                    success_count += 1
+                else:
+                    error_count += 1
+            messages.success(request, f"Bulk Import: {success_count} imported, {error_count} skipped/failed.")
+
+        else:
+            messages.error(request, "Invalid bulk action.")
+
+    return redirect('sync_manager', device_id=device_id)

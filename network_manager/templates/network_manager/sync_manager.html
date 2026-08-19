@@ -78,10 +78,14 @@
                     <small class="text-muted">On Mikrotik, but NOT in Django</small>
                 </div>
                 <div class="card-body p-0 table-responsive">
-                    <table class="table table-hover mb-0 datatable">
+                    <form method="POST" action="{% url 'sync_bulk_action' device.id %}">
+                        {% csrf_token %}
+                    <table class="table table-hover mb-0 datatable" id="orphansTable">
                         <thead>
                             <tr>
+                                <th style="width: 40px;"><input type="checkbox" class="form-check-input" id="selectAllOrphans"></th>
                                 <th>PPPoE Username</th>
+                                <th>Status</th>
                                 <th>Profile</th>
                                 <th>Comment</th>
                                 <th class="text-end">Actions</th>
@@ -89,14 +93,31 @@
                         </thead>
                         <tbody>
                             {% for user in orphans %}
-                            <tr>
-                                <td><span class="fw-bold">{{ user.name }}</span></td>
+                            <tr class="{% if user.is_suspicious %}table-danger{% endif %}">
+                                <td><input type="checkbox" class="form-check-input orphan-check" name="selected_users" value="{{ user.name }}"></td>
+                                <td>
+                                    <span class="fw-bold">{{ user.name }}</span>
+                                    {% if user.is_suspicious %}
+                                    <span class="badge bg-danger ms-1" title="Suspicious Name/Profile"><i class="fas fa-exclamation-triangle"></i></span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if user.is_active %}
+                                    <span class="badge bg-success"><i class="fas fa-circle"></i> Online</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary"><i class="far fa-circle"></i> Offline</span>
+                                    {% endif %}
+                                </td>
                                 <td><span class="badge bg-secondary badge-custom">{{ user.profile }}</span></td>
                                 <td class="text-muted">{{ user.comment|default:"-" }}</td>
                                 <td class="text-end">
-                                    <a href="{% url 'add_customer' %}?pppoe_username={{ user.name }}" class="btn btn-sm btn-outline-success">
-                                        <i class="fas fa-file-import"></i> Import to Django
-                                    </a>
+                                    <form method="POST" action="{% url 'sync_bulk_action' device.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="selected_users" value="{{ user.name }}">
+                                        <button type="submit" name="bulk_action" value="bulk_import" class="btn btn-sm btn-outline-success">
+                                            <i class="fas fa-file-import"></i> Auto-Import
+                                        </button>
+                                    </form>
                                     <form method="POST" action="{% url 'sync_delete_user' device.id %}" class="d-inline">
                                         {% csrf_token %}
                                         <input type="hidden" name="pppoe_username" value="{{ user.name }}">
@@ -106,13 +127,21 @@
                                     </form>
                                 </td>
                             </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="4" class="text-center text-muted py-4">No orphaned users found.</td>
-                            </tr>
                             {% endfor %}
                         </tbody>
                     </table>
+                    <div class="p-3 bg-light border-top">
+                        <div class="d-flex align-items-center">
+                            <span class="me-3 fw-bold text-muted">With Selected:</span>
+                            <button type="submit" name="bulk_action" value="bulk_import" class="btn btn-sm btn-success me-2">
+                                <i class="fas fa-file-import"></i> Bulk Import to Django
+                            </button>
+                            <button type="submit" name="bulk_action" value="bulk_delete" class="btn btn-sm btn-danger" onclick="return confirm('Delete selected users from the router? This cannot be undone.');">
+                                <i class="fas fa-trash-alt"></i> Bulk Delete from Router
+                            </button>
+                        </div>
+                    </div>
+                    </form>
                 </div>
             </div>
 
@@ -123,9 +152,12 @@
                     <small class="text-muted">In Django, but NOT on Mikrotik</small>
                 </div>
                 <div class="card-body p-0 table-responsive">
-                    <table class="table table-hover mb-0 datatable">
+                    <form method="POST" action="{% url 'sync_bulk_action' device.id %}">
+                        {% csrf_token %}
+                    <table class="table table-hover mb-0 datatable" id="missingTable">
                         <thead>
                             <tr>
+                                <th style="width: 40px;"><input type="checkbox" class="form-check-input" id="selectAllMissing"></th>
                                 <th>PPPoE Username</th>
                                 <th>Customer Name</th>
                                 <th>Plan</th>
@@ -135,6 +167,7 @@
                         <tbody>
                             {% for customer in missing_on_router %}
                             <tr>
+                                <td><input type="checkbox" class="form-check-input missing-check" name="selected_users" value="{{ customer.pppoe_username }}"></td>
                                 <td><span class="fw-bold">{{ customer.pppoe_username }}</span></td>
                                 <td>{{ customer.full_name }}</td>
                                 <td><span class="badge bg-info badge-custom">{{ customer.plan.name|default:"None" }}</span></td>
@@ -148,13 +181,18 @@
                                     </form>
                                 </td>
                             </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="4" class="text-center text-muted py-4">No missing users found.</td>
-                            </tr>
                             {% endfor %}
                         </tbody>
                     </table>
+                    <div class="p-3 bg-light border-top">
+                        <div class="d-flex align-items-center">
+                            <span class="me-3 fw-bold text-muted">With Selected:</span>
+                            <button type="submit" name="bulk_action" value="bulk_push" class="btn btn-sm btn-primary me-2">
+                                <i class="fas fa-cloud-upload-alt"></i> Bulk Push to Router
+                            </button>
+                        </div>
+                    </div>
+                    </form>
                 </div>
             </div>
 
@@ -180,10 +218,6 @@
                                 <td><span class="badge bg-primary badge-custom">{{ user.profile }}</span></td>
                                 <td><span class="text-success"><i class="fas fa-check"></i> Synced</span></td>
                             </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="3" class="text-center text-muted py-4">No synced users found.</td>
-                            </tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -208,6 +242,35 @@
             "info": true,
             "searching": true,
             "order": [] // Disable initial sorting
+        });
+
+        // Select All for Orphans
+        $('#selectAllOrphans').change(function() {
+            $('.orphan-check').prop('checked', $(this).prop('checked'));
+        });
+
+        // Select All for Missing
+        $('#selectAllMissing').change(function() {
+            $('.missing-check').prop('checked', $(this).prop('checked'));
+        });
+        
+        // Uncheck 'Select All' if one is manually unchecked
+        $('.orphan-check').change(function(){
+            if(false == $(this).prop("checked")){
+                $("#selectAllOrphans").prop('checked', false); 
+            }
+            if ($('.orphan-check:checked').length == $('.orphan-check').length ){
+                $("#selectAllOrphans").prop('checked', true);
+            }
+        });
+
+        $('.missing-check').change(function(){
+            if(false == $(this).prop("checked")){
+                $("#selectAllMissing").prop('checked', false); 
+            }
+            if ($('.missing-check:checked').length == $('.missing-check').length ){
+                $("#selectAllMissing").prop('checked', true);
+            }
         });
     });
 </script>

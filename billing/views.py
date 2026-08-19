@@ -276,15 +276,52 @@ def live_monitoring_view(request):
 
 @login_required
 def api_live_monitoring_data(request):
-    data = []
+    response_data = {
+        'users': [],
+        'routers': []
+    }
+    
     devices = MikrotikDevice.objects.all()
     for device in devices:
         try:
-            active_users = MikrotikAPI(device).get_active_pppoe_users()
+            api = MikrotikAPI(device)
+            # Check Uplink Health by pinging 8.8.8.8
+            uplink_status = 'Offline'
+            uplink_ping = 'Timeout'
+            try:
+                ping_res = api._get_api().get_resource('/').call('ping', {'address': '8.8.8.8', 'count': '1'})
+                if ping_res and len(ping_res) > 0:
+                    result = ping_res[0]
+                    loss = int(result.get('packet-loss', 100))
+                    if loss == 100 or result.get('status') == 'no route to host' or result.get('status') == 'timeout':
+                        uplink_status = 'Offline'
+                        uplink_ping = 'Timeout'
+                    else:
+                        avg_rtt_str = result.get('avg-rtt', '0ms')
+                        rtt_ms = int(avg_rtt_str.replace('ms', ''))
+                        uplink_ping = f"{rtt_ms}ms"
+                        if rtt_ms > 150:
+                            uplink_status = 'Unstable'
+                        else:
+                            uplink_status = 'Online'
+            except Exception as e:
+                print(f"Ping Error on {device.device_name}: {e}")
+                uplink_status = 'Offline'
+                uplink_ping = 'Error'
+
+            response_data['routers'].append({
+                'id': device.id,
+                'name': device.device_name,
+                'ip': device.ip_address,
+                'uplink_status': uplink_status,
+                'uplink_ping': uplink_ping
+            })
+
+            active_users = api.get_active_pppoe_users()
             
             # Fetch traffic for all active PPPoE users directly from their dynamic interfaces
             interface_names = [f"<pppoe-{au.get('name')}>" for au in active_users if au.get('name')]
-            traffic_data = MikrotikAPI(device).get_interfaces_traffic(interface_names)
+            traffic_data = api.get_interfaces_traffic(interface_names)
             
             # Map traffic data by clean username
             traffic_dict = {}
@@ -311,7 +348,7 @@ def api_live_monitoring_data(request):
                 
                 stats = traffic_dict.get(u_name, {'rx_mbps': 0, 'tx_mbps': 0})
                 
-                data.append({
+                response_data['users'].append({
                     'device_name': device.device_name,
                     'device_ip': device.ip_address,
                     'ip': user_ip,
@@ -320,11 +357,11 @@ def api_live_monitoring_data(request):
                     'tx_mbps': stats['tx_mbps'],
                     'uptime': au.get('uptime', '0s')
                 })
-        except Exception:
-            # Skip unreachable devices
+        except Exception as e:
+            # Device unreachable or API error
             pass
-
-    return JsonResponse(data, safe=False)
+            
+    return JsonResponse(response_data)
 
 
 # ─────────────────────────────────────────────────
@@ -923,7 +960,7 @@ def add_customer(request):
     if request.method == 'POST':
         Customer.objects.create(
             full_name=request.POST.get('full_name'),
-            email=request.POST.get('email'),
+            email=request.POST.get('email') or None,
             phone=request.POST.get('phone'),
             address=request.POST.get('address'),
             pppoe_username=request.POST.get('pppoe_username') or None,
@@ -958,7 +995,7 @@ def edit_customer(request, customer_id):
     customer = get_object_or_404(Customer, id=customer_id)
     if request.method == 'POST':
         customer.full_name = request.POST.get('full_name')
-        customer.email = request.POST.get('email')
+        customer.email = request.POST.get('email') or None
         customer.phone = request.POST.get('phone')
         customer.address = request.POST.get('address')
         customer.pppoe_username = request.POST.get('pppoe_username') or None
@@ -1138,10 +1175,9 @@ def customer_force_reactivate(request, username):
         reason = request.POST.get('override_reason', '')
         customer = get_object_or_404(Customer, pppoe_username=username)
         
-        # Verify Master Override Password against environment variable
-        master_password = os.environ.get('MASTER_OVERRIDE_PASSWORD')
-        if not master_password or admin_password != master_password:
-            messages.error(request, "Admin Override Failed: Invalid Master Password.")
+        # Verify that the user is a superuser and entered their correct password
+        if not request.user.is_superuser or not request.user.check_password(admin_password):
+            messages.error(request, "Admin Override Failed: Invalid Password or you are not a Superuser.")
             return redirect('view_customer', customer_id=customer.id)
             
         if not reason.strip():
@@ -1326,6 +1362,11 @@ def create_payment_view(request, customer_id):
         )
 
         customer.expires_at = ed
+        
+        # If the customer was previously inactive or suspended, auto-reactivate them
+        if customer.status in ['expired', 'suspended', 'inactive', 'past_due']:
+            customer.status = 'active'
+            
         customer.save()
 
         messages.success(

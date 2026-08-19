@@ -61,16 +61,32 @@ class MikrotikAPI:
             connection, api = self._get_api_connection()
             secrets_api = api.get_resource('/ppp/secret')
             secrets = secrets_api.get()
+            active_api = api.get_resource('/ppp/active')
+            active_users = active_api.get()
             connection.disconnect()
+            
+            active_usernames = {u.get('name') for u in active_users if u.get('name')}
+            
+            import re
+            # Only allow alphanumeric, dashes, dots, and underscores
+            suspicious_pattern = re.compile(r'[^a-zA-Z0-9\.\-\_]')
             
             # Format the output to strictly match requirements
             formatted_users = []
             for s in secrets:
+                name = s.get("name", "")
+                profile = s.get("profile", "")
+                
+                is_active = name in active_usernames
+                is_suspicious = bool(suspicious_pattern.search(name)) or profile.lower() == 'default'
+                
                 formatted_users.append({
-                    "name": s.get("name", ""),
+                    "name": name,
                     "password": s.get("password", ""),
-                    "profile": s.get("profile", ""),
-                    "comment": s.get("comment", "")
+                    "profile": profile,
+                    "comment": s.get("comment", ""),
+                    "is_active": is_active,
+                    "is_suspicious": is_suspicious
                 })
                 
             return {"success": True, "data": formatted_users}

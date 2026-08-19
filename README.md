@@ -43,7 +43,7 @@ If you prefer to use the command line manually, follow these steps:
    ```
 2. **Activate it**:
    ```cmd
-   venv\Scripts\activate.bat
+   py -m venv venv
    .\venv\Scripts\Activate.ps1
 
    ```

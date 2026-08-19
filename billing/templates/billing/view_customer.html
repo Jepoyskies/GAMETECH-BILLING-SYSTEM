@@ -352,48 +352,57 @@
         }
     });
 
-    // Fetch live Mikrotik status asynchronously
+    // Fetch live Mikrotik status asynchronously and poll every 5 seconds
     document.addEventListener("DOMContentLoaded", function() {
         const customerId = "{{ customer.id }}";
-        fetch(`/customers/api/status/${customerId}/`)
-            .then(response => response.json())
-            .then(data => {
-                // Update Status
-                const statusContainer = document.getElementById('mt-status-container');
-                if (data.mt_status === 'Connected') {
-                    statusContainer.innerHTML = '<span class="text-success"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Connected</span>';
-                } else {
-                    statusContainer.innerHTML = '<span class="text-danger"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Disconnected</span>';
-                }
-
-                // Update MAC
-                document.getElementById('mt-live-mac').innerText = data.live_mac;
-
-                // Handle Uptime/Last Logged Out Visibility
-                const uptimeContainer = document.getElementById('uptime-container');
-                const lastLoggedOutContainer = document.getElementById('last-logged-out-container');
-
-                if (data.mt_status === 'Connected') {
-                    document.getElementById('mt-uptime').innerText = data.uptime;
-                    uptimeContainer.style.display = 'flex';
-                    lastLoggedOutContainer.style.display = 'none';
-                } else {
-                    if (data.last_logged_out !== 'N/A') {
-                        document.getElementById('mt-last-logged-out').innerText = data.last_logged_out;
-                        lastLoggedOutContainer.style.display = 'flex';
+        
+        function fetchStatus() {
+            fetch(`/customers/api/status/${customerId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    // Update Status
+                    const statusContainer = document.getElementById('mt-status-container');
+                    if (data.mt_status === 'Connected') {
+                        statusContainer.innerHTML = '<span class="text-success"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Connected</span>';
                     } else {
-                        lastLoggedOutContainer.style.display = 'none';
+                        statusContainer.innerHTML = '<span class="text-danger"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Disconnected</span>';
                     }
-                    uptimeContainer.style.display = 'none';
-                }
-            })
-            .catch(error => {
-                console.error("Error fetching Mikrotik status:", error);
-                document.getElementById('mt-status-container').innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-triangle me-1" style="font-size:0.6rem;"></i>Error</span>';
-                document.getElementById('uptime-container').style.display = 'none';
-                document.getElementById('last-logged-out-container').style.display = 'none';
-                document.getElementById('mt-live-mac').innerText = 'N/A';
-            });
+
+                    // Update MAC
+                    document.getElementById('mt-live-mac').innerText = data.live_mac;
+
+                    // Handle Uptime/Last Logged Out Visibility
+                    const uptimeContainer = document.getElementById('uptime-container');
+                    const lastLoggedOutContainer = document.getElementById('last-logged-out-container');
+
+                    if (data.mt_status === 'Connected') {
+                        document.getElementById('mt-uptime').innerText = data.uptime;
+                        uptimeContainer.style.display = 'flex';
+                        lastLoggedOutContainer.style.display = 'none';
+                    } else {
+                        if (data.last_logged_out !== 'N/A') {
+                            document.getElementById('mt-last-logged-out').innerText = data.last_logged_out;
+                            lastLoggedOutContainer.style.display = 'flex';
+                        } else {
+                            lastLoggedOutContainer.style.display = 'none';
+                        }
+                        uptimeContainer.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error("Error fetching Mikrotik status:", error);
+                    document.getElementById('mt-status-container').innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-triangle me-1" style="font-size:0.6rem;"></i>Error</span>';
+                    document.getElementById('uptime-container').style.display = 'none';
+                    document.getElementById('last-logged-out-container').style.display = 'none';
+                    document.getElementById('mt-live-mac').innerText = 'N/A';
+                });
+        }
+
+        // Initial fetch
+        fetchStatus();
+        
+        // Poll every 5 seconds
+        setInterval(fetchStatus, 5000);
     });
 </script>
 {% endblock %}

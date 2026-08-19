@@ -115,17 +115,19 @@
     box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
 }
 
+.box-uplink { border-left: 4px solid #8b5cf6; background: linear-gradient(135deg, rgba(139,92,246,0.85) 0%, rgba(109,40,217,0.95) 100%); color: white; }
 .box-rx { border-left: 4px solid #38bdf8; }
-.box-tx { border-left: 4px solid #34d399; }
-.box-net { border-left: 4px solid #c084fc; }
-.box-users { border-left: 4px solid #fb923c; }
-.box-top { border-left: 4px solid #f87171; }
+.box-tx { border-left: 4px solid #fbbf24; }
+.box-net { border-left: 4px solid #10b981; }
+.box-users { border-left: 4px solid #6366f1; }
+.box-top { border-left: 4px solid #ec4899; }
 
+.dark-mode .box-uplink { background: linear-gradient(135deg, rgba(139,92,246,0.3) 0%, rgba(109,40,217,0.5) 100%); border: 1px solid rgba(139,92,246,0.4); }
 .dark-mode .box-rx { background: linear-gradient(135deg, rgba(56,189,248,0.2) 0%, rgba(2,132,199,0.4) 100%); border: 1px solid rgba(56,189,248,0.3); }
-.dark-mode .box-tx { background: linear-gradient(135deg, rgba(52,211,153,0.2) 0%, rgba(5,150,105,0.4) 100%); border: 1px solid rgba(52,211,153,0.3); }
-.dark-mode .box-net { background: linear-gradient(135deg, rgba(192,132,252,0.2) 0%, rgba(124,58,237,0.4) 100%); border: 1px solid rgba(192,132,252,0.3); }
-.dark-mode .box-users { background: linear-gradient(135deg, rgba(251,146,60,0.2) 0%, rgba(217,119,6,0.4) 100%); border: 1px solid rgba(251,146,60,0.3); }
-.dark-mode .box-top { background: linear-gradient(135deg, rgba(248,113,113,0.2) 0%, rgba(220,38,38,0.4) 100%); border: 1px solid rgba(248,113,113,0.3); }
+.dark-mode .box-tx { background: linear-gradient(135deg, rgba(251,191,36,0.2) 0%, rgba(217,119,6,0.4) 100%); border: 1px solid rgba(251,191,36,0.3); }
+.dark-mode .box-net { background: linear-gradient(135deg, rgba(16,185,129,0.2) 0%, rgba(4,120,87,0.4) 100%); border: 1px solid rgba(16,185,129,0.3); }
+.dark-mode .box-users { background: linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(67,56,202,0.4) 100%); border: 1px solid rgba(99,102,241,0.3); }
+.dark-mode .box-top { background: linear-gradient(135deg, rgba(236,72,153,0.2) 0%, rgba(190,24,93,0.4) 100%); border: 1px solid rgba(236,72,153,0.3); }
 
 .sum-box h3 {
     margin: 0 0 6px 0;
@@ -367,6 +369,11 @@
     </div>
 
     <div class="summary-grid">
+        <div class="sum-box box-uplink" title="Main Router Internet Connection">
+            <h3>Router Uplink</h3>
+            <p id="uplinkStatus">Checking...</p>
+            <div style="font-size:0.8rem; color:rgba(255,255,255,0.8); margin-top: 5px;" id="uplinkPing"></div>
+        </div>
         <div class="sum-box box-rx" title="Total upload from all active simple queues">
             <h3>Total Upload</h3>
             <p id="totalRx">0</p>
@@ -802,7 +809,30 @@ function loadData(){
     fetch("{% url 'api_live_monitoring' %}")
     .then(r => r.json())
     .then(d => {
-        allData = d;
+        allData = d.users || [];
+        
+        // Update Router Uplink Health
+        if (d.routers && d.routers.length > 0) {
+            let r = d.routers[0]; // Display main router's uplink
+            let box = document.querySelector('.box-uplink');
+            let statusText = document.getElementById('uplinkStatus');
+            let pingText = document.getElementById('uplinkPing');
+            
+            statusText.innerText = r.uplink_status;
+            pingText.innerText = "Ping: " + r.uplink_ping;
+            
+            if (r.uplink_status === 'Offline') {
+                box.style.background = 'linear-gradient(135deg, rgba(239,68,68,0.85) 0%, rgba(185,28,28,0.95) 100%)';
+                box.style.borderLeftColor = '#ef4444';
+            } else if (r.uplink_status === 'Unstable') {
+                box.style.background = 'linear-gradient(135deg, rgba(245,158,11,0.85) 0%, rgba(217,119,6,0.95) 100%)';
+                box.style.borderLeftColor = '#f59e0b';
+            } else {
+                box.style.background = ''; // Revert to CSS default
+                box.style.borderLeftColor = ''; 
+            }
+        }
+
         // Dynamic Gauge Scaling
         let rx = allData.reduce((s,u)=>s+ +u.rx_mbps,0);
         let tx = allData.reduce((s,u)=>s+ +u.tx_mbps,0);
