@@ -5,6 +5,7 @@ import os
 from django.conf import settings
 from django.core.cache import cache
 from django.contrib.auth.decorators import login_required, permission_required
+from .decorators import role_required
 from django.contrib import messages
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -591,6 +592,8 @@ def agent_list(request):
 
 # Replaces add_agent.php
 
+@login_required
+@role_required(['Admin', 'Editor'])
 
 def add_agent(request):
     if request.method == 'POST':
@@ -611,6 +614,8 @@ def add_agent(request):
 
 # Replaces edit_agent.php
 
+@login_required
+@role_required(['Admin', 'Editor'])
 
 def edit_agent(request, agent_id):
     agent = get_object_or_404(Agent, id=agent_id)
@@ -627,6 +632,8 @@ def edit_agent(request, agent_id):
 
 # Replaces the delete portion inside agents.php
 
+@login_required
+@role_required(['Admin', 'Editor'])
 
 def delete_agent(request, agent_id):
     if request.method == 'POST':
@@ -737,6 +744,7 @@ def sync_plans_from_mikrotik(request):
     return redirect('plan_list')
 
 
+@role_required(['Admin', 'Editor'])
 @login_required
 def add_plan(request):
     if request.method == 'POST':
@@ -761,6 +769,7 @@ def add_plan(request):
     return render(request, 'billing/add_plan.html')
 
 
+@role_required(['Admin', 'Editor'])
 @login_required
 def edit_plan(request, plan_id):
     plan = get_object_or_404(SubscriptionPlan, id=plan_id)
@@ -779,6 +788,7 @@ def edit_plan(request, plan_id):
     return render(request, 'billing/edit_plan.html', {'plan': plan})
 
 
+@role_required(['Admin', 'Editor'])
 @login_required
 def delete_plan(request, plan_id):
     plan = get_object_or_404(SubscriptionPlan, id=plan_id)
@@ -794,6 +804,7 @@ def staff_list(request):
     return render(request, 'billing/staff_and_admins.html', {'staff_members': staff_members})
 
 
+@role_required(['Admin'])
 @login_required
 def add_staff(request):
     if request.method == 'POST':
@@ -852,6 +863,7 @@ def add_staff(request):
     return render(request, 'billing/add_staff.html')
 
 
+@role_required(['Admin'])
 @login_required
 def edit_staff(request, pk):
     # Retrieve user role safely (fallback to Viewer to be safe)
@@ -955,6 +967,7 @@ def customer_list(request):
 
 
 @login_required
+@role_required(['Admin', 'Editor'])
 @permission_required('billing.add_customer', raise_exception=True)
 def add_customer(request):
     if request.method == 'POST':
@@ -990,6 +1003,7 @@ def add_customer(request):
     return render(request, 'billing/add_customer.html', context)
 
 
+@role_required(['Admin', 'Editor'])
 @login_required
 def edit_customer(request, customer_id):
     customer = get_object_or_404(Customer, id=customer_id)
@@ -1117,6 +1131,7 @@ def api_customer_mikrotik_status(request, customer_id):
 
 
 @login_required
+@role_required(['Admin', 'Editor'])
 @permission_required('billing.delete_customer', raise_exception=True)
 def delete_customer(request, customer_id):
     if request.method == 'POST':
@@ -1390,6 +1405,7 @@ def profile_view(request):
 def settings_view(request):
     return render(request, 'billing/settings.html')
 
+@role_required(['Admin'])
 @login_required
 def admin_panel_view(request):
     user_role = getattr(request.user, 'role', 'Viewer')
@@ -1859,6 +1875,7 @@ def create_account_type(request):
         form = AccountTypeForm()
     return render(request, 'billing/settings_form.html', {'form': form, 'title': 'Create Account Type', 'back_url': 'account_type_list'})
 
+@role_required(['Admin', 'Editor'])
 @login_required
 def edit_account_type(request, pk):
     obj = get_object_or_404(AccountType, pk=pk)
@@ -1872,6 +1889,7 @@ def edit_account_type(request, pk):
         form = AccountTypeForm(instance=obj)
     return render(request, 'billing/settings_form.html', {'form': form, 'title': 'Edit Account Type', 'back_url': 'account_type_list'})
 
+@role_required(['Admin', 'Editor'])
 @login_required
 def delete_account_type(request, pk):
     obj = get_object_or_404(AccountType, pk=pk)
@@ -1925,6 +1943,9 @@ def delete_barangay(request, pk):
         obj.delete()
         messages.success(request, "Barangay deleted successfully!")
     return redirect('barangay_list')
+
+@login_required
+@role_required(['Admin', 'Editor'])
 def send_semaphore_sms(phone, message):
     api_key = 'a1be64e85146a946d40aeb1677d37a48'
     url = 'https://api.semaphore.co/api/v4/messages'
@@ -2208,3 +2229,33 @@ def backup_database_view(request):
     
     messages.error(request, "Database file not found.")
     return redirect('settings')
+
+from django.contrib.auth import authenticate, login
+
+def unified_login_view(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    if request.session.get('customer_id'):
+        return redirect('customer_portal:portal_dashboard')
+
+    if request.method == 'POST':
+        u = request.POST.get('username')
+        p = request.POST.get('password')
+        
+        # 1. Try standard Admin/Staff login
+        user = authenticate(request, username=u, password=p)
+        if user is not None:
+            login(request, user)
+            next_url = request.POST.get('next') or request.GET.get('next')
+            return redirect(next_url if next_url else 'dashboard')
+            
+        # 2. Try Customer Login
+        try:
+            customer = Customer.objects.get(pppoe_username=u, pppoe_password=p)
+            request.session['customer_id'] = customer.id
+            next_url = request.POST.get('next') or request.GET.get('next')
+            return redirect(next_url if next_url else 'customer_portal:portal_dashboard')
+        except Customer.DoesNotExist:
+            messages.error(request, 'Invalid username or password.')
+            
+    return render(request, 'billing/login.html')

@@ -72,7 +72,7 @@
                 <option value="{{ device.device_name }}">{{ device.device_name }}</option>
                 {% endfor %}
             </select>
-            {% if perms.billing.add_customer %}
+            {% if request.user.role == 'Admin' or request.user.role == 'Editor' %}
             <a href="{% url 'add_customer' %}" class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold">
                 <i class="fa-solid fa-user-plus me-2"></i> Add New Customer
             </a>
@@ -150,6 +150,7 @@
                                 <a href="{% url 'view_customer' customer.id %}" class="btn btn-sm btn-outline-info" title="View Details">
                                     <i class="fas fa-eye"></i>
                                 </a>
+                                {% if request.user.role == 'Admin' or request.user.role == 'Editor' %}
                                 <a href="{% url 'edit_customer' customer.id %}" class="btn btn-sm btn-outline-secondary" title="Edit Customer">
                                     <i class="fas fa-edit"></i>
                                 </a>
@@ -159,6 +160,7 @@
                                         <i class="fas fa-trash-alt"></i>
                                     </button>
                                 </form>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>

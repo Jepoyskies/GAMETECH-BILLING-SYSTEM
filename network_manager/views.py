@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from billing.decorators import role_required
 from django.contrib import messages
 from django.http import JsonResponse
 from .models import MikrotikDevice
@@ -13,6 +14,7 @@ def device_list(request):
     return render(request, 'network_manager/device_list.html', {'devices': devices})
 
 
+@role_required(['Admin'])
 @login_required
 def add_device(request):
     if request.method == 'POST':
@@ -38,6 +40,7 @@ def add_device(request):
     return render(request, 'network_manager/add_device.html')
 
 
+@role_required(['Admin'])
 @login_required
 def edit_device(request, device_id):
     device = get_object_or_404(MikrotikDevice, id=device_id)
@@ -61,6 +64,7 @@ def edit_device(request, device_id):
     return render(request, 'network_manager/edit_device.html', {'device': device})
 
 
+@role_required(['Admin'])
 @login_required
 def delete_device(request, device_id):
     if request.method == 'POST':
@@ -92,6 +96,7 @@ def test_device_connection(request, device_id):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': f'Connection failed: {e}'})
 
+@role_required(['Admin', 'Editor'])
 @login_required
 def sync_device_users(request, device_id):
     if request.method == 'POST':
@@ -178,6 +183,7 @@ def nap_list_view(request):
     return render(request, 'network_manager/nap_list.html', {'naps': naps})
 
 
+@role_required(['Admin', 'Editor'])
 @login_required
 def add_nap_view(request):
     from .models import NapBox
@@ -197,6 +203,7 @@ def add_nap_view(request):
     return render(request, 'network_manager/nap_form.html')
 
 
+@role_required(['Admin', 'Editor'])
 @login_required
 def edit_nap_view(request, nap_id):
     from .models import NapBox
@@ -216,6 +223,7 @@ def edit_nap_view(request, nap_id):
     return render(request, 'network_manager/nap_form.html', {'nap': nap})
 
 
+@role_required(['Admin', 'Editor'])
 @login_required
 def delete_nap_view(request, nap_id):
     from .models import NapBox
@@ -233,6 +241,7 @@ def fbt_plc_calculator_view(request):
     """
     return render(request, 'network_manager/fbt_plc_calculator.html')
 
+@role_required(['Admin', 'Editor'])
 @login_required
 def sync_manager(request, device_id):
     from billing.models import Customer
@@ -288,6 +297,7 @@ def sync_manager(request, device_id):
     
     return render(request, 'network_manager/sync_manager.html', context)
 
+@role_required(['Admin', 'Editor'])
 @login_required
 def sync_push_user(request, device_id):
     if request.method == 'POST':
@@ -323,6 +333,7 @@ def sync_push_user(request, device_id):
             
     return redirect('sync_manager', device_id=device_id)
 
+@role_required(['Admin', 'Editor'])
 @login_required
 def sync_delete_user(request, device_id):
     if request.method == 'POST':
@@ -347,6 +358,7 @@ def sync_delete_user(request, device_id):
             
     return redirect('sync_manager', device_id=device_id)
 
+@role_required(['Admin', 'Editor'])
 @login_required
 def sync_bulk_action(request, device_id):
     if request.method == 'POST':
@@ -425,4 +437,4 @@ def sync_bulk_action(request, device_id):
         else:
             messages.error(request, "Invalid bulk action.")
 
-    return redirect('sync_manager', device_id=device_id)
+    return redirect('sync_manager', device_id=device_id)

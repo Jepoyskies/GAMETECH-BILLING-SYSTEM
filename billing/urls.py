@@ -44,7 +44,7 @@ urlpatterns = [
 
 
     # Auth route
-    path('login/', auth_views.LoginView.as_view(template_name='billing/login.html'), name='login'),
+    path('login/', views.unified_login_view, name='login'),
     path('agents/', views.agent_list, name='agent_list'),
     path('agents/add/', views.add_agent, name='add_agent'),
     path('agents/edit/<int:agent_id>/', views.edit_agent, name='edit_agent'),
