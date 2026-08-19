@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'billing',
     'network_manager',
+    'customer_portal',
 ]
 
 MIDDLEWARE = [

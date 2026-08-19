@@ -19,7 +19,60 @@
                     </div>
                     Mikrotik Active Users
                 </h2>
-            <!-- ASYNC DATA CONTAINER -->
+                <div class="d-inline-flex gap-2 align-items-center">
+                    <button type="button" class="btn btn-warning rounded-pill fw-bold px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#networkHealthModal">
+                        <i class="fas fa-heartbeat me-1"></i> Update Network Health
+                    </button>
+                    <select id="routerFilter" class="form-select rounded-pill px-3 shadow-sm w-auto d-inline-block border-primary text-primary fw-bold">
+                        <option value="">All Routers</option>
+                        {% for device in devices %}
+                        <option value="{{ device.device_name }}">{{ device.device_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            {% if active_device_alerts or active_barangay_alerts %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm rounded-4" style="border-top: 4px solid #f59e0b !important;">
+                        <div class="card-header bg-white border-0 pt-4 pb-0 px-4">
+                            <h5 class="fw-bold mb-0 text-warning"><i class="fas fa-exclamation-triangle me-2"></i>Active Network Alerts</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            {% for alert in active_device_alerts %}
+                            <div class="d-flex justify-content-between align-items-center mb-3 p-3 rounded" style="background-color: #f8f9fa; border-left: 3px solid #dc3545;">
+                                <div>
+                                    <h6 class="mb-1 fw-bold"><i class="fas fa-server me-2 text-secondary"></i>{{ alert.device_name }} (Router)
+                                        <span class="badge bg-danger ms-2">{{ alert.health_status }}</span>
+                                    </h6>
+                                    <p class="mb-0 text-muted small">{{ alert.health_reason }}</p>
+                                </div>
+                                <div>
+                                    <a href="{% url 'resolve_network_health' 'router' alert.id %}" class="btn btn-sm btn-outline-success rounded-pill fw-bold"><i class="fas fa-check me-1"></i>Resolve</a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            
+                            {% for alert in active_barangay_alerts %}
+                            <div class="d-flex justify-content-between align-items-center mb-3 p-3 rounded" style="background-color: #f8f9fa; border-left: 3px solid #fd7e14;">
+                                <div>
+                                    <h6 class="mb-1 fw-bold"><i class="fas fa-map-marker-alt me-2 text-secondary"></i>{{ alert.name }} (Barangay)
+                                        <span class="badge bg-warning text-dark ms-2">{{ alert.health_status }}</span>
+                                    </h6>
+                                    <p class="mb-0 text-muted small">{{ alert.health_reason }}</p>
+                                </div>
+                                <div>
+                                    <a href="{% url 'resolve_network_health' 'barangay' alert.id %}" class="btn btn-sm btn-outline-success rounded-pill fw-bold"><i class="fas fa-check me-1"></i>Resolve</a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
             <div id="async-data-container">
                 <div class="d-flex flex-column align-items-center justify-content-center py-5">
                     <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
@@ -33,6 +86,78 @@
         </div>
     </div>
 </div>
+
+<!-- Network Health Modal -->
+<div class="modal fade" id="networkHealthModal" tabindex="-1" aria-labelledby="networkHealthModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-warning text-dark border-0">
+        <h5 class="modal-title fw-bold" id="networkHealthModalLabel"><i class="fas fa-heartbeat"></i> Update Network Health</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="{% url 'update_network_health' %}" method="POST">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+            <div class="mb-3">
+                <label class="form-label fw-bold">Scope</label>
+                <div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="scope" id="scopeRouter" value="router" checked onchange="toggleScope()">
+                        <label class="form-check-label" for="scopeRouter">Entire Router</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="scope" id="scopeBarangay" value="barangay" onchange="toggleScope()">
+                        <label class="form-check-label" for="scopeBarangay">Specific Barangay</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3" id="routerSelectDiv">
+                <label for="router_id" class="form-label fw-bold">Select Router</label>
+                <select class="form-select" id="router_id" name="router_id">
+                    {% for device in devices %}
+                    <option value="{{ device.id }}">{{ device.device_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3 d-none" id="barangaySelectDiv">
+                <label for="barangay_id" class="form-label fw-bold">Select Barangay</label>
+                <select class="form-select" id="barangay_id" name="barangay_id">
+                    {% for barangay in barangays %}
+                    <option value="{{ barangay.id }}">{{ barangay.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="health_status" class="form-label fw-bold">Health Status</label>
+                <select class="form-select" id="health_status" name="health_status" required>
+                    <option value="Excellent">Excellent - Normal Operations</option>
+                    <option value="Moderate">Moderate - Slow Connections</option>
+                    <option value="Poor">Poor - Frequent Disconnects</option>
+                    <option value="Outage">Outage - Total Loss of Service</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="health_reason" class="form-label fw-bold">Reason / Details</label>
+                <textarea class="form-control" id="health_reason" name="health_reason" rows="3" placeholder="E.g., Fiber cut in main highway..."></textarea>
+            </div>
+
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="send_sms" name="send_sms" value="1">
+                <label class="form-check-label fw-bold text-primary" for="send_sms">Broadcast SMS to affected customers</label>
+            </div>
+        </div>
+        <div class="modal-footer bg-light border-0">
+          <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-warning rounded-pill px-4 fw-bold">Update Health</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -40,6 +165,17 @@
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 <script>
+    function toggleScope() {
+        const isRouter = document.getElementById('scopeRouter').checked;
+        if (isRouter) {
+            document.getElementById('routerSelectDiv').classList.remove('d-none');
+            document.getElementById('barangaySelectDiv').classList.add('d-none');
+        } else {
+            document.getElementById('routerSelectDiv').classList.add('d-none');
+            document.getElementById('barangaySelectDiv').classList.remove('d-none');
+        }
+    }
+
     document.addEventListener("DOMContentLoaded", function() {
         const container = document.getElementById('async-data-container');
         
@@ -54,12 +190,16 @@
                 container.innerHTML = html;
                 
                 // Initialize DataTables AFTER the table is injected
-                $('#activeUsersTable').DataTable({
+                var table = $('#activeUsersTable').DataTable({
                     "order": [[ 0, "asc" ]], // Sort by username by default
                     "pageLength": 10,
                     "language": {
                         "search": "Quick Search:"
                     }
+                });
+
+                $('#routerFilter').on('change', function () {
+                    table.column(2).search(this.value).draw();
                 });
             })
             .catch(error => {

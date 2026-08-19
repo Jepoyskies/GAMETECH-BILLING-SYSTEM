@@ -29,6 +29,8 @@ urlpatterns = [
          name='mikrotik_active_users_data_api'),
     
     # Live Monitoring routes
+    path('network/health/update/', views.update_network_health, name='update_network_health'),
+    path('network/health/resolve/<str:scope>/<int:item_id>/', views.resolve_network_health, name='resolve_network_health'),
     path('live-monitoring/', views.live_monitoring_view, name='live_monitoring'),
     path('api/live-monitoring/', views.api_live_monitoring_data,
          name='api_live_monitoring'),

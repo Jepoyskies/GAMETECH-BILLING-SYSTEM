@@ -65,6 +65,8 @@ class SystemAdmin(models.Model):
 
 class Barangay(models.Model):
     name = models.CharField(max_length=100)
+    health_status = models.CharField(max_length=20, choices=[('Excellent', 'Excellent'), ('Moderate', 'Moderate'), ('Poor', 'Poor'), ('Outage', 'Outage')], default='Excellent')
+    health_reason = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return self.name
@@ -105,6 +107,8 @@ class Customer(models.Model):
     address = models.TextField(blank=True, null=True)
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default='active')
+    health_status = models.CharField(max_length=20, choices=[('Excellent', 'Excellent'), ('Moderate', 'Moderate'), ('Poor', 'Poor'), ('Outage', 'Outage')], default='Excellent')
+    health_reason = models.TextField(blank=True, null=True)
 
     # --- Location (For the Map) ---
     latitude = models.DecimalField(

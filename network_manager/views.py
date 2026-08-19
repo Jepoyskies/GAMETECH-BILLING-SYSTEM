@@ -232,3 +232,118 @@ def fbt_plc_calculator_view(request):
     No database context required.
     """
     return render(request, 'network_manager/fbt_plc_calculator.html')
+
+@login_required
+def sync_manager(request, device_id):
+    from billing.models import Customer
+    from .sync_services import MikrotikAPI as MikrotikSyncAPI
+    
+    device = get_object_or_404(MikrotikDevice, id=device_id)
+    
+    # 1. Fetch Django Customers for this device
+    django_customers = Customer.objects.filter(mikrotik_device=device).exclude(pppoe_username__isnull=True).exclude(pppoe_username='')
+    django_usernames = set(django_customers.values_list('pppoe_username', flat=True))
+    
+    # 2. Fetch Router Users using the Sync API
+    api = MikrotikSyncAPI(
+        ip_address=device.ip_address,
+        username=device.api_username,
+        password=device.api_password,
+        port=device.api_port
+    )
+    
+    result = api.get_all_pppoe_users()
+    
+    orphans = []
+    missing_on_router = []
+    synced = []
+    
+    if result.get('success'):
+        router_users = result.get('data', [])
+        router_usernames = set(u.get('name') for u in router_users if u.get('name'))
+        
+        # Categorize
+        for ru in router_users:
+            name = ru.get('name')
+            if not name:
+                continue
+            if name in django_usernames:
+                synced.append(ru)
+            else:
+                orphans.append(ru)
+                
+        for dc in django_customers:
+            if dc.pppoe_username not in router_usernames:
+                missing_on_router.append(dc)
+    else:
+        messages.error(request, f"Failed to connect to router: {result.get('error')}")
+        
+    context = {
+        'device': device,
+        'orphans': orphans,
+        'missing_on_router': missing_on_router,
+        'synced': synced,
+        'api_success': result.get('success', False)
+    }
+    
+    return render(request, 'network_manager/sync_manager.html', context)
+
+@login_required
+def sync_push_user(request, device_id):
+    if request.method == 'POST':
+        pppoe_username = request.POST.get('pppoe_username')
+        device = get_object_or_404(MikrotikDevice, id=device_id)
+        
+        from billing.models import Customer
+        from .sync_services import MikrotikAPI as MikrotikSyncAPI
+        
+        customer = get_object_or_404(Customer, pppoe_username=pppoe_username, mikrotik_device=device)
+        
+        api = MikrotikSyncAPI(
+            ip_address=device.ip_address,
+            username=device.api_username,
+            password=device.api_password,
+            port=device.api_port
+        )
+        
+        profile = customer.plan.name if customer.plan else "default"
+        comment = customer.full_name
+        
+        result = api.add_pppoe_user(
+            name=customer.pppoe_username,
+            password=customer.pppoe_password,
+            profile=profile,
+            comment=comment
+        )
+        
+        if result.get('success'):
+            messages.success(request, result.get('message'))
+        else:
+            messages.error(request, f"Failed to push user: {result.get('error')}")
+            
+    return redirect('sync_manager', device_id=device_id)
+
+@login_required
+def sync_delete_user(request, device_id):
+    if request.method == 'POST':
+        pppoe_username = request.POST.get('pppoe_username')
+        device = get_object_or_404(MikrotikDevice, id=device_id)
+        
+        from .sync_services import MikrotikAPI as MikrotikSyncAPI
+        
+        api = MikrotikSyncAPI(
+            ip_address=device.ip_address,
+            username=device.api_username,
+            password=device.api_password,
+            port=device.api_port
+        )
+        
+        result = api.delete_pppoe_user(name=pppoe_username)
+        
+        if result.get('success'):
+            messages.success(request, result.get('message'))
+        else:
+            messages.error(request, f"Failed to delete user: {result.get('error')}")
+            
+    return redirect('sync_manager', device_id=device_id)
+

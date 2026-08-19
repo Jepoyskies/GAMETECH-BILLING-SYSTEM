@@ -65,11 +65,19 @@
             </div>
             Customers List
         </h2>
-        {% if perms.billing.add_customer %}
-        <a href="{% url 'add_customer' %}" class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold">
-            <i class="fa-solid fa-user-plus me-2"></i> Add New Customer
-        </a>
-        {% endif %}
+        <div class="d-inline-flex gap-2 align-items-center">
+            <select id="routerFilter" class="form-select rounded-pill px-3 shadow-sm w-auto d-inline-block border-primary text-primary fw-bold">
+                <option value="">All Routers</option>
+                {% for device in devices %}
+                <option value="{{ device.device_name }}">{{ device.device_name }}</option>
+                {% endfor %}
+            </select>
+            {% if perms.billing.add_customer %}
+            <a href="{% url 'add_customer' %}" class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold">
+                <i class="fa-solid fa-user-plus me-2"></i> Add New Customer
+            </a>
+            {% endif %}
+        </div>
     </div>
 
     <div class="dashboard-card">
@@ -171,13 +179,17 @@
 
 <script>
     $(document).ready(function () {
-        $('#customerTable').DataTable({
+        var table = $('#customerTable').DataTable({
             "lengthMenu": [10, 25, 50, 100],
             "pageLength": 10,
             "order": [[0, "asc"]], // Sort by Full Name ascending
             "columnDefs": [
                 { "orderable": false, "targets": 8 } // Disable sorting on Actions column
             ]
+        });
+
+        $('#routerFilter').on('change', function () {
+            table.column(6).search(this.value).draw();
         });
     });
 </script>
