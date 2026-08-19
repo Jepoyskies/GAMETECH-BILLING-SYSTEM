@@ -639,6 +639,7 @@ def staff_list(request):
     return render(request, 'billing/staff_and_admins.html', {'staff_members': staff_members})
 
 
+@login_required
 def add_staff(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -649,34 +650,54 @@ def add_staff(request):
         raw_password = request.POST.get('password')
 
         # Check if username or email already exists to prevent errors
-        if SystemAdmin.objects.filter(username=username).exists():
+        if User.objects.filter(username=username).exists() or SystemAdmin.objects.filter(username=username).exists():
             messages.error(request, "That username is already taken.")
             return redirect('add_staff')
 
-        if SystemAdmin.objects.filter(email=email).exists():
+        if User.objects.filter(email=email).exists() or SystemAdmin.objects.filter(email=email).exists():
             messages.error(request, "That email is already registered.")
             return redirect('add_staff')
 
-        # Securely hash the password
-        hashed_password = make_password(raw_password)
+        try:
+            with transaction.atomic():
+                # 1. Create the Django User (handles password hashing securely)
+                user = User(
+                    username=username,
+                    email=email,
+                    is_staff=True,  # Allows login to /admin/
+                    is_active=(status == 'Active')
+                )
+                if role == 'Admin':
+                    user.is_superuser = True
+                user.set_password(raw_password)
+                user.save() # This also triggers the signal to create EmployeeProfile
 
-        # Create the new staff user
-        SystemAdmin.objects.create(
-            username=username,
-            full_name=full_name,
-            email=email,
-            role=role,
-            status=status,
-            password_hash=hashed_password
-        )
+                # 2. Assign User to the correct RBAC Group
+                from django.contrib.auth.models import Group
+                group = Group.objects.filter(name=role).first()
+                if group:
+                    user.groups.add(group)
 
-        messages.success(
-            request, f"Staff member '{full_name}' added successfully!")
-        return redirect('staff_list')
+                # 3. Create the legacy SystemAdmin record for UI compatibility
+                SystemAdmin.objects.create(
+                    username=username,
+                    full_name=full_name,
+                    email=email,
+                    role=role,
+                    status=status,
+                    password_hash=user.password
+                )
+
+            messages.success(request, f"Staff member '{full_name}' added successfully!")
+            return redirect('staff_list')
+        except Exception as e:
+            messages.error(request, f"Error creating staff member: {str(e)}")
+            return redirect('add_staff')
 
     return render(request, 'billing/add_staff.html')
 
 
+@login_required
 def edit_staff(request, pk):
     # Retrieve user role safely (fallback to Viewer to be safe)
     user_role = getattr(request.user, 'role', 'Viewer')
@@ -696,29 +717,72 @@ def edit_staff(request, pk):
         raw_password = request.POST.get('password')
 
         # Check if username or email already exists to prevent errors
-        if SystemAdmin.objects.filter(username=username).exclude(pk=pk).exists():
+        if User.objects.filter(username=username).exclude(username=staff.username).exists() or \
+           SystemAdmin.objects.filter(username=username).exclude(pk=pk).exists():
             messages.error(request, "That username is already taken.")
             return redirect('edit_staff', pk=pk)
 
-        if SystemAdmin.objects.filter(email=email).exclude(pk=pk).exists():
+        if User.objects.filter(email=email).exclude(email=staff.email).exists() or \
+           SystemAdmin.objects.filter(email=email).exclude(pk=pk).exists():
             messages.error(request, "That email is already registered.")
             return redirect('edit_staff', pk=pk)
 
-        # Update staff user
-        staff.username = username
-        staff.full_name = full_name
-        staff.email = email
-        staff.role = role
-        staff.status = status
+        try:
+            with transaction.atomic():
+                # Update or Create underlying Django User
+                user = User.objects.filter(username=staff.username).first()
+                if not user:
+                    user = User(
+                        username=username,
+                        email=email,
+                        is_staff=True,
+                        is_active=(status == 'Active'),
+                        is_superuser=(role == 'Admin')
+                    )
+                    if raw_password:
+                        user.set_password(raw_password)
+                    else:
+                        user.set_unusable_password()
+                    user.save()
+                else:
+                    user.username = username
+                    user.email = email
+                    user.is_active = (status == 'Active')
+                    user.is_superuser = (role == 'Admin')
+                    
+                    if user_role == 'Admin' and raw_password:
+                        user.set_password(raw_password)
+                    
+                    user.save()
+                    
+                # Update Group assignment
+                user.groups.clear()
+                from django.contrib.auth.models import Group
+                group = Group.objects.filter(name=role).first()
+                if group:
+                    user.groups.add(group)
 
-        # Admins only: Override password if one is provided
-        if user_role == 'Admin' and raw_password:
-            staff.password_hash = make_password(raw_password)
+                # Update legacy staff user
+                staff.username = username
+                staff.full_name = full_name
+                staff.email = email
+                staff.role = role
+                staff.status = status
 
-        staff.save()
+                # Admins only: Override password if one is provided (for legacy compatibility)
+                if user_role == 'Admin' and raw_password:
+                    if user:
+                        staff.password_hash = user.password
+                    else:
+                        staff.password_hash = make_password(raw_password)
 
-        messages.success(request, f"Staff member '{full_name}' updated successfully!")
-        return redirect('staff_list')
+                staff.save()
+
+            messages.success(request, f"Staff member '{full_name}' updated successfully!")
+            return redirect('staff_list')
+        except Exception as e:
+            messages.error(request, f"Error updating staff member: {str(e)}")
+            return redirect('edit_staff', pk=pk)
 
     return render(request, 'billing/edit_staff.html', {'staff': staff})
 

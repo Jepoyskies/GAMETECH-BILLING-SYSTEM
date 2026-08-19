@@ -123,3 +123,23 @@ def delete_plan_on_mikrotik(sender, instance, **kwargs):
             api.delete_plan_from_mikrotik(plan_name=instance.name)
         except Exception as e:
             logger.error(f"Failed to delete plan {instance.name} from {device.device_name}: {e}")
+
+from django.contrib.auth.models import User
+from .models import EmployeeProfile
+
+@receiver(post_save, sender=User)
+def create_employee_profile(sender, instance, created, **kwargs):
+    """
+    Automatically create an EmployeeProfile when a new User is created.
+    """
+    if created:
+        EmployeeProfile.objects.create(user=instance)
+
+@receiver(post_save, sender=User)
+def save_employee_profile(sender, instance, **kwargs):
+    """
+    Save the EmployeeProfile when the User is saved.
+    """
+    if hasattr(instance, 'employee_profile'):
+        instance.employee_profile.save()
+

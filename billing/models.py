@@ -1,6 +1,7 @@
 # pyrefly: ignore [missing-import]
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth.models import User
 from network_manager.models import MikrotikDevice
 
 
@@ -246,3 +247,14 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"{self.action_type} on {self.customer.full_name} at {self.timestamp}"
+
+
+class EmployeeProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='employee_profile')
+    phone_number = models.CharField(max_length=50, blank=True, null=True)
+    branch_location = models.CharField(max_length=255, blank=True, null=True)
+    employee_id = models.CharField(max_length=100, blank=True, null=True)
+    
+    def __str__(self):
+        return f"{self.user.username} Profile"
+
