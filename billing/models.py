@@ -37,6 +37,9 @@ class SubscriptionPlan(models.Model):
     def __str__(self):
         return f"{self.name} (₱{self.price})"
 
+    class Meta:
+        ordering = ['price']
+
 
 class SystemAdmin(models.Model):
     ROLE_CHOICES = (

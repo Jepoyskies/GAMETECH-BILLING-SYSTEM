@@ -99,6 +99,9 @@
                         <th>Plan</th>
                         <th>New Expiry</th>
                         <th>Adjusted By</th>
+                        {% if request.user.role == 'Admin' %}
+                        <th>Actions</th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody>
@@ -112,10 +115,15 @@
                         <td>{{ p.plan_name }}</td>
                         <td>{{ p.expires_at|date:"M d, Y" }}</td>
                         <td>{{ p.adjusted_by }}</td>
+                        {% if request.user.role == 'Admin' %}
+                        <td>
+                            <a href="{% url 'edit_payment_log' p.id %}" class="btn btn-sm btn-outline-primary" title="Edit Payment Log"><i class="fas fa-edit"></i></a>
+                        </td>
+                        {% endif %}
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="8" class="text-center py-4 text-muted">No payments found.</td>
+                        <td colspan="9" class="text-center py-4 text-muted">No payments found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

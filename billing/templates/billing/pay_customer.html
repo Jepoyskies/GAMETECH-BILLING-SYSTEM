@@ -1,185 +1,429 @@
 {% extends 'billing/base.html' %}
+{% load static %}
+
+{% block title %}Pay for {{ customer.username|default:customer.full_name }}{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <div class="dashboard-card mx-auto" style="max-width: 500px;">
-        <div class="card-header bg-success text-white fw-bold">
-            💵 Renew Subscription: {{ customer.pppoe_username }}
+<style>
+    .pay-container { max-width: 1000px; margin: 2rem auto; }
+    
+    /* Modern Card styling matching dashboard */
+    .dashboard-card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 1.5rem; margin-bottom: 1.5rem; }
+    
+    .section-title { font-size: 1.1rem; font-weight: 700; color: var(--text-color); margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
+    
+    /* Info List */
+    .info-list { list-style: none; padding: 0; margin: 0; }
+    .info-list li { display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid rgba(148, 163, 184, 0.1); }
+    .info-list li:last-child { border-bottom: none; }
+    .info-label { color: #64748b; font-size: 0.9rem; font-weight: 500; }
+    .info-value { color: var(--text-color); font-size: 0.95rem; font-weight: 600; text-align: right; }
+    
+    /* Quick Pay Grid */
+    .quick-pay-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.5rem; }
+    .quick-btn {
+        background: var(--bg-color);
+        border: 2px solid var(--border-color);
+        color: var(--text-color);
+        border-radius: 8px;
+        padding: 1rem 0.5rem;
+        text-align: center;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .quick-btn:hover { border-color: var(--primary-color); background: rgba(56, 189, 248, 0.05); }
+    .quick-btn.active { border-color: #10b981; background: rgba(16, 185, 129, 0.1); color: #10b981; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
+    .quick-btn .months { font-size: 1.1rem; display: block; margin-bottom: 0.2rem; }
+    .quick-btn .price { font-size: 0.85rem; opacity: 0.8; }
+    
+    /* Form Elements */
+    label { font-weight: 600; color: var(--text-color); margin-bottom: 0.5rem; display: block; font-size: 0.9rem; }
+    .form-control, .form-select { 
+        width: 100%; 
+        padding: 0.75rem; 
+        margin-bottom: 1.2rem; 
+        border: 1px solid var(--border-color); 
+        border-radius: 8px; 
+        background: var(--bg-color); 
+        color: var(--text-color); 
+        font-size: 0.95rem; 
+        transition: border-color 0.2s; 
+    }
+    .form-control:focus, .form-select:focus { border-color: var(--primary-color); outline: none; box-shadow: none; }
+    
+    /* Action Buttons */
+    .action-btn { width: 100%; padding: 1rem; border: none; border-radius: 8px; font-size: 1.05rem; font-weight: 600; text-align: center; display: block; text-decoration: none; margin-top: 10px; transition: transform 0.1s, opacity 0.2s; }
+    .action-btn:hover { opacity: 0.9; transform: translateY(-2px); }
+    .btn-pay { background: linear-gradient(135deg, #34d399, #10b981); color: white; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3); }
+    .btn-cancel { background: #64748b; color: white; }
+    
+    /* Expiry Preview Box */
+    .expiry-preview {
+        background: rgba(16, 185, 129, 0.1);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        border-left: 4px solid #10b981;
+        padding: 1.25rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .expiry-preview .label { color: #10b981; font-weight: 600; font-size: 0.9rem; margin-bottom: 0.2rem; }
+    .expiry-preview .date { color: var(--text-color); font-size: 1.2rem; font-weight: 700; }
+    
+    /* Dark mode specifics */
+    .dark-mode .dashboard-card { background: #1e293b; border-color: #334155; }
+    .dark-mode .form-control, .dark-mode .form-select { background: rgba(15,23,42,0.5); border-color: #334155; color: #e2e8f0; }
+    .dark-mode .form-control:focus, .dark-mode .form-select:focus { border-color: #38bdf8; }
+    .dark-mode .quick-btn { background: rgba(15,23,42,0.5); border-color: #334155; }
+</style>
+
+<div class="container-fluid py-4">
+    <div class="pay-container">
+        
+        <div class="d-flex align-items-center mb-4">
+            <h2 class="fw-bold mb-0" style="color: var(--text-color);"><i class="fas fa-credit-card me-2 text-success"></i> Renew Subscription</h2>
         </div>
-        <div class="card-body">
-            <form method="post" autocomplete="off" id="renew-form">
-                {% csrf_token %}
-                <input type="hidden" name="next_url" value="{{ next_url }}">
 
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Mikrotik Device</label>
-                    <input type="text" class="form-control bg-light"
-                        value="{{ customer.mikrotik_device.name|default:'N/A' }}" readonly>
+        <div class="row g-4">
+            <!-- Left Column: Customer Details -->
+            <div class="col-lg-5">
+                <div class="dashboard-card h-100">
+                    <h3 class="section-title"><i class="fas fa-user text-primary me-2"></i> Customer Details</h3>
+                    <ul class="info-list">
+                        <li>
+                            <span class="info-label">Name / Username</span>
+                            <span class="info-value">{{ customer.username|default:customer.full_name }}</span>
+                        </li>
+                        <li>
+                            <span class="info-label">Service Plan</span>
+                            <span class="info-value">
+                                <select id="plan-dropdown" class="form-select form-select-sm border-0 bg-light" style="width:120px; display:inline-block; font-weight:bold;">
+                                    {% for plan in plans %}
+                                        <option value="{{ plan.id }}" data-price="{{ plan.price }}" {% if customer.plan_id == plan.id %}selected{% endif %}>{{ plan.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </span>
+                        </li>
+                        <li>
+                            <span class="info-label">Monthly Price</span>
+                            <span class="info-value text-success" id="monthly-price-display"><strong>₱{{ customer.plan.price|default:0.00 }}</strong></span>
+                        </li>
+                        <li>
+                            <span class="info-label">Current Expiry</span>
+                            <span class="info-value text-warning">{{ customer.expires_at|date:'M d, Y h:i A'|default:'None' }}</span>
+                        </li>
+                        <li>
+                            <span class="info-label">Current Status</span>
+                            <span class="info-value">
+                                {% if customer.status == 'active' %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-danger">{{ customer.status|title }}</span>
+                                {% endif %}
+                            </span>
+                        </li>
+                        <li>
+                            <span class="info-label">Mikrotik Router</span>
+                            <span class="info-value">{{ customer.mikrotik_device.device_name|default:'N/A' }}</span>
+                        </li>
+                    </ul>
                 </div>
+            </div>
 
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Current Expiry (UTC, 24h)</label>
-                    <input type="text" class="form-control bg-light" value="{{ current_expiry_display }}" readonly>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Start Date (UTC Time)</label>
-                    <input type="datetime-local" id="start_date" name="start_date" class="form-control"
-                        value="{{ start_default_str }}" step="1" required>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-bold">End Date (UTC Time)</label>
-                    <input type="datetime-local" id="end_date" name="end_date" class="form-control"
-                        value="{{ end_default_str }}" step="1" required>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-bold text-primary">Days Adjusted</label>
-                    <input type="number" id="days" name="days" class="form-control bg-light" readonly>
-                </div>
-
-                <div class="alert alert-info py-2">
-                    <strong>New Expiry Date:</strong> <span id="due-date" class="text-success fw-bold"></span>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Amount (₱)</label>
-                    <input type="text" id="amount" name="amount" class="form-control fw-bold text-success fs-5"
-                        readonly>
-
-                    <div class="mt-2 d-flex align-items-center gap-2">
-                        <span>Is this amount correct?</span>
-                        <div class="form-check form-check-inline mb-0">
-                            <input class="form-check-input" type="radio" name="amount_correct" id="amount_yes"
-                                value="yes" checked>
-                            <label class="form-check-label" for="amount_yes">Yes</label>
+            <!-- Right Column: Payment Form -->
+            <div class="col-lg-7">
+                <div class="dashboard-card">
+                    <form action="{% url 'pay_customer' customer.id %}" method="post" autocomplete="off" id="renew-form">
+                        {% csrf_token %}
+                        <input type='hidden' name='next_url' value='{{ next_url }}'>
+                        <input type="hidden" name="new_plan_id" id="hidden_new_plan_id" value="{{ customer.plan_id|default:'' }}">
+                        
+                        <div class="mb-4">
+                            <label for="start_date">Calculate Expiry From (Base Date)</label>
+                            <input type="datetime-local" id="start_date" name="start_date" class="form-control" required>
+                            <small style="color: #64748b; margin-top: -0.8rem; display: block; margin-bottom: 1rem;">Change this if you are recording a payment that was received in the past.</small>
                         </div>
-                        <div class="form-check form-check-inline mb-0">
-                            <input class="form-check-input" type="radio" name="amount_correct" id="amount_no"
-                                value="no">
-                            <label class="form-check-label" for="amount_no">No</label>
+                        
+                        <h3 class="section-title"><i class="fas fa-wallet text-success me-2"></i> Payment Options</h3>
+                        
+                        <!-- Quick Pay Buttons -->
+                        <div class="quick-pay-grid">
+                            <div class="quick-btn" data-days="3">
+                                <span class="months">3 Days</span>
+                                <span class="price">₱<span class="calc-price" data-days="3">0.00</span></span>
+                            </div>
+                            <div class="quick-btn" data-days="15">
+                                <span class="months">15 Days</span>
+                                <span class="price">₱<span class="calc-price" data-days="15">0.00</span></span>
+                            </div>
+                            <div class="quick-btn active" data-months="1">
+                                <span class="months">1 Month</span>
+                                <span class="price">₱<span class="calc-price" data-mult="1">0.00</span></span>
+                            </div>
+                            <div class="quick-btn" data-months="2">
+                                <span class="months">2 Months</span>
+                                <span class="price">₱<span class="calc-price" data-mult="2">0.00</span></span>
+                            </div>
+                            <div class="quick-btn" data-months="3">
+                                <span class="months">3 Months</span>
+                                <span class="price">₱<span class="calc-price" data-mult="3">0.00</span></span>
+                            </div>
+                            <div class="quick-btn" data-months="6">
+                                <span class="months">6 Months</span>
+                                <span class="price">₱<span class="calc-price" data-mult="6">0.00</span></span>
+                            </div>
+                            <div class="quick-btn" data-months="12">
+                                <span class="months">1 Year</span>
+                                <span class="price">₱<span class="calc-price" data-mult="12">0.00</span></span>
+                            </div>
+                            <div class="quick-btn" data-months="custom" id="btn-custom">
+                                <span class="months">Custom</span>
+                                <span class="price">Enter Amount</span>
+                            </div>
                         </div>
-                    </div>
 
-                    <div id="reason-block" class="mt-2" style="display:none;">
-                        <input type="text" id="reason" name="reason" class="form-control"
-                            placeholder="Specify reason for amount change...">
-                    </div>
+                        <!-- Amount Input -->
+                        <div class="mb-4">
+                            <label for="amount">Payment Amount (₱)</label>
+                            <input type="number" id="amount" name="amount" class="form-control" value="0.00" step="0.01" required>
+                        </div>
+                        
+                        <!-- Reason Input (For Custom Amounts) -->
+                        <div id="reason-block" style="display:none;">
+                            <label for="reason">Reason for Custom Amount</label>
+                            <input type="text" id="reason" name="reason" class="form-control" maxlength="255" placeholder="e.g. Prorated payment, half payment, etc.">
+                        </div>
+
+                        <!-- Real-time Expiry Preview -->
+                        <div class="expiry-preview">
+                            <div>
+                                <div class="label"><i class="fas fa-calendar-check me-1"></i> New Expiration Date</div>
+                                <div class="date" id="preview-date">Calculating...</div>
+                            </div>
+                            <div>
+                                <i class="fas fa-arrow-right text-success opacity-50 fs-3"></i>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="payment_method">Payment Method</label>
+                                <select name="payment_method" id="payment_method" class="form-select" required>
+                                    <option value="cash" selected>Cash (Office)</option>
+                                    <option value="bank_transfer">Bank Transfer</option>
+                                    <option value="e-wallet">E-Wallet (GCash/PayMaya)</option>
+                                    <option value="payment_center">Payment Center</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="reference_no">Reference No.</label>
+                                <input type="text" name="reference_no" id="reference_no" class="form-control" maxlength="64" placeholder="Optional for cash">
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-3 mt-4">
+                            <a href="{% url 'subscription_plans' %}" class="action-btn btn-cancel flex-grow-1"><i class="fas fa-times me-2"></i> Cancel</a>
+                            <button type="submit" class="action-btn btn-pay flex-grow-1"><i class="fas fa-check-circle me-2"></i> Confirm Payment</button>
+                        </div>
+                    </form>
                 </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Payment Method</label>
-                    <select name="payment_method" id="payment_method" class="form-select" required>
-                        <option value="">-- Select --</option>
-                        <option value="cash">Cash</option>
-                        <option value="bank_transfer">Bank Transfer</option>
-                        <option value="e-wallet">E-Wallet</option>
-                        <option value="payment_center">Payment Center</option>
-                    </select>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Reference No.</label>
-                    <input type="text" name="reference_no" id="reference_no" class="form-control">
-                </div>
-
-                <button type="submit" class="btn btn-success w-100 fw-bold mb-2">Pay & Renew</button>
-                <a href="{{ next_url }}" class="btn btn-outline-secondary w-100">Cancel</a>
-            </form>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Legacy JavaScript Logic Ported 1-to-1
-        function pad(n) { return n < 10 ? '0' + n : n; }
-        function formatUtcDatetime(dt) {
-            return dt.getUTCFullYear() + '-' + pad(dt.getUTCMonth() + 1) + '-' + pad(dt.getUTCDate()) + ' ' +
-                pad(dt.getUTCHours()) + ':' + pad(dt.getUTCMinutes()) + ':' + pad(dt.getUTCSeconds());
-        }
-        function formatInputDatetime(dt) {
-            return dt.getUTCFullYear() + '-' + pad(dt.getUTCMonth() + 1) + '-' + pad(dt.getUTCDate()) + 'T' +
-                pad(dt.getUTCHours()) + ':' + pad(dt.getUTCMinutes()) + ':' + pad(dt.getUTCSeconds());
-        }
+document.addEventListener('DOMContentLoaded', function() {
+    let monthlyPrice = parseFloat("{{ customer.plan.price|default:0 }}");
+    const currentExpiryStr = "{{ customer.expires_at|date:'c' }}";
+    
+    const planDropdown = document.getElementById('plan-dropdown');
+    const hiddenPlanInput = document.getElementById('hidden_new_plan_id');
+    const priceDisplay = document.getElementById('monthly-price-display');
 
-        function handleAmountRadioChange() {
-            var yesChecked = document.getElementById('amount_yes').checked;
-            var amountInput = document.getElementById('amount');
-            var reasonBlock = document.getElementById('reason-block');
-            var reasonInput = document.getElementById('reason');
-            if (yesChecked) {
-                amountInput.readOnly = true;
-                reasonBlock.style.display = 'none';
-                reasonInput.required = false;
-                reasonInput.value = '';
-            } else {
-                amountInput.readOnly = false;
-                amountInput.focus();
-                reasonBlock.style.display = 'block';
-                reasonInput.required = true;
+    if (planDropdown) {
+        planDropdown.addEventListener('change', function() {
+            const selectedOpt = this.options[this.selectedIndex];
+            hiddenPlanInput.value = selectedOpt.value;
+            monthlyPrice = parseFloat(selectedOpt.getAttribute('data-price')) || 0;
+            
+            // Update the text display
+            if (priceDisplay) {
+                priceDisplay.innerHTML = '<strong>₱' + monthlyPrice.toFixed(2) + '</strong>';
+            }
+            
+            // Recalculate grid buttons
+            updateGridMath();
+            
+            // Trigger recalculation on the active button
+            const activeBtn = document.querySelector('.quick-btn.active');
+            if (activeBtn) {
+                activeBtn.click(); // Re-trigger click to update amount input and preview
+            }
+        });
+    }
+
+    // Parse Initial Date (Default Start Date)
+    let initialDate = new Date();
+    if (currentExpiryStr && currentExpiryStr !== 'None' && currentExpiryStr !== '') {
+        let parsed = new Date(currentExpiryStr);
+        if (!isNaN(parsed.getTime())) {
+            // Only use the current expiry if it's in the future!
+            if (parsed > new Date()) {
+                initialDate = parsed;
             }
         }
-        document.getElementById('amount_yes').addEventListener('change', handleAmountRadioChange);
-        document.getElementById('amount_no').addEventListener('change', handleAmountRadioChange);
+    }
+    
+    // Set default value for Start Date input
+    const startInput = document.getElementById('start_date');
+    function formatInputDatetime(dt) {
+        const pad = (n) => n < 10 ? '0'+n : n;
+        return dt.getFullYear() + '-' + pad(dt.getMonth()+1) + '-' + pad(dt.getDate()) + 'T' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+    }
+    startInput.value = formatInputDatetime(initialDate);
+    
+    // Setup Quick Pay Grid Math
+    function updateGridMath() {
+        document.querySelectorAll('.calc-price').forEach(el => {
+            if (el.hasAttribute('data-mult')) {
+                let mult = parseInt(el.getAttribute('data-mult'));
+                el.textContent = '₱' + (monthlyPrice * mult).toFixed(2);
+            } else if (el.hasAttribute('data-days')) {
+                let days = parseInt(el.getAttribute('data-days'));
+                el.textContent = '₱' + ((monthlyPrice / 30) * days).toFixed(2);
+            }
+        });
+    }
+    updateGridMath();
 
-        const startInput = document.getElementById('start_date');
-        const endInput = document.getElementById('end_date');
-        const daysInput = document.getElementById('days');
-        const dueDateDiv = document.getElementById('due-date');
-        const amountInput = document.getElementById('amount');
-        const monthlyPrice = {{ monthly_price }};
+    const amountInput = document.getElementById('amount');
+    const reasonBlock = document.getElementById('reason-block');
+    const reasonInput = document.getElementById('reason');
+    const previewDateEl = document.getElementById('preview-date');
+    const quickBtns = document.querySelectorAll('.quick-btn');
 
-    function getDateFromInput(str) {
-        if (!str) return null;
-        return new Date(str.replace('T', ' ') + 'Z');
+    function safeAddOneMonth(dt) {
+        let year = dt.getFullYear();
+        let month = dt.getMonth(); // 0-indexed
+        let day = dt.getDate();
+        let hours = dt.getHours();
+        let mins = dt.getMinutes();
+        let secs = dt.getSeconds();
+        
+        month += 1;
+        if (month > 11) {
+            month = 0;
+            year += 1;
+        }
+        
+        // Get max days in the new month
+        let maxDays = new Date(year, month + 1, 0).getDate();
+        let safeDay = Math.min(day, maxDays);
+        
+        return new Date(year, month, safeDay, hours, mins, secs);
     }
 
-    function addOneMonthUTC(dt) {
-        let nextMonth = new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate(), dt.getUTCHours(), dt.getUTCMinutes(), dt.getUTCSeconds()));
-        if (nextMonth.getUTCDate() !== dt.getUTCDate()) nextMonth.setUTCDate(0);
-        return nextMonth;
+    function calculateExpiryPreview(paymentAmount) {
+        // Read dynamic start date
+        let baseDate = new Date(startInput.value);
+        if (isNaN(baseDate.getTime())) baseDate = new Date();
+
+        if (monthlyPrice <= 0 || paymentAmount <= 0) {
+            return baseDate;
+        }
+        
+        let fullMonths = Math.floor(paymentAmount / monthlyPrice);
+        let remainder = paymentAmount % monthlyPrice;
+        
+        let previewDate = new Date(baseDate.getTime());
+        for(let i=0; i<fullMonths; i++) {
+            previewDate = safeAddOneMonth(previewDate);
+        }
+        
+        if (remainder > 0.01) {
+            let pricePerDay = monthlyPrice / 30.0;
+            let daysGranted = remainder / pricePerDay;
+            previewDate = new Date(previewDate.getTime() + (daysGranted * 24 * 60 * 60 * 1000));
+        }
+        
+        return previewDate;
     }
 
-    function updateDueDaysAmount() {
-        let startDate = getDateFromInput(startInput.value);
-        let endDate = getDateFromInput(endInput.value);
-        if (!startDate || !endDate) return;
-
-        let diffMs = endDate - startDate;
-        let days = diffMs / (1000 * 60 * 60 * 24);
-        daysInput.value = days.toFixed(2);
-        dueDateDiv.textContent = formatUtcDatetime(endDate) + " (UTC)";
-
-        let exactlyOneMonth = addOneMonthUTC(startDate);
-        if (Math.abs(endDate.getTime() - exactlyOneMonth.getTime()) < 2000) {
-            amountInput.value = monthlyPrice.toFixed(2);
+    function updatePreview() {
+        let amt = parseFloat(amountInput.value) || 0;
+        let newDate = calculateExpiryPreview(amt);
+        
+        // Format nicely: e.g. "Oct 15, 2024, 10:30 AM"
+        const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+        previewDateEl.textContent = newDate.toLocaleDateString('en-US', options);
+        
+        // Handle Reason block
+        if (amt > 0 && amt % monthlyPrice !== 0) {
+            reasonBlock.style.display = 'block';
+            reasonInput.required = true;
         } else {
-            amountInput.value = ((monthlyPrice / 30) * days).toFixed(2);
+            reasonBlock.style.display = 'none';
+            reasonInput.required = false;
         }
     }
 
-    startInput.addEventListener('change', function () {
-        let sd = getDateFromInput(startInput.value);
-        if (sd) endInput.value = formatInputDatetime(addOneMonthUTC(sd));
-        updateDueDaysAmount();
+    // Quick Button Click Handling
+    quickBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            quickBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            if (btn.hasAttribute('data-months')) {
+                let months = btn.getAttribute('data-months');
+                if (months === 'custom') {
+                    amountInput.readOnly = false;
+                    amountInput.focus();
+                } else {
+                    amountInput.readOnly = true;
+                    amountInput.value = (monthlyPrice * parseInt(months)).toFixed(2);
+                    updatePreview();
+                }
+            } else if (btn.hasAttribute('data-days')) {
+                let days = parseInt(btn.getAttribute('data-days'));
+                amountInput.readOnly = true;
+                amountInput.value = ((monthlyPrice / 30) * days).toFixed(2);
+                updatePreview();
+            }
+        });
     });
-    endInput.addEventListener('change', updateDueDaysAmount);
 
-    var paymentMethodSelect = document.getElementById('payment_method');
-    var referenceNoInput = document.getElementById('reference_no');
-    paymentMethodSelect.addEventListener('change', function () {
-        if (this.value === 'cash') {
-            referenceNoInput.disabled = true;
-            referenceNoInput.required = false;
-            referenceNoInput.value = '';
-        } else {
-            referenceNoInput.disabled = false;
-            referenceNoInput.required = true;
+    // Inputs listeners
+    amountInput.addEventListener('input', () => {
+        // Only run if Custom is selected
+        if (document.getElementById('btn-custom').classList.contains('active')) {
+            updatePreview();
         }
     });
 
-    updateDueDaysAmount();
+    startInput.addEventListener('change', updatePreview);
+
+    // Payment method logic
+    const paymentMethod = document.getElementById('payment_method');
+    const refNo = document.getElementById('reference_no');
+    
+    paymentMethod.addEventListener('change', () => {
+        if (paymentMethod.value === 'cash') {
+            refNo.required = false;
+        } else {
+            refNo.required = true;
+        }
+    });
+
+    // Initialize Page State
+    amountInput.readOnly = true; // 1 Month is active by default
+    amountInput.value = monthlyPrice.toFixed(2);
+    updatePreview();
 });
 </script>
 {% endblock %}
+
+

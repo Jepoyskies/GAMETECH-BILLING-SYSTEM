@@ -86,6 +86,7 @@ urlpatterns = [
     path('customer/<str:username>/rollback/', views.customer_rollback_view, name='customer_rollback'),
     path('payment/success/', views.payment_success_view, name='payment_success'),
     path('logs/payments/', views.payment_logs_view, name='payment_logs'),
+    path('logs/payments/<int:payment_id>/edit/', views.edit_payment_log_view, name='edit_payment_log'),
     path('logs/payment-addons/', views.payment_addon_logs_view, name='payment_addon_logs'),
     # Payment Processing
     path('payment-portal/', views.payment_portal_view, name='payment_portal'),

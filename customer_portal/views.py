@@ -1,7 +1,12 @@
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.contrib import messages
-from billing.models import Customer, Payment
+from billing.models import Customer, Payment, SubscriptionPlan
+from billing.views import calculate_new_expiration_date
+from decimal import Decimal
+from datetime import timedelta
+from django.utils import timezone
+from django.db import transaction
 
 def portal_login(request):
     # If already logged in, redirect to dashboard
@@ -34,11 +39,39 @@ def portal_dashboard(request):
         
     plan = customer.plan
     payments = Payment.objects.filter(customer=customer).order_by('-created_at')[:10]
+    plans = SubscriptionPlan.objects.all().order_by('price')
     
+    effective_status = 'Active'
+    effective_reason = 'Your service is running normally.'
+    is_network_issue = False
+
+    def get_priority(status):
+        priorities = {'Active': 0, 'Maintenance': 1, 'Disconnected': 2, 'Outage': 3}
+        return priorities.get(status, 0)
+
+    if customer.barangay and get_priority(customer.barangay.health_status) > get_priority(effective_status):
+        effective_status = customer.barangay.health_status
+        effective_reason = customer.barangay.health_reason or f"Network issue reported in {customer.barangay.name}"
+        is_network_issue = True
+
+    if customer.mikrotik_device and get_priority(customer.mikrotik_device.health_status) > get_priority(effective_status):
+        effective_status = customer.mikrotik_device.health_status
+        effective_reason = customer.mikrotik_device.health_reason or "Network issue reported for your sector"
+        is_network_issue = True
+    
+    if customer.status in ['suspended', 'expired', 'inactive']:
+        effective_status = 'Disconnected'
+        effective_reason = "Your account has been suspended due to an overdue balance. Please pay your bill to restore connection."
+        is_network_issue = True
+        
     context = {
         'customer': customer,
         'plan': plan,
         'payments': payments,
+        'effective_status': effective_status,
+        'effective_reason': effective_reason,
+        'is_network_issue': is_network_issue,
+        'plans': plans,
     }
     return render(request, 'customer_portal/portal_dashboard.html', context)
 
@@ -112,3 +145,105 @@ def portal_router_uplink_api(request):
         })
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)})
+
+
+def portal_process_mock_payment(request):
+    if request.method == 'POST':
+        customer_id = request.session.get('customer_id')
+        if not customer_id:
+            return redirect('login')
+            
+        amount = request.POST.get('amount')
+        plan_id = request.POST.get('plan_id')
+        payment_method = request.POST.get('payment_method', 'Customer Portal (Mock)')
+        
+        if amount:
+            try:
+                amount_float = float(amount)
+                customer = Customer.objects.get(id=customer_id)
+                monthly_price = float(customer.plan.price) if customer.plan else 0.0
+                
+                with transaction.atomic():
+                    # Lock for update
+                    locked_customer = Customer.objects.select_for_update().get(pk=customer.pk)
+                    was_suspended = locked_customer.status in ['suspended', 'inactive', 'expired']
+                    
+                    old_plan_id = str(locked_customer.plan_id)
+                    is_upgrade = False
+                    is_downgrade = False
+                    if plan_id and old_plan_id != str(plan_id):
+                        new_plan = SubscriptionPlan.objects.get(id=plan_id)
+                        old_price = float(locked_customer.plan.price) if locked_customer.plan else 0.0
+                        monthly_price = float(new_plan.price)
+                        locked_customer.plan = new_plan
+                        if monthly_price > old_price:
+                            is_upgrade = True
+                        else:
+                            is_downgrade = True
+                        
+                    if locked_customer.expires_at and locked_customer.expires_at > timezone.now():
+                        current_exp = locked_customer.expires_at
+                    else:
+                        current_exp = timezone.now()
+                        
+                    new_expiry = calculate_new_expiration_date(current_exp, amount_float, monthly_price)
+                    
+                    # Update DB
+                    locked_customer.expires_at = new_expiry
+                    locked_customer.outstanding_balance -= Decimal(amount)
+                    
+                    if was_suspended:
+                        locked_customer.status = 'active'
+                        
+                    locked_customer.save()
+                    
+                    # Log Payment as Customer Portal
+                    reference = f"PORTAL-{timezone.now().strftime('%Y%m%d%H%M%S')}"
+                    Payment.objects.create(
+                        customer=locked_customer,
+                        username=locked_customer.pppoe_username,
+                        plan_name=locked_customer.plan.name if locked_customer.plan else None,
+                        amount=amount,
+                        payment_method=payment_method,
+                        reference_no=reference,
+                        reason="Online Payment",
+                        expires_at=new_expiry,
+                        adjusted_by="Customer Portal"
+                    )
+                    
+                # Mikrotik Activation
+                if customer.mikrotik_device:
+                    try:
+                        from network_manager.services import MikrotikAPI
+                        api = MikrotikAPI(customer.mikrotik_device)
+                        
+                        # Mikrotik Format: exp . new . plan. payment. admin. note:
+                        # e.g., Oct 20, 2026 . 50Mbps . GCash . Customer Portal . Paid Online
+                        expiry_str = new_expiry.strftime('%b %d, %Y')
+                        plan_name = customer.plan.name if customer.plan else "No Plan"
+                        comment_text = f"{expiry_str} . {plan_name} . {payment_method} . Customer Portal . Paid Online"
+                        api.set_pppoe_comment(customer.pppoe_username, comment_text)
+                        
+                        if customer.plan and customer.plan.name:
+                            api.set_user_pppoe_profile(customer.pppoe_username, customer.plan.name)
+                            if was_suspended:
+                                api.enable_pppoe_user(customer.pppoe_username)
+                            # Kick to force reconnect with new plan bandwidth
+                            api.kick_active_user(customer.pppoe_username)
+                    except Exception as e:
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.error(f"Failed to sync portal renewal for {customer.pppoe_username}: {e}")
+                
+                # Build Message
+                base_msg = f"Payment of ₱{amount} via {payment_method} successful! Your account is now active until {new_expiry.strftime('%b %d, %Y')}."
+                if is_upgrade:
+                    base_msg += f" Thank you for upgrading to {new_plan.name}! Enjoy your faster speeds."
+                elif is_downgrade:
+                    base_msg += f" Your plan has been successfully updated to {new_plan.name}. If you wish to upgrade soon for faster speeds, you can always do so!"
+
+                messages.success(request, base_msg)
+            except Exception as e:
+                messages.error(request, f"Payment processing failed: {e}")
+                
+    return redirect('customer_portal:portal_dashboard')
