@@ -14,6 +14,7 @@ class AccountType(models.Model):
 
 
 class Agent(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True, related_name='agent_profile')
     name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=50, blank=True, null=True)
@@ -40,8 +41,9 @@ class SubscriptionPlan(models.Model):
 class SystemAdmin(models.Model):
     ROLE_CHOICES = (
         ('Admin', 'Admin'),
-        ('Editor', 'Editor'),
-        ('Viewer', 'Viewer'),
+        ('Technician', 'Technician'),
+        ('Agent', 'Agent'),
+        ('CSR', 'CSR'),
     )
     STATUS_CHOICES = (
         ('Active', 'Active'),
@@ -272,4 +274,35 @@ class EmployeeProfile(models.Model):
     
     def __str__(self):
         return f"{self.user.username} Profile"
+
+class JobOrder(models.Model):
+    STATUS_CHOICES = (
+        ('Pending', 'Pending'),
+        ('In Progress', 'In Progress'),
+        ('Completed', 'Completed'),
+        ('Cancelled', 'Cancelled'),
+    )
+    TYPE_CHOICES = (
+        ('Installation', 'Installation'),
+        ('Repair', 'Repair'),
+        ('Replacement', 'Replacement'),
+        ('Relocation', 'Relocation'),
+    )
+
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='job_orders')
+    technician = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, limit_choices_to={'groups__name': 'Technician'})
+    job_type = models.CharField(max_length=50, choices=TYPE_CHOICES)
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Pending')
+    
+    reported_issue = models.TextField(help_text="What the CSR/Agent reported")
+    resolution_notes = models.TextField(blank=True, null=True, help_text="What the Technician did")
+    
+    start_time = models.DateTimeField(null=True, blank=True)
+    end_time = models.DateTimeField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_job_orders')
+
+    def __str__(self):
+        return f"{self.job_type} - {self.customer.full_name} ({self.status})"
 

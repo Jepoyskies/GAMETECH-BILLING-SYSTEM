@@ -1,47 +1,54 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
-from billing.models import Customer, Payment
-from network_manager.models import MikrotikDevice
+from billing.models import Customer, JobOrder, Agent, Payment
+from django.core.management.base import CommandError
 
 class Command(BaseCommand):
-    help = 'Sets up default RBAC groups and permissions for Gametech Billing System'
+    help = 'Creates default groups and permissions for the Gametech RBAC system'
 
-    def handle(self, *args, **kwargs):
-        # Create groups
-        groups = ['Technician', 'Agent', 'CSR', 'Admin']
-        for group_name in groups:
-            Group.objects.get_or_create(name=group_name)
-            self.stdout.write(self.style.SUCCESS(f'Group "{group_name}" ensured.'))
+    def handle(self, *args, **options):
+        # 1. Create Groups
+        admin_group, _ = Group.objects.get_or_create(name='Admin') # Though Admins are usually superusers, good to have a group
+        technician_group, _ = Group.objects.get_or_create(name='Technician')
+        agent_group, _ = Group.objects.get_or_create(name='Agent')
+        csr_group, _ = Group.objects.get_or_create(name='CSR')
 
-        # Helper function to get permissions by codename for specific content types
-        def get_perms(model, actions):
-            ct = ContentType.objects.get_for_model(model)
-            model_name = model._meta.model_name
-            codenames = [f"{action}_{model_name}" for action in actions]
-            return Permission.objects.filter(content_type=ct, codename__in=codenames)
+        try:
+            # 2. Get Content Types
+            customer_ct = ContentType.objects.get_for_model(Customer)
+            job_order_ct = ContentType.objects.get_for_model(JobOrder)
+            payment_ct = ContentType.objects.get_for_model(Payment)
 
-        def assign_perms(group_name, permissions):
-            group = Group.objects.get(name=group_name)
-            group.permissions.set(permissions)
-            self.stdout.write(self.style.SUCCESS(f'Assigned permissions to {group_name}'))
+            # 3. Assign Permissions
+            
+            # Technician
+            tech_permissions = [
+                Permission.objects.get(codename='view_customer', content_type=customer_ct),
+                Permission.objects.get(codename='change_joborder', content_type=job_order_ct),
+                Permission.objects.get(codename='view_joborder', content_type=job_order_ct),
+            ]
+            technician_group.permissions.set(tech_permissions)
+            
+            # Agent
+            agent_permissions = [
+                Permission.objects.get(codename='add_customer', content_type=customer_ct),
+                Permission.objects.get(codename='view_customer', content_type=customer_ct),
+                Permission.objects.get(codename='change_customer', content_type=customer_ct),
+            ]
+            agent_group.permissions.set(agent_permissions)
 
-        # CSR: View, Add, Change for Customer and Payment
-        csr_perms = list(get_perms(Customer, ['view', 'add', 'change'])) + \
-                    list(get_perms(Payment, ['view', 'add', 'change']))
-        assign_perms('CSR', csr_perms)
+            # CSR
+            csr_permissions = [
+                Permission.objects.get(codename='view_customer', content_type=customer_ct),
+                Permission.objects.get(codename='change_customer', content_type=customer_ct),
+                Permission.objects.get(codename='add_joborder', content_type=job_order_ct),
+                Permission.objects.get(codename='change_joborder', content_type=job_order_ct),
+                Permission.objects.get(codename='view_joborder', content_type=job_order_ct),
+                Permission.objects.get(codename='view_payment', content_type=payment_ct),
+            ]
+            csr_group.permissions.set(csr_permissions)
 
-        # Agent: View for Customer and Payment
-        agent_perms = list(get_perms(Customer, ['view'])) + \
-                      list(get_perms(Payment, ['view']))
-        assign_perms('Agent', agent_perms)
-
-        # Technician: View and Change for Customer, View/Change for MikrotikDevice
-        tech_perms = list(get_perms(Customer, ['view', 'change'])) + \
-                     list(get_perms(MikrotikDevice, ['view', 'change']))
-        assign_perms('Technician', tech_perms)
-
-        # Admin: Can be left empty here as Admin usually has is_superuser=True 
-        # which grants all permissions implicitly. We still created the group for grouping purposes.
-
-        self.stdout.write(self.style.SUCCESS('Successfully setup RBAC groups and permissions!'))
+            self.stdout.write(self.style.SUCCESS('Successfully setup RBAC groups and permissions.'))
+        except Exception as e:
+            raise CommandError(f'Error setting up RBAC: {e}. Ensure you have run migrations first.')

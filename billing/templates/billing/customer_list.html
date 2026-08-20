@@ -4,8 +4,9 @@
 {% block title %}Customers{% endblock %}
 
 {% block extra_css %}
-<!-- DataTables Bootstrap 5 CSS -->
+<!-- DataTables Bootstrap 5 & Responsive CSS -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
 <style>
     #customerTable th,
     #customerTable td {
@@ -66,15 +67,17 @@
             Customers List
         </h2>
         <div class="d-inline-flex gap-2 align-items-center">
+            {% if request.user.role != 'Agent' %}
             <select id="routerFilter" class="form-select rounded-pill px-3 shadow-sm w-auto d-inline-block border-primary text-primary fw-bold">
                 <option value="">All Routers</option>
                 {% for device in devices %}
                 <option value="{{ device.device_name }}">{{ device.device_name }}</option>
                 {% endfor %}
             </select>
-            {% if request.user.role == 'Admin' or request.user.role == 'Editor' %}
-            <a href="{% url 'add_customer' %}" class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold">
-                <i class="fa-solid fa-user-plus me-2"></i> Add New Customer
+            {% endif %}
+            {% if request.user.role in 'Admin,Agent,CSR' %}
+            <a href="{% url 'add_customer' %}" class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold text-nowrap d-flex align-items-center">
+                <i class="fa-solid fa-user-plus me-2"></i> Add Customer
             </a>
             {% endif %}
         </div>
@@ -85,15 +88,15 @@
             <table id="customerTable" class="table table-hover align-middle mb-0" style="width:100%; border-collapse: collapse;">
                 <thead style="background: rgba(0,0,0,0.03);">
                     <tr>
-                        <th>Full Name</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Plan</th>
-                        <th>Agent</th>
-                        <th>Barangay</th>
-                        <th>Router</th>
-                        <th>Status</th>
-                        <th>Actions</th>
+                        <th class="all">Full Name</th>
+                        <th class="min-tablet">Email</th>
+                        <th class="min-tablet">Phone</th>
+                        <th class="min-tablet">Plan</th>
+                        <th class="min-tablet">Agent</th>
+                        <th class="min-tablet">Barangay</th>
+                        <th class="min-tablet">Router</th>
+                        <th class="all">Status</th>
+                        <th class="all">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -178,10 +181,14 @@
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
 
 <script>
     $(document).ready(function () {
         var table = $('#customerTable').DataTable({
+            "responsive": true,
+            "dom": '<"d-flex flex-column flex-md-row justify-content-between align-items-center mt-4 mb-3 px-3 px-md-4"lf>rt<"d-flex flex-column flex-md-row justify-content-between align-items-center mt-3 mb-4 px-3 px-md-4"ip>',
             "lengthMenu": [10, 25, 50, 100],
             "pageLength": 10,
             "order": [[0, "asc"]], // Sort by Full Name ascending

@@ -1,32 +1,12 @@
 from django.contrib import admin
-from .models import AccountType, Customer, Agent, Barangay, Payment
+from .models import AccountType, Customer, Agent, Barangay, Payment, JobOrder
 
 # Helpers for RBAC
 def is_in_group(user, group_name):
     if user.is_superuser:
-        return False
+        return True # Superusers should ideally pass any group check conceptually in admin, or we handle it explicitly.
     return user.groups.filter(name=group_name).exists()
 
-class BaseRBACAdmin(admin.ModelAdmin):
-    def has_add_permission(self, request):
-        if is_in_group(request.user, 'Agent'):
-            return False
-        return super().has_add_permission(request)
-
-    def has_change_permission(self, request, obj=None):
-        if is_in_group(request.user, 'Agent'):
-            return False
-        return super().has_change_permission(request, obj)
-
-    def has_delete_permission(self, request, obj=None):
-        if is_in_group(request.user, 'Agent'):
-            return False
-        return super().has_delete_permission(request, obj)
-
-    def get_readonly_fields(self, request, obj=None):
-        if is_in_group(request.user, 'Agent'):
-            return [f.name for f in self.model._meta.fields]
-        return super().get_readonly_fields(request, obj)
 
 @admin.register(AccountType)
 class AccountTypeAdmin(admin.ModelAdmin):
@@ -35,31 +15,131 @@ class AccountTypeAdmin(admin.ModelAdmin):
 
 
 @admin.register(Customer)
-class CustomerAdmin(BaseRBACAdmin):
+class CustomerAdmin(admin.ModelAdmin):
     list_display = ('full_name', 'email', 'phone',
                     'plan', 'status', 'mikrotik_device')
     search_fields = ('full_name', 'email', 'phone', 'mac_address')
     list_filter = ('status', 'plan', 'account_type', 'mikrotik_device')
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        if is_in_group(request.user, 'Agent'):
+            # Agents only see their own customers
+            return qs.filter(agent__user=request.user)
+        # Technicians and CSRs can see all customers
+        return qs
+
     def get_exclude(self, request, obj=None):
-        if is_in_group(request.user, 'Technician'):
-            return ['outstanding_balance', 'plan']
+        if not request.user.is_superuser and is_in_group(request.user, 'Technician'):
+            return ['outstanding_balance', 'plan', 'payment_method', 'amount']
         return super().get_exclude(request, obj)
 
+    def get_readonly_fields(self, request, obj=None):
+        if request.user.is_superuser:
+            return super().get_readonly_fields(request, obj)
+            
+        if is_in_group(request.user, 'Agent'):
+            # Agents can only edit basic info before activation maybe? Or just read only if already active.
+            # For simplicity based on RBAC plan, they can view/edit own.
+            pass
+            
+        if is_in_group(request.user, 'Technician'):
+            # Technicians shouldn't edit customer details, only JobOrders
+            return [f.name for f in self.model._meta.fields]
+            
+        return super().get_readonly_fields(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        if not request.user.is_superuser:
+            return False # Nobody except Admin can delete customers
+        return super().has_delete_permission(request, obj)
+
+
 @admin.register(Payment)
-class PaymentAdmin(BaseRBACAdmin):
+class PaymentAdmin(admin.ModelAdmin):
     list_display = ('customer', 'amount', 'payment_method', 'paid_at')
     search_fields = ('customer__full_name', 'reference_no')
     list_filter = ('payment_method', 'paid_at')
 
+    def has_module_permission(self, request):
+        if is_in_group(request.user, 'Technician') or is_in_group(request.user, 'Agent'):
+            return False
+        return super().has_module_permission(request)
+
+    def has_add_permission(self, request):
+        # Only Admins can add payments manually, or maybe CSRs if permitted later
+        if not request.user.is_superuser:
+            return False
+        return super().has_add_permission(request)
+
+    def has_change_permission(self, request, obj=None):
+        if not request.user.is_superuser:
+            return False
+        return super().has_change_permission(request, obj)
+        
+    def has_delete_permission(self, request, obj=None):
+        if not request.user.is_superuser:
+            return False
+        return super().has_delete_permission(request, obj)
+
+
+@admin.register(JobOrder)
+class JobOrderAdmin(admin.ModelAdmin):
+    list_display = ('job_type', 'customer', 'technician', 'status', 'created_at')
+    list_filter = ('status', 'job_type', 'technician')
+    search_fields = ('customer__full_name', 'reported_issue')
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser or is_in_group(request.user, 'CSR'):
+            return qs
+        if is_in_group(request.user, 'Technician'):
+            return qs.filter(technician=request.user)
+        return qs.none() # Agents shouldn't see Job Orders
+
+    def get_readonly_fields(self, request, obj=None):
+        if request.user.is_superuser:
+            return []
+        if is_in_group(request.user, 'Technician'):
+            # Technicians can only update status, resolution_notes, start/end time
+            return ['customer', 'technician', 'job_type', 'reported_issue', 'created_by']
+        return []
+
+    def has_add_permission(self, request):
+        if is_in_group(request.user, 'Technician') or is_in_group(request.user, 'Agent'):
+            return False
+        return True # CSR and Admin can add
+
+    def has_delete_permission(self, request, obj=None):
+        if not request.user.is_superuser:
+            return False
+        return super().has_delete_permission(request, obj)
+
+    def save_model(self, request, obj, form, change):
+        if not obj.pk:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
 
 @admin.register(Agent)
 class AgentAdmin(admin.ModelAdmin):
-    list_display = ('name', 'email', 'phone')
+    list_display = ('name', 'email', 'phone', 'user')
     search_fields = ('name', 'email')
+    
+    def has_module_permission(self, request):
+        if not request.user.is_superuser:
+            return False
+        return super().has_module_permission(request)
 
 
 @admin.register(Barangay)
 class BarangayAdmin(admin.ModelAdmin):
     list_display = ('name',)
     search_fields = ('name',)
+
+    def has_module_permission(self, request):
+        if not request.user.is_superuser:
+            return False
+        return super().has_module_permission(request)

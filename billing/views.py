@@ -50,6 +50,9 @@ def calculate_new_expiration_date(current_expiration_date: datetime, payment_amo
 
 @login_required
 def dashboard_view(request):
+    if hasattr(request.user, 'role') and request.user.role == 'Agent':
+        return redirect('customer_list')
+        
     today = timezone.localtime().date()
     now = timezone.localtime()
 
@@ -672,6 +675,9 @@ def view_agent(request, agent_id):
 
 
 def plan_list(request):
+    if hasattr(request.user, 'role') and request.user.role == 'Agent':
+        return redirect('customer_list')
+        
     plans = SubscriptionPlan.objects.all().order_by('price')
     return render(request, 'billing/service_plans.html', {'plans': plans})
 
@@ -967,7 +973,7 @@ def customer_list(request):
 
 
 @login_required
-@role_required(['Admin', 'Editor'])
+@role_required(['Admin', 'Agent', 'CSR'])
 @permission_required('billing.add_customer', raise_exception=True)
 def add_customer(request):
     if request.method == 'POST':
@@ -978,12 +984,12 @@ def add_customer(request):
             address=request.POST.get('address'),
             pppoe_username=request.POST.get('pppoe_username') or None,
             pppoe_password=request.POST.get('pppoe_password'),
-            status=request.POST.get('status', 'active'),
+            status='pending' if request.user.role == 'Agent' else request.POST.get('status', 'active'),
             plan_id=request.POST.get('plan_id'),
-            mikrotik_device_id=request.POST.get('device_id'),
+            mikrotik_device_id=request.POST.get('device_id') or None,
             agent_id=request.POST.get('agent_id'),
             barangay_id=request.POST.get('barangay_id'),
-            account_type_id=request.POST.get('account_type_id'),
+            account_type_id=request.POST.get('account_type_id') or None,
             latitude=request.POST.get('latitude') or None,
             longitude=request.POST.get('longitude') or None,
             cignalplay_no=request.POST.get('cignalplay_no'),
@@ -1418,6 +1424,9 @@ def admin_panel_view(request):
 
 @login_required
 def geomap_view(request):
+    if hasattr(request.user, 'role') and request.user.role == 'Agent':
+        return redirect('customer_list')
+        
     # Fetch NAP boxes
     napboxes = list(NapBox.objects.values('id', 'napbox_no', 'latitude', 'longitude', 'marker_color'))
     
