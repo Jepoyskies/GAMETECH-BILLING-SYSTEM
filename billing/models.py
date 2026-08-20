@@ -107,8 +107,19 @@ class Customer(models.Model):
     address = models.TextField(blank=True, null=True)
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default='active')
-    health_status = models.CharField(max_length=20, choices=[('Excellent', 'Excellent'), ('Moderate', 'Moderate'), ('Poor', 'Poor'), ('Outage', 'Outage')], default='Excellent')
-    health_reason = models.TextField(blank=True, null=True)
+    CONNECTION_STATUS_CHOICES = (
+        ('Offline', 'Offline'),
+        ('Low', 'Low'),
+        ('Poor', 'Poor'),
+        ('Unstable', 'Unstable'),
+        ('Stable', 'Stable'),
+        ('Good', 'Good'),
+        ('Strong', 'Strong'),
+        ('Excellent', 'Excellent'), # Keep for backwards compatibility
+        ('Outage', 'Outage'),
+    )
+    health_status = models.CharField(max_length=20, choices=CONNECTION_STATUS_CHOICES, default='Good')
+    health_reason = models.TextField(blank=True, null=True, help_text="Message for the customer regarding their connection status.")
 
     # --- Location (For the Map) ---
     latitude = models.DecimalField(

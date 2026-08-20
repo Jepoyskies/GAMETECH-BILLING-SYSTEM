@@ -126,44 +126,59 @@
         <div class="status-badge {{ customer.status }}">{{ customer.get_status_display|default:customer.status }}</div>
     </div>
 
-    <!-- Network Health Alerts -->
+    <!-- Network Health Alerts (Global/Area) -->
     {% if customer.mikrotik_device and customer.mikrotik_device.health_status == 'Outage' or customer.mikrotik_device and customer.mikrotik_device.health_status == 'Poor' %}
-    <div class="info-card" style="border-left: 4px solid #ef4444; padding: 20px 30px;">
-        <h3 class="info-title" style="color: #ef4444; margin-bottom: 10px;"><i class="fas fa-server"></i> Router Alert</h3>
-        <p style="margin: 0; color: #e2e8f0;">{{ customer.mikrotik_device.health_reason|default:"Network issue reported on the main router." }}</p>
+    <div class="info-card" style="border-left: 4px solid #ef4444; padding: 20px 30px; margin-bottom: 24px;">
+        <h3 class="info-title" style="color: #ef4444; margin-bottom: 10px;"><i class="fas fa-server"></i> Network Outage Alert</h3>
+        <p style="margin: 0; color: #e2e8f0;">{{ customer.mikrotik_device.health_reason|default:"We are currently experiencing a network issue in your area." }}</p>
     </div>
     {% elif customer.barangay and customer.barangay.health_status == 'Outage' or customer.barangay and customer.barangay.health_status == 'Poor' %}
-    <div class="info-card" style="border-left: 4px solid #f59e0b; padding: 20px 30px;">
+    <div class="info-card" style="border-left: 4px solid #f59e0b; padding: 20px 30px; margin-bottom: 24px;">
         <h3 class="info-title" style="color: #f59e0b; margin-bottom: 10px;"><i class="fas fa-map-marker-alt"></i> Area Alert ({{ customer.barangay.name }})</h3>
         <p style="margin: 0; color: #e2e8f0;">{{ customer.barangay.health_reason|default:"Network issue reported in your area." }}</p>
     </div>
-    {% elif customer.health_status == 'Moderate' or customer.health_status == 'Poor' %}
-    <div class="info-card" style="border-left: 4px solid #3b82f6; padding: 20px 30px;">
-        <h3 class="info-title" style="color: #3b82f6; margin-bottom: 10px;"><i class="fas fa-user-exclamation"></i> Account Notice</h3>
-        <p style="margin: 0; color: #e2e8f0;">{{ customer.health_reason|default:"Notice regarding your specific connection." }}</p>
-    </div>
-    {% else %}
-    <div class="info-card" style="border-left: 4px solid #10b981; background: rgba(16, 185, 129, 0.05); padding: 20px 30px;">
-        <h3 class="info-title" style="color: #10b981; margin-bottom: 0;"><i class="fas fa-check-circle"></i> Excellent - All systems operational</h3>
-    </div>
     {% endif %}
 
-    <!-- Live Router Uplink (Beautiful Box) -->
-    {% if customer.mikrotik_device %}
-    <div class="info-card p-0" id="router-uplink-card" style="display: none; overflow: hidden; border-left: 4px solid #8b5cf6; background: linear-gradient(135deg, rgba(139,92,246,0.3) 0%, rgba(109,40,217,0.5) 100%); transition: all 0.3s ease; position: relative;">
+    <!-- Connection Quality Monitoring (Personal) -->
+    <div class="info-card p-0" id="connection-monitoring-card" style="overflow: hidden; border-left: 4px solid {% if customer.health_status == 'Strong' or customer.health_status == 'Excellent' or customer.health_status == 'Good' or customer.health_status == 'Stable' %}#10b981{% elif customer.health_status == 'Low' or customer.health_status == 'Poor' or customer.health_status == 'Outage' or customer.health_status == 'Offline' %}#ef4444{% else %}#f59e0b{% endif %}; position: relative; margin-bottom: 24px;">
         <div style="padding: 24px; position: relative; z-index: 2;">
-            <h3 style="margin: 0 0 6px 0; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; display: flex; justify-content: space-between; align-items: center;">
-                <span>Router Uplink</span>
+            <h3 style="margin: 0 0 10px 0; font-size: 1.1rem; font-weight: 700; color: #f1f5f9; display: flex; align-items: center; justify-content: space-between;">
+                <span style="display: flex; align-items: center; gap: 10px;">
+                    <i id="connection-monitoring-icon" class="fas fa-chart-line" style="color: {% if customer.health_status == 'Strong' or customer.health_status == 'Excellent' or customer.health_status == 'Good' or customer.health_status == 'Stable' %}#10b981{% elif customer.health_status == 'Low' or customer.health_status == 'Poor' or customer.health_status == 'Outage' or customer.health_status == 'Offline' %}#ef4444{% else %}#f59e0b{% endif %};"></i> Connection Quality Monitoring
+                </span>
+                {% if customer.mikrotik_device %}
                 <i class="fas fa-sync fa-spin" id="uplink-sync-icon" style="display: none; font-size: 0.8rem; color: #8b5cf6;"></i>
+                {% endif %}
             </h3>
-            <p id="uplinkStatus" style="margin: 0; font-size: 2rem; font-weight: bold; color: #f8fafc;">Checking...</p>
-            <div style="font-size:0.85rem; color:rgba(255,255,255,0.7); margin-top: 5px;" id="uplinkPing"></div>
+            
+            <div style="display: flex; align-items: baseline; gap: 15px; margin-bottom: 15px;">
+                <div id="connection-status-text" style="font-size: 2rem; font-weight: bold; color: {% if customer.health_status == 'Strong' or customer.health_status == 'Excellent' or customer.health_status == 'Good' or customer.health_status == 'Stable' %}#10b981{% elif customer.health_status == 'Low' or customer.health_status == 'Poor' or customer.health_status == 'Outage' or customer.health_status == 'Offline' %}#ef4444{% else %}#f59e0b{% endif %}; text-transform: uppercase;">
+                    {{ customer.health_status }}
+                </div>
+                {% if customer.mikrotik_device %}
+                <div id="uplinkPing" style="font-size: 0.85rem; color: rgba(255,255,255,0.7); font-family: monospace;"></div>
+                {% endif %}
+            </div>
+
+            <div id="connection-message-container" style="background: rgba(255, 255, 255, 0.05); border-radius: 10px; padding: 15px; border-left: 3px solid rgba(255,255,255,0.2);">
+                {% if customer.health_reason %}
+                <p style="margin: 0; font-size: 0.95rem; color: #e2e8f0; line-height: 1.5;">
+                    <strong><i class="fas fa-info-circle me-1"></i> CSR Message:</strong><br>
+                    <span id="csr-message-text">{{ customer.health_reason }}</span>
+                </p>
+                {% else %}
+                <p style="margin: 0; font-size: 0.95rem; color: #94a3b8; line-height: 1.5;" id="default-message-text">
+                    Your internet connection is currently operating normally based on our monitoring.
+                </p>
+                {% endif %}
+            </div>
         </div>
         <div style="position: absolute; right: -20px; bottom: -20px; font-size: 8rem; color: rgba(255,255,255,0.03); z-index: 1;">
-            <i class="fas fa-globe"></i>
+            <i class="fas fa-wifi"></i>
         </div>
     </div>
-    {% endif %}
+
+    <!-- Live Router Uplink has been merged into Connection Quality Monitoring -->
 
     <!-- Subscription Details -->
     <div class="info-card">
@@ -266,30 +281,33 @@
 
     function fetchRouterUplink() {
         const syncIcon = document.getElementById('uplink-sync-icon');
-        syncIcon.style.display = 'inline-block';
+        if(syncIcon) syncIcon.style.display = 'inline-block';
         
         fetch('{% url "customer_portal:portal_router_uplink_api" %}')
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
-                    document.getElementById('router-uplink-card').style.display = 'block';
-                    
-                    const statusText = document.getElementById('uplinkStatus');
+                    const statusText = document.getElementById('connection-status-text');
                     const pingText = document.getElementById('uplinkPing');
-                    const card = document.getElementById('router-uplink-card');
+                    const card = document.getElementById('connection-monitoring-card');
+                    const icon = document.getElementById('connection-monitoring-icon');
                     
-                    statusText.textContent = data.uplink_status || 'Unknown';
-                    pingText.textContent = 'Ping: ' + (data.uplink_ping || '--');
+                    if(pingText) pingText.textContent = 'Ping: ' + (data.uplink_ping || '--');
                     
+                    // Override the CSR status if actual uplink is offline
                     if (data.uplink_status === 'Offline') {
-                        card.style.background = 'linear-gradient(135deg, rgba(239,68,68,0.3) 0%, rgba(185,28,28,0.5) 100%)';
+                        statusText.textContent = 'OFFLINE';
+                        statusText.style.color = '#ef4444';
                         card.style.borderLeftColor = '#ef4444';
-                    } else if (data.uplink_status === 'Unstable') {
-                        card.style.background = 'linear-gradient(135deg, rgba(245,158,11,0.3) 0%, rgba(217,119,6,0.5) 100%)';
-                        card.style.borderLeftColor = '#f59e0b';
-                    } else {
-                        card.style.background = 'linear-gradient(135deg, rgba(139,92,246,0.3) 0%, rgba(109,40,217,0.5) 100%)';
-                        card.style.borderLeftColor = '#8b5cf6';
+                        icon.style.color = '#ef4444';
+                        
+                        const msgContainer = document.getElementById('connection-message-container');
+                        msgContainer.innerHTML = `
+                            <p style="margin: 0; font-size: 0.95rem; color: #ef4444; line-height: 1.5;">
+                                <strong><i class="fas fa-exclamation-triangle me-1"></i> System Alert:</strong><br>
+                                Your router is currently offline or unreachable. Please check if it is powered on and plugged in.
+                            </p>
+                        `;
                     }
                 } else {
                     console.error('Failed to fetch uplink data:', data.message);
@@ -298,7 +316,7 @@
             .catch(err => console.error('Error fetching router uplink:', err))
             .finally(() => {
                 setTimeout(() => {
-                    syncIcon.style.display = 'none';
+                    if(syncIcon) syncIcon.style.display = 'none';
                 }, 1000);
             });
     }
