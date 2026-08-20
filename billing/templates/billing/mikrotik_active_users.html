@@ -188,9 +188,8 @@
             })
             .then(html => {
                 container.innerHTML = html;
-                
                 // Initialize DataTables AFTER the table is injected
-                var table = $('#activeUsersTable').DataTable({
+                var activeTable = $('#activeUsersTable').DataTable({
                     "order": [[ 0, "asc" ]], // Sort by username by default
                     "pageLength": 10,
                     "language": {
@@ -198,8 +197,21 @@
                     }
                 });
 
+                var offlineTable = $('#offlineUsersTable').DataTable({
+                    "order": [[ 0, "asc" ]], // Sort by customer name by default
+                    "pageLength": 10,
+                    "language": {
+                        "search": "Quick Search:",
+                        "emptyTable": "<div class='py-4 text-muted'><i class='fas fa-check-circle text-success fs-3 mb-2 d-block'></i> All assigned customers are currently online.</div>"
+                    }
+                });
+
                 $('#routerFilter').on('change', function () {
-                    table.column(2).search(this.value).draw();
+                    var val = this.value;
+                    // Active Users table: Router is column index 2
+                    activeTable.column(2).search(val).draw();
+                    // Offline Users table: Router is column index 3
+                    offlineTable.column(3).search(val).draw();
                 });
             })
             .catch(error => {

@@ -17,12 +17,25 @@
 
             <small class="text-muted">
                 Processed by: {{ adjusted_by }} <br>
-                System Status: 🟢 Database Updated (Mikrotik sync pending)
+                System Status: ✔ Database Updated (Mikrotik sync pending)
             </small>
         </div>
 
+        {% if messenger_template %}
+        <div class="text-start bg-white p-3 rounded border mb-4 border-primary shadow-sm">
+            <h6 class="fw-bold text-primary mb-2"><i class="fab fa-facebook-messenger"></i> Messenger Template</h6>
+            <textarea id="messengerTemplate" class="form-control mb-2" rows="6" readonly style="resize: none;">{{ messenger_template }}</textarea>
+            <div class="d-grid">
+                <button class="btn btn-outline-primary btn-sm fw-bold" onclick="copyMessengerTemplate()">
+                    <i class="fas fa-copy"></i> Copy for Messenger
+                </button>
+            </div>
+            <p id="messengerCopyStatus" class="text-success mt-2 fw-bold text-center" style="display:none; font-size: 0.85rem;">Copied to clipboard!</p>
+        </div>
+        {% endif %}
+
         <div class="d-grid gap-2 d-md-flex justify-content-md-center">
-            <button class="btn btn-primary fw-bold" onclick="copyReceipt()">📋 Copy to Clipboard</button>
+            <button class="btn btn-primary fw-bold" onclick="copyReceipt()">📋 Copy Receipt</button>
             <a href="{{ next_url }}" class="btn btn-secondary fw-bold">Back</a>
         </div>
         <p id="copyStatus" class="text-success mt-2 fw-bold" style="display:none;">Copied to clipboard!</p>
@@ -34,6 +47,15 @@
         const text = document.getElementById('receiptContent').innerText;
         navigator.clipboard.writeText(text).then(() => {
             const status = document.getElementById('copyStatus');
+            status.style.display = 'block';
+            setTimeout(() => status.style.display = 'none', 3000);
+        });
+    }
+
+    function copyMessengerTemplate() {
+        const text = document.getElementById('messengerTemplate').value;
+        navigator.clipboard.writeText(text).then(() => {
+            const status = document.getElementById('messengerCopyStatus');
             status.style.display = 'block';
             setTimeout(() => status.style.display = 'none', 3000);
         });

@@ -16,7 +16,7 @@ from datetime import timedelta, datetime
 
 from .models import (
     SystemAdmin, SubscriptionPlan, Agent, AccountType,
-    Customer, Barangay, Payment, Rebate, SystemLog, SmsLog, CignalPlay
+    Customer, Barangay, Payment, Rebate, SystemLog, SmsLog, CignalPlay, AuditLog
 )
 import requests
 from network_manager.models import MikrotikDevice, NapBox
@@ -993,7 +993,7 @@ def add_customer(request):
         messages.success(request, 'Customer added successfully!')
         return redirect('customer_list')
     context = {
-        'plans': SubscriptionPlan.objects.all(),
+        'plans': SubscriptionPlan.objects.all().order_by('price'),
         'devices': MikrotikDevice.objects.all(),
         'agents': Agent.objects.all(),
         'barangays': Barangay.objects.all(),
@@ -1059,7 +1059,7 @@ def edit_customer(request, customer_id):
 
     context = {
         'customer': customer,
-        'plans': SubscriptionPlan.objects.all(),
+        'plans': SubscriptionPlan.objects.all().order_by('price'),
         'devices': MikrotikDevice.objects.all(),
         'agents': Agent.objects.all(),
         'barangays': Barangay.objects.all(),
@@ -1746,6 +1746,7 @@ def pay_customer_view(request, username):
         payment_method = request.POST.get('payment_method')
         reference_no = request.POST.get('reference_no', '')
         reason = request.POST.get('reason', '')
+        new_plan_id = request.POST.get('new_plan_id')
         
         if amount:
             from decimal import Decimal
@@ -1761,12 +1762,31 @@ def pay_customer_view(request, username):
             else:
                 current_exp = timezone.now()
 
-            # Calculate new expiration using the staggered logic
-            new_expiry = calculate_new_expiration_date(current_exp, amount_float, monthly_price)
-
             with transaction.atomic():
                 # Lock the customer row for atomic update
                 locked_customer = Customer.objects.select_for_update().get(pk=customer.pk)
+                
+                # --- UPGRADE PLAN LOGIC ---
+                is_upgrade = False
+                is_downgrade = False
+                old_plan_name = locked_customer.plan.name if locked_customer.plan else "None"
+                
+                if new_plan_id and str(locked_customer.plan_id) != str(new_plan_id):
+                    new_plan = SubscriptionPlan.objects.filter(id=new_plan_id).first()
+                    if new_plan:
+                        old_price = float(locked_customer.plan.price) if locked_customer.plan else 0.0
+                        monthly_price = float(new_plan.price)
+                        locked_customer.plan = new_plan
+                        if monthly_price > old_price:
+                            is_upgrade = True
+                        else:
+                            is_downgrade = True
+                        locked_customer.save() # Triggers Mikrotik Sync
+                # --------------------------
+                
+                # Calculate new expiration using the staggered logic
+                new_expiry = calculate_new_expiration_date(current_exp, amount_float, monthly_price)
+
                 was_suspended = locked_customer.status in ['suspended', 'inactive', 'expired']
                 
                 # 1. Update Customer Expiry
@@ -1800,8 +1820,12 @@ def pay_customer_view(request, username):
                     from network_manager.services import MikrotikAPI
                     api = MikrotikAPI(customer.mikrotik_device)
                     
-                    # Push Payment Comment
-                    comment_text = f"Paid {amount} PHP on {timezone.now().strftime('%b %d, %Y')}. Expires: {new_expiry.strftime('%b %d, %Y')}"
+                    # Mikrotik Format: exp . new . plan. payment. admin. note:
+                    # e.g., Oct 20, 2026 . 50Mbps . GCash . staff_john . Paid Online
+                    expiry_str = new_expiry.strftime('%b %d, %Y')
+                    plan_name = customer.plan.name if customer.plan else "No Plan"
+                    admin_name = request.user.username if request.user.is_authenticated else "Admin"
+                    comment_text = f"{expiry_str} . {plan_name} . {payment_method} . {admin_name} . {reason}"
                     api.set_pppoe_comment(customer.pppoe_username, comment_text)
                     
                     if was_suspended and customer.plan and customer.plan.name:
@@ -1817,6 +1841,14 @@ def pay_customer_view(request, username):
                     logger.error(f"Failed to sync renewal for {customer.pppoe_username} on MikroTik: {e}")
 
             # 4. Success Output
+            
+            # Generate Messenger Template
+            messenger_msg = f"Hi {customer.full_name},\n\nThank you for your payment of ₱{amount} via {payment_method}. Your internet connection is now active until {new_expiry.strftime('%B %d, %Y')}."
+            if is_upgrade:
+                messenger_msg += f"\n\nThank you for upgrading to {new_plan.name}! Enjoy your faster speeds."
+            elif is_downgrade:
+                messenger_msg += f"\n\nYour plan has been successfully updated to {new_plan.name}. If you wish to upgrade soon for faster speeds, you can always let us know!"
+            
             context = {
                 'customer': customer,
                 'new_expiry': new_expiry.strftime('%Y-%m-%d %H:%M:%S'),
@@ -1824,6 +1856,7 @@ def pay_customer_view(request, username):
                 'action_type': 'Standard Renewal',
                 'amount': amount,
                 'next_url': next_url,
+                'messenger_template': messenger_msg,
             }
             return render(request, 'billing/payment_success.html', context)
 
@@ -1835,8 +1868,11 @@ def pay_customer_view(request, username):
     end_default = current_expiry + timezone.timedelta(days=30)
     end_default_str = end_default.strftime('%Y-%m-%dT%H:%M:%S')
 
+    plans = SubscriptionPlan.objects.all().order_by('price')
+
     context = {
         'customer': customer,
+        'plans': plans,
         'current_expiry_display': current_expiry.strftime('%Y-%m-%d %H:%M:%S'),
         'start_default_str': start_default_str,
         'end_default_str': end_default_str,
@@ -2259,3 +2295,55 @@ def unified_login_view(request):
             messages.error(request, 'Invalid username or password.')
             
     return render(request, 'billing/login.html')
+
+@role_required(['Admin'])
+@login_required
+def edit_payment_log_view(request, payment_id):
+    payment = get_object_or_404(Payment, pk=payment_id)
+    
+    if request.method == 'POST':
+        old_method = payment.payment_method
+        old_amount = payment.amount
+        old_ref = payment.reference_no
+        old_reason = payment.reason
+
+        new_method = request.POST.get('payment_method')
+        new_amount = request.POST.get('amount')
+        new_ref = request.POST.get('reference_no', '')
+        new_reason = request.POST.get('reason', '')
+
+        # Construct audit log remarks
+        changes = []
+        if str(old_method) != str(new_method):
+            changes.append(f"Method: {old_method} -> {new_method}")
+        if str(old_amount) != str(new_amount):
+            changes.append(f"Amount: {old_amount} -> {new_amount}")
+        if str(old_ref) != str(new_ref):
+            changes.append(f"Reference: {old_ref} -> {new_ref}")
+        if str(old_reason) != str(new_reason):
+            changes.append(f"Reason: {old_reason} -> {new_reason}")
+
+        if changes:
+            payment.payment_method = new_method
+            if new_amount:
+                payment.amount = new_amount
+            payment.reference_no = new_ref
+            payment.reason = new_reason
+            payment.save()
+
+            AuditLog.objects.create(
+                admin_user=request.user,
+                customer=payment.customer,
+                action_type='Edit Payment Log',
+                remarks=f"Edited Payment #{payment.id}. Changes: {', '.join(changes)}"
+            )
+            messages.success(request, f"Payment #{payment.id} successfully updated.")
+        
+        return redirect('payment_logs')
+
+    context = {
+        'payment': payment
+    }
+    return render(request, 'billing/edit_payment_log.html', context)
+
+

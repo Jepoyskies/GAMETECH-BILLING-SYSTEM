@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from billing.models import AccountType, Agent, Barangay
+from billing.models import AccountType, Agent, Barangay, SubscriptionPlan
 
 class Command(BaseCommand):
     help = 'Seeds the database with default Account Types, Agents, and Barangays.'
@@ -45,5 +45,34 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS(f"Created Barangay: {brgy_name}"))
             else:
                 self.stdout.write(f"Barangay already exists: {brgy_name}")
+
+        # 4. Seed Subscription Plans
+        plans = [
+            {'name': '5Mbps', 'speed_up': '5 Mbps', 'speed_down': '5 Mbps', 'price': 500.00},
+            {'name': '10Mbps', 'speed_up': '10 Mbps', 'speed_down': '10 Mbps', 'price': 750.00},
+            {'name': '20Mbps', 'speed_up': '20 Mbps', 'speed_down': '20 Mbps', 'price': 1000.00},
+            {'name': '30Mbps', 'speed_up': '30 Mbps', 'speed_down': '30 Mbps', 'price': 1250.00},
+            {'name': '50Mbps', 'speed_up': '50 Mbps', 'speed_down': '50 Mbps', 'price': 1500.00},
+        ]
+        
+        for plan_data in plans:
+            obj, created = SubscriptionPlan.objects.get_or_create(
+                name=plan_data['name'],
+                defaults={
+                    'speed_up': plan_data['speed_up'],
+                    'speed_down': plan_data['speed_down'],
+                    'price': plan_data['price'],
+                    'validity_days': 30
+                }
+            )
+            # Ensure price is updated if the plan already exists but was 0.00
+            if not created and obj.price == 0.00:
+                obj.price = plan_data['price']
+                obj.save()
+                self.stdout.write(self.style.SUCCESS(f"Updated Plan Price: {plan_data['name']} to {plan_data['price']}"))
+            elif created:
+                self.stdout.write(self.style.SUCCESS(f"Created Plan: {plan_data['name']}"))
+            else:
+                self.stdout.write(f"Plan already exists: {plan_data['name']}")
 
         self.stdout.write(self.style.SUCCESS('\nSuccessfully seeded default system data!'))

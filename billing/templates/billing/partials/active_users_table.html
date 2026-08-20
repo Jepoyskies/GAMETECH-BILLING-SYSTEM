@@ -1,6 +1,9 @@
-<!-- ACTIVE USERS DATA -->
+<!-- ACTIVE/OFFLINE USERS DATA -->
 <div class="mb-3 d-flex align-items-center justify-content-between">
-    <span class="badge bg-success fs-6 rounded-pill px-3 py-2 shadow-sm">Total Active: {{ total_active }}</span>
+    <div>
+        <span class="badge bg-success fs-6 rounded-pill px-3 py-2 shadow-sm me-2">Total Active: {{ total_active }}</span>
+        <span class="badge bg-danger fs-6 rounded-pill px-3 py-2 shadow-sm">Total Offline: {{ total_offline }}</span>
+    </div>
 </div>
 
 {% if messages %}
@@ -11,34 +14,96 @@
     {% endfor %}
 {% endif %}
 
-<div class="dashboard-card">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" id="activeUsersTable" style="width:100%; border-collapse: collapse;">
-                <thead style="background: rgba(0,0,0,0.03);">
-                    <tr>
-                        <th>Username</th>
-                        <th>IP Address</th>
-                        <th>Router</th>
-                        <th>MAC Address</th>
-                        <th>Uptime</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for user in active_users %}
-                    <tr>
-                        <td class="fw-semibold text-primary">{{ user.name }}</td>
-                        <td>{{ user.address }}</td>
-                        <td>
-                            <span class="badge bg-secondary">{{ user.router_name }}</span><br>
-                            <small class="text-muted">{{ user.router_ip }}</small>
-                        </td>
-                        <td>{{ user.caller_id|default:"N/A" }}</td>
-                        <td>{{ user.uptime }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+<ul class="nav nav-tabs fw-bold mb-3" id="usersTab" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active text-success" id="online-tab" data-bs-toggle="tab" data-bs-target="#online-tab-pane" type="button" role="tab" aria-controls="online-tab-pane" aria-selected="true">
+        <i class="fas fa-wifi me-1"></i> Online Users
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link text-danger" id="offline-tab" data-bs-toggle="tab" data-bs-target="#offline-tab-pane" type="button" role="tab" aria-controls="offline-tab-pane" aria-selected="false">
+        <i class="fas fa-unlink me-1"></i> Offline Customers
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content" id="usersTabContent">
+  <!-- ONLINE USERS TAB -->
+  <div class="tab-pane fade show active" id="online-tab-pane" role="tabpanel" aria-labelledby="online-tab" tabindex="0">
+    <div class="dashboard-card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="activeUsersTable" style="width:100%; border-collapse: collapse;">
+                    <thead style="background: rgba(0,0,0,0.03);">
+                        <tr>
+                            <th>Username</th>
+                            <th>IP Address</th>
+                            <th>Router</th>
+                            <th>MAC Address</th>
+                            <th>Uptime</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in active_users %}
+                        <tr>
+                            <td class="fw-semibold text-primary">{{ user.name }}</td>
+                            <td>{{ user.address }}</td>
+                            <td>
+                                <span class="badge bg-secondary">{{ user.router_name }}</span><br>
+                                <small class="text-muted">{{ user.router_ip }}</small>
+                            </td>
+                            <td>{{ user.caller_id|default:"N/A" }}</td>
+                            <td>{{ user.uptime }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
+  </div>
+
+  <!-- OFFLINE USERS TAB -->
+  <div class="tab-pane fade" id="offline-tab-pane" role="tabpanel" aria-labelledby="offline-tab" tabindex="0">
+    <div class="dashboard-card border-danger border border-2">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="offlineUsersTable" style="width:100%; border-collapse: collapse;">
+                    <thead style="background: rgba(220, 53, 69, 0.05);">
+                        <tr>
+                            <th>Customer Name</th>
+                            <th>PPPoE Username</th>
+                            <th>Barangay / Address</th>
+                            <th>Assigned Router</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for customer in offline_users %}
+                        <tr>
+                            <td class="fw-bold">
+                                {{ customer.full_name }}
+                                {% if customer.health_status != 'Excellent' %}
+                                <span class="badge bg-danger ms-1" style="font-size: 0.7rem;">{{ customer.health_status }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="fw-semibold text-danger">{{ customer.pppoe_username }}</td>
+                            <td>
+                                {% if customer.barangay %}<span class="badge bg-warning text-dark">{{ customer.barangay.name }}</span><br>{% endif %}
+                                <small class="text-muted">{{ customer.address }}</small>
+                            </td>
+                            <td><span class="badge bg-secondary">{{ customer.mikrotik_device.device_name }}</span></td>
+                            <td class="text-end">
+                                <a href="{% url 'view_customer' customer.id %}" class="btn btn-sm btn-outline-danger rounded-pill fw-bold" target="_blank">
+                                    <i class="fas fa-external-link-alt me-1"></i> Update Health
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+  </div>
 </div>
