@@ -1,63 +1,297 @@
 {% extends 'billing/base.html' %}
+{% block title %}Payment Success - Mikrotik Billing System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .success-wrapper {
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1rem;
+        /* Modern subtle mesh gradient background */
+        background: radial-gradient(circle at top left, rgba(16, 185, 129, 0.05), transparent 50%),
+                    radial-gradient(circle at bottom right, rgba(56, 189, 248, 0.05), transparent 50%);
+        width: 100%;
+        margin: 0;
+    }
+    .receipt-card {
+        background: var(--card-bg, #ffffff);
+        border-radius: 24px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0,0,0,0.02);
+        width: 100%;
+        max-width: 480px;
+        overflow: hidden;
+        position: relative;
+        margin: 0 auto; /* Guaranteed centering */
+        transform: translateY(20px);
+        opacity: 0;
+        animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes slideUp {
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+    .dark-mode .receipt-card {
+        background: #1e293b;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255,255,255,0.05);
+    }
+    .receipt-header {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        padding: 3rem 2rem 2.5rem;
+        text-align: center;
+        color: white;
+        position: relative;
+    }
+    .success-icon-wrapper {
+        width: 80px;
+        height: 80px;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+        animation: scalePop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s forwards;
+        transform: scale(0);
+    }
+    .success-icon {
+        font-size: 2.5rem;
+        color: #10b981;
+        opacity: 0;
+        animation: fadeInIcon 0.3s ease 0.5s forwards;
+    }
+    @keyframes scalePop {
+        to { transform: scale(1); }
+    }
+    @keyframes fadeInIcon {
+        to { opacity: 1; }
+    }
+    .receipt-body {
+        padding: 2.5rem 2rem;
+        position: relative;
+        background: inherit;
+    }
+    /* Ticket dashed line */
+    .receipt-body::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 20px;
+        right: 20px;
+        border-top: 2px dashed rgba(0, 0, 0, 0.08);
+    }
+    .dark-mode .receipt-body::before {
+        border-top: 2px dashed rgba(255, 255, 255, 0.1);
+    }
+    /* Ticket edge cutouts */
+    .cutout {
+        position: absolute;
+        top: -12px;
+        width: 24px;
+        height: 24px;
+        background: #f8fafc; /* Should match body background ideally */
+        border-radius: 50%;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.04);
+        z-index: 10;
+    }
+    .dark-mode .cutout { 
+        background: #0f172a; 
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .cutout.left { left: -12px; }
+    .cutout.right { right: -12px; }
+    
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 1.25rem;
+        align-items: center;
+    }
+    .detail-row:last-child {
+        margin-bottom: 0;
+    }
+    .detail-label {
+        color: #64748b;
+        font-size: 0.95rem;
+        font-weight: 500;
+    }
+    .dark-mode .detail-label { color: #94a3b8; }
+    .detail-value {
+        font-weight: 700;
+        color: #0f172a;
+        font-size: 1.05rem;
+        text-align: right;
+    }
+    .dark-mode .detail-value { color: #f8fafc; }
+    
+    .total-row {
+        background: rgba(16, 185, 129, 0.08);
+        padding: 1.25rem 1.5rem;
+        border-radius: 16px;
+        margin-top: 1.5rem;
+        border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    .dark-mode .total-row { background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); }
+    .total-row .detail-value {
+        color: #059669;
+        font-size: 1.4rem;
+    }
+    .dark-mode .total-row .detail-value { color: #34d399; }
+    
+    .messenger-box {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 1.25rem;
+        margin-top: 2rem;
+        transition: all 0.2s;
+    }
+    .messenger-box:hover {
+        border-color: #38bdf8;
+        box-shadow: 0 4px 12px rgba(56, 189, 248, 0.1);
+    }
+    .dark-mode .messenger-box {
+        background: rgba(0, 0, 0, 0.2);
+        border-color: rgba(255, 255, 255, 0.08);
+    }
+    .dark-mode .messenger-box:hover {
+        border-color: #38bdf8;
+    }
+    
+    .btn-action {
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        font-weight: 600;
+    }
+    .btn-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+    }
+    .btn-copy-msg {
+        background: #e0f2fe;
+        color: #0369a1;
+        border: none;
+        transition: all 0.2s;
+    }
+    .btn-copy-msg:hover {
+        background: #bae6fd;
+        color: #0c4a6e;
+    }
+    .dark-mode .btn-copy-msg {
+        background: rgba(56, 189, 248, 0.15);
+        color: #7dd3fc;
+    }
+    .dark-mode .btn-copy-msg:hover {
+        background: rgba(56, 189, 248, 0.25);
+    }
+    
+    /* Ensure the body background is soft to make the card pop */
+    body {
+        background-color: #f8fafc;
+    }
+    .dark-mode body {
+        background-color: #0f172a;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container mt-5">
-    <div class="alert alert-success shadow-sm mx-auto text-center p-4" style="max-width: 600px; border-radius: 12px;">
-        <h4 class="alert-heading fw-bold mb-3">✅ Transaction Successful!</h4>
-
-        <div id="receiptContent" class="text-start bg-light p-3 rounded border mb-4">
-            <p class="mb-1">Hello <strong>{{ customer.pppoe_username }}</strong>,</p>
-            <p class="mb-2">Your internet subscription has been successfully updated via <strong>{{ action_type
-                    }}</strong>.</p>
-
-            <ul class="list-unstyled mb-2 ms-2">
-                <li>📌 <strong>Plan:</strong> {{ customer.plan.name|default:"N/A" }}</li>
-                <li>💵 <strong>Amount Paid:</strong> ₱{{ amount }}</li>
-                <li>⏰ <strong>New Expiry:</strong> {{ new_expiry }}</li>
-            </ul>
-
-            <small class="text-muted">
-                Processed by: {{ adjusted_by }} <br>
-                System Status: ✔ Database Updated (Mikrotik sync pending)
-            </small>
+<div class="success-wrapper">
+    <div class="receipt-card">
+        <div class="receipt-header">
+            <div class="success-icon-wrapper">
+                <i class="fas fa-check success-icon"></i>
+            </div>
+            <h3 class="fw-bold mb-2">Payment Successful!</h3>
+            <p class="mb-0 text-white-50" style="font-size: 0.95rem;">Receipt for {{ customer.pppoe_username }}</p>
         </div>
+        
+        <div class="receipt-body">
+            <!-- Cutouts for the ticket effect -->
+            <div class="cutout left"></div>
+            <div class="cutout right"></div>
+            
+            <div class="text-center mb-4 mt-2">
+                <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill fw-bold" style="font-size: 0.85rem; border: 1px solid rgba(16, 185, 129, 0.2);">
+                    <i class="fas fa-bolt text-warning me-1"></i> {{ action_type }}
+                </span>
+            </div>
+            
+            <div class="detail-row">
+                <span class="detail-label">Internet Plan</span>
+                <span class="detail-value">{{ customer.plan.name|default:"N/A" }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Processed By</span>
+                <span class="detail-value">{{ adjusted_by }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">New Expiry Date</span>
+                <span class="detail-value text-primary">{{ new_expiry }}</span>
+            </div>
+            
+            <div class="detail-row total-row">
+                <span class="detail-label" style="color: inherit; font-size: 1.1rem;"><i class="fas fa-money-bill-wave me-2"></i>Amount Paid</span>
+                <span class="detail-value">₱{{ amount }}</span>
+            </div>
 
-        {% if messenger_template %}
-        <div class="text-start bg-white p-3 rounded border mb-4 border-primary shadow-sm">
-            <h6 class="fw-bold text-primary mb-2"><i class="fab fa-facebook-messenger"></i> Messenger Template</h6>
-            <textarea id="messengerTemplate" class="form-control mb-2" rows="6" readonly style="resize: none;">{{ messenger_template }}</textarea>
-            <div class="d-grid">
-                <button class="btn btn-outline-primary btn-sm fw-bold" onclick="copyMessengerTemplate()">
-                    <i class="fas fa-copy"></i> Copy for Messenger
+            {% if messenger_template %}
+            <div class="messenger-box">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="fw-bold text-primary" style="font-size: 0.9rem;"><i class="fab fa-facebook-messenger me-1"></i> Messenger Template</span>
+                    <button class="btn btn-sm btn-copy-msg rounded-pill px-3 fw-bold" onclick="copyMessengerTemplate()" id="msgCopyBtn">
+                        <i class="fas fa-copy me-1"></i> Copy
+                    </button>
+                </div>
+                <textarea id="messengerTemplate" class="form-control text-dark" rows="3" readonly style="resize: none; background: transparent; border: none; font-size: 0.85rem; padding: 0;">{{ messenger_template }}</textarea>
+            </div>
+            {% endif %}
+            
+            <div class="d-flex gap-3 mt-4 pt-2">
+                <a href="{% if next_url %}{{ next_url }}{% else %}javascript:history.back(){% endif %}" class="btn btn-light btn-action flex-grow-1" style="color: #475569; border: 1px solid #e2e8f0;">
+                    <i class="fas fa-arrow-left me-2"></i> Go Back
+                </a>
+                <button class="btn btn-dark btn-action flex-grow-1" onclick="copyReceipt()" id="receiptCopyBtn">
+                    <i class="fas fa-receipt me-2"></i> Copy Text
                 </button>
             </div>
-            <p id="messengerCopyStatus" class="text-success mt-2 fw-bold text-center" style="display:none; font-size: 0.85rem;">Copied to clipboard!</p>
         </div>
-        {% endif %}
-
-        <div class="d-grid gap-2 d-md-flex justify-content-md-center">
-            <button class="btn btn-primary fw-bold" onclick="copyReceipt()">📋 Copy Receipt</button>
-            <a href="{{ next_url }}" class="btn btn-secondary fw-bold">Back</a>
-        </div>
-        <p id="copyStatus" class="text-success mt-2 fw-bold" style="display:none;">Copied to clipboard!</p>
     </div>
 </div>
 
 <script>
     function copyReceipt() {
-        const text = document.getElementById('receiptContent').innerText;
+        // Build a clean text receipt without HTML
+        const text = `PAYMENT RECEIPT\n------------------------\nCustomer: {{ customer.pppoe_username }}\nAction: {{ action_type }}\nPlan: {{ customer.plan.name|default:"N/A" }}\nAmount Paid: ₱{{ amount }}\nNew Expiry: {{ new_expiry }}\nProcessed By: {{ adjusted_by }}\n------------------------\nSystem Status: Database Updated`;
+        
         navigator.clipboard.writeText(text).then(() => {
-            const status = document.getElementById('copyStatus');
-            status.style.display = 'block';
-            setTimeout(() => status.style.display = 'none', 3000);
+            const btn = document.getElementById('receiptCopyBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check me-2"></i> Copied!';
+            btn.classList.replace('btn-dark', 'btn-success');
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.classList.replace('btn-success', 'btn-dark');
+            }, 2000);
         });
     }
 
     function copyMessengerTemplate() {
         const text = document.getElementById('messengerTemplate').value;
         navigator.clipboard.writeText(text).then(() => {
-            const status = document.getElementById('messengerCopyStatus');
-            status.style.display = 'block';
-            setTimeout(() => status.style.display = 'none', 3000);
+            const btn = document.getElementById('msgCopyBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check me-1"></i> Copied!';
+            btn.classList.add('bg-success', 'text-white');
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.classList.remove('bg-success', 'text-white');
+            }, 2000);
         });
     }
 </script>

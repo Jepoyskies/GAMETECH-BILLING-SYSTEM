@@ -326,7 +326,7 @@ class MikrotikAPI:
                     mac = active_sessions[0].get('caller-id')
                     if mac and customer:
                         customer.mac_address = mac
-                        customer.save()
+                        Customer.objects.filter(pk=customer.pk).update(mac_address=mac)
 
             if mac:
                 # Implement MAC-level Bridge Drop (Option C)

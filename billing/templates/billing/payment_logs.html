@@ -88,33 +88,39 @@
             <span class="text-muted small">{{ page_obj.paginator.count }} records found</span>
         </div>
         <div class="table-responsive">
-            <table>
-                <thead>
+            <table class="table table-hover align-middle w-100">
+                <thead style="background: rgba(0,0,0,0.03);">
                     <tr>
-                        <th>Date Paid</th>
-                        <th>Username</th>
-                        <th>Amount</th>
-                        <th>Method</th>
-                        <th>Reference</th>
-                        <th>Plan</th>
-                        <th>New Expiry</th>
-                        <th>Adjusted By</th>
+                        <th class="py-3 px-4 border-bottom">Date Paid</th>
+                        <th class="py-3 px-4 border-bottom">Username</th>
+                        <th class="py-3 px-4 border-bottom">Amount</th>
+                        <th class="py-3 px-4 border-bottom">Method</th>
+                        <th class="py-3 px-4 border-bottom">Reference</th>
+                        <th class="py-3 px-4 border-bottom">Plan</th>
+                        <th class="py-3 px-4 border-bottom">New Expiry</th>
+                        <th class="py-3 px-4 border-bottom">Adjusted By</th>
                         {% if request.user.role == 'Admin' %}
-                        <th>Actions</th>
+                        <th class="py-3 px-4 border-bottom">Actions</th>
                         {% endif %}
                     </tr>
                 </thead>
                 <tbody>
                     {% for p in page_obj %}
                     <tr>
-                        <td>{{ p.paid_at|date:"M d, Y H:i" }}</td>
-                        <td class="fw-bold text-primary">{{ p.username }}</td>
-                        <td class="fw-bold text-success">₱{{ p.amount|floatformat:2 }}</td>
-                        <td><span class="badge-method">{{ p.payment_method|title }}</span></td>
-                        <td><code class="text-muted">{{ p.reference_no|default:"-" }}</code></td>
-                        <td>{{ p.plan_name }}</td>
-                        <td>{{ p.expires_at|date:"M d, Y" }}</td>
-                        <td>{{ p.adjusted_by }}</td>
+                        <td class="px-4 py-3 text-muted">{{ p.created_at|date:"M d, Y H:i" }}</td>
+                        <td class="px-4 py-3 fw-bold text-primary">{{ p.username }}</td>
+                        <td class="px-4 py-3 fw-bold text-success">₱{{ p.amount|floatformat:2 }}</td>
+                        <td class="px-4 py-3"><span class="badge-method">{{ p.payment_method|title }}</span></td>
+                        <td class="px-4 py-3"><code class="text-muted">{{ p.reference_no|default:"-" }}</code></td>
+                        <td class="px-4 py-3">{{ p.plan_name }}</td>
+                        <td class="px-4 py-3">{{ p.expires_at|date:"M d, Y" }}</td>
+                        <td class="px-4 py-3">
+                            {% if p.adjusted_by == 'Customer Portal' %}
+                                <span class="badge bg-success" style="font-size: 0.8rem; padding: 6px 10px; border-radius: 6px;"><i class="fas fa-globe me-1"></i> Portal</span>
+                            {% else %}
+                                <span class="badge bg-info text-dark" style="font-size: 0.8rem; padding: 6px 10px; border-radius: 6px;"><i class="fas fa-user-shield me-1"></i> {{ p.adjusted_by }}</span>
+                            {% endif %}
+                        </td>
                         {% if request.user.role == 'Admin' %}
                         <td>
                             <a href="{% url 'edit_payment_log' p.id %}" class="btn btn-sm btn-outline-primary" title="Edit Payment Log"><i class="fas fa-edit"></i></a>

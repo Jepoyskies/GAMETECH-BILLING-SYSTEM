@@ -13,9 +13,21 @@ def track_customer_changes(sender, instance, **kwargs):
         if orig:
             instance._original_plan_id = orig.plan_id
             instance._original_mikrotik_device_id = orig.mikrotik_device_id
+            instance._original_state = {
+                'Full Name': orig.full_name,
+                'Email': orig.email,
+                'Phone': orig.phone,
+                'Status': orig.status,
+                'Plan': orig.plan.name if orig.plan else "None",
+                'Router': orig.mikrotik_device.device_name if orig.mikrotik_device else "None",
+                'Username': orig.pppoe_username,
+                'Password': orig.pppoe_password,
+                'Expiration': orig.expires_at.strftime('%Y-%m-%d %H:%M') if orig.expires_at else "None"
+            }
     else:
         instance._original_plan_id = None
         instance._original_mikrotik_device_id = None
+        instance._original_state = None
 
 @receiver(post_save, sender=Customer)
 def sync_customer_to_mikrotik(sender, instance, created, **kwargs):
@@ -81,6 +93,45 @@ def sync_customer_to_mikrotik(sender, instance, created, **kwargs):
         logger.error(f"Error syncing customer {instance.pppoe_username} to Mikrotik: {e}")
         # Mark as Failed (Router Unreachable)
         Customer.objects.filter(pk=instance.pk).update(sync_status='Failed')
+
+@receiver(post_save, sender=Customer)
+def audit_customer_changes(sender, instance, created, **kwargs):
+    """
+    Logs changes to Customer fields into SystemLog for audit purposes.
+    """
+    from billing.models import SystemLog
+    
+    # We only log updates, not creations (unless we want to, but updates are more critical for audits)
+    if not created and hasattr(instance, '_original_state') and instance._original_state:
+        changes = []
+        new_state = {
+            'Full Name': instance.full_name,
+            'Email': instance.email,
+            'Phone': instance.phone,
+            'Status': instance.status,
+            'Plan': instance.plan.name if instance.plan else "None",
+            'Router': instance.mikrotik_device.device_name if instance.mikrotik_device else "None",
+            'Username': instance.pppoe_username,
+            'Password': instance.pppoe_password,
+            'Expiration': instance.expires_at.strftime('%Y-%m-%d %H:%M') if instance.expires_at else "None"
+        }
+        
+        for field, old_val in instance._original_state.items():
+            new_val = new_state.get(field)
+            if str(old_val) != str(new_val):
+                changes.append(f"{field}: '{old_val}' \u2192 '{new_val}'")
+                
+        if changes:
+            # We don't have access to request.user here easily, so we log as 'System' or grab from thread locals if we had it.
+            # But the requirement is to see what changed. 
+            SystemLog.objects.create(
+                table_name='Customer',
+                record_id=str(instance.id),
+                action='UPDATE (Profile)',
+                changed_by='System/Admin',
+                old_data="\n".join(changes),
+                new_data="Profile updated via UI or API"
+            )
 
 @receiver(post_delete, sender=Customer)
 def delete_customer_from_mikrotik(sender, instance, **kwargs):

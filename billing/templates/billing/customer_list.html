@@ -19,30 +19,6 @@
         margin-bottom: 1rem;
     }
 
-    .badge-active {
-        background-color: #22c55e;
-        color: white;
-    }
-
-    .badge-inactive {
-        background-color: #ef4444;
-        color: white;
-    }
-
-    .badge-pending {
-        background-color: #eab308;
-        color: white;
-    }
-
-    .badge-suspended {
-        background-color: #6366f1;
-        color: white;
-    }
-
-    .badge-pullout {
-        background-color: #64748b;
-        color: white;
-    }
 </style>
 {% endblock %}
 
@@ -83,8 +59,24 @@
         </div>
     </div>
 
+    <!-- Filter Pills -->
+    <div class="mb-4 d-flex flex-wrap gap-2">
+        <a href="?filter=all" class="btn {% if filter_type == 'all' or not filter_type %}btn-primary{% else %}btn-outline-primary{% endif %} rounded-pill px-4 shadow-sm fw-bold">
+            All Customers
+        </a>
+        <a href="?filter=nearing_expiration" class="btn {% if filter_type == 'nearing_expiration' %}btn-warning text-dark{% else %}btn-outline-warning text-dark{% endif %} rounded-pill px-4 shadow-sm fw-bold">
+            <i class="fas fa-clock me-1"></i> Nearing Expiration (<= 3 Days)
+        </a>
+        <a href="?filter=outstanding_balance" class="btn {% if filter_type == 'outstanding_balance' %}btn-danger{% else %}btn-outline-danger{% endif %} rounded-pill px-4 shadow-sm fw-bold">
+            <i class="fas fa-exclamation-circle me-1"></i> With Outstanding Balance
+        </a>
+        <a href="?filter=advance_payment" class="btn {% if filter_type == 'advance_payment' %}btn-success{% else %}btn-outline-success{% endif %} rounded-pill px-4 shadow-sm fw-bold">
+            <i class="fas fa-check-circle me-1"></i> Paid in Advance
+        </a>
+    </div>
+
     <div class="dashboard-card">
-        <div class="card-body table-responsive p-0">
+        <div class="card-body table-responsive-modern p-0">
             <table id="customerTable" class="table table-hover align-middle mb-0" style="width:100%; border-collapse: collapse;">
                 <thead style="background: rgba(0,0,0,0.03);">
                     <tr>
@@ -135,17 +127,17 @@
                         </td>
                         <td>
                             {% if customer.status == 'active' %}
-                                <span class="badge badge-active">Active</span>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Active</span>
                             {% elif customer.status == 'inactive' %}
-                                <span class="badge badge-inactive">Inactive</span>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">Inactive</span>
                             {% elif customer.status == 'pending' %}
-                                <span class="badge badge-pending">Pending</span>
+                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">Pending</span>
                             {% elif customer.status == 'suspended' %}
-                                <span class="badge badge-suspended">Suspended</span>
+                                <span class="badge bg-purple-subtle text-purple border border-purple-subtle px-2 py-1" style="background-color: rgba(99, 102, 241, 0.1); color: #6366f1; border-color: rgba(99, 102, 241, 0.2);">Suspended</span>
                             {% elif customer.status == 'pull out' %}
-                                <span class="badge badge-pullout">Pull Out</span>
+                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">Pull Out</span>
                             {% else %}
-                                <span class="badge bg-secondary">{{ customer.status|title }}</span>
+                                <span class="badge bg-secondary px-2 py-1">{{ customer.status|title }}</span>
                             {% endif %}
                         </td>
                         <td>

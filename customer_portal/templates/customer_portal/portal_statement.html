@@ -1,0 +1,210 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Statement of Account - {{ customer.full_name }}</title>
+    <style>
+        body {
+            font-family: 'Inter', Arial, sans-serif;
+            font-size: 14px;
+            color: #1e293b;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 800px;
+            margin: 40px auto;
+            padding: 40px;
+            background: #fff;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            border-radius: 8px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header img {
+            max-height: 80px;
+            margin-bottom: 10px;
+        }
+        .title {
+            text-align: center;
+            font-size: 24px;
+            margin: 20px 0;
+            font-weight: bold;
+            color: #0f172a;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .info {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #475569;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        table th, table td {
+            border: 1px solid #e2e8f0;
+            padding: 12px;
+            text-align: left;
+        }
+        table th {
+            background: #f1f5f9;
+            font-weight: 600;
+            color: #334155;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.05em;
+        }
+        table tbody tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+        .total {
+            text-align: right;
+            font-weight: bold;
+            font-size: 18px;
+            color: #0f172a;
+            padding: 15px;
+            background: #f1f5f9;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        .footer {
+            margin-top: 40px;
+            font-size: 12px;
+            text-align: center;
+            color: #64748b;
+        }
+        .no-print {
+            text-align: center;
+            margin-top: 30px;
+        }
+        .btn {
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn:hover {
+            background-color: #0b5ed7;
+        }
+        .btn-secondary {
+            background-color: #64748b;
+            margin-right: 10px;
+        }
+        .btn-secondary:hover {
+            background-color: #475569;
+        }
+        @media print {
+            body { background: white; }
+            .container { 
+                box-shadow: none; 
+                margin: 0; 
+                padding: 0; 
+                width: 100%;
+            }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <img src="{% static 'assets/images/logo_black.png' %}" alt="GameTech Logo">
+        <div><strong style="font-size: 18px;">GameTech UnliFiber</strong></div>
+        <div style="color: #475569; margin-top: 5px;">043 St. Therese, Patag, CDO</div>
+        <div style="color: #475569;">Phone: 0936-274-2712</div>
+    </div>
+
+    <div class="title">Statement of Account</div>
+
+    <div class="info">
+        <div class="info-row">
+            <div><span class="info-label">Customer Name:</span> <strong>{{ customer.full_name }}</strong></div>
+            <div><span class="info-label">Date Generated:</span> {{ current_date|date:"M d, Y h:i A" }}</div>
+        </div>
+        <div class="info-row">
+            <div><span class="info-label">Username:</span> {{ customer.username|default:"-" }}</div>
+            {% if date_from and date_to %}
+            <div><span class="info-label">Period:</span> {{ date_from }} to {{ date_to }}</div>
+            {% endif %}
+        </div>
+        <div class="info-row">
+            <div><span class="info-label">Address:</span> {{ customer.address|default:"-" }}</div>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Date Paid</th>
+                <th>Plan / Item</th>
+                <th>Days</th>
+                <th>Amount</th>
+                <th>Processed By</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in payments %}
+                <tr>
+                    <td>{{ p.paid_at|date:"M d, Y" }}</td>
+                    <td>{{ p.plan_name|default:"-" }}</td>
+                    <td>{{ p.days_paid|default:"-" }}</td>
+                    <td>₱{{ p.amount }}</td>
+                    <td>{{ p.adjusted_by|default:"-" }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center; color: #64748b; padding: 20px;">No payment records found for this period.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="total">
+        TOTAL PAID: ₱{{ total_paid|floatformat:2 }}
+    </div>
+
+    <div class="footer">
+        This is a system-generated Statement of Account.
+    </div>
+
+    <div class="no-print">
+        <a href="{% url 'customer_portal:portal_dashboard' %}" class="btn btn-secondary">Go to Dashboard</a>
+        <button class="btn" onclick="window.print()">
+            <svg style="width: 16px; height: 16px; vertical-align: text-bottom; margin-right: 5px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+            Print / Save as PDF
+        </button>
+    </div>
+</div>
+
+<script>
+    // Auto-open print dialog if explicitly requested via some param if needed, 
+    // but usually better to let user click the button so they see the page first.
+    // window.onload = function() { window.print(); }
+</script>
+
+</body>
+</html>

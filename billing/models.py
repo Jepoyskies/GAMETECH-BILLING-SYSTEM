@@ -157,6 +157,10 @@ class Customer(models.Model):
     def __str__(self):
         return f"{self.full_name} ({self.pppoe_username})"
 
+    @property
+    def abs_outstanding_balance(self):
+        return abs(self.outstanding_balance) if self.outstanding_balance else 0
+
 
 class Payment(models.Model):
     customer = models.ForeignKey(

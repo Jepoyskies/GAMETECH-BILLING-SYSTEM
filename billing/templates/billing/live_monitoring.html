@@ -145,6 +145,14 @@
 }
 .dark-mode .sum-box p { color: #f8fafc; }
 
+.hw-warning {
+    border-color: #ef4444 !important;
+    background: rgba(239, 68, 68, 0.1) !important;
+}
+.hw-warning h3 { color: #ef4444 !important; }
+.hw-warning p { color: #ef4444 !important; }
+.dark-mode .hw-warning { background: rgba(239, 68, 68, 0.2) !important; }
+
 .gauge-canvas {
     width: 62px !important;
     height: 62px !important;
@@ -389,9 +397,9 @@
             <p id="totalNet">0</p>
             <canvas class="gauge-canvas" id="gauge-net" width="62" height="62"></canvas>
         </div>
-        <div class="sum-box box-users" title="Active users being monitored">
+        <div class="sum-box box-users" title="Active users being monitored / Total active subscriptions">
             <h3>Active Users</h3>
-            <p id="activeUsers">0</p>
+            <p id="activeUsers">0 <span style="font-size: 0.5em; color: #94a3b8; font-weight: 500;">/ <span id="totalActiveSubs">0</span></span></p>
         </div>
         <div class="sum-box box-top" title="Top user by current bandwidth">
             <h3>Top User</h3>
@@ -461,6 +469,36 @@
         </div>
     </div>
 
+    <!-- Offline Customers (Paid but Down) -->
+    <div class="row mb-4" id="offlineCustomersPanel" style="display: none;">
+        <div class="col-12">
+            <div class="card shadow-sm border-danger border-2 rounded-4">
+                <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center rounded-top-4 py-3">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-plug-circle-xmark me-2"></i>Offline Customers (Paid but Down)</h5>
+                    <span class="badge bg-white text-danger rounded-pill px-3 py-2" id="offlineCountBadge" style="font-size: 1.1em; font-weight: 800;">0</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4 py-3 text-secondary" style="font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px;">CUSTOMER</th>
+                                    <th class="py-3 text-secondary" style="font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px;">PPPOE USERNAME</th>
+                                    <th class="py-3 text-secondary" style="font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px;">PHONE</th>
+                                    <th class="py-3 text-secondary" style="font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px;">LAST LOGGED OUT</th>
+                                    <th class="pe-4 py-3 text-secondary text-end" style="font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px;">ACTION</th>
+                                </tr>
+                            </thead>
+                            <tbody id="offlineCustomersTableBody">
+                                <!-- Populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Hardware Status Section -->
     <div class="mb-5">
         <h4 class="mb-3 text-secondary" style="font-size: 1.1rem; font-weight: 600;"><i class="fas fa-microchip me-2"></i>Router Hardware Status</h4>
@@ -471,13 +509,17 @@
             <span class="badge bg-secondary" style="font-size: 0.85em; padding: 6px 10px; border-radius: 8px;" id="hw-status-{{ device.id }}">Loading...</span>
         </div>
         <div class="summary-grid mb-4">
-            <div class="sum-box box-rx">
+            <div class="sum-box box-rx" id="hw-box-cpu-{{ device.id }}">
                 <h3>CPU Load</h3>
                 <p id="hw-cpu-{{ device.id }}">-</p>
             </div>
-            <div class="sum-box box-tx">
+            <div class="sum-box box-tx" id="hw-box-ram-{{ device.id }}">
                 <h3>Memory Usage</h3>
                 <p id="hw-ram-{{ device.id }}">-</p>
+            </div>
+            <div class="sum-box box-top" id="hw-box-storage-{{ device.id }}">
+                <h3>Storage Space</h3>
+                <p id="hw-storage-{{ device.id }}">-</p>
             </div>
             <div class="sum-box box-net">
                 <h3>Uptime</h3>
@@ -749,6 +791,23 @@ function render(filtered){
     let html = '';
     heavyMap = {};
     
+    // Helper to parse Mikrotik uptime (e.g. 5m20s, 1h30m, 45s) into seconds
+    function parseUptime(uptimeStr) {
+        if (!uptimeStr) return 0;
+        let seconds = 0;
+        let str = uptimeStr.replace('w', 'w ').replace('d', 'd ').replace('h', 'h ').replace('m', 'm ').replace('s', 's ');
+        let parts = str.split(' ').filter(p => p.trim());
+        for(let p of parts) {
+            let val = parseInt(p);
+            if (p.includes('w')) seconds += val * 604800;
+            else if (p.includes('d')) seconds += val * 86400;
+            else if (p.includes('h')) seconds += val * 3600;
+            else if (p.includes('m')) seconds += val * 60;
+            else if (p.includes('s')) seconds += val;
+        }
+        return seconds;
+    }
+    
     filtered.forEach(u => {
         let rx = +u.rx_mbps||0;
         let tx = +u.tx_mbps||0;
@@ -764,13 +823,17 @@ function render(filtered){
         let heavy = total > (avg*1.5);
         if(heavy) heavyMap[u.user] = true;
         let color = getColor(total, avg);
+        
+        let uptimeSec = parseUptime(u.uptime);
+        let isFlapping = uptimeSec > 0 && uptimeSec < 300; // Connected less than 5 minutes
 
         html += `
-        <div class="user-card ${heavy ? 'heavy' : ''}">
+        <div class="user-card ${heavy ? 'heavy' : ''} ${isFlapping && !heavy ? 'border-warning' : ''}" style="${isFlapping && !heavy ? 'box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);' : ''}">
             <div class="user-card-header">
                 <div>
                     <span class="username">${u.user}</span>
                     ${u.ip ? `<span class="ip" title="Assigned IP">${u.ip}</span>` : (u.device_ip ? `<span class="ip" title="Router IP">${u.device_ip}</span>` : '')}
+                    ${isFlapping ? '<span class="badge bg-warning text-dark ms-2" style="font-size: 0.6em; vertical-align: middle;"><i class="fas fa-bolt"></i> Flapping</span>' : ''}
                 </div>
                 <span class="speed-badge" style="background:${color}" title="Total bandwidth">
                     ${total.toFixed(2)} Mbps
@@ -811,6 +874,12 @@ function loadData(){
     .then(d => {
         allData = d.users || [];
         
+        // Update total active subs
+        document.getElementById('totalActiveSubs').innerText = d.total_active_subs || 0;
+        
+        // Render offline customers
+        renderOfflineCustomers(d.offline_users || []);
+        
         // Update Router Uplink Health
         if (d.routers && d.routers.length > 0) {
             let r = d.routers[0]; // Display main router's uplink
@@ -848,6 +917,38 @@ function loadData(){
     .catch(err => {
         console.error("Live monitoring fetch error:", err);
     });
+}
+
+function renderOfflineCustomers(offline_users) {
+    const panel = document.getElementById('offlineCustomersPanel');
+    const badge = document.getElementById('offlineCountBadge');
+    const tbody = document.getElementById('offlineCustomersTableBody');
+    
+    if (!offline_users || offline_users.length === 0) {
+        panel.style.display = 'none';
+        return;
+    }
+    
+    panel.style.display = 'flex'; // it's a row
+    badge.innerText = offline_users.length;
+    
+    let html = '';
+    offline_users.forEach(u => {
+        html += `
+        <tr>
+            <td class="ps-4">
+                <div class="fw-bold text-dark">${u.full_name}</div>
+                <div class="text-muted small" style="font-size: 0.75rem;"><i class="fas fa-server me-1"></i>${u.device_name}</div>
+            </td>
+            <td><span class="badge bg-light text-dark border shadow-sm px-2 py-1">${u.username}</span></td>
+            <td><span class="text-secondary fw-medium">${u.phone || 'N/A'}</span></td>
+            <td><span class="text-danger fw-bold"><i class="fas fa-clock me-1"></i>${u.last_logged_out}</span></td>
+            <td class="pe-4 text-end">
+                <a href="/customers/view/${u.id}/" class="btn btn-sm btn-outline-danger rounded-pill fw-bold px-3">View Profile</a>
+            </td>
+        </tr>`;
+    });
+    tbody.innerHTML = html;
 }
 
 function applyFilter(){
@@ -904,16 +1005,36 @@ function loadHardwareData() {
                 statusBadge.innerText = 'Online';
                 
                 let hw = res.resource;
-                document.getElementById(`hw-cpu-${device.id}`).innerText = (hw['cpu-load'] || 0) + '%';
                 
+                let cpuBox = document.getElementById(`hw-box-cpu-${device.id}`);
+                let cpuLoad = parseInt(hw['cpu-load'] || 0);
+                document.getElementById(`hw-cpu-${device.id}`).innerText = cpuLoad + '%';
+                if (cpuLoad > 80) cpuBox.classList.add('hw-warning');
+                else cpuBox.classList.remove('hw-warning');
+                
+                let ramBox = document.getElementById(`hw-box-ram-${device.id}`);
                 let freeMem = parseInt(hw['free-memory'] || 0);
                 let totMem = parseInt(hw['total-memory'] || 0);
                 let usedMem = totMem - freeMem;
                 let memPct = totMem > 0 ? ((usedMem / totMem) * 100).toFixed(1) : 0;
-                
                 document.getElementById(`hw-ram-${device.id}`).innerText = memPct + '%';
+                if (memPct > 80) ramBox.classList.add('hw-warning');
+                else ramBox.classList.remove('hw-warning');
+                
+                let storageBox = document.getElementById(`hw-box-storage-${device.id}`);
+                if (storageBox) {
+                    let freeHdd = parseInt(hw['free-hdd-space'] || 0);
+                    let totHdd = parseInt(hw['total-hdd-space'] || 0);
+                    let usedHdd = totHdd - freeHdd;
+                    let hddPct = totHdd > 0 ? ((usedHdd / totHdd) * 100).toFixed(1) : 0;
+                    document.getElementById(`hw-storage-${device.id}`).innerText = hddPct + '%';
+                    if (hddPct > 80) storageBox.classList.add('hw-warning');
+                    else storageBox.classList.remove('hw-warning');
+                }
+                
                 document.getElementById(`hw-uptime-${device.id}`).innerText = hw['uptime'] || '-';
-                document.getElementById(`hw-version-${device.id}`).innerText = hw['version'] || '-';
+                let versionEl = document.getElementById(`hw-version-${device.id}`);
+                if (versionEl) versionEl.innerText = hw['version'] || '-';
                 
                 let optHtml = '';
                 if (res.optical && res.optical.length > 0) {
