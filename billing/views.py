@@ -1157,7 +1157,6 @@ def customer_list(request):
 @permission_required('billing.add_customer', raise_exception=True)
 def add_customer(request):
     if request.method == 'POST':
-<<<<<<< HEAD
         if request.user.role == 'Agent':
             barangay_name = request.POST.get('barangay_name')
             if barangay_name:
@@ -1175,10 +1174,7 @@ def add_customer(request):
             latitude = request.POST.get('latitude') or None
             longitude = request.POST.get('longitude') or None
 
-        Customer.objects.create(
-=======
         customer = Customer.objects.create(
->>>>>>> 1e0e0f15067f6634727739cc60e66df9e694dddd
             full_name=request.POST.get('full_name'),
             email=request.POST.get('email') or None,
             phone=request.POST.get('phone'),
@@ -1276,7 +1272,6 @@ def edit_customer(request, customer_id):
             new_data.append(f"Agent ID: {agent_id}")
         customer.agent_id = agent_id if agent_id else None
         
-<<<<<<< HEAD
         if request.user.role == 'Agent':
             barangay_name = request.POST.get('barangay_name')
             if barangay_name:
@@ -1284,19 +1279,21 @@ def edit_customer(request, customer_id):
                     name__iexact=barangay_name, 
                     defaults={'name': barangay_name, 'health_status': 'Excellent'}
                 )
+                if str(customer.barangay_id or "") != str(barangay.id):
+                    old_data.append(f"Barangay ID: {customer.barangay_id}")
+                    new_data.append(f"Barangay ID: {barangay.id}")
                 customer.barangay_id = barangay.id
             else:
+                if customer.barangay_id is not None:
+                    old_data.append(f"Barangay ID: {customer.barangay_id}")
+                    new_data.append(f"Barangay ID: None")
                 customer.barangay_id = None
         else:
             barangay_id = request.POST.get('barangay_id')
+            if str(customer.barangay_id or "") != str(barangay_id or ""):
+                old_data.append(f"Barangay ID: {customer.barangay_id}")
+                new_data.append(f"Barangay ID: {barangay_id}")
             customer.barangay_id = barangay_id if barangay_id else None
-=======
-        barangay_id = request.POST.get('barangay_id')
-        if str(customer.barangay_id or "") != str(barangay_id or ""):
-            old_data.append(f"Barangay ID: {customer.barangay_id}")
-            new_data.append(f"Barangay ID: {barangay_id}")
-        customer.barangay_id = barangay_id if barangay_id else None
->>>>>>> 1e0e0f15067f6634727739cc60e66df9e694dddd
         
         account_type_id = request.POST.get('account_type_id')
         if str(customer.account_type_id or "") != str(account_type_id or ""):
@@ -1307,9 +1304,11 @@ def edit_customer(request, customer_id):
         if request.user.role != 'Agent':
             latitude = request.POST.get('latitude')
             if latitude:
+                check_change('Latitude', customer.latitude, latitude)
                 customer.latitude = latitude
             longitude = request.POST.get('longitude')
             if longitude:
+                check_change('Longitude', customer.longitude, longitude)
                 customer.longitude = longitude
         
         # Cignal Play Integration
@@ -1321,20 +1320,7 @@ def edit_customer(request, customer_id):
             check_change('Cignal Play Date', str(customer.cignalplay_date) if customer.cignalplay_date else None, cignal_date)
             customer.cignalplay_date = cignal_date
             
-<<<<<<< HEAD
-=======
-        latitude = request.POST.get('latitude')
-        if latitude:
-            check_change('Latitude', customer.latitude, latitude)
-            customer.latitude = latitude
-            
-        longitude = request.POST.get('longitude')
-        if longitude:
-            check_change('Longitude', customer.longitude, longitude)
-            customer.longitude = longitude
-            
         check_change('Health Status', customer.health_status, request.POST.get('health_status', 'Excellent'))
->>>>>>> 1e0e0f15067f6634727739cc60e66df9e694dddd
         customer.health_status = request.POST.get('health_status', 'Excellent')
 
         check_change('Health Reason', customer.health_reason, request.POST.get('health_reason'))
