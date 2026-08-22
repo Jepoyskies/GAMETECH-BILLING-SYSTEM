@@ -289,3 +289,35 @@ def portal_process_mock_payment(request):
                 messages.error(request, f"Payment processing failed: {e}")
                 
     return redirect('customer_portal:portal_dashboard')
+
+def portal_apply_addon(request):
+    if request.method == 'POST':
+        customer_id = request.session.get('customer_id')
+        if not customer_id:
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=401)
+            
+        import json
+        try:
+            data = json.loads(request.body)
+            addon_type = data.get('addon_type')
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'Invalid data'}, status=400)
+            
+        if not addon_type:
+            return JsonResponse({'status': 'error', 'message': 'Addon type is required'}, status=400)
+            
+        try:
+            customer = Customer.objects.get(id=customer_id)
+        except Customer.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Customer not found'}, status=404)
+            
+        from billing.models import AddOnRequest
+        AddOnRequest.objects.create(
+            customer=customer,
+            addon_type=addon_type,
+            status='Pending'
+        )
+        
+        return JsonResponse({'status': 'success', 'message': 'Request submitted successfully. Our staff will contact you soon.'})
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)

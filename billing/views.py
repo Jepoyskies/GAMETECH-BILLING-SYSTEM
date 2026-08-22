@@ -5,6 +5,7 @@ import os
 from django.conf import settings
 from django.core.cache import cache
 from django.contrib.auth.decorators import login_required, permission_required
+from django.views.decorators.http import require_POST
 from .decorators import role_required
 from django.contrib import messages
 from django.utils import timezone
@@ -16,7 +17,7 @@ from datetime import timedelta, datetime
 
 from .models import (
     SystemAdmin, SubscriptionPlan, Agent, AccountType,
-    Customer, Barangay, Payment, Rebate, SystemLog, SmsLog, CignalPlay, AuditLog
+    Customer, Barangay, Payment, Rebate, SystemLog, SmsLog, CignalPlay, AuditLog, AddOnRequest
 )
 import requests
 from network_manager.models import MikrotikDevice, NapBox
@@ -326,25 +327,34 @@ def resolve_network_health(request, scope, item_id):
         customer.health_reason = ''
         customer.save()
         messages.success(request, f"Resolved network health for customer {customer.full_name}.")
+    elif scope == 'addon':
+        from .models import AddOnRequest
+        addon = get_object_or_404(AddOnRequest, id=item_id)
+        addon.status = 'Resolved'
+        addon.save()
+        messages.success(request, f"Resolved add-on request ({addon.addon_type}) for {addon.customer.full_name}.")
     return redirect(request.META.get('HTTP_REFERER', 'live_monitoring'))
 
 
 @login_required
 def live_monitoring_view(request):
-    from .models import Barangay, Customer
+    from .models import Barangay, Customer, AddOnRequest
     devices = MikrotikDevice.objects.all().order_by('device_name')
     barangays = Barangay.objects.all().order_by('name')
     customers = Customer.objects.filter(status='active').order_by('full_name')
     active_device_alerts = MikrotikDevice.objects.exclude(health_status='Excellent')
     active_barangay_alerts = Barangay.objects.exclude(health_status='Excellent')
     active_customer_alerts = Customer.objects.exclude(health_status='Excellent').filter(status='active')
+    pending_addon_requests = AddOnRequest.objects.filter(status='Pending').order_by('-requested_at')
+    
     return render(request, 'billing/live_monitoring.html', {
         'devices': devices,
         'barangays': barangays,
         'customers': customers,
         'active_device_alerts': active_device_alerts,
         'active_barangay_alerts': active_barangay_alerts,
-        'active_customer_alerts': active_customer_alerts
+        'active_customer_alerts': active_customer_alerts,
+        'pending_addon_requests': pending_addon_requests
     })
 
 
@@ -362,47 +372,6 @@ def api_live_monitoring_data(request):
     for device in devices:
         try:
             api = MikrotikAPI(device)
-            # Check Uplink Health by pinging 8.8.8.8
-            uplink_status = 'Offline'
-            uplink_ping = 'Timeout'
-            try:
-                ping_res = api._get_api().get_resource('/').call('ping', {'address': '8.8.8.8', 'count': '1'})
-                if ping_res and len(ping_res) > 0:
-                    result = ping_res[0]
-                    loss = int(result.get('packet-loss', 100))
-                    if loss == 100 or result.get('status') == 'no route to host' or result.get('status') == 'timeout':
-                        uplink_status = 'Offline'
-                        uplink_ping = 'Timeout'
-                    else:
-                        avg_rtt_str = result.get('avg-rtt', '0ms')
-                        rtt_ms = int(avg_rtt_str.replace('ms', ''))
-                        uplink_ping = f"{rtt_ms}ms"
-                        if rtt_ms > 150:
-                            uplink_status = 'Unstable'
-                        else:
-                            uplink_status = 'Online'
-            except Exception as e:
-                print(f"Ping Error on {device.device_name}: {e}")
-                uplink_status = 'Offline'
-                uplink_ping = 'Error'
-
-            resources = api.get_system_resources()
-            
-            response_data['routers'].append({
-                'id': device.id,
-                'name': device.device_name,
-                'ip': device.ip_address,
-                'uplink_status': uplink_status,
-                'uplink_ping': uplink_ping,
-                'cpu_load': resources.get('cpu-load', '0'),
-                'free_memory': resources.get('free-memory', '0'),
-                'total_memory': resources.get('total-memory', '0'),
-                'free_hdd': resources.get('free-hdd-space', '0'),
-                'total_hdd': resources.get('total-hdd-space', '0'),
-                'uptime': resources.get('uptime', '0s'),
-                'version': resources.get('version', 'Unknown')
-            })
-
             active_users = api.get_active_pppoe_users()
             
             # Fetch active customers from DB
@@ -412,27 +381,6 @@ def api_live_monitoring_data(request):
             ).exclude(pppoe_username__isnull=True).exclude(pppoe_username='')
             
             response_data['total_active_subs'] += active_db_customers.count()
-            
-            # Identify active usernames on Mikrotik
-            active_mt_usernames = {au.get('name') for au in active_users if au.get('name')}
-            
-            # Get PPP secrets to fetch last-logged-out time for offline users
-            secrets = api.get_ppp_secrets()
-            secrets_dict = {s.get('name'): s.get('last-logged-out', 'Unknown') for s in secrets if s.get('name')}
-            
-            # Find users who are PAID (Active in DB) but DOWN (Not connected)
-            for c in active_db_customers:
-                if c.pppoe_username not in active_mt_usernames:
-                    response_data['offline_users'].append({
-                        'id': c.id,
-                        'full_name': c.full_name,
-                        'username': c.pppoe_username,
-                        'phone': c.phone,
-                        'address': c.address,
-                        'device_id': device.id,
-                        'device_name': device.device_name,
-                        'last_logged_out': secrets_dict.get(c.pppoe_username, 'Unknown')
-                    })
             
             # Fetch traffic for all active PPPoE users directly from their dynamic interfaces
             interface_names = [f"<pppoe-{au.get('name')}>" for au in active_users if au.get('name')]
@@ -450,33 +398,111 @@ def api_live_monitoring_data(request):
                     tx_bps = int(t.get('tx-bits-per-second', 0))
                     rx_mbps = round(rx_bps / 1000000, 2)
                     tx_mbps = round(tx_bps / 1000000, 2)
-                except ValueError:
-                    rx_mbps = 0
-                    tx_mbps = 0
+                    traffic_dict[clean_name] = {
+                        'rx_mbps': rx_mbps,
+                        'tx_mbps': tx_mbps
+                    }
+                except Exception:
+                    continue
                     
-                traffic_dict[clean_name] = {'rx_mbps': rx_mbps, 'tx_mbps': tx_mbps}
-
-            # Build the output data
             for au in active_users:
-                u_name = au.get('name', 'Unknown')
-                user_ip = au.get('address', device.ip_address) # Actual assigned IP
-                
-                stats = traffic_dict.get(u_name, {'rx_mbps': 0, 'tx_mbps': 0})
-                
+                username = au.get('name')
+                tr = traffic_dict.get(username, {'rx_mbps': 0.0, 'tx_mbps': 0.0})
                 response_data['users'].append({
-                    'device_name': device.device_name,
-                    'device_ip': device.ip_address,
-                    'ip': user_ip,
-                    'user': u_name,
-                    'rx_mbps': stats['rx_mbps'],
-                    'tx_mbps': stats['tx_mbps'],
-                    'uptime': au.get('uptime', '0s')
+                    'user': username,
+                    'ip': au.get('address', ''),
+                    'uptime': au.get('uptime', '0s'),
+                    'rx_mbps': tr['rx_mbps'],
+                    'tx_mbps': tr['tx_mbps'],
+                    'device_ip': device.ip_address
                 })
+                
+            api.connection.disconnect()
+        except Exception as e:
+            print(f"Error connecting to Mikrotik {device.device_name}: {e}")
+            
+    return JsonResponse(response_data)
+
+
+@login_required
+def api_offline_users(request):
+    response_data = {'offline_users': []}
+    from billing.models import Customer
+    devices = MikrotikDevice.objects.all()
+    for device in devices:
+        try:
+            api = MikrotikAPI(device)
+            active_users = api.get_active_pppoe_users()
+            active_mt_usernames = {au.get('name') for au in active_users if au.get('name')}
+            
+            active_db_customers = Customer.objects.filter(
+                status='active', 
+                mikrotik_device=device
+            ).exclude(pppoe_username__isnull=True).exclude(pppoe_username='')
+            
+            offline_customer_usernames = [c.pppoe_username for c in active_db_customers if c.pppoe_username not in active_mt_usernames]
+            
+            if offline_customer_usernames:
+                secrets = api.get_ppp_secrets()
+                secrets_dict = {s.get('name'): s.get('last-logged-out', 'Unknown') for s in secrets if s.get('name')}
+                
+                for c in active_db_customers:
+                    if c.pppoe_username in offline_customer_usernames:
+                        response_data['offline_users'].append({
+                            'id': c.id,
+                            'full_name': c.full_name,
+                            'username': c.pppoe_username,
+                            'phone': c.phone,
+                            'address': c.address,
+                            'device_id': device.id,
+                            'device_name': device.device_name,
+                            'last_logged_out': secrets_dict.get(c.pppoe_username, 'Unknown')
+                        })
+            api.connection.disconnect()
+        except Exception as e:
+            print(f"Error fetching offline users for {device.device_name}: {e}")
+            
+    return JsonResponse(response_data)
+
+
+@login_required
+def api_router_uplink(request):
+    routers = []
+    devices = MikrotikDevice.objects.all()
+    for device in devices:
+        try:
+            api = MikrotikAPI(device)
+            uplink_status = 'Offline'
+            uplink_ping = 'Timeout'
+            try:
+                ping_res = api._get_api().get_resource('/').call('ping', {'address': '8.8.8.8', 'count': '1'})
+                if ping_res and len(ping_res) > 0:
+                    result = ping_res[0]
+                    loss = int(result.get('packet-loss', 100))
+                    if loss == 100 or result.get('status') == 'no route to host' or result.get('status') == 'timeout':
+                        uplink_status = 'Offline'
+                        uplink_ping = 'Timeout'
+                    else:
+                        avg_rtt_str = result.get('avg-rtt', '0ms')
+                        rtt_ms = int(avg_rtt_str.replace('ms', ''))
+                        uplink_ping = f"{rtt_ms}ms"
+                        uplink_status = 'Unstable' if rtt_ms > 150 else 'Online'
+            except Exception as e:
+                uplink_status = 'Offline'
+                uplink_ping = 'Error'
+                
+            routers.append({
+                'id': device.id,
+                'name': device.device_name,
+                'uplink_status': uplink_status,
+                'uplink_ping': uplink_ping,
+            })
+            api.connection.disconnect()
         except Exception as e:
             # Device unreachable or API error
             pass
             
-    return JsonResponse(response_data)
+    return JsonResponse({'routers': routers})
 
 
 # ─────────────────────────────────────────────────
@@ -1069,6 +1095,34 @@ def edit_staff(request, pk):
             return redirect('edit_staff', pk=pk)
 
     return render(request, 'billing/edit_staff.html', {'staff': staff})
+
+
+@login_required
+@require_POST
+def bulk_sms_view(request):
+    import json
+    import time
+    try:
+        data = json.loads(request.body)
+        customer_ids = data.get('customer_ids', [])
+        message = data.get('message', '').strip()
+
+        if not customer_ids or not message:
+            return JsonResponse({'success': False, 'error': 'Missing customers or message.'})
+
+        customers = Customer.objects.filter(id__in=customer_ids)
+        sent_count = 0
+
+        for customer in customers:
+            if customer.phone:
+                response, is_success = send_semaphore_sms(customer.phone, message)
+                if is_success:
+                    sent_count += 1
+                time.sleep(0.1)  # Prevent rate limiting
+
+        return JsonResponse({'success': True, 'sent_count': sent_count})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
 
 
 @login_required
@@ -2623,3 +2677,75 @@ def edit_payment_log_view(request, payment_id):
     return render(request, 'billing/edit_payment_log.html', context)
 
 
+
+@login_required
+def live_addon_requests_api(request):
+    requests = AddOnRequest.objects.filter(status='Pending').select_related('customer').order_by('-requested_at')
+    data = []
+    for req in requests:
+        data.append({
+            'id': req.id,
+            'customer_name': req.customer.full_name,
+            'customer_id': req.customer.id,
+            'addon_type': req.addon_type,
+            'requested_at': req.requested_at.strftime('%b %d, %I:%M %p')
+        })
+    return JsonResponse({'status': 'success', 'data': data})
+
+@login_required
+@require_POST
+def resolve_addon_request_api(request):
+    import json
+    try:
+        body = json.loads(request.body)
+        req_id = body.get('request_id')
+        if req_id:
+            addon_req = AddOnRequest.objects.get(id=req_id)
+            addon_req.status = 'Resolved'
+            addon_req.save()
+            return JsonResponse({'status': 'success'})
+    except AddOnRequest.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Request not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    return JsonResponse({'status': 'error', 'message': 'Invalid data'}, status=400)
+
+
+
+def api_network_alerts(request):
+    from .models import Barangay, Customer
+    from network_manager.models import MikrotikDevice
+    active_device_alerts = MikrotikDevice.objects.exclude(health_status='Excellent')
+    active_barangay_alerts = Barangay.objects.exclude(health_status='Excellent')
+    active_customer_alerts = Customer.objects.exclude(health_status='Excellent').filter(status='active')
+    
+    data = []
+    for d in active_device_alerts:
+        data.append({'type': 'device', 'id': d.id, 'name': d.device_name + ' (Router)', 'status': d.health_status, 'reason': d.health_reason})
+    for b in active_barangay_alerts:
+        data.append({'type': 'barangay', 'id': b.id, 'name': b.name + ' (Barangay)', 'status': b.health_status, 'reason': b.health_reason})
+    for c in active_customer_alerts:
+        data.append({'type': 'customer', 'id': c.id, 'name': c.full_name + ' (Customer)', 'status': c.health_status, 'reason': c.health_reason})
+        
+    return JsonResponse({'status': 'success', 'alerts': data})
+
+
+def api_active_pppoe_usernames(request):
+    from network_manager.models import MikrotikDevice
+    from network_manager.services import MikrotikAPI
+    from django.http import JsonResponse
+    
+    devices = MikrotikDevice.objects.all()
+    active_usernames = set()
+    
+    for device in devices:
+        try:
+            api = MikrotikAPI(device)
+            active_users = api.get_active_pppoe_users()
+            for au in active_users:
+                if au.get('name'):
+                    active_usernames.add(au.get('name'))
+        except Exception:
+            pass
+            
+    return JsonResponse({'status': 'success', 'active_usernames': list(active_usernames)})

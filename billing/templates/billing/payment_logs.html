@@ -43,22 +43,22 @@
     </div>
 
     <!-- FILTERS -->
-    <div class="filter-card">
+    <div class="filter-glass">
         <form method="get" class="row g-3 align-items-end">
             <div class="col-md-2">
-                <div class="filter-label">From Date</div>
+                <label class="form-label fw-bold text-muted small">From Date</label>
                 <input type="date" name="from" value="{{ filter_from }}" class="form-control">
             </div>
             <div class="col-md-2">
-                <div class="filter-label">To Date</div>
+                <label class="form-label fw-bold text-muted small">To Date</label>
                 <input type="date" name="to" value="{{ filter_to }}" class="form-control">
             </div>
             <div class="col-md-3">
-                <div class="filter-label">Search (User/Ref)</div>
+                <label class="form-label fw-bold text-muted small">Search (User/Ref)</label>
                 <input type="text" name="search" value="{{ filter_search }}" class="form-control" placeholder="Username or reference no...">
             </div>
             <div class="col-md-2">
-                <div class="filter-label">Payment Method</div>
+                <label class="form-label fw-bold text-muted small">Payment Method</label>
                 <select name="method" class="form-select">
                     <option value="">All Methods</option>
                     {% for m in methods %}
@@ -67,8 +67,8 @@
                 </select>
             </div>
             <div class="col-md-3 d-flex gap-2">
-                <button type="submit" class="btn btn-primary-action w-100"><i class="fas fa-filter"></i> Apply Filters</button>
-                <a href="{% url 'payment_logs' %}" class="btn btn-outline-secondary w-100">Clear</a>
+                <button type="submit" class="btn btn-primary w-100 rounded-pill"><i class="fas fa-filter me-1"></i> Filter</button>
+                <a href="{% url 'payment_logs' %}" class="btn btn-outline-secondary w-100 rounded-pill">Clear</a>
             </div>
         </form>
     </div>
@@ -110,7 +110,17 @@
                         <td class="px-4 py-3 text-muted">{{ p.created_at|date:"M d, Y H:i" }}</td>
                         <td class="px-4 py-3 fw-bold text-primary">{{ p.username }}</td>
                         <td class="px-4 py-3 fw-bold text-success">₱{{ p.amount|floatformat:2 }}</td>
-                        <td class="px-4 py-3"><span class="badge-method">{{ p.payment_method|title }}</span></td>
+                        <td class="px-4 py-3">
+                            {% if p.payment_method|lower == 'gcash' %}
+                                <span class="badge-payment badge-gcash"><i class="fas fa-wallet"></i> GCash</span>
+                            {% elif p.payment_method|lower == 'maya' or p.payment_method|lower == 'paymaya' %}
+                                <span class="badge-payment badge-maya"><i class="fas fa-wallet"></i> Maya</span>
+                            {% elif p.payment_method|lower == 'cash' %}
+                                <span class="badge-payment badge-cash"><i class="fas fa-money-bill-wave"></i> Cash</span>
+                            {% else %}
+                                <span class="badge-payment" style="background: rgba(148,163,184,0.1); color: #64748b; border: 1px solid rgba(148,163,184,0.3);"><i class="fas fa-credit-card"></i> {{ p.payment_method|title }}</span>
+                            {% endif %}
+                        </td>
                         <td class="px-4 py-3"><code class="text-muted">{{ p.reference_no|default:"-" }}</code></td>
                         <td class="px-4 py-3">{{ p.plan_name }}</td>
                         <td class="px-4 py-3">{{ p.expires_at|date:"M d, Y" }}</td>

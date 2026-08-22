@@ -551,6 +551,39 @@ function confirmAction(e, title, text, icon) {
         
         // Poll every 5 seconds
         setInterval(fetchStatus, 5000);
+        
+        // Auto-resolve Addon Request
+        const urlParams = new URLSearchParams(window.location.search);
+        const resolveAddonId = urlParams.get('resolve_addon');
+        if (resolveAddonId) {
+            // Send AJAX to resolve
+            fetch('{% url "resolve_addon_request_api" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ request_id: resolveAddonId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    // Highlight the Edit Profile button so admin remembers to add it
+                    const editBtn = document.querySelector('a.btn-edit[href*="/edit/"]');
+                    if(editBtn) {
+                        editBtn.classList.remove('btn-edit');
+                        editBtn.classList.add('bg-danger', 'text-white', 'pulse-animation');
+                        editBtn.innerHTML = '<i class="fas fa-exclamation-circle"></i> Complete Add-on Here';
+                        
+                        // Show Bootstrap Toast or Alert
+                        alert("Add-on Application processed!\nPlease click the 'Complete Add-on Here' button to update the customer's Cignal Play details.");
+                    }
+                    
+                    // Clean URL
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            });
+        }
     });
 </script>
 {% endblock %}

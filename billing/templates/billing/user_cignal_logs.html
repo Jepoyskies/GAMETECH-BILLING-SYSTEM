@@ -4,7 +4,7 @@
 {% block title %}Cignal Play Logs{% endblock %}
 
 {% block content %}
-<main class="container-fluid py-4 px-3 px-md-4">
+<main class="container-fluid py-3 px-3 px-md-4">
     <!-- Messages / Notifications -->
     {% if messages %}
         {% for message in messages %}
@@ -15,46 +15,58 @@
         {% endfor %}
     {% endif %}
 
-    <div class="d-flex align-items-center justify-content-between mb-4">
-        <h2 class="mb-0 fw-bold text-primary">
-            <i class="fa-solid fa-receipt me-2"></i> Transaction Logs for {{ customer.full_name }}
+    <div class="live-header-row mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <h2 class="live-title mb-0">
+            <div class="kpi-icon icon-red" style="width: 48px; height: 48px; font-size: 1.4rem; margin-right: 0;">
+                <i class="fa-solid fa-satellite-dish"></i>
+            </div>
+            Transaction Logs for {{ customer.full_name }}
         </h2>
-        <a href="{% url 'cignal_play_list' %}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left me-1"></i> Back to List
+        <a href="{% url 'cignal_play_list' %}" class="btn btn-outline-secondary rounded-pill px-4">
+            <i class="fas fa-arrow-left me-2"></i> Back to List
         </a>
     </div>
 
-    <div class="dashboard-card">
-        <div class="card-body">
-            <strong>Username:</strong> {{ customer.username|default:"N/A" }} &nbsp;|&nbsp;
-            <strong>Cignal No:</strong> <span class="badge bg-warning text-dark">{{ customer.cignalplay_no|default:"N/A" }}</span>
+    <!-- Customer Overview Filter-Glass style -->
+    <div class="filter-glass d-flex align-items-center gap-4">
+        <h6 class="mb-0 fw-bold text-muted text-uppercase letter-spacing-1">Customer Info</h6>
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-muted"><i class="fas fa-user me-1"></i> Username:</span>
+            <span class="fw-bold text-primary">{{ customer.username|default:"N/A" }}</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-muted"><i class="fas fa-tv me-1"></i> Cignal No:</span>
+            <span class="badge bg-warning text-dark px-3 rounded-pill">{{ customer.cignalplay_no|default:"N/A" }}</span>
         </div>
     </div>
 
-    <div class="dashboard-card">
-        <div class="card-body table-responsive">
-            <table class="table table-hover table-bordered align-middle">
-                <thead class="table-primary">
+    <div class="dashboard-card shadow-sm">
+        <div class="card-body p-0 table-responsive">
+            <table class="table table-hover align-middle mb-0 w-100">
+                <thead style="background: rgba(0,0,0,0.03);">
                     <tr>
-                        <th>Date Recorded</th>
-                        <th>Plan / Item</th>
-                        <th>Start / Received Date</th>
-                        <th>End Date</th>
-                        <th>Processed By</th>
+                        <th class="py-3 px-4 border-bottom">Date Recorded</th>
+                        <th class="py-3 px-4 border-bottom">Plan / Item</th>
+                        <th class="py-3 px-4 border-bottom">Start / Received Date</th>
+                        <th class="py-3 px-4 border-bottom">End Date</th>
+                        <th class="py-3 px-4 border-bottom">Processed By</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for log in logs %}
                     <tr>
-                        <td>{{ log.created_at|date:"M d, Y h:i A" }}</td>
-                        <td><strong>{{ log.plan_name }}</strong></td>
-                        <td>{{ log.start_date|date:"M d, Y"|default:"-" }}</td>
-                        <td>{{ log.end_date|date:"M d, Y"|default:"-" }}</td>
-                        <td>{{ log.adjusted_by|default:"-" }}</td>
+                        <td class="px-4 py-3 text-muted">{{ log.created_at|date:"M d, Y h:i A" }}</td>
+                        <td class="px-4 py-3 fw-bold text-primary">{{ log.plan_name }}</td>
+                        <td class="px-4 py-3"><span class="badge bg-light text-dark border">{{ log.start_date|date:"M d, Y"|default:"-" }}</span></td>
+                        <td class="px-4 py-3"><span class="badge bg-light text-dark border">{{ log.end_date|date:"M d, Y"|default:"-" }}</span></td>
+                        <td class="px-4 py-3"><span class="badge bg-secondary rounded-pill"><i class="fas fa-user-shield me-1"></i> {{ log.adjusted_by|default:"-" }}</span></td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="text-center text-muted py-4">No transactions recorded for this customer.</td>
+                        <td colspan="5" class="text-center text-muted py-5">
+                            <i class="fas fa-inbox fa-3x mb-3" style="opacity: 0.3;"></i><br>
+                            No transactions recorded for this customer.
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
