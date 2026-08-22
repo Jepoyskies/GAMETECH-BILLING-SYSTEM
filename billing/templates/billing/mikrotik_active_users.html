@@ -20,7 +20,7 @@
                     Mikrotik Active Users
                 </h2>
                 <div class="d-inline-flex gap-2 align-items-center">
-                    <button type="button" class="btn btn-warning rounded-pill fw-bold px-3 shadow-sm text-dark border-warning" data-bs-toggle="modal" data-bs-target="#networkHealthModal">
+                    <button type="button" class="btn btn-warning rounded-pill fw-bold px-3 shadow-sm text-dark border-warning" data-bs-toggle="modal" data-bs-target="#updateHealthModal">
                         <i class="fas fa-heartbeat me-1"></i> Update Network Health
                     </button>
                     <select id="routerFilter" class="filter-select rounded-pill px-3 shadow-sm w-auto d-inline-block border-primary text-primary fw-bold" style="background-color: rgba(25, 64, 122, 0.05);">
@@ -87,77 +87,7 @@
     </div>
 </div>
 
-<!-- Network Health Modal -->
-<div class="modal fade" id="networkHealthModal" tabindex="-1" aria-labelledby="networkHealthModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content border-0 shadow-lg">
-      <div class="modal-header bg-warning text-dark border-0">
-        <h5 class="modal-title fw-bold" id="networkHealthModalLabel"><i class="fas fa-heartbeat"></i> Update Network Health</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <form action="{% url 'update_network_health' %}" method="POST">
-        {% csrf_token %}
-        <div class="modal-body p-4">
-            <div class="mb-3">
-                <label class="form-label fw-bold">Scope</label>
-                <div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="scope" id="scopeRouter" value="router" checked onchange="toggleScope()">
-                        <label class="form-check-label" for="scopeRouter">Entire Router</label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="scope" id="scopeBarangay" value="barangay" onchange="toggleScope()">
-                        <label class="form-check-label" for="scopeBarangay">Specific Barangay</label>
-                    </div>
-                </div>
-            </div>
-
-            <div class="mb-3" id="routerSelectDiv">
-                <label for="router_id" class="form-label fw-bold">Select Router</label>
-                <select class="form-select" id="router_id" name="router_id">
-                    {% for device in devices %}
-                    <option value="{{ device.id }}">{{ device.device_name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="mb-3 d-none" id="barangaySelectDiv">
-                <label for="barangay_id" class="form-label fw-bold">Select Barangay</label>
-                <select class="form-select" id="barangay_id" name="barangay_id">
-                    {% for barangay in barangays %}
-                    <option value="{{ barangay.id }}">{{ barangay.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="mb-3">
-                <label for="health_status" class="form-label fw-bold">Health Status</label>
-                <select class="form-select" id="health_status" name="health_status" required>
-                    <option value="Excellent">Excellent - Normal Operations</option>
-                    <option value="Moderate">Moderate - Slow Connections</option>
-                    <option value="Poor">Poor - Frequent Disconnects</option>
-                    <option value="Outage">Outage - Total Loss of Service</option>
-                </select>
-            </div>
-
-            <div class="mb-3">
-                <label for="health_reason" class="form-label fw-bold">Reason / Details</label>
-                <textarea class="form-control" id="health_reason" name="health_reason" rows="3" placeholder="E.g., Fiber cut in main highway..."></textarea>
-            </div>
-
-            <div class="mb-3 form-check">
-                <input type="checkbox" class="form-check-input" id="send_sms" name="send_sms" value="1">
-                <label class="form-check-label fw-bold text-primary" for="send_sms">Broadcast SMS to affected customers</label>
-            </div>
-        </div>
-        <div class="modal-footer bg-light border-0">
-          <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-warning rounded-pill px-4 fw-bold">Update Health</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
+{% include 'billing/partials/update_health_modal.html' %}
 {% endblock %}
 
 {% block extra_js %}
@@ -165,16 +95,7 @@
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 <script>
-    function toggleScope() {
-        const isRouter = document.getElementById('scopeRouter').checked;
-        if (isRouter) {
-            document.getElementById('routerSelectDiv').classList.remove('d-none');
-            document.getElementById('barangaySelectDiv').classList.add('d-none');
-        } else {
-            document.getElementById('routerSelectDiv').classList.add('d-none');
-            document.getElementById('barangaySelectDiv').classList.remove('d-none');
-        }
-    }
+
 
     document.addEventListener("DOMContentLoaded", function() {
         const container = document.getElementById('async-data-container');

@@ -26,7 +26,7 @@
         --bg-main: #0f172a;
         --card-bg: #1e293b;
         --text-main: #f8fafc;
-        --text-muted: #94a3b8;
+        --text-muted: #cbd5e1;
         --border-color: #334155;
         /* Hero, accent, danger, success can remain the same */
     }
@@ -235,6 +235,12 @@
         font-size: 0.85rem;
         color: var(--text-muted);
         overflow-y: auto;
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+    }
+    
+    .cell-content::-webkit-scrollbar {
+        display: none;
     }
 
     .status-dot {
@@ -319,9 +325,9 @@
             <div class="hero-title">
                 <h1>Live Monitoring</h1>
                 <div class="hero-actions">
-                    <a href="{% url 'update_network_health' %}" class="btn-update">
+                    <button type="button" class="btn-update" data-bs-toggle="modal" data-bs-target="#updateHealthModal">
                         <i class="fas fa-heartbeat me-1"></i> Update Health
-                    </a>
+                    </button>
                     <select id="interval" class="select-speed">
                         <option value="1000">Ultra-Fast (1s)</option>
                         <option value="2000" selected>Fast (2s)</option>
@@ -505,6 +511,8 @@
     </div>
 </div>
 
+{% include 'billing/partials/update_health_modal.html' %}
+
 <!-- DataTables Bootstrap 5 CSS -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
 <!-- DataTables Responsive CSS -->
@@ -526,6 +534,8 @@
     let slowTimer = null;
     let liveTrafficTable = null;
 
+
+
     function renderOfflineCustomers(offline_users) {
         let tbody = document.getElementById('offlineUsersList');
         if (!offline_users || offline_users.length === 0) {
@@ -541,7 +551,7 @@
                 <i class="fas fa-user-slash text-danger me-3 fs-4"></i>
                 <div>
                     <h6 class="mb-1 text-danger fw-bold">${u.full_name} <span class="badge bg-danger ms-2">${u.username}</span></h6>
-                    <p class="mb-0 text-muted small"><i class="fas fa-clock me-1"></i>Down since: ${u.last_logged_out}</p>
+                    <p class="mb-0 text-danger-emphasis small"><i class="fas fa-clock me-1"></i>Down since: ${u.last_logged_out}</p>
                 </div>
             </div>
             <a href="/customers/view/${u.id}/" class="btn btn-sm btn-danger rounded-pill px-3">View</a>
@@ -594,7 +604,7 @@
                         <div>
                             <h6 class="mb-1 text-primary fw-bold">${req.addon_type}</h6>
                             <p class="mb-0 fw-semibold text-body">${req.customer_name}</p>
-                            <p class="mb-0 text-muted small"><i class="fas fa-clock me-1"></i>${req.requested_at}</p>
+                            <p class="mb-0 text-primary-emphasis small"><i class="fas fa-clock me-1"></i>${req.requested_at}</p>
                         </div>
                     </div>
                     <button id="btn-addon-${req.id}" onclick="processAddon(${req.id}, ${req.customer_id})" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold">Process <i class="fas fa-arrow-right ms-1"></i></button>
@@ -727,7 +737,7 @@
         <div id="hw-box-{{ device.id }}" class="mb-4">
             <div class="text-muted small mb-2 fw-bold">{{ device.device_name }}</div>
             <div class="hw-grid row text-center g-2">
-                <div class="col-3"><div class="text-muted small text-uppercase">CPU</div><div class="fw-bold text-primary">${cpu}</div></div>
+                <div class="col-3"><div class="text-muted small text-uppercase">CPU</div><div class="fw-bold text-info">${cpu}</div></div>
                 <div class="col-3"><div class="text-muted small text-uppercase">RAM</div><div class="fw-bold text-warning">${ram}</div></div>
                 <div class="col-3"><div class="text-muted small text-uppercase">Disk</div><div class="fw-bold text-danger">${sto}</div></div>
                 <div class="col-3"><div class="text-muted small text-uppercase">Uptime</div><div class="fw-bold text-success">${upt}</div></div>
