@@ -6,154 +6,133 @@
     <div class="live-header-row mb-4">
         <h2 class="live-title">
             <div class="kpi-icon icon-purple" style="width: 48px; height: 48px; font-size: 1.4rem; margin-right: 0;">
-                <i class="fa fa-gavel"></i>
+                <i class="fa fa-history"></i>
             </div>
             System Logs
         </h2>
     </div>
 
-    <div class="dashboard-card">
-        <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3" style="background:transparent; border-bottom:1px solid rgba(0,0,0,0.05); padding: 1.25rem;">
-            <div>
-                <small class="text-muted fw-semibold">
-                    Showing {{ logs.start_index }}–{{ logs.end_index }} of {{ logs.paginator.count }} records
-                </small>
+    <!-- Filter Bar -->
+    <div class="filter-glass">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label fw-bold text-muted small">Search Logs</label>
+                <input type="text" name="search" value="{{ search }}" class="form-control" placeholder="Search logs..." autocomplete="off">
             </div>
-
-            <form method="get" class="d-flex flex-wrap gap-2 align-items-center">
-                <input type="text" name="search" value="{{ search }}" class="filter-input" style="width: 250px;" placeholder="Search logs..." autocomplete="off">
-                
-                <select name="action_filter" class="filter-select" style="width: auto;">
+            <div class="col-md-2">
+                <label class="form-label fw-bold text-muted small">Action Filter</label>
+                <select name="action_filter" class="form-select">
                     <option value="">All Actions</option>
                     <option value="ADD" {% if action_filter == 'ADD' %}selected{% endif %}>ADD</option>
                     <option value="UPDATE" {% if action_filter == 'UPDATE' %}selected{% endif %}>UPDATE</option>
                     <option value="DELETE" {% if action_filter == 'DELETE' %}selected{% endif %}>DELETE</option>
                 </select>
-
-                <input type="date" name="date_from" value="{{ date_from }}" class="filter-input" style="width: 140px;" placeholder="From">
-                <input type="date" name="date_to" value="{{ date_to }}" class="filter-input" style="width: 140px;" placeholder="To">
-                
-                <input type="hidden" name="sort" value="{{ sort }}">
-                <input type="hidden" name="dir" value="{{ dir }}">
-                
-                <button type="submit" class="btn-filter" style="width: auto;"><i class="fas fa-filter"></i></button>
-                <a href="{% url 'system_logs' %}" class="btn-filter" style="width: auto; background: #64748b;"><i class="fas fa-undo"></i></a>
-            </form>
-        </div>
-
-            <div class="card-body p-0">
-                {% if not logs %}
-                    <div class="p-4 text-center text-muted">
-                        No logs available for current filters.
-                    </div>
-                {% else %}
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0" id="logsTable">
-                            <thead>
-                                <tr>
-                                    <th>
-                                        <a href="?sort=changed_at&dir={% if sort == 'changed_at' and dir == 'asc' %}desc{% else %}asc{% endif %}&{{ query_params }}" class="text-decoration-none">
-                                            Date {% if sort == 'changed_at' %}{% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}
-                                        </a>
-                                    </th>
-                                    <th>
-                                        <a href="?sort=table_name&dir={% if sort == 'table_name' and dir == 'asc' %}desc{% else %}asc{% endif %}&{{ query_params }}" class="text-decoration-none">
-                                            Table {% if sort == 'table_name' %}{% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}
-                                        </a>
-                                    </th>
-                                    <th>
-                                        <a href="?sort=record_id&dir={% if sort == 'record_id' and dir == 'asc' %}desc{% else %}asc{% endif %}&{{ query_params }}" class="text-decoration-none">
-                                            Record ID {% if sort == 'record_id' %}{% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}
-                                        </a>
-                                    </th>
-                                    <th>
-                                        <a href="?sort=action&dir={% if sort == 'action' and dir == 'asc' %}desc{% else %}asc{% endif %}&{{ query_params }}" class="text-decoration-none">
-                                            Action {% if sort == 'action' %}{% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}
-                                        </a>
-                                    </th>
-                                    <th>
-                                        <a href="?sort=changed_by&dir={% if sort == 'changed_by' and dir == 'asc' %}desc{% else %}asc{% endif %}&{{ query_params }}" class="text-decoration-none">
-                                            User {% if sort == 'changed_by' %}{% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}
-                                        </a>
-                                    </th>
-                                    <th style="min-width: 200px;">Old Data</th>
-                                    <th style="min-width: 200px;">New Data</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for log in logs %}
-                                <tr>
-                                    <td data-label="Date">
-                                        <div class="fw-semibold">{{ log.changed_at|date:"Y-m-d H:i:s" }}</div>
-                                        <div class="log-meta">Log ID: {{ log.id }}</div>
-                                    </td>
-                                    <td data-label="Table">
-                                        <span class="fw-semibold">{{ log.table_name }}</span>
-                                    </td>
-                                    <td data-label="Record ID">
-                                        {{ log.record_id }}
-                                    </td>
-                                    <td data-label="Action">
-                                        {% if log.action|lower == 'add' or log.action|lower == 'insert' or log.action|lower == 'create' %}
-                                            <span class="badge badge-action badge-action-insert">{{ log.action }}</span>
-                                        {% elif log.action|lower == 'delete' or log.action|lower == 'remove' %}
-                                            <span class="badge badge-action badge-action-delete">{{ log.action }}</span>
-                                        {% else %}
-                                            <span class="badge badge-action badge-action-update">{{ log.action }}</span>
-                                        {% endif %}
-                                    </td>
-                                    <td data-label="User">
-                                        {{ log.changed_by }}
-                                    </td>
-                                    <td data-label="Old Data">
-                                        {% if not log.old_data or log.old_data == 'null' %}
-                                            <div class="log-json empty">No previous data</div>
-                                        {% else %}
-                                            <pre class="log-json mb-0">{{ log.old_data }}</pre>
-                                        {% endif %}
-                                    </td>
-                                    <td data-label="New Data">
-                                        {% if not log.new_data or log.new_data == 'null' %}
-                                            <div class="log-json empty">No new data</div>
-                                        {% else %}
-                                            <pre class="log-json mb-0">{{ log.new_data }}</pre>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <!-- Pagination -->
-                    {% if logs.has_other_pages %}
-                    <nav class="p-3 border-top">
-                        <ul class="pagination pagination-sm mb-0 justify-content-center flex-wrap">
-                            {% if logs.has_previous %}
-                                <li class="page-item"><a class="page-link" href="?page={{ logs.previous_page_number }}&sort={{ sort }}&dir={{ dir }}&{{ query_params }}">&laquo;</a></li>
-                            {% else %}
-                                <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
-                            {% endif %}
-                            
-                            {% for i in logs.paginator.page_range %}
-                                {% if logs.number == i %}
-                                    <li class="page-item active"><span class="page-link">{{ i }}</span></li>
-                                {% elif i > logs.number|add:'-3' and i < logs.number|add:'3' %}
-                                    <li class="page-item"><a class="page-link" href="?page={{ i }}&sort={{ sort }}&dir={{ dir }}&{{ query_params }}">{{ i }}</a></li>
-                                {% endif %}
-                            {% endfor %}
-                            
-                            {% if logs.has_next %}
-                                <li class="page-item"><a class="page-link" href="?page={{ logs.next_page_number }}&sort={{ sort }}&dir={{ dir }}&{{ query_params }}">&raquo;</a></li>
-                            {% else %}
-                                <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
-                            {% endif %}
-                        </ul>
-                    </nav>
-                    {% endif %}
-                {% endif %}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold text-muted small">From Date</label>
+                <input type="date" name="date_from" value="{{ date_from }}" class="form-control">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold text-muted small">To Date</label>
+                <input type="date" name="date_to" value="{{ date_to }}" class="form-control">
+            </div>
+            <input type="hidden" name="sort" value="{{ sort }}">
+            <input type="hidden" name="dir" value="{{ dir }}">
+            
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary w-100 rounded-pill"><i class="fas fa-filter me-1"></i> Filter</button>
+                <a href="{% url 'system_logs' %}" class="btn btn-outline-secondary w-100 rounded-pill">Reset</a>
+            </div>
+        </form>
+        <div class="mt-3 text-end">
+            <small class="text-muted fw-semibold">
+                Showing {{ logs.start_index }}–{{ logs.end_index }} of {{ logs.paginator.count }} records
+            </small>
         </div>
     </div>
+
+    <!-- Timeline Content -->
+    {% if not logs %}
+        <div class="p-5 text-center text-muted">
+            <i class="fas fa-inbox fa-3x mb-3" style="opacity: 0.3;"></i>
+            <h5>No logs found for current filters.</h5>
+        </div>
+    {% else %}
+        <div class="log-timeline">
+            {% for log in logs %}
+            <div class="timeline-item">
+                <!-- Icon -->
+                {% if log.action|lower == 'add' or log.action|lower == 'insert' or log.action|lower == 'create' %}
+                    <div class="timeline-icon add" title="Added"><i class="fas fa-plus"></i></div>
+                {% elif log.action|lower == 'delete' or log.action|lower == 'remove' %}
+                    <div class="timeline-icon delete" title="Deleted"><i class="fas fa-trash"></i></div>
+                {% else %}
+                    <div class="timeline-icon update" title="Updated"><i class="fas fa-pen"></i></div>
+                {% endif %}
+                
+                <!-- Content Card -->
+                <div class="timeline-content">
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                        <div>
+                            <span class="badge bg-secondary me-2">{{ log.table_name }}</span>
+                            <strong class="text-primary">Record ID: {{ log.record_id }}</strong>
+                            <span class="ms-3 text-muted small"><i class="fas fa-user-circle me-1"></i>{{ log.changed_by }}</span>
+                        </div>
+                        <div class="text-muted small fw-bold">
+                            <i class="far fa-clock me-1"></i> {{ log.changed_at|date:"M d, Y H:i:s" }}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <h6 class="text-muted small fw-bold text-uppercase mb-2">Previous Data</h6>
+                            {% if not log.old_data or log.old_data == 'null' %}
+                                <div class="log-json empty">No previous data</div>
+                            {% else %}
+                                <div class="log-json">{{ log.old_data }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted small fw-bold text-uppercase mb-2">New Data</h6>
+                            {% if not log.new_data or log.new_data == 'null' %}
+                                <div class="log-json empty">No new data</div>
+                            {% else %}
+                                <div class="log-json" style="border-color: rgba(52, 211, 153, 0.3);">{{ log.new_data }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Pagination -->
+        {% if logs.has_other_pages %}
+        <nav class="p-3 mt-4">
+            <ul class="pagination mb-0 justify-content-center flex-wrap">
+                {% if logs.has_previous %}
+                    <li class="page-item"><a class="page-link rounded-start-pill px-3" href="?page={{ logs.previous_page_number }}&sort={{ sort }}&dir={{ dir }}&{{ query_params }}">Prev</a></li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link rounded-start-pill px-3">Prev</span></li>
+                {% endif %}
+                
+                {% for i in logs.paginator.page_range %}
+                    {% if logs.number == i %}
+                        <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                    {% elif i > logs.number|add:'-3' and i < logs.number|add:'3' %}
+                        <li class="page-item"><a class="page-link" href="?page={{ i }}&sort={{ sort }}&dir={{ dir }}&{{ query_params }}">{{ i }}</a></li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if logs.has_next %}
+                    <li class="page-item"><a class="page-link rounded-end-pill px-3" href="?page={{ logs.next_page_number }}&sort={{ sort }}&dir={{ dir }}&{{ query_params }}">Next</a></li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link rounded-end-pill px-3">Next</span></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    {% endif %}
 </div>
 {% endblock %}
 

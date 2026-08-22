@@ -157,6 +157,10 @@ class Customer(models.Model):
     def __str__(self):
         return f"{self.full_name} ({self.pppoe_username})"
 
+    @property
+    def abs_outstanding_balance(self):
+        return abs(self.outstanding_balance) if self.outstanding_balance else 0
+
 
 class Payment(models.Model):
     customer = models.ForeignKey(
@@ -308,4 +312,16 @@ class JobOrder(models.Model):
 
     def __str__(self):
         return f"{self.job_type} - {self.customer.full_name} ({self.status})"
+
+class AddOnRequest(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='addon_requests')
+    addon_type = models.CharField(max_length=100) # e.g. 'Cignal Play Add-on', 'Cignal Box'
+    status = models.CharField(max_length=20, default='Pending') # 'Pending', 'Resolved'
+    requested_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.customer.full_name} - {self.addon_type} ({self.status})"
+
+    class Meta:
+        ordering = ['-requested_at']
 

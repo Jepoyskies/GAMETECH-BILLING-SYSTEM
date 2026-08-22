@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Mikrotik Billing System{% endblock %}</title>
+    <title>{% block title %}Gametech Unli Fiber{% endblock %}</title>
     <!-- CSS Links -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -62,6 +62,31 @@
 .sidebar ul li .menu-link:hover .icon {
     color: #F9B233;
 }
+.sub-menu-link {
+    padding-left: 3.5rem !important;
+    font-size: 0.92rem;
+    opacity: 0.95;
+    background: transparent !important;
+}
+.sub-menu-link.active {
+    background: rgba(255,255,255,0.05) !important;
+    border-left: 4px solid #F9B233 !important;
+}
+.dropdown-toggle::after {
+    float: right;
+    margin-top: 0.4rem;
+    transition: transform 0.3s;
+    content: "\f107";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    border: none;
+}
+.dropdown-toggle[aria-expanded="true"]::after {
+    transform: rotate(180deg);
+}
+.sidebar.collapsed .dropdown-toggle::after {
+    display: none;
+}
 .sidebar-footer {
     padding: 1.2rem;
     border-top: 1px solid rgba(255,255,255,0.09);
@@ -71,12 +96,13 @@
 .sidebar-overlay { display: none; position: fixed; inset: 0;
                    background: rgba(33,81,161,0.18); z-index: 1039; transition: opacity 0.2s; }
 .sidebar-overlay.active { display: block; }
-.main-content { margin-left: 250px; transition: margin 0.3s; min-height: 100vh; }
+.main-content { margin-left: 250px; transition: margin 0.3s; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
 .main-content.full, .sidebar.collapsed ~ .main-content { margin-left: 70px; }
 @media (max-width: 991.98px) { .main-content, .main-content.full { margin-left: 0; } }
 .topbar { padding: 0.9rem 1.5rem; background: #fff; border-bottom: 1px solid #f0f0f0;
            display: flex; align-items: center; justify-content: space-between; min-height: 62px;
-           position: sticky; top: 0; z-index: 10; }
+           position: sticky; top: 0; z-index: 10; width: 100%; }
+.content-wrapper { width: 100%; max-width: 1600px; margin: 0 auto; }
 .menu-btn, .hide-btn, .show-btn {
     background: none; border: none; font-size: 1.45rem; color: #2151A1;
     margin-right: 1rem; cursor: pointer; transition: color 0.2s;
@@ -103,8 +129,18 @@
     body { font-size: 0.95rem; }
     h2 { font-size: 1.5rem !important; }
 }
+
+/* TV Mode Override (NOC Dashboard) */
+body.tv-mode .sidebar { display: none !important; }
+body.tv-mode .topbar { display: none !important; }
+body.tv-mode .main-content { margin-left: 0 !important; }
+body.tv-mode .content-wrapper { padding: 0 !important; max-width: 100% !important; }
+body.tv-mode {
+    background-color: #0f172a !important; /* Force ultra dark */
+    overflow-x: hidden;
+}
     </style>
-    <link rel="stylesheet" href="{% static 'css/theme.css' %}?v=1.1">
+    <link rel="stylesheet" href="{% static 'css/theme.css' %}?v=1.2">
     {% block extra_css %}{% endblock %}
     
     <script>
@@ -121,32 +157,53 @@
         <button class="close-btn" id="closeSidebar" type="button">&times;</button>
     </div>
     <nav>
-        <ul>
+        <ul id="sidebarNav" class="list-unstyled">
             {% if request.user.role != 'Agent' %}
             <li><a href="{% url 'dashboard' %}" class="menu-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"><span class="icon"><i class="fas fa-chart-pie"></i></span> <span>Dashboard</span></a></li>
+            
+            <!-- Billing & CRM -->
+            <li>
+                <a href="#billingSubmenu" data-bs-toggle="collapse" aria-expanded="{% if 'customer' in request.resolver_match.url_name or 'subscription' in request.resolver_match.url_name or 'plan' in request.resolver_match.url_name or 'payment' in request.resolver_match.url_name %}true{% else %}false{% endif %}" class="menu-link dropdown-toggle {% if 'customer' in request.resolver_match.url_name or 'subscription' in request.resolver_match.url_name or 'plan' in request.resolver_match.url_name or 'payment' in request.resolver_match.url_name %}active{% endif %}">
+                    <span class="icon"><i class="fas fa-users"></i></span> <span>Billing & CRM</span>
+                </a>
+                <ul class="collapse list-unstyled {% if 'customer' in request.resolver_match.url_name or 'subscription' in request.resolver_match.url_name or 'plan' in request.resolver_match.url_name or 'payment' in request.resolver_match.url_name %}show{% endif %}" id="billingSubmenu" data-bs-parent="#sidebarNav">
+                    <li><a href="{% url 'customer_list' %}" class="menu-link sub-menu-link {% if 'customer' in request.resolver_match.url_name %}active{% endif %}"><span>Customers</span></a></li>
+                    <li><a href="{% url 'subscription_plans' %}" class="menu-link sub-menu-link {% if 'subscription' in request.resolver_match.url_name %}active{% endif %}"><span>Customer Subs</span></a></li>
+                    <li><a href="{% url 'plan_list' %}" class="menu-link sub-menu-link {% if 'plan' in request.resolver_match.url_name and 'subscription' not in request.resolver_match.url_name %}active{% endif %}"><span>Internet Plans</span></a></li>
+                    <li><a href="{% url 'add_on_payments' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'add_on_payments' %}active{% endif %}"><span>Payments</span></a></li>
+                    <li><a href="{% url 'payment_logs' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'payment_logs' %}active{% endif %}"><span>Payment logs</span></a></li>
+                </ul>
+            </li>
             {% endif %}
-            <li><a href="{% url 'customer_list' %}" class="menu-link {% if 'customer' in request.resolver_match.url_name %}active{% endif %}"><span class="icon"><i class="fas fa-users"></i></span> <span>Customers</span></a></li>
-            {% if request.user.role != 'Agent' %}
-            <li><a href="{% url 'live_monitoring' %}" class="menu-link {% if request.resolver_match.url_name == 'live_monitoring' %}active{% endif %}"><span class="icon"><i class="fa-brands fa-creative-commons-sampling-plus"></i></span> <span>Live Monitoring</span></a></li>
-            <li><a href="{% url 'subscription_plans' %}" class="menu-link {% if 'subscription' in request.resolver_match.url_name %}active{% endif %}"><span class="icon"><i class="fa-solid fa-users-gear"></i></span> <span>Customer Subs</span></a></li>
-            {% endif %}
-            {% if request.user.role != 'Agent' %}
-            <li><a href="{% url 'plan_list' %}" class="menu-link {% if 'plan' in request.resolver_match.url_name and 'subscription' not in request.resolver_match.url_name %}active{% endif %}"><span class="icon"><i class="fa-solid fa-network-wired"></i></span> <span>Internet Plans</span></a></li>
-            <li><a href="{% url 'add_on_payments' %}" class="menu-link {% if request.resolver_match.url_name == 'add_on_payments' %}active{% endif %}"><span class="icon"><i class="fa-solid fa-cash-register"></i></span> <span>Payments</span></a></li>
-            <li><a href="{% url 'payment_logs' %}" class="menu-link {% if 'payment_logs' == request.resolver_match.url_name %}active{% endif %}"><span class="icon"><i class="fas fa-file-invoice-dollar"></i></span> <span>Payment logs</span></a></li>
-            <li><a href="{% url 'agent_list' %}" class="menu-link {% if 'agent' in request.path %}active{% endif %}"><span class="icon"><i class="fa fa-address-card"></i></span> <span>Agents</span></a></li>
-            {% endif %}
+
             {% if request.user.role == 'Admin' or request.user.role == 'Technician' %}
-            <li><a href="{% url 'device_list' %}" class="menu-link {% if request.resolver_match.url_name and 'device' in request.resolver_match.url_name %}active{% endif %}"><span class="icon"><i class="fa fa-mobile"></i></span> <span>Mikrotik Devices</span></a></li>
-            <li><a href="{% url 'mikrotik_active_users' %}" class="menu-link {% if request.resolver_match.url_name == 'mikrotik_active_users' %}active{% endif %}"><span class="icon"><i class="fa-solid fa-computer"></i></span> <span>Mikrotik Active Users</span></a></li>
+            <!-- Network Operations -->
+            <li>
+                <a href="#networkSubmenu" data-bs-toggle="collapse" aria-expanded="{% if request.resolver_match.url_name == 'live_monitoring' or 'device' in request.resolver_match.url_name or request.resolver_match.url_name == 'mikrotik_active_users' or request.resolver_match.url_name == 'geomap' %}true{% else %}false{% endif %}" class="menu-link dropdown-toggle {% if request.resolver_match.url_name == 'live_monitoring' or 'device' in request.resolver_match.url_name or request.resolver_match.url_name == 'mikrotik_active_users' or request.resolver_match.url_name == 'geomap' %}active{% endif %}">
+                    <span class="icon"><i class="fa-solid fa-network-wired"></i></span> <span>Network Ops</span>
+                </a>
+                <ul class="collapse list-unstyled {% if request.resolver_match.url_name == 'live_monitoring' or 'device' in request.resolver_match.url_name or request.resolver_match.url_name == 'mikrotik_active_users' or request.resolver_match.url_name == 'geomap' %}show{% endif %}" id="networkSubmenu" data-bs-parent="#sidebarNav">
+                    <li><a href="{% url 'live_monitoring' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'live_monitoring' %}active{% endif %}"><span>Live Monitoring</span></a></li>
+                    <li><a href="{% url 'device_list' %}" class="menu-link sub-menu-link {% if 'device' in request.resolver_match.url_name %}active{% endif %}"><span>Mikrotik Devices</span></a></li>
+                    <li><a href="{% url 'mikrotik_active_users' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'mikrotik_active_users' %}active{% endif %}"><span>Active Users</span></a></li>
+                    <li><a href="{% url 'geomap' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'geomap' %}active{% endif %}"><span>GeoMap</span></a></li>
+                </ul>
+            </li>
             {% endif %}
-            {% if request.user.role != 'Agent' %}
-            <li><a href="{% url 'geomap' %}" class="menu-link {% if request.resolver_match.url_name == 'geomap' %}active{% endif %}"><span class="icon"><i class="fa-solid fa-map-location"></i></span> <span>GeoMap</span></a></li>
-            {% endif %}
+            
             {% if request.user.role == 'Admin' %}
-            <li><a href="{% url 'system_logs' %}" class="menu-link {% if request.resolver_match.url_name == 'system_logs' %}active{% endif %}"><span class="icon"><i class="fa fa-gavel"></i></span> <span>Logs</span></a></li>
-            <li><a href="{% url 'settings' %}" class="menu-link {% if request.resolver_match.url_name == 'settings' %}active{% endif %}"><span class="icon"><i class="fas fa-cog"></i></span> <span>Settings</span></a></li>
-            <li><a href="{% url 'admin_panel' %}" class="menu-link {% if request.resolver_match.url_name == 'admin_panel' %}active{% endif %}"><span class="icon"><i class="fas fa-user-shield"></i></span> <span>Admin Panel</span></a></li>
+            <!-- Administration -->
+            <li>
+                <a href="#adminSubmenu" data-bs-toggle="collapse" aria-expanded="{% if 'agent' in request.path or request.resolver_match.url_name == 'system_logs' or request.resolver_match.url_name == 'settings' or request.resolver_match.url_name == 'admin_panel' %}true{% else %}false{% endif %}" class="menu-link dropdown-toggle {% if 'agent' in request.path or request.resolver_match.url_name == 'system_logs' or request.resolver_match.url_name == 'settings' or request.resolver_match.url_name == 'admin_panel' %}active{% endif %}">
+                    <span class="icon"><i class="fas fa-cogs"></i></span> <span>Administration</span>
+                </a>
+                <ul class="collapse list-unstyled {% if 'agent' in request.path or request.resolver_match.url_name == 'system_logs' or request.resolver_match.url_name == 'settings' or request.resolver_match.url_name == 'admin_panel' %}show{% endif %}" id="adminSubmenu" data-bs-parent="#sidebarNav">
+                    <li><a href="{% url 'agent_list' %}" class="menu-link sub-menu-link {% if 'agent' in request.path %}active{% endif %}"><span>Agents</span></a></li>
+                    <li><a href="{% url 'system_logs' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'system_logs' %}active{% endif %}"><span>Logs</span></a></li>
+                    <li><a href="{% url 'settings' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'settings' %}active{% endif %}"><span>Settings</span></a></li>
+                    <li><a href="{% url 'admin_panel' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'admin_panel' %}active{% endif %}"><span>Admin Panel</span></a></li>
+                </ul>
+            </li>
             {% endif %}
             
             <li class="mt-2">
@@ -160,7 +217,7 @@
         </ul>
     </nav>
     <div class="sidebar-footer text-center mt-auto mb-2">
-        <small>&copy; {% now 'Y' %} Mikrotik Billing Systems</small>
+        <small>&copy; {% now 'Y' %} Gametech Unli Fiber</small>
     </div>
 </div>
 
@@ -168,15 +225,22 @@
 
 <div class="main-content" id="mainContent">
     <header class="topbar">
-        <div>
-            <button class="hide-btn d-none d-lg-inline" id="hideSidebar" title="Hide Sidebar" type="button">
-                <i class="fas fa-angle-left"></i>
-            </button>
-            <button class="show-btn d-none d-lg-inline" id="showSidebar" title="Show Sidebar" type="button" style="display: none;">
-                <i class="fas fa-angle-right"></i>
-            </button>
-            <button class="menu-btn d-lg-none" id="openSidebar" type="button">
-                <i class="fas fa-bars"></i>
+        <div class="d-flex align-items-center gap-3">
+            <div>
+                <button class="hide-btn d-none d-lg-inline" id="hideSidebar" title="Hide Sidebar" type="button">
+                    <i class="fas fa-angle-left"></i>
+                </button>
+                <button class="show-btn d-none d-lg-inline" id="showSidebar" title="Show Sidebar" type="button" style="display: none;">
+                    <i class="fas fa-angle-right"></i>
+                </button>
+                <button class="menu-btn d-lg-none" id="openSidebar" type="button">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            
+            <!-- Global Back Button -->
+            <button onclick="window.history.back();" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2" style="border-radius: 20px; font-weight: 500; border-color: rgba(255,255,255,0.1);" title="Go Back">
+                <i class="fas fa-arrow-left"></i> <span>Back</span>
             </button>
         </div>
         <div class="topbar-right d-flex align-items-center gap-2">
@@ -268,6 +332,16 @@ document.addEventListener("DOMContentLoaded", function() {
     if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
     if (hideSidebarBtn) hideSidebarBtn.addEventListener('click', hideSidebar);
     if (showSidebarBtn) showSidebarBtn.addEventListener('click', showSidebar);
+
+    // Expand sidebar if dropdown clicked while collapsed
+    const dropdownToggles = document.querySelectorAll('.dropdown-toggle');
+    dropdownToggles.forEach(toggle => {
+        toggle.addEventListener('click', function(e) {
+            if (sidebar.classList.contains('collapsed')) {
+                showSidebar();
+            }
+        });
+    });
     });
 
     // Theme Toggle Logic

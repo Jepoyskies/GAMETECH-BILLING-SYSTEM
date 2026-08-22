@@ -8,9 +8,14 @@ urlpatterns = [
 
     # Customer routes
     path('customers/', views.customer_list, name='customer_list'),
+    path('customers/bulk-sms/', views.bulk_sms_view, name='bulk_sms_view'),
     path('customers/add/', views.add_customer, name='add_customer'),
     path('customers/edit/<int:customer_id>/',
          views.edit_customer, name='edit_customer'),
+    path('customers/<int:customer_id>/edit-expiration/',
+         views.edit_customer_expiration, name='edit_customer_expiration'),
+    path('customers/<int:customer_id>/edit-balance/',
+         views.edit_customer_balance, name='edit_customer_balance'),
     path('customers/view/<int:customer_id>/',
          views.view_customer, name='view_customer'),
     path('customers/api/status/<int:customer_id>/',
@@ -32,8 +37,12 @@ urlpatterns = [
     path('network/health/update/', views.update_network_health, name='update_network_health'),
     path('network/health/resolve/<str:scope>/<int:item_id>/', views.resolve_network_health, name='resolve_network_health'),
     path('live-monitoring/', views.live_monitoring_view, name='live_monitoring'),
-    path('api/live-monitoring/', views.api_live_monitoring_data,
-         name='api_live_monitoring'),
+    path('api/live-monitoring/', views.api_live_monitoring_data, name='api_live_monitoring'),
+    path('api/network-alerts/', views.api_network_alerts, name='api_network_alerts'),
+    path('api/offline-users/', views.api_offline_users, name='api_offline_users'),
+    path('api/router-uplink/', views.api_router_uplink, name='api_router_uplink'),
+    path('api/active-usernames/', views.api_active_pppoe_usernames, name='api_active_pppoe_usernames'),
+
 
     # Subscription / Service Plans routes
     path('subscriptions/', views.subscription_plans_view,
@@ -116,4 +125,7 @@ urlpatterns = [
     path('settings/barangays/delete/<int:pk>/', views.delete_barangay, name='delete_barangay'),
     
     path('settings/backup/', views.backup_database_view, name='backup_database'),
+    
+    path('api/live-addon-requests/', views.live_addon_requests_api, name='live_addon_requests_api'),
+    path('api/resolve-addon-request/', views.resolve_addon_request_api, name='resolve_addon_request_api'),
 ]

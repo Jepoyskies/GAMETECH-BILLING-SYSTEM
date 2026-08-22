@@ -5,18 +5,19 @@ import os
 from django.conf import settings
 from django.core.cache import cache
 from django.contrib.auth.decorators import login_required, permission_required
+from django.views.decorators.http import require_POST
 from .decorators import role_required
 from django.contrib import messages
 from django.utils import timezone
 from django.contrib.auth.models import User
-from django.db.models import Count, Sum, Q
+from django.db.models import Count, Sum, Q, Max
 from django.core.paginator import Paginator
 import json
 from datetime import timedelta, datetime
 
 from .models import (
     SystemAdmin, SubscriptionPlan, Agent, AccountType,
-    Customer, Barangay, Payment, Rebate, SystemLog, SmsLog, CignalPlay, AuditLog
+    Customer, Barangay, Payment, Rebate, SystemLog, SmsLog, CignalPlay, AuditLog, AddOnRequest
 )
 import requests
 from network_manager.models import MikrotikDevice, NapBox
@@ -61,14 +62,69 @@ def dashboard_view(request):
     new_customers_this_month = Customer.objects.filter(
         created_at__month=today.month, created_at__year=today.year).count()
 
-    # Mocking revenue since Payment model isn't implemented yet
+    # Totals
+    yesterday = today - timedelta(days=1)
+    start_of_week = today - timedelta(days=today.weekday())
+    
+    payments = Payment.objects.all()
+    
+    total_today = payments.filter(created_at__date=today).aggregate(t=Sum('amount'))['t'] or 0
+    total_yesterday = payments.filter(created_at__date=yesterday).aggregate(t=Sum('amount'))['t'] or 0
+    total_week = payments.filter(created_at__date__gte=start_of_week).aggregate(t=Sum('amount'))['t'] or 0
+    total_month = payments.filter(created_at__month=today.month, created_at__year=today.year).aggregate(t=Sum('amount'))['t'] or 0
+    total_year = payments.filter(created_at__year=today.year).aggregate(t=Sum('amount'))['t'] or 0
+
     totals = {
-        'today': "0.00",
-        'yesterday': "0.00",
-        'week': "0.00",
-        'month': "0.00",
-        'year': "0.00",
+        'today': f"{total_today:,.2f}",
+        'yesterday': f"{total_yesterday:,.2f}",
+        'week': f"{total_week:,.2f}",
+        'month': f"{total_month:,.2f}",
+        'year': f"{total_year:,.2f}",
     }
+
+    # Revenue Growth
+    last_month_dt = today.replace(day=1) - timedelta(days=1)
+    total_last_month = payments.filter(created_at__month=last_month_dt.month, created_at__year=last_month_dt.year).aggregate(t=Sum('amount'))['t'] or 0
+    
+    if total_last_month > 0:
+        growth_percent = ((float(total_month) - float(total_last_month)) / float(total_last_month)) * 100
+    else:
+        growth_percent = 100.0 if total_month > 0 else 0.0
+
+    growth_icon = 'fa-arrow-up' if growth_percent >= 0 else 'fa-arrow-down'
+    growth_color = 'text-success' if growth_percent >= 0 else 'text-danger'
+
+    # Collection Rate
+    distinct_payers_this_month = payments.filter(created_at__month=today.month, created_at__year=today.year).values('customer').distinct().count()
+    collection_rate = (distinct_payers_this_month / total_customers * 100) if total_customers > 0 else 0
+
+    # Sales by Month Chart
+    months_js = []
+    sales_by_month_js = []
+    for i in range(11, -1, -1):
+        m = (today.month - 1 - i) % 12 + 1
+        y = today.year + ((today.month - 1 - i) // 12)
+        month_name = calendar.month_abbr[m]
+        months_js.append(month_name)
+        m_total = payments.filter(created_at__month=m, created_at__year=y).aggregate(t=Sum('amount'))['t'] or 0
+        sales_by_month_js.append(float(m_total))
+
+    # Sales by Day (Last 7 days)
+    days_js = []
+    sales_by_day_js = []
+    for i in range(6, -1, -1):
+        d = today - timedelta(days=i)
+        days_js.append(d.strftime("%a"))
+        d_total = payments.filter(created_at__date=d).aggregate(t=Sum('amount'))['t'] or 0
+        sales_by_day_js.append(float(d_total))
+
+    # Pie Chart
+    cash = payments.filter(payment_method='Cash', created_at__month=today.month, created_at__year=today.year).aggregate(t=Sum('amount'))['t'] or 0
+    gcash = payments.filter(payment_method='GCash', created_at__month=today.month, created_at__year=today.year).aggregate(t=Sum('amount'))['t'] or 0
+    bank = payments.filter(payment_method='Bank Transfer', created_at__month=today.month, created_at__year=today.year).aggregate(t=Sum('amount'))['t'] or 0
+    
+    pie_labels_js = ["Cash", "GCash", "Bank Transfer"]
+    pie_data_js = [float(cash), float(gcash), float(bank)]
 
     # Admin logins (mock/fetch last logins)
     recent_users = User.objects.exclude(
@@ -82,14 +138,29 @@ def dashboard_view(request):
             'login_time': u.last_login
         })
 
+    # Top Paying Clients
+    top_clients_qs = payments.values('customer__full_name', 'customer__pppoe_username').annotate(
+        total_paid=Sum('amount'), last_payment=Max('created_at')
+    ).order_by('-total_paid')[:5]
+
+    top_clients = []
+    for c in top_clients_qs:
+        if c['customer__full_name'] or c['customer__pppoe_username']:
+            top_clients.append({
+                'username': c['customer__pppoe_username'] or c['customer__full_name'],
+                'total_paid': c['total_paid'],
+                'last_payment': c['last_payment']
+            })
+
     # Top Service Plans
     top_plans_qs = Customer.objects.values('plan__name').annotate(
         cnt=Count('id')).order_by('-cnt')[:5]
     top_plans = [{'plan_name': p['plan__name'] or 'None',
                   'cnt': p['cnt']} for p in top_plans_qs]
 
-    # Expiring Users
-    expiring_qs = Customer.objects.filter(expires_at__date=today)
+    # Expiring Users (Next 3 days & recently expired)
+    three_days_ahead = now + timedelta(days=3)
+    expiring_qs = Customer.objects.filter(expires_at__isnull=False, expires_at__lte=three_days_ahead).order_by('-expires_at')[:5]
     expiring_users = []
     for u in expiring_qs:
         is_expired = u.expires_at < now
@@ -102,25 +173,25 @@ def dashboard_view(request):
         })
 
     context = {
-        'growth_percent': 0,
-        'growth_icon': 'fa-arrow-up',
-        'growth_color': 'text-success',
-        'growth_percent_formatted': '0.0',
+        'growth_percent': growth_percent,
+        'growth_icon': growth_icon,
+        'growth_color': growth_color,
+        'growth_percent_formatted': f"{growth_percent:.1f}",
         'new_customers_this_month': new_customers_this_month,
-        'collection_rate_formatted': '0.0',
-        'distinct_payers_this_month': 0,
+        'collection_rate_formatted': f"{collection_rate:.1f}",
+        'distinct_payers_this_month': distinct_payers_this_month,
         'total_customers': total_customers,
         'totals': totals,
         'recent_admin_logins': recent_admin_logins,
-        'top_clients': [],
+        'top_clients': top_clients,
         'top_plans': top_plans,
         'expiring_users': expiring_users,
-        'months_js': json.dumps(["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]),
-        'sales_by_month_js': json.dumps([0] * 12),
-        'days_js': json.dumps(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]),
-        'sales_by_day_js': json.dumps([0] * 7),
-        'pie_labels_js': json.dumps(["Cash", "Gcash", "Bank Transfer"]),
-        'pie_data_js': json.dumps([0, 0, 0]),
+        'months_js': json.dumps(months_js),
+        'sales_by_month_js': json.dumps(sales_by_month_js),
+        'days_js': json.dumps(days_js),
+        'sales_by_day_js': json.dumps(sales_by_day_js),
+        'pie_labels_js': json.dumps(pie_labels_js),
+        'pie_data_js': json.dumps(pie_data_js),
     }
 
     return render(request, 'billing/dashboard.html', context)
@@ -256,25 +327,34 @@ def resolve_network_health(request, scope, item_id):
         customer.health_reason = ''
         customer.save()
         messages.success(request, f"Resolved network health for customer {customer.full_name}.")
+    elif scope == 'addon':
+        from .models import AddOnRequest
+        addon = get_object_or_404(AddOnRequest, id=item_id)
+        addon.status = 'Resolved'
+        addon.save()
+        messages.success(request, f"Resolved add-on request ({addon.addon_type}) for {addon.customer.full_name}.")
     return redirect(request.META.get('HTTP_REFERER', 'live_monitoring'))
 
 
 @login_required
 def live_monitoring_view(request):
-    from .models import Barangay, Customer
+    from .models import Barangay, Customer, AddOnRequest
     devices = MikrotikDevice.objects.all().order_by('device_name')
     barangays = Barangay.objects.all().order_by('name')
     customers = Customer.objects.filter(status='active').order_by('full_name')
     active_device_alerts = MikrotikDevice.objects.exclude(health_status='Excellent')
     active_barangay_alerts = Barangay.objects.exclude(health_status='Excellent')
     active_customer_alerts = Customer.objects.exclude(health_status='Excellent').filter(status='active')
+    pending_addon_requests = AddOnRequest.objects.filter(status='Pending').order_by('-requested_at')
+    
     return render(request, 'billing/live_monitoring.html', {
         'devices': devices,
         'barangays': barangays,
         'customers': customers,
         'active_device_alerts': active_device_alerts,
         'active_barangay_alerts': active_barangay_alerts,
-        'active_customer_alerts': active_customer_alerts
+        'active_customer_alerts': active_customer_alerts,
+        'pending_addon_requests': pending_addon_requests
     })
 
 
@@ -282,46 +362,25 @@ def live_monitoring_view(request):
 def api_live_monitoring_data(request):
     response_data = {
         'users': [],
-        'routers': []
+        'routers': [],
+        'offline_users': [],
+        'total_active_subs': 0
     }
     
+    from billing.models import Customer
     devices = MikrotikDevice.objects.all()
     for device in devices:
         try:
             api = MikrotikAPI(device)
-            # Check Uplink Health by pinging 8.8.8.8
-            uplink_status = 'Offline'
-            uplink_ping = 'Timeout'
-            try:
-                ping_res = api._get_api().get_resource('/').call('ping', {'address': '8.8.8.8', 'count': '1'})
-                if ping_res and len(ping_res) > 0:
-                    result = ping_res[0]
-                    loss = int(result.get('packet-loss', 100))
-                    if loss == 100 or result.get('status') == 'no route to host' or result.get('status') == 'timeout':
-                        uplink_status = 'Offline'
-                        uplink_ping = 'Timeout'
-                    else:
-                        avg_rtt_str = result.get('avg-rtt', '0ms')
-                        rtt_ms = int(avg_rtt_str.replace('ms', ''))
-                        uplink_ping = f"{rtt_ms}ms"
-                        if rtt_ms > 150:
-                            uplink_status = 'Unstable'
-                        else:
-                            uplink_status = 'Online'
-            except Exception as e:
-                print(f"Ping Error on {device.device_name}: {e}")
-                uplink_status = 'Offline'
-                uplink_ping = 'Error'
-
-            response_data['routers'].append({
-                'id': device.id,
-                'name': device.device_name,
-                'ip': device.ip_address,
-                'uplink_status': uplink_status,
-                'uplink_ping': uplink_ping
-            })
-
             active_users = api.get_active_pppoe_users()
+            
+            # Fetch active customers from DB
+            active_db_customers = Customer.objects.filter(
+                status='active', 
+                mikrotik_device=device
+            ).exclude(pppoe_username__isnull=True).exclude(pppoe_username='')
+            
+            response_data['total_active_subs'] += active_db_customers.count()
             
             # Fetch traffic for all active PPPoE users directly from their dynamic interfaces
             interface_names = [f"<pppoe-{au.get('name')}>" for au in active_users if au.get('name')]
@@ -339,33 +398,111 @@ def api_live_monitoring_data(request):
                     tx_bps = int(t.get('tx-bits-per-second', 0))
                     rx_mbps = round(rx_bps / 1000000, 2)
                     tx_mbps = round(tx_bps / 1000000, 2)
-                except ValueError:
-                    rx_mbps = 0
-                    tx_mbps = 0
+                    traffic_dict[clean_name] = {
+                        'rx_mbps': rx_mbps,
+                        'tx_mbps': tx_mbps
+                    }
+                except Exception:
+                    continue
                     
-                traffic_dict[clean_name] = {'rx_mbps': rx_mbps, 'tx_mbps': tx_mbps}
-
-            # Build the output data
             for au in active_users:
-                u_name = au.get('name', 'Unknown')
-                user_ip = au.get('address', device.ip_address) # Actual assigned IP
-                
-                stats = traffic_dict.get(u_name, {'rx_mbps': 0, 'tx_mbps': 0})
-                
+                username = au.get('name')
+                tr = traffic_dict.get(username, {'rx_mbps': 0.0, 'tx_mbps': 0.0})
                 response_data['users'].append({
-                    'device_name': device.device_name,
-                    'device_ip': device.ip_address,
-                    'ip': user_ip,
-                    'user': u_name,
-                    'rx_mbps': stats['rx_mbps'],
-                    'tx_mbps': stats['tx_mbps'],
-                    'uptime': au.get('uptime', '0s')
+                    'user': username,
+                    'ip': au.get('address', ''),
+                    'uptime': au.get('uptime', '0s'),
+                    'rx_mbps': tr['rx_mbps'],
+                    'tx_mbps': tr['tx_mbps'],
+                    'device_ip': device.ip_address
                 })
+                
+            api.connection.disconnect()
+        except Exception as e:
+            print(f"Error connecting to Mikrotik {device.device_name}: {e}")
+            
+    return JsonResponse(response_data)
+
+
+@login_required
+def api_offline_users(request):
+    response_data = {'offline_users': []}
+    from billing.models import Customer
+    devices = MikrotikDevice.objects.all()
+    for device in devices:
+        try:
+            api = MikrotikAPI(device)
+            active_users = api.get_active_pppoe_users()
+            active_mt_usernames = {au.get('name') for au in active_users if au.get('name')}
+            
+            active_db_customers = Customer.objects.filter(
+                status='active', 
+                mikrotik_device=device
+            ).exclude(pppoe_username__isnull=True).exclude(pppoe_username='')
+            
+            offline_customer_usernames = [c.pppoe_username for c in active_db_customers if c.pppoe_username not in active_mt_usernames]
+            
+            if offline_customer_usernames:
+                secrets = api.get_ppp_secrets()
+                secrets_dict = {s.get('name'): s.get('last-logged-out', 'Unknown') for s in secrets if s.get('name')}
+                
+                for c in active_db_customers:
+                    if c.pppoe_username in offline_customer_usernames:
+                        response_data['offline_users'].append({
+                            'id': c.id,
+                            'full_name': c.full_name,
+                            'username': c.pppoe_username,
+                            'phone': c.phone,
+                            'address': c.address,
+                            'device_id': device.id,
+                            'device_name': device.device_name,
+                            'last_logged_out': secrets_dict.get(c.pppoe_username, 'Unknown')
+                        })
+            api.connection.disconnect()
+        except Exception as e:
+            print(f"Error fetching offline users for {device.device_name}: {e}")
+            
+    return JsonResponse(response_data)
+
+
+@login_required
+def api_router_uplink(request):
+    routers = []
+    devices = MikrotikDevice.objects.all()
+    for device in devices:
+        try:
+            api = MikrotikAPI(device)
+            uplink_status = 'Offline'
+            uplink_ping = 'Timeout'
+            try:
+                ping_res = api._get_api().get_resource('/').call('ping', {'address': '8.8.8.8', 'count': '1'})
+                if ping_res and len(ping_res) > 0:
+                    result = ping_res[0]
+                    loss = int(result.get('packet-loss', 100))
+                    if loss == 100 or result.get('status') == 'no route to host' or result.get('status') == 'timeout':
+                        uplink_status = 'Offline'
+                        uplink_ping = 'Timeout'
+                    else:
+                        avg_rtt_str = result.get('avg-rtt', '0ms')
+                        rtt_ms = int(avg_rtt_str.replace('ms', ''))
+                        uplink_ping = f"{rtt_ms}ms"
+                        uplink_status = 'Unstable' if rtt_ms > 150 else 'Online'
+            except Exception as e:
+                uplink_status = 'Offline'
+                uplink_ping = 'Error'
+                
+            routers.append({
+                'id': device.id,
+                'name': device.device_name,
+                'uplink_status': uplink_status,
+                'uplink_ping': uplink_ping,
+            })
+            api.connection.disconnect()
         except Exception as e:
             # Device unreachable or API error
             pass
             
-    return JsonResponse(response_data)
+    return JsonResponse({'routers': routers})
 
 
 # ─────────────────────────────────────────────────
@@ -961,14 +1098,57 @@ def edit_staff(request, pk):
 
 
 @login_required
+@require_POST
+def bulk_sms_view(request):
+    import json
+    import time
+    try:
+        data = json.loads(request.body)
+        customer_ids = data.get('customer_ids', [])
+        message = data.get('message', '').strip()
+
+        if not customer_ids or not message:
+            return JsonResponse({'success': False, 'error': 'Missing customers or message.'})
+
+        customers = Customer.objects.filter(id__in=customer_ids)
+        sent_count = 0
+
+        for customer in customers:
+            if customer.phone:
+                response, is_success = send_semaphore_sms(customer.phone, message)
+                if is_success:
+                    sent_count += 1
+                time.sleep(0.1)  # Prevent rate limiting
+
+        return JsonResponse({'success': True, 'sent_count': sent_count})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
 def customer_list(request):
     from network_manager.models import MikrotikDevice
+    from django.utils import timezone
+    from datetime import timedelta
+    
     customers = Customer.objects.select_related(
         'plan', 'agent', 'barangay', 'mikrotik_device').all()
+        
+    filter_type = request.GET.get('filter', 'all')
+    
+    if filter_type == 'nearing_expiration':
+        three_days_from_now = timezone.now() + timedelta(days=3)
+        customers = customers.filter(expires_at__lte=three_days_from_now, status='active')
+    elif filter_type == 'outstanding_balance':
+        customers = customers.filter(outstanding_balance__gt=0)
+    elif filter_type == 'advance_payment':
+        customers = customers.filter(outstanding_balance__lt=0)
+        
     devices = MikrotikDevice.objects.all().order_by('device_name')
     return render(request, 'billing/customer_list.html', {
         'customers': customers,
-        'devices': devices
+        'devices': devices,
+        'filter_type': filter_type
     })
 
 
@@ -977,6 +1157,7 @@ def customer_list(request):
 @permission_required('billing.add_customer', raise_exception=True)
 def add_customer(request):
     if request.method == 'POST':
+<<<<<<< HEAD
         if request.user.role == 'Agent':
             barangay_name = request.POST.get('barangay_name')
             if barangay_name:
@@ -995,6 +1176,9 @@ def add_customer(request):
             longitude = request.POST.get('longitude') or None
 
         Customer.objects.create(
+=======
+        customer = Customer.objects.create(
+>>>>>>> 1e0e0f15067f6634727739cc60e66df9e694dddd
             full_name=request.POST.get('full_name'),
             email=request.POST.get('email') or None,
             phone=request.POST.get('phone'),
@@ -1012,6 +1196,16 @@ def add_customer(request):
             cignalplay_no=request.POST.get('cignalplay_no'),
             cignalplay_date=request.POST.get('cignalplay_date') or None,
             created_form_by=request.user.username
+        )
+        
+        from .models import SystemLog
+        SystemLog.objects.create(
+            table_name='Customer',
+            record_id=str(customer.id),
+            action='ADD',
+            changed_by=request.user.username,
+            old_data="",
+            new_data=f"Name: {customer.full_name}\nPhone: {customer.phone}\nStatus: {customer.status}"
         )
         messages.success(request, 'Customer added successfully!')
         return redirect('customer_list')
@@ -1031,28 +1225,58 @@ def add_customer(request):
 def edit_customer(request, customer_id):
     customer = get_object_or_404(Customer, id=customer_id)
     if request.method == 'POST':
+        old_data = []
+        new_data = []
+
+        def check_change(field_name, old_val, new_val):
+            # Treat None and empty string as equivalent for logging
+            if (old_val or "") != (new_val or ""):
+                old_data.append(f"{field_name}: {old_val}")
+                new_data.append(f"{field_name}: {new_val}")
+
+        check_change('Name', customer.full_name, request.POST.get('full_name'))
         customer.full_name = request.POST.get('full_name')
+
+        check_change('Email', customer.email, request.POST.get('email'))
         customer.email = request.POST.get('email') or None
+
+        check_change('Phone', customer.phone, request.POST.get('phone'))
         customer.phone = request.POST.get('phone')
+
+        check_change('Address', customer.address, request.POST.get('address'))
         customer.address = request.POST.get('address')
+
+        check_change('PPPoE Username', customer.pppoe_username, request.POST.get('pppoe_username'))
         customer.pppoe_username = request.POST.get('pppoe_username') or None
         
         new_password = request.POST.get('pppoe_password')
         if new_password:
+            check_change('PPPoE Password', '***', '*** (changed)')
             customer.pppoe_password = new_password
             
+        check_change('Status', customer.status, request.POST.get('status', 'active'))
         customer.status = request.POST.get('status', 'active')
         
         # Handle ForeignKeys (using _id allows us to assign None if empty string, or the ID directly)
         plan_id = request.POST.get('plan_id')
+        if str(customer.plan_id or "") != str(plan_id or ""):
+            old_data.append(f"Plan ID: {customer.plan_id}")
+            new_data.append(f"Plan ID: {plan_id}")
         customer.plan_id = plan_id if plan_id else None
         
         device_id = request.POST.get('device_id')
+        if str(customer.mikrotik_device_id or "") != str(device_id or ""):
+            old_data.append(f"Device ID: {customer.mikrotik_device_id}")
+            new_data.append(f"Device ID: {device_id}")
         customer.mikrotik_device_id = device_id if device_id else None
         
         agent_id = request.POST.get('agent_id')
+        if str(customer.agent_id or "") != str(agent_id or ""):
+            old_data.append(f"Agent ID: {customer.agent_id}")
+            new_data.append(f"Agent ID: {agent_id}")
         customer.agent_id = agent_id if agent_id else None
         
+<<<<<<< HEAD
         if request.user.role == 'Agent':
             barangay_name = request.POST.get('barangay_name')
             if barangay_name:
@@ -1066,8 +1290,18 @@ def edit_customer(request, customer_id):
         else:
             barangay_id = request.POST.get('barangay_id')
             customer.barangay_id = barangay_id if barangay_id else None
+=======
+        barangay_id = request.POST.get('barangay_id')
+        if str(customer.barangay_id or "") != str(barangay_id or ""):
+            old_data.append(f"Barangay ID: {customer.barangay_id}")
+            new_data.append(f"Barangay ID: {barangay_id}")
+        customer.barangay_id = barangay_id if barangay_id else None
+>>>>>>> 1e0e0f15067f6634727739cc60e66df9e694dddd
         
         account_type_id = request.POST.get('account_type_id')
+        if str(customer.account_type_id or "") != str(account_type_id or ""):
+            old_data.append(f"Account Type ID: {customer.account_type_id}")
+            new_data.append(f"Account Type ID: {account_type_id}")
         customer.account_type_id = account_type_id if account_type_id else None
         
         if request.user.role != 'Agent':
@@ -1079,14 +1313,44 @@ def edit_customer(request, customer_id):
                 customer.longitude = longitude
         
         # Cignal Play Integration
+        check_change('Cignal Play No', customer.cignalplay_no, request.POST.get('cignalplay_no'))
         customer.cignalplay_no = request.POST.get('cignalplay_no')
+        
         cignal_date = request.POST.get('cignalplay_date')
         if cignal_date:
+            check_change('Cignal Play Date', str(customer.cignalplay_date) if customer.cignalplay_date else None, cignal_date)
             customer.cignalplay_date = cignal_date
             
+<<<<<<< HEAD
+=======
+        latitude = request.POST.get('latitude')
+        if latitude:
+            check_change('Latitude', customer.latitude, latitude)
+            customer.latitude = latitude
+            
+        longitude = request.POST.get('longitude')
+        if longitude:
+            check_change('Longitude', customer.longitude, longitude)
+            customer.longitude = longitude
+            
+        check_change('Health Status', customer.health_status, request.POST.get('health_status', 'Excellent'))
+>>>>>>> 1e0e0f15067f6634727739cc60e66df9e694dddd
         customer.health_status = request.POST.get('health_status', 'Excellent')
+
+        check_change('Health Reason', customer.health_reason, request.POST.get('health_reason'))
         customer.health_reason = request.POST.get('health_reason')
             
+        if old_data or new_data:
+            from .models import SystemLog
+            SystemLog.objects.create(
+                table_name='Customer',
+                record_id=str(customer.id),
+                action='UPDATE',
+                changed_by=request.user.username,
+                old_data='\n'.join(old_data),
+                new_data='\n'.join(new_data)
+            )
+
         customer.save()
         messages.success(request, f'Customer {customer.full_name} updated successfully!')
         return redirect('view_customer', customer_id=customer.id)
@@ -1125,6 +1389,62 @@ def view_customer(request, customer_id):
 
 
 @login_required
+@role_required(['Admin', 'Agent', 'CSR'])
+def edit_customer_expiration(request, customer_id):
+    customer = get_object_or_404(Customer, id=customer_id)
+    if request.method == 'POST':
+        new_date_str = request.POST.get('expires_at')
+        if new_date_str:
+            from django.utils.dateparse import parse_datetime
+            from .models import SystemLog
+            new_date = parse_datetime(new_date_str)
+            if new_date:
+                old_date = customer.expires_at.strftime("%Y-%m-%d %H:%M:%S") if customer.expires_at else "None"
+                customer.expires_at = new_date
+                customer.save()
+                SystemLog.objects.create(
+                    table_name='Customer',
+                    record_id=str(customer.id),
+                    action='UPDATE',
+                    changed_by=request.user.username,
+                    old_data=f"Expiration: {old_date}",
+                    new_data=f"Expiration: {new_date.strftime('%Y-%m-%d %H:%M:%S')}"
+                )
+                messages.success(request, f"Expiration date for {customer.full_name} has been successfully updated.")
+            else:
+                messages.error(request, "Invalid date format.")
+    return redirect('view_customer', customer_id=customer.id)
+
+
+@login_required
+@role_required(['Admin', 'Agent', 'CSR'])
+def edit_customer_balance(request, customer_id):
+    customer = get_object_or_404(Customer, id=customer_id)
+    if request.method == 'POST':
+        new_balance_str = request.POST.get('outstanding_balance')
+        if new_balance_str is not None:
+            try:
+                from decimal import Decimal
+                from .models import SystemLog
+                new_balance = Decimal(new_balance_str)
+                old_balance = customer.outstanding_balance
+                customer.outstanding_balance = new_balance
+                customer.save()
+                SystemLog.objects.create(
+                    table_name='Customer',
+                    record_id=str(customer.id),
+                    action='UPDATE',
+                    changed_by=request.user.username,
+                    old_data=f"Balance: ₱{old_balance}",
+                    new_data=f"Balance: ₱{new_balance}"
+                )
+                messages.success(request, f"Balance for {customer.full_name} has been successfully updated.")
+            except:
+                messages.error(request, "Invalid balance amount.")
+    return redirect('view_customer', customer_id=customer.id)
+
+
+@login_required
 def api_customer_mikrotik_status(request, customer_id):
     customer = get_object_or_404(Customer, id=customer_id)
     
@@ -1159,6 +1479,22 @@ def api_customer_mikrotik_status(request, customer_id):
                     break
         except Exception:
             pass
+
+    # Add context to disconnected status
+    if data['mt_status'] == 'Disconnected':
+        if customer.status == 'active':
+            if customer.barangay and customer.barangay.health_status == 'Outage':
+                data['mt_status'] = 'Area Outage (Barangay)'
+            elif customer.mikrotik_device and customer.mikrotik_device.health_status == 'Outage':
+                data['mt_status'] = 'Network Outage (Router)'
+            elif customer.health_status == 'Outage':
+                data['mt_status'] = 'Service Outage'
+            else:
+                data['mt_status'] = 'Offline (Router Off)'
+        elif customer.status == 'suspended':
+            data['mt_status'] = 'Suspended (Unpaid)'
+        else:
+            data['mt_status'] = f'Disconnected ({customer.get_status_display()})'
             
     from django.http import JsonResponse
     return JsonResponse(data)
@@ -1848,7 +2184,8 @@ def pay_customer_view(request, username):
                     reference_no=reference_no, 
                     reason=reason, 
                     expires_at=new_expiry,
-                    adjusted_by=request.user.username
+                    adjusted_by=request.user.username,
+                    paid_at=timezone.now()
                 )
 
             # 5. Mikrotik API Reactivation & Comments
@@ -2220,9 +2557,13 @@ def add_on_payments_view(request):
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
     
+    # Fetch all active customers for Walk-in Payment dropdown
+    all_customers = Customer.objects.filter(status='active').values('pppoe_username', 'full_name')
+    
     context = {
         'page_obj': page_obj,
         'search': search,
+        'all_customers': all_customers,
     }
     return render(request, 'billing/add_on_payments.html', context)
 
@@ -2384,3 +2725,75 @@ def edit_payment_log_view(request, payment_id):
     return render(request, 'billing/edit_payment_log.html', context)
 
 
+
+@login_required
+def live_addon_requests_api(request):
+    requests = AddOnRequest.objects.filter(status='Pending').select_related('customer').order_by('-requested_at')
+    data = []
+    for req in requests:
+        data.append({
+            'id': req.id,
+            'customer_name': req.customer.full_name,
+            'customer_id': req.customer.id,
+            'addon_type': req.addon_type,
+            'requested_at': req.requested_at.strftime('%b %d, %I:%M %p')
+        })
+    return JsonResponse({'status': 'success', 'data': data})
+
+@login_required
+@require_POST
+def resolve_addon_request_api(request):
+    import json
+    try:
+        body = json.loads(request.body)
+        req_id = body.get('request_id')
+        if req_id:
+            addon_req = AddOnRequest.objects.get(id=req_id)
+            addon_req.status = 'Resolved'
+            addon_req.save()
+            return JsonResponse({'status': 'success'})
+    except AddOnRequest.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Request not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    return JsonResponse({'status': 'error', 'message': 'Invalid data'}, status=400)
+
+
+
+def api_network_alerts(request):
+    from .models import Barangay, Customer
+    from network_manager.models import MikrotikDevice
+    active_device_alerts = MikrotikDevice.objects.exclude(health_status='Excellent')
+    active_barangay_alerts = Barangay.objects.exclude(health_status='Excellent')
+    active_customer_alerts = Customer.objects.exclude(health_status='Excellent').filter(status='active')
+    
+    data = []
+    for d in active_device_alerts:
+        data.append({'type': 'device', 'id': d.id, 'name': d.device_name + ' (Router)', 'status': d.health_status, 'reason': d.health_reason})
+    for b in active_barangay_alerts:
+        data.append({'type': 'barangay', 'id': b.id, 'name': b.name + ' (Barangay)', 'status': b.health_status, 'reason': b.health_reason})
+    for c in active_customer_alerts:
+        data.append({'type': 'customer', 'id': c.id, 'name': c.full_name + ' (Customer)', 'status': c.health_status, 'reason': c.health_reason})
+        
+    return JsonResponse({'status': 'success', 'alerts': data})
+
+
+def api_active_pppoe_usernames(request):
+    from network_manager.models import MikrotikDevice
+    from network_manager.services import MikrotikAPI
+    from django.http import JsonResponse
+    
+    devices = MikrotikDevice.objects.all()
+    active_usernames = set()
+    
+    for device in devices:
+        try:
+            api = MikrotikAPI(device)
+            active_users = api.get_active_pppoe_users()
+            for au in active_users:
+                if au.get('name'):
+                    active_usernames.add(au.get('name'))
+        except Exception:
+            pass
+            
+    return JsonResponse({'status': 'success', 'active_usernames': list(active_usernames)})

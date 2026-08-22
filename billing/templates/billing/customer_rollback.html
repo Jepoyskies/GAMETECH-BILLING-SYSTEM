@@ -1,35 +1,49 @@
 {% extends 'billing/base.html' %}
 {% block content %}
-<div class="container mt-4">
-    <div class="dashboard-card mx-auto" style="max-width: 500px;">
-        <div class="card-header bg-danger text-white fw-bold">
-            ⏪ Rollback Expiry for {{ customer.pppoe_username }}
+<div class="container py-5 d-flex justify-content-center">
+    <div class="modern-card w-100" style="max-width: 500px;">
+        <div class="card-header-gradient-danger text-center">
+            <h4 class="mb-0 fw-bold"><i class="fas fa-backward me-2"></i> Rollback Expiry</h4>
+            <p class="mb-0 text-white-50 small">for {{ customer.pppoe_username }}</p>
         </div>
-        <div class="card-body">
+        <div class="card-body p-4">
             <form method="post" autocomplete="off">
                 {% csrf_token %}
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Current Expiry</label>
-                    <input type="text" class="form-control bg-light" value="{{ customer.expires_at|default:'N/A' }}"
-                        readonly>
+                    <label class="form-label fw-bold text-muted small text-uppercase">Current Expiry</label>
+                    <input type="text" class="form-control modern-form-control" value="{{ customer.expires_at|default:'N/A' }}" readonly>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label fw-bold text-danger">Rollback To (Penalty / Adjustment)</label>
-                    <input type="datetime-local" name="rollback_to" class="form-control" value="{{ current_expiry_js }}"
-                        required>
+                    <label class="form-label fw-bold text-danger small text-uppercase">Rollback To (Penalty / Adj.)</label>
+                    <input type="datetime-local" name="rollback_to" class="form-control modern-form-control border-danger border-opacity-25" value="{{ current_expiry_js }}" required>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Reason for Rollback</label>
-                    <textarea name="note" class="form-control" rows="3"
-                        placeholder="Bounced payment, error adjustment..." required></textarea>
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-muted small text-uppercase">Reason for Rollback</label>
+                    <textarea name="note" class="form-control modern-form-control" rows="3" placeholder="Bounced payment, error adjustment..." required></textarea>
                 </div>
 
-                <button type="submit" class="btn btn-danger w-100 fw-bold mb-2">Confirm Rollback</button>
-                <a href="{% url 'customer_list' %}" class="btn btn-outline-secondary w-100">Cancel</a>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'view_customer' customer.id %}" class="btn btn-light modern-btn flex-fill">Cancel</a>
+                    <button type="submit" class="btn btn-danger modern-btn flex-fill shadow-sm">Confirm Rollback</button>
+                </div>
             </form>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .modern-card { background: #fff; border-radius: 20px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.08); overflow: hidden; }
+  .dark-mode .modern-card { background: #1e293b; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+  .card-header-gradient-danger { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 25px 20px; border-bottom: none; }
+  .modern-form-control { border-radius: 12px; padding: 12px 15px; border: 1px solid #e2e8f0; background: #f8fafc; }
+  .dark-mode .modern-form-control { background: #0f172a; border-color: #334155; color: #f1f5f9; }
+  .dark-mode .text-muted { color: #94a3b8 !important; }
+  .modern-btn { border-radius: 12px; padding: 12px; font-weight: 600; }
+  .dark-mode .btn-light { background: #334155; border-color: #334155; color: #f1f5f9; }
+  .dark-mode .btn-light:hover { background: #475569; }
+</style>
 {% endblock %}

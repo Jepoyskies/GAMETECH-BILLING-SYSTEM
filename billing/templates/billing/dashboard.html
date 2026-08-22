@@ -29,36 +29,36 @@
   <!-- KPI Row 1 -->
   <div class="row g-3 mb-2">
     <div class="col-12 col-md-6 col-xl-4">
-      <div class="kpi-card h-100">
-        <div class="kpi-icon icon-gray" style="color:{% if growth_percent >= 0 %}#198754{% else %}#dc3545{% endif %};">
+      <div class="kpi-card h-100 {% if growth_percent >= 0 %}bg-mesh-success{% else %}bg-mesh-danger{% endif %} text-white border-0">
+        <div class="kpi-icon text-white bg-white bg-opacity-25 shadow-sm">
           <i class="fas {{ growth_icon }}"></i>
         </div>
         <div>
-          <div class="kpi-label">Revenue Growth</div>
-          <div class="kpi-value {{ growth_color }}">{{ growth_percent_formatted }}%</div>
-          <div class="kpi-sub">vs last month</div>
+          <div class="kpi-label text-white text-opacity-75">Revenue Growth</div>
+          <div class="kpi-value text-white">{{ growth_percent_formatted }}%</div>
+          <div class="kpi-sub text-white text-opacity-75">vs last month</div>
         </div>
       </div>
     </div>
 
     <div class="col-12 col-md-6 col-xl-3">
-      <div class="kpi-card h-100">
-        <div class="kpi-icon icon-blue"><i class="fas fa-user-plus"></i></div>
+      <div class="kpi-card h-100 bg-mesh-primary text-white border-0">
+        <div class="kpi-icon text-white bg-white bg-opacity-25 shadow-sm"><i class="fas fa-user-plus"></i></div>
         <div>
-          <div class="kpi-label">New Customers</div>
-          <div class="kpi-value">{{ new_customers_this_month }}</div>
-          <div class="kpi-sub">This month</div>
+          <div class="kpi-label text-white text-opacity-75">New Customers</div>
+          <div class="kpi-value text-white">{{ new_customers_this_month }}</div>
+          <div class="kpi-sub text-white text-opacity-75">This month</div>
         </div>
       </div>
     </div>
 
     <div class="col-12 col-md-6 col-xl-3">
-      <div class="kpi-card h-100">
-        <div class="kpi-icon icon-purple"><i class="fas fa-coins"></i></div>
+      <div class="kpi-card h-100 bg-mesh-warning text-white border-0">
+        <div class="kpi-icon text-white bg-white bg-opacity-25 shadow-sm"><i class="fas fa-coins"></i></div>
         <div>
-          <div class="kpi-label">Collection Rate</div>
-          <div class="kpi-value">{{ collection_rate_formatted }}%</div>
-          <div class="kpi-sub">This month ({{ distinct_payers_this_month }}/{{ total_customers }})</div>
+          <div class="kpi-label text-white text-opacity-75">Collection Rate</div>
+          <div class="kpi-value text-white">{{ collection_rate_formatted }}%</div>
+          <div class="kpi-sub text-white text-opacity-75">This month ({{ distinct_payers_this_month }}/{{ total_customers }})</div>
         </div>
       </div>
     </div>
@@ -400,10 +400,10 @@
       });
     }
 
-    const planChartCtx = document.getElementById('planDistributionChart');
+    const planChartCtx = document.getElementById('salesPieChart');
     if(planChartCtx && pieLabels.length > 0) {
       planChart = new Chart(planChartCtx.getContext('2d'), {
-        type: 'bar',
+        type: 'doughnut',
         data: {
           labels: pieLabels,
           datasets: [{
@@ -413,17 +413,20 @@
               '#38bdf8', '#34d399', '#c084fc', '#fb923c', 
               '#f472b6', '#a3e635', '#f87171', '#2dd4bf'
             ],
-            borderRadius: 8,
-            barThickness: 18,
             borderWidth: 0
           }]
         },
         options: {
-          indexAxis: 'y',
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { display: false },
+            legend: { 
+              position: 'right',
+              labels: {
+                usePointStyle: true,
+                padding: 20
+              }
+            },
             tooltip: {
               callbacks: {
                 label: function(context) {
@@ -435,18 +438,7 @@
               }
             }
           },
-          scales: {
-            x: {
-              beginAtZero: true,
-              ticks: {
-                callback: function(value) { return '₱' + value.toLocaleString(); }
-              }
-            },
-            y: {
-              grid: { display: false },
-              ticks: { font: { weight: '600' } }
-            }
-          }
+          cutout: '70%'
         }
       });
     }

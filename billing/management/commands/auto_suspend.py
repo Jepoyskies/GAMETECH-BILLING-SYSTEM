@@ -23,7 +23,7 @@ class Command(BaseCommand):
         for customer in due_customers:
             # Skip if they don't have a linked Mikrotik device
             if not customer.mikrotik_device:
-                self.stdout.write(self.style.ERROR(f"⚠️ {customer.pppoe_username} has no Mikrotik device assigned. Skipping."))
+                self.stdout.write(self.style.ERROR(f"[WARNING] {customer.pppoe_username} has no Mikrotik device assigned. Skipping."))
                 continue
                 
             try:
@@ -49,10 +49,10 @@ class Command(BaseCommand):
                     )
                     
                     suspended_count += 1
-                    self.stdout.write(self.style.SUCCESS(f"🔴 Suspended {customer.pppoe_username} on {customer.mikrotik_device.device_name}: {message}"))
+                    self.stdout.write(self.style.SUCCESS(f"[SUCCESS] Suspended {customer.pppoe_username} on {customer.mikrotik_device.device_name}: {message}"))
                 else:
-                    self.stdout.write(self.style.ERROR(f"❌ Failed to suspend {customer.pppoe_username} on Mikrotik: {message}"))
+                    self.stdout.write(self.style.ERROR(f"[FAILED] Failed to suspend {customer.pppoe_username} on Mikrotik: {message}"))
             except Exception as e:
-                self.stdout.write(self.style.ERROR(f"❌ Unexpected error suspending {customer.pppoe_username}: {str(e)}"))
+                self.stdout.write(self.style.ERROR(f"[ERROR] Unexpected error suspending {customer.pppoe_username}: {str(e)}"))
 
-        self.stdout.write(self.style.SUCCESS(f"✅ Suspend process complete. Total suspended: {suspended_count}"))
+        self.stdout.write(self.style.SUCCESS(f"[DONE] Suspend process complete. Total suspended: {suspended_count}"))

@@ -41,51 +41,76 @@
 .payment-log { border-left:3px solid #38bdf8; padding-left:15px; margin-bottom:15px; }
 .payment-log .amount { font-weight:700; color:#10b981; font-size:1.1rem; }
 .payment-log .date { color:#64748b; font-size:0.85rem; }
+
+/* Dropdown styling */
+.w-25px { width:25px; text-align:center; }
+.dark-mode .dropdown-menu { background:#1e293b; border-color:rgba(255,255,255,0.1); }
+.dark-mode .dropdown-item { color:#e2e8f0; }
+.dark-mode .dropdown-item:hover { background:#334155; color:#fff; }
+.dark-mode .dropdown-divider { border-top-color:rgba(255,255,255,0.1); }
+
+/* Modal styling */
+.dark-mode .modal-content { background:#1e293b; color:#f1f5f9; border:1px solid rgba(255,255,255,0.1); }
+.dark-mode .modal-content .text-muted { color:#94a3b8 !important; }
+.dark-mode .modal-content input, .dark-mode .modal-content select { background:#0f172a; color:#f1f5f9; border-color:#334155; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4 px-3 px-md-4">
     <div class="row mb-3">
-        <div class="col-12 d-flex justify-content-end gap-2">
+        <div class="col-12 d-flex justify-content-end gap-2 flex-wrap">
             <a href="{% url 'customer_list' %}" class="btn-action btn-edit"><i class="fas fa-arrow-left"></i> Back to List</a>
             
             {% if request.user.role == 'Admin' or request.user.role == 'Editor' %}
-            <a href="{% url 'edit_customer' customer.id %}" class="btn-action btn-edit"><i class="fas fa-edit"></i> Edit Profile</a>
-            <button type="button" class="btn-action" style="background:#fef9c3; color:#a16207; border:none;" data-bs-toggle="modal" data-bs-target="#customerHealthModal"><i class="fas fa-heartbeat"></i> Update Health</button>
-            {% endif %}
-            
-            <a href="{% url 'statement_of_account' customer.id %}" class="btn-action" style="background:#e0f2fe; color:#0369a1;"><i class="fas fa-print"></i> Print SOA</a>
-            
-            {% if customer.pppoe_username %}
-                {% if request.user.role == 'Admin' or request.user.role == 'Editor' %}
-                <a href="{% url 'pay_customer' customer.pppoe_username %}?next={{ request.get_full_path|urlencode }}" class="btn-action" style="background:#d1fae5; color:#065f46;"><i class="fas fa-money-bill-wave"></i> Renew / Pay Bill</a>
+                <a href="{% url 'edit_customer' customer.id %}" class="btn-action btn-edit"><i class="fas fa-edit"></i> Edit Profile</a>
+                
+                {% if customer.pppoe_username %}
+                    <a href="{% url 'pay_customer' customer.pppoe_username %}?next={{ request.get_full_path|urlencode }}" class="btn-action" style="background:#d1fae5; color:#065f46;"><i class="fas fa-money-bill-wave"></i> Renew / Pay Bill</a>
                 {% endif %}
                 
-                {% if request.user.role == 'Admin' or request.user.role == 'Editor' %}
-                <a href="{% url 'customer_rebate' customer.pppoe_username %}" class="btn-action" style="background:#dcfce7; color:#166534;"><i class="fas fa-gift"></i> Rebate</a>
-                <a href="{% url 'customer_rollback' customer.pppoe_username %}" class="btn-action" style="background:#fee2e2; color:#991b1b;"><i class="fas fa-backward"></i> Rollback</a>
-                
-                <!-- Manual Network Controls -->
-                <form action="{% url 'customer_kick_session' customer.pppoe_username %}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to kick the active session? This will force their router to redial.');">
-                    {% csrf_token %}
-                    <button type="submit" class="btn-action" style="background:#cffafe; color:#0369a1; border:none;"><i class="fas fa-bolt"></i> Kick Session</button>
-                </form>
-                <form action="{% url 'customer_force_suspend' customer.pppoe_username %}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to force suspend this customer? This will set them to expired on the router and drop their session.');">
-                    {% csrf_token %}
-                    <button type="submit" class="btn-action" style="background:#ffedd5; color:#c2410c; border:none;"><i class="fas fa-power-off"></i> Force Suspend</button>
-                </form>
-                <button type="button" class="btn-action" style="background:#fef3c7; color:#b45309; border:none; font-weight: bold;" data-bs-toggle="modal" data-bs-target="#forceReactivateModal">
-                    <i class="fas fa-exclamation-triangle"></i> Force Reactivate
-                </button>
-                {% endif %}
-            {% endif %}
-            
-            {% if request.user.role == 'Admin' or request.user.role == 'Editor' %}
-            <form action="{% url 'delete_customer' customer.id %}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this customer? This cannot be undone.');">
-                {% csrf_token %}
-                <button type="submit" class="btn-action btn-delete"><i class="fas fa-trash-alt"></i> Delete</button>
-            </form>
+                <div class="dropdown">
+                    <button class="btn-action btn-edit dropdown-toggle" type="button" id="moreActionsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-ellipsis-v"></i> More Actions
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="moreActionsDropdown" style="border-radius:12px; border:none; padding:10px;">
+                        <li><a class="dropdown-item" href="{% url 'statement_of_account' customer.id %}"><i class="fas fa-print text-primary w-25px"></i> Print SOA</a></li>
+                        <li><button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#customerHealthModal"><i class="fas fa-heartbeat text-warning w-25px"></i> Update Health</button></li>
+                        
+                        {% if customer.pppoe_username %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'customer_rebate' customer.pppoe_username %}"><i class="fas fa-gift text-success w-25px"></i> Rebate</a></li>
+                            <li><a class="dropdown-item" href="{% url 'customer_rollback' customer.pppoe_username %}"><i class="fas fa-backward text-danger w-25px"></i> Rollback</a></li>
+                            
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form action="{% url 'customer_kick_session' customer.pppoe_username %}" method="post" class="m-0 p-0" onsubmit="return confirmAction(event, 'Kick Session?', 'Are you sure you want to kick the active session? This will force their router to redial.', 'warning');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item"><i class="fas fa-bolt text-info w-25px"></i> Kick Session</button>
+                                </form>
+                            </li>
+                            <li>
+                                <form action="{% url 'customer_force_suspend' customer.pppoe_username %}" method="post" class="m-0 p-0" onsubmit="return confirmAction(event, 'Force Suspend?', 'Are you sure you want to force suspend this customer? This will set them to expired on the router and drop their session.', 'warning');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item"><i class="fas fa-power-off text-warning w-25px"></i> Force Suspend</button>
+                                </form>
+                            </li>
+                            <li><button class="dropdown-item text-danger fw-bold" data-bs-toggle="modal" data-bs-target="#forceReactivateModal"><i class="fas fa-exclamation-triangle w-25px"></i> Force Reactivate</button></li>
+                        {% endif %}
+                        
+                        {% if request.user.role == 'Admin' %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form action="{% url 'delete_customer' customer.id %}" method="post" class="m-0 p-0" onsubmit="return confirmAction(event, 'Delete Customer?', 'Are you sure you want to delete this customer? This cannot be undone.', 'error');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item text-danger"><i class="fas fa-trash-alt w-25px"></i> Delete</button>
+                                </form>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            {% else %}
+                <a href="{% url 'statement_of_account' customer.id %}" class="btn-action" style="background:#e0f2fe; color:#0369a1;"><i class="fas fa-print"></i> Print SOA</a>
             {% endif %}
         </div>
     </div>
@@ -135,6 +160,40 @@
                         <span class="info-label">Agent</span>
                         <span class="info-value">{{ customer.agent.name|default:"—" }}</span>
                     </li>
+                    <li>
+                        <span class="info-label">Expiration Date</span>
+                        <span class="info-value">
+                            {{ customer.expires_at|date:"M d, Y H:i"|default:"—" }}
+                            {% if request.user.role == 'Admin' or request.user.role == 'Editor' %}
+                            <button type="button" class="btn btn-sm btn-link p-0 ms-2 text-primary" data-bs-toggle="modal" data-bs-target="#editExpirationModal"><i class="fas fa-edit"></i></button>
+                            {% endif %}
+                        </span>
+                    </li>
+                    <li>
+                        <span class="info-label">Last Paid Date</span>
+                        <span class="info-value">
+                            {% if payments %}
+                                {{ payments.0.created_at|date:"M d, Y H:i" }}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </span>
+                    </li>
+                    <li>
+                        <span class="info-label">Outstanding Balance</span>
+                        <span class="info-value {% if customer.outstanding_balance > 0 %}text-danger{% elif customer.outstanding_balance < 0 %}text-success{% endif %}">
+                            {% if customer.outstanding_balance < 0 %}
+                                ₱{{ customer.abs_outstanding_balance|floatformat:2 }}
+                            {% elif customer.outstanding_balance > 0 %}
+                                ₱-{{ customer.outstanding_balance|floatformat:2 }}
+                            {% else %}
+                                ₱0.00
+                            {% endif %}
+                            {% if request.user.role == 'Admin' or request.user.role == 'Editor' %}
+                            <button type="button" class="btn btn-sm btn-link p-0 ms-2 text-primary" data-bs-toggle="modal" data-bs-target="#editBalanceModal"><i class="fas fa-edit"></i></button>
+                            {% endif %}
+                        </span>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -161,14 +220,17 @@
                         <span class="info-value">{{ customer.pppoe_password|default:"—" }}</span>
                     </li>
                     <li>
-                        <span class="info-label">Live MT Status</span>
+                        <span class="info-label">
+                            Live MT Status
+                            <i class="fas fa-question-circle text-muted ms-1" style="cursor:help;" data-bs-toggle="tooltip" data-bs-html="true" title="<b>Connected:</b> Internet active.<br><b>Offline:</b> Home router is off.<br><b>Suspended:</b> Account unpaid.<br><b>Outage:</b> Network issue."></i>
+                        </span>
                         <span class="info-value" id="mt-status-container">
                             {% if mt_status == 'Loading...' %}
                                 <span class="text-secondary"><i class="fas fa-spinner fa-spin me-1" style="font-size:0.6rem;"></i>Loading...</span>
                             {% elif mt_status == 'Connected' %}
                                 <span class="text-success"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Connected</span>
                             {% else %}
-                                <span class="text-danger"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Disconnected</span>
+                                <span class="text-danger"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>{{ mt_status|default:"Disconnected" }}</span>
                             {% endif %}
                         </span>
                     </li>
@@ -230,7 +292,7 @@
                     {% for payment in payments|slice:":5" %}
                     <div class="payment-log">
                         <div class="amount">₱{{ payment.amount }}</div>
-                        <div class="date">{{ payment.paid_at|date:"M d, Y g:i A" }}</div>
+                        <div class="date">{{ payment.created_at|date:"M d, Y g:i A" }}</div>
                         <div style="font-size:0.8rem; color:#64748b;">Method: {{ payment.payment_method }}</div>
                     </div>
                     {% endfor %}
@@ -248,15 +310,15 @@
     </div>
 </div>
 
-<!-- Admin Override Modal for Reactivation -->
-{% if customer.pppoe_username %}
-<div class="modal fade" id="forceReactivateModal" tabindex="-1" aria-labelledby="forceReactivateModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content border-0 shadow">
-      <div class="modal-header" style="background: #166534; color: white;">
-        <h5 class="modal-title" id="forceReactivateModalLabel"><i class="fas fa-shield-alt"></i> Admin Override Required</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
+  <!-- Admin Override Modal for Reactivation -->
+  {% if customer.pppoe_username %}
+  <div class="modal fade" id="forceReactivateModal" tabindex="-1" aria-labelledby="forceReactivateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="border-radius:20px; border:none;">
+        <div class="modal-header border-bottom-0 pb-0">
+          <h5 class="modal-title fw-bold"><i class="fas fa-shield-alt text-success me-2"></i> Admin Override Required</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
       <form action="{% url 'customer_force_reactivate' customer.pppoe_username %}" method="post">
         {% csrf_token %}
         <div class="modal-body">
@@ -273,9 +335,9 @@
             <textarea class="form-control" id="override_reason" name="override_reason" rows="3" required placeholder="e.g. VIP client, grace period extension, dispute resolution..."></textarea>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-success"><i class="fas fa-play"></i> Authorize & Reactivate</button>
+        <div class="modal-footer border-top-0">
+          <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success rounded-pill px-4"><i class="fas fa-play"></i> Authorize & Reactivate</button>
         </div>
       </form>
     </div>
@@ -283,14 +345,14 @@
 </div>
 {% endif %}
 
-<!-- Customer Health Modal -->
-<div class="modal fade" id="customerHealthModal" tabindex="-1" aria-labelledby="customerHealthModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content border-0 shadow-lg">
-      <div class="modal-header bg-warning text-dark border-0">
-        <h5 class="modal-title fw-bold" id="customerHealthModalLabel"><i class="fas fa-heartbeat"></i> Update Customer Health</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
+  <!-- Customer Health Modal -->
+  <div class="modal fade" id="customerHealthModal" tabindex="-1" aria-labelledby="customerHealthModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="border-radius:20px; border:none;">
+        <div class="modal-header border-bottom-0 pb-0">
+          <h5 class="modal-title fw-bold"><i class="fas fa-heartbeat text-warning me-2"></i> Update Customer Health</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
       <form action="{% url 'update_network_health' %}" method="POST">
         {% csrf_token %}
         <input type="hidden" name="scope" value="customer">
@@ -322,18 +384,104 @@
         </div>
         <div class="modal-footer bg-light border-0">
           <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-warning rounded-pill px-4 fw-bold">Update Health</button>
+            <button type="submit" class="btn btn-primary" style="border-radius:12px;">Save Status</button>
         </div>
       </form>
     </div>
   </div>
 </div>
+
+<!-- Edit Expiration Modal -->
+<div class="modal fade" id="editExpirationModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:20px; border:none;">
+      <div class="modal-header border-bottom-0 pb-0">
+        <h5 class="modal-title fw-bold"><i class="fas fa-calendar-alt text-primary me-2"></i> Edit Expiration Date</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="{% url 'edit_customer_expiration' customer.id %}" method="post">
+        {% csrf_token %}
+        <div class="modal-body py-4">
+            <p class="text-muted small mb-3">Manually override the customer's expiration date. This action will be audited.</p>
+            <div class="mb-3">
+                <label class="form-label fw-bold">New Expiration Date & Time</label>
+                <input type="datetime-local" class="form-control" name="expires_at" value="{{ customer.expires_at|date:'Y-m-d\TH:i' }}" required>
+            </div>
+        </div>
+        <div class="modal-footer border-top-0 pt-0">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="border-radius:12px;">Cancel</button>
+            <button type="submit" class="btn btn-primary" style="border-radius:12px;">Save Expiration</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Balance Modal -->
+<div class="modal fade" id="editBalanceModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:20px; border:none;">
+      <div class="modal-header border-bottom-0 pb-0">
+        <h5 class="modal-title fw-bold"><i class="fas fa-coins text-primary me-2"></i> Edit Outstanding Balance</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="{% url 'edit_customer_balance' customer.id %}" method="post">
+        {% csrf_token %}
+        <div class="modal-body py-4">
+            <p class="text-muted small mb-3">Manually override the customer's outstanding balance. Use negative numbers for advance payments. This action will be audited.</p>
+            <div class="mb-3">
+                <label class="form-label fw-bold">Balance Amount (₱)</label>
+                <input type="number" step="0.01" class="form-control" name="outstanding_balance" value="{{ customer.outstanding_balance }}" required>
+            </div>
+            <div class="d-flex gap-2 mb-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="document.querySelector('input[name=outstanding_balance]').value='0'">Set to ₱0 (Reset)</button>
+                <button type="button" class="btn btn-sm btn-outline-danger rounded-pill" onclick="document.querySelector('input[name=outstanding_balance]').value='{{ customer.plan.price|default:'0' }}'">Set to 1 Month Owed</button>
+            </div>
+        </div>
+        <div class="modal-footer border-top-0 pt-0">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="border-radius:12px;">Cancel</button>
+            <button type="submit" class="btn btn-primary" style="border-radius:12px;">Save Balance</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+function confirmAction(e, title, text, icon) {
+    e.preventDefault();
+    const form = e.target;
+    Swal.fire({
+        title: title,
+        text: text,
+        icon: icon,
+        showCancelButton: true,
+        confirmButtonColor: '#38bdf8',
+        cancelButtonColor: '#ef4444',
+        confirmButtonText: 'Yes, proceed',
+        background: document.body.classList.contains('dark-mode') ? '#1e293b' : '#fff',
+        color: document.body.classList.contains('dark-mode') ? '#f1f5f9' : '#1e293b'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            form.submit();
+        }
+    });
+    return false;
+}
+</script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
+        // Initialize Bootstrap tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+
         var lat = {{ customer.latitude|default:"null" }};
         var lng = {{ customer.longitude|default:"null" }};
         
@@ -365,7 +513,7 @@
                     if (data.mt_status === 'Connected') {
                         statusContainer.innerHTML = '<span class="text-success"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Connected</span>';
                     } else {
-                        statusContainer.innerHTML = '<span class="text-danger"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Disconnected</span>';
+                        statusContainer.innerHTML = '<span class="text-danger"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>' + data.mt_status + '</span>';
                     }
 
                     // Update MAC
@@ -403,6 +551,39 @@
         
         // Poll every 5 seconds
         setInterval(fetchStatus, 5000);
+        
+        // Auto-resolve Addon Request
+        const urlParams = new URLSearchParams(window.location.search);
+        const resolveAddonId = urlParams.get('resolve_addon');
+        if (resolveAddonId) {
+            // Send AJAX to resolve
+            fetch('{% url "resolve_addon_request_api" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ request_id: resolveAddonId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    // Highlight the Edit Profile button so admin remembers to add it
+                    const editBtn = document.querySelector('a.btn-edit[href*="/edit/"]');
+                    if(editBtn) {
+                        editBtn.classList.remove('btn-edit');
+                        editBtn.classList.add('bg-danger', 'text-white', 'pulse-animation');
+                        editBtn.innerHTML = '<i class="fas fa-exclamation-circle"></i> Complete Add-on Here';
+                        
+                        // Show Bootstrap Toast or Alert
+                        alert("Add-on Application processed!\nPlease click the 'Complete Add-on Here' button to update the customer's Cignal Play details.");
+                    }
+                    
+                    // Clean URL
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            });
+        }
     });
 </script>
 {% endblock %}

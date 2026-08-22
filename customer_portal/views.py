@@ -41,13 +41,18 @@ def portal_dashboard(request):
     payments = Payment.objects.filter(customer=customer).order_by('-created_at')[:10]
     plans = SubscriptionPlan.objects.all().order_by('price')
     
-    effective_status = 'Active'
+    effective_status = 'Excellent'
     effective_reason = 'Your service is running normally.'
     is_network_issue = False
 
     def get_priority(status):
-        priorities = {'Active': 0, 'Maintenance': 1, 'Disconnected': 2, 'Outage': 3}
+        priorities = {'Excellent': 0, 'Active': 0, 'Good': 0, 'Moderate': 1, 'Maintenance': 1, 'Poor': 2, 'Disconnected': 2, 'Offline': 3, 'Outage': 4}
         return priorities.get(status, 0)
+
+    if customer.health_status and get_priority(customer.health_status) > get_priority(effective_status):
+        effective_status = customer.health_status
+        effective_reason = customer.health_reason or "We have detected an issue with your connection."
+        is_network_issue = True
 
     if customer.barangay and get_priority(customer.barangay.health_status) > get_priority(effective_status):
         effective_status = customer.barangay.health_status
@@ -64,16 +69,53 @@ def portal_dashboard(request):
         effective_reason = "Your account has been suspended due to an overdue balance. Please pay your bill to restore connection."
         is_network_issue = True
         
+    is_expiring_soon = False
+    if customer.expires_at and customer.status == 'active':
+        if customer.expires_at <= timezone.now() + timedelta(days=3):
+            is_expiring_soon = True
+        
     context = {
         'customer': customer,
         'plan': plan,
-        'payments': payments,
         'effective_status': effective_status,
         'effective_reason': effective_reason,
         'is_network_issue': is_network_issue,
-        'plans': plans,
+        'is_expiring_soon': is_expiring_soon,
+        'payments': payments,
+        'plans': plans
     }
     return render(request, 'customer_portal/portal_dashboard.html', context)
+
+
+def portal_statement_view(request):
+    customer_id = request.session.get('customer_id')
+    if not customer_id:
+        return redirect('login')
+        
+    try:
+        customer = Customer.objects.get(id=customer_id)
+    except Customer.DoesNotExist:
+        request.session.flush()
+        return redirect('login')
+
+    payments = Payment.objects.filter(customer=customer).order_by('-paid_at')
+    
+    date_from = request.GET.get('from')
+    date_to = request.GET.get('to')
+    
+    if date_from and date_to:
+        payments = payments.filter(paid_at__date__gte=date_from, paid_at__date__lte=date_to)
+        
+    total_paid = sum(p.amount for p in payments)
+    
+    context = {
+        'customer': customer,
+        'payments': payments,
+        'date_from': date_from,
+        'date_to': date_to,
+        'total_paid': total_paid,
+    }
+    return render(request, 'customer_portal/portal_statement.html', context)
 
 def portal_logout(request):
     request.session.flush()
@@ -175,6 +217,10 @@ def portal_process_mock_payment(request):
                         new_plan = SubscriptionPlan.objects.get(id=plan_id)
                         old_price = float(locked_customer.plan.price) if locked_customer.plan else 0.0
                         monthly_price = float(new_plan.price)
+                        
+                        if monthly_price < old_price:
+                            raise Exception("Plan downgrades cannot be processed online. Please contact Gametech support.")
+                            
                         locked_customer.plan = new_plan
                         if monthly_price > old_price:
                             is_upgrade = True
@@ -224,12 +270,8 @@ def portal_process_mock_payment(request):
                         comment_text = f"{expiry_str} . {plan_name} . {payment_method} . Customer Portal . Paid Online"
                         api.set_pppoe_comment(customer.pppoe_username, comment_text)
                         
-                        if customer.plan and customer.plan.name:
-                            api.set_user_pppoe_profile(customer.pppoe_username, customer.plan.name)
-                            if was_suspended:
-                                api.enable_pppoe_user(customer.pppoe_username)
-                            # Kick to force reconnect with new plan bandwidth
-                            api.kick_active_user(customer.pppoe_username)
+                        # The post_save signal on Customer handles setting the profile, enabling, and kicking the user.
+                        # We only need to manually update the comment here to record the payment details.
                     except Exception as e:
                         import logging
                         logger = logging.getLogger(__name__)
@@ -247,3 +289,35 @@ def portal_process_mock_payment(request):
                 messages.error(request, f"Payment processing failed: {e}")
                 
     return redirect('customer_portal:portal_dashboard')
+
+def portal_apply_addon(request):
+    if request.method == 'POST':
+        customer_id = request.session.get('customer_id')
+        if not customer_id:
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=401)
+            
+        import json
+        try:
+            data = json.loads(request.body)
+            addon_type = data.get('addon_type')
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'Invalid data'}, status=400)
+            
+        if not addon_type:
+            return JsonResponse({'status': 'error', 'message': 'Addon type is required'}, status=400)
+            
+        try:
+            customer = Customer.objects.get(id=customer_id)
+        except Customer.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Customer not found'}, status=404)
+            
+        from billing.models import AddOnRequest
+        AddOnRequest.objects.create(
+            customer=customer,
+            addon_type=addon_type,
+            status='Pending'
+        )
+        
+        return JsonResponse({'status': 'success', 'message': 'Request submitted successfully. Our staff will contact you soon.'})
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)

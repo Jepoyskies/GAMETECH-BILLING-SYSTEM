@@ -1,20 +1,47 @@
 {% extends "billing/base.html" %}
 {% load static %}
 
-{% block title %}Add-on Payments{% endblock %}
+{% block title %}Payments Hub{% endblock %}
 
 {% block content %}
 <main class="container-fluid py-3 px-3 px-md-4">
     <div class="live-header-row mb-4">
         <h2 class="live-title">
             <div class="kpi-icon icon-blue" style="width: 48px; height: 48px; font-size: 1.4rem; margin-right: 0;">
-                <i class="fa-solid fa-puzzle-piece"></i>
+                <i class="fa-solid fa-wallet"></i>
             </div>
-            Payment Add-ons
+            Payments Hub
         </h2>
     </div>
 
-    <div class="filter-card">
+    <!-- Walk-in Payment Section -->
+    <div class="dashboard-card mb-4 bg-mesh-primary text-white border-0">
+        <div class="card-body p-4 p-md-5 text-center">
+            <h3 class="mb-3 fw-bold"><i class="fas fa-money-bill-wave text-success me-2"></i>Process Walk-in Payment</h3>
+            <p class="mb-4 text-white text-opacity-75">Search for an active customer below to jump directly to their payment portal.</p>
+            
+            <div class="row justify-content-center">
+                <div class="col-12 col-md-8 col-lg-6">
+                    <div class="input-group input-group-lg shadow-sm">
+                        <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" id="customerSearchInput" class="form-control border-start-0 ps-0" placeholder="Type name or username..." list="customerList">
+                        <button class="btn btn-primary fw-bold px-4" onclick="proceedToPayment()">Proceed</button>
+                    </div>
+                </div>
+            </div>
+            <datalist id="customerList">
+                {% for c in all_customers %}
+                    {% if c.pppoe_username %}
+                    <option value="{{ c.pppoe_username }}">{{ c.full_name }} ({{ c.pppoe_username }})</option>
+                    {% endif %}
+                {% endfor %}
+            </datalist>
+        </div>
+    </div>
+
+    <!-- Add-ons Section -->
+    <h4 class="mb-3 fw-bold live-title"><i class="fa-solid fa-puzzle-piece me-2 text-primary"></i>Payment Add-ons</h4>
+    <div class="filter-card mb-3">
         <form method="get" class="row g-2 align-items-center">
             <div class="col-12 col-lg-8">
                 <div class="filter-label">Search Add-ons</div>
@@ -27,24 +54,24 @@
     </div>
 
     <div class="dashboard-card">
-        <div class="card-body p-0 table-responsive">
+        <div class="card-body p-0 table-responsive-modern">
             <table class="table table-hover align-middle mb-0" style="width:100%; border-collapse: collapse;">
                 <thead style="background: rgba(0,0,0,0.03);">
                     <tr>
-                        <th class="text-center">Actions</th>
-                        <th>Created at</th>
-                        <th>Username</th>
-                        <th>CignalPlay No</th>
-                        <th>Adjusted By</th>
-                        <th>Full Name</th>
-                        <th>Account Type</th>
-                        <th>Address</th>
+                        <th class="text-center px-4 py-3" style="font-weight: 700; color: #475569;">ACTIONS</th>
+                        <th class="py-3" style="font-weight: 700; color: #475569;">CREATED AT</th>
+                        <th class="py-3" style="font-weight: 700; color: #475569;">USERNAME</th>
+                        <th class="py-3" style="font-weight: 700; color: #475569;">CIGNALPLAY NO</th>
+                        <th class="py-3" style="font-weight: 700; color: #475569;">ADJUSTED BY</th>
+                        <th class="py-3" style="font-weight: 700; color: #475569;">FULL NAME</th>
+                        <th class="py-3" style="font-weight: 700; color: #475569;">ACCOUNT TYPE</th>
+                        <th class="pe-4 py-3" style="font-weight: 700; color: #475569;">ADDRESS</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for customer in page_obj %}
                     <tr>
-                        <td class="text-center">
+                        <td class="text-center px-4 py-3">
                             <div class="btn-group btn-group-sm">
                                 {% if request.user.role == 'Admin' or request.user.role == 'Editor' %}
                                 <a href="{% url 'edit_customer' customer.id %}" class="btn btn-outline-info" title="Edit Customer">
@@ -59,17 +86,20 @@
                                 </a>
                             </div>
                         </td>
-                        <td>{{ customer.created_at|date:"M d, Y" }}</td>
-                        <td>{{ customer.username|default:"Not Connected" }}</td>
-                        <td><span class="badge bg-warning text-dark">{{ customer.cignalplay_no }}</span></td>
-                        <td>{{ customer.cignalplay_adjustedby|default:"-" }}</td>
-                        <td><strong>{{ customer.full_name }}</strong></td>
-                        <td>{{ customer.account_type|default:"-" }}</td>
-                        <td>{{ customer.address|default:"-" }}</td>
+                        <td class="py-3">{{ customer.created_at|date:"M d, Y" }}</td>
+                        <td class="py-3"><span class="badge bg-light text-dark border shadow-sm px-2 py-1">{{ customer.username|default:"Not Connected" }}</span></td>
+                        <td class="py-3"><span class="badge bg-warning text-dark px-2 py-1">{{ customer.cignalplay_no }}</span></td>
+                        <td class="py-3">{{ customer.cignalplay_adjustedby|default:"-" }}</td>
+                        <td class="py-3"><strong style="color: #0f172a;">{{ customer.full_name }}</strong></td>
+                        <td class="py-3">{{ customer.account_type|default:"-" }}</td>
+                        <td class="pe-4 py-3">{{ customer.address|default:"-" }}</td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="8" class="text-center text-muted py-4">No Add-on customers found.</td>
+                        <td colspan="8" class="text-center text-muted py-5">
+                            <div style="font-size: 3rem; color: #cbd5e1; margin-bottom: 1rem;"><i class="fas fa-folder-open"></i></div>
+                            <h5 style="color: #64748b;">No Add-on customers found</h5>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -77,4 +107,16 @@
         </div>
     </div>
 </main>
+
+<script>
+function proceedToPayment() {
+    const input = document.getElementById('customerSearchInput').value.trim();
+    if (input) {
+        // Construct the URL dynamically
+        window.location.href = `/customer/${encodeURIComponent(input)}/pay/`;
+    } else {
+        alert("Please select a customer from the dropdown first.");
+    }
+}
+</script>
 {% endblock %}
