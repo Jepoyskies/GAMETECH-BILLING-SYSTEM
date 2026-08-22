@@ -977,6 +977,23 @@ def customer_list(request):
 @permission_required('billing.add_customer', raise_exception=True)
 def add_customer(request):
     if request.method == 'POST':
+        if request.user.role == 'Agent':
+            barangay_name = request.POST.get('barangay_name')
+            if barangay_name:
+                barangay, _ = Barangay.objects.get_or_create(
+                    name__iexact=barangay_name, 
+                    defaults={'name': barangay_name, 'health_status': 'Excellent'}
+                )
+                barangay_id = barangay.id
+            else:
+                barangay_id = None
+            latitude = None
+            longitude = None
+        else:
+            barangay_id = request.POST.get('barangay_id')
+            latitude = request.POST.get('latitude') or None
+            longitude = request.POST.get('longitude') or None
+
         Customer.objects.create(
             full_name=request.POST.get('full_name'),
             email=request.POST.get('email') or None,
@@ -988,10 +1005,10 @@ def add_customer(request):
             plan_id=request.POST.get('plan_id'),
             mikrotik_device_id=request.POST.get('device_id') or None,
             agent_id=request.POST.get('agent_id'),
-            barangay_id=request.POST.get('barangay_id'),
+            barangay_id=barangay_id,
             account_type_id=request.POST.get('account_type_id') or None,
-            latitude=request.POST.get('latitude') or None,
-            longitude=request.POST.get('longitude') or None,
+            latitude=latitude,
+            longitude=longitude,
             cignalplay_no=request.POST.get('cignalplay_no'),
             cignalplay_date=request.POST.get('cignalplay_date') or None,
             created_form_by=request.user.username
@@ -1036,25 +1053,36 @@ def edit_customer(request, customer_id):
         agent_id = request.POST.get('agent_id')
         customer.agent_id = agent_id if agent_id else None
         
-        barangay_id = request.POST.get('barangay_id')
-        customer.barangay_id = barangay_id if barangay_id else None
+        if request.user.role == 'Agent':
+            barangay_name = request.POST.get('barangay_name')
+            if barangay_name:
+                barangay, _ = Barangay.objects.get_or_create(
+                    name__iexact=barangay_name, 
+                    defaults={'name': barangay_name, 'health_status': 'Excellent'}
+                )
+                customer.barangay_id = barangay.id
+            else:
+                customer.barangay_id = None
+        else:
+            barangay_id = request.POST.get('barangay_id')
+            customer.barangay_id = barangay_id if barangay_id else None
         
         account_type_id = request.POST.get('account_type_id')
         customer.account_type_id = account_type_id if account_type_id else None
+        
+        if request.user.role != 'Agent':
+            latitude = request.POST.get('latitude')
+            if latitude:
+                customer.latitude = latitude
+            longitude = request.POST.get('longitude')
+            if longitude:
+                customer.longitude = longitude
         
         # Cignal Play Integration
         customer.cignalplay_no = request.POST.get('cignalplay_no')
         cignal_date = request.POST.get('cignalplay_date')
         if cignal_date:
             customer.cignalplay_date = cignal_date
-            
-        latitude = request.POST.get('latitude')
-        if latitude:
-            customer.latitude = latitude
-            
-        longitude = request.POST.get('longitude')
-        if longitude:
-            customer.longitude = longitude
             
         customer.health_status = request.POST.get('health_status', 'Excellent')
         customer.health_reason = request.POST.get('health_reason')

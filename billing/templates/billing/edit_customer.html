@@ -4,7 +4,9 @@
 {% block title %}Edit Customer{% endblock %}
 
 {% block extra_css %}
+{% if request.user.role != 'Agent' %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+{% endif %}
 </style>
 {% endblock %}
 
@@ -60,7 +62,7 @@
                     <select name="plan_id" class="plan-form-control">
                         <option value="">-- Select Plan --</option>
                         {% for plan in plans %}
-                        <option value="{{ plan.id }}" {% if customer.plan_id == plan.id %}selected{% endif %}>{{ plan.name }} (₱{{ plan.price }})</option>
+                        <option value="{{ plan.id }}" {% if customer.plan_id == plan.id %}selected{% endif %}>{{ plan.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -176,15 +178,23 @@
                 </div>
                 <div class="col-md-12">
                     <label class="plan-form-label">Barangay</label>
+                    {% if request.user.role == 'Agent' %}
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-map i-icon"></i>
+                        <input type="text" name="barangay_name" class="plan-form-control" placeholder="e.g. Upper Carmen" value="{{ customer.barangay.name|default:'' }}">
+                    </div>
+                    {% else %}
                     <select name="barangay_id" class="plan-form-control">
                         <option value="">-- Select Barangay --</option>
                         {% for barangay in barangays %}
                         <option value="{{ barangay.id }}" {% if customer.barangay_id == barangay.id %}selected{% endif %}>{{ barangay.name }}</option>
                         {% endfor %}
                     </select>
+                    {% endif %}
                 </div>
             </div>
 
+            {% if request.user.role != 'Agent' %}
             <div class="mb-4">
                 <label class="plan-form-label">Map Pin Location (Drag to update)</label>
                 <div id="map" style="height: 300px; border-radius: 12px; margin-bottom: 15px; border: 1px solid rgba(0,0,0,0.1);"></div>
@@ -199,6 +209,7 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
 
             <div class="d-flex align-items-center justify-content-between gap-2 mt-4">
                 <a href="{% url 'view_customer' customer.id %}" class="btn-cancel">Cancel</a>
@@ -210,6 +221,7 @@
 {% endblock %}
 
 {% block extra_js %}
+{% if request.user.role != 'Agent' %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
@@ -244,4 +256,5 @@
         });
     });
 </script>
+{% endif %}
 {% endblock %}
