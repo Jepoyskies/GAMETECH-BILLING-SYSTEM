@@ -46,13 +46,21 @@ With the services running, you can access the application in your web browser:
 - **Main Portal**: [http://localhost:8000/](http://localhost:8000/)
 - **Admin Panel**: [http://localhost:8000/admin/](http://localhost:8000/admin/)
 
-### Step 5: Stopping the System
+### Step 5: Stopping and Restarting the System
+**To Stop the System:**
 When you are done working for the day, you can safely shut down the system without losing any data.
 - If running in the foreground: Simply press `Ctrl + C` in the terminal where Docker is running.
-- Alternatively, you can always open a new terminal in the project root and run:
+- Alternatively, you can open a new terminal in the project root and run:
   ```bash
   docker-compose down
   ```
+
+**To Restart the System Later:**
+When you want to work on the project again, simply open your terminal at the project root and run:
+```bash
+docker-compose up
+```
+*(You don't need the `--build` flag again unless you've added new packages to requirements.txt).*
 
 ---
 
