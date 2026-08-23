@@ -46,11 +46,18 @@ With the services running, you can access the application in your web browser:
 - **Main Portal**: [http://localhost:8000/](http://localhost:8000/)
 - **Admin Panel**: [http://localhost:8000/admin/](http://localhost:8000/admin/)
 
+### Step 5: Stopping the System
+When you are done working for the day, you can safely shut down the system without losing any data.
+- If running in the foreground: Simply press `Ctrl + C` in the terminal where Docker is running.
+- Alternatively, you can always open a new terminal in the project root and run:
+  ```bash
+  docker-compose down
+  ```
+
 ---
 
 ## Useful Docker Commands
 
-- **Stop the system**: Press `Ctrl + C` in the terminal where it's running, or run `docker-compose down`.
 - **Run in the background (detached mode)**: `docker-compose up -d`
 - **View logs**: `docker-compose logs -f`
 - **Access the Django shell**: `docker-compose exec web python manage.py shell`
