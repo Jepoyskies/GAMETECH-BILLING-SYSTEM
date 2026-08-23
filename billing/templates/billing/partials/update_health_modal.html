@@ -1,0 +1,107 @@
+<!-- Update Health Modal -->
+<div class="modal fade" id="updateHealthModal" tabindex="-1" aria-labelledby="updateHealthModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background-color: var(--card-bg, #1e293b); color: var(--text-main, #f8fafc);">
+      <div class="modal-header border-bottom-0">
+        <h5 class="modal-title fw-bold" id="updateHealthModalLabel">Update Network Health</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: var(--bs-btn-close-white-filter, invert(1) grayscale(100%) brightness(200%));"></button>
+      </div>
+      <form action="{% url 'update_network_health' %}" method="post">
+        {% csrf_token %}
+        <div class="modal-body py-2">
+            <div class="mb-3">
+                <label class="form-label text-muted small text-uppercase fw-bold">Scope</label>
+                <select name="scope" id="healthScope" class="form-select bg-dark text-light border-secondary" required onchange="toggleScopeInputs()">
+                    <option value="" disabled selected>Select Scope</option>
+                    {% if devices %}<option value="router">Router</option>{% endif %}
+                    {% if barangays %}<option value="barangay">Barangay</option>{% endif %}
+                    {% if customers %}<option value="customer">Customer</option>{% endif %}
+                </select>
+            </div>
+            
+            {% if devices %}
+            <div class="mb-3 d-none" id="routerInputGroup">
+                <label class="form-label text-muted small text-uppercase fw-bold">Select Router</label>
+                <select name="router_id" class="form-select bg-dark text-light border-secondary">
+                    {% for d in devices %}
+                        <option value="{{ d.id }}">{{ d.device_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            {% if barangays %}
+            <div class="mb-3 d-none" id="barangayInputGroup">
+                <label class="form-label text-muted small text-uppercase fw-bold">Select Barangay(s)</label>
+                <select name="barangay_id" class="form-select bg-dark text-light border-secondary" multiple>
+                    {% for b in barangays %}
+                        <option value="{{ b.id }}">{{ b.name }}</option>
+                    {% endfor %}
+                </select>
+                <div class="form-text text-muted small">Hold Ctrl/Cmd to select multiple.</div>
+            </div>
+            {% endif %}
+
+            {% if customers %}
+            <div class="mb-3 d-none" id="customerInputGroup">
+                <label class="form-label text-muted small text-uppercase fw-bold">Select Customer</label>
+                <select name="customer_id" class="form-select bg-dark text-light border-secondary">
+                    <option value="" disabled selected>Search/Select Customer</option>
+                    {% for c in customers %}
+                        <option value="{{ c.id }}">{{ c.full_name }} ({{ c.pppoe_username }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            <div class="mb-3">
+                <label class="form-label text-muted small text-uppercase fw-bold">Health Status</label>
+                <select name="health_status" class="form-select bg-dark text-light border-secondary" required>
+                    <option value="Excellent">Excellent</option>
+                    <option value="Moderate">Moderate</option>
+                    <option value="Poor">Poor</option>
+                    <option value="Outage">Outage</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label text-muted small text-uppercase fw-bold">Reason / Note</label>
+                <textarea name="health_reason" class="form-control bg-dark text-light border-secondary" rows="2" placeholder="Brief reason for status change..."></textarea>
+            </div>
+            
+            <div class="form-check form-switch mt-3">
+                <input class="form-check-input" type="checkbox" name="send_sms" value="1" id="sendSmsAdvisory">
+                <label class="form-check-label text-muted small" for="sendSmsAdvisory">
+                    Send SMS Advisory to Affected Customers
+                </label>
+            </div>
+        </div>
+        <div class="modal-footer border-top-0 d-flex gap-2 mt-2">
+            <button type="button" class="btn btn-secondary flex-fill rounded-pill" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary flex-fill rounded-pill">Update Health</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+    function toggleScopeInputs() {
+        const scope = document.getElementById('healthScope').value;
+        const routerGrp = document.getElementById('routerInputGroup');
+        const barangayGrp = document.getElementById('barangayInputGroup');
+        const customerGrp = document.getElementById('customerInputGroup');
+
+        if (routerGrp) routerGrp.classList.add('d-none');
+        if (barangayGrp) barangayGrp.classList.add('d-none');
+        if (customerGrp) customerGrp.classList.add('d-none');
+        
+        if (scope === 'router' && routerGrp) {
+            routerGrp.classList.remove('d-none');
+        } else if (scope === 'barangay' && barangayGrp) {
+            barangayGrp.classList.remove('d-none');
+        } else if (scope === 'customer' && customerGrp) {
+            customerGrp.classList.remove('d-none');
+        }
+    }
+</script>

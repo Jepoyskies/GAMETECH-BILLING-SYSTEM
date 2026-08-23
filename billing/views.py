@@ -2079,6 +2079,7 @@ def payment_addon_logs_view(request):
         'active_count': active_count,
         'expired_count': expired_count,
         'no_plan_count': no_plan_count,
+        'now': now,
     }
     return render(request, 'billing/payment_addon_logs.html', context)
 
