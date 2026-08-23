@@ -35,7 +35,13 @@ docker-compose exec web python manage.py createsuperuser
 ```
 Follow the prompts to set your username, email, and password.
 
-### Step 3: Access the System
+### Step 3: Load Initial Data (Optional)
+The system automatically creates a fresh PostgreSQL database and runs all migrations on startup. Since the database is new, it will be empty. If you need test data (like seed plans), you can load the backup data fixture by running:
+```bash
+docker-compose exec web python manage.py loaddata data/fixtures/datadump.json
+```
+
+### Step 4: Access the System
 With the services running, you can access the application in your web browser:
 - **Main Portal**: [http://localhost:8000/](http://localhost:8000/)
 - **Admin Panel**: [http://localhost:8000/admin/](http://localhost:8000/admin/)
