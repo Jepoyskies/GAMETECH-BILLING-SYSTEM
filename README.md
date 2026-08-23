@@ -1,62 +1,57 @@
 # GAMETECH BILLING SYSTEM
 
-This is a Django-based billing and network management system that integrates with MikroTik devices via the RouterOS API.
+This is a comprehensive Django-based billing and network management system that integrates with MikroTik devices via the RouterOS API. 
+
+The project operates on a containerized **Docker Architecture** utilizing:
+- **Django** (Web Application & API)
+- **PostgreSQL** (Primary Database)
+- **Redis** (Message Broker)
+- **Celery & Celery Beat** (Background Task Processing & Scheduling)
+
+---
 
 ## Prerequisites
 
-Before running this project, make sure you have installed:
-- **Python 3.8 or higher** (The `python-installer.exe` is provided in the directory if you need it. When installing, make sure to check "Add Python to PATH" if possible).
+Before running this project, you must install:
+- **[Docker Desktop](https://www.docker.com/products/docker-desktop)** (Includes Docker Engine and Docker Compose). Ensure Docker Desktop is running before proceeding.
 
 ---
 
-## Quick Setup and Run (Windows)
+## Setting up the System (Docker)
 
-We have created two batch scripts to make it super easy for you to run the project.
+Spinning up the entire tech stack is incredibly simple thanks to Docker Compose.
 
-### Step 1: Initial Setup
-If this is your first time opening this project, just double-click the **`setup.bat`** file.
-- It will automatically create a virtual environment.
-- It will install all the necessary dependencies (`django` and `RouterOS-api`).
-- It will set up your local SQLite database correctly.
+### Step 1: Build and Run the Containers
+Open your terminal at the root of the project (where `docker-compose.yml` is located) and run:
+```bash
+docker-compose up --build
+```
+*Note: This command will download the necessary base images, install all Python dependencies, set up the database, run Django migrations, and start the web server alongside the Celery workers. You can omit `--build` on subsequent runs.*
 
-### Step 2: Running the System
-Whenever you want to start the project, just double-click the **`run.bat`** file.
-- It will activate the virtual environment and start the development server.
-- Leave the black terminal window open while you use the system.
+### Step 2: Create a Superuser (Admin)
+Once the containers are successfully running, open a **new terminal tab** and execute the following command to create your admin account:
+```bash
+docker-compose exec web python manage.py createsuperuser
+```
+Follow the prompts to set your username, email, and password.
 
 ### Step 3: Access the System
-Once `run.bat` is running, open your web browser and go to:
-- **[http://127.0.0.1:8000/](http://127.0.0.1:8000/)**
-
-To access the admin panel, go to:
-- **[http://127.0.0.1:8000/admin/](http://127.0.0.1:8000/admin/)**
+With the services running, you can access the application in your web browser:
+- **Main Portal**: [http://localhost:8000/](http://localhost:8000/)
+- **Admin Panel**: [http://localhost:8000/admin/](http://localhost:8000/admin/)
 
 ---
 
-## Manual Setup (If batch files don't work)
+## Useful Docker Commands
 
-If you prefer to use the command line manually, follow these steps:
+- **Stop the system**: Press `Ctrl + C` in the terminal where it's running, or run `docker-compose down`.
+- **Run in the background (detached mode)**: `docker-compose up -d`
+- **View logs**: `docker-compose logs -f`
+- **Access the Django shell**: `docker-compose exec web python manage.py shell`
 
-1. **Create the virtual environment**:
-   ```cmd
-   py -m venv venv
-   ```
-2. **Activate it**:
-   ```cmd
-   py -m venv venv
-   .\venv\Scripts\Activate.ps1
+---
 
-   ```
-3. **Install dependencies**:
-   ```cmd
-   pip install -r requirements.txt
-   ```
-4. **Apply database migrations**:
-   ```cmd
-   python manage.py makemigrations
-   python manage.py migrate
-   ```
-5. **Run the server**:
-   ```cmd
-   python manage.py runserver
-   ```
+## Legacy Local Setup
+*Note: The standalone local setup is no longer the recommended way to run this project.*
+
+If you need to run the project without Docker for legacy testing purposes, the old local Windows setup batch scripts (`setup.bat` and `run.bat`) and local Python utilities have been preserved and moved to the `scripts/` directory. 
