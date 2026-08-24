@@ -1,86 +1,8 @@
 {% extends "billing/base.html" %}
 {% load static %}
 
-{% block title %}Customers
-<script>
-    function showReason(btn) {
-        let el = btn.closest('.conn-status-indicator');
-        let status = el.getAttribute('data-status');
-        let cid = el.getAttribute('data-customer-id');
-        let reason = el.getAttribute('data-health-reason') || "No specific reason provided.";
-        let health = el.getAttribute('data-health-status');
-        let balance = el.getAttribute('data-balance');
-        
-        if (status === 'suspended') {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Account Suspended',
-                html: `This account is currently suspended.<br><br><b>Outstanding Balance:</b> ₱${balance}`,
-                showCancelButton: true,
-                confirmButtonText: '<i class="fas fa-eye me-1"></i> View Profile',
-                cancelButtonText: 'Close',
-                confirmButtonColor: '#3085d6'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = '/customers/view/' + cid + '/';
-                }
-            });
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Customer Offline',
-                html: `<div class="text-start mt-3"><b>Network Health:</b> <span class="text-danger">${health}</span><br><b>Reason:</b> <span class="text-muted">${reason}</span></div>`,
-                showCancelButton: true,
-                confirmButtonText: '<i class="fas fa-check me-1"></i> Resolve Status',
-                cancelButtonText: 'Close',
-                confirmButtonColor: '#10b981'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = '/network/health/resolve/customer/' + cid + '/';
-                }
-            });
-        }
-    }
+{% block title %}Customers{% endblock %}
 
-    function updateConnectionStatuses() {
-        let indicators = document.querySelectorAll('.conn-status-indicator');
-        if (indicators.length === 0) return;
-        
-        fetch('/api/active-usernames/')
-        .then(res => res.json())
-        .then(data => {
-            if (data.status === 'success') {
-                let active_users = new Set(data.active_usernames);
-                indicators.forEach(el => {
-                    let pppoe = el.getAttribute('data-pppoe');
-                    let status = el.getAttribute('data-status');
-                    let btnHtml = ' <button class="btn btn-sm btn-link text-danger p-0 ms-1" onclick="showReason(this)" title="View Reason" style="text-decoration: none;"><i class="fas fa-exclamation-circle fa-lg"></i></button>';
-                    
-                    if (status === 'suspended') {
-                        el.innerHTML = '<span class="text-danger"><i class="fas fa-ban me-1"></i>Disconnected (Suspended)</span>' + btnHtml;
-                    } else if (!pppoe) {
-                        el.innerHTML = '<span class="text-muted"><i class="fas fa-question-circle me-1"></i>No PPPoE Info</span>';
-                    } else if (active_users.has(pppoe)) {
-                        el.innerHTML = '<span class="text-success"><i class="fas fa-circle me-1" style="font-size: 0.5rem; vertical-align: middle;"></i>Online</span>';
-                    } else {
-                        el.innerHTML = '<span class="text-danger"><i class="fas fa-circle me-1" style="font-size: 0.5rem; vertical-align: middle;"></i>Offline</span>' + btnHtml;
-                    }
-                });
-            }
-        })
-        .catch(err => console.error("Error fetching active usernames:", err));
-    }
-    
-    // Run immediately, then every 30 seconds
-    updateConnectionStatuses();
-    setInterval(updateConnectionStatuses, 30000);
-    
-    // Also run when DataTables redraws the page
-    $('#customerTable').on('draw.dt', function () {
-        updateConnectionStatuses();
-    });
-</script>
-{% endblock %}
 
 
 {% block extra_css %}
@@ -101,84 +23,7 @@
 
 </style>
 
-<script>
-    function showReason(btn) {
-        let el = btn.closest('.conn-status-indicator');
-        let status = el.getAttribute('data-status');
-        let cid = el.getAttribute('data-customer-id');
-        let reason = el.getAttribute('data-health-reason') || "No specific reason provided.";
-        let health = el.getAttribute('data-health-status');
-        let balance = el.getAttribute('data-balance');
-        
-        if (status === 'suspended') {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Account Suspended',
-                html: `This account is currently suspended.<br><br><b>Outstanding Balance:</b> ₱${balance}`,
-                showCancelButton: true,
-                confirmButtonText: '<i class="fas fa-eye me-1"></i> View Profile',
-                cancelButtonText: 'Close',
-                confirmButtonColor: '#3085d6'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = '/customers/view/' + cid + '/';
-                }
-            });
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Customer Offline',
-                html: `<div class="text-start mt-3"><b>Network Health:</b> <span class="text-danger">${health}</span><br><b>Reason:</b> <span class="text-muted">${reason}</span></div>`,
-                showCancelButton: true,
-                confirmButtonText: '<i class="fas fa-check me-1"></i> Resolve Status',
-                cancelButtonText: 'Close',
-                confirmButtonColor: '#10b981'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = '/network/health/resolve/customer/' + cid + '/';
-                }
-            });
-        }
-    }
 
-    function updateConnectionStatuses() {
-        let indicators = document.querySelectorAll('.conn-status-indicator');
-        if (indicators.length === 0) return;
-        
-        fetch('/api/active-usernames/')
-        .then(res => res.json())
-        .then(data => {
-            if (data.status === 'success') {
-                let active_users = new Set(data.active_usernames);
-                indicators.forEach(el => {
-                    let pppoe = el.getAttribute('data-pppoe');
-                    let status = el.getAttribute('data-status');
-                    let btnHtml = ' <button class="btn btn-sm btn-link text-danger p-0 ms-1" onclick="showReason(this)" title="View Reason" style="text-decoration: none;"><i class="fas fa-exclamation-circle fa-lg"></i></button>';
-                    
-                    if (status === 'suspended') {
-                        el.innerHTML = '<span class="text-danger"><i class="fas fa-ban me-1"></i>Disconnected (Suspended)</span>' + btnHtml;
-                    } else if (!pppoe) {
-                        el.innerHTML = '<span class="text-muted"><i class="fas fa-question-circle me-1"></i>No PPPoE Info</span>';
-                    } else if (active_users.has(pppoe)) {
-                        el.innerHTML = '<span class="text-success"><i class="fas fa-circle me-1" style="font-size: 0.5rem; vertical-align: middle;"></i>Online</span>';
-                    } else {
-                        el.innerHTML = '<span class="text-danger"><i class="fas fa-circle me-1" style="font-size: 0.5rem; vertical-align: middle;"></i>Offline</span>' + btnHtml;
-                    }
-                });
-            }
-        })
-        .catch(err => console.error("Error fetching active usernames:", err));
-    }
-    
-    // Run immediately, then every 30 seconds
-    updateConnectionStatuses();
-    setInterval(updateConnectionStatuses, 30000);
-    
-    // Also run when DataTables redraws the page
-    $('#customerTable').on('draw.dt', function () {
-        updateConnectionStatuses();
-    });
-</script>
 {% endblock %}
 
 
@@ -272,7 +117,6 @@
                             {% else %}
                                 <span class="text-muted">None</span>
                             {% endif %}
-                            <div class="mt-1 conn-status-indicator" style="font-size: 0.75rem;" data-pppoe="{{ customer.pppoe_username|default:'' }}" data-status="{{ customer.status|lower }}" data-customer-id="{{ customer.id }}" data-health-status="{{ customer.health_status }}" data-health-reason="{{ customer.health_reason|escapejs }}" data-balance="{{ customer.outstanding_balance|default:'0' }}"></div>
                         </td>
                         <td>
                             {% if customer.agent %}
@@ -280,7 +124,6 @@
                             {% else %}
                                 <span class="text-muted">None</span>
                             {% endif %}
-                            <div class="mt-1 conn-status-indicator" style="font-size: 0.75rem;" data-pppoe="{{ customer.pppoe_username|default:'' }}" data-status="{{ customer.status|lower }}" data-customer-id="{{ customer.id }}" data-health-status="{{ customer.health_status }}" data-health-reason="{{ customer.health_reason|escapejs }}" data-balance="{{ customer.outstanding_balance|default:'0' }}"></div>
                         </td>
                         <td>
                             {% if customer.barangay %}
@@ -288,7 +131,6 @@
                             {% else %}
                                 <span class="text-muted">None</span>
                             {% endif %}
-                            <div class="mt-1 conn-status-indicator" style="font-size: 0.75rem;" data-pppoe="{{ customer.pppoe_username|default:'' }}" data-status="{{ customer.status|lower }}" data-customer-id="{{ customer.id }}" data-health-status="{{ customer.health_status }}" data-health-reason="{{ customer.health_reason|escapejs }}" data-balance="{{ customer.outstanding_balance|default:'0' }}"></div>
                         </td>
                         <td>
                             {% if customer.mikrotik_device %}
@@ -296,7 +138,6 @@
                             {% else %}
                                 <span class="text-muted">None</span>
                             {% endif %}
-                            <div class="mt-1 conn-status-indicator" style="font-size: 0.75rem;" data-pppoe="{{ customer.pppoe_username|default:'' }}" data-status="{{ customer.status|lower }}" data-customer-id="{{ customer.id }}" data-health-status="{{ customer.health_status }}" data-health-reason="{{ customer.health_reason|escapejs }}" data-balance="{{ customer.outstanding_balance|default:'0' }}"></div>
                         </td>
                         <td>
                             {% if customer.status == 'active' %}
@@ -312,7 +153,19 @@
                             {% else %}
                                 <span class="badge bg-secondary px-2 py-1">{{ customer.status|title }}</span>
                             {% endif %}
-                            <div class="mt-1 conn-status-indicator" style="font-size: 0.75rem;" data-pppoe="{{ customer.pppoe_username|default:'' }}" data-status="{{ customer.status|lower }}" data-customer-id="{{ customer.id }}" data-health-status="{{ customer.health_status }}" data-health-reason="{{ customer.health_reason|escapejs }}" data-balance="{{ customer.outstanding_balance|default:'0' }}"></div>
+                            <div class="mt-1 conn-status-indicator" style="font-size: 0.75rem;" 
+                                 data-pppoe="{{ customer.pppoe_username|default:'' }}" 
+                                 data-status="{{ customer.status|lower }}" 
+                                 data-customer-id="{{ customer.id }}" 
+                                 data-health-status="{{ customer.health_status }}" 
+                                 data-health-reason="{{ customer.health_reason|escapejs }}" 
+                                 data-balance="{{ customer.outstanding_balance|default:'0' }}"
+                                 data-router-id="{{ customer.mikrotik_device.id|default:'' }}"
+                                 data-router-health="{{ customer.mikrotik_device.health_status|default:'Excellent' }}"
+                                 data-router-name="{{ customer.mikrotik_device.device_name|default:'Unknown Router' }}"
+                                 data-barangay-id="{{ customer.barangay.id|default:'' }}"
+                                 data-barangay-health="{{ customer.barangay.health_status|default:'Excellent' }}"
+                                 data-barangay-name="{{ customer.barangay.name|default:'Unknown Barangay' }}"></div>
                         </td>
                         <td>
                             <div class="d-flex gap-2">
@@ -364,84 +217,7 @@
     </div>
 </div>
 
-<script>
-    function showReason(btn) {
-        let el = btn.closest('.conn-status-indicator');
-        let status = el.getAttribute('data-status');
-        let cid = el.getAttribute('data-customer-id');
-        let reason = el.getAttribute('data-health-reason') || "No specific reason provided.";
-        let health = el.getAttribute('data-health-status');
-        let balance = el.getAttribute('data-balance');
-        
-        if (status === 'suspended') {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Account Suspended',
-                html: `This account is currently suspended.<br><br><b>Outstanding Balance:</b> ₱${balance}`,
-                showCancelButton: true,
-                confirmButtonText: '<i class="fas fa-eye me-1"></i> View Profile',
-                cancelButtonText: 'Close',
-                confirmButtonColor: '#3085d6'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = '/customers/view/' + cid + '/';
-                }
-            });
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Customer Offline',
-                html: `<div class="text-start mt-3"><b>Network Health:</b> <span class="text-danger">${health}</span><br><b>Reason:</b> <span class="text-muted">${reason}</span></div>`,
-                showCancelButton: true,
-                confirmButtonText: '<i class="fas fa-check me-1"></i> Resolve Status',
-                cancelButtonText: 'Close',
-                confirmButtonColor: '#10b981'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = '/network/health/resolve/customer/' + cid + '/';
-                }
-            });
-        }
-    }
 
-    function updateConnectionStatuses() {
-        let indicators = document.querySelectorAll('.conn-status-indicator');
-        if (indicators.length === 0) return;
-        
-        fetch('/api/active-usernames/')
-        .then(res => res.json())
-        .then(data => {
-            if (data.status === 'success') {
-                let active_users = new Set(data.active_usernames);
-                indicators.forEach(el => {
-                    let pppoe = el.getAttribute('data-pppoe');
-                    let status = el.getAttribute('data-status');
-                    let btnHtml = ' <button class="btn btn-sm btn-link text-danger p-0 ms-1" onclick="showReason(this)" title="View Reason" style="text-decoration: none;"><i class="fas fa-exclamation-circle fa-lg"></i></button>';
-                    
-                    if (status === 'suspended') {
-                        el.innerHTML = '<span class="text-danger"><i class="fas fa-ban me-1"></i>Disconnected (Suspended)</span>' + btnHtml;
-                    } else if (!pppoe) {
-                        el.innerHTML = '<span class="text-muted"><i class="fas fa-question-circle me-1"></i>No PPPoE Info</span>';
-                    } else if (active_users.has(pppoe)) {
-                        el.innerHTML = '<span class="text-success"><i class="fas fa-circle me-1" style="font-size: 0.5rem; vertical-align: middle;"></i>Online</span>';
-                    } else {
-                        el.innerHTML = '<span class="text-danger"><i class="fas fa-circle me-1" style="font-size: 0.5rem; vertical-align: middle;"></i>Offline</span>' + btnHtml;
-                    }
-                });
-            }
-        })
-        .catch(err => console.error("Error fetching active usernames:", err));
-    }
-    
-    // Run immediately, then every 30 seconds
-    updateConnectionStatuses();
-    setInterval(updateConnectionStatuses, 30000);
-    
-    // Also run when DataTables redraws the page
-    $('#customerTable').on('draw.dt', function () {
-        updateConnectionStatuses();
-    });
-</script>
 {% endblock %}
 
 
@@ -560,9 +336,21 @@
         let status = el.getAttribute('data-status');
         let cid = el.getAttribute('data-customer-id');
         let reason = el.getAttribute('data-health-reason') || "No specific reason provided.";
-        let health = el.getAttribute('data-health-status');
+        let health = el.getAttribute('data-health-status') || "Excellent";
         let balance = el.getAttribute('data-balance');
         
+        let routerHealth = el.getAttribute('data-router-health');
+        let routerName = el.getAttribute('data-router-name');
+        let brgyHealth = el.getAttribute('data-barangay-health');
+        let brgyName = el.getAttribute('data-barangay-name');
+        let routerUnreachable = el.getAttribute('data-router-unreachable') === 'true';
+
+        let effectiveReason = reason;
+        let effectiveHealth = health;
+        let canResolve = false; 
+        let resolveScope = 'customer';
+        let resolveId = cid;
+
         if (status === 'suspended') {
             Swal.fire({
                 icon: 'warning',
@@ -577,50 +365,113 @@
                     window.location.href = '/customers/view/' + cid + '/';
                 }
             });
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Customer Offline',
-                html: `<div class="text-start mt-3"><b>Network Health:</b> <span class="text-danger">${health}</span><br><b>Reason:</b> <span class="text-muted">${reason}</span></div>`,
-                showCancelButton: true,
-                confirmButtonText: '<i class="fas fa-check me-1"></i> Resolve Status',
-                cancelButtonText: 'Close',
-                confirmButtonColor: '#10b981'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = '/network/health/resolve/customer/' + cid + '/';
-                }
-            });
+            return;
         }
+
+        // Intelligent Diagnosis Logic
+        if (health === 'Excellent' || !health) {
+            if (routerUnreachable) {
+                effectiveHealth = 'Router Uplink Offline';
+                effectiveReason = `The main router (${routerName}) has lost its internet connection (Uplink Offline) or is completely unreachable from the server.`;
+                canResolve = false; 
+            } else if (routerHealth && routerHealth !== 'Excellent') {
+                effectiveHealth = `${routerHealth} (Router Issue)`;
+                effectiveReason = `The main router (${routerName}) is currently experiencing issues.`;
+                resolveScope = 'router';
+                resolveId = el.getAttribute('data-router-id');
+                canResolve = true;
+            } else if (brgyHealth && brgyHealth !== 'Excellent') {
+                effectiveHealth = `${brgyHealth} (Barangay Issue)`;
+                effectiveReason = `The area (${brgyName}) is currently experiencing an outage.`;
+                resolveScope = 'barangay';
+                resolveId = el.getAttribute('data-barangay-id');
+                canResolve = true;
+            } else {
+                effectiveHealth = 'Isolated Offline';
+                effectiveReason = 'Customer router is unplugged, fiber cable is cut, or there is a localized power outage.';
+                canResolve = false; 
+            }
+        } else {
+            canResolve = true; 
+        }
+
+        let swalOptions = {
+            icon: canResolve ? 'warning' : 'error',
+            title: 'Customer Offline Diagnosis',
+            html: `<div class="text-start mt-3 p-3 bg-light rounded border">
+                    <b>Network Health:</b> <span class="${canResolve ? 'text-warning' : 'text-danger'}">${effectiveHealth}</span><br>
+                    <hr class="my-2">
+                    <b>System Diagnosis:</b> <span class="text-muted">${effectiveReason}</span>
+                   </div>`,
+            showCancelButton: true,
+            cancelButtonText: 'Close'
+        };
+
+        if (canResolve) {
+            swalOptions.confirmButtonText = '<i class="fas fa-check me-1"></i> Resolve Status';
+            swalOptions.confirmButtonColor = '#10b981';
+        } else {
+            swalOptions.showConfirmButton = false;
+        }
+
+        Swal.fire(swalOptions).then((result) => {
+            if (result.isConfirmed && canResolve) {
+                window.location.href = `/network/health/resolve/${resolveScope}/${resolveId}/`;
+            }
+        });
     }
 
     function updateConnectionStatuses() {
         let indicators = document.querySelectorAll('.conn-status-indicator');
         if (indicators.length === 0) return;
         
-        fetch('/api/active-usernames/')
-        .then(res => res.json())
-        .then(data => {
-            if (data.status === 'success') {
-                let active_users = new Set(data.active_usernames);
+        Promise.all([
+            fetch('/api/active-usernames/').then(res => res.json()),
+            fetch('/api/router-uplink/').then(res => res.json())
+        ])
+        .then(([activeData, uplinkData]) => {
+            if (activeData.status === 'success') {
+                let active_users = new Set(activeData.active_usernames);
+                let offline_routers = new Set(activeData.offline_routers || []);
+                
+                // Map router uplink statuses
+                let router_uplinks = {};
+                if (uplinkData.routers) {
+                    uplinkData.routers.forEach(r => {
+                        router_uplinks[r.id] = r.uplink_status;
+                    });
+                }
+                
                 indicators.forEach(el => {
                     let pppoe = el.getAttribute('data-pppoe');
                     let status = el.getAttribute('data-status');
-                    let btnHtml = ' <button class="btn btn-sm btn-link text-danger p-0 ms-1" onclick="showReason(this)" title="View Reason" style="text-decoration: none;"><i class="fas fa-exclamation-circle fa-lg"></i></button>';
+                    let routerId = parseInt(el.getAttribute('data-router-id'));
+                    let btnHtml = '<button class="btn btn-sm btn-light p-0 ms-1 rounded-circle shadow-sm border" onclick="showReason(this)" title="View Reason" style="width: 22px; height: 22px; line-height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fas fa-exclamation-circle text-danger" style="font-size: 0.8rem;"></i></button>';
                     
                     if (status === 'suspended') {
-                        el.innerHTML = '<span class="text-danger"><i class="fas fa-ban me-1"></i>Disconnected (Suspended)</span>' + btnHtml;
+                        el.innerHTML = '<span class="badge bg-danger rounded-pill shadow-sm mt-1"><i class="fas fa-ban me-1"></i>Suspended</span>' + btnHtml;
                     } else if (!pppoe) {
-                        el.innerHTML = '<span class="text-muted"><i class="fas fa-question-circle me-1"></i>No PPPoE Info</span>';
+                        el.innerHTML = '<span class="badge bg-secondary rounded-pill shadow-sm mt-1"><i class="fas fa-question-circle me-1"></i>No PPPoE</span>';
                     } else if (active_users.has(pppoe)) {
-                        el.innerHTML = '<span class="text-success"><i class="fas fa-circle me-1" style="font-size: 0.5rem; vertical-align: middle;"></i>Online</span>';
+                        el.innerHTML = '<span class="badge bg-success rounded-pill shadow-sm mt-1" style="background-color: #10b981 !important;"><i class="fas fa-check-circle me-1"></i>Active</span>';
                     } else {
-                        el.innerHTML = '<span class="text-danger"><i class="fas fa-circle me-1" style="font-size: 0.5rem; vertical-align: middle;"></i>Offline</span>' + btnHtml;
+                        let isRouterOffline = false;
+                        if (!isNaN(routerId)) {
+                            // Offline if API connection completely failed
+                            if (offline_routers.has(routerId)) isRouterOffline = true;
+                            // OR offline if router is connected but has no internet (uplink offline)
+                            if (router_uplinks[routerId] === 'Offline') isRouterOffline = true;
+                        }
+
+                        if (isRouterOffline) {
+                            el.setAttribute('data-router-unreachable', 'true');
+                        }
+                        el.innerHTML = '<span class="badge rounded-pill shadow-sm mt-1" style="background-color: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);"><i class="fas fa-wifi me-1" style="text-decoration: line-through;"></i>Offline</span>' + btnHtml;
                     }
                 });
             }
         })
-        .catch(err => console.error("Error fetching active usernames:", err));
+        .catch(err => console.error("Error fetching connection statuses", err));
     }
     
     // Run immediately, then every 30 seconds

@@ -9,6 +9,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css?family=Montserrat:400,600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <style>
 /* Sidebar Styles from legacy system */
@@ -139,7 +140,31 @@ body.tv-mode {
     background-color: #0f172a !important; /* Force ultra dark */
     overflow-x: hidden;
 }
-    </style>
+    
+.notif-menu {
+    background: var(--bs-body-bg) !important;
+}
+.dark-mode .notif-menu {
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    background: #1e293b !important;
+}
+.dark-mode .notif-header {
+    background: rgba(255,255,255,0.05) !important;
+}
+.dark-mode .notif-item {
+    border-bottom-color: rgba(255,255,255,0.1) !important;
+    color: #e2e8f0 !important;
+}
+.dark-mode .notif-item.bg-light {
+    background-color: rgba(255,255,255,0.05) !important;
+}
+.dark-mode .notif-item:hover {
+    background-color: rgba(255,255,255,0.08) !important;
+}
+.notif-item:hover {
+    background-color: rgba(0,0,0,0.02);
+}
+</style>
     <link rel="stylesheet" href="{% static 'css/theme.css' %}?v=1.2">
     {% block extra_css %}{% endblock %}
     
@@ -149,8 +174,19 @@ body.tv-mode {
             document.documentElement.classList.add('dark-mode');
         }
     </script>
+    <style>
+    /* Pulse animation for high priority notifications */
+    @keyframes pulseDanger {
+        0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+    }
+    .pulse-danger {
+        animation: pulseDanger 2s infinite;
+    }
+    </style>
 </head>
-<body>
+<body class="bg-light">
 <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
         <a href="#"><img src="{% static 'assets/images/logo_white.png' %}" alt="Logo"></a>
@@ -244,12 +280,69 @@ body.tv-mode {
             </button>
         </div>
         <div class="topbar-right d-flex align-items-center gap-2">
+            <!-- Notification Bell -->
+            <div class="dropdown">
+                <button class="btn btn-sm position-relative" type="button" id="notifDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background:transparent; border:none; font-size:1.25rem; color:inherit;" title="Notifications">
+                    <i class="fas fa-bell"></i>
+                    <span id="notifBadge" class="position-absolute top-25 start-75 translate-middle p-1 bg-danger border border-light rounded-circle" style="display: none;">
+                        <span class="visually-hidden">New alerts</span>
+                    </span>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 notif-menu" aria-labelledby="notifDropdown" style="width: 350px; border-radius: 12px; overflow: hidden; padding: 0;">
+                    <div class="d-flex justify-content-between align-items-center px-3 py-3 border-bottom notif-header">
+                        <h6 class="mb-0 fw-bold"><i class="fas fa-bell me-2 text-primary"></i>Notifications</h6>
+                        <button class="btn btn-link btn-sm text-decoration-none p-0 text-muted" id="markAllReadBtn" style="font-size: 0.8rem;">Mark all as read</button>
+                    </div>
+                    <div id="notifList" style="max-height: 400px; overflow-y: auto; background: var(--bs-body-bg);">
+                        <div class="p-4 text-center text-muted small" id="notifEmptyState">
+                            <i class="fas fa-box-open fa-2x mb-2 text-black-50"></i><br>
+                            All caught up!
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <button id="themeToggle" class="btn btn-sm" style="background:transparent; border:none; font-size:1.25rem; color:inherit;" title="Toggle Dark/Light Mode">
                 <i class="fas fa-moon" id="themeIcon"></i>
             </button>
-            <a href="{% url 'profile' %}" class="btn btn-sm" style="background:transparent; border:none; font-size:1.25rem; color:inherit; text-decoration:none;" title="My Profile">
-                <i class="fas fa-user-circle"></i>
-            </a>
+            <!-- Profile Dropdown -->
+            <div class="dropdown">
+                <button class="btn btn-sm" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background:transparent; border:none; font-size:1.25rem; color:inherit;" title="My Profile">
+                    <i class="fas fa-user-circle"></i>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 profile-menu" aria-labelledby="profileDropdown" style="width: 300px; border-radius: 16px; overflow: hidden; padding: 0;">
+                    <div class="p-4 text-center border-bottom profile-header position-relative">
+                        <!-- Abstract background shape for premium look -->
+                        <div class="position-absolute top-0 start-0 w-100 h-50 bg-primary opacity-10" style="z-index: 0; border-radius: 0 0 50% 50%;"></div>
+                        
+                        <div class="mb-3 position-relative z-1 d-inline-flex justify-content-center align-items-center bg-primary bg-gradient text-white rounded-circle shadow-sm border border-2 border-white" style="width: 72px; height: 72px; font-size: 2.5rem;">
+                            <i class="fas fa-user-shield"></i>
+                        </div>
+                        <h5 class="mb-1 fw-bold position-relative z-1">{{ request.user.username }}</h5>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1 position-relative z-1">{{ request.user.role|default:"System Administrator" }}</span>
+                        <div class="mt-2 text-muted small position-relative z-1">{{ request.user.email|default:"No email provided" }}</div>
+                    </div>
+                    <div class="p-2">
+                        <a class="dropdown-item profile-item rounded p-2 mb-1 d-flex align-items-center" href="{% url 'profile' %}" style="transition: all 0.2s ease;">
+                            <div class="icon-box bg-light text-primary rounded d-flex justify-content-center align-items-center me-3" style="width: 38px; height: 38px; font-size: 1.1rem;"><i class="fas fa-id-card"></i></div>
+                            <div>
+                                <div class="fw-bold" style="font-size: 0.95rem;">View Full Profile</div>
+                                <div class="text-muted" style="font-size: 0.75rem;">Account settings & security</div>
+                            </div>
+                        </a>
+                        <form action="{% url 'logout' %}" method="post" class="m-0 p-0">
+                            {% csrf_token %}
+                            <button type="submit" class="dropdown-item profile-item rounded p-2 d-flex align-items-center text-danger" style="transition: all 0.2s ease;">
+                                <div class="icon-box bg-danger-subtle text-danger rounded d-flex justify-content-center align-items-center me-3" style="width: 38px; height: 38px; font-size: 1.1rem;"><i class="fas fa-sign-out-alt"></i></div>
+                                <div>
+                                    <div class="fw-bold" style="font-size: 0.95rem;">Logout</div>
+                                    <div class="text-muted" style="font-size: 0.75rem;">End session securely</div>
+                                </div>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
             {% block topbar_right %}{% endblock %}
         </div>
     </header>
@@ -448,6 +541,128 @@ document.addEventListener("DOMContentLoaded", function() {
     to { transform: translateX(0); opacity: 1; }
 }
 </style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const notifBadge = document.getElementById('notifBadge');
+    const notifList = document.getElementById('notifList');
+    const markAllReadBtn = document.getElementById('markAllReadBtn');
+    let hasFetched = false;
+
+    function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]') ? document.querySelector('[name=csrfmiddlewaretoken]').value : '';
+    }
+
+    function timeSince(dateStr) {
+        const date = new Date(dateStr);
+        const seconds = Math.floor((new Date() - date) / 1000);
+        let interval = seconds / 31536000;
+        if (interval > 1) return Math.floor(interval) + " years ago";
+        interval = seconds / 2592000;
+        if (interval > 1) return Math.floor(interval) + " months ago";
+        interval = seconds / 86400;
+        if (interval > 1) return Math.floor(interval) + " days ago";
+        interval = seconds / 3600;
+        if (interval > 1) return Math.floor(interval) + " hours ago";
+        interval = seconds / 60;
+        if (interval > 1) return Math.floor(interval) + " mins ago";
+        return Math.floor(seconds) + " secs ago";
+    }
+
+    function fetchNotifications() {
+        fetch('/api/notifications/')
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === 'success') {
+                if(data.unread_count > 0) {
+                    notifBadge.style.display = 'block';
+                    // Optional: add a subtle pulse animation class here
+                } else {
+                    notifBadge.style.display = 'none';
+                }
+
+                if(data.notifications.length > 0) {
+                    let hasHighPriority = false;
+                    let html = '';
+                    data.notifications.forEach(n => {
+                        let icon = '<i class="fas fa-info-circle text-primary"></i>';
+                        let bgClass = n.is_read ? '' : 'bg-light';
+                        let dot = n.is_read ? '' : '<span class="text-primary" style="font-size: 0.5rem;"><i class="fas fa-circle"></i></span>';
+                        let borderClass = '';
+                        
+                        if(n.type === 'payment') {
+                            icon = '<i class="fas fa-check-circle text-info"></i>';
+                            if (!n.is_read) borderClass = 'border-start border-4 border-info';
+                        }
+                        if(n.type === 'network' || n.type === 'cignal') {
+                            icon = '<i class="fas fa-exclamation-triangle text-danger"></i>';
+                            if (!n.is_read) {
+                                hasHighPriority = true;
+                                bgClass = 'bg-danger bg-opacity-10';
+                                dot = '<span class="text-danger" style="font-size: 0.5rem;"><i class="fas fa-circle"></i></span>';
+                                borderClass = 'border-start border-4 border-danger';
+                            }
+                        }
+
+                        html += `
+                        <a href="${n.link || '#'}" class="text-decoration-none text-dark d-block p-3 border-bottom notif-item ${bgClass} ${borderClass}" data-id="${n.id}" style="transition: background 0.2s;">
+                            <div class="d-flex align-items-start gap-3">
+                                <div class="mt-1" style="font-size: 1.2rem;">${icon}</div>
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <strong class="mb-0" style="font-size: 0.9rem;">${n.title}</strong>
+                                        ${dot}
+                                    </div>
+                                    <p class="mb-0 text-muted" style="font-size: 0.8rem; line-height: 1.2;">${n.message}</p>
+                                    <small class="text-muted" style="font-size: 0.7rem;">${timeSince(n.created_at)}</small>
+                                </div>
+                            </div>
+                        </a>`;
+                    });
+                    notifList.innerHTML = html;
+                    
+                    if (hasHighPriority) {
+                        notifBadge.classList.add('pulse-danger');
+                    } else {
+                        notifBadge.classList.remove('pulse-danger');
+                    }
+
+                    // Attach click handlers to mark as read
+                    document.querySelectorAll('.notif-item').forEach(item => {
+                        item.addEventListener('click', function(e) {
+                            if(this.classList.contains('bg-light')) {
+                                let notifId = this.getAttribute('data-id');
+                                fetch(`/api/notifications/mark-read/${notifId}/`, {
+                                    method: 'POST',
+                                    headers: {'X-CSRFToken': getCsrfToken()}
+                                });
+                            }
+                        });
+                    });
+                } else {
+                    notifList.innerHTML = `<div class="p-4 text-center text-muted small"><i class="fas fa-box-open fa-2x mb-2 text-black-50"></i><br>All caught up!</div>`;
+                }
+            }
+        });
+    }
+
+    if(markAllReadBtn) {
+        markAllReadBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            fetch('/api/notifications/mark-all-read/', {
+                method: 'POST',
+                headers: {'X-CSRFToken': getCsrfToken()}
+            }).then(() => {
+                fetchNotifications();
+            });
+        });
+    }
+
+    // Polling
+    fetchNotifications();
+    setInterval(fetchNotifications, 30000); // every 30 secs
+});
+</script>
 {% block extra_js %}{% endblock %}
 </body>
 </html>

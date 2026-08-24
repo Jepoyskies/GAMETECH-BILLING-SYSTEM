@@ -17,7 +17,7 @@ from datetime import timedelta, datetime
 
 from .models import (
     SystemAdmin, SubscriptionPlan, Agent, AccountType,
-    Customer, Barangay, Payment, Rebate, SystemLog, SmsLog, CignalPlay, AuditLog, AddOnRequest
+    Customer, Barangay, Payment, Rebate, SystemLog, SmsLog, CignalPlay, AuditLog, AddOnRequest, Notification
 )
 import requests
 from network_manager.models import MikrotikDevice, NapBox
@@ -255,6 +255,13 @@ def update_network_health(request):
                 device.health_status = health_status
                 device.health_reason = health_reason
                 device.save()
+                
+                Notification.objects.create(
+                    title=f"Router Status: {health_status}", 
+                    message=f"Router {device.device_name} updated: {health_reason}", 
+                    notification_type='network', 
+                    link='/live-monitoring/'
+                )
                 messages.success(request, f"Health updated for router {device.device_name}.")
                 
                 send_sms = request.POST.get('send_sms') == '1'
@@ -277,6 +284,13 @@ def update_network_health(request):
                     barangay.save()
                     names.append(barangay.name)
                     
+                    Notification.objects.create(
+                        title=f"Barangay Status: {health_status}", 
+                        message=f"{barangay.name} updated: {health_reason}", 
+                        notification_type='network', 
+                        link='/live-monitoring/'
+                    )
+                    
                 messages.success(request, f"Health updated for barangays: {', '.join(names)}.")
                 
                 send_sms = request.POST.get('send_sms') == '1'
@@ -295,6 +309,13 @@ def update_network_health(request):
                 customer.health_status = health_status
                 customer.health_reason = health_reason
                 customer.save()
+                
+                Notification.objects.create(
+                    title=f"Customer Status: {health_status}", 
+                    message=f"{customer.full_name} updated: {health_reason}", 
+                    notification_type='network', 
+                    link=f"/network/health/resolve/customer/{customer.id}/"
+                )
                 messages.success(request, f"Health updated for customer {customer.full_name}.")
                 
                 send_sms = request.POST.get('send_sms') == '1'
@@ -2162,7 +2183,7 @@ def pay_customer_view(request, username):
                 locked_customer.save()
 
                 # 4. Log the Payment
-                Payment.objects.create(
+                payment = Payment.objects.create(
                     customer=locked_customer,
                     username=locked_customer.pppoe_username,
                     plan_name=locked_customer.plan.name if locked_customer.plan else None,
@@ -2173,6 +2194,14 @@ def pay_customer_view(request, username):
                     expires_at=new_expiry,
                     adjusted_by=request.user.username,
                     paid_at=timezone.now()
+                )
+
+                # Send Notification
+                Notification.objects.create(
+                    title=f"Payment Received: ₱{amount}",
+                    message=f"{locked_customer.full_name} paid via {payment_method}.",
+                    notification_type='payment',
+                    link=f"/logs/payments/"
                 )
 
             # 5. Mikrotik API Reactivation & Comments
@@ -2576,6 +2605,13 @@ def cignalplay_form_view(request, customer_id):
         customer.cignalplay_adjustedby = adjusted_by
         customer.save()
         
+        Notification.objects.create(
+            title="Cignal Play / Add-on Applied",
+            message=f"{customer.full_name} applied for {plan_name}.",
+            notification_type='cignal',
+            link=f"/customer/{customer.id}/cignal-logs/"
+        )
+        
         messages.success(request, f"Successfully recorded Cignal Play / Add-on payment for {customer.full_name}.")
         return redirect('user_cignal_logs', customer_id=customer.id)
         
@@ -2652,10 +2688,19 @@ def unified_login_view(request):
             
         # 2. Try Customer Login
         try:
-            customer = Customer.objects.get(pppoe_username=u, pppoe_password=p)
-            request.session['customer_id'] = customer.id
-            next_url = request.POST.get('next') or request.GET.get('next')
-            return redirect(next_url if next_url else 'customer_portal:portal_dashboard')
+            from django.db.models import Q
+            customer = Customer.objects.filter(
+                Q(full_name__iexact=u, portal_password=p) | 
+                Q(phone=u, portal_password=p)
+            ).first()
+            
+            if customer:
+                request.session['customer_id'] = customer.id
+                next_url = request.POST.get('next') or request.GET.get('next')
+                return redirect(next_url if next_url else 'customer_portal:portal_dashboard')
+            else:
+                messages.error(request, 'Invalid username or password.')
+
         except Customer.DoesNotExist:
             messages.error(request, 'Invalid username or password.')
             
@@ -2743,7 +2788,40 @@ def resolve_addon_request_api(request):
         return JsonResponse({'status': 'error', 'message': 'Request not found'}, status=404)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-    return JsonResponse({'status': 'error', 'message': 'Invalid data'}, status=400)
+
+@login_required
+def api_notifications(request):
+    notifications = Notification.objects.all()[:15]
+    unread_count = Notification.objects.filter(is_read=False).count()
+    data = []
+    for n in notifications:
+        data.append({
+            'id': n.id,
+            'title': n.title,
+            'message': n.message,
+            'type': n.notification_type,
+            'is_read': n.is_read,
+            'created_at': n.created_at.isoformat(),
+            'link': n.link or '#'
+        })
+    return JsonResponse({'status': 'success', 'unread_count': unread_count, 'notifications': data})
+
+@login_required
+@require_POST
+def api_mark_notification_read(request, notif_id):
+    try:
+        notif = Notification.objects.get(id=notif_id)
+        notif.is_read = True
+        notif.save()
+        return JsonResponse({'status': 'success'})
+    except Notification.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Not found'}, status=404)
+
+@login_required
+@require_POST
+def api_mark_all_notifications_read(request):
+    Notification.objects.filter(is_read=False).update(is_read=True)
+    return JsonResponse({'status': 'success'})
 
 
 
@@ -2772,6 +2850,7 @@ def api_active_pppoe_usernames(request):
     
     devices = MikrotikDevice.objects.all()
     active_usernames = set()
+    offline_routers = []
     
     for device in devices:
         try:
@@ -2781,6 +2860,10 @@ def api_active_pppoe_usernames(request):
                 if au.get('name'):
                     active_usernames.add(au.get('name'))
         except Exception:
-            pass
+            offline_routers.append(device.id)
             
-    return JsonResponse({'status': 'success', 'active_usernames': list(active_usernames)})
+    return JsonResponse({
+        'status': 'success', 
+        'active_usernames': list(active_usernames),
+        'offline_routers': offline_routers
+    })

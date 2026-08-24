@@ -133,6 +133,29 @@ def audit_customer_changes(sender, instance, created, **kwargs):
                 new_data="Profile updated via UI or API"
             )
 
+@receiver(post_save, sender=Customer)
+def notify_customer_status_change(sender, instance, created, **kwargs):
+    """
+    Creates a high-priority system notification when a customer is suspended or expired.
+    """
+    if not created and hasattr(instance, '_original_state') and instance._original_state:
+        old_status = instance._original_state.get('Status')
+        new_status = instance.status
+        
+        if old_status != new_status and new_status in ['suspended', 'expired']:
+            from billing.models import Notification
+            from django.urls import reverse
+            try:
+                customer_url = reverse('view_customer', args=[instance.id])
+                Notification.objects.create(
+                    title=f"Customer {new_status.title()}",
+                    message=f"{instance.full_name}'s account has been marked as {new_status}.",
+                    notification_type="network", # network type triggers high-priority UI
+                    link=customer_url
+                )
+            except Exception as e:
+                logger.error(f"Failed to create status notification for {instance.full_name}: {e}")
+
 @receiver(post_delete, sender=Customer)
 def delete_customer_from_mikrotik(sender, instance, **kwargs):
     """

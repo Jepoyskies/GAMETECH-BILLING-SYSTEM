@@ -53,9 +53,9 @@ docker-compose exec web python manage.py createsuperuser
 Follow the prompts to configure your admin username and password.
 
 ### 3️⃣ Load Initial Data (Optional)
-The system automatically creates a fresh, empty PostgreSQL database on first launch. If you need test data (like seed plans), you can load the backup data fixture:
+The system automatically creates a fresh, empty PostgreSQL database on first launch. If you need test data for real-world testing (including mock customers, plans, agents, and routers), you can run the seed command:
 ```bash
-docker-compose exec web python manage.py loaddata data/fixtures/datadump.json
+docker-compose exec web python manage.py seed
 ```
 
 ### 4️⃣ Access the System

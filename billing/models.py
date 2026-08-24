@@ -77,6 +77,14 @@ class Barangay(models.Model):
         return self.name
 
 
+import random
+import string
+
+def generate_portal_password(length=8):
+    """Generate a random alphanumeric password."""
+    chars = string.ascii_letters + string.digits
+    return ''.join(random.choices(chars, k=length))
+
 class Customer(models.Model):
     STATUS_CHOICES = (
         ('active', 'Active'),
@@ -112,6 +120,8 @@ class Customer(models.Model):
     address = models.TextField(blank=True, null=True)
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default='active')
+    portal_password = models.CharField(max_length=50, blank=True, null=True)
+    must_change_password = models.BooleanField(default=True)
     CONNECTION_STATUS_CHOICES = (
         ('Offline', 'Offline'),
         ('Low', 'Low'),
@@ -153,6 +163,14 @@ class Customer(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     sms_sent_at = models.DateTimeField(null=True, blank=True)
     expires_at = models.DateTimeField(null=True, blank=True)
+
+    def get_status_display_badge(self):
+        return f'<span class="badge badge-{self.status}">{self.get_status_display()}</span>'
+
+    def save(self, *args, **kwargs):
+        if not self.portal_password:
+            self.portal_password = generate_portal_password()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.full_name} ({self.pppoe_username})"
@@ -325,3 +343,17 @@ class AddOnRequest(models.Model):
     class Meta:
         ordering = ['-requested_at']
 
+
+class Notification(models.Model):
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    notification_type = models.CharField(max_length=50) # 'payment', 'network', 'cignal', 'system'
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    link = models.CharField(max_length=255, blank=True, null=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.notification_type}] {self.title}"

@@ -108,9 +108,45 @@
         .pay-btn-massive:active {
             transform: translateY(0);
         }
+    
+        /* Abstract glowing background blobs */
+        .blob { position: fixed; border-radius: 50%; filter: blur(100px); z-index: -1; animation: float 20s infinite alternate cubic-bezier(0.4, 0, 0.2, 1); }
+        .blob-1 { top: -10%; left: -10%; width: 50vw; height: 50vw; background: rgba(56, 189, 248, 0.2); }
+        .blob-2 { bottom: -20%; right: -10%; width: 60vw; height: 60vw; background: rgba(139, 92, 246, 0.15); animation-delay: -5s; }
+        .blob-3 { top: 40%; left: 40%; width: 30vw; height: 30vw; background: rgba(236, 72, 153, 0.15); animation-delay: -10s; }
+        @keyframes float { 0% { transform: translate(0, 0) scale(1); } 50% { transform: translate(5%, 10%) scale(1.1); } 100% { transform: translate(-5%, -5%) scale(0.9); } }
+
+        .dashboard-card {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-top: 1px solid rgba(255,255,255,0.15);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 24px;
+        }
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(255,255,255,0.1);
+        }
+        
+        .profile-header { 
+            background: linear-gradient(135deg, rgba(33, 81, 161, 0.8), rgba(56, 189, 248, 0.8)) !important; 
+            backdrop-filter: blur(20px) !important;
+            -webkit-backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+        }
+
     </style>
 </head>
 <body class="dark-mode">
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+
 
 <div class="navbar mb-4">
     <img src="{% static 'assets/images/logo_white.png' %}" alt="GT Fiber Logo" style="height: 40px; width: auto;" onerror="this.src='https://via.placeholder.com/120x40/155ab6/ffffff?text=Gametech+Logo'">
@@ -451,7 +487,7 @@
         {% for message in messages %}
             Swal.fire({
                 title: '{% if message.tags == "success" %}Success!{% elif message.tags == "error" %}Error!{% else %}Notice{% endif %}',
-                text: '{{ message }}',
+                text: '{{ message|escapejs }}',
                 icon: '{{ message.tags }}' === 'error' ? 'error' : '{{ message.tags }}' === 'success' ? 'success' : 'info',
                 background: '#1e293b',
                 color: '#f8fafc',
@@ -601,6 +637,20 @@
             }
         }, 500);
     }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const paymentForm = document.getElementById('portalPaymentForm');
+        if (paymentForm) {
+            paymentForm.addEventListener('submit', function(e) {
+                const btn = this.querySelector('button[type="submit"]');
+                if (btn) {
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Processing...';
+                    btn.disabled = true;
+                    // Do not prevent default, allow form to submit
+                }
+            });
+        }
+    });
 </script>
 
 <script>

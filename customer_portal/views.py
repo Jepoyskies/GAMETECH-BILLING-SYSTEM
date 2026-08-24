@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.contrib import messages
-from billing.models import Customer, Payment, SubscriptionPlan
+from billing.models import Customer, Payment, SubscriptionPlan, Notification, AddOnRequest
 from billing.views import calculate_new_expiration_date
 from decimal import Decimal
 from datetime import timedelta
@@ -36,6 +36,9 @@ def portal_dashboard(request):
     except Customer.DoesNotExist:
         request.session.flush()
         return redirect('login')
+        
+    if customer.must_change_password:
+        return redirect('customer_portal:force_change_password')
         
     plan = customer.plan
     payments = Payment.objects.filter(customer=customer).order_by('-created_at')[:10]
@@ -97,8 +100,11 @@ def portal_statement_view(request):
     except Customer.DoesNotExist:
         request.session.flush()
         return redirect('login')
-
-    payments = Payment.objects.filter(customer=customer).order_by('-paid_at')
+        
+    if customer.must_change_password:
+        return redirect('customer_portal:force_change_password')
+        
+    payments = Payment.objects.filter(customer=customer).order_by('-created_at')
     
     date_from = request.GET.get('from')
     date_to = request.GET.get('to')
@@ -120,6 +126,39 @@ def portal_statement_view(request):
 def portal_logout(request):
     request.session.flush()
     return redirect('login')
+
+def force_change_password(request):
+    customer_id = request.session.get('customer_id')
+    if not customer_id:
+        return redirect('login')
+        
+    try:
+        customer = Customer.objects.get(id=customer_id)
+    except Customer.DoesNotExist:
+        request.session.flush()
+        return redirect('login')
+        
+    if not customer.must_change_password:
+        return redirect('customer_portal:portal_dashboard')
+        
+    if request.method == 'POST':
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
+        
+        if not new_password or not confirm_password:
+            messages.error(request, "Please fill in all fields.")
+        elif len(new_password) < 6:
+            messages.error(request, "Password must be at least 6 characters long.")
+        elif new_password != confirm_password:
+            messages.error(request, "Passwords do not match.")
+        else:
+            customer.portal_password = new_password
+            customer.must_change_password = False
+            customer.save()
+            messages.success(request, "Password updated successfully! Welcome to your dashboard.")
+            return redirect('customer_portal:portal_dashboard')
+            
+    return render(request, 'customer_portal/force_change_password.html', {'customer': customer})
 
 def portal_router_uplink_api(request):
     customer_id = request.session.get('customer_id')
@@ -284,6 +323,24 @@ def portal_process_mock_payment(request):
                 elif is_downgrade:
                     base_msg += f" Your plan has been successfully updated to {new_plan.name}. If you wish to upgrade soon for faster speeds, you can always do so!"
 
+                from django.urls import reverse
+                customer_url = reverse('view_customer', args=[customer.id])
+                
+                Notification.objects.create(
+                    title="Portal Payment Received",
+                    message=f"{customer.full_name} paid ₱{amount} via {payment_method}.",
+                    notification_type="payment",
+                    link=customer_url
+                )
+                
+                if is_upgrade:
+                    Notification.objects.create(
+                        title="Plan Upgrade",
+                        message=f"{customer.full_name} upgraded their plan to {new_plan.name} via the portal.",
+                        notification_type="system",
+                        link=customer_url
+                    )
+
                 messages.success(request, base_msg)
             except Exception as e:
                 messages.error(request, f"Payment processing failed: {e}")
@@ -316,6 +373,16 @@ def portal_apply_addon(request):
             customer=customer,
             addon_type=addon_type,
             status='Pending'
+        )
+        
+        from django.urls import reverse
+        customer_url = reverse('view_customer', args=[customer.id])
+        
+        Notification.objects.create(
+            title=f"New Add-on Request: {addon_type}",
+            message=f"{customer.full_name} has requested {addon_type}. Please contact them.",
+            notification_type="cignal",
+            link=customer_url
         )
         
         return JsonResponse({'status': 'success', 'message': 'Request submitted successfully. Our staff will contact you soon.'})
