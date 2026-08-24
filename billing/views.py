@@ -1484,6 +1484,10 @@ def api_customer_mikrotik_status(request, customer_id):
                     if data['mt_status'] == "Disconnected" and not customer.mac_address:
                         data['live_mac'] = secret.get('caller-id', 'N/A')
                     break
+            
+            if getattr(api, '_connection_failed', False):
+                data['mt_status'] = 'API Unreachable'
+                
         except Exception:
             data['mt_status'] = 'API Unreachable'
 
