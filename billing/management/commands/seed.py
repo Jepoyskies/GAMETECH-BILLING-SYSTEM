@@ -10,7 +10,37 @@ from network_manager.models import MikrotikDevice, NapBox
 class Command(BaseCommand):
     help = 'Seed the database with realistic test data'
 
+    def add_arguments(self, parser):
+        parser.add_argument('--clear', action='store_true', help='Clear existing data before seeding')
+
     def handle(self, *args, **kwargs):
+        from django.db.models.signals import post_save, post_delete
+        from billing.signals import (
+            sync_customer_to_mikrotik, 
+            delete_customer_from_mikrotik, 
+            sync_plan_on_save, 
+            delete_plan_on_mikrotik
+        )
+        
+        # Disconnect signals to prevent Mikrotik API timeouts during seeding
+        post_save.disconnect(sync_customer_to_mikrotik, sender=Customer)
+        post_delete.disconnect(delete_customer_from_mikrotik, sender=Customer)
+        post_save.disconnect(sync_plan_on_save, sender=SubscriptionPlan)
+        post_delete.disconnect(delete_plan_on_mikrotik, sender=SubscriptionPlan)
+
+        if kwargs['clear']:
+            self.stdout.write('Clearing existing data...')
+            Payment.objects.all().delete()
+            Customer.objects.all().delete()
+            NapBox.objects.all().delete()
+            MikrotikDevice.objects.all().delete()
+            Barangay.objects.all().delete()
+            SubscriptionPlan.objects.all().delete()
+            AccountType.objects.all().delete()
+            Agent.objects.all().delete()
+            User.objects.filter(is_superuser=False).delete()
+            self.stdout.write('Data cleared.')
+
         self.stdout.write('Seeding data...')
 
         # 1. Create Users & Agents
@@ -46,11 +76,11 @@ class Command(BaseCommand):
         self.stdout.write('Creating Subscription Plans...')
         plans = []
         plan_data = [
-            ('20 Mbps Plan', '20M', '20M', 0.00),
-            ('30 Mbps Plan', '30M', '30M', 0.00),
-            ('50 Mbps Plan', '50M', '50M', 0.00),
-            ('75 Mbps Plan', '75M', '75M', 0.00),
-            ('100 Mbps Plan', '100M', '100M', 0.00),
+            ('20 Mbps Plan', '20M', '20M', 999.00),
+            ('30 Mbps Plan', '30M', '30M', 1299.00),
+            ('50 Mbps Plan', '50M', '50M', 1499.00),
+            ('75 Mbps Plan', '75M', '75M', 1999.00),
+            ('100 Mbps Plan', '100M', '100M', 2499.00),
         ]
         for name, up, down, price in plan_data:
             plan, _ = SubscriptionPlan.objects.get_or_create(

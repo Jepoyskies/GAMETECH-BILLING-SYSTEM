@@ -165,6 +165,12 @@ def device_hardware_api(request, device_id):
         
         return JsonResponse({
             'status': 'success',
+            'cpu_load': resource_data.get('cpu-load'),
+            'free_memory': resource_data.get('free-memory'),
+            'total_memory': resource_data.get('total-memory'),
+            'free_hdd_space': resource_data.get('free-hdd-space'),
+            'total_hdd_space': resource_data.get('total-hdd-space'),
+            'uptime': resource_data.get('uptime'),
             'resource': resource_data,
             'health': health_data,
             'optical': optical_data

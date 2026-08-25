@@ -100,6 +100,13 @@ class MikrotikAPI:
         """
         try:
             connection, api = self._get_api_connection()
+            
+            # First, ensure the profile exists on the router to avoid rejection
+            profile_api = api.get_resource('/ppp/profile')
+            if not profile_api.get(name=profile):
+                profile_api.add(name=profile)
+                logger.info(f"Auto-created missing PPPoE Profile '{profile}' at {self.ip_address}")
+                
             secrets_api = api.get_resource('/ppp/secret')
             
             existing = secrets_api.get(name=name)

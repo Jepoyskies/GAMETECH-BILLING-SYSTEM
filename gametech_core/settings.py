@@ -145,3 +145,17 @@ MAILERS = {
 # Authentication Redirects
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = '/'
+
+# Celery Beat Schedule
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    'auto-suspend-hourly': {
+        'task': 'billing.tasks.auto_suspend_task',
+        'schedule': crontab(minute='0'),  # Run at the top of every hour
+    },
+    'auto-sms-daily': {
+        'task': 'billing.tasks.auto_sms_task',
+        'schedule': crontab(hour='9', minute='0'),  # Run daily at 9:00 AM
+    },
+}

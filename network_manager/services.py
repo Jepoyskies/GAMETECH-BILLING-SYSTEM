@@ -28,7 +28,7 @@ class MikrotikAPI:
 
         # Set a default timeout for this thread's sockets to prevent infinite hangs
         old_timeout = socket.getdefaulttimeout()
-        socket.setdefaulttimeout(3.0)
+        socket.setdefaulttimeout(1.0)
         try:
             # We set up the API connection pool
             self.connection = routeros_api.RouterOsApiPool(
@@ -51,7 +51,7 @@ class MikrotikAPI:
         try:
             # First attempt with plaintext_login (RouterOS v6.43+)
             old_timeout = socket.getdefaulttimeout()
-            socket.setdefaulttimeout(3.0)
+            socket.setdefaulttimeout(1.0)
             try:
                 return self.connection.get_api()
             finally:
@@ -63,7 +63,7 @@ class MikrotikAPI:
             
             try:
                 old_timeout = socket.getdefaulttimeout()
-                socket.setdefaulttimeout(3.0)
+                socket.setdefaulttimeout(1.0)
                 try:
                     # Re-create connection with legacy auth
                     self.connection = routeros_api.RouterOsApiPool(
@@ -508,6 +508,13 @@ class MikrotikAPI:
         """
         try:
             api = self._get_api()
+            
+            # First, ensure the profile exists on the router to avoid rejection
+            profile_api = api.get_resource('/ppp/profile')
+            if not profile_api.get(name=profile):
+                profile_api.add(name=profile)
+                logger.info(f"Auto-created missing PPPoE Profile '{profile}' on {self.device.device_name}")
+                
             secrets = api.get_resource('/ppp/secret')
 
             # Check if user already exists
