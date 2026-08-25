@@ -284,11 +284,16 @@ def sync_manager(request, device_id):
         router_usernames = set(u.get('name') for u in router_users if u.get('name'))
         
         # Categorize
+        # Create a fast lookup dict for django customers by pppoe_username
+        django_customer_map = {dc.pppoe_username: dc for dc in django_customers}
+        
         for ru in router_users:
             name = ru.get('name')
             if not name:
                 continue
             if name in django_usernames:
+                # Add the Django Customer object to the router user dictionary
+                ru['customer'] = django_customer_map.get(name)
                 synced.append(ru)
             else:
                 orphans.append(ru)
@@ -299,11 +304,18 @@ def sync_manager(request, device_id):
     else:
         messages.error(request, f"Failed to connect to router: {result.get('error')}")
         
+    from billing.models import Barangay
+    
+    all_routers = MikrotikDevice.objects.all()
+    barangays = Barangay.objects.all().order_by('name')
+
     context = {
         'device': device,
         'orphans': orphans,
         'missing_on_router': missing_on_router,
         'synced': synced,
+        'all_routers': all_routers,
+        'barangays': barangays,
         'api_success': result.get('success', False)
     }
     
