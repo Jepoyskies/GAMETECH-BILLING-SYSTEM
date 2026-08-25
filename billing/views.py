@@ -2888,3 +2888,38 @@ def api_active_pppoe_usernames(request):
         'active_usernames': list(active_usernames),
         'offline_routers': offline_routers
     })
+
+@role_required(['Admin', 'Editor'])
+@login_required
+def bulk_transfer_router(request):
+    """
+    Handles bulk moving customers to a different Mikrotik router.
+    """
+    if request.method == 'POST':
+        customer_ids = request.POST.getlist('customer_ids')
+        target_device_id = request.POST.get('target_device_id')
+        
+        if not customer_ids or not target_device_id:
+            messages.error(request, 'Please select customers and a target router.')
+            return redirect('customer_list')
+            
+        try:
+            from network_manager.models import MikrotikDevice
+            target_device = MikrotikDevice.objects.get(id=target_device_id)
+            
+            transferred_count = 0
+            for cid in customer_ids:
+                customer = Customer.objects.get(id=cid)
+                if str(customer.mikrotik_device_id) != str(target_device_id):
+                    # Keep track of old device ID so the signal knows to delete the secret
+                    customer._original_mikrotik_device_id = customer.mikrotik_device_id
+                    
+                    customer.mikrotik_device = target_device
+                    customer.save() # Triggers post_save signal
+                    transferred_count += 1
+                    
+            messages.success(request, f'Successfully transferred {transferred_count} customers to {target_device.device_name}.')
+        except Exception as e:
+            messages.error(request, f'Error during transfer: {str(e)}')
+            
+    return redirect('customer_list')

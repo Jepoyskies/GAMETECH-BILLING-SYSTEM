@@ -10,10 +10,9 @@ urlpatterns = [
          views.delete_device, name='delete_device'),
 
     # This is for the "Test Connection" AJAX button!
-    path('devices/test/<int:device_id>/',
-         views.test_device_connection, name='test_device'),
-    path('devices/sync/<int:device_id>/',
-         views.sync_device_users, name='sync_device_users'),
+    path('devices/<int:device_id>/test/', views.test_device_connection, name='test_device'),
+    path('devices/<int:device_id>/setup-profiles/', views.setup_router_profiles, name='setup_router_profiles'),
+    path('devices/<int:device_id>/sync-users/', views.sync_device_users, name='sync_device_users'),
     path('devices/<int:device_id>/sync/', views.sync_manager, name='sync_manager'),
     path('devices/<int:device_id>/sync/push/', views.sync_push_user, name='sync_push_user'),
     path('devices/<int:device_id>/sync/delete/', views.sync_delete_user, name='sync_delete_user'),

@@ -106,6 +106,7 @@ urlpatterns = [
     path('sms/', views.sms_view, name='sms_messaging'),
     
     # Cignal Play Integration
+    path('customers/bulk-transfer/', views.bulk_transfer_router, name='bulk_transfer_router'),
     path('cignal-play/', views.cignal_play_list_view, name='cignal_play_list'),
     path('add-ons/', views.add_on_payments_view, name='add_on_payments'),
     path('customer/<int:customer_id>/cignalplay-form/', views.cignalplay_form_view, name='cignalplay_form'),

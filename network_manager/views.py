@@ -10,7 +10,10 @@ from .services import MikrotikAPI
 
 @login_required
 def device_list(request):
-    devices = MikrotikDevice.objects.all().order_by('device_name')
+    from django.db.models import Count, Q
+    devices = MikrotikDevice.objects.annotate(
+        customer_count=Count('customer', filter=Q(customer__status='active'))
+    ).order_by('device_name')
     return render(request, 'network_manager/device_list.html', {'devices': devices})
 
 
@@ -255,8 +258,11 @@ def sync_manager(request, device_id):
     
     device = get_object_or_404(MikrotikDevice, id=device_id)
     
-    # 1. Fetch Django Customers for this device
-    django_customers = Customer.objects.filter(mikrotik_device=device).exclude(pppoe_username__isnull=True).exclude(pppoe_username='')
+    # 1. Fetch Django Customers for this device OR unassigned customers
+    from django.db.models import Q
+    django_customers = Customer.objects.filter(
+        Q(mikrotik_device=device) | Q(mikrotik_device__isnull=True)
+    ).exclude(pppoe_username__isnull=True).exclude(pppoe_username='')
     django_usernames = set(django_customers.values_list('pppoe_username', flat=True))
     
     # 2. Fetch Router Users using the Sync API
@@ -323,7 +329,12 @@ def sync_push_user(request, device_id):
         )
         
         profile = customer.plan.name if customer.plan else "default"
-        comment = customer.full_name
+        comment_parts = [customer.full_name]
+        if customer.barangay:
+            comment_parts.append(customer.barangay.name)
+        elif customer.address:
+            comment_parts.append(customer.address[:30] + ('...' if len(customer.address) > 30 else ''))
+        comment = " | ".join(comment_parts)
         
         result = api.add_pppoe_user(
             name=customer.pppoe_username,
@@ -333,6 +344,9 @@ def sync_push_user(request, device_id):
         )
         
         if result.get('success'):
+            if customer.mikrotik_device != device:
+                customer.mikrotik_device = device
+                customer.save(update_fields=['mikrotik_device'])
             messages.success(request, result.get('message'))
         else:
             messages.error(request, f"Failed to push user: {result.get('error')}")
@@ -400,7 +414,7 @@ def sync_bulk_action(request, device_id):
 
         elif action == 'bulk_push':
             for uname in usernames:
-                customer = Customer.objects.filter(pppoe_username=uname, mikrotik_device=device).first()
+                customer = Customer.objects.filter(pppoe_username=uname).first()
                 if customer:
                     profile = customer.plan.name if customer.plan else "default"
                     res = api.add_pppoe_user(
@@ -410,6 +424,9 @@ def sync_bulk_action(request, device_id):
                         comment=customer.full_name
                     )
                     if res.get('success'):
+                        if customer.mikrotik_device != device:
+                            customer.mikrotik_device = device
+                            customer.save(update_fields=['mikrotik_device'])
                         success_count += 1
                     else:
                         error_count += 1
@@ -444,3 +461,59 @@ def sync_bulk_action(request, device_id):
             messages.error(request, "Invalid bulk action.")
 
     return redirect('sync_manager', device_id=device_id)
+
+@role_required(['Admin', 'Editor'])
+@login_required
+def setup_router_profiles(request, device_id):
+    """
+    Syncs all Django Subscription Plans to the Mikrotik router as PPPoE Profiles.
+    """
+    if request.method == 'POST':
+        device = get_object_or_404(MikrotikDevice, id=device_id)
+        from billing.models import SubscriptionPlan
+        from .sync_services import MikrotikAPI as MikrotikSyncAPI
+        
+        try:
+            api = MikrotikSyncAPI(
+                ip_address=device.ip_address,
+                username=device.api_username,
+                password=device.api_password,
+                port=device.api_port
+            )
+            connection, router_api = api._get_api_connection()
+            profile_api = router_api.get_resource('/ppp/profile')
+            
+            plans = SubscriptionPlan.objects.all()
+            success_count = 0
+            
+            import re
+            for plan in plans:
+                # Format rate limit string e.g., '10M/10M' (Mikrotik standard rx/tx)
+                def extract_speed(speed_str):
+                    match = re.search(r'\d+', str(speed_str))
+                    return match.group(0) if match else "1"
+                
+                speed_up = extract_speed(plan.speed_up)
+                speed_down = extract_speed(plan.speed_down)
+                rate_limit_str = f"{speed_up}M/{speed_down}M"
+                
+                existing = profile_api.get(name=plan.name)
+                if existing:
+                    profile_id = existing[0].get('id') or existing[0].get('.id')
+                    profile_api.set(
+                        id=profile_id,
+                        **{'rate-limit': rate_limit_str}
+                    )
+                else:
+                    profile_api.add(
+                        name=plan.name,
+                        **{'rate-limit': rate_limit_str}
+                    )
+                success_count += 1
+                
+            connection.disconnect()
+            messages.success(request, f'Successfully synced {success_count} Subscription Plans to {device.device_name}!')
+        except Exception as e:
+            messages.error(request, f'Failed to setup router: {str(e)}')
+            
+    return redirect('device_list')
