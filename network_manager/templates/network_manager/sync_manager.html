@@ -111,20 +111,13 @@
                                 <td><span class="badge bg-secondary badge-custom">{{ user.profile }}</span></td>
                                 <td class="text-muted">{{ user.comment|default:"-" }}</td>
                                 <td class="text-end">
-                                    <form method="POST" action="{% url 'sync_bulk_action' device.id %}" class="d-inline">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="selected_users" value="{{ user.name }}">
-                                        <button type="submit" name="bulk_action" value="bulk_import" class="btn btn-sm btn-outline-success">
-                                            <i class="fas fa-file-import"></i> Auto-Import
-                                        </button>
-                                    </form>
-                                    <form method="POST" action="{% url 'sync_delete_user' device.id %}" class="d-inline">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="pppoe_username" value="{{ user.name }}">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger ms-1" onclick="return confirm('Are you sure you want to delete this user from the Mikrotik router?');">
-                                            <i class="fas fa-trash-alt"></i> Delete from Router
-                                        </button>
-                                    </form>
+                                    <button type="submit" formaction="{% url 'sync_bulk_action' device.id %}" formmethod="POST" name="selected_users" value="{{ user.name }}" class="btn btn-sm btn-outline-success">
+                                        <input type="hidden" name="bulk_action" value="bulk_import">
+                                        <i class="fas fa-file-import"></i> Auto-Import
+                                    </button>
+                                    <button type="submit" formaction="{% url 'sync_delete_user' device.id %}" formmethod="POST" name="pppoe_username" value="{{ user.name }}" class="btn btn-sm btn-outline-danger ms-1" onclick="return confirm('Are you sure you want to delete this user from the Mikrotik router?');">
+                                        <i class="fas fa-trash-alt"></i> Delete from Router
+                                    </button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -172,13 +165,9 @@
                                 <td>{{ customer.full_name }}</td>
                                 <td><span class="badge bg-info badge-custom">{{ customer.plan.name|default:"None" }}</span></td>
                                 <td class="text-end">
-                                    <form method="POST" action="{% url 'sync_push_user' device.id %}" class="d-inline">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="pppoe_username" value="{{ customer.pppoe_username }}">
-                                        <button type="submit" class="btn btn-sm btn-primary">
-                                            <i class="fas fa-cloud-upload-alt"></i> Push to Router
-                                        </button>
-                                    </form>
+                                    <button type="submit" formaction="{% url 'sync_push_user' device.id %}" formmethod="POST" name="pppoe_username" value="{{ customer.pppoe_username }}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-cloud-upload-alt"></i> Push to Router
+                                    </button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -247,6 +236,27 @@
         // Select All for Orphans
         $('#selectAllOrphans').change(function() {
             $('.orphan-check').prop('checked', $(this).prop('checked'));
+        });
+        
+        // Form Validation for Bulk Actions
+        $('form').on('submit', function(e) {
+            var submitBtn = $(document.activeElement);
+            if (submitBtn.attr('name') === 'bulk_action') {
+                var checkboxes = $(this).find('input[name="selected_users"]:checked');
+                if (checkboxes.length === 0) {
+                    e.preventDefault();
+                    
+                    // Show a nice inline alert instead of reloading the page
+                    const alertHtml = `
+                    <div class="alert alert-warning alert-dismissible fade show mt-2 custom-validation-alert" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i> Please select at least one user using the checkboxes first.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>`;
+                    
+                    $(this).find('.custom-validation-alert').remove();
+                    $(this).find('.card-body').prepend(alertHtml);
+                }
+            }
         });
 
         // Select All for Missing

@@ -24,7 +24,7 @@
             {% endfor %}
         {% endif %}
 
-        <form method="post" autocomplete="off">
+        <form method="post" autocomplete="off" id="edit-customer-form" novalidate>
             {% csrf_token %}
 
             <div class="form-section-label"><i class="fas fa-id-card me-1"></i> Basic Information</div>
@@ -257,4 +257,58 @@
     });
 </script>
 {% endif %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const form = document.getElementById('edit-customer-form');
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+                
+                // Find all invalid elements
+                const invalidElements = form.querySelectorAll(':invalid');
+                if (invalidElements.length > 0) {
+                    const firstInvalid = invalidElements[0];
+                    
+                    // Try to find the label for this input
+                    let labelContainer = firstInvalid.closest('.mb-3, .col-md-6, .col-md-12');
+                    let labelText = "Field";
+                    if (labelContainer) {
+                        let labelEl = labelContainer.querySelector('label');
+                        if (labelEl) {
+                            labelText = labelEl.innerText.replace('*','').trim();
+                        }
+                    }
+                    
+                    const message = firstInvalid.validationMessage || 'Invalid format.';
+                    
+                    // Create an elegant error banner
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'error-alert mb-4 custom-validation-alert';
+                    alertDiv.style.backgroundColor = '#fff3f3';
+                    alertDiv.style.color = '#dc3545';
+                    alertDiv.style.borderLeft = '4px solid #dc3545';
+                    alertDiv.style.padding = '12px 16px';
+                    alertDiv.style.borderRadius = '8px';
+                    alertDiv.style.fontWeight = '500';
+                    alertDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i> <b>Validation Error on "' + labelText + '":</b> ' + message;
+                    
+                    // Remove old custom alerts
+                    document.querySelectorAll('.custom-validation-alert').forEach(e => e.remove());
+                    
+                    // Insert at top of form and scroll to it
+                    form.insertBefore(alertDiv, form.firstChild);
+                    alertDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
+                    firstInvalid.focus();
+                    
+                    // Flash red border to draw attention
+                    const originalBorder = firstInvalid.style.border;
+                    firstInvalid.style.border = '2px solid #dc3545';
+                    setTimeout(() => { firstInvalid.style.border = originalBorder; }, 3000);
+                }
+            }
+        }, false);
+    });
+</script>
 {% endblock %}

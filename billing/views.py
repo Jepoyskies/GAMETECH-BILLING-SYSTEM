@@ -1178,6 +1178,7 @@ def customer_list(request):
 @permission_required('billing.add_customer', raise_exception=True)
 def add_customer(request):
     if request.method == 'POST':
+        from django.utils.crypto import get_random_string
         if request.user.role == 'Agent':
             barangay_name = request.POST.get('barangay_name')
             if barangay_name:
@@ -1201,7 +1202,7 @@ def add_customer(request):
             phone=request.POST.get('phone'),
             address=request.POST.get('address'),
             pppoe_username=request.POST.get('pppoe_username') or None,
-            pppoe_password=request.POST.get('pppoe_password'),
+            pppoe_password=request.POST.get('pppoe_password') or get_random_string(8),
             status='pending' if request.user.role == 'Agent' else request.POST.get('status', 'active'),
             plan_id=request.POST.get('plan_id'),
             mikrotik_device_id=request.POST.get('device_id') or None,
@@ -1270,6 +1271,10 @@ def edit_customer(request, customer_id):
         if new_password:
             check_change('PPPoE Password', '***', '*** (changed)')
             customer.pppoe_password = new_password
+        elif not customer.pppoe_password:
+            from django.utils.crypto import get_random_string
+            customer.pppoe_password = get_random_string(8)
+            check_change('PPPoE Password', 'None', '*** (auto-generated)')
             
         check_change('Status', customer.status, request.POST.get('status', 'active'))
         customer.status = request.POST.get('status', 'active')
@@ -1487,11 +1492,23 @@ def api_customer_mikrotik_status(request, customer_id):
             
             if getattr(api, '_connection_failed', False):
                 data['mt_status'] = 'API Unreachable'
+            else:
+                # If the customer is completely disconnected, check if the ENTIRE router is offline (lost uplink)
+                if data['mt_status'] == "Disconnected":
+                    try:
+                        ping_res = api._get_api().get_resource('/').call('ping', {'address': '8.8.8.8', 'count': '1'})
+                        if ping_res and len(ping_res) > 0:
+                            result = ping_res[0]
+                            loss = int(result.get('packet-loss', 100))
+                            if loss == 100 or result.get('status') in ['no route to host', 'timeout']:
+                                data['mt_status'] = 'Offline (Router Off)'
+                    except Exception:
+                        pass # Ignore ping errors, just leave as Disconnected
                 
         except Exception:
             data['mt_status'] = 'API Unreachable'
 
-    # Add context to disconnected status
+    # Add context to disconnected status if it wasn't caught by the ping check
     if data['mt_status'] == 'Disconnected':
         if customer.status == 'active':
             if customer.barangay and customer.barangay.health_status == 'Outage':
@@ -1501,9 +1518,9 @@ def api_customer_mikrotik_status(request, customer_id):
             elif customer.health_status == 'Outage':
                 data['mt_status'] = 'Service Outage'
             else:
-                data['mt_status'] = 'Offline (Router Off)'
+                data['mt_status'] = 'Disconnected (Inactive)'
         elif customer.status == 'suspended':
-            data['mt_status'] = 'Suspended (Unpaid)'
+            data['mt_status'] = 'Suspended'
         else:
             data['mt_status'] = f'Disconnected ({customer.get_status_display()})'
             
