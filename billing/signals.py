@@ -65,12 +65,22 @@ def sync_customer_to_mikrotik(sender, instance, created, **kwargs):
         # 1. Determine target profile from SubscriptionPlan
         target_profile = instance.plan.name if instance.plan else "default"
         is_disabled = "no"
+        
+        # Format the comment to include location data
+        comment_parts = [instance.full_name]
+        if instance.barangay:
+            comment_parts.append(instance.barangay.name)
+        elif instance.address:
+            # truncate address if it's too long
+            comment_parts.append(instance.address[:30] + ('...' if len(instance.address) > 30 else ''))
+        secret_comment = " | ".join(comment_parts)
 
         # 2. Update the secret on the router with standard profile
         success, msg = api.add_pppoe_user(
             name=instance.pppoe_username,
             password=instance.pppoe_password,
             profile=target_profile,
+            comment=secret_comment,
             disabled=is_disabled
         )
 

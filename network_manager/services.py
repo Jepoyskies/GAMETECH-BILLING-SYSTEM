@@ -502,7 +502,7 @@ class MikrotikAPI:
             logger.error(f"Failed to delete profile {plan_name}: {e}")
             return False, str(e)
 
-    def add_pppoe_user(self, name, password, profile, service="pppoe", disabled="no"):
+    def add_pppoe_user(self, name, password, profile, service="pppoe", disabled="no", comment=None):
         """
         Creates or updates a PPPoE user (secret) on the Mikrotik device.
         """
@@ -520,13 +520,31 @@ class MikrotikAPI:
             # Check if user already exists
             existing = secrets.get(name=name)
             if existing:
-                secrets.set(
-                    id=existing[0]['id'], password=password, profile=profile, service=service, disabled=disabled)
+                update_params = {
+                    'id': existing[0]['id'],
+                    'password': password,
+                    'profile': profile,
+                    'service': service,
+                    'disabled': disabled
+                }
+                if comment:
+                    update_params['comment'] = comment
+                
+                secrets.set(**update_params)
                 logger.info(
                     f"Updated existing PPPoE user {name} on {self.device.device_name}")
             else:
-                secrets.add(name=name, password=password,
-                            profile=profile, service=service, disabled=disabled)
+                add_params = {
+                    'name': name,
+                    'password': password,
+                    'profile': profile,
+                    'service': service,
+                    'disabled': disabled
+                }
+                if comment:
+                    add_params['comment'] = comment
+                    
+                secrets.add(**add_params)
                 logger.info(
                     f"Added new PPPoE user {name} to {self.device.device_name}")
 

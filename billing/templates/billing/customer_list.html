@@ -60,6 +60,9 @@
             <button type="button" id="btnBulkSms" class="btn btn-success rounded-pill px-4 shadow-sm fw-bold text-nowrap d-flex align-items-center" disabled data-bs-toggle="modal" data-bs-target="#bulkSmsModal">
                 <i class="fas fa-comment-sms me-2"></i> Send Bulk SMS (<span id="selectedCount">0</span>)
             </button>
+            <button type="button" id="btnBulkTransfer" class="btn btn-info text-white rounded-pill px-4 shadow-sm fw-bold text-nowrap d-flex align-items-center" disabled data-bs-toggle="modal" data-bs-target="#bulkTransferModal">
+                <i class="fas fa-exchange-alt me-2"></i> Transfer Router (<span id="selectedTransferCount">0</span>)
+            </button>
             <a href="{% url 'add_customer' %}" class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold text-nowrap d-flex align-items-center">
                 <i class="fa-solid fa-user-plus me-2"></i> Add Customer
             </a>
@@ -217,7 +220,39 @@
     </div>
 </div>
 
-
+    <!-- Bulk Transfer Modal -->
+    <div class="modal fade" id="bulkTransferModal" tabindex="-1" aria-labelledby="bulkTransferModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title fw-bold" id="bulkTransferModalLabel"><i class="fas fa-exchange-alt me-2"></i>Transfer Router</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="bulkTransferForm" method="POST" action="{% url 'bulk_transfer_router' %}">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <p>You are about to transfer <strong id="transferCountDisplay">0</strong> customers to a new Mikrotik router. This will automatically delete their PPPoE secret on their old router and recreate it on the new router.</p>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Select Target Router</label>
+                            <select name="target_device_id" class="form-select" required>
+                                <option value="">-- Choose Router --</option>
+                                {% for device in devices %}
+                                <option value="{{ device.id }}">{{ device.device_name }} ({{ device.ip_address }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <!-- Hidden inputs for customer IDs will be appended here by JS -->
+                        <div id="transferCustomerInputs"></div>
+                    </div>
+                    <div class="modal-footer bg-light border-top-0">
+                        <button type="button" class="btn btn-secondary rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-info text-white rounded-pill px-4 fw-bold shadow-sm">Confirm Transfer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</main>
 {% endblock %}
 
 
@@ -260,10 +295,21 @@
             
             var totalCount = table.$('.customer-checkbox').length;
             $('#selectAllCheckbox').prop('checked', selectedCount > 0 && selectedCount === totalCount);
+            
+            // Add Transfer Logic
+            $('#selectedTransferCount').text(selectedCount);
+            $('#transferCountDisplay').text(selectedCount);
+            $('#btnBulkTransfer').prop('disabled', selectedCount === 0);
+            $('#transferCustomerInputs').empty();
+            table.$('.customer-checkbox:checked').each(function() {
+                $('#transferCustomerInputs').append(`<input type="hidden" name="customer_ids" value="${$(this).val()}">`);
+            });
         }
 
         $('#selectAllCheckbox').on('change', function() {
-            table.$('.customer-checkbox').prop('checked', $(this).prop('checked'));
+            var isChecked = $(this).prop('checked');
+            // Only select the rows that are currently visible/filtered by the user's search
+            table.$('.customer-checkbox', {"filter":"applied"}).prop('checked', isChecked);
             updateSelectedCount();
         });
 
