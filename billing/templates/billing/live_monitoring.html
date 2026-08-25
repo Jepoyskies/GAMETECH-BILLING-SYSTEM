@@ -262,6 +262,11 @@
         70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
         100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
     }
+    @keyframes pulse-primary {
+        0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+    }
     .alert-pulse-danger {
         animation: pulse-danger 2s infinite;
         border: 1px solid rgba(239, 68, 68, 0.5) !important;
@@ -269,6 +274,10 @@
     .alert-pulse-warning {
         animation: pulse-warning 2s infinite;
         border: 1px solid rgba(245, 158, 11, 0.5) !important;
+    }
+    .alert-pulse-primary {
+        animation: pulse-primary 2s infinite;
+        border: 1px solid rgba(59, 130, 246, 0.5) !important;
     }
 
     /* Bottom Card: Live Traffic */
@@ -413,7 +422,7 @@
         <div class="info-card-container">
             <!-- Network Alerts -->
             <div class="info-cell">
-                <div class="cell-header text-warning">
+                <div class="cell-header danger">
                     <i class="fas fa-exclamation-triangle"></i> Network Alerts
                 </div>
                 <div class="cell-content" id="network-alerts-list">
@@ -422,50 +431,50 @@
                     </div>
                     {% else %}
                     {% for alert in active_device_alerts %}
-                    <div class="alert-item d-flex justify-content-between align-items-center mb-2 p-2 border border-warning rounded"
-                        style="background: rgba(245, 158, 11, 0.1);">
+                    <div class="alert-item d-flex justify-content-between align-items-center mb-1 p-1 px-2 border border-danger rounded"
+                        style="background: rgba(239, 68, 68, 0.1);">
                         <div class="d-flex align-items-center">
-                            <i class="fas fa-server text-warning me-2 fs-5"></i>
+                            <i class="fas fa-server text-danger me-2 fs-6"></i>
                             <div>
-                                <h6 style=" margin-bottom: 2px; font-size: 0.9rem;">{{ alert.device_name }} (Router)</h6>
-                                <p style="font-weight: 600; margin-bottom: 0; font-size: 0.8rem;">{{ alert.health_status }}</p>
+                                <h6 style=" margin-bottom: 0px; font-size: 0.85rem;">{{ alert.device_name }} (Router)</h6>
+                                <p style="font-weight: 600; margin-bottom: 0; font-size: 0.75rem;">{{ alert.health_status }}</p>
                             </div>
                         </div>
                         <a href="{% url 'resolve_network_health' 'device' alert.id %}"
-                            class="btn btn-sm btn-outline-warning rounded-pill px-2 py-0"><i
-                                class="fas fa-check me-1"></i>Resolve</a>
+                            class="btn btn-outline-danger rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" title="Resolve" data-bs-toggle="tooltip"><i
+                                class="fas fa-check"></i></a>
                     </div>
                     {% endfor %}
 
                     {% for alert in active_barangay_alerts %}
-                    <div class="alert-item d-flex justify-content-between align-items-center mb-2 p-2 border border-warning rounded"
-                        style="background: rgba(245, 158, 11, 0.1);">
+                    <div class="alert-item d-flex justify-content-between align-items-center mb-1 p-1 px-2 border border-danger rounded"
+                        style="background: rgba(239, 68, 68, 0.1);">
                         <div class="d-flex align-items-center">
-                            <i class="fas fa-map-marker-alt text-warning me-2 fs-5"></i>
+                            <i class="fas fa-map-marker-alt text-danger me-2 fs-6"></i>
                             <div>
-                                <h6 style=" margin-bottom: 2px; font-size: 0.9rem;">{{ alert.name }} (Barangay)</h6>
-                                <p style="font-weight: 600; margin-bottom: 0; font-size: 0.8rem;">{{ alert.health_status }}</p>
+                                <h6 style=" margin-bottom: 0px; font-size: 0.85rem;">{{ alert.name }} (Barangay)</h6>
+                                <p style="font-weight: 600; margin-bottom: 0; font-size: 0.75rem;">{{ alert.health_status }}</p>
                             </div>
                         </div>
                         <a href="{% url 'resolve_network_health' 'barangay' alert.id %}"
-                            class="btn btn-sm btn-outline-warning rounded-pill px-2 py-0"><i
-                                class="fas fa-check me-1"></i>Resolve</a>
+                            class="btn btn-outline-danger rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" title="Resolve" data-bs-toggle="tooltip"><i
+                                class="fas fa-check"></i></a>
                     </div>
                     {% endfor %}
 
                     {% for alert in active_customer_alerts %}
-                    <div class="alert-item d-flex justify-content-between align-items-center mb-2 p-2 border border-warning rounded alert-pulse-warning"
-                        style="background: rgba(245, 158, 11, 0.1);">
+                    <div class="alert-item d-flex justify-content-between align-items-center mb-1 p-1 px-2 border border-danger rounded alert-pulse-danger"
+                        style="background: rgba(239, 68, 68, 0.1);">
                         <div class="d-flex align-items-center">
-                            <i class="fas fa-user-times text-warning me-2 fs-5"></i>
+                            <i class="fas fa-user-times text-danger me-2 fs-6"></i>
                             <div>
-                                <h6 style=" margin-bottom: 2px; font-size: 0.9rem;">{{ alert.full_name }} (Customer)</h6>
-                                <p style="font-weight: 600; margin-bottom: 0; font-size: 0.8rem;">{{ alert.health_status }}</p>
+                                <h6 style=" margin-bottom: 0px; font-size: 0.85rem;">{{ alert.full_name }} (Customer)</h6>
+                                <p style="font-weight: 600; margin-bottom: 0; font-size: 0.75rem;">{{ alert.health_status }}</p>
                             </div>
                         </div>
                         <a href="{% url 'resolve_network_health' 'customer' alert.id %}"
-                            class="btn btn-sm btn-outline-warning rounded-pill px-2 py-0"><i
-                                class="fas fa-check me-1"></i>Resolve</a>
+                            class="btn btn-outline-danger rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" title="Resolve" data-bs-toggle="tooltip"><i
+                                class="fas fa-check"></i></a>
                     </div>
                     {% endfor %}
                     {% endif %}
@@ -474,9 +483,9 @@
 
             <!-- Pending Add-on Requests -->
             <div class="info-cell">
-                <div class="cell-header info" style="display: flex; justify-content: space-between; width: 100%;">
+                <div class="cell-header text-warning" style="display: flex; justify-content: space-between; width: 100%;">
                     <span><i class="fas fa-puzzle-piece"></i> Pending Add-on Requests</span>
-                    <span class="badge bg-info rounded-pill" id="addon-badge" style="display:none; font-size: 0.7rem;">0
+                    <span class="badge bg-warning text-dark rounded-pill" id="addon-badge" style="display:none; font-size: 0.7rem;">0
                         New</span>
                 </div>
                 <div class="cell-content" id="addon-requests-list">
@@ -486,8 +495,8 @@
 
             <!-- Paid Offline Customers -->
             <div class="info-cell">
-                <div class="cell-header danger">
-                    <i class="fas fa-exclamation-triangle"></i> Paid Offline Customers
+                <div class="cell-header info">
+                    <i class="fas fa-user-slash"></i> Paid Offline Customers
                 </div>
                 <div class="cell-content" id="offlineUsersList">
                     <!-- loaded by js -->
@@ -572,15 +581,15 @@
         let html = '';
         offline_users.forEach(u => {
             html += `
-        <div class="d-flex justify-content-between align-items-center p-2 mb-2 border rounded bg-danger-subtle">
+        <div class="d-flex justify-content-between align-items-center p-1 px-2 mb-1 border rounded bg-primary-subtle">
             <div class="d-flex align-items-center">
-                <i class="fas fa-user-slash text-danger me-2 fs-5"></i>
+                <i class="fas fa-user-slash text-primary me-2 fs-6"></i>
                 <div>
-                    <h6 class="mb-1 text-danger fw-bold" style="font-size: 0.9rem;">${u.full_name} <span class="badge bg-danger ms-1">${u.username}</span></h6>
-                    <p class="mb-0 text-danger-emphasis small" style="font-size: 0.75rem;"><i class="fas fa-clock me-1"></i>Down since: ${u.last_logged_out}</p>
+                    <h6 class="mb-0 text-primary fw-bold" style="font-size: 0.85rem;">${u.full_name} <span class="badge bg-primary ms-1">${u.username}</span></h6>
+                    <p class="mb-0 text-primary-emphasis small" style="font-size: 0.7rem;"><i class="fas fa-clock me-1"></i>Down since: ${u.last_logged_out}</p>
                 </div>
             </div>
-            <a href="/customers/view/${u.id}/" class="btn btn-sm btn-danger rounded-pill px-2 py-0">View</a>
+            <a href="/customers/view/${u.id}/" class="btn btn-primary rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" title="View" data-bs-toggle="tooltip"><i class="fas fa-eye"></i></a>
         </div>`;
         });
         tbody.innerHTML = html;
@@ -624,16 +633,16 @@
                     let html = '';
                     d.data.forEach(req => {
                         html += `
-                <div class="d-flex justify-content-between align-items-center p-2 mb-2 border rounded bg-primary-subtle">
+                <div class="d-flex justify-content-between align-items-center p-1 px-2 mb-1 border rounded bg-warning-subtle">
                     <div class="d-flex align-items-center">
-                        <i class="fas fa-tv text-primary me-2 fs-5"></i>
+                        <i class="fas fa-tv text-warning me-2 fs-6"></i>
                         <div>
-                            <h6 class="mb-1 text-primary fw-bold" style="font-size: 0.9rem;">${req.addon_type}</h6>
-                            <p class="mb-0 fw-semibold text-body" style="font-size: 0.8rem;">${req.customer_name}</p>
-                            <p class="mb-0 text-primary-emphasis small" style="font-size: 0.75rem;"><i class="fas fa-clock me-1"></i>${req.requested_at}</p>
+                            <h6 class="mb-0 text-warning fw-bold" style="font-size: 0.85rem;">${req.addon_type}</h6>
+                            <p class="mb-0 fw-semibold text-body" style="font-size: 0.75rem;">${req.customer_name}</p>
+                            <p class="mb-0 text-warning-emphasis small" style="font-size: 0.7rem;"><i class="fas fa-clock me-1"></i>${req.requested_at}</p>
                         </div>
                     </div>
-                    <button id="btn-addon-${req.id}" onclick="processAddon(${req.id}, ${req.customer_id})" class="btn btn-sm btn-primary rounded-pill px-2 py-0 fw-bold">Process <i class="fas fa-arrow-right ms-1"></i></button>
+                    <button id="btn-addon-${req.id}" onclick="processAddon(${req.id}, ${req.customer_id})" class="btn btn-outline-warning rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" title="Process" data-bs-toggle="tooltip"><i class="fas fa-arrow-right"></i></button>
                 </div>
                 `;
                     });
@@ -654,22 +663,22 @@
                     let inner = '';
                     d.alerts.forEach(a => {
                         let icon = a.type === 'device' ? 'fa-server' : (a.type === 'barangay' ? 'fa-map-marker-alt' : 'fa-user-times');
-                        let btnColor = 'btn-outline-warning';
-                        let subClass = 'bg-warning-subtle';
-                        let textColor = 'text-warning';
-                        let pulseClass = a.type === 'customer' ? 'alert-pulse-warning' : '';
+                        let btnColor = 'btn-outline-danger';
+                        let subClass = 'bg-danger-subtle';
+                        let textColor = 'text-danger';
+                        let pulseClass = a.type === 'customer' ? 'alert-pulse-danger' : '';
 
                         inner += `
-                <div class="d-flex justify-content-between align-items-center p-2 mb-2 border border-warning rounded ${subClass} ${pulseClass}">
+                <div class="d-flex justify-content-between align-items-center p-1 px-2 mb-1 border border-danger rounded ${subClass} ${pulseClass}">
                     <div class="d-flex align-items-center">
-                        <i class="fas ${icon} ${textColor} me-2 fs-5"></i>
+                        <i class="fas ${icon} ${textColor} me-2 fs-6"></i>
                         <div>
-                            <h6 class="mb-1 ${textColor} fw-bold" style="font-size: 0.9rem;">${a.name}</h6>
-                            <p class="mb-0 fw-semibold text-body" style="font-size: 0.8rem;">${a.status}</p>
-                            ${a.reason ? `<p class="mb-0 text-muted small" style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.75rem;">${a.reason}</p>` : ''}
+                            <h6 class="mb-0 ${textColor} fw-bold" style="font-size: 0.85rem;">${a.name}</h6>
+                            <p class="mb-0 fw-semibold text-body" style="font-size: 0.75rem;">${a.status}</p>
+                            ${a.reason ? `<p class="mb-0 text-muted small" style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.7rem;">${a.reason}</p>` : ''}
                         </div>
                     </div>
-                    <a href="/network/health/resolve/${a.type}/${a.id}/" class="btn btn-sm ${btnColor} rounded-pill px-2 py-0"><i class="fas fa-check me-1"></i>Resolve</a>
+                    <a href="/network/health/resolve/${a.type}/${a.id}/" class="btn ${btnColor} rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" title="Resolve" data-bs-toggle="tooltip"><i class="fas fa-check"></i></a>
                 </div>
                 `;
                     });
