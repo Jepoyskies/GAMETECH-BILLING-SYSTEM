@@ -1000,11 +1000,14 @@
         {% endfor %}
     }
 
-    function pollFastData() {
+    let currentPollId = 0;
+
+    function pollFastData(id) {
         let fastSpeed = parseInt(document.getElementById('interval').value);
         fetch("{% url 'api_live_monitoring' %}")
             .then(r => r.json())
             .then(d => {
+                if (id !== currentPollId) return; // Drop old responses
                 allData = d.data || [];
                 maxRx = 0; maxTx = 0;
                 allData.forEach(u => {
@@ -1016,7 +1019,9 @@
             })
             .catch(err => console.error("Fast fetch error", err))
             .finally(() => {
-                fastTimer = setTimeout(pollFastData, fastSpeed);
+                if (id === currentPollId) {
+                    fastTimer = setTimeout(() => pollFastData(id), fastSpeed);
+                }
             });
     }
 
@@ -1039,7 +1044,6 @@
                     pingText.innerText = "Ping: " + r.uplink_ping;
 
                     box.classList.remove('border-danger', 'border-warning', 'border-info', 'border-success');
-                    // Remove the inline border-color so Bootstrap utility classes can take over
                     box.style.setProperty('border-color', '', 'important');
 
                     if (r.uplink_status === 'Offline') {
@@ -1061,11 +1065,12 @@
     }
 
     function startInterval() {
+        currentPollId++; // Invalidate any pending fast loops
         loadNetworkAlerts();
         loadAddonRequests();
         if (fastTimer) clearTimeout(fastTimer);
         if (slowTimer) clearTimeout(slowTimer);
-        pollFastData();
+        pollFastData(currentPollId);
         pollSlowData();
     }
 

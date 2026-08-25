@@ -158,4 +158,12 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'billing.tasks.auto_sms_task',
         'schedule': crontab(hour='9', minute='0'),  # Run daily at 9:00 AM
     },
+    'auto-sync-failed-5min': {
+        'task': 'billing.tasks.auto_sync_failed_task',
+        'schedule': crontab(minute='*/5'),  # Run every 5 minutes
+    },
+    'auto-reconcile-routers-30min': {
+        'task': 'billing.tasks.auto_reconcile_routers_task',
+        'schedule': crontab(minute='*/30'),  # Run every 30 minutes
+    },
 }

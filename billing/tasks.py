@@ -21,3 +21,21 @@ def auto_sms_task():
         logger.info("Auto-SMS task completed successfully.")
     except Exception as e:
         logger.error(f"Error in auto-SMS task: {e}")
+
+@shared_task(name="billing.tasks.auto_sync_failed_task")
+def auto_sync_failed_task():
+    logger.info("Starting auto-sync-failed task via Celery...")
+    try:
+        call_command('auto_sync_failed')
+        logger.info("Auto-sync-failed task completed successfully.")
+    except Exception as e:
+        logger.error(f"Error in auto-sync-failed task: {e}")
+
+@shared_task(name="billing.tasks.auto_reconcile_routers_task")
+def auto_reconcile_routers_task():
+    logger.info("Starting auto-reconcile-routers task via Celery...")
+    try:
+        call_command('auto_reconcile_routers')
+        logger.info("Auto-reconcile-routers task completed successfully.")
+    except Exception as e:
+        logger.error(f"Error in auto-reconcile-routers task: {e}")

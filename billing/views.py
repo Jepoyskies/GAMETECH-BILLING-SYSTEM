@@ -365,7 +365,7 @@ def live_monitoring_view(request):
     customers = Customer.objects.filter(status='active').order_by('full_name')
     active_device_alerts = MikrotikDevice.objects.exclude(health_status='Excellent')
     active_barangay_alerts = Barangay.objects.exclude(health_status='Excellent')
-    active_customer_alerts = Customer.objects.exclude(health_status='Excellent').filter(status='active')
+    active_customer_alerts = Customer.objects.exclude(health_status__in=['Excellent', 'Good', 'Stable', 'Strong']).filter(status='active')
     pending_addon_requests = AddOnRequest.objects.filter(status='Pending').order_by('-requested_at')
     
     return render(request, 'billing/live_monitoring.html', {
@@ -1166,9 +1166,12 @@ def customer_list(request):
         customers = customers.filter(outstanding_balance__lt=0)
         
     devices = MikrotikDevice.objects.all().order_by('device_name')
+    from .models import Barangay
+    barangays = Barangay.objects.all().order_by('name')
     return render(request, 'billing/customer_list.html', {
         'customers': customers,
         'devices': devices,
+        'barangays': barangays,
         'filter_type': filter_type
     })
 
@@ -2851,7 +2854,7 @@ def api_network_alerts(request):
     from network_manager.models import MikrotikDevice
     active_device_alerts = MikrotikDevice.objects.exclude(health_status='Excellent')
     active_barangay_alerts = Barangay.objects.exclude(health_status='Excellent')
-    active_customer_alerts = Customer.objects.exclude(health_status='Excellent').filter(status='active')
+    active_customer_alerts = Customer.objects.exclude(health_status__in=['Excellent', 'Good', 'Stable', 'Strong']).filter(status='active')
     
     data = []
     for d in active_device_alerts:

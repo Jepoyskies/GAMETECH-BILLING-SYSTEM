@@ -521,7 +521,7 @@ class MikrotikAPI:
             existing = secrets.get(name=name)
             if existing:
                 update_params = {
-                    'id': existing[0]['id'],
+                    'id': existing[0].get('id') or existing[0].get('.id'),
                     'password': password,
                     'profile': profile,
                     'service': service,

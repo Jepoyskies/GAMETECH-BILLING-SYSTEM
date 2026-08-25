@@ -66,23 +66,30 @@ def sync_customer_to_mikrotik(sender, instance, created, **kwargs):
         target_profile = instance.plan.name if instance.plan else "default"
         is_disabled = "no"
         
-        # Format the comment to include location data
-        comment_parts = [instance.full_name]
-        if instance.barangay:
-            comment_parts.append(instance.barangay.name)
+        # Format the comment to include location data safely
+        comment_parts = [str(instance.full_name) if instance.full_name else "Unknown"]
+        if instance.barangay and instance.barangay.name:
+            comment_parts.append(str(instance.barangay.name))
         elif instance.address:
-            # truncate address if it's too long
-            comment_parts.append(instance.address[:30] + ('...' if len(instance.address) > 30 else ''))
+            # truncate address if it's too long, safely converting to string
+            clean_addr = str(instance.address).replace('\n', ' ').replace('\r', ' ')
+            comment_parts.append(clean_addr[:30] + ('...' if len(clean_addr) > 30 else ''))
+            
         secret_comment = " | ".join(comment_parts)
+        # Final cleanup for Mikrotik comment compatibility (remove non-printable chars)
+        secret_comment = "".join(c for c in secret_comment if c.isprintable())
 
         # 2. Update the secret on the router with standard profile
-        success, msg = api.add_pppoe_user(
+        success_add, msg_add = api.add_pppoe_user(
             name=instance.pppoe_username,
             password=instance.pppoe_password,
             profile=target_profile,
             comment=secret_comment,
             disabled=is_disabled
         )
+        
+        if not success_add:
+            raise Exception(f"Failed to add PPPoE user: {msg_add}")
 
         # 3. Plan Upgrade Session Kick
         # If the plan changed, and the user is active, bounce their session to apply speeds
@@ -92,9 +99,13 @@ def sync_customer_to_mikrotik(sender, instance, created, **kwargs):
 
         # 4. Apply Suspension/Reactivation Logic (Option C)
         if instance.status in ['expired', 'suspended', 'inactive', 'past_due']:
-            api.suspend_pppoe_user(instance.pppoe_username)
+            success_status, msg_status = api.suspend_pppoe_user(instance.pppoe_username)
         else:
-            api.enable_pppoe_user(instance.pppoe_username)
+            success_status, msg_status = api.enable_pppoe_user(instance.pppoe_username)
+            
+        if not success_status:
+            logger.warning(f"Failed to change status for {instance.pppoe_username}: {msg_status}")
+            # We don't raise here because the user is already on the router. It might just be an issue with bridge filter.
 
         # 5. Mark as Synced
         Customer.objects.filter(pk=instance.pk).update(sync_status='Synced')

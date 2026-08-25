@@ -55,6 +55,12 @@
                 <option value="{{ device.device_name }}">{{ device.device_name }}</option>
                 {% endfor %}
             </select>
+            <select id="barangayFilter" class="form-select rounded-pill px-3 shadow-sm w-auto d-inline-block border-info text-info fw-bold">
+                <option value="">All Barangays</option>
+                {% for barangay in barangays %}
+                <option value="{{ barangay.name }}">{{ barangay.name }}</option>
+                {% endfor %}
+            </select>
             {% endif %}
             {% if request.user.role in 'Admin,Agent,CSR' %}
             <button type="button" id="btnBulkSms" class="btn btn-success rounded-pill px-4 shadow-sm fw-bold text-nowrap d-flex align-items-center" disabled data-bs-toggle="modal" data-bs-target="#bulkSmsModal">
@@ -284,6 +290,10 @@
 
         $('#routerFilter').on('change', function () {
             table.column(7).search(this.value).draw();
+        });
+
+        $('#barangayFilter').on('change', function () {
+            table.column(6).search(this.value).draw();
         });
 
         // --- Bulk SMS Logic ---

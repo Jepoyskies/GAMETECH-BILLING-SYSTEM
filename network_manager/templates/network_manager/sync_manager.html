@@ -78,10 +78,40 @@
                     <small class="text-muted">Present in both Django and Mikrotik</small>
                 </div>
                 <div class="card-body p-0 table-responsive">
-                    <table class="table table-hover mb-0 datatable">
+                    <form method="POST" action="{% url 'bulk_transfer_router' %}" id="bulkTransferForm">
+                        {% csrf_token %}
+                        <div class="p-3 bg-light border-bottom d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-2">
+                                <label class="fw-bold mb-0 text-muted text-nowrap"><i class="fas fa-filter"></i> Filter Barangay:</label>
+                                <select id="barangayFilter" class="form-select form-select-sm" style="max-width: 200px;">
+                                    <option value="">All Barangays</option>
+                                    {% for brgy in barangays %}
+                                    <option value="{{ brgy.name }}">{{ brgy.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <label class="fw-bold mb-0 text-muted text-nowrap">Move Selected To:</label>
+                                <select name="target_device_id" class="form-select form-select-sm" style="max-width: 200px;" required>
+                                    <option value="">-- Select Router --</option>
+                                    {% for r in all_routers %}
+                                        {% if r.id != device.id %}
+                                        <option value="{{ r.id }}">{{ r.device_name }} ({{ r.ip_address }})</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-primary" onclick="return confirm('Are you sure you want to move the selected users to this router?');">
+                                    <i class="fas fa-exchange-alt"></i> Move
+                                </button>
+                            </div>
+                        </div>
+                    <table class="table table-hover mb-0 datatable" id="syncedTable">
                         <thead>
                             <tr>
+                                <th style="width: 40px;"><input type="checkbox" class="form-check-input" id="selectAllSynced"></th>
                                 <th>PPPoE Username</th>
+                                <th>Customer Name</th>
+                                <th>Barangay</th>
                                 <th>Profile</th>
                                 <th>Status</th>
                             </tr>
@@ -89,13 +119,21 @@
                         <tbody>
                             {% for user in synced %}
                             <tr>
+                                <td>
+                                    {% if user.customer %}
+                                    <input type="checkbox" class="form-check-input synced-check" name="customer_ids" value="{{ user.customer.id }}" data-barangay="{{ user.customer.barangay.name|default:'' }}">
+                                    {% endif %}
+                                </td>
                                 <td><span class="fw-bold">{{ user.name }}</span></td>
+                                <td>{{ user.customer.full_name|default:"-" }}</td>
+                                <td>{{ user.customer.barangay.name|default:"-" }}</td>
                                 <td><span class="badge bg-primary badge-custom">{{ user.profile }}</span></td>
                                 <td><span class="text-success"><i class="fas fa-check"></i> Synced</span></td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
+                    </form>
                 </div>
             </div>
 
@@ -233,13 +271,59 @@
             "order": [] // Disable initial sorting
         });
 
+        // Initialize DataTables
+        var syncedTable = $('#syncedTable').DataTable({
+            "pageLength": 10,
+            "searching": true,
+            "order": []
+        });
+
+        // Barangay Filter for Synced Table
+        $('#barangayFilter').on('change', function() {
+            var val = $.fn.dataTable.util.escapeRegex($(this).val());
+            syncedTable.column(3).search(val ? '^' + val + '$' : '', true, false).draw();
+        });
+
+        // Select All for Synced Table
+        $('#selectAllSynced').change(function() {
+            var isChecked = $(this).prop('checked');
+            // Only check visible checkboxes in the DataTable
+            $('.synced-check:visible').prop('checked', isChecked);
+        });
+
+        $('.synced-check').change(function(){
+            if(false == $(this).prop("checked")){
+                $("#selectAllSynced").prop('checked', false); 
+            }
+            if ($('.synced-check:visible:checked').length == $('.synced-check:visible').length ){
+                $("#selectAllSynced").prop('checked', true);
+            }
+        });
+
+        // Bulk Transfer Form Validation
+        $('#bulkTransferForm').on('submit', function(e) {
+            var checkboxes = $(this).find('input[name="customer_ids"]:checked');
+            var target = $(this).find('select[name="target_device_id"]').val();
+            
+            if (checkboxes.length === 0) {
+                e.preventDefault();
+                alert('Please select at least one customer to move.');
+                return false;
+            }
+            if (!target) {
+                e.preventDefault();
+                alert('Please select a target router.');
+                return false;
+            }
+        });
+        
         // Select All for Orphans
         $('#selectAllOrphans').change(function() {
             $('.orphan-check').prop('checked', $(this).prop('checked'));
         });
         
         // Form Validation for Bulk Actions
-        $('form').on('submit', function(e) {
+        $('form:not(#bulkTransferForm)').on('submit', function(e) {
             var submitBtn = $(document.activeElement);
             if (submitBtn.attr('name') === 'bulk_action') {
                 var checkboxes = $(this).find('input[name="selected_users"]:checked');
