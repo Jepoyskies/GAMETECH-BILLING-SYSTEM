@@ -4,7 +4,7 @@ from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.utils import timezone
-from billing.models import AccountType, Agent, SubscriptionPlan, Barangay, Customer, Payment
+from billing.models import AccountType, Agent, SubscriptionPlan, Barangay, Customer, Payment, AddOnRequest
 from network_manager.models import MikrotikDevice, NapBox
 
 class Command(BaseCommand):
@@ -25,11 +25,11 @@ class Command(BaseCommand):
             if created:
                 user.set_password('password123')
                 user.save()
-            agent, _ = Agent.objects.get_or_create(
-                user=user, 
-                name=name, 
+            agent, _ = Agent.objects.update_or_create(
+                email=email, 
                 defaults={
-                    'email': email, 
+                    'user': user,
+                    'name': name,
                     'phone': phone
                 }
             )
@@ -88,11 +88,11 @@ class Command(BaseCommand):
         last_names = ['Dela Cruz', 'Santos', 'Reyes', 'Cruz', 'Bautista', 'Ocampo', 'Garcia', 'Mendoza', 'Torres', 'Tomas']
         
         # Add the specific customer from the datadump
-        customer, created = Customer.objects.get_or_create(
-            pppoe_username='fyuytuyt',
+        customer, created = Customer.objects.update_or_create(
+            email='fyuytuyt@gmail.com',
             defaults={
+                'pppoe_username': 'fyuytuyt',
                 'full_name': 'fyuytuyt',
-                'email': 'fyuytuyt@gmail.com',
                 'phone': '09123456789',
                 'address': 'portico subd.',
                 'plan': plans[0],
@@ -142,6 +142,14 @@ class Command(BaseCommand):
                     payment_method=random.choice(['Cash', 'GCash', 'Bank Transfer']),
                     reference_no=str(uuid.uuid4())[:8].upper(),
                     paid_at=timezone.now() - timedelta(days=random.randint(1, 30))
+                )
+
+            # 9. Add dummy Add-on requests
+            if random.choice([True, False, False]):
+                AddOnRequest.objects.create(
+                    customer=customer,
+                    addon_type=random.choice(['Static IP', 'Cignal Play Premium', 'Mesh Router', 'Cable Extension']),
+                    status=random.choice(['Pending', 'Pending', 'Resolved'])
                 )
 
         self.stdout.write(self.style.SUCCESS('Successfully seeded the database!'))
