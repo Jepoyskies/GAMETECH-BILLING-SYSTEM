@@ -422,8 +422,9 @@
         <div class="info-card-container">
             <!-- Network Alerts -->
             <div class="info-cell">
-                <div class="cell-header danger">
-                    <i class="fas fa-exclamation-triangle"></i> Network Alerts
+                <div class="cell-header danger" style="display: flex; justify-content: space-between; width: 100%;">
+                    <span><i class="fas fa-exclamation-triangle"></i> Network Alerts</span>
+                    <span class="badge bg-danger rounded-pill" id="network-badge" style="display:none; font-size: 0.7rem; cursor: pointer;" onclick="openViewAllModal('network')">0 New</span>
                 </div>
                 <div class="cell-content" id="network-alerts-list">
                     {% if not active_device_alerts and not active_barangay_alerts and not active_customer_alerts %}
@@ -441,8 +442,8 @@
                             </div>
                         </div>
                         <a href="{% url 'resolve_network_health' 'device' alert.id %}"
-                            class="btn btn-outline-danger rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" title="Resolve" data-bs-toggle="tooltip"><i
-                                class="fas fa-check"></i></a>
+                            class="btn btn-danger rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 22px; height: 22px; padding: 0; font-size: 0.65rem;" title="Resolve" data-bs-toggle="tooltip"><i
+                                class="fas fa-eye"></i></a>
                     </div>
                     {% endfor %}
 
@@ -457,8 +458,8 @@
                             </div>
                         </div>
                         <a href="{% url 'resolve_network_health' 'barangay' alert.id %}"
-                            class="btn btn-outline-danger rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" title="Resolve" data-bs-toggle="tooltip"><i
-                                class="fas fa-check"></i></a>
+                            class="btn btn-danger rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 22px; height: 22px; padding: 0; font-size: 0.65rem;" title="Resolve" data-bs-toggle="tooltip"><i
+                                class="fas fa-eye"></i></a>
                     </div>
                     {% endfor %}
 
@@ -472,9 +473,9 @@
                                 <p style="font-weight: 600; margin-bottom: 0; font-size: 0.75rem;">{{ alert.health_status }}</p>
                             </div>
                         </div>
-                        <a href="{% url 'resolve_network_health' 'customer' alert.id %}"
-                            class="btn btn-outline-danger rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" title="Resolve" data-bs-toggle="tooltip"><i
-                                class="fas fa-check"></i></a>
+                        <a href="/customers/view/{{ alert.id }}/"
+                            class="btn btn-danger rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 22px; height: 22px; padding: 0; font-size: 0.65rem;" title="Resolve" data-bs-toggle="tooltip"><i
+                                class="fas fa-eye"></i></a>
                     </div>
                     {% endfor %}
                     {% endif %}
@@ -485,7 +486,7 @@
             <div class="info-cell">
                 <div class="cell-header text-warning" style="display: flex; justify-content: space-between; width: 100%;">
                     <span><i class="fas fa-puzzle-piece"></i> Pending Add-on Requests</span>
-                    <span class="badge bg-warning text-dark rounded-pill" id="addon-badge" style="display:none; font-size: 0.7rem;">0
+                    <span class="badge bg-warning text-dark rounded-pill" id="addon-badge" style="display:none; font-size: 0.7rem; cursor: pointer;" onclick="openViewAllModal('addons')">0
                         New</span>
                 </div>
                 <div class="cell-content" id="addon-requests-list">
@@ -495,8 +496,9 @@
 
             <!-- Paid Offline Customers -->
             <div class="info-cell">
-                <div class="cell-header info">
-                    <i class="fas fa-user-slash"></i> Paid Offline Customers
+                <div class="cell-header info" style="display: flex; justify-content: space-between; width: 100%;">
+                    <span><i class="fas fa-user-slash"></i> Paid Offline Customers</span>
+                    <span class="badge bg-primary rounded-pill" id="offline-badge" style="display:none; font-size: 0.7rem; cursor: pointer;" onclick="openViewAllModal('offline')">0 Offline</span>
                 </div>
                 <div class="cell-content" id="offlineUsersList">
                     <!-- loaded by js -->
@@ -544,6 +546,20 @@
     </div>
 </div>
 
+<!-- View All Modal -->
+<div class="modal fade" id="viewAllModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold" id="viewAllModalTitle">View All</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0" id="viewAllModalBody">
+      </div>
+    </div>
+  </div>
+</div>
+
 {% include 'billing/partials/update_health_modal.html' %}
 
 <!-- DataTables Bootstrap 5 CSS -->
@@ -569,13 +585,77 @@
     let slowTimer = null;
     let liveTrafficTable = null;
 
+    let currentNetworkAlerts = [];
+    let currentAddonRequests = [];
+    let currentOfflineUsers = [];
 
+    function openViewAllModal(type) {
+        let title = document.getElementById('viewAllModalTitle');
+        let body = document.getElementById('viewAllModalBody');
+        let html = '<div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light">';
+        
+        if (type === 'network') {
+            title.innerText = 'All Network Alerts';
+            html += '<tr><th class="ps-3">Name</th><th>Type</th><th>Status</th><th>Reason</th><th class="pe-3 text-end">Action</th></tr></thead><tbody>';
+            currentNetworkAlerts.forEach(a => {
+                let btnColor = 'btn-danger';
+                html += `<tr>
+                    <td class="ps-3"><span class="fw-bold">${a.name}</span></td>
+                    <td><span class="badge bg-secondary">${a.type.toUpperCase()}</span></td>
+                    <td><span class="fw-semibold text-danger">${a.status}</span></td>
+                    <td class="text-muted small" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${a.reason || '-'}</td>
+                    <td class="pe-3 text-end"><a href="${a.type === 'customer' ? '/customers/view/' + a.id + '/' : '/network/health/resolve/' + a.type + '/' + a.id + '/'}" class="btn ${btnColor} rounded-circle d-inline-flex justify-content-center align-items-center" style="width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" title="Resolve"><i class="fas fa-eye"></i></a></td>
+                </tr>`;
+            });
+        } else if (type === 'addons') {
+            title.innerText = 'All Pending Add-on Requests';
+            html += '<tr><th class="ps-3">Customer</th><th>Add-on Type</th><th>Requested At</th><th class="pe-3 text-end">Action</th></tr></thead><tbody>';
+            currentAddonRequests.forEach(req => {
+                html += `<tr>
+                    <td class="ps-3"><span class="fw-bold">${req.customer_name}</span></td>
+                    <td><span class="badge bg-warning text-dark">${req.addon_type}</span></td>
+                    <td class="text-muted small">${req.requested_at}</td>
+                    <td class="pe-3 text-end"><a href="/customers/view/${req.customer_id}/" class="btn btn-warning rounded-circle d-inline-flex justify-content-center align-items-center" style="width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" title="Process"><i class="fas fa-eye"></i></a></td>
+                </tr>`;
+            });
+        } else if (type === 'offline') {
+            title.innerText = 'All Paid Offline Customers';
+            html += '<tr><th class="ps-3">Customer</th><th>Username</th><th>Down Since</th><th class="pe-3 text-end">Action</th></tr></thead><tbody>';
+            currentOfflineUsers.forEach(u => {
+                html += `<tr>
+                    <td class="ps-3"><span class="fw-bold">${u.full_name}</span></td>
+                    <td><span class="badge bg-primary">${u.username}</span></td>
+                    <td class="text-muted small">${u.last_logged_out}</td>
+                    <td class="pe-3 text-end"><a href="/customers/view/${u.id}/" class="btn btn-primary rounded-circle d-inline-flex justify-content-center align-items-center" style="width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" title="View"><i class="fas fa-eye"></i></a></td>
+                </tr>`;
+            });
+        }
+        
+        if ((type === 'network' && currentNetworkAlerts.length === 0) || 
+            (type === 'addons' && currentAddonRequests.length === 0) || 
+            (type === 'offline' && currentOfflineUsers.length === 0)) {
+            html = '<div class="text-center text-muted p-5">No data to display. <i class="fas fa-check-circle text-success ms-1"></i></div>';
+        } else {
+            html += '</tbody></table></div>';
+        }
+        
+        body.innerHTML = html;
+        $('#viewAllModal').modal('show');
+    }
 
     function renderOfflineCustomers(offline_users) {
+        currentOfflineUsers = offline_users || [];
         let tbody = document.getElementById('offlineUsersList');
+        let badge = document.getElementById('offline-badge');
         if (!offline_users || offline_users.length === 0) {
+            if (badge) badge.style.display = 'none';
             tbody.innerHTML = '<div class="text-muted small text-center mt-4">All Paid Customers are Online <i class="fas fa-check-circle text-success ms-1"></i></div>';
             return;
+        }
+
+        if (badge) {
+            badge.style.display = 'inline-block';
+            badge.innerText = offline_users.length + ' Offline';
         }
 
         let html = '';
@@ -589,42 +669,19 @@
                     <p class="mb-0 text-primary-emphasis small" style="font-size: 0.7rem;"><i class="fas fa-clock me-1"></i>Down since: ${u.last_logged_out}</p>
                 </div>
             </div>
-            <a href="/customers/view/${u.id}/" class="btn btn-primary rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" title="View" data-bs-toggle="tooltip"><i class="fas fa-eye"></i></a>
+            <a href="/customers/view/${u.id}/" class="btn btn-primary rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 22px; height: 22px; padding: 0; font-size: 0.65rem;" title="View" data-bs-toggle="tooltip"><i class="fas fa-eye"></i></a>
         </div>`;
         });
         tbody.innerHTML = html;
     }
 
-    function processAddon(id, customer_id) {
-        let btn = document.getElementById('btn-addon-' + id);
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        btn.disabled = true;
 
-        fetch("{% url 'resolve_addon_request_api' %}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: JSON.stringify({ request_id: id })
-        })
-            .then(r => r.json())
-            .then(d => {
-                if (d.status === 'success') {
-                    loadAddonRequests();
-                    window.open(`/customers/view/${customer_id}/`, '_blank');
-                } else {
-                    alert('Failed: ' + d.message);
-                    btn.innerHTML = 'Process';
-                    btn.disabled = false;
-                }
-            });
-    }
 
     function loadAddonRequests() {
         fetch("{% url 'live_addon_requests_api' %}")
             .then(r => r.json())
             .then(d => {
+                currentAddonRequests = d.data || [];
                 let list = document.getElementById('addon-requests-list');
                 let badge = document.getElementById('addon-badge');
                 if (d.data && d.data.length > 0) {
@@ -642,7 +699,7 @@
                             <p class="mb-0 text-warning-emphasis small" style="font-size: 0.7rem;"><i class="fas fa-clock me-1"></i>${req.requested_at}</p>
                         </div>
                     </div>
-                    <button id="btn-addon-${req.id}" onclick="processAddon(${req.id}, ${req.customer_id})" class="btn btn-outline-warning rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" title="Process" data-bs-toggle="tooltip"><i class="fas fa-arrow-right"></i></button>
+                    <a href="/customers/view/${req.customer_id}/" class="btn btn-warning rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 22px; height: 22px; padding: 0; font-size: 0.65rem;" title="Process" data-bs-toggle="tooltip"><i class="fas fa-eye"></i></a>
                 </div>
                 `;
                     });
@@ -658,12 +715,18 @@
         fetch("{% url 'api_network_alerts' %}")
             .then(r => r.json())
             .then(d => {
+                currentNetworkAlerts = d.alerts || [];
                 let list = document.getElementById('network-alerts-list');
+                let badge = document.getElementById('network-badge');
                 if (d.alerts && d.alerts.length > 0) {
+                    if (badge) {
+                        badge.style.display = 'inline-block';
+                        badge.innerText = d.alerts.length + ' New';
+                    }
                     let inner = '';
                     d.alerts.forEach(a => {
                         let icon = a.type === 'device' ? 'fa-server' : (a.type === 'barangay' ? 'fa-map-marker-alt' : 'fa-user-times');
-                        let btnColor = 'btn-outline-danger';
+                        let btnColor = 'btn-danger';
                         let subClass = 'bg-danger-subtle';
                         let textColor = 'text-danger';
                         let pulseClass = a.type === 'customer' ? 'alert-pulse-danger' : '';
@@ -678,12 +741,13 @@
                             ${a.reason ? `<p class="mb-0 text-muted small" style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.7rem;">${a.reason}</p>` : ''}
                         </div>
                     </div>
-                    <a href="/network/health/resolve/${a.type}/${a.id}/" class="btn ${btnColor} rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" title="Resolve" data-bs-toggle="tooltip"><i class="fas fa-check"></i></a>
+                    <a href="${a.type === 'customer' ? '/customers/view/' + a.id + '/' : '/network/health/resolve/' + a.type + '/' + a.id + '/'}" class="btn ${btnColor} rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 22px; height: 22px; padding: 0; font-size: 0.65rem;" title="Resolve" data-bs-toggle="tooltip"><i class="fas fa-eye"></i></a>
                 </div>
                 `;
                     });
                     list.innerHTML = inner;
                 } else {
+                    if (badge) badge.style.display = 'none';
                     list.innerHTML = '<div class="text-muted small text-center mt-3">No active alerts <i class="fas fa-check-circle text-success ms-1"></i></div>';
                 }
             });
