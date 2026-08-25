@@ -98,6 +98,11 @@ class MikrotikAPI:
         """
         Push User (For Export): Creates or updates a user on the router.
         """
+        # Ensure comment is safe for Mikrotik API
+        if comment:
+            comment = str(comment).replace('\n', ' ').replace('\r', ' ')
+            comment = "".join(c for c in comment if c.isprintable())
+            
         try:
             connection, api = self._get_api_connection()
             
