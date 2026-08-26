@@ -1,5 +1,6 @@
 {% extends 'billing/base.html' %}
 {% load static %}
+{% load log_filters %}
 
 {% block content %}
 <div class="container-fluid py-3 px-3 px-md-4">
@@ -51,88 +52,91 @@
         </div>
     </div>
 
-    <!-- Timeline Content -->
-    {% if not logs %}
-        <div class="p-5 text-center text-muted">
-            <i class="fas fa-inbox fa-3x mb-3" style="opacity: 0.3;"></i>
-            <h5>No logs found for current filters.</h5>
+    <!-- TABLE -->
+    <div class="table-wrapper shadow-sm mt-4">
+        <div class="p-3 border-bottom d-flex justify-content-between align-items-center" style="background: var(--card-bg);">
+            <h5 class="mb-0 fw-bold">Recent System Logs</h5>
+            <span class="text-muted small">{{ logs.paginator.count }} records found</span>
         </div>
-    {% else %}
-        <div class="log-timeline">
-            {% for log in logs %}
-            <div class="timeline-item">
-                <!-- Icon -->
-                {% if log.action|lower == 'add' or log.action|lower == 'insert' or log.action|lower == 'create' %}
-                    <div class="timeline-icon add" title="Added"><i class="fas fa-plus"></i></div>
-                {% elif log.action|lower == 'delete' or log.action|lower == 'remove' %}
-                    <div class="timeline-icon delete" title="Deleted"><i class="fas fa-trash"></i></div>
-                {% else %}
-                    <div class="timeline-icon update" title="Updated"><i class="fas fa-pen"></i></div>
-                {% endif %}
-                
-                <!-- Content Card -->
-                <div class="timeline-content">
-                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
-                        <div>
-                            <span class="badge bg-secondary me-2">{{ log.table_name }}</span>
-                            <strong class="text-primary">Record ID: {{ log.record_id }}</strong>
-                            <span class="ms-3 text-muted small"><i class="fas fa-user-circle me-1"></i>{{ log.changed_by }}</span>
-                        </div>
-                        <div class="text-muted small fw-bold">
-                            <i class="far fa-clock me-1"></i> {{ log.changed_at|date:"M d, Y H:i:s" }}
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6 mb-3 mb-md-0">
-                            <h6 class="text-muted small fw-bold text-uppercase mb-2">Previous Data</h6>
-                            {% if not log.old_data or log.old_data == 'null' %}
-                                <div class="log-json empty">No previous data</div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle w-100">
+                <thead style="background: rgba(0,0,0,0.03);">
+                    <tr>
+                        <th class="py-3 px-4 border-bottom">Date/Time</th>
+                        <th class="py-3 px-4 border-bottom">User</th>
+                        <th class="py-3 px-4 border-bottom">Action</th>
+                        <th class="py-3 px-4 border-bottom">Table</th>
+                        <th class="py-3 px-4 border-bottom">Record ID</th>
+                        <th class="py-3 px-4 border-bottom" colspan="2" style="min-width: 350px;">Comments / Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td class="px-4 py-3 text-muted" style="white-space: nowrap;">{{ log.changed_at|date:"M d, Y H:i" }}</td>
+                        <td class="px-4 py-3">
+                            <div class="fw-bold text-primary">{{ log.changed_by }}</div>
+                            <div class="mt-1">
+                                {% if log.actor_role == 'Admin' %}
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-1" style="font-size: 0.7rem;"><i class="fas fa-user-shield me-1"></i>Admin</span>
+                                {% elif log.actor_role == 'Technician' %}
+                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-2 py-1" style="font-size: 0.7rem;"><i class="fas fa-tools me-1"></i>Technician</span>
+                                {% elif log.actor_role == 'Agent' %}
+                                    <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2 py-1" style="font-size: 0.7rem;"><i class="fas fa-user-tie me-1"></i>Agent</span>
+                                {% elif log.actor_role == 'CSR' %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1" style="font-size: 0.7rem;"><i class="fas fa-headset me-1"></i>CSR</span>
+                                {% elif log.actor_role == 'System' %}
+                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2 py-1" style="font-size: 0.7rem;"><i class="fas fa-robot me-1"></i>System</span>
+                                {% else %}
+                                    <span class="badge bg-light text-dark border rounded-pill px-2 py-1" style="font-size: 0.7rem;"><i class="fas fa-user me-1"></i>{{ log.actor_role|default:"User" }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            {% if log.action|lower == 'add' or log.action|lower == 'insert' or log.action|lower == 'create' %}
+                                <span class="badge bg-success" style="font-size: 0.8rem; padding: 6px 10px; border-radius: 6px;">{{ log.action }}</span>
+                            {% elif log.action|lower == 'delete' or log.action|lower == 'remove' %}
+                                <span class="badge bg-danger" style="font-size: 0.8rem; padding: 6px 10px; border-radius: 6px;">{{ log.action }}</span>
                             {% else %}
-                                <div class="log-json">{{ log.old_data }}</div>
+                                <span class="badge bg-info text-dark" style="font-size: 0.8rem; padding: 6px 10px; border-radius: 6px;">{{ log.action }}</span>
                             {% endif %}
-                        </div>
-                        <div class="col-md-6">
-                            <h6 class="text-muted small fw-bold text-uppercase mb-2">New Data</h6>
-                            {% if not log.new_data or log.new_data == 'null' %}
-                                <div class="log-json empty">No new data</div>
-                            {% else %}
-                                <div class="log-json" style="border-color: rgba(52, 211, 153, 0.3);">{{ log.new_data }}</div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="badge bg-secondary mb-1 d-block w-100 text-start" style="white-space: normal;">
+                                {% if log.table_name == 'SystemAdmin' %}
+                                    Staff Account
+                                {% elif log.table_name == 'SubscriptionPlan' %}
+                                    Subscription Plan
+                                {% elif log.table_name == 'NapBox' %}
+                                    NAP Box
+                                {% elif log.table_name == 'MikrotikDevice' %}
+                                    Network Device
+                                {% else %}
+                                    {{ log.table_name }}
+                                {% endif %}
+                            </span>
+                            {% if log.target_customer %}
+                                <div class="text-muted small mt-1"><i class="{{ log.target_icon }} me-1"></i>{{ log.target_customer }}</div>
                             {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
+                        </td>
+                        <td class="px-4 py-3"><code class="text-muted">{{ log.record_id }}</code></td>
+                        <td class="px-4 py-3" colspan="2">
+                            <div class="log-comments" style="max-height: 150px; overflow-y: auto; background: rgba(241, 245, 249, 0.5); padding: 10px; border-radius: 8px; border-left: 3px solid #38bdf8;">
+                                {{ log|format_log_details }}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">No logs found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
-        
-        <!-- Pagination -->
-        {% if logs.has_other_pages %}
-        <nav class="p-3 mt-4">
-            <ul class="pagination mb-0 justify-content-center flex-wrap">
-                {% if logs.has_previous %}
-                    <li class="page-item"><a class="page-link rounded-start-pill px-3" href="?page={{ logs.previous_page_number }}&sort={{ sort }}&dir={{ dir }}&{{ query_params }}">Prev</a></li>
-                {% else %}
-                    <li class="page-item disabled"><span class="page-link rounded-start-pill px-3">Prev</span></li>
-                {% endif %}
-                
-                {% for i in logs.paginator.page_range %}
-                    {% if logs.number == i %}
-                        <li class="page-item active"><span class="page-link">{{ i }}</span></li>
-                    {% elif i > logs.number|add:'-3' and i < logs.number|add:'3' %}
-                        <li class="page-item"><a class="page-link" href="?page={{ i }}&sort={{ sort }}&dir={{ dir }}&{{ query_params }}">{{ i }}</a></li>
-                    {% endif %}
-                {% endfor %}
-                
-                {% if logs.has_next %}
-                    <li class="page-item"><a class="page-link rounded-end-pill px-3" href="?page={{ logs.next_page_number }}&sort={{ sort }}&dir={{ dir }}&{{ query_params }}">Next</a></li>
-                {% else %}
-                    <li class="page-item disabled"><span class="page-link rounded-end-pill px-3">Next</span></li>
-                {% endif %}
-            </ul>
-        </nav>
-        {% endif %}
-    {% endif %}
+    </div>
+
+    {% include 'billing/partials/pagination.html' with page_obj=logs query_params=query_params %}
 </div>
 {% endblock %}
 

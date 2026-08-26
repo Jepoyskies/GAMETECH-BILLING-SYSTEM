@@ -143,13 +143,24 @@ def audit_customer_changes(sender, instance, created, **kwargs):
                 changes.append(f"{field}: '{old_val}' \u2192 '{new_val}'")
                 
         if changes:
-            # We don't have access to request.user here easily, so we log as 'System' or grab from thread locals if we had it.
-            # But the requirement is to see what changed. 
+            from billing.middleware import get_current_user
+            current_user = get_current_user()
+            
+            # If changed_by_user was explicitly injected into the model instance, use that.
+            # Otherwise, use the thread local user. Otherwise fallback to System/Admin.
+            if hasattr(instance, '_changed_by_user'):
+                changed_by_user = instance._changed_by_user
+            elif current_user and current_user.is_authenticated:
+                changed_by_user = current_user.username
+            else:
+                changed_by_user = 'System/Admin'
+
             SystemLog.objects.create(
                 table_name='Customer',
                 record_id=str(instance.id),
                 action='UPDATE (Profile)',
-                changed_by='System/Admin',
+                changed_by=changed_by_user,
+                target_name=instance.full_name,
                 old_data="\n".join(changes),
                 new_data="Profile updated via UI or API"
             )

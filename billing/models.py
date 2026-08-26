@@ -210,6 +210,7 @@ class SystemLog(models.Model):
     record_id = models.CharField(max_length=255)
     action = models.CharField(max_length=50) # ADD, UPDATE, DELETE
     changed_by = models.CharField(max_length=255)
+    target_name = models.CharField(max_length=255, null=True, blank=True)
     changed_at = models.DateTimeField(auto_now_add=True)
     old_data = models.TextField(null=True, blank=True)
     new_data = models.TextField(null=True, blank=True)

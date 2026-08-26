@@ -160,40 +160,7 @@
             </div>
         </div>
 
-        <!-- Pagination -->
-        {% if page_obj.has_other_pages %}
-            <nav class="mt-4">
-                <ul class="pagination justify-content-center">
-                    {% if page_obj.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link shadow-sm border-0" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}" style="border-radius: 8px 0 0 8px;">&laquo; Prev</a>
-                    </li>
-                    {% else %}
-                    <li class="page-item disabled">
-                        <span class="page-link border-0" style="border-radius: 8px 0 0 8px;">&laquo; Prev</span>
-                    </li>
-                    {% endif %}
-                    
-                    {% for i in page_obj.paginator.page_range %}
-                        {% if page_obj.number == i %}
-                            <li class="page-item active"><span class="page-link border-0" style="background: linear-gradient(135deg, #2151A1, #38bdf8);">{{ i }}</span></li>
-                        {% else %}
-                            <li class="page-item"><a class="page-link border-0" href="?page={{ i }}{% if search %}&search={{ search }}{% endif %}">{{ i }}</a></li>
-                        {% endif %}
-                    {% endfor %}
-                    
-                    {% if page_obj.has_next %}
-                    <li class="page-item">
-                        <a class="page-link shadow-sm border-0" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}" style="border-radius: 0 8px 8px 0;">Next &raquo;</a>
-                    </li>
-                    {% else %}
-                    <li class="page-item disabled">
-                        <span class="page-link border-0" style="border-radius: 0 8px 8px 0;">Next &raquo;</span>
-                    </li>
-                    {% endif %}
-                </ul>
-            </nav>
-        {% endif %}
+        {% include 'billing/partials/pagination.html' with page_obj=page_obj query_params=query_params %}
       </div>
 
       <!-- SMS Log Tab -->

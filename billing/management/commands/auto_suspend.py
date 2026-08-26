@@ -44,6 +44,7 @@ class Command(BaseCommand):
                         record_id=str(customer.id),
                         action='UPDATE',
                         changed_by='System (Auto-Suspend)',
+                        target_name=customer.full_name,
                         old_data='status: active',
                         new_data='status: suspended'
                     )

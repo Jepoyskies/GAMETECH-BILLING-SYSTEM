@@ -664,6 +664,11 @@ def subscription_plans_data_api(request):
         'soon': soon,
         'one_month_ago': one_month_ago,
     }
+    
+    q = request.GET.copy()
+    if 'page' in q:
+        del q['page']
+    context['query_params'] = q.urlencode()
 
     return render(request, 'billing/partials/subscription_plans_table.html', context)
 
@@ -706,7 +711,6 @@ def agent_list(request):
 
 @login_required
 @role_required(['Admin', 'Editor'])
-
 def add_agent(request):
     if request.method == 'POST':
         name = request.POST.get('name')
@@ -728,7 +732,6 @@ def add_agent(request):
 
 @login_required
 @role_required(['Admin', 'Editor'])
-
 def edit_agent(request, agent_id):
     agent = get_object_or_404(Agent, id=agent_id)
     if request.method == 'POST':
@@ -746,7 +749,6 @@ def edit_agent(request, agent_id):
 
 @login_required
 @role_required(['Admin', 'Editor'])
-
 def delete_agent(request, agent_id):
     if request.method == 'POST':
         agent = get_object_or_404(Agent, id=agent_id)
@@ -1176,6 +1178,7 @@ def add_customer(request):
             record_id=str(customer.id),
             action='ADD',
             changed_by=request.user.username,
+            target_name=customer.full_name,
             old_data="",
             new_data=f"Name: {customer.full_name}\nPhone: {customer.phone}\nStatus: {customer.status}"
         )
@@ -1313,6 +1316,7 @@ def edit_customer(request, customer_id):
                 record_id=str(customer.id),
                 action='UPDATE',
                 changed_by=request.user.username,
+                target_name=customer.full_name,
                 old_data='\n'.join(old_data),
                 new_data='\n'.join(new_data)
             )
@@ -1401,6 +1405,7 @@ def edit_customer_balance(request, customer_id):
                     record_id=str(customer.id),
                     action='UPDATE',
                     changed_by=request.user.username,
+                    target_name=customer.full_name,
                     old_data=f"Balance: ₱{old_balance}",
                     new_data=f"Balance: ₱{new_balance}"
                 )
@@ -1666,6 +1671,11 @@ def payment_logs_view(request):
         'chart_labels_js': json.dumps(chart_labels),
         'chart_values_js': json.dumps(chart_values),
     }
+    
+    q = request.GET.copy()
+    if 'page' in q:
+        del q['page']
+    context['query_params'] = q.urlencode()
 
     return render(request, 'billing/payment_logs.html', context)
 
@@ -1913,6 +1923,108 @@ def system_logs_view(request):
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
 
+    # Dynamically resolve target names based on table_name
+    from .models import Customer, Payment, AddOnRequest, SubscriptionPlan, Agent, SystemAdmin, Barangay, AccountType
+    from network_manager.models import MikrotikDevice, NapBox
+
+    # Initialize all targets to None
+    for log in page_obj:
+        log.target_customer = None
+        log.target_icon = "fas fa-cube" # default icon
+
+    # Group record IDs by table
+    from collections import defaultdict
+    table_ids = defaultdict(list)
+    for log in page_obj:
+        if str(log.record_id).isdigit(): # ensure it's a valid PK
+            table_ids[log.table_name].append(log.record_id)
+        
+    # Bulk fetch names
+    resolved_names = defaultdict(dict)
+    
+    if 'Customer' in table_ids:
+        qs = Customer.objects.filter(id__in=table_ids['Customer']).values('id', 'full_name')
+        resolved_names['Customer'] = {str(c['id']): (c['full_name'], 'fas fa-user') for c in qs}
+        
+    if 'Payment' in table_ids:
+        qs = Payment.objects.filter(id__in=table_ids['Payment']).select_related('customer').values('id', 'customer__full_name')
+        resolved_names['Payment'] = {str(p['id']): (p['customer__full_name'] or 'Unknown', 'fas fa-user-circle') for p in qs}
+        
+    if 'AddOnRequest' in table_ids:
+        qs = AddOnRequest.objects.filter(id__in=table_ids['AddOnRequest']).select_related('customer').values('id', 'customer__full_name')
+        resolved_names['AddOnRequest'] = {str(a['id']): (a['customer__full_name'] or 'Unknown', 'fas fa-plus-circle') for a in qs}
+        
+    if 'MikrotikDevice' in table_ids:
+        qs = MikrotikDevice.objects.filter(id__in=table_ids['MikrotikDevice']).values('id', 'device_name')
+        resolved_names['MikrotikDevice'] = {str(m['id']): (m['device_name'], 'fas fa-server') for m in qs}
+        
+    if 'NapBox' in table_ids:
+        qs = NapBox.objects.filter(id__in=table_ids['NapBox']).values('id', 'napbox_no')
+        resolved_names['NapBox'] = {str(n['id']): (n['napbox_no'], 'fas fa-box') for n in qs}
+        
+    if 'SubscriptionPlan' in table_ids:
+        qs = SubscriptionPlan.objects.filter(id__in=table_ids['SubscriptionPlan']).values('id', 'name')
+        resolved_names['SubscriptionPlan'] = {str(s['id']): (s['name'], 'fas fa-wifi') for s in qs}
+        
+    if 'Agent' in table_ids:
+        qs = Agent.objects.filter(id__in=table_ids['Agent']).values('id', 'name')
+        resolved_names['Agent'] = {str(a['id']): (a['name'], 'fas fa-user-tie') for a in qs}
+        
+    if 'SystemAdmin' in table_ids:
+        qs = SystemAdmin.objects.filter(id__in=table_ids['SystemAdmin']).values('id', 'username')
+        resolved_names['SystemAdmin'] = {str(s['id']): (s['username'], 'fas fa-user-shield') for s in qs}
+        
+    if 'Barangay' in table_ids:
+        qs = Barangay.objects.filter(id__in=table_ids['Barangay']).values('id', 'name')
+        resolved_names['Barangay'] = {str(b['id']): (b['name'], 'fas fa-map-marker-alt') for b in qs}
+        
+    if 'AccountType' in table_ids:
+        qs = AccountType.objects.filter(id__in=table_ids['AccountType']).values('id', 'type_name')
+        resolved_names['AccountType'] = {str(a['id']): (a['type_name'], 'fas fa-tags') for a in qs}
+
+    # Attach to logs
+    for log in page_obj:
+        name = None
+        icon = None
+        
+        # Prefer the new target_name field in the model if it exists
+        if hasattr(log, 'target_name') and log.target_name:
+            name = log.target_name
+            # Still determine the icon based on table_name
+            if log.table_name == 'Customer': icon = 'fas fa-user'
+            elif log.table_name == 'Payment': icon = 'fas fa-user-circle'
+            elif log.table_name == 'AddOnRequest': icon = 'fas fa-plus-circle'
+            elif log.table_name == 'MikrotikDevice': icon = 'fas fa-server'
+            elif log.table_name == 'NapBox': icon = 'fas fa-box'
+            elif log.table_name == 'SubscriptionPlan': icon = 'fas fa-wifi'
+            elif log.table_name == 'Agent': icon = 'fas fa-user-tie'
+            elif log.table_name == 'SystemAdmin': icon = 'fas fa-user-shield'
+            elif log.table_name == 'Barangay': icon = 'fas fa-map-marker-alt'
+            elif log.table_name == 'AccountType': icon = 'fas fa-tags'
+            
+        # Fallback to the DB lookup for older logs before the migration
+        elif log.table_name in resolved_names:
+            name, icon = resolved_names[log.table_name].get(str(log.record_id), (None, None))
+            
+        if name:
+            log.target_customer = name
+            log.target_icon = icon or "fas fa-cube"
+
+    # Attach actor roles for the USER column
+    admin_roles = dict(SystemAdmin.objects.values_list('username', 'role'))
+    agent_names = set(Agent.objects.values_list('user__username', flat=True))
+    
+    for log in page_obj:
+        user_str = log.changed_by or 'Unknown'
+        if user_str.startswith('System/'):
+            log.actor_role = 'System'
+        elif user_str in admin_roles:
+            log.actor_role = admin_roles[user_str]
+        elif user_str in agent_names:
+            log.actor_role = 'Agent'
+        else:
+            log.actor_role = 'User'
+
     # Reconstruct query string for pagination links
     query_params = request.GET.copy()
     if 'page' in query_params:
@@ -1926,7 +2038,8 @@ def system_logs_view(request):
         'date_to': date_to,
         'sort': sort_column,
         'dir': sort_dir,
-        'query_params': query_params.urlencode()
+        'query_params': query_params.urlencode(),
+        'page_range': page_obj.paginator.get_elided_page_range(page_obj.number, on_each_side=2, on_ends=1)
     }
     return render(request, 'billing/logs.html', context)
 
@@ -2346,7 +2459,7 @@ def delete_barangay(request, pk):
     return redirect('barangay_list')
 
 @login_required
-@role_required(['Admin', 'Editor'])
+@role_required(['Admin', 'Editor', 'CSR'])
 def send_semaphore_sms(phone, message):
     api_key = 'a1be64e85146a946d40aeb1677d37a48'
     url = 'https://api.semaphore.co/api/v4/messages'
@@ -2422,6 +2535,11 @@ def sms_view(request):
         'search': search,
         'sms_logs': sms_logs
     }
+    
+    q = request.GET.copy()
+    if 'page' in q:
+        del q['page']
+    context['query_params'] = q.urlencode()
     return render(request, 'billing/sms_messaging.html', context)
 
 @login_required
@@ -2525,6 +2643,11 @@ def cignal_play_list_view(request):
         'search': search,
         'status_filter': status_filter,
     }
+    
+    q = request.GET.copy()
+    if 'page' in q:
+        del q['page']
+    context['query_params'] = q.urlencode()
     return render(request, 'billing/cignal_play_list.html', context)
 
 
@@ -2556,6 +2679,11 @@ def add_on_payments_view(request):
         'search': search,
         'all_customers': all_customers,
     }
+    
+    q = request.GET.copy()
+    if 'page' in q:
+        del q['page']
+    context['query_params'] = q.urlencode()
     return render(request, 'billing/add_on_payments.html', context)
 
 
