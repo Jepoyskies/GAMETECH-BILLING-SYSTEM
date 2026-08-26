@@ -3,132 +3,160 @@
 {% load log_filters %}
 
 {% block content %}
-<div class="container-fluid py-3 px-3 px-md-4">
-    <div class="live-header-row mb-4">
-        <h2 class="live-title">
-            <div class="kpi-icon icon-purple" style="width: 48px; height: 48px; font-size: 1.4rem; margin-right: 0;">
-                <i class="fa fa-history"></i>
-            </div>
-            System Logs
-        </h2>
+<style>
+    .table-hover tbody tr:hover {
+        background-color: #f8fafc !important;
+        transition: background-color 0.2s ease-in-out;
+    }
+    .avatar-circle {
+        width: 38px;
+        height: 38px;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+</style>
+
+<div class="container-fluid py-4 px-3 px-md-4" style="background-color: #f8fafc; min-height: 100vh;">
+    <!-- Header -->
+    <div class="mb-4">
+        <h2 class="mb-1 fw-bold text-dark" style="font-family: Inter, sans-serif;">Audit Logs</h2>
+        <div class="d-flex justify-content-between align-items-center">
+            <p class="text-muted small mb-0">Track system changes, user activity, and billing updates.</p>
+            <span class="text-muted small" style="font-weight: 500;">Showing {{ logs.start_index|default:"0" }}-{{ logs.end_index|default:"0" }} of {{ logs.paginator.count }} records</span>
+        </div>
     </div>
 
     <!-- Filter Bar -->
-    <div class="filter-glass">
-        <form method="get" class="row g-3 align-items-end">
-            <div class="col-md-3">
-                <label class="form-label fw-bold text-muted small">Search Logs</label>
-                <input type="text" name="search" value="{{ search }}" class="form-control" placeholder="Search logs..." autocomplete="off">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label fw-bold text-muted small">Action Filter</label>
-                <select name="action_filter" class="form-select">
-                    <option value="">All Actions</option>
-                    <option value="ADD" {% if action_filter == 'ADD' %}selected{% endif %}>ADD</option>
-                    <option value="UPDATE" {% if action_filter == 'UPDATE' %}selected{% endif %}>UPDATE</option>
-                    <option value="DELETE" {% if action_filter == 'DELETE' %}selected{% endif %}>DELETE</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label fw-bold text-muted small">From Date</label>
-                <input type="date" name="date_from" value="{{ date_from }}" class="form-control">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label fw-bold text-muted small">To Date</label>
-                <input type="date" name="date_to" value="{{ date_to }}" class="form-control">
-            </div>
-            <input type="hidden" name="sort" value="{{ sort }}">
-            <input type="hidden" name="dir" value="{{ dir }}">
-            
-            <div class="col-md-3 d-flex gap-2">
-                <button type="submit" class="btn btn-primary w-100 rounded-pill"><i class="fas fa-filter me-1"></i> Filter</button>
-                <a href="{% url 'system_logs' %}" class="btn btn-outline-secondary w-100 rounded-pill">Reset</a>
-            </div>
-        </form>
-        <div class="mt-3 text-end">
-            <small class="text-muted fw-semibold">
-                Showing {{ logs.start_index }}–{{ logs.end_index }} of {{ logs.paginator.count }} records
-            </small>
+    <div class="card mb-4 border-0 shadow-sm" style="border-radius: 10px;">
+        <div class="card-body p-4">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label fw-bold text-muted small mb-1" style="font-size: 0.75rem;">Search Logs</label>
+                    <div class="input-group input-group-sm" style="height: 38px;">
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-search"></i></span>
+                        <input type="text" name="search" value="{{ search }}" class="form-control border-start-0 ps-0" placeholder="Search by user or entity..." autocomplete="off">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold text-muted small mb-1" style="font-size: 0.75rem;">Action Filter</label>
+                    <select name="action_filter" class="form-select form-select-sm" style="height: 38px;">
+                        <option value="">All Actions</option>
+                        <option value="ADD" {% if action_filter == 'ADD' %}selected{% endif %}>ADD</option>
+                        <option value="UPDATE" {% if action_filter == 'UPDATE' %}selected{% endif %}>UPDATE</option>
+                        <option value="DELETE" {% if action_filter == 'DELETE' %}selected{% endif %}>DELETE</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold text-muted small mb-1" style="font-size: 0.75rem;">From Date</label>
+                    <div class="input-group input-group-sm" style="height: 38px;">
+                        <input type="date" name="date_from" value="{{ date_from }}" class="form-control border-end-0">
+                        <span class="input-group-text bg-white text-muted"><i class="far fa-calendar"></i></span>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold text-muted small mb-1" style="font-size: 0.75rem;">To Date</label>
+                    <div class="input-group input-group-sm" style="height: 38px;">
+                        <input type="date" name="date_to" value="{{ date_to }}" class="form-control border-end-0">
+                        <span class="input-group-text bg-white text-muted"><i class="far fa-calendar"></i></span>
+                    </div>
+                </div>
+                
+                <input type="hidden" name="sort" value="{{ sort }}">
+                <input type="hidden" name="dir" value="{{ dir }}">
+                
+                <div class="col-md-2 d-flex gap-2" style="height: 38px;">
+                    <button type="submit" class="btn btn-primary w-100 d-flex align-items-center justify-content-center" style="background-color: #3b82f6; border-color: #3b82f6;"><i class="fas fa-filter me-2"></i> Filter</button>
+                    <a href="{% url 'system_logs' %}" class="btn border w-100 bg-white text-dark d-flex align-items-center justify-content-center">Reset</a>
+                </div>
+            </form>
         </div>
     </div>
 
-    <!-- TABLE -->
-    <div class="table-wrapper shadow-sm mt-4">
-        <div class="p-3 border-bottom d-flex justify-content-between align-items-center" style="background: var(--card-bg);">
-            <h5 class="mb-0 fw-bold">Recent System Logs</h5>
-            <span class="text-muted small">{{ logs.paginator.count }} records found</span>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle w-100">
-                <thead style="background: rgba(0,0,0,0.03);">
+    <!-- Table -->
+    <div class="card border-0 shadow-sm mb-4" style="border-radius: 10px;">
+        <div class="card-body p-0 table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-white text-uppercase text-muted" style="font-size: 0.7rem; letter-spacing: 0.5px;">
                     <tr>
-                        <th class="py-3 px-4 border-bottom">Date/Time</th>
-                        <th class="py-3 px-4 border-bottom">User</th>
-                        <th class="py-3 px-4 border-bottom">Action</th>
-                        <th class="py-3 px-4 border-bottom">Table</th>
-                        <th class="py-3 px-4 border-bottom">Record ID</th>
-                        <th class="py-3 px-4 border-bottom" colspan="2" style="min-width: 350px;">Comments / Details</th>
+                        <th class="py-3 px-4 border-bottom fw-semibold">DATE & TIME</th>
+                        <th class="py-3 px-4 border-bottom fw-semibold">PERFORMED BY</th>
+                        <th class="py-3 px-4 border-bottom fw-semibold">ACTION</th>
+                        <th class="py-3 px-4 border-bottom fw-semibold">TARGET ENTITY</th>
+                        <th class="py-3 px-4 border-bottom fw-semibold" style="min-width: 350px;">CHANGE DETAILS</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="border-top-0">
                     {% for log in logs %}
                     <tr>
-                        <td class="px-4 py-3 text-muted" style="white-space: nowrap;">{{ log.changed_at|date:"M d, Y H:i" }}</td>
+                        <td class="px-4 py-3" style="white-space: nowrap;">
+                            <div class="text-dark" style="font-weight: 500;">{{ log.changed_at|date:"M d, Y" }}</div>
+                            <div class="text-muted small mt-1">{{ log.changed_at|date:"h:i A" }}</div>
+                        </td>
                         <td class="px-4 py-3">
-                            <div class="fw-bold text-primary">{{ log.changed_by }}</div>
-                            <div class="mt-1">
+                            <div class="d-flex align-items-center">
                                 {% if log.actor_role == 'Admin' %}
-                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-1" style="font-size: 0.7rem;"><i class="fas fa-user-shield me-1"></i>Admin</span>
+                                    <div class="avatar-circle bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center me-3">{{ log.changed_by|get_initials }}</div>
                                 {% elif log.actor_role == 'Technician' %}
-                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-2 py-1" style="font-size: 0.7rem;"><i class="fas fa-tools me-1"></i>Technician</span>
+                                    <div class="avatar-circle bg-warning-subtle text-warning rounded-circle d-flex align-items-center justify-content-center me-3">{{ log.changed_by|get_initials }}</div>
                                 {% elif log.actor_role == 'Agent' %}
-                                    <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2 py-1" style="font-size: 0.7rem;"><i class="fas fa-user-tie me-1"></i>Agent</span>
+                                    <div class="avatar-circle bg-info-subtle text-info rounded-circle d-flex align-items-center justify-content-center me-3">{{ log.changed_by|get_initials }}</div>
                                 {% elif log.actor_role == 'CSR' %}
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1" style="font-size: 0.7rem;"><i class="fas fa-headset me-1"></i>CSR</span>
-                                {% elif log.actor_role == 'System' %}
-                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2 py-1" style="font-size: 0.7rem;"><i class="fas fa-robot me-1"></i>System</span>
+                                    <div class="avatar-circle bg-success-subtle text-success rounded-circle d-flex align-items-center justify-content-center me-3">{{ log.changed_by|get_initials }}</div>
                                 {% else %}
-                                    <span class="badge bg-light text-dark border rounded-pill px-2 py-1" style="font-size: 0.7rem;"><i class="fas fa-user me-1"></i>{{ log.actor_role|default:"User" }}</span>
+                                    <div class="avatar-circle bg-secondary-subtle text-secondary rounded-circle d-flex align-items-center justify-content-center me-3">{{ log.changed_by|get_initials }}</div>
                                 {% endif %}
+                                <div>
+                                    <div class="fw-bold text-dark" style="font-size: 0.9rem;">{{ log.changed_by }}</div>
+                                    <div class="mt-1" style="font-size: 0.75rem;">
+                                        {% if log.actor_role == 'Admin' %}
+                                            <span class="text-primary"><i class="fas fa-user-shield me-1"></i>Admin</span>
+                                        {% elif log.actor_role == 'Technician' %}
+                                            <span class="text-warning"><i class="fas fa-tools me-1"></i>Technician</span>
+                                        {% elif log.actor_role == 'Agent' %}
+                                            <span class="text-info"><i class="fas fa-user-tie me-1"></i>Agent</span>
+                                        {% elif log.actor_role == 'CSR' %}
+                                            <span class="text-success"><i class="fas fa-headset me-1"></i>CSR</span>
+                                        {% else %}
+                                            <span class="text-secondary"><i class="fas fa-user me-1"></i>{{ log.actor_role|default:"User" }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
                             </div>
                         </td>
                         <td class="px-4 py-3">
                             {% if log.action|lower == 'add' or log.action|lower == 'insert' or log.action|lower == 'create' %}
-                                <span class="badge bg-success" style="font-size: 0.8rem; padding: 6px 10px; border-radius: 6px;">{{ log.action }}</span>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-1 px-3 py-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">{{ log.action|upper }}</span>
                             {% elif log.action|lower == 'delete' or log.action|lower == 'remove' %}
-                                <span class="badge bg-danger" style="font-size: 0.8rem; padding: 6px 10px; border-radius: 6px;">{{ log.action }}</span>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-1 px-3 py-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">{{ log.action|upper }}</span>
                             {% else %}
-                                <span class="badge bg-info text-dark" style="font-size: 0.8rem; padding: 6px 10px; border-radius: 6px;">{{ log.action }}</span>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-1 px-3 py-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">{{ log.action|upper }}</span>
                             {% endif %}
                         </td>
                         <td class="px-4 py-3">
-                            <span class="badge bg-secondary mb-1 d-block w-100 text-start" style="white-space: normal;">
-                                {% if log.table_name == 'SystemAdmin' %}
-                                    Staff Account
-                                {% elif log.table_name == 'SubscriptionPlan' %}
-                                    Subscription Plan
-                                {% elif log.table_name == 'NapBox' %}
-                                    NAP Box
-                                {% elif log.table_name == 'MikrotikDevice' %}
-                                    Network Device
-                                {% else %}
-                                    {{ log.table_name }}
-                                {% endif %}
-                            </span>
+                            <div class="text-muted small mb-1">
+                                {% if log.table_name == 'SystemAdmin' %}Staff Account
+                                {% elif log.table_name == 'SubscriptionPlan' %}Subscription Plan
+                                {% elif log.table_name == 'NapBox' %}NAP Box
+                                {% elif log.table_name == 'MikrotikDevice' %}Network Device
+                                {% else %}{{ log.table_name }}{% endif %}
+                            </div>
                             {% if log.target_customer %}
-                                <div class="text-muted small mt-1"><i class="{{ log.target_icon }} me-1"></i>{{ log.target_customer }}</div>
+                                <div class="text-primary fw-medium" style="font-size: 0.85rem;"><i class="{{ log.target_icon }} me-1 text-primary"></i>{{ log.target_customer }}</div>
+                            {% else %}
+                                <div class="text-muted fw-medium" style="font-size: 0.85rem;">-</div>
                             {% endif %}
                         </td>
-                        <td class="px-4 py-3"><code class="text-muted">{{ log.record_id }}</code></td>
-                        <td class="px-4 py-3" colspan="2">
-                            <div class="log-comments" style="max-height: 150px; overflow-y: auto; background: rgba(241, 245, 249, 0.5); padding: 10px; border-radius: 8px; border-left: 3px solid #38bdf8;">
-                                {{ log|format_log_details }}
-                            </div>
+                        <td class="px-4 py-3">
+                            {{ log|format_log_details }}
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center py-4 text-muted">No logs found.</td>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="fas fa-inbox fa-3x mb-3 text-light"></i>
+                            <h5>No logs found</h5>
+                            <p class="small">Adjust your filters to see more results.</p>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -136,7 +164,10 @@
         </div>
     </div>
 
-    {% include 'billing/partials/pagination.html' with page_obj=logs query_params=query_params %}
+    <!-- Pagination -->
+    <div class="d-flex justify-content-between align-items-center mt-2 px-2">
+        <div class="text-muted small">Showing page {{ logs.number }} of {{ logs.paginator.num_pages }}</div>
+        {% include 'billing/partials/pagination.html' with page_obj=logs query_params=query_params %}
+    </div>
 </div>
 {% endblock %}
-
