@@ -6,35 +6,103 @@
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
 <style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+        --success-gradient: linear-gradient(135deg, #1cc88a 0%, #13855c 100%);
+        --warning-gradient: linear-gradient(135deg, #f6c23e 0%, #dda20a 100%);
+        --danger-gradient: linear-gradient(135deg, #e74a3b 0%, #be2617 100%);
+        --card-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.08);
+        --hover-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.12);
+    }
+    
+    body {
+        background-color: #f4f7fc;
+    }
+
     .sync-card {
-        border-radius: 12px;
+        border-radius: 16px;
         border: none;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        margin-bottom: 24px;
+        box-shadow: var(--card-shadow);
+        margin-bottom: 30px;
         overflow: hidden;
+        background: #ffffff;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
+    
+    .sync-card:hover {
+        box-shadow: var(--hover-shadow);
+        transform: translateY(-2px);
+    }
+
     .sync-card .card-header {
-        background-color: #f8f9fa;
-        border-bottom: 1px solid #edf2f9;
-        padding: 16px 20px;
-        font-weight: 600;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        padding: 20px 24px;
+        font-weight: 700;
+        letter-spacing: 0.3px;
     }
-    .sync-card .table th {
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: #6c757d;
-        background: rgba(0,0,0,0.02);
-        padding: 12px 20px;
-    }
-    .sync-card .table td {
-        padding: 12px 20px;
-        vertical-align: middle;
-    }
-    .badge-custom {
-        padding: 6px 10px;
+    
+    .card-header.success-header { background: var(--success-gradient); color: white !important; }
+    .card-header.warning-header { background: var(--warning-gradient); color: white !important; }
+    .card-header.danger-header { background: var(--danger-gradient); color: white !important; }
+    
+    .card-header small.text-muted {
+        color: rgba(255, 255, 255, 0.8) !important;
         font-weight: 500;
-        border-radius: 6px;
+    }
+
+    .sync-card .table th {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #858796;
+        background: #f8f9fc;
+        padding: 16px 24px;
+        border-bottom: 2px solid #e3e6f0;
+    }
+
+    .sync-card .table td {
+        padding: 16px 24px;
+        vertical-align: middle;
+        color: #5a5c69;
+        border-bottom: 1px solid #edf2f9;
+        transition: background-color 0.15s ease;
+    }
+    
+    .sync-card .table tbody tr {
+        transition: all 0.2s ease;
+    }
+    
+    .sync-card .table tbody tr:hover td {
+        background-color: #f8f9fc;
+    }
+
+    .badge-custom {
+        padding: 8px 12px;
+        font-weight: 600;
+        border-radius: 8px;
+        letter-spacing: 0.3px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    .filter-bar {
+        background: rgba(248, 249, 252, 0.7);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid #edf2f9;
+        padding: 16px 24px;
+    }
+    
+    .form-select, .btn {
+        border-radius: 8px;
+    }
+    
+    .btn-primary {
+        background: var(--primary-gradient);
+        border: none;
+        box-shadow: 0 4px 10px rgba(78, 115, 223, 0.3);
+    }
+    .btn-primary:hover {
+        box-shadow: 0 6px 15px rgba(78, 115, 223, 0.4);
+        transform: translateY(-1px);
     }
 </style>
 {% endblock %}
@@ -51,14 +119,14 @@
     {% endfor %}
     {% endif %}
 
-    <div class="live-header-row mb-4">
-        <h2 class="live-title">
-            <div class="kpi-icon icon-purple" style="width: 48px; height: 48px; font-size: 1.4rem; margin-right: 0;">
+    <div class="live-header-row mb-4 d-flex justify-content-between align-items-center bg-white p-4 rounded-4 shadow-sm" style="border: 1px solid rgba(0,0,0,0.05);">
+        <h2 class="live-title mb-0 d-flex align-items-center text-dark" style="font-weight: 800; letter-spacing: -0.5px;">
+            <div class="kpi-icon d-flex justify-content-center align-items-center rounded-circle me-3" style="width: 54px; height: 54px; font-size: 1.5rem; background: var(--primary-gradient); color: white; box-shadow: 0 4px 15px rgba(78, 115, 223, 0.4);">
                 <i class="fas fa-exchange-alt"></i>
             </div>
             Sync Manager: {{ device.device_name }}
         </h2>
-        <a href="{% url 'device_list' %}" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm fw-bold">
+        <a href="{% url 'device_list' %}" class="btn btn-light rounded-pill px-4 fw-bold" style="border: 1px solid #e3e6f0; color: #5a5c69; transition: all 0.2s;">
             <i class="fas fa-arrow-left me-2"></i> Back to Devices
         </a>
     </div>
@@ -72,18 +140,18 @@
     <div class="row">
         <div class="col-12">
             <!-- Synced Users -->
-            <div class="card sync-card border-success mb-4">
-                <div class="card-header text-success bg-white d-flex justify-content-between align-items-center border-success border-bottom">
-                    <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i> Synced Users ({{ synced|length }})</h5>
+            <div class="card sync-card border-0 mb-4">
+                <div class="card-header success-header d-flex justify-content-between align-items-center border-0">
+                    <h5 class="mb-0 text-white"><i class="fas fa-check-circle me-2"></i> Synced Users ({{ synced|length }})</h5>
                     <small class="text-muted">Present in both Django and Mikrotik</small>
                 </div>
                 <div class="card-body p-0 table-responsive">
                     <form method="POST" action="{% url 'bulk_transfer_router' %}" id="bulkTransferForm">
                         {% csrf_token %}
-                        <div class="p-3 bg-light border-bottom d-flex align-items-center justify-content-between">
+                        <div class="filter-bar d-flex align-items-center justify-content-between">
                             <div class="d-flex align-items-center gap-2">
-                                <label class="fw-bold mb-0 text-muted text-nowrap"><i class="fas fa-filter"></i> Filter Barangay:</label>
-                                <select id="barangayFilter" class="form-select form-select-sm" style="max-width: 200px;">
+                                <label class="fw-bold mb-0 text-muted text-nowrap"><i class="fas fa-filter text-primary"></i> Filter Barangay:</label>
+                                <select id="barangayFilter" class="form-select form-select-sm shadow-sm" style="max-width: 200px; border-color: #e3e6f0;">
                                     <option value="">All Barangays</option>
                                     {% for brgy in barangays %}
                                     <option value="{{ brgy.name }}">{{ brgy.name }}</option>
@@ -92,7 +160,7 @@
                             </div>
                             <div class="d-flex align-items-center gap-2">
                                 <label class="fw-bold mb-0 text-muted text-nowrap">Move Selected To:</label>
-                                <select name="target_device_id" class="form-select form-select-sm" style="max-width: 200px;" required>
+                                <select name="target_device_id" class="form-select form-select-sm shadow-sm" style="max-width: 200px; border-color: #e3e6f0;" required>
                                     <option value="">-- Select Router --</option>
                                     {% for r in all_routers %}
                                         {% if r.id != device.id %}
@@ -138,10 +206,10 @@
             </div>
 
             <!-- Unknown/Orphaned Users -->
-            <div class="card sync-card border-warning">
-                <div class="card-header text-warning bg-white d-flex justify-content-between align-items-center border-warning border-bottom">
-                    <h5 class="mb-0"><i class="fas fa-question-circle me-2"></i> Unknown/Orphaned Users on Router ({{ orphans|length }})</h5>
-                    <small class="text-muted">On Mikrotik, but NOT in Django</small>
+            <div class="card sync-card border-0">
+                <div class="card-header warning-header d-flex justify-content-between align-items-center border-0">
+                    <h5 class="mb-0 text-white"><i class="fas fa-question-circle me-2"></i> Unknown/Orphaned Users on Router ({{ orphans|length }})</h5>
+                    <small class="text-white opacity-75">On Mikrotik, but NOT in Django</small>
                 </div>
                 <div class="card-body p-0 table-responsive">
                     <form method="POST" action="{% url 'sync_bulk_action' device.id %}">
@@ -205,10 +273,10 @@
             </div>
 
             <!-- Missing on Router -->
-            <div class="card sync-card border-danger">
-                <div class="card-header text-danger bg-white d-flex justify-content-between align-items-center border-danger border-bottom">
-                    <h5 class="mb-0"><i class="fas fa-cloud-download-alt me-2"></i> Missing on Router ({{ missing_on_router|length }})</h5>
-                    <small class="text-muted">In Django, but NOT on Mikrotik</small>
+            <div class="card sync-card border-0">
+                <div class="card-header danger-header d-flex justify-content-between align-items-center border-0">
+                    <h5 class="mb-0 text-white"><i class="fas fa-cloud-download-alt me-2"></i> Missing on Router ({{ missing_on_router|length }})</h5>
+                    <small class="text-white opacity-75">In Django, but NOT on Mikrotik</small>
                 </div>
                 <div class="card-body p-0 table-responsive">
                     <form method="POST" action="{% url 'sync_bulk_action' device.id %}">
