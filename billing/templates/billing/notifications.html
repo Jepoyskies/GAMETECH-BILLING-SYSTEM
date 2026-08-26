@@ -1,0 +1,281 @@
+{% extends 'billing/base.html' %}
+{% load static %}
+
+{% block title %}Notifications | Gametech Unli Fiber{% endblock %}
+
+{% block extra_css %}
+<style>
+    .notifications-header {
+        background: linear-gradient(135deg, #2151A1 0%, #19407A 100%);
+        color: white;
+        padding: 2.5rem 2rem;
+        border-radius: 1rem;
+        box-shadow: 0 10px 30px rgba(33, 81, 161, 0.15);
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .notifications-header::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background: url('{% static "assets/images/pattern-bg.png" %}') opacity(0.05);
+        pointer-events: none;
+    }
+
+    .notif-card {
+        border: none;
+        border-radius: 1rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        transition: transform 0.2s, box-shadow 0.2s;
+        margin-bottom: 1rem;
+        background: var(--bs-body-bg);
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .dark-mode .notif-card {
+        background: #1e293b;
+        border: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    .notif-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+    }
+
+    .notif-unread {
+        border-left: 4px solid #0d6efd;
+        background-color: rgba(13, 110, 253, 0.03);
+    }
+    
+    .dark-mode .notif-unread {
+        background-color: rgba(13, 110, 253, 0.1);
+    }
+
+    .notif-icon-wrapper {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-size: 1.25rem;
+    }
+
+    .filter-btn {
+        border-radius: 2rem;
+        padding: 0.5rem 1.25rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .filter-btn.active {
+        background-color: #2151A1;
+        color: white;
+        box-shadow: 0 4px 10px rgba(33, 81, 161, 0.3);
+    }
+    
+    .dark-mode .filter-btn {
+        background: #334155;
+        color: #e2e8f0;
+        border: none;
+    }
+    .dark-mode .filter-btn.active {
+        background: #3b82f6;
+        color: white;
+    }
+
+    .empty-state {
+        padding: 4rem 2rem;
+        text-align: center;
+        color: #64748b;
+    }
+    
+    .empty-state-icon {
+        font-size: 4rem;
+        color: #cbd5e1;
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2">
+    <!-- Header Section -->
+    <div class="notifications-header d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h2 class="mb-1 fw-bold"><i class="fas fa-bell me-2 text-warning"></i> Notifications Center</h2>
+            <p class="mb-0 text-white-50">Manage and view all your system alerts and updates.</p>
+        </div>
+        <div>
+            <button class="btn btn-light btn-sm rounded-pill px-3 fw-bold text-primary shadow-sm" id="pageMarkAllReadBtn">
+                <i class="fas fa-check-double me-2"></i>Mark all as read
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="?type=all&status={{ current_status }}" class="btn btn-outline-secondary filter-btn {% if current_type == 'all' %}active{% endif %}">All Types</a>
+            <a href="?type=payment&status={{ current_status }}" class="btn btn-outline-secondary filter-btn {% if current_type == 'payment' %}active{% endif %}">Payments</a>
+            <a href="?type=network&status={{ current_status }}" class="btn btn-outline-secondary filter-btn {% if current_type == 'network' %}active{% endif %}">Network Ops</a>
+            <a href="?type=cignal&status={{ current_status }}" class="btn btn-outline-secondary filter-btn {% if current_type == 'cignal' %}active{% endif %}">Cignal Play</a>
+        </div>
+        
+        <div class="btn-group shadow-sm" role="group">
+            <a href="?type={{ current_type }}&status=all" class="btn btn-outline-secondary {% if current_status == 'all' %}active{% endif %}">All</a>
+            <a href="?type={{ current_type }}&status=unread" class="btn btn-outline-secondary {% if current_status == 'unread' %}active{% endif %}">Unread</a>
+        </div>
+    </div>
+
+    <!-- Notifications List -->
+    <div class="row">
+        <div class="col-12">
+            {% if page_obj %}
+                {% for notif in page_obj %}
+                    <div class="card notif-card {% if not notif.is_read %}notif-unread{% endif %}" data-id="{{ notif.id }}">
+                        <div class="card-body p-4 d-flex align-items-start gap-4">
+                            <!-- Icon -->
+                            <div class="notif-icon-wrapper flex-shrink-0 
+                                {% if notif.notification_type == 'payment' %}bg-success-subtle text-success
+                                {% elif notif.notification_type == 'network' or notif.notification_type == 'cignal' %}bg-danger-subtle text-danger
+                                {% else %}bg-primary-subtle text-primary{% endif %}">
+                                <i class="fas 
+                                    {% if notif.notification_type == 'payment' %}fa-check-circle
+                                    {% elif notif.notification_type == 'network' or notif.notification_type == 'cignal' %}fa-exclamation-triangle
+                                    {% else %}fa-info-circle{% endif %}">
+                                </i>
+                            </div>
+
+                            <!-- Content -->
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <h5 class="mb-0 fw-bold" style="color: var(--bs-heading-color);">{{ notif.title }}</h5>
+                                    <small class="text-muted fw-medium"><i class="far fa-clock me-1"></i>{{ notif.created_at|timesince }} ago</small>
+                                </div>
+                                <p class="mb-2 text-muted" style="font-size: 0.95rem;">{{ notif.message }}</p>
+                                
+                                <div class="d-flex align-items-center gap-3 mt-3">
+                                    {% if notif.link %}
+                                    <a href="{{ notif.link }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                        View Details
+                                    </a>
+                                    {% endif %}
+                                    
+                                    {% if not notif.is_read %}
+                                    <button class="btn btn-sm btn-light rounded-pill text-primary fw-medium mark-read-btn" data-id="{{ notif.id }}">
+                                        <i class="fas fa-check me-1"></i>Mark as Read
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            {% if not notif.is_read %}
+                            <div class="position-absolute top-0 end-0 mt-3 me-3">
+                                <span class="badge bg-primary rounded-pill p-2 shadow-sm">New</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+
+                <!-- Pagination -->
+                <nav class="mt-4 mb-5 d-flex justify-content-center">
+                    <ul class="pagination pagination-lg">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item"><a class="page-link shadow-sm" href="?page=1&type={{ current_type }}&status={{ current_status }}">&laquo; First</a></li>
+                            <li class="page-item"><a class="page-link shadow-sm" href="?page={{ page_obj.previous_page_number }}&type={{ current_type }}&status={{ current_status }}">Previous</a></li>
+                        {% endif %}
+
+                        <li class="page-item active"><span class="page-link shadow-sm">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+
+                        {% if page_obj.has_next %}
+                            <li class="page-item"><a class="page-link shadow-sm" href="?page={{ page_obj.next_page_number }}&type={{ current_type }}&status={{ current_status }}">Next</a></li>
+                            <li class="page-item"><a class="page-link shadow-sm" href="?page={{ page_obj.paginator.num_pages }}&type={{ current_type }}&status={{ current_status }}">Last &raquo;</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+
+            {% else %}
+                <!-- Empty State -->
+                <div class="card notif-card">
+                    <div class="card-body empty-state">
+                        <i class="fas fa-box-open empty-state-icon"></i>
+                        <h4 class="fw-bold">No Notifications Found</h4>
+                        <p class="text-muted">You're all caught up! There are no notifications matching your current filters.</p>
+                        <a href="{% url 'notifications_list' %}" class="btn btn-primary rounded-pill px-4 mt-3">Clear Filters</a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]') ? document.querySelector('[name=csrfmiddlewaretoken]').value : '';
+    }
+
+    // Mark single notification as read
+    document.querySelectorAll('.mark-read-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const notifId = this.getAttribute('data-id');
+            const card = document.querySelector(`.notif-card[data-id="${notifId}"]`);
+            
+            fetch(`/api/notifications/mark-read/${notifId}/`, {
+                method: 'POST',
+                headers: {'X-CSRFToken': getCsrfToken()}
+            }).then(res => res.json()).then(data => {
+                if(data.status === 'success') {
+                    // Visually update the card
+                    card.classList.remove('notif-unread');
+                    this.remove(); // Remove the mark as read button
+                    const badge = card.querySelector('.badge.bg-primary');
+                    if (badge) badge.remove();
+                    
+                    // Trigger custom event so base.html can update its counter if needed
+                    window.dispatchEvent(new Event('notificationsUpdated'));
+                }
+            });
+        });
+    });
+
+    // Mark all as read
+    const pageMarkAllReadBtn = document.getElementById('pageMarkAllReadBtn');
+    if(pageMarkAllReadBtn) {
+        pageMarkAllReadBtn.addEventListener('click', function() {
+            Swal.fire({
+                title: 'Mark all as read?',
+                text: "This will mark all notifications as read.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#2151A1',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, mark all'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch('/api/notifications/mark-all-read/', {
+                        method: 'POST',
+                        headers: {'X-CSRFToken': getCsrfToken()}
+                    }).then(res => res.json()).then(data => {
+                        if(data.status === 'success') {
+                            window.location.reload();
+                        }
+                    });
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

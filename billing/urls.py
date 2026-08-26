@@ -130,6 +130,9 @@ urlpatterns = [
     path('api/live-addon-requests/', views.live_addon_requests_api, name='live_addon_requests_api'),
     path('api/resolve-addon-request/', views.resolve_addon_request_api, name='resolve_addon_request_api'),
 
+    # Notifications
+    path('notifications/', views.notifications_list_view, name='notifications_list'),
+
     # Notifications API
     path('api/notifications/', views.api_notifications, name='api_notifications'),
     path('api/notifications/mark-read/<int:notif_id>/', views.api_mark_notification_read, name='api_mark_notification_read'),

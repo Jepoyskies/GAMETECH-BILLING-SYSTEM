@@ -146,6 +146,14 @@ MAILERS = {
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = '/'
 
+# Caching
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': os.environ.get('CELERY_BROKER_URL', 'redis://redis:6379/1'),
+    }
+}
+
 # Celery Beat Schedule
 from celery.schedules import crontab
 
@@ -165,5 +173,9 @@ CELERY_BEAT_SCHEDULE = {
     'auto-reconcile-routers-30min': {
         'task': 'billing.tasks.auto_reconcile_routers_task',
         'schedule': crontab(minute='*/30'),  # Run every 30 minutes
+    },
+    'fetch-live-monitoring-10sec': {
+        'task': 'billing.tasks.fetch_live_monitoring_data_task',
+        'schedule': 10.0,  # Run every 10 seconds
     },
 }

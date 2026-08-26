@@ -381,67 +381,18 @@ def live_monitoring_view(request):
 
 @login_required
 def api_live_monitoring_data(request):
-    response_data = {
-        'users': [],
-        'routers': [],
-        'offline_users': [],
-        'total_active_subs': 0
-    }
+    from django.core.cache import cache
+    response_data = cache.get('live_monitoring_data')
     
-    from billing.models import Customer
-    devices = MikrotikDevice.objects.all()
-    for device in devices:
-        try:
-            api = MikrotikAPI(device)
-            active_users = api.get_active_pppoe_users()
-            
-            # Fetch active customers from DB
-            active_db_customers = Customer.objects.filter(
-                status='active', 
-                mikrotik_device=device
-            ).exclude(pppoe_username__isnull=True).exclude(pppoe_username='')
-            
-            response_data['total_active_subs'] += active_db_customers.count()
-            
-            # Fetch traffic for all active PPPoE users directly from their dynamic interfaces
-            interface_names = [f"<pppoe-{au.get('name')}>" for au in active_users if au.get('name')]
-            traffic_data = api.get_interfaces_traffic(interface_names)
-            
-            # Map traffic data by clean username
-            traffic_dict = {}
-            for t in traffic_data:
-                name = t.get('name', '')
-                # Strip `<pppoe-` prefix and `>` suffix
-                clean_name = name.strip('<>').replace('pppoe-', '', 1)
-                
-                try:
-                    rx_bps = int(t.get('rx-bits-per-second', 0))
-                    tx_bps = int(t.get('tx-bits-per-second', 0))
-                    rx_mbps = round(rx_bps / 1000000, 2)
-                    tx_mbps = round(tx_bps / 1000000, 2)
-                    traffic_dict[clean_name] = {
-                        'rx_mbps': rx_mbps,
-                        'tx_mbps': tx_mbps
-                    }
-                except Exception:
-                    continue
-                    
-            for au in active_users:
-                username = au.get('name')
-                tr = traffic_dict.get(username, {'rx_mbps': 0.0, 'tx_mbps': 0.0})
-                response_data['users'].append({
-                    'user': username,
-                    'ip': au.get('address', ''),
-                    'uptime': au.get('uptime', '0s'),
-                    'rx_mbps': tr['rx_mbps'],
-                    'tx_mbps': tr['tx_mbps'],
-                    'device_ip': device.ip_address
-                })
-                
-            api.connection.disconnect()
-        except Exception as e:
-            print(f"Error connecting to Mikrotik {device.device_name}: {e}")
-            
+    # Fallback if cache is empty or expired
+    if not response_data:
+        response_data = {
+            'users': [],
+            'routers': [],
+            'offline_users': [],
+            'total_active_subs': 0
+        }
+        
     return JsonResponse(response_data)
 
 
@@ -2812,6 +2763,33 @@ def resolve_addon_request_api(request):
         return JsonResponse({'status': 'error', 'message': 'Request not found'}, status=404)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@login_required
+def notifications_list_view(request):
+    notification_list = Notification.objects.all().order_by('-created_at')
+    
+    # Filter by type if provided
+    notif_type = request.GET.get('type')
+    if notif_type and notif_type != 'all':
+        notification_list = notification_list.filter(notification_type=notif_type)
+        
+    # Filter by read status if provided
+    is_read = request.GET.get('status')
+    if is_read == 'unread':
+        notification_list = notification_list.filter(is_read=False)
+    elif is_read == 'read':
+        notification_list = notification_list.filter(is_read=True)
+
+    paginator = Paginator(notification_list, 20)  # Show 20 notifications per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'billing/notifications.html', {
+        'page_obj': page_obj,
+        'current_type': notif_type or 'all',
+        'current_status': is_read or 'all',
+    })
+
 
 @login_required
 def api_notifications(request):
