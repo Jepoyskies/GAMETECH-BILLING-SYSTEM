@@ -32,7 +32,11 @@ SECRET_KEY = 'django-insecure-&#1lotwp@bi@r%8e25pr-41x=pux%otc3&u9jxx!r5=!i0y^aq
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
+CSRF_TRUSTED_ORIGINS = ['http://143.198.207.144', 'https://143.198.207.144']
 
+# Trust the Nginx Reverse Proxy Headers
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'http')
 
 # Application definition
 
