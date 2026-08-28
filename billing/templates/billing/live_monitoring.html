@@ -570,6 +570,42 @@
             </div>
         </div>
 
+    <!-- Apply Cignal Add-on Modal -->
+    <div class="modal fade" id="applyAddonModal" tabindex="-1" aria-labelledby="applyAddonModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <form id="applyAddonForm" method="POST">
+                    {% csrf_token %}
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold" id="applyAddonModalLabel"><i class="fas fa-tv text-warning me-2"></i>Apply Cignal Play</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body pb-2">
+                        <p class="text-muted small mb-3">Apply Cignal Play Add-on for <strong id="modalCustomerName">Customer</strong>.</p>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small text-muted">Cignal Play No.</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="fas fa-hashtag text-muted"></i></span>
+                                <input type="text" class="form-control border-start-0 ps-0" name="cignal_play_no" required placeholder="e.g. 123456789">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small text-muted">Cignal Date</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="fas fa-calendar-alt text-muted"></i></span>
+                                <input type="date" class="form-control border-start-0 ps-0" name="cignal_date" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success rounded-pill px-4 shadow-sm"><i class="fas fa-check me-2"></i>Apply Add-on</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
         <!-- Bottom Live Traffic Card -->
         <div class="traffic-card">
             <div class="traffic-header">
@@ -1004,6 +1040,17 @@
     }
 
     let currentPollId = 0;
+
+    function openApplyAddonModal(requestId, customerId, customerName, addonType) {
+        if (addonType !== 'Cignal Play Add-on' && !addonType.toLowerCase().includes('cignal')) {
+            alert('This modal is only for Cignal Play Add-ons. Other add-ons must be handled manually.');
+            return;
+        }
+        document.getElementById('modalCustomerName').innerText = customerName;
+        document.getElementById('applyAddonForm').action = '/cignal-play/approve/' + requestId + '/';
+        var myModal = new bootstrap.Modal(document.getElementById('applyAddonModal'));
+        myModal.show();
+    }
 
     function pollFastData(id) {
         let fastSpeed = parseInt(document.getElementById('interval').value);

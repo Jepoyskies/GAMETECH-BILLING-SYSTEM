@@ -3239,9 +3239,9 @@ def approve_cignal_request(request, request_id):
         messages.error(request, 'Cignal Play No and Date are required.')
         return redirect('add_on_requests')
     customer = addon_req.customer
-    customer.cignal_play_no = cignal_no
+    customer.cignalplay_no = cignal_no
     try:
-        customer.cignal_date = timezone.datetime.fromisoformat(cignal_date).date()
+        customer.cignalplay_date = timezone.datetime.fromisoformat(cignal_date).date()
     except ValueError:
         messages.error(request, 'Invalid date format.')
         return redirect('add_on_requests')
