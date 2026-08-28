@@ -75,7 +75,7 @@ The system automatically creates a fresh, empty PostgreSQL database on first lau
 
 ### 4️⃣ Access the System
 With everything running smoothly, access the application in your browser:
-- 🌍 **Main Portal**: [http://localhost:8000/](http://localhost:8000/)
+- 🌍 **Main Portal**: [C](http://localhost:8000/)
 - 🔐 **Admin Panel**: [http://localhost:8000/admin/](http://localhost:8000/admin/)
 
 ---
