@@ -315,6 +315,25 @@ body.tv-mode {
                     </div>
                 </div>
             </div>
+            
+            <!-- Online Staff -->
+            <div class="dropdown">
+                <button class="btn btn-sm position-relative" type="button" id="onlineStaffDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background:transparent; border:none; font-size:1.25rem; color:inherit;" title="Online Staff" onclick="fetchOnlineStaff()">
+                    <i class="fas fa-users"></i>
+                    <span id="onlineStaffBadge" class="position-absolute top-25 start-75 translate-middle badge rounded-pill bg-success" style="font-size: 0.6rem; display: none;">0</span>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 profile-menu" aria-labelledby="onlineStaffDropdown" style="width: 280px; border-radius: 16px; padding: 0; backdrop-filter: blur(16px); background: rgba(255, 255, 255, 0.9);">
+                    <div class="px-4 py-3 border-bottom position-relative overflow-hidden">
+                        <div class="position-absolute top-0 start-0 w-100 h-100 bg-success opacity-10" style="z-index: 0;"></div>
+                        <h6 class="mb-0 fw-bold position-relative z-1 text-success">
+                            <i class="fas fa-users me-2"></i>Currently Online
+                        </h6>
+                    </div>
+                    <div id="onlineStaffList" style="max-height: 300px; overflow-y: auto;">
+                        <div class="p-4 text-center text-muted small"><i class="fas fa-spinner fa-spin me-2"></i>Loading...</div>
+                    </div>
+                </div>
+            </div>
 
             <button id="themeToggle" class="btn btn-sm" style="background:transparent; border:none; font-size:1.25rem; color:inherit;" title="Toggle Dark/Light Mode">
                 <i class="fas fa-moon" id="themeIcon"></i>
@@ -683,7 +702,50 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Polling
     fetchNotifications();
-    setInterval(fetchNotifications, 30000); // every 30 secs
+    setInterval(fetchNotifications, 60000); // 1 minute
+    
+    // Online staff JS
+    function fetchOnlineStaff() {
+        fetch('/api/online-staff/')
+            .then(r => r.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    const list = document.getElementById('onlineStaffList');
+                    const badge = document.getElementById('onlineStaffBadge');
+                    
+                    if(data.data.length > 0) {
+                        badge.style.display = 'inline-block';
+                        badge.innerText = data.data.length;
+                        
+                        let html = '';
+                        data.data.forEach(user => {
+                            html += `
+                            <div class="px-4 py-2 border-bottom d-flex align-items-center">
+                                <div class="me-3 position-relative">
+                                    <div class="bg-success text-white rounded-circle d-flex justify-content-center align-items-center" style="width: 32px; height: 32px; font-weight: bold; text-transform: uppercase;">
+                                        ${user.username.charAt(0)}
+                                    </div>
+                                    <span class="position-absolute bottom-0 end-0 p-1 bg-success border border-light rounded-circle" style="width: 10px; height: 10px;"></span>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-bold" style="font-size: 0.9rem;">${user.username}</h6>
+                                    <small class="text-muted" style="font-size: 0.75rem;">${user.role}</small>
+                                </div>
+                            </div>
+                            `;
+                        });
+                        list.innerHTML = html;
+                    } else {
+                        badge.style.display = 'none';
+                        list.innerHTML = '<div class="p-4 text-center text-muted small">No one else is online.</div>';
+                    }
+                }
+            })
+            .catch(err => console.error(err));
+    }
+    
+    // Fetch once on load to show badge
+    setTimeout(fetchOnlineStaff, 2000);
 });
 </script>
 {% block extra_js %}{% endblock %}

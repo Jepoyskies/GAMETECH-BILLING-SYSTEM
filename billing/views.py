@@ -3176,3 +3176,35 @@ def apply_cignal_addon(request):
         messages.success(request, f"Add-on applied successfully for {customer.full_name}.")
         
     return redirect(request.META.get('HTTP_REFERER', 'live_monitoring'))
+
+
+@login_required
+def online_staff_api(request):
+    from django.contrib.sessions.models import Session
+    from django.utils import timezone
+    from django.contrib.auth.models import User
+    
+    # Get all non-expired sessions
+    sessions = Session.objects.filter(expire_date__gte=timezone.now())
+    
+    user_id_list = []
+    for session in sessions:
+        data = session.get_decoded()
+        user_id = data.get('_auth_user_id')
+        if user_id and user_id not in user_id_list:
+            user_id_list.append(user_id)
+            
+    # Fetch user details
+    online_users = User.objects.filter(id__in=user_id_list)
+    
+    data = []
+    for u in online_users:
+        # Check if the user is a staff or admin, not a customer
+        # We can assume all User models are staff (since customers use portal_password usually, but let's just return their username and role)
+        role = getattr(u, 'role', 'Staff')
+        data.append({
+            'username': u.username,
+            'role': role
+        })
+        
+    return JsonResponse({'status': 'success', 'data': data})

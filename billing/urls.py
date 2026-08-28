@@ -73,6 +73,7 @@ urlpatterns = [
     path('profile/', views.profile_view, name='profile'),
     path('settings/', views.settings_view, name='settings'),
     path('admin-panel/', views.admin_panel_view, name='admin_panel'),
+    path('api/online-staff/', views.online_staff_api, name='online_staff_api'),
     
     # Auth Extensions
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
