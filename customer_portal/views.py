@@ -302,11 +302,11 @@ def portal_process_mock_payment(request):
                         from network_manager.services import MikrotikAPI
                         api = MikrotikAPI(customer.mikrotik_device)
                         
-                        # Mikrotik Format: exp . new . plan. payment. admin. note:
-                        # e.g., Oct 20, 2026 . 50Mbps . GCash . Customer Portal . Paid Online
+                        # Mikrotik Format: paid (date) exp (date) . plan . method . admin
                         expiry_str = new_expiry.strftime('%b %d, %Y')
+                        paid_str = timezone.now().strftime('%b %d, %Y')
                         plan_name = customer.plan.name if customer.plan else "No Plan"
-                        comment_text = f"{expiry_str} . {plan_name} . {payment_method} . Customer Portal . Paid Online"
+                        comment_text = f"paid {paid_str} exp {expiry_str} . {plan_name} . {payment_method} . Customer Portal . Paid Online"
                         api.set_pppoe_comment(customer.pppoe_username, comment_text)
                         
                         # The post_save signal on Customer handles setting the profile, enabling, and kicking the user.

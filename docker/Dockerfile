@@ -16,5 +16,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy project files
 COPY . /app/
 
-# Ensure start scripts are executable
-RUN chmod +x /app/docker/start_*.sh
+# Ensure start scripts are executable and have Linux line endings
+RUN sed -i 's/\r$//' /app/docker/start_*.sh && chmod +x /app/docker/start_*.sh

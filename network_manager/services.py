@@ -28,7 +28,7 @@ class MikrotikAPI:
 
         # Set a default timeout for this thread's sockets to prevent infinite hangs
         old_timeout = socket.getdefaulttimeout()
-        socket.setdefaulttimeout(1.0)
+        socket.setdefaulttimeout(5.0)
         try:
             # We set up the API connection pool
             self.connection = routeros_api.RouterOsApiPool(
@@ -51,7 +51,7 @@ class MikrotikAPI:
         try:
             # First attempt with plaintext_login (RouterOS v6.43+)
             old_timeout = socket.getdefaulttimeout()
-            socket.setdefaulttimeout(1.0)
+            socket.setdefaulttimeout(5.0)
             try:
                 return self.connection.get_api()
             finally:
@@ -63,7 +63,7 @@ class MikrotikAPI:
             
             try:
                 old_timeout = socket.getdefaulttimeout()
-                socket.setdefaulttimeout(1.0)
+                socket.setdefaulttimeout(5.0)
                 try:
                     # Re-create connection with legacy auth
                     self.connection = routeros_api.RouterOsApiPool(

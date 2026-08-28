@@ -133,7 +133,12 @@
                         </td>
                         {% if request.user.role == 'Admin' %}
                         <td>
-                            <a href="{% url 'edit_payment_log' p.id %}" class="btn btn-sm btn-outline-primary" title="Edit Payment Log"><i class="fas fa-edit"></i></a>
+                            <div class="d-flex gap-1">
+                                <a href="{% url 'edit_payment_log' p.id %}" class="btn btn-sm btn-outline-primary" title="Edit Payment Log"><i class="fas fa-edit"></i></a>
+                                <button type="button" class="btn btn-sm btn-outline-warning" title="Transfer Payment" data-bs-toggle="modal" data-bs-target="#transferModal{{ p.id }}">
+                                    <i class="fas fa-exchange-alt"></i>
+                                </button>
+                            </div>
                         </td>
                         {% endif %}
                     </tr>
@@ -146,6 +151,41 @@
             </table>
         </div>
     </div>
+    
+    {% for p in page_obj %}
+    <!-- Transfer Modal for payment {{ p.id }} -->
+    <div class="modal fade text-start" id="transferModal{{ p.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius:20px; border:none;">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-exchange-alt text-warning me-2"></i> Transfer Payment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="{% url 'revert_transfer_payment' p.id %}" method="post">
+                    {% csrf_token %}
+                    <div class="modal-body py-4">
+                        <div class="alert alert-warning border-0 rounded-3 shadow-sm mb-4">
+                            <i class="fas fa-exclamation-triangle me-2"></i> This will revert the payment from <strong>{{ p.customer.full_name }}</strong> and apply it to a new customer. The previous customer's expiration and balance will be recalculated.
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Select Correct Customer</label>
+                            <select class="form-select" name="new_customer_id" required>
+                                <option value="">-- Choose Customer --</option>
+                                {% for c in all_customers %}
+                                    <option value="{{ c.id }}">{{ c.full_name }} ({{ c.pppoe_username }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top-0 pt-0">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="border-radius:12px;">Cancel</button>
+                        <button type="submit" class="btn btn-warning" style="border-radius:12px; color: #fff;"><i class="fas fa-exchange-alt"></i> Confirm Transfer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
 
     {% include 'billing/partials/pagination.html' with page_obj=page_obj query_params=query_params %}
 
