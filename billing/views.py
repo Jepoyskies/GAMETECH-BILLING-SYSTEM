@@ -1359,7 +1359,7 @@ def view_customer(request, customer_id):
 
 
 @login_required
-@role_required(['Admin', 'Agent', 'CSR'])
+@role_required(['Admin'])
 def edit_customer_expiration(request, customer_id):
     customer = get_object_or_404(Customer, id=customer_id)
     if request.method == 'POST':
@@ -1387,7 +1387,7 @@ def edit_customer_expiration(request, customer_id):
 
 
 @login_required
-@role_required(['Admin', 'Agent', 'CSR'])
+@role_required(['Admin'])
 def edit_customer_balance(request, customer_id):
     customer = get_object_or_404(Customer, id=customer_id)
     if request.method == 'POST':
@@ -1662,6 +1662,7 @@ def payment_logs_view(request):
         'filter_search': filter_search,
         'filter_method': filter_method,
         'methods': methods,
+        'all_customers': Customer.objects.all().order_by('full_name'),
 
         'grand_total': grand_total,
         'filtered_range_total': filtered_range_total,
@@ -2298,12 +2299,12 @@ def pay_customer_view(request, username):
                     from network_manager.services import MikrotikAPI
                     api = MikrotikAPI(customer.mikrotik_device)
                     
-                    # Mikrotik Format: exp . new . plan. payment. admin. note:
-                    # e.g., Oct 20, 2026 . 50Mbps . GCash . staff_john . Paid Online
+                    # Mikrotik Format: paid (date) exp (date) . plan . method . admin
                     expiry_str = new_expiry.strftime('%b %d, %Y')
+                    paid_str = timezone.now().strftime('%b %d, %Y')
                     plan_name = customer.plan.name if customer.plan else "No Plan"
                     admin_name = request.user.username if request.user.is_authenticated else "Admin"
-                    comment_text = f"{expiry_str} . {plan_name} . {payment_method} . {admin_name} . {reason}"
+                    comment_text = f"paid {paid_str} exp {expiry_str} . {plan_name} . {payment_method} . {admin_name} . {reason}"
                     api.set_pppoe_comment(customer.pppoe_username, comment_text)
                     
                     if was_suspended and customer.plan and customer.plan.name:
@@ -3032,3 +3033,146 @@ def bulk_transfer_router(request):
             messages.error(request, f'Error during transfer: {str(e)}')
             
     return redirect('customer_list')
+
+@login_required
+@role_required(['Admin'])
+def revert_transfer_payment(request, payment_id):
+    if request.method == 'POST':
+        payment = get_object_or_404(Payment, id=payment_id)
+        wrong_customer = payment.customer
+        new_customer_id = request.POST.get('new_customer_id')
+        
+        if not new_customer_id:
+            messages.error(request, "You must select a new customer to transfer the payment to.")
+            return redirect(request.META.get('HTTP_REFERER', 'payment_logs'))
+            
+        new_customer = get_object_or_404(Customer, id=new_customer_id)
+        
+        if wrong_customer.id == new_customer.id:
+            messages.error(request, "Cannot transfer payment to the same customer.")
+            return redirect(request.META.get('HTTP_REFERER', 'payment_logs'))
+
+        with transaction.atomic():
+            # Lock both customers
+            wrong_customer = Customer.objects.select_for_update().get(pk=wrong_customer.pk)
+            new_customer = Customer.objects.select_for_update().get(pk=new_customer.pk)
+            
+            # --- Revert Wrong Customer ---
+            monthly_price = float(wrong_customer.plan.price) if wrong_customer.plan else 0.0
+            if monthly_price > 0:
+                days_to_subtract = float(payment.amount) / (monthly_price / 30)
+                from datetime import timedelta
+                if wrong_customer.expires_at:
+                    wrong_customer.expires_at = wrong_customer.expires_at - timedelta(days=days_to_subtract)
+            
+            wrong_customer.outstanding_balance += payment.amount
+            wrong_customer.save()
+            
+            # --- Apply to New Customer ---
+            monthly_price_new = float(new_customer.plan.price) if new_customer.plan else 0.0
+            current_exp = new_customer.expires_at if (new_customer.expires_at and new_customer.expires_at > timezone.now()) else timezone.now()
+            new_expiry = calculate_new_expiration_date(current_exp, float(payment.amount), monthly_price_new)
+            
+            was_suspended = new_customer.status in ['suspended', 'inactive', 'expired']
+            new_customer.expires_at = new_expiry
+            new_customer.outstanding_balance -= payment.amount
+            if was_suspended:
+                new_customer.status = 'active'
+            new_customer.save()
+            
+            # Transfer the payment record
+            payment.customer = new_customer
+            payment.username = new_customer.pppoe_username
+            payment.plan_name = new_customer.plan.name if new_customer.plan else None
+            payment.expires_at = new_expiry
+            payment.reason = f"[TRANSFERRED FROM {wrong_customer.full_name}] " + (payment.reason or "")
+            payment.save()
+            
+            from .models import SystemLog
+            SystemLog.objects.create(
+                table_name='Payment',
+                record_id=str(payment.id),
+                action='UPDATE',
+                changed_by=request.user.username,
+                target_name=new_customer.full_name,
+                old_data=f"Belonged to {wrong_customer.full_name}",
+                new_data=f"Transferred to {new_customer.full_name}"
+            )
+
+        # --- Mikrotik Logic (Outside Atomic to prevent DB locks during network calls) ---
+        from network_manager.services import MikrotikAPI
+        # Kick wrong customer so router redials and suspends if due
+        if wrong_customer.mikrotik_device:
+            try:
+                api_wrong = MikrotikAPI(wrong_customer.mikrotik_device)
+                api_wrong.kick_active_user(wrong_customer.pppoe_username)
+            except Exception as e:
+                pass # Non-critical
+                
+        # Reactivate new customer
+        if new_customer.mikrotik_device:
+            try:
+                api_new = MikrotikAPI(new_customer.mikrotik_device)
+                
+                expiry_str = new_expiry.strftime('%b %d, %Y')
+                paid_str = payment.created_at.strftime('%b %d, %Y')
+                plan_name = new_customer.plan.name if new_customer.plan else "No Plan"
+                comment_text = f"paid {paid_str} exp {expiry_str} . {plan_name} . {payment.payment_method} . Transfer"
+                api_new.set_pppoe_comment(new_customer.pppoe_username, comment_text)
+                
+                if was_suspended and new_customer.plan and new_customer.plan.name:
+                    api_new.enable_pppoe_user(new_customer.pppoe_username)
+                    api_new.kick_active_user(new_customer.pppoe_username)
+            except Exception as e:
+                pass # Non-critical
+
+        messages.success(request, f"Payment successfully transferred from {wrong_customer.full_name} to {new_customer.full_name}.")
+        return redirect(request.META.get('HTTP_REFERER', 'payment_logs'))
+    return redirect('payment_logs')
+
+
+@login_required
+def apply_cignal_addon(request):
+    if request.method == 'POST':
+        request_id = request.POST.get('request_id')
+        customer_id = request.POST.get('customer_id')
+        cignalplay_no = request.POST.get('cignalplay_no')
+        cignalplay_date = request.POST.get('cignalplay_date')
+        addon_type = request.POST.get('addon_type')
+        
+        customer = get_object_or_404(Customer, id=customer_id)
+        
+        # Resolve request
+        if request_id:
+            try:
+                addon_req = AddOnRequest.objects.get(id=request_id)
+                addon_req.status = 'Resolved'
+                addon_req.save()
+            except AddOnRequest.DoesNotExist:
+                pass
+                
+        # Update customer profile
+        customer.cignalplay_no = cignalplay_no
+        customer.cignalplay_date = cignalplay_date
+        customer.cignalplay_adjustedby = request.user.username
+        customer.save()
+        
+        # Log to CignalPlay table
+        CignalPlay.objects.create(
+            customer=customer,
+            plan_name=addon_type or 'Cignal Play Add-on',
+            start_date=cignalplay_date,
+            adjusted_by=request.user.username
+        )
+        
+        # Notification
+        Notification.objects.create(
+            title="Cignal Add-on Applied",
+            message=f"{customer.full_name} applied for {addon_type or 'Cignal Play'} (Acct: {cignalplay_no}).",
+            notification_type='cignal',
+            link=f"/customer/{customer.id}/cignal-logs/"
+        )
+        
+        messages.success(request, f"Add-on applied successfully for {customer.full_name}.")
+        
+    return redirect(request.META.get('HTTP_REFERER', 'live_monitoring'))

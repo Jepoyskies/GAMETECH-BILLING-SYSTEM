@@ -96,6 +96,7 @@ urlpatterns = [
     path('payment/success/', views.payment_success_view, name='payment_success'),
     path('logs/payments/', views.payment_logs_view, name='payment_logs'),
     path('logs/payments/<int:payment_id>/edit/', views.edit_payment_log_view, name='edit_payment_log'),
+    path('logs/payments/<int:payment_id>/transfer/', views.revert_transfer_payment, name='revert_transfer_payment'),
     path('logs/payment-addons/', views.payment_addon_logs_view, name='payment_addon_logs'),
     # Payment Processing
     path('payment-portal/', views.payment_portal_view, name='payment_portal'),
@@ -108,6 +109,7 @@ urlpatterns = [
     # Cignal Play Integration
     path('customers/bulk-transfer/', views.bulk_transfer_router, name='bulk_transfer_router'),
     path('cignal-play/', views.cignal_play_list_view, name='cignal_play_list'),
+    path('cignal-play/apply/', views.apply_cignal_addon, name='apply_cignal_addon'),
     path('add-ons/', views.add_on_payments_view, name='add_on_payments'),
     path('customer/<int:customer_id>/cignalplay-form/', views.cignalplay_form_view, name='cignalplay_form'),
     path('customer/<int:customer_id>/cignal-logs/', views.user_cignal_logs_view, name='user_cignal_logs'),
