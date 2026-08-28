@@ -916,6 +916,24 @@ def delete_plan(request, plan_id):
 
 @login_required
 def staff_list(request):
+    # Auto-sync any Django Users (like hidden superusers created via CLI) to SystemAdmin
+    from django.contrib.auth.models import User
+    from django.db.models import Q
+    for u in User.objects.filter(Q(is_staff=True) | Q(is_superuser=True)):
+        sys_admin, created = SystemAdmin.objects.get_or_create(
+            username=u.username,
+            defaults={
+                'full_name': f"{u.first_name} {u.last_name}".strip() or u.username,
+                'email': u.email or f"{u.username}@example.com",
+                'role': 'Admin' if u.is_superuser else 'Viewer',
+                'status': 'Active' if u.is_active else 'Inactive',
+                'password_hash': 'managed_by_django'
+            }
+        )
+        if not created and u.is_superuser and sys_admin.role != 'Admin':
+            sys_admin.role = 'Admin'
+            sys_admin.save(update_fields=['role'])
+
     # Fetch all admins, ordered by the newest created
     staff_members = SystemAdmin.objects.all().order_by('-created_at')
     return render(request, 'billing/staff_and_admins.html', {'staff_members': staff_members})
@@ -3208,3 +3226,28 @@ def online_staff_api(request):
         })
         
     return JsonResponse({'status': 'success', 'data': data})
+
+@role_required(['Admin', 'Editor', 'Technician', 'Agent'])
+@login_required
+@require_POST
+def approve_cignal_request(request, request_id):
+    from billing.models import AddOnRequest
+    addon_req = get_object_or_404(AddOnRequest, pk=request_id)
+    cignal_no = request.POST.get('cignal_play_no')
+    cignal_date = request.POST.get('cignal_date')
+    if not cignal_no or not cignal_date:
+        messages.error(request, 'Cignal Play No and Date are required.')
+        return redirect('add_on_requests')
+    customer = addon_req.customer
+    customer.cignal_play_no = cignal_no
+    try:
+        customer.cignal_date = timezone.datetime.fromisoformat(cignal_date).date()
+    except ValueError:
+        messages.error(request, 'Invalid date format.')
+        return redirect('add_on_requests')
+    customer.save()
+    addon_req.status = 'Resolved'
+    addon_req.save()
+    messages.success(request, f'Cignal request for {customer.full_name} approved and applied.')
+    return redirect('add_on_requests')
+

@@ -112,6 +112,7 @@ urlpatterns = [
     path('cignal-play/', views.cignal_play_list_view, name='cignal_play_list'),
     path('cignal-play/apply/', views.apply_cignal_addon, name='apply_cignal_addon'),
     path('add-ons/', views.add_on_payments_view, name='add_on_payments'),
+    path('cignal-play/approve/<int:request_id>/', views.approve_cignal_request, name='approve_cignal_request'),
     path('customer/<int:customer_id>/cignalplay-form/', views.cignalplay_form_view, name='cignalplay_form'),
     path('customer/<int:customer_id>/cignal-logs/', views.user_cignal_logs_view, name='user_cignal_logs'),
     
