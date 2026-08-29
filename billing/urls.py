@@ -145,4 +145,7 @@ urlpatterns = [
     # Improvement / Feedback Requests
     path('api/improvement-request/', views.submit_improvement_request, name='submit_improvement_request'),
     path('improvement-requests/', views.improvement_requests_list, name='improvement_requests_list'),
+    
+    # Changelog / System Updates
+    path('changelog/', views.changelog_view, name='changelog'),
 ]

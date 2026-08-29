@@ -3305,3 +3305,9 @@ def improvement_requests_list(request):
     requests_qs = ImprovementRequest.objects.select_related('submitted_by').all()
     return render(request, 'billing/improvement_requests.html', {'improvement_requests': requests_qs})
 
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def changelog_view(request):
+    return render(request, 'billing/changelog.html')
