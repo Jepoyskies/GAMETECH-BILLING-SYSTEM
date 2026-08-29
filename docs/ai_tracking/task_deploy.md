@@ -1,0 +1,10 @@
+- `[x]` Version Control
+    - `[x]` Commit all changes (deleted legacy files, updated settings, new requirements, docker scripts).
+    - `[x]` Push to GitHub branch `main`.
+- `[x]` Live Server Deployment
+    - `[x]` SSH into Digital Ocean droplet.
+    - `[x]` Pull latest changes from GitHub.
+    - `[x]` Rebuild and restart Docker containers (`docker-compose up -d --build`).
+- `[x]` Verification
+    - `[x]` Check Docker logs.
+    - `[x]` Verify website is running correctly.

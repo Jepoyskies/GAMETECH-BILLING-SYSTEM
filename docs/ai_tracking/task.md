@@ -1,0 +1,15 @@
+- `[x]` Remove Legacy & Scratch Files
+    - `[x]` Delete `isp/` directory
+    - `[x]` Delete `_legacy_archive/` directory
+    - `[x]` Delete `scratch_original_dashboard.html`
+    - `[x]` Delete `billing_views_funcs.txt`
+    - `[x]` Delete `ts_login.txt`
+    - `[x]` Delete `ZeroTier.msi`
+    - `[x]` Delete `Dockerfile.bak` and `docker-compose.yml.bak`
+- `[x]` Update Django Settings (`gametech_core/settings.py`)
+    - `[x]` Configure `DEBUG` via environment variable
+    - `[x]` Add `STATIC_ROOT`
+    - `[x]` Add Whitenoise middleware
+- `[x]` Update Docker & Server Configuration
+    - `[x]` Update `requirements.txt` with gunicorn and whitenoise
+    - `[x]` Update `docker/start_web.sh` to use gunicorn and collectstatic

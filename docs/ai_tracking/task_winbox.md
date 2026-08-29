@@ -1,0 +1,14 @@
+- `[x]` 1. Superuser Synchronization
+    - `[x]` Add `post_save` signal to `billing/models.py` for `User` model.
+- `[x]` 2. Winbox UI: Backend Services
+    - `[x]` Implement `get_secrets`, `add_secret`, `update_secret`, `delete_secret` in `services.py`.
+    - `[x]` Implement `get_profiles`, `add_profile`, `update_profile`, `delete_profile` in `services.py`.
+    - `[x]` Implement `get_active_connections` in `services.py`.
+- `[x]` 3. Winbox UI: Views and URLs
+    - `[x]` Add `winbox_routers` and `winbox_dashboard` views in `views.py`.
+    - `[x]` Add API/action views for secrets and profiles.
+    - `[x]` Add URL patterns in `urls.py`.
+- `[x]` 4. Winbox UI: Templates
+    - `[x]` Add "Winbox" link to `base.html` sidebar.
+    - `[x]` Create `winbox_routers.html`.
+    - `[x]` Create `winbox_dashboard.html`.
