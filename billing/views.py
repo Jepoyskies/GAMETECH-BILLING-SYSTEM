@@ -2338,11 +2338,12 @@ def pay_customer_view(request, username):
                     comment_text = f"paid {paid_str} exp {expiry_str} . {plan_name} . {payment_method} . {admin_name} . {reason}"
                     api.set_pppoe_comment(customer.pppoe_username, comment_text)
                     
-                    if was_suspended and customer.plan and customer.plan.name:
+                    if was_suspended:
                         # 1. Enable the user (Removes bridge drop and enables secret)
                         api.enable_pppoe_user(customer.pppoe_username)
-                        # 2. Update the profile back to their plan
-                        api.set_user_pppoe_profile(customer.pppoe_username, customer.plan.name)
+                        # 2. Update the profile back to their plan, or default if none
+                        target_profile = customer.plan.name if customer.plan and customer.plan.name else "default"
+                        api.set_user_pppoe_profile(customer.pppoe_username, target_profile)
                         # 3. Kick them so they reconnect and get the new profile
                         api.kick_active_user(customer.pppoe_username)
                 except Exception as e:
