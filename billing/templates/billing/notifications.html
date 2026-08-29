@@ -1,219 +1,183 @@
 {% extends 'billing/base.html' %}
 {% load static %}
 
-{% block title %}Notifications | Gametech Unli Fiber{% endblock %}
+{% block title %}Notification Center | Gametech{% endblock %}
 
 {% block extra_css %}
 <style>
-    .notifications-header {
-        background: linear-gradient(135deg, #2151A1 0%, #19407A 100%);
-        color: white;
-        padding: 2.5rem 2rem;
-        border-radius: 1rem;
-        box-shadow: 0 10px 30px rgba(33, 81, 161, 0.15);
-        margin-bottom: 2rem;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .notifications-header::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        left: 0;
-        background: url('{% static "assets/images/pattern-bg.png" %}') opacity(0.05);
-        pointer-events: none;
-    }
-
-    .notif-card {
-        border: none;
-        border-radius: 1rem;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-        transition: transform 0.2s, box-shadow 0.2s;
-        margin-bottom: 1rem;
-        background: var(--bs-body-bg);
-        overflow: hidden;
-        position: relative;
-    }
-    
-    .dark-mode .notif-card {
-        background: #1e293b;
-        border: 1px solid rgba(255,255,255,0.05);
-    }
-    
-    .notif-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.08);
-    }
-
-    .notif-unread {
-        border-left: 4px solid #0d6efd;
-        background-color: rgba(13, 110, 253, 0.03);
-    }
-    
-    .dark-mode .notif-unread {
-        background-color: rgba(13, 110, 253, 0.1);
-    }
-
-    .notif-icon-wrapper {
-        width: 48px;
-        height: 48px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        font-size: 1.25rem;
-    }
-
-    .filter-btn {
-        border-radius: 2rem;
-        padding: 0.5rem 1.25rem;
-        font-weight: 500;
-        transition: all 0.3s ease;
-    }
-    
-    .filter-btn.active {
-        background-color: #2151A1;
-        color: white;
-        box-shadow: 0 4px 10px rgba(33, 81, 161, 0.3);
-    }
-    
-    .dark-mode .filter-btn {
-        background: #334155;
-        color: #e2e8f0;
-        border: none;
-    }
-    .dark-mode .filter-btn.active {
-        background: #3b82f6;
-        color: white;
-    }
-
-    .empty-state {
-        padding: 4rem 2rem;
-        text-align: center;
-        color: #64748b;
-    }
-    
-    .empty-state-icon {
-        font-size: 4rem;
-        color: #cbd5e1;
-        margin-bottom: 1.5rem;
-    }
+.notif-item {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+.dark-mode .notif-item {
+    background: #1e293b;
+    border-color: rgba(255,255,255,0.06);
+}
+.notif-item:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.09); }
+.notif-item.unread { border-left: 4px solid #2563eb; }
+.notif-item.unread { background: linear-gradient(to right, rgba(37,99,235,0.03), white); }
+.dark-mode .notif-item.unread { background: linear-gradient(to right, rgba(37,99,235,0.08), #1e293b); }
+.notif-icon-box {
+    width: 52px; height: 52px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+.filter-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 16px; border-radius: 30px;
+    font-size: 0.82rem; font-weight: 600;
+    border: 1px solid rgba(0,0,0,0.1);
+    color: #475569; background: white;
+    text-decoration: none; transition: all 0.2s;
+}
+.filter-pill:hover { background: #f1f5f9; color: #1e293b; }
+.filter-pill.active { background: #2563eb; color: white; border-color: #2563eb; box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+.dark-mode .filter-pill { background: #1e293b; border-color: rgba(255,255,255,0.1); color: #94a3b8; }
+.dark-mode .filter-pill:hover { background: #334155; color: #e2e8f0; }
+.dark-mode .filter-pill.active { background: #2563eb; color: white; border-color: #2563eb; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-2">
-    <!-- Header Section -->
-    <div class="notifications-header d-flex justify-content-between align-items-center flex-wrap gap-3">
-        <div>
-            <h2 class="mb-1 fw-bold"><i class="fas fa-bell me-2 text-warning"></i> Notifications Center</h2>
-            <p class="mb-0 text-white-50">Manage and view all your system alerts and updates.</p>
+<div class="container-fluid py-4 px-3 px-md-4">
+
+    <!-- Page Hero -->
+    <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in">
+        <div class="d-flex align-items-center">
+            <div class="hero-icon"><i class="fas fa-bell"></i></div>
+            <div>
+                <div class="hero-title">Notification Center</div>
+                <div class="hero-sub">Stay updated on payments, network activity, and system alerts</div>
+            </div>
         </div>
-        <div>
-            <button class="btn btn-light btn-sm rounded-pill px-3 fw-bold text-primary shadow-sm" id="pageMarkAllReadBtn">
-                <i class="fas fa-check-double me-2"></i>Mark all as read
-            </button>
-        </div>
+        <button class="btn-premium" id="pageMarkAllReadBtn"
+                style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.3); backdrop-filter:blur(8px);">
+            <i class="fas fa-check-double"></i> Mark all as read
+        </button>
     </div>
 
-    <!-- Filters -->
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <!-- Filter Bar -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 animate-fade-in animate-delay-1">
         <div class="d-flex gap-2 flex-wrap">
-            <a href="?type=all&status={{ current_status }}" class="btn btn-outline-secondary filter-btn {% if current_type == 'all' %}active{% endif %}">All Types</a>
-            <a href="?type=payment&status={{ current_status }}" class="btn btn-outline-secondary filter-btn {% if current_type == 'payment' %}active{% endif %}">Payments</a>
-            <a href="?type=network&status={{ current_status }}" class="btn btn-outline-secondary filter-btn {% if current_type == 'network' %}active{% endif %}">Network Ops</a>
-            <a href="?type=cignal&status={{ current_status }}" class="btn btn-outline-secondary filter-btn {% if current_type == 'cignal' %}active{% endif %}">Cignal Play</a>
+            <a href="?type=all&status={{ current_status }}" class="filter-pill {% if current_type == 'all' %}active{% endif %}">
+                <i class="fas fa-th-large"></i> All Types
+            </a>
+            <a href="?type=payment&status={{ current_status }}" class="filter-pill {% if current_type == 'payment' %}active{% endif %}">
+                <i class="fas fa-money-bill-wave"></i> Payments
+            </a>
+            <a href="?type=network&status={{ current_status }}" class="filter-pill {% if current_type == 'network' %}active{% endif %}">
+                <i class="fas fa-network-wired"></i> Network Ops
+            </a>
+            <a href="?type=cignal&status={{ current_status }}" class="filter-pill {% if current_type == 'cignal' %}active{% endif %}">
+                <i class="fas fa-satellite-dish"></i> Cignal Play
+            </a>
         </div>
-        
-        <div class="btn-group shadow-sm" role="group">
-            <a href="?type={{ current_type }}&status=all" class="btn btn-outline-secondary {% if current_status == 'all' %}active{% endif %}">All</a>
-            <a href="?type={{ current_type }}&status=unread" class="btn btn-outline-secondary {% if current_status == 'unread' %}active{% endif %}">Unread</a>
+        <div class="d-flex gap-2">
+            <a href="?type={{ current_type }}&status=all" class="filter-pill {% if current_status == 'all' %}active{% endif %}">All</a>
+            <a href="?type={{ current_type }}&status=unread" class="filter-pill {% if current_status == 'unread' %}active{% endif %}">
+                <i class="fas fa-dot-circle" style="font-size:0.6rem;"></i> Unread
+            </a>
         </div>
     </div>
 
     <!-- Notifications List -->
-    <div class="row">
-        <div class="col-12">
-            {% if page_obj %}
-                {% for notif in page_obj %}
-                    <div class="card notif-card {% if not notif.is_read %}notif-unread{% endif %}" data-id="{{ notif.id }}">
-                        <div class="card-body p-4 d-flex align-items-start gap-4">
-                            <!-- Icon -->
-                            <div class="notif-icon-wrapper flex-shrink-0 
-                                {% if notif.notification_type == 'payment' %}bg-success-subtle text-success
-                                {% elif notif.notification_type == 'network' or notif.notification_type == 'cignal' %}bg-danger-subtle text-danger
-                                {% else %}bg-primary-subtle text-primary{% endif %}">
-                                <i class="fas 
-                                    {% if notif.notification_type == 'payment' %}fa-check-circle
-                                    {% elif notif.notification_type == 'network' or notif.notification_type == 'cignal' %}fa-exclamation-triangle
-                                    {% else %}fa-info-circle{% endif %}">
-                                </i>
-                            </div>
+    <div class="animate-fade-in animate-delay-2">
+        {% if page_obj %}
+            {% for notif in page_obj %}
+            <div class="notif-item {% if not notif.is_read %}unread{% endif %}" data-id="{{ notif.id }}">
+                <div class="p-4 d-flex align-items-start gap-3">
 
-                            <!-- Content -->
-                            <div class="flex-grow-1">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <h5 class="mb-0 fw-bold" style="color: var(--bs-heading-color);">{{ notif.title }}</h5>
-                                    <small class="text-muted fw-medium"><i class="far fa-clock me-1"></i>{{ notif.created_at|date:"M d, Y h:i A" }} ({{ notif.created_at|timesince }} ago)</small>
-                                </div>
-                                <p class="mb-2 text-muted" style="font-size: 0.95rem;">{{ notif.message }}</p>
-                                
-                                <div class="d-flex align-items-center gap-3 mt-3">
-                                    {% if notif.link %}
-                                    <a href="{{ notif.link }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
-                                        View Details
-                                    </a>
-                                    {% endif %}
-                                    
-                                    {% if not notif.is_read %}
-                                    <button class="btn btn-sm btn-light rounded-pill text-primary fw-medium mark-read-btn" data-id="{{ notif.id }}">
-                                        <i class="fas fa-check me-1"></i>Mark as Read
-                                    </button>
-                                    {% endif %}
-                                </div>
+                    <!-- Icon Box -->
+                    <div class="notif-icon-box flex-shrink-0
+                        {% if notif.notification_type == 'payment' %}
+                            " style="background:#f0fdf4; color:#16a34a;">
+                            <i class="fas fa-check-circle"></i>
+                        {% elif notif.notification_type == 'network' %}
+                            " style="background:#fef2f2; color:#dc2626;">
+                            <i class="fas fa-network-wired"></i>
+                        {% elif notif.notification_type == 'cignal' %}
+                            " style="background:#fdf4ff; color:#7c3aed;">
+                            <i class="fas fa-satellite-dish"></i>
+                        {% else %}
+                            " style="background:#eff6ff; color:#2563eb;">
+                            <i class="fas fa-info-circle"></i>
+                        {% endif %}
+                    </div>
+
+                    <!-- Content -->
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap mb-1">
+                            <h6 class="mb-0 fw-bold" style="font-size:0.95rem;">{{ notif.title }}</h6>
+                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                {% if not notif.is_read %}
+                                <span class="pill pill-pending" style="font-size:0.7rem; padding:2px 10px;">New</span>
+                                {% endif %}
+                                <small class="text-muted" style="font-size:0.75rem; white-space:nowrap;">
+                                    <i class="far fa-clock me-1"></i>{{ notif.created_at|date:"M d, Y h:i A" }}
+                                </small>
                             </div>
-                            
-                            {% if not notif.is_read %}
-                            <div class="position-absolute top-0 end-0 mt-3 me-3">
-                                <span class="badge bg-primary rounded-pill p-2 shadow-sm">New</span>
-                            </div>
+                        </div>
+                        <p class="text-muted mb-3" style="font-size:0.88rem; line-height:1.5;">{{ notif.message }}</p>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            {% if notif.link %}
+                            <a href="{{ notif.link }}" class="btn-premium btn-p-primary" style="padding:6px 14px; font-size:0.8rem;">
+                                <i class="fas fa-arrow-right"></i> View Details
+                            </a>
                             {% endif %}
+                            {% if not notif.is_read %}
+                            <button class="btn-premium btn-p-ghost mark-read-btn" data-id="{{ notif.id }}" style="padding:6px 14px; font-size:0.8rem;">
+                                <i class="fas fa-check"></i> Mark as Read
+                            </button>
+                            {% endif %}
+                            <!-- Type tag -->
+                            <span class="ms-auto text-muted" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.5px;">
+                                {{ notif.notification_type|title }}
+                            </span>
                         </div>
                     </div>
-                {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
 
-                <!-- Pagination -->
-                <nav class="mt-4 mb-5 d-flex justify-content-center">
-                    <ul class="pagination pagination-lg">
+            <!-- Pagination -->
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <span class="text-muted small">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
                         {% if page_obj.has_previous %}
-                            <li class="page-item"><a class="page-link shadow-sm" href="?page=1&type={{ current_type }}&status={{ current_status }}">&laquo; First</a></li>
-                            <li class="page-item"><a class="page-link shadow-sm" href="?page={{ page_obj.previous_page_number }}&type={{ current_type }}&status={{ current_status }}">Previous</a></li>
+                            <li class="page-item"><a class="page-link" href="?page=1&type={{ current_type }}&status={{ current_status }}">«</a></li>
+                            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&type={{ current_type }}&status={{ current_status }}">Prev</a></li>
                         {% endif %}
-
-                        <li class="page-item active"><span class="page-link shadow-sm">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
-
+                        <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
                         {% if page_obj.has_next %}
-                            <li class="page-item"><a class="page-link shadow-sm" href="?page={{ page_obj.next_page_number }}&type={{ current_type }}&status={{ current_status }}">Next</a></li>
-                            <li class="page-item"><a class="page-link shadow-sm" href="?page={{ page_obj.paginator.num_pages }}&type={{ current_type }}&status={{ current_status }}">Last &raquo;</a></li>
+                            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&type={{ current_type }}&status={{ current_status }}">Next</a></li>
+                            <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&type={{ current_type }}&status={{ current_status }}">»</a></li>
                         {% endif %}
                     </ul>
                 </nav>
+            </div>
 
-            {% else %}
-                <!-- Empty State -->
-                <div class="card notif-card">
-                    <div class="card-body empty-state">
-                        <i class="fas fa-box-open empty-state-icon"></i>
-                        <h4 class="fw-bold">No Notifications Found</h4>
-                        <p class="text-muted">You're all caught up! There are no notifications matching your current filters.</p>
-                        <a href="{% url 'notifications_list' %}" class="btn btn-primary rounded-pill px-4 mt-3">Clear Filters</a>
-                    </div>
+        {% else %}
+            <!-- Premium Empty State -->
+            <div class="dashboard-card" style="border-radius:20px; overflow:hidden;">
+                <div class="empty-state py-5">
+                    <div class="es-icon"><i class="fas fa-bell-slash"></i></div>
+                    <h6>No Notifications Found</h6>
+                    <p>You're all caught up! There are no notifications matching your current filters.</p>
+                    <a href="{% url 'notifications_list' %}" class="btn-premium btn-p-primary mt-4">
+                        <i class="fas fa-times"></i> Clear Filters
+                    </a>
                 </div>
-            {% endif %}
-        </div>
+            </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
@@ -222,7 +186,8 @@
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     function getCsrfToken() {
-        return document.querySelector('[name=csrfmiddlewaretoken]') ? document.querySelector('[name=csrfmiddlewaretoken]').value : '';
+        const el = document.querySelector('[name=csrfmiddlewaretoken]');
+        return el ? el.value : '';
     }
 
     // Mark single notification as read
@@ -230,20 +195,16 @@ document.addEventListener("DOMContentLoaded", function() {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
             const notifId = this.getAttribute('data-id');
-            const card = document.querySelector(`.notif-card[data-id="${notifId}"]`);
-            
+            const card = document.querySelector(`.notif-item[data-id="${notifId}"]`);
             fetch(`/api/notifications/mark-read/${notifId}/`, {
                 method: 'POST',
                 headers: {'X-CSRFToken': getCsrfToken()}
             }).then(res => res.json()).then(data => {
                 if(data.status === 'success') {
-                    // Visually update the card
-                    card.classList.remove('notif-unread');
-                    this.remove(); // Remove the mark as read button
-                    const badge = card.querySelector('.badge.bg-primary');
-                    if (badge) badge.remove();
-                    
-                    // Trigger custom event so base.html can update its counter if needed
+                    card.classList.remove('unread');
+                    this.remove();
+                    const badge = card.querySelector('.pill-pending');
+                    if(badge) badge.remove();
                     window.dispatchEvent(new Event('notificationsUpdated'));
                 }
             });
@@ -256,21 +217,21 @@ document.addEventListener("DOMContentLoaded", function() {
         pageMarkAllReadBtn.addEventListener('click', function() {
             Swal.fire({
                 title: 'Mark all as read?',
-                text: "This will mark all notifications as read.",
+                text: "This will mark all your notifications as read.",
                 icon: 'question',
                 showCancelButton: true,
-                confirmButtonColor: '#2151A1',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'Yes, mark all'
+                confirmButtonColor: '#2563eb',
+                cancelButtonColor: '#94a3b8',
+                confirmButtonText: '<i class="fas fa-check-double me-1"></i>Yes, mark all',
+                cancelButtonText: 'Cancel',
+                borderRadius: '20px',
             }).then((result) => {
-                if (result.isConfirmed) {
+                if(result.isConfirmed) {
                     fetch('/api/notifications/mark-all-read/', {
                         method: 'POST',
                         headers: {'X-CSRFToken': getCsrfToken()}
                     }).then(res => res.json()).then(data => {
-                        if(data.status === 'success') {
-                            window.location.reload();
-                        }
+                        if(data.status === 'success') { window.location.reload(); }
                     });
                 }
             });

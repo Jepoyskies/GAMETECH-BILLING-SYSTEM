@@ -1,64 +1,86 @@
 {% extends 'billing/base.html' %}
 {% load static %}
 
-{% block title %}Payment Logs{% endblock %}
+{% block title %}Payment Logs | Gametech{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-3 px-3 px-md-4">
-    <div class="live-header-row mb-4">
-        <h2 class="live-title">
-            <div class="kpi-icon icon-blue" style="width: 48px; height: 48px; font-size: 1.4rem; margin-right: 0;">
-                <i class="fas fa-file-invoice-dollar"></i>
-            </div>
-            Payment Logs
-        </h2>
-    </div>
+<div class="container-fluid py-4 px-3 px-md-4">
 
-    <!-- SUMMARY CARDS -->
-    <div class="row g-4 mb-4">
-        <div class="col-12 col-md-6 col-lg-3">
-            <div class="mini-card bg-grand">
-                <div class="label">Grand Total</div>
-                <div class="value">₱{{ grand_total|floatformat:2 }}</div>
+    <!-- Page Hero -->
+    <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in" style="background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%);">
+        <div class="d-flex align-items-center">
+            <div class="hero-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+            <div>
+                <div class="hero-title">Payment Logs</div>
+                <div class="hero-sub">Full history of all subscriber billing transactions</div>
             </div>
         </div>
-        <div class="col-12 col-md-6 col-lg-3">
-            <div class="mini-card bg-range">
-                <div class="label">Sales (Filtered Range)</div>
-                <div class="value">₱{{ filtered_range_total|floatformat:2 }}</div>
-            </div>
-        </div>
-        <div class="col-12 col-md-6 col-lg-3">
-            <div class="mini-card bg-today">
-                <div class="label">Today</div>
-                <div class="value">₱{{ total_today|floatformat:2 }}</div>
-            </div>
-        </div>
-        <div class="col-12 col-md-6 col-lg-3">
-            <div class="mini-card">
-                <div class="label">Yesterday</div>
-                <div class="value">₱{{ total_yesterday|floatformat:2 }}</div>
-            </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span class="hero-badge"><i class="fas fa-list me-1"></i> {{ page_obj.paginator.count }} records</span>
         </div>
     </div>
 
-    <!-- FILTERS -->
-    <div class="filter-glass">
+    <!-- Summary KPI Cards -->
+    <div class="row g-3 mb-4 animate-fade-in animate-delay-1">
+        <div class="col-6 col-md-3">
+            <div class="kpi-card h-100 bg-mesh-warning text-white border-0">
+                <div class="kpi-icon bg-white bg-opacity-25 shadow-sm"><i class="fas fa-coins text-white"></i></div>
+                <div>
+                    <div class="kpi-label text-white text-opacity-75">Grand Total</div>
+                    <div class="kpi-value text-white">₱{{ grand_total|floatformat:2 }}</div>
+                    <div class="kpi-sub text-white text-opacity-75">All time</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="kpi-card h-100 bg-mesh-success text-white border-0">
+                <div class="kpi-icon bg-white bg-opacity-25 shadow-sm"><i class="fas fa-calendar-alt text-white"></i></div>
+                <div>
+                    <div class="kpi-label text-white text-opacity-75">Filtered Range</div>
+                    <div class="kpi-value text-white">₱{{ filtered_range_total|floatformat:2 }}</div>
+                    <div class="kpi-sub text-white text-opacity-75">Selected period</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="kpi-card h-100 bg-mesh-primary text-white border-0">
+                <div class="kpi-icon bg-white bg-opacity-25 shadow-sm"><i class="fas fa-calendar-day text-white"></i></div>
+                <div>
+                    <div class="kpi-label text-white text-opacity-75">Today</div>
+                    <div class="kpi-value text-white">₱{{ total_today|floatformat:2 }}</div>
+                    <div class="kpi-sub text-white text-opacity-75">Today's collections</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="kpi-card h-100">
+                <div class="kpi-icon icon-gray"><i class="fas fa-calendar-minus"></i></div>
+                <div>
+                    <div class="kpi-label">Yesterday</div>
+                    <div class="kpi-value">₱{{ total_yesterday|floatformat:2 }}</div>
+                    <div class="kpi-sub">Previous day</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Glass Panel -->
+    <div class="filter-glass animate-fade-in animate-delay-2">
         <form method="get" class="row g-3 align-items-end">
             <div class="col-md-2">
-                <label class="form-label fw-bold text-muted small">From Date</label>
+                <label class="filter-label"><i class="far fa-calendar me-1"></i> From Date</label>
                 <input type="date" name="from" value="{{ filter_from }}" class="form-control">
             </div>
             <div class="col-md-2">
-                <label class="form-label fw-bold text-muted small">To Date</label>
+                <label class="filter-label"><i class="far fa-calendar me-1"></i> To Date</label>
                 <input type="date" name="to" value="{{ filter_to }}" class="form-control">
             </div>
             <div class="col-md-3">
-                <label class="form-label fw-bold text-muted small">Search (User/Ref)</label>
+                <label class="filter-label"><i class="fas fa-search me-1"></i> Search</label>
                 <input type="text" name="search" value="{{ filter_search }}" class="form-control" placeholder="Username or reference no...">
             </div>
             <div class="col-md-2">
-                <label class="form-label fw-bold text-muted small">Payment Method</label>
+                <label class="filter-label"><i class="fas fa-wallet me-1"></i> Payment Method</label>
                 <select name="method" class="form-select">
                     <option value="">All Methods</option>
                     {% for m in methods %}
@@ -67,75 +89,106 @@
                 </select>
             </div>
             <div class="col-md-3 d-flex gap-2">
-                <button type="submit" class="btn btn-primary w-100 rounded-pill"><i class="fas fa-filter me-1"></i> Filter</button>
-                <a href="{% url 'payment_logs' %}" class="btn btn-outline-secondary w-100 rounded-pill">Clear</a>
+                <button type="submit" class="btn-premium btn-p-success w-100 justify-content-center">
+                    <i class="fas fa-filter"></i> Filter
+                </button>
+                <a href="{% url 'payment_logs' %}" class="btn-premium btn-p-ghost w-100 justify-content-center">Clear</a>
             </div>
         </form>
     </div>
 
-    <!-- CHART -->
-    <div class="chart-container">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="mb-0 fw-bold">Last 14 Days Sales</h6>
+    <!-- Sales Chart Card -->
+    <div class="dashboard-card mb-4 animate-fade-in animate-delay-2">
+        <div class="section-header section-header-green">
+            <h6><i class="fas fa-chart-line sh-icon"></i> Last 14 Days — Sales Trend</h6>
         </div>
-        <canvas id="salesChart"></canvas>
+        <div class="chart-container">
+            <canvas id="salesChart"></canvas>
+        </div>
     </div>
 
-    <!-- TABLE -->
-    <div class="table-wrapper shadow-sm">
-        <div class="p-3 border-bottom d-flex justify-content-between align-items-center" style="background: var(--card-bg);">
-            <h5 class="mb-0 fw-bold">Recent Payments</h5>
-            <span class="text-muted small">{{ page_obj.paginator.count }} records found</span>
+    <!-- Payment Table Card -->
+    <div class="dashboard-card animate-fade-in animate-delay-3" style="overflow:hidden;">
+        <div class="section-header section-header-green">
+            <h6><i class="fas fa-receipt sh-icon"></i> Payment Records</h6>
+            <small>{{ page_obj.paginator.count }} records found</small>
         </div>
         <div class="table-responsive">
-            <table class="table table-hover align-middle w-100">
-                <thead style="background: rgba(0,0,0,0.03);">
+            <table class="table table-premium table-hover align-middle mb-0">
+                <thead>
                     <tr>
-                        <th class="py-3 px-4 border-bottom">Date Paid</th>
-                        <th class="py-3 px-4 border-bottom">Username</th>
-                        <th class="py-3 px-4 border-bottom">Amount</th>
-                        <th class="py-3 px-4 border-bottom">Method</th>
-                        <th class="py-3 px-4 border-bottom">Reference</th>
-                        <th class="py-3 px-4 border-bottom">Plan</th>
-                        <th class="py-3 px-4 border-bottom">New Expiry</th>
-                        <th class="py-3 px-4 border-bottom">Adjusted By</th>
-                        {% if request.user.role == 'Admin' %}
-                        <th class="py-3 px-4 border-bottom">Actions</th>
-                        {% endif %}
+                        <th>Date Paid</th>
+                        <th>Username</th>
+                        <th>Amount</th>
+                        <th>Method</th>
+                        <th>Reference</th>
+                        <th>Plan</th>
+                        <th>New Expiry</th>
+                        <th>Adjusted By</th>
+                        {% if request.user.role == 'Admin' %}<th>Actions</th>{% endif %}
                     </tr>
                 </thead>
                 <tbody>
                     {% for p in page_obj %}
                     <tr>
-                        <td class="px-4 py-3 text-muted">{{ p.created_at|date:"M d, Y H:i" }}</td>
-                        <td class="px-4 py-3 fw-bold text-primary">{{ p.username }}</td>
-                        <td class="px-4 py-3 fw-bold text-success">₱{{ p.amount|floatformat:2 }}</td>
-                        <td class="px-4 py-3">
+                        <td style="white-space:nowrap;">
+                            <div class="fw-semibold" style="font-size:0.85rem;">{{ p.created_at|date:"M d, Y" }}</div>
+                            <div class="text-muted" style="font-size:0.75rem;">{{ p.created_at|date:"h:i A" }}</div>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="av av-sm av-blue">{{ p.username|slice:":1"|upper }}</div>
+                                <span class="fw-bold" style="color:#2563eb; font-size:0.88rem;">{{ p.username }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="fw-bold" style="color:#059669; font-size:1rem;">₱{{ p.amount|floatformat:2 }}</span>
+                        </td>
+                        <td>
                             {% if p.payment_method|lower == 'gcash' %}
-                                <span class="badge-payment badge-gcash"><i class="fas fa-wallet"></i> GCash</span>
+                                <span class="pill" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">
+                                    <i class="fas fa-wallet"></i> GCash
+                                </span>
                             {% elif p.payment_method|lower == 'maya' or p.payment_method|lower == 'paymaya' %}
-                                <span class="badge-payment badge-maya"><i class="fas fa-wallet"></i> Maya</span>
+                                <span class="pill" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;">
+                                    <i class="fas fa-wallet"></i> Maya
+                                </span>
                             {% elif p.payment_method|lower == 'cash' %}
-                                <span class="badge-payment badge-cash"><i class="fas fa-money-bill-wave"></i> Cash</span>
+                                <span class="pill" style="background:#fffbeb;color:#92400e;border:1px solid #fde68a;">
+                                    <i class="fas fa-money-bill-wave"></i> Cash
+                                </span>
                             {% else %}
-                                <span class="badge-payment" style="background: rgba(148,163,184,0.1); color: #64748b; border: 1px solid rgba(148,163,184,0.3);"><i class="fas fa-credit-card"></i> {{ p.payment_method|title }}</span>
+                                <span class="pill pill-inactive">
+                                    <i class="fas fa-credit-card"></i> {{ p.payment_method|title }}
+                                </span>
                             {% endif %}
                         </td>
-                        <td class="px-4 py-3"><code class="text-muted">{{ p.reference_no|default:"-" }}</code></td>
-                        <td class="px-4 py-3">{{ p.plan_name }}</td>
-                        <td class="px-4 py-3">{{ p.expires_at|date:"M d, Y" }}</td>
-                        <td class="px-4 py-3">
+                        <td>
+                            <code style="background:rgba(0,0,0,0.04); padding:3px 8px; border-radius:6px; font-size:0.8rem; color:#475569;">
+                                {{ p.reference_no|default:"—" }}
+                            </code>
+                        </td>
+                        <td>
+                            <span class="fw-semibold" style="font-size:0.85rem;">{{ p.plan_name }}</span>
+                        </td>
+                        <td style="white-space:nowrap;">
+                            <span class="fw-semibold" style="font-size:0.85rem;">{{ p.expires_at|date:"M d, Y" }}</span>
+                        </td>
+                        <td>
                             {% if p.adjusted_by == 'Customer Portal' %}
-                                <span class="badge bg-success" style="font-size: 0.8rem; padding: 6px 10px; border-radius: 6px;"><i class="fas fa-globe me-1"></i> Portal</span>
+                                <span class="pill pill-active"><i class="fas fa-globe"></i> Portal</span>
                             {% else %}
-                                <span class="badge bg-info text-dark" style="font-size: 0.8rem; padding: 6px 10px; border-radius: 6px;"><i class="fas fa-user-shield me-1"></i> {{ p.adjusted_by }}</span>
+                                <span class="pill pill-pending"><i class="fas fa-user-shield"></i> {{ p.adjusted_by }}</span>
                             {% endif %}
                         </td>
                         {% if request.user.role == 'Admin' %}
                         <td>
                             <div class="d-flex gap-1">
-                                <a href="{% url 'edit_payment_log' p.id %}" class="btn btn-sm btn-outline-primary" title="Edit Payment Log"><i class="fas fa-edit"></i></a>
-                                <button type="button" class="btn btn-sm btn-outline-warning" title="Transfer Payment" data-bs-toggle="modal" data-bs-target="#transferModal{{ p.id }}">
+                                <a href="{% url 'edit_payment_log' p.id %}" class="btn-premium btn-p-ghost" style="padding:6px 10px; font-size:0.8rem;" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" class="btn-premium btn-p-warning" style="padding:6px 10px; font-size:0.8rem;" title="Transfer Payment"
+                                        data-bs-toggle="modal" data-bs-target="#transferModal{{ p.id }}">
                                     <i class="fas fa-exchange-alt"></i>
                                 </button>
                             </div>
@@ -144,71 +197,85 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="9" class="text-center py-4 text-muted">No payments found.</td>
+                        <td colspan="9">
+                            <div class="empty-state">
+                                <div class="es-icon"><i class="fas fa-receipt"></i></div>
+                                <h6>No payments found</h6>
+                                <p>Try adjusting your date range or search term to find payment records.</p>
+                            </div>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-    </div>
-    
-    {% for p in page_obj %}
-    <!-- Transfer Modal for payment {{ p.id }} -->
-    <div class="modal fade text-start" id="transferModal{{ p.id }}" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content" style="border-radius:20px; border:none;">
-                <div class="modal-header border-bottom-0 pb-0">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-exchange-alt text-warning me-2"></i> Transfer Payment</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form action="{% url 'revert_transfer_payment' p.id %}" method="post">
-                    {% csrf_token %}
-                    <div class="modal-body py-4">
-                        <div class="alert alert-warning border-0 rounded-3 shadow-sm mb-4">
-                            <i class="fas fa-exclamation-triangle me-2"></i> This will revert the payment from <strong>{{ p.customer.full_name }}</strong> and apply it to a new customer. The previous customer's expiration and balance will be recalculated.
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Select Correct Customer</label>
-                            <select class="form-select" name="new_customer_id" required>
-                                <option value="">-- Choose Customer --</option>
-                                {% for c in all_customers %}
-                                    <option value="{{ c.id }}">{{ c.full_name }} ({{ c.pppoe_username }})</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-                    <div class="modal-footer border-top-0 pt-0">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="border-radius:12px;">Cancel</button>
-                        <button type="submit" class="btn btn-warning" style="border-radius:12px; color: #fff;"><i class="fas fa-exchange-alt"></i> Confirm Transfer</button>
-                    </div>
-                </form>
-            </div>
+        <div class="card-footer-actions">
+            <div class="text-muted small">Page <strong>{{ page_obj.number }}</strong> of <strong>{{ page_obj.paginator.num_pages }}</strong></div>
+            {% include 'billing/partials/pagination.html' with page_obj=page_obj query_params=query_params %}
         </div>
     </div>
-    {% endfor %}
-
-    {% include 'billing/partials/pagination.html' with page_obj=page_obj query_params=query_params %}
 
 </div>
 
-<!-- CHART.JS -->
+<!-- Transfer Modals -->
+{% for p in page_obj %}
+<div class="modal fade text-start" id="transferModal{{ p.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:20px; overflow:hidden;">
+            <div class="modal-header border-0 pb-2" style="background:linear-gradient(135deg,#78350f,#f59e0b);">
+                <div>
+                    <h5 class="modal-title fw-bold text-white mb-0">
+                        <i class="fas fa-exchange-alt me-2"></i>Transfer Payment
+                    </h5>
+                    <small class="text-white opacity-75">Revert &amp; reassign this payment to another account</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{% url 'revert_transfer_payment' p.id %}" method="post">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="alert border-0 rounded-3 mb-4" style="background:#fffbeb; color:#92400e; border-left:4px solid #f59e0b !important;">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        This will revert the payment from <strong>{{ p.customer.full_name }}</strong> and apply it to a new customer.
+                        The previous customer's expiration and balance will be recalculated.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Select Correct Customer</label>
+                        <select class="form-select" name="new_customer_id" required>
+                            <option value="">-- Choose Customer --</option>
+                            {% for c in all_customers %}
+                                <option value="{{ c.id }}">{{ c.full_name }} ({{ c.pppoe_username }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light px-4 pb-4 pt-2">
+                    <button type="button" class="btn-premium btn-p-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-premium btn-p-warning">
+                        <i class="fas fa-exchange-alt"></i> Confirm Transfer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const ctx = document.getElementById('salesChart').getContext('2d');
     const chartLabels = JSON.parse('{{ chart_labels_js|escapejs }}');
     const chartValues = JSON.parse('{{ chart_values_js|escapejs }}');
-    
     function getChartTheme() {
         const isDark = document.documentElement.classList.contains('dark-mode');
         return {
-            grid: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+            grid: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
             ticks: isDark ? '#94a3b8' : '#64748b'
         };
     }
-
     let theme = getChartTheme();
-    
     let salesChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -217,26 +284,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 label: 'Sales (₱)',
                 data: chartValues,
                 borderColor: '#10b981',
-                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                tension: 0.3,
-                pointRadius: 3,
+                backgroundColor: 'rgba(16,185,129,0.1)',
+                tension: 0.4,
+                pointRadius: 4,
                 pointBackgroundColor: '#10b981',
-                borderWidth: 2,
+                borderWidth: 2.5,
                 fill: true
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
+            plugins: { legend: { display: false } },
             scales: {
                 x: {
                     grid: { display: false },
                     ticks: { color: theme.ticks, maxRotation: 45, autoSkip: true, maxTicksLimit: 7 }
                 },
-                y: { 
+                y: {
                     beginAtZero: true,
                     grid: { color: theme.grid },
                     ticks: { color: theme.ticks }
@@ -244,12 +309,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
-
     window.addEventListener('themeChanged', () => {
-        let newTheme = getChartTheme();
-        salesChart.options.scales.x.ticks.color = newTheme.ticks;
-        salesChart.options.scales.y.ticks.color = newTheme.ticks;
-        salesChart.options.scales.y.grid.color = newTheme.grid;
+        let t = getChartTheme();
+        salesChart.options.scales.x.ticks.color = t.ticks;
+        salesChart.options.scales.y.ticks.color = t.ticks;
+        salesChart.options.scales.y.grid.color = t.grid;
         salesChart.update();
     });
 });

@@ -2,138 +2,143 @@
 {% load static %}
 {% load log_filters %}
 
+{% block title %}Audit Logs | Gametech{% endblock %}
+
 {% block content %}
-<style>
-    .table-hover tbody tr:hover {
-        background-color: #f8fafc !important;
-        transition: background-color 0.2s ease-in-out;
-    }
-    .avatar-circle {
-        width: 38px;
-        height: 38px;
-        font-weight: 600;
-        font-size: 0.85rem;
-    }
-</style>
+<div class="container-fluid py-4 px-3 px-md-4">
 
-<div class="container-fluid py-4 px-3 px-md-4" style="background-color: #f8fafc; min-height: 100vh;">
-    <!-- Header -->
-    <div class="mb-4">
-        <h2 class="mb-1 fw-bold text-dark" style="font-family: Inter, sans-serif;">Audit Logs</h2>
-        <div class="d-flex justify-content-between align-items-center">
-            <p class="text-muted small mb-0">Track system changes, user activity, and billing updates.</p>
-            <span class="text-muted small" style="font-weight: 500;">Showing {{ logs.start_index|default:"0" }}-{{ logs.end_index|default:"0" }} of {{ logs.paginator.count }} records</span>
+    <!-- Page Hero -->
+    <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in">
+        <div class="d-flex align-items-center">
+            <div class="hero-icon"><i class="fas fa-shield-alt"></i></div>
+            <div>
+                <div class="hero-title">Audit Logs</div>
+                <div class="hero-sub">Track every change, action, and activity across the system</div>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span class="hero-badge"><i class="fas fa-database me-1"></i> {{ logs.paginator.count }} total records</span>
+            <span class="hero-badge"><i class="fas fa-file-alt me-1"></i> Page {{ logs.number }} of {{ logs.paginator.num_pages }}</span>
         </div>
     </div>
 
-    <!-- Filter Bar -->
-    <div class="card mb-4 border-0 shadow-sm" style="border-radius: 10px;">
-        <div class="card-body p-4">
-            <form method="get" class="row g-3 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label fw-bold text-muted small mb-1" style="font-size: 0.75rem;">Search Logs</label>
-                    <div class="input-group input-group-sm" style="height: 38px;">
-                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-search"></i></span>
-                        <input type="text" name="search" value="{{ search }}" class="form-control border-start-0 ps-0" placeholder="Search by user or entity..." autocomplete="off">
-                    </div>
+    <!-- Glass Filter Panel -->
+    <div class="filter-glass animate-fade-in animate-delay-1">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="filter-label"><i class="fas fa-search me-1"></i> Search Logs</label>
+                <div class="input-group">
+                    <span class="input-group-text" style="background:transparent; border-right:none;">
+                        <i class="fas fa-search text-muted"></i>
+                    </span>
+                    <input type="text" name="search" value="{{ search }}" class="form-control" style="border-left:none;" placeholder="Search by user or entity..." autocomplete="off">
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label fw-bold text-muted small mb-1" style="font-size: 0.75rem;">Action Filter</label>
-                    <select name="action_filter" class="form-select form-select-sm" style="height: 38px;">
-                        <option value="">All Actions</option>
-                        <option value="ADD" {% if action_filter == 'ADD' %}selected{% endif %}>ADD</option>
-                        <option value="UPDATE" {% if action_filter == 'UPDATE' %}selected{% endif %}>UPDATE</option>
-                        <option value="DELETE" {% if action_filter == 'DELETE' %}selected{% endif %}>DELETE</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label fw-bold text-muted small mb-1" style="font-size: 0.75rem;">From Date</label>
-                    <div class="input-group input-group-sm" style="height: 38px;">
-                        <input type="date" name="date_from" value="{{ date_from }}" class="form-control border-end-0">
-                        <span class="input-group-text bg-white text-muted"><i class="far fa-calendar"></i></span>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label fw-bold text-muted small mb-1" style="font-size: 0.75rem;">To Date</label>
-                    <div class="input-group input-group-sm" style="height: 38px;">
-                        <input type="date" name="date_to" value="{{ date_to }}" class="form-control border-end-0">
-                        <span class="input-group-text bg-white text-muted"><i class="far fa-calendar"></i></span>
-                    </div>
-                </div>
-                
-                <input type="hidden" name="sort" value="{{ sort }}">
-                <input type="hidden" name="dir" value="{{ dir }}">
-                
-                <div class="col-md-2 d-flex gap-2" style="height: 38px;">
-                    <button type="submit" class="btn btn-primary w-100 d-flex align-items-center justify-content-center" style="background-color: #3b82f6; border-color: #3b82f6;"><i class="fas fa-filter me-2"></i> Filter</button>
-                    <a href="{% url 'system_logs' %}" class="btn border w-100 bg-white text-dark d-flex align-items-center justify-content-center">Reset</a>
-                </div>
-            </form>
-        </div>
+            </div>
+            <div class="col-md-2">
+                <label class="filter-label"><i class="fas fa-tag me-1"></i> Action</label>
+                <select name="action_filter" class="form-select">
+                    <option value="">All Actions</option>
+                    <option value="ADD" {% if action_filter == 'ADD' %}selected{% endif %}>ADD</option>
+                    <option value="UPDATE" {% if action_filter == 'UPDATE' %}selected{% endif %}>UPDATE</option>
+                    <option value="DELETE" {% if action_filter == 'DELETE' %}selected{% endif %}>DELETE</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="filter-label"><i class="far fa-calendar me-1"></i> From Date</label>
+                <input type="date" name="date_from" value="{{ date_from }}" class="form-control">
+            </div>
+            <div class="col-md-2">
+                <label class="filter-label"><i class="far fa-calendar me-1"></i> To Date</label>
+                <input type="date" name="date_to" value="{{ date_to }}" class="form-control">
+            </div>
+            <input type="hidden" name="sort" value="{{ sort }}">
+            <input type="hidden" name="dir" value="{{ dir }}">
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn-premium btn-p-primary w-100 justify-content-center">
+                    <i class="fas fa-filter"></i> Filter
+                </button>
+                <a href="{% url 'system_logs' %}" class="btn-premium btn-p-ghost w-100 justify-content-center">
+                    Reset
+                </a>
+            </div>
+        </form>
     </div>
 
-    <!-- Table -->
-    <div class="card border-0 shadow-sm mb-4" style="border-radius: 10px;">
-        <div class="card-body p-0 table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="bg-white text-uppercase text-muted" style="font-size: 0.7rem; letter-spacing: 0.5px;">
+    <!-- Log Table Card -->
+    <div class="dashboard-card animate-fade-in animate-delay-2" style="overflow:hidden;">
+        <!-- Section Header -->
+        <div class="section-header section-header-blue">
+            <h6><i class="fas fa-list-alt sh-icon"></i> Activity Records</h6>
+            <small>{{ logs.start_index|default:"0" }}–{{ logs.end_index|default:"0" }} of {{ logs.paginator.count }} results</small>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-premium table-hover align-middle mb-0">
+                <thead>
                     <tr>
-                        <th class="py-3 px-4 border-bottom fw-semibold">DATE & TIME</th>
-                        <th class="py-3 px-4 border-bottom fw-semibold">PERFORMED BY</th>
-                        <th class="py-3 px-4 border-bottom fw-semibold">ACTION</th>
-                        <th class="py-3 px-4 border-bottom fw-semibold">TARGET ENTITY</th>
-                        <th class="py-3 px-4 border-bottom fw-semibold" style="min-width: 350px;">CHANGE DETAILS</th>
+                        <th>Date &amp; Time</th>
+                        <th>Performed By</th>
+                        <th>Action</th>
+                        <th>Target Entity</th>
+                        <th style="min-width:340px;">Change Details</th>
                     </tr>
                 </thead>
-                <tbody class="border-top-0">
+                <tbody>
                     {% for log in logs %}
                     <tr>
-                        <td class="px-4 py-3" style="white-space: nowrap;">
-                            <div class="text-dark" style="font-weight: 500;">{{ log.changed_at|date:"M d, Y" }}</div>
-                            <div class="text-muted small mt-1">{{ log.changed_at|date:"h:i A" }}</div>
+                        <!-- Date -->
+                        <td style="white-space:nowrap;">
+                            <div class="fw-bold" style="font-size:0.88rem;">{{ log.changed_at|date:"M d, Y" }}</div>
+                            <div class="text-muted" style="font-size:0.78rem;">{{ log.changed_at|date:"h:i A" }}</div>
                         </td>
-                        <td class="px-4 py-3">
-                            <div class="d-flex align-items-center">
+
+                        <!-- Performed By -->
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
                                 {% if log.actor_role == 'Admin' %}
-                                    <div class="avatar-circle bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center me-3">{{ log.changed_by|get_initials }}</div>
+                                    <div class="av av-sm av-red">{{ log.changed_by|get_initials }}</div>
                                 {% elif log.actor_role == 'Technician' %}
-                                    <div class="avatar-circle bg-warning-subtle text-warning rounded-circle d-flex align-items-center justify-content-center me-3">{{ log.changed_by|get_initials }}</div>
+                                    <div class="av av-sm av-orange">{{ log.changed_by|get_initials }}</div>
                                 {% elif log.actor_role == 'Agent' %}
-                                    <div class="avatar-circle bg-info-subtle text-info rounded-circle d-flex align-items-center justify-content-center me-3">{{ log.changed_by|get_initials }}</div>
+                                    <div class="av av-sm av-blue">{{ log.changed_by|get_initials }}</div>
                                 {% elif log.actor_role == 'CSR' %}
-                                    <div class="avatar-circle bg-success-subtle text-success rounded-circle d-flex align-items-center justify-content-center me-3">{{ log.changed_by|get_initials }}</div>
+                                    <div class="av av-sm av-green">{{ log.changed_by|get_initials }}</div>
                                 {% else %}
-                                    <div class="avatar-circle bg-secondary-subtle text-secondary rounded-circle d-flex align-items-center justify-content-center me-3">{{ log.changed_by|get_initials }}</div>
+                                    <div class="av av-sm" style="background:#94a3b8;">{{ log.changed_by|get_initials }}</div>
                                 {% endif %}
                                 <div>
-                                    <div class="fw-bold text-dark" style="font-size: 0.9rem;">{{ log.changed_by }}</div>
-                                    <div class="mt-1" style="font-size: 0.75rem;">
+                                    <div class="fw-bold" style="font-size:0.85rem;">{{ log.changed_by }}</div>
+                                    <div style="font-size:0.72rem;">
                                         {% if log.actor_role == 'Admin' %}
-                                            <span class="text-primary"><i class="fas fa-user-shield me-1"></i>Admin</span>
+                                            <span style="color:#dc2626;"><i class="fas fa-user-shield me-1"></i>Admin</span>
                                         {% elif log.actor_role == 'Technician' %}
-                                            <span class="text-warning"><i class="fas fa-tools me-1"></i>Technician</span>
+                                            <span style="color:#ea580c;"><i class="fas fa-tools me-1"></i>Technician</span>
                                         {% elif log.actor_role == 'Agent' %}
-                                            <span class="text-info"><i class="fas fa-user-tie me-1"></i>Agent</span>
+                                            <span style="color:#3b82f6;"><i class="fas fa-user-tie me-1"></i>Agent</span>
                                         {% elif log.actor_role == 'CSR' %}
-                                            <span class="text-success"><i class="fas fa-headset me-1"></i>CSR</span>
+                                            <span style="color:#10b981;"><i class="fas fa-headset me-1"></i>CSR</span>
                                         {% else %}
-                                            <span class="text-secondary"><i class="fas fa-user me-1"></i>{{ log.actor_role|default:"User" }}</span>
+                                            <span class="text-muted"><i class="fas fa-user me-1"></i>{{ log.actor_role|default:"User" }}</span>
                                         {% endif %}
                                     </div>
                                 </div>
                             </div>
                         </td>
-                        <td class="px-4 py-3">
+
+                        <!-- Action Badge -->
+                        <td>
                             {% if log.action|lower == 'add' or log.action|lower == 'insert' or log.action|lower == 'create' %}
-                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-1 px-3 py-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">{{ log.action|upper }}</span>
+                                <span class="pill pill-active"><span class="pill-dot"></span>{{ log.action|upper }}</span>
                             {% elif log.action|lower == 'delete' or log.action|lower == 'remove' %}
-                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-1 px-3 py-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">{{ log.action|upper }}</span>
+                                <span class="pill pill-expired"><span class="pill-dot"></span>{{ log.action|upper }}</span>
                             {% else %}
-                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-1 px-3 py-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">{{ log.action|upper }}</span>
+                                <span class="pill pill-pending"><span class="pill-dot"></span>{{ log.action|upper }}</span>
                             {% endif %}
                         </td>
-                        <td class="px-4 py-3">
-                            <div class="text-muted small mb-1">
+
+                        <!-- Target Entity -->
+                        <td>
+                            <div class="text-muted" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px;">
                                 {% if log.table_name == 'SystemAdmin' %}Staff Account
                                 {% elif log.table_name == 'SubscriptionPlan' %}Subscription Plan
                                 {% elif log.table_name == 'NapBox' %}NAP Box
@@ -141,33 +146,38 @@
                                 {% else %}{{ log.table_name }}{% endif %}
                             </div>
                             {% if log.target_customer %}
-                                <div class="text-primary fw-medium" style="font-size: 0.85rem;"><i class="{{ log.target_icon }} me-1 text-primary"></i>{{ log.target_customer }}</div>
+                                <div class="fw-bold" style="font-size:0.85rem; color:#2563eb;">
+                                    <i class="{{ log.target_icon }} me-1"></i>{{ log.target_customer }}
+                                </div>
                             {% else %}
-                                <div class="text-muted fw-medium" style="font-size: 0.85rem;">-</div>
+                                <span class="text-muted">—</span>
                             {% endif %}
                         </td>
-                        <td class="px-4 py-3">
-                            {{ log|format_log_details }}
-                        </td>
+
+                        <!-- Change Details -->
+                        <td>{{ log|format_log_details }}</td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="text-center py-5 text-muted">
-                            <i class="fas fa-inbox fa-3x mb-3 text-light"></i>
-                            <h5>No logs found</h5>
-                            <p class="small">Adjust your filters to see more results.</p>
+                        <td colspan="5">
+                            <div class="empty-state">
+                                <div class="es-icon"><i class="fas fa-file-search"></i></div>
+                                <h6>No logs found</h6>
+                                <p>Try adjusting your filters or clearing the search to see more results.</p>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+
+        <!-- Pagination Footer -->
+        <div class="card-footer-actions">
+            <div class="text-muted small">Showing page <strong>{{ logs.number }}</strong> of <strong>{{ logs.paginator.num_pages }}</strong></div>
+            {% include 'billing/partials/pagination.html' with page_obj=logs query_params=query_params %}
+        </div>
     </div>
 
-    <!-- Pagination -->
-    <div class="d-flex justify-content-between align-items-center mt-2 px-2">
-        <div class="text-muted small">Showing page {{ logs.number }} of {{ logs.paginator.num_pages }}</div>
-        {% include 'billing/partials/pagination.html' with page_obj=logs query_params=query_params %}
-    </div>
 </div>
 {% endblock %}
