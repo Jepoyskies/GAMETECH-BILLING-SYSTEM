@@ -6,53 +6,87 @@
 {% block extra_css %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
-.profile-header { background:linear-gradient(135deg,#2151A1,#38bdf8); color:#fff; padding:40px; border-radius:20px; margin-bottom:24px; position:relative; overflow:hidden; box-shadow:0 10px 30px rgba(33,81,161,0.2); }
-.profile-header::after { content:''; position:absolute; right:-50px; top:-50px; width:200px; height:200px; background:radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%); border-radius:50%; }
-.profile-title { font-size:2rem; font-weight:700; margin:0; }
-.profile-subtitle { font-size:1rem; opacity:0.9; margin-top:5px; }
-.status-badge { display:inline-block; padding:6px 14px; border-radius:30px; font-size:0.85rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-top:15px; }
-.status-badge.active { background:rgba(255,255,255,0.2); backdrop-filter:blur(10px); }
-.status-badge.inactive { background:rgba(239,68,68,0.2); }
+/* Profile header already covered by page-hero + dashboard-card in theme.css */
+.profile-header {
+  background: linear-gradient(135deg, #1e3a5f 0%, #2151A1 50%, #38bdf8 100%);
+  color: #fff;
+  padding: 36px 40px;
+  border-radius: 20px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(33,81,161,0.25);
+}
+.profile-header::before {
+  content: '';
+  position: absolute;
+  right: -60px; top: -60px;
+  width: 220px; height: 220px;
+  background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
+  border-radius: 50%;
+}
+.profile-header::after {
+  content: '';
+  position: absolute;
+  left: -40px; bottom: -40px;
+  width: 160px; height: 160px;
+  background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+  border-radius: 50%;
+}
+.profile-avatar-ring {
+  width: 70px; height: 70px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.18);
+  border: 2px solid rgba(255,255,255,0.35);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; font-weight: 700; color: white;
+  flex-shrink: 0; margin-right: 20px;
+}
+.profile-title { font-size: 1.8rem; font-weight: 800; margin: 0; line-height: 1.2; }
+.profile-subtitle { font-size: 0.95rem; opacity: 0.85; margin-top: 4px; }
+.status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 30px; font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 12px; }
+.status-badge.active    { background: rgba(22,163,74,0.25); border: 1px solid rgba(22,163,74,0.4); }
+.status-badge.inactive  { background: rgba(100,116,139,0.25); border: 1px solid rgba(100,116,139,0.4); }
+.status-badge.expired   { background: rgba(220,38,38,0.25); border: 1px solid rgba(220,38,38,0.4); }
+.status-badge.suspended { background: rgba(245,158,11,0.25); border: 1px solid rgba(245,158,11,0.4); }
 
-.info-card { background:#fff; border-radius:20px; padding:30px; box-shadow:0 4px 20px rgba(0,0,0,0.05); margin-bottom:24px; border:1px solid rgba(0,0,0,0.04); height:100%; }
-.dark-mode .info-card { background:#1e293b; border-color:rgba(255,255,255,0.05); box-shadow:0 4px 20px rgba(0,0,0,0.2); }
-.info-title { font-size:1.1rem; font-weight:700; color:#1e293b; margin-bottom:20px; display:flex; align-items:center; gap:10px; }
-.dark-mode .info-title { color:#f1f5f9; }
-.info-title i { color:#38bdf8; }
+.info-card { background: #fff; border-radius: 20px; padding: 28px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); margin-bottom: 24px; border: 1px solid rgba(0,0,0,0.04); height: 100%; }
+.dark-mode .info-card { background: #1e293b; border-color: rgba(255,255,255,0.05); box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+.info-title { font-size: 1rem; font-weight: 700; color: #1e293b; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; }
+.dark-mode .info-title { color: #f1f5f9; }
+.info-title i { color: #2563eb; }
 
-.info-list { list-style:none; padding:0; margin:0; }
-.info-list li { display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid rgba(0,0,0,0.05); }
-.dark-mode .info-list li { border-bottom-color:rgba(255,255,255,0.05); }
-.info-list li:last-child { border-bottom:none; padding-bottom:0; }
-.info-label { color:#64748b; font-size:0.9rem; font-weight:500; }
-.dark-mode .info-label { color:#94a3b8; }
-.info-value { color:#1e293b; font-size:0.95rem; font-weight:600; text-align:right; }
-.dark-mode .info-value { color:#e2e8f0; }
+.info-list { list-style: none; padding: 0; margin: 0; }
+.info-list li { display: flex; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid rgba(0,0,0,0.05); align-items: center; gap: 12px; }
+.dark-mode .info-list li { border-bottom-color: rgba(255,255,255,0.05); }
+.info-list li:last-child { border-bottom: none; padding-bottom: 0; }
+.info-label { color: #64748b; font-size: 0.85rem; font-weight: 500; flex-shrink: 0; }
+.dark-mode .info-label { color: #94a3b8; }
+.info-value { color: #1e293b; font-size: 0.88rem; font-weight: 600; text-align: right; }
+.dark-mode .info-value { color: #e2e8f0; }
 
-.btn-action { display:inline-flex; align-items:center; gap:8px; padding:10px 20px; border-radius:12px; font-weight:600; font-size:0.9rem; transition:all 0.2s; text-decoration:none; }
-.btn-edit { background:#f1f5f9; color:#334155; }
-.btn-edit:hover { background:#e2e8f0; }
-.btn-delete { background:#fef2f2; color:#ef4444; border:none; }
-.btn-delete:hover { background:#fee2e2; }
-.dark-mode .btn-edit { background:#334155; color:#f1f5f9; }
-.dark-mode .btn-edit:hover { background:#475569; }
-.dark-mode .btn-delete { background:rgba(239,68,68,0.1); }
+.btn-action { display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; border-radius: 12px; font-weight: 600; font-size: 0.85rem; transition: all 0.2s; text-decoration: none; cursor: pointer; border: none; }
+.btn-edit { background: #f1f5f9; color: #334155; }
+.btn-edit:hover { background: #e2e8f0; color: #334155; }
+.btn-delete { background: #fef2f2; color: #ef4444; }
+.btn-delete:hover { background: #fee2e2; }
+.dark-mode .btn-edit { background: #334155; color: #f1f5f9; }
+.dark-mode .btn-edit:hover { background: #475569; color: #f1f5f9; }
+.dark-mode .btn-delete { background: rgba(239,68,68,0.1); color: #ef4444; }
 
-.payment-log { border-left:3px solid #38bdf8; padding-left:15px; margin-bottom:15px; }
-.payment-log .amount { font-weight:700; color:#10b981; font-size:1.1rem; }
-.payment-log .date { color:#64748b; font-size:0.85rem; }
+.payment-log { border-left: 3px solid #38bdf8; padding-left: 15px; margin-bottom: 15px; }
+.payment-log .amount { font-weight: 700; color: #10b981; font-size: 1.05rem; }
+.payment-log .date { color: #64748b; font-size: 0.82rem; }
 
-/* Dropdown styling */
-.w-25px { width:25px; text-align:center; }
-.dark-mode .dropdown-menu { background:#1e293b; border-color:rgba(255,255,255,0.1); }
-.dark-mode .dropdown-item { color:#e2e8f0; }
-.dark-mode .dropdown-item:hover { background:#334155; color:#fff; }
-.dark-mode .dropdown-divider { border-top-color:rgba(255,255,255,0.1); }
-
-/* Modal styling */
-.dark-mode .modal-content { background:#1e293b; color:#f1f5f9; border:1px solid rgba(255,255,255,0.1); }
-.dark-mode .modal-content .text-muted { color:#94a3b8 !important; }
-.dark-mode .modal-content input, .dark-mode .modal-content select { background:#0f172a; color:#f1f5f9; border-color:#334155; }
+.w-25px { width: 25px; text-align: center; }
+.dark-mode .dropdown-menu { background: #1e293b; border-color: rgba(255,255,255,0.1); }
+.dark-mode .dropdown-item { color: #e2e8f0; }
+.dark-mode .dropdown-item:hover { background: #334155; color: #fff; }
+.dark-mode .dropdown-divider { border-top-color: rgba(255,255,255,0.1); }
+.dark-mode .modal-content { background: #1e293b; color: #f1f5f9; border: 1px solid rgba(255,255,255,0.1); }
+.dark-mode .modal-content .text-muted { color: #94a3b8 !important; }
+.dark-mode .modal-content input, .dark-mode .modal-content select { background: #0f172a; color: #f1f5f9; border-color: #334155; }
 </style>
 {% endblock %}
 
@@ -131,11 +165,20 @@
     {% endif %}
 
     <div class="profile-header">
-        <h1 class="profile-title">{{ customer.full_name }}</h1>
-        <div class="profile-subtitle">
-            <i class="fas fa-map-marker-alt me-1"></i> {{ customer.barangay.name|default:"No Barangay" }}
+        <div class="d-flex align-items-center">
+            <div class="profile-avatar-ring">{{ customer.full_name|make_list|first|upper }}</div>
+            <div>
+                <h1 class="profile-title">{{ customer.full_name }}</h1>
+                <div class="profile-subtitle">
+                    <i class="fas fa-map-marker-alt me-1"></i> {{ customer.barangay.name|default:"No Barangay" }}
+                    {% if customer.pppoe_username %} &bull; <i class="fas fa-user me-1"></i>{{ customer.pppoe_username }}{% endif %}
+                </div>
+                <div class="status-badge {{ customer.status }}">
+                    <span style="width:7px; height:7px; border-radius:50%; background:currentColor; opacity:0.7; display:inline-block;"></span>
+                    {{ customer.get_status_display }}
+                </div>
+            </div>
         </div>
-        <div class="status-badge {{ customer.status }}">{{ customer.get_status_display }}</div>
     </div>
 
     <div class="row g-4">

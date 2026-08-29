@@ -1,106 +1,85 @@
 {% extends 'billing/base.html' %}
 {% load static %}
 
-{% block title %}Pay for {{ customer.username|default:customer.full_name }}{% endblock %}
+{% block title %}Pay for {{ customer.username|default:customer.full_name }} | Gametech{% endblock %}
 
-{% block content %}
+{% block extra_css %}
 <style>
-    .pay-container { max-width: 1000px; margin: 2rem auto; }
-    
-    /* Modern Card styling matching dashboard */
-    .dashboard-card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 1.5rem; margin-bottom: 1.5rem; }
-    
-    .section-title { font-size: 1.1rem; font-weight: 700; color: var(--text-color); margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
-    
-    /* Info List */
-    .info-list { list-style: none; padding: 0; margin: 0; }
-    .info-list li { display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid rgba(148, 163, 184, 0.1); }
-    .info-list li:last-child { border-bottom: none; }
-    .info-label { color: #64748b; font-size: 0.9rem; font-weight: 500; }
-    .info-value { color: var(--text-color); font-size: 0.95rem; font-weight: 600; text-align: right; }
-    
     /* Quick Pay Grid */
     .quick-pay-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.5rem; }
     .quick-btn {
-        background: var(--bg-color);
+        background: rgba(0,0,0,0.02);
         border: 2px solid var(--border-color);
         color: var(--text-color);
-        border-radius: 8px;
+        border-radius: 12px;
         padding: 1rem 0.5rem;
         text-align: center;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
     }
-    .quick-btn:hover { border-color: var(--primary-color); background: rgba(56, 189, 248, 0.05); }
-    .quick-btn.active { border-color: #10b981; background: rgba(16, 185, 129, 0.1); color: #10b981; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
-    .quick-btn .months { font-size: 1.1rem; display: block; margin-bottom: 0.2rem; }
+    .dark-mode .quick-btn { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.1); }
+    .quick-btn:hover { border-color: #38bdf8; background: rgba(56, 189, 248, 0.05); }
+    .quick-btn.active { border-color: #10b981; background: rgba(16, 185, 129, 0.1); color: #10b981; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15); }
+    .quick-btn .months { font-size: 1.05rem; display: block; margin-bottom: 0.2rem; }
     .quick-btn .price { font-size: 0.85rem; opacity: 0.8; }
-    
-    /* Form Elements */
-    label { font-weight: 600; color: var(--text-color); margin-bottom: 0.5rem; display: block; font-size: 0.9rem; }
-    .form-control, .form-select { 
-        width: 100%; 
-        padding: 0.75rem; 
-        margin-bottom: 1.2rem; 
-        border: 1px solid var(--border-color); 
-        border-radius: 8px; 
-        background: var(--bg-color); 
-        color: var(--text-color); 
-        font-size: 0.95rem; 
-        transition: border-color 0.2s; 
-    }
-    .form-control:focus, .form-select:focus { border-color: var(--primary-color); outline: none; box-shadow: none; }
-    
-    /* Action Buttons */
-    .action-btn { width: 100%; padding: 1rem; border: none; border-radius: 8px; font-size: 1.05rem; font-weight: 600; text-align: center; display: block; text-decoration: none; margin-top: 10px; transition: transform 0.1s, opacity 0.2s; }
-    .action-btn:hover { opacity: 0.9; transform: translateY(-2px); }
-    .btn-pay { background: linear-gradient(135deg, #34d399, #10b981); color: white; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3); }
-    .btn-cancel { background: #64748b; color: white; }
     
     /* Expiry Preview Box */
     .expiry-preview {
-        background: rgba(16, 185, 129, 0.1);
-        border: 1px solid rgba(16, 185, 129, 0.3);
+        background: rgba(16, 185, 129, 0.08);
+        border: 1px solid rgba(16, 185, 129, 0.2);
         border-left: 4px solid #10b981;
         padding: 1.25rem;
-        border-radius: 8px;
+        border-radius: 12px;
         margin-bottom: 1.5rem;
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
-    .expiry-preview .label { color: #10b981; font-weight: 600; font-size: 0.9rem; margin-bottom: 0.2rem; }
-    .expiry-preview .date { color: var(--text-color); font-size: 1.2rem; font-weight: 700; }
+    .expiry-preview .label { color: #10b981; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.2rem; text-transform:uppercase; letter-spacing:0.5px;}
+    .expiry-preview .date { color: var(--text-color); font-size: 1.15rem; font-weight: 700; }
     
-    /* Dark mode specifics */
-    .dark-mode .dashboard-card { background: #1e293b; border-color: #334155; }
-    .dark-mode .form-control, .dark-mode .form-select { background: rgba(15,23,42,0.5); border-color: #334155; color: #e2e8f0; }
-    .dark-mode .form-control:focus, .dark-mode .form-select:focus { border-color: #38bdf8; }
-    .dark-mode .quick-btn { background: rgba(15,23,42,0.5); border-color: #334155; }
+    @media (max-width: 576px) {
+        .quick-pay-grid { grid-template-columns: repeat(2, 1fr); }
+    }
 </style>
+{% endblock %}
 
-<div class="container-fluid py-4">
-    <div class="pay-container">
-        
-        <div class="d-flex align-items-center mb-4">
-            <h2 class="fw-bold mb-0" style="color: var(--text-color);"><i class="fas fa-credit-card me-2 text-success"></i> Renew Subscription</h2>
+{% block content %}
+<div class="container-fluid py-4 px-3 px-md-4">
+    
+    <!-- Page Hero -->
+    <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4 animate-fade-in"
+         style="background: linear-gradient(135deg, #064e3b 0%, #059669 50%, #10b981 100%);">
+        <div class="d-flex align-items-center">
+            <div class="hero-icon"><i class="fas fa-credit-card"></i></div>
+            <div>
+                <div class="hero-title">Renew Subscription</div>
+                <div class="hero-sub">Process payment for <strong>{{ customer.username|default:customer.full_name }}</strong></div>
+            </div>
         </div>
+        <a href="{% url 'payment_portal' %}" class="btn-premium" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.3);">
+            <i class="fas fa-arrow-left"></i> Back to Portal
+        </a>
+    </div>
 
-        <div class="row g-4">
-            <!-- Left Column: Customer Details -->
-            <div class="col-lg-5">
-                <div class="dashboard-card h-100">
-                    <h3 class="section-title"><i class="fas fa-user text-primary me-2"></i> Customer Details</h3>
-                    <ul class="info-list">
+    <div class="row g-4 animate-fade-in animate-delay-1">
+        <!-- Left Column: Customer Details -->
+        <div class="col-lg-5">
+            <div class="dashboard-card h-100" style="overflow:hidden;">
+                <div class="section-header section-header-blue">
+                    <h6><i class="fas fa-user sh-icon"></i> Customer Details</h6>
+                </div>
+                <div class="p-3">
+                    <ul class="detail-list">
                         <li>
-                            <span class="info-label">Name / Username</span>
-                            <span class="info-value">{{ customer.username|default:customer.full_name }}</span>
+                            <span class="detail-label">Name / Username</span>
+                            <span class="detail-value">{{ customer.username|default:customer.full_name }}</span>
                         </li>
                         <li>
-                            <span class="info-label">Service Plan</span>
-                            <span class="info-value">
-                                <select id="plan-dropdown" class="form-select form-select-sm border-0 bg-light" style="width:120px; display:inline-block; font-weight:bold;">
+                            <span class="detail-label">Service Plan</span>
+                            <span class="detail-value">
+                                <select id="plan-dropdown" class="form-select form-select-sm border-0" style="width:140px; display:inline-block; font-weight:bold; background:rgba(0,0,0,0.05);">
                                     {% for plan in plans %}
                                         <option value="{{ plan.id }}" data-price="{{ plan.price }}" {% if customer.plan_id == plan.id %}selected{% endif %}>{{ plan.name }}</option>
                                     {% endfor %}
@@ -108,46 +87,49 @@
                             </span>
                         </li>
                         <li>
-                            <span class="info-label">Monthly Price</span>
-                            <span class="info-value text-success" id="monthly-price-display"><strong>₱{{ customer.plan.price|default:0.00 }}</strong></span>
+                            <span class="detail-label">Monthly Price</span>
+                            <span class="detail-value text-success" id="monthly-price-display"><strong>₱{{ customer.plan.price|default:0.00 }}</strong></span>
                         </li>
                         <li>
-                            <span class="info-label">Current Expiry</span>
-                            <span class="info-value text-warning">{{ customer.expires_at|date:'M d, Y h:i A'|default:'None' }}</span>
+                            <span class="detail-label">Current Expiry</span>
+                            <span class="detail-value text-warning fw-bold">{{ customer.expires_at|date:'M d, Y h:i A'|default:'None' }}</span>
                         </li>
                         <li>
-                            <span class="info-label">Current Status</span>
-                            <span class="info-value">
+                            <span class="detail-label">Current Status</span>
+                            <span class="detail-value">
                                 {% if customer.status == 'active' %}
-                                    <span class="badge bg-success">Active</span>
+                                    <span class="pill pill-active"><span class="pill-dot"></span>Active</span>
                                 {% else %}
-                                    <span class="badge bg-danger">{{ customer.status|title }}</span>
+                                    <span class="pill pill-suspended"><span class="pill-dot"></span>{{ customer.status|title }}</span>
                                 {% endif %}
                             </span>
                         </li>
                         <li>
-                            <span class="info-label">Mikrotik Router</span>
-                            <span class="info-value">{{ customer.mikrotik_device.device_name|default:'N/A' }}</span>
+                            <span class="detail-label">Mikrotik Router</span>
+                            <span class="detail-value">{{ customer.mikrotik_device.device_name|default:'N/A' }}</span>
                         </li>
                     </ul>
                 </div>
             </div>
+        </div>
 
-            <!-- Right Column: Payment Form -->
-            <div class="col-lg-7">
-                <div class="dashboard-card">
+        <!-- Right Column: Payment Form -->
+        <div class="col-lg-7">
+            <div class="dashboard-card h-100" style="overflow:hidden;">
+                <div class="section-header section-header-green">
+                    <h6><i class="fas fa-wallet sh-icon"></i> Payment Options</h6>
+                </div>
+                <div class="p-4">
                     <form action="{% url 'pay_customer' customer.pppoe_username %}" method="post" autocomplete="off" id="renew-form">
                         {% csrf_token %}
                         <input type='hidden' name='next_url' value='{{ next_url }}'>
                         <input type="hidden" name="new_plan_id" id="hidden_new_plan_id" value="{{ customer.plan_id|default:'' }}">
                         
-                        <div class="mb-4">
-                            <label for="start_date">Calculate Expiry From (Base Date)</label>
-                            <input type="datetime-local" id="start_date" name="start_date" class="form-control" required>
-                            <small style="color: #64748b; margin-top: -0.8rem; display: block; margin-bottom: 1rem;">Change this if you are recording a payment that was received in the past.</small>
+                        <div class="mb-4 p-3 rounded-3" style="background:rgba(56,189,248,0.05); border:1px solid rgba(56,189,248,0.2);">
+                            <label for="start_date" class="filter-label" style="color:#0284c7;"><i class="fas fa-calendar-alt me-1"></i> Calculate Expiry From (Base Date)</label>
+                            <input type="datetime-local" id="start_date" name="start_date" class="form-control mb-1" required>
+                            <div class="text-muted" style="font-size:0.75rem;"><i class="fas fa-info-circle me-1"></i>Change this if you are recording a payment received in the past.</div>
                         </div>
-                        
-                        <h3 class="section-title"><i class="fas fa-wallet text-success me-2"></i> Payment Options</h3>
                         
                         <!-- Quick Pay Buttons -->
                         <div class="quick-pay-grid">
@@ -187,30 +169,30 @@
 
                         <!-- Amount Input -->
                         <div class="mb-4">
-                            <label for="amount">Payment Amount (₱)</label>
-                            <input type="number" id="amount" name="amount" class="form-control" value="0.00" step="0.01" required>
+                            <label for="amount" class="filter-label">Payment Amount (₱)</label>
+                            <input type="number" id="amount" name="amount" class="form-control form-control-lg fw-bold text-success" value="0.00" step="0.01" required>
                         </div>
                         
                         <!-- Reason Input (For Custom Amounts) -->
-                        <div id="reason-block" style="display:none;">
-                            <label for="reason">Reason for Custom Amount</label>
+                        <div id="reason-block" style="display:none; margin-bottom:1.5rem;">
+                            <label for="reason" class="filter-label">Reason for Custom Amount</label>
                             <input type="text" id="reason" name="reason" class="form-control" maxlength="255" placeholder="e.g. Prorated payment, half payment, etc.">
                         </div>
 
                         <!-- Real-time Expiry Preview -->
-                        <div class="expiry-preview">
+                        <div class="expiry-preview shadow-sm">
                             <div>
                                 <div class="label"><i class="fas fa-calendar-check me-1"></i> New Expiration Date</div>
                                 <div class="date" id="preview-date">Calculating...</div>
                             </div>
                             <div>
-                                <i class="fas fa-arrow-right text-success opacity-50 fs-3"></i>
+                                <i class="fas fa-arrow-right text-success opacity-50 fs-2"></i>
                             </div>
                         </div>
 
                         <div class="row">
-                            <div class="col-md-6">
-                                <label for="payment_method">Payment Method</label>
+                            <div class="col-md-6 mb-3">
+                                <label for="payment_method" class="filter-label">Payment Method</label>
                                 <select name="payment_method" id="payment_method" class="form-select" required>
                                     <option value="cash" selected>Cash (Office)</option>
                                     <option value="bank_transfer">Bank Transfer</option>
@@ -218,15 +200,15 @@
                                     <option value="payment_center">Payment Center</option>
                                 </select>
                             </div>
-                            <div class="col-md-6">
-                                <label for="reference_no">Reference No.</label>
+                            <div class="col-md-6 mb-3">
+                                <label for="reference_no" class="filter-label">Reference No.</label>
                                 <input type="text" name="reference_no" id="reference_no" class="form-control" maxlength="64" placeholder="Optional for cash">
                             </div>
                         </div>
 
-                        <div class="d-flex gap-3 mt-4">
-                            <a href="{% url 'subscription_plans' %}" class="action-btn btn-cancel flex-grow-1"><i class="fas fa-times me-2"></i> Cancel</a>
-                            <button type="submit" class="action-btn btn-pay flex-grow-1"><i class="fas fa-check-circle me-2"></i> Confirm Payment</button>
+                        <div class="d-flex gap-3 mt-3">
+                            <a href="{% url 'subscription_plans' %}" class="btn-premium btn-p-ghost flex-grow-1 justify-content-center py-3"><i class="fas fa-times"></i> Cancel</a>
+                            <button type="submit" class="btn-premium btn-p-success flex-grow-1 justify-content-center py-3 fs-6"><i class="fas fa-check-circle"></i> Confirm Payment</button>
                         </div>
                     </form>
                 </div>
@@ -291,10 +273,10 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.calc-price').forEach(el => {
             if (el.hasAttribute('data-mult')) {
                 let mult = parseInt(el.getAttribute('data-mult'));
-                el.textContent = '₱' + (monthlyPrice * mult).toFixed(2);
+                el.textContent = (monthlyPrice * mult).toFixed(2);
             } else if (el.hasAttribute('data-days')) {
                 let days = parseInt(el.getAttribute('data-days'));
-                el.textContent = '₱' + ((monthlyPrice / 30) * days).toFixed(2);
+                el.textContent = ((monthlyPrice / 30) * days).toFixed(2);
             }
         });
     }
@@ -425,5 +407,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-
-

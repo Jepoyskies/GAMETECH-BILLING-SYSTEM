@@ -40,56 +40,59 @@
     {% endfor %}
     {% endif %}
 
-    <div class="live-header-row mb-4">
-        <h2 class="live-title">
-            <div class="kpi-icon icon-blue" style="width: 48px; height: 48px; font-size: 1.4rem; margin-right: 0;">
-                <i class="fa-solid fa-users"></i>
+    <!-- Page Hero -->
+    <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4 animate-fade-in"
+         style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #60a5fa 100%);">
+        <div class="d-flex align-items-center">
+            <div class="hero-icon"><i class="fa-solid fa-users"></i></div>
+            <div>
+                <div class="hero-title">Customers List</div>
+                <div class="hero-sub">Manage and view all subscriber accounts</div>
             </div>
-            Customers List
-        </h2>
-        <div class="d-inline-flex gap-2 align-items-center">
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
             {% if request.user.role != 'Agent' %}
-            <select id="routerFilter" class="form-select rounded-pill px-3 shadow-sm w-auto d-inline-block border-primary text-primary fw-bold">
-                <option value="">All Routers</option>
+            <select id="routerFilter" class="form-select form-select-sm" style="background:rgba(255,255,255,0.15); border-color:rgba(255,255,255,0.3); color:white; border-radius:30px; font-weight:600;">
+                <option value="" style="color:#1e293b;">All Routers</option>
                 {% for device in devices %}
-                <option value="{{ device.device_name }}">{{ device.device_name }}</option>
+                <option value="{{ device.device_name }}" style="color:#1e293b;">{{ device.device_name }}</option>
                 {% endfor %}
             </select>
-            <select id="barangayFilter" class="form-select rounded-pill px-3 shadow-sm w-auto d-inline-block border-info text-info fw-bold">
-                <option value="">All Barangays</option>
+            <select id="barangayFilter" class="form-select form-select-sm" style="background:rgba(255,255,255,0.15); border-color:rgba(255,255,255,0.3); color:white; border-radius:30px; font-weight:600;">
+                <option value="" style="color:#1e293b;">All Barangays</option>
                 {% for barangay in barangays %}
-                <option value="{{ barangay.name }}">{{ barangay.name }}</option>
+                <option value="{{ barangay.name }}" style="color:#1e293b;">{{ barangay.name }}</option>
                 {% endfor %}
             </select>
             {% endif %}
             {% if request.user.role in 'Admin,Agent,CSR' %}
-            <button type="button" id="btnBulkSms" class="btn btn-success rounded-pill px-4 shadow-sm fw-bold text-nowrap d-flex align-items-center" disabled data-bs-toggle="modal" data-bs-target="#bulkSmsModal">
-                <i class="fas fa-comment-sms me-2"></i> Send Bulk SMS (<span id="selectedCount">0</span>)
+            <button type="button" id="btnBulkSms" class="btn-premium" style="background:#10b981; border:none; padding:6px 14px; font-size:0.8rem;" disabled data-bs-toggle="modal" data-bs-target="#bulkSmsModal">
+                <i class="fas fa-comment-sms"></i> SMS (<span id="selectedCount">0</span>)
             </button>
-            <button type="button" id="btnBulkTransfer" class="btn btn-info text-white rounded-pill px-4 shadow-sm fw-bold text-nowrap d-flex align-items-center" disabled data-bs-toggle="modal" data-bs-target="#bulkTransferModal">
-                <i class="fas fa-exchange-alt me-2"></i> Transfer Router (<span id="selectedTransferCount">0</span>)
+            <button type="button" id="btnBulkTransfer" class="btn-premium" style="background:#0ea5e9; border:none; padding:6px 14px; font-size:0.8rem;" disabled data-bs-toggle="modal" data-bs-target="#bulkTransferModal">
+                <i class="fas fa-exchange-alt"></i> Transfer (<span id="selectedTransferCount">0</span>)
             </button>
-            <a href="{% url 'add_customer' %}" class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold text-nowrap d-flex align-items-center">
-                <i class="fa-solid fa-user-plus me-2"></i> Add Customer
+            <a href="{% url 'add_customer' %}" class="btn-premium" style="background:rgba(255,255,255,0.25); color:white; border:1px solid rgba(255,255,255,0.4); padding:6px 14px; font-size:0.8rem;">
+                <i class="fa-solid fa-user-plus"></i> Add Customer
             </a>
             {% endif %}
         </div>
     </div>
 
     <!-- Filter Pills -->
-    <div class="mb-4 d-flex flex-wrap gap-2">
-        <a href="?filter=all" class="btn {% if filter_type == 'all' or not filter_type %}btn-primary{% else %}btn-outline-primary{% endif %} rounded-pill px-4 shadow-sm fw-bold">
+    <div class="mb-4 d-flex flex-wrap gap-2 animate-fade-in animate-delay-1">
+        <a href="?filter=all" class="btn-premium {% if filter_type == 'all' or not filter_type %}btn-p-primary{% else %}btn-p-ghost{% endif %}" style="padding:6px 16px; font-size:0.85rem;">
             All Customers
         </a>
-        <a href="?filter=nearing_expiration" class="btn {% if filter_type == 'nearing_expiration' %}btn-warning text-dark{% else %}btn-outline-warning text-dark{% endif %} rounded-pill px-4 shadow-sm fw-bold">
-            <i class="fas fa-clock me-1"></i> Expiring Soon
+        <a href="?filter=nearing_expiration" class="btn-premium {% if filter_type == 'nearing_expiration' %}btn-p-warning{% else %}btn-p-ghost{% endif %}" style="padding:6px 16px; font-size:0.85rem;">
+            <i class="fas fa-clock"></i> Expiring Soon
         </a>
-        <a href="?filter=advance_payment" class="btn {% if filter_type == 'advance_payment' %}btn-success{% else %}btn-outline-success{% endif %} rounded-pill px-4 shadow-sm fw-bold">
-            <i class="fas fa-check-circle me-1"></i> Paid in Advance
+        <a href="?filter=advance_payment" class="btn-premium {% if filter_type == 'advance_payment' %}btn-p-success{% else %}btn-p-ghost{% endif %}" style="padding:6px 16px; font-size:0.85rem;">
+            <i class="fas fa-check-circle"></i> Paid in Advance
         </a>
     </div>
 
-    <div class="dashboard-card">
+    <div class="dashboard-card animate-fade-in animate-delay-2" style="overflow:hidden;">
         <div class="card-body table-responsive-modern p-0">
             <table id="customerTable" class="table table-hover align-middle mb-0" style="width:100%; border-collapse: collapse;">
                 <thead style="background: rgba(0,0,0,0.03);">
