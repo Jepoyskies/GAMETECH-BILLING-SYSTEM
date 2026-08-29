@@ -1,77 +1,117 @@
 {% extends "billing/base.html" %}
 {% load static %}
 
-{% block title %}Cignal Play Plans{% endblock %}
+{% block title %}Cignal Play Plans | Gametech{% endblock %}
 
 {% block content %}
-<main class="container-fluid py-4 px-3 px-md-4">
-    <div class="d-flex align-items-center justify-content-between mb-4">
-        <h2 class="mb-0 fw-bold text-primary">
-            <i class="fa-solid fa-tv me-2"></i> Cignal Play Plans
-        </h2>
-    </div>
+<div class="container-fluid py-4 px-3 px-md-4">
 
-    <div class="dashboard-card">
-        <div class="card-body">
-            <form method="get" class="row g-2 align-items-center">
-                <div class="col-12 col-lg-8">
-                    <div class="input-group">
-                        <input type="text" name="search" class="form-control" placeholder="Search customer, username, cignal play no..." value="{{ search }}">
-                        <button type="submit" class="btn btn-primary">Search</button>
-                    </div>
-                </div>
-            </form>
-        </div>
+  <!-- Page Hero -->
+  <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in"
+       style="background: linear-gradient(135deg, #713f12 0%, #a16207 50%, #ca8a04 100%);">
+    <div class="d-flex align-items-center">
+      <div class="hero-icon"><i class="fas fa-tv"></i></div>
+      <div>
+        <div class="hero-title">Cignal Play Plans</div>
+        <div class="hero-sub">Manage and track Cignal Play subscriptions per customer</div>
+      </div>
     </div>
+  </div>
 
-    <div class="dashboard-card">
-        <div class="card-body table-responsive">
-            <table class="table table-hover table-bordered align-middle">
-                <thead class="table-primary">
-                    <tr>
-                        <th class="text-center">Actions</th>
-                        <th>Created at</th>
-                        <th>Username</th>
-                        <th>CignalPlay No</th>
-                        <th>Adjusted By</th>
-                        <th>Full Name</th>
-                        <th>Account Type</th>
-                        <th>Address</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for customer in page_obj %}
-                    <tr>
-                        <td class="text-center">
-                            <div class="btn-group btn-group-sm">
-                                <a href="{% url 'edit_customer' customer.id %}" class="btn btn-outline-info" title="Edit Customer">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <a href="{% url 'cignalplay_form' customer.id %}" class="btn btn-outline-success" title="Payment">
-                                    <i class="fas fa-money-bill"></i>
-                                </a>
-                                <a href="{% url 'user_cignal_logs' customer.id %}" class="btn btn-outline-dark" title="Transaction Logs">
-                                    <i class="fas fa-receipt"></i>
-                                </a>
-                            </div>
-                        </td>
-                        <td>{{ customer.created_at|date:"M d, Y" }}</td>
-                        <td>{{ customer.username|default:"Not Connected" }}</td>
-                        <td><span class="badge bg-warning text-dark">{{ customer.cignalplay_no }}</span></td>
-                        <td>{{ customer.cignalplay_adjustedby|default:"-" }}</td>
-                        <td><strong>{{ customer.full_name }}</strong></td>
-                        <td>{{ customer.account_type|default:"-" }}</td>
-                        <td>{{ customer.address|default:"-" }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="8" class="text-center text-muted py-4">No Cignal Play customers found.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% include 'billing/partials/pagination.html' with page_obj=page_obj query_params=query_params %}
+  <!-- Filter -->
+  <div class="filter-glass animate-fade-in animate-delay-1">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-12 col-md-9">
+        <label class="filter-label"><i class="fas fa-search me-1"></i> Search</label>
+        <input type="text" name="search" class="form-control" placeholder="Search customer, username, Cignal Play no..." value="{{ search }}">
+      </div>
+      <div class="col-6 col-md-2">
+        <button type="submit" class="btn-premium btn-p-warning w-100 justify-content-center">
+          <i class="fas fa-search"></i> Search
+        </button>
+      </div>
+      <div class="col-6 col-md-1">
+        <a href="{% url 'cignal_play_list' %}" class="btn-premium btn-p-ghost w-100 justify-content-center">Clear</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Table Card -->
+  <div class="dashboard-card animate-fade-in animate-delay-2" style="overflow:hidden;">
+    <div class="section-header section-header-amber">
+      <h6><i class="fas fa-satellite-dish sh-icon"></i> Cignal Play Subscribers</h6>
     </div>
-</main>
+    <div class="table-responsive">
+      <table class="table table-premium table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="text-center">Actions</th>
+            <th>Created At</th>
+            <th>Username</th>
+            <th>Cignal Play No.</th>
+            <th>Adjusted By</th>
+            <th>Full Name</th>
+            <th>Account Type</th>
+            <th>Address</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for customer in page_obj %}
+          <tr>
+            <td class="text-center">
+              <div class="d-flex justify-content-center gap-1">
+                <a href="{% url 'edit_customer' customer.id %}" class="action-btn btn-view" title="Edit Customer">
+                  <i class="fas fa-edit"></i>
+                </a>
+                <a href="{% url 'cignalplay_form' customer.id %}" class="action-btn btn-pay" title="Payment">
+                  <i class="fas fa-money-bill"></i>
+                </a>
+                <a href="{% url 'user_cignal_logs' customer.id %}" class="action-btn btn-log" title="Transaction Logs">
+                  <i class="fas fa-receipt"></i>
+                </a>
+              </div>
+            </td>
+            <td><span class="text-muted" style="font-size:0.83rem;">{{ customer.created_at|date:"M d, Y" }}</span></td>
+            <td>
+              {% if customer.username %}
+                <span class="fw-bold" style="color:#2563eb;">{{ customer.username }}</span>
+              {% else %}
+                <span class="pill pill-inactive"><span class="pill-dot"></span>Not Connected</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="pill pill-suspended" style="background:rgba(202,138,4,0.12); color:#92400e; border-color:rgba(202,138,4,0.3);">
+                <span class="pill-dot" style="background:#ca8a04;"></span>{{ customer.cignalplay_no }}
+              </span>
+            </td>
+            <td><span class="text-muted" style="font-size:0.83rem;">{{ customer.cignalplay_adjustedby|default:"—" }}</span></td>
+            <td class="fw-bold">{{ customer.full_name }}</td>
+            <td><span class="text-muted" style="font-size:0.83rem;">{{ customer.account_type|default:"—" }}</span></td>
+            <td><span class="text-muted" style="font-size:0.83rem;">{{ customer.address|default:"—" }}</span></td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8">
+              <div class="empty-state">
+                <div class="es-icon"><i class="fas fa-tv"></i></div>
+                <h6>No Cignal Play Customers Found</h6>
+                <p>No customers with Cignal Play subscriptions match your search.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include 'billing/partials/pagination.html' with page_obj=page_obj query_params=query_params %}
+  </div>
+</div>
+
+<style>
+.action-btn { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:8px; color:#fff; border:none; font-size:0.8rem; transition:transform 0.15s; text-decoration:none; }
+.action-btn:hover { transform:scale(1.1); color:#fff; }
+.btn-view   { background:linear-gradient(135deg,#0369a1,#0ea5e9); }
+.btn-pay    { background:linear-gradient(135deg,#065f46,#10b981); }
+.btn-log    { background:linear-gradient(135deg,#334155,#64748b); }
+</style>
 {% endblock %}

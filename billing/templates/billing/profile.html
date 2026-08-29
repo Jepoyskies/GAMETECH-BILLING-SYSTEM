@@ -1,43 +1,73 @@
 {% extends "billing/base.html" %}
 {% load static %}
 
-{% block title %}My Profile{% endblock %}
+{% block title %}My Profile | Gametech{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    {% if request.GET.password_changed %}
-        <div class="alert alert-success border-0 rounded-4 shadow-sm mb-4" style="background:#ecfdf5; color:#059669; max-width:600px; margin:0 auto;">
-            <i class="fas fa-check-circle me-2"></i>Password updated successfully.
-        </div>
-    {% endif %}
+<div class="container-fluid py-4 px-3 px-md-4">
 
-    <div class="profile-card">
-        <div class="profile-avatar">
-            <i class="fas fa-user-shield"></i>
-        </div>
-        <h1 class="profile-name">{{ request.user.get_full_name|default:request.user.username }}</h1>
-        <div class="profile-role">System Administrator</div>
+  {% if request.GET.password_changed %}
+  <div class="alert alert-success border-0 rounded-3 shadow-sm mb-4" style="background:#f0fdf4; color:#15803d; border-left:4px solid #16a34a !important;">
+    <i class="fas fa-check-circle me-2"></i>Password updated successfully!
+  </div>
+  {% endif %}
 
-        <div class="profile-detail mt-2">
-            <span class="detail-label">Username</span>
-            <span class="detail-value">{{ request.user.username }}</span>
+  <!-- Profile Hero -->
+  <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-4 mb-4 animate-fade-in"
+       style="background: linear-gradient(135deg, #1e1b4b 0%, #3730a3 60%, #4f46e5 100%);">
+    <div class="d-flex align-items-center gap-4">
+      <div class="av av-xl" style="background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3); font-size:2.5rem; backdrop-filter:blur(8px);">
+        <i class="fas fa-user-shield"></i>
+      </div>
+      <div>
+        <div class="hero-title">{{ request.user.get_full_name|default:request.user.username }}</div>
+        <div class="hero-sub">{{ request.user.role|default:"System Administrator" }} &bull; {{ request.user.email|default:"No email set" }}</div>
+        <div class="mt-2">
+          <span class="pill pill-active" style="background:rgba(22,163,74,0.25); color:#bbf7d0; border-color:rgba(22,163,74,0.4);">
+            <span class="pill-dot" style="background:#4ade80;"></span>Active Account
+          </span>
         </div>
-        <div class="profile-detail">
-            <span class="detail-label">Email Address</span>
-            <span class="detail-value">{{ request.user.email|default:"No email provided" }}</span>
-        </div>
-        <div class="profile-detail">
-            <span class="detail-label">Status</span>
-            <span class="detail-value text-success">Active</span>
-        </div>
-        <div class="profile-detail">
-            <span class="detail-label">Last Login</span>
-            <span class="detail-value">{{ request.user.last_login|date:"M d, Y h:i A" }}</span>
-        </div>
-
-        <a href="{% url 'change_password' %}" class="btn-pwd">
-            <i class="fas fa-lock me-2"></i>Change Password
-        </a>
+      </div>
     </div>
+    <a href="{% url 'change_password' %}" class="btn-premium" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.3);">
+      <i class="fas fa-lock"></i> Change Password
+    </a>
+  </div>
+
+  <!-- Profile Details Card -->
+  <div class="row justify-content-center animate-fade-in animate-delay-1">
+    <div class="col-12 col-lg-8">
+      <div class="dashboard-card" style="overflow:hidden;">
+        <div class="section-header section-header-purple">
+          <h6><i class="fas fa-id-card sh-icon"></i> Account Details</h6>
+        </div>
+        <div class="p-4">
+          <ul class="detail-list">
+            <li>
+              <span class="dl-label"><i class="fas fa-user me-2 text-muted"></i>Username</span>
+              <span class="dl-value">{{ request.user.username }}</span>
+            </li>
+            <li>
+              <span class="dl-label"><i class="fas fa-envelope me-2 text-muted"></i>Email Address</span>
+              <span class="dl-value">{{ request.user.email|default:"No email provided" }}</span>
+            </li>
+            <li>
+              <span class="dl-label"><i class="fas fa-user-tag me-2 text-muted"></i>Role</span>
+              <span class="dl-value">{{ request.user.role|default:"Administrator" }}</span>
+            </li>
+            <li>
+              <span class="dl-label"><i class="fas fa-circle-check me-2 text-muted"></i>Account Status</span>
+              <span class="dl-value"><span class="pill pill-active" style="font-size:0.78rem;"><span class="pill-dot"></span>Active</span></span>
+            </li>
+            <li>
+              <span class="dl-label"><i class="fas fa-clock me-2 text-muted"></i>Last Login</span>
+              <span class="dl-value">{{ request.user.last_login|date:"M d, Y h:i A"|default:"N/A" }}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 {% endblock %}

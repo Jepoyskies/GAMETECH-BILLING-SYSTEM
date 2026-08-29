@@ -1,90 +1,95 @@
 {% extends 'billing/base.html' %}
 {% load static %}
 
-{% block title %}Mikrotik Active Users{% endblock %}
+{% block title %}Mikrotik Active Users | Gametech{% endblock %}
 
 {% block extra_css %}
-<!-- DataTables CSS for easy sorting/searching -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 {% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="live-header-row mb-4">
-                <h2 class="live-title">
-                    <div class="kpi-icon icon-blue" style="width: 48px; height: 48px; font-size: 1.4rem; margin-right: 0;">
-                        <i class="fa-solid fa-computer"></i>
-                    </div>
-                    Mikrotik Active Users
-                </h2>
-                <div class="d-inline-flex gap-2 align-items-center">
-                    <button type="button" class="btn btn-warning rounded-pill fw-bold px-3 shadow-sm text-dark border-warning" data-bs-toggle="modal" data-bs-target="#updateHealthModal">
-                        <i class="fas fa-heartbeat me-1"></i> Update Network Health
-                    </button>
-                    <select id="routerFilter" class="filter-select rounded-pill px-3 shadow-sm w-auto d-inline-block border-primary text-primary fw-bold" style="background-color: rgba(25, 64, 122, 0.05);">
-                        <option value="">All Routers</option>
-                        {% for device in devices %}
-                        <option value="{{ device.device_name }}">{{ device.device_name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
+<div class="container-fluid py-4 px-3 px-md-4">
 
-            {% if active_device_alerts or active_barangay_alerts %}
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card border-0 shadow-sm rounded-4" style="border-top: 4px solid #f59e0b !important;">
-                        <div class="card-header bg-white border-0 pt-4 pb-0 px-4">
-                            <h5 class="fw-bold mb-0 text-warning"><i class="fas fa-exclamation-triangle me-2"></i>Active Network Alerts</h5>
-                        </div>
-                        <div class="card-body p-4">
-                            {% for alert in active_device_alerts %}
-                            <div class="d-flex justify-content-between align-items-center mb-3 p-3 rounded" style="background-color: #f8f9fa; border-left: 3px solid #dc3545;">
-                                <div>
-                                    <h6 class="mb-1 fw-bold"><i class="fas fa-server me-2 text-secondary"></i>{{ alert.device_name }} (Router)
-                                        <span class="badge bg-danger ms-2">{{ alert.health_status }}</span>
-                                    </h6>
-                                    <p class="mb-0 text-muted small">{{ alert.health_reason }}</p>
-                                </div>
-                                <div>
-                                    <a href="{% url 'resolve_network_health' 'router' alert.id %}" class="btn btn-sm btn-outline-success rounded-pill fw-bold"><i class="fas fa-check me-1"></i>Resolve</a>
-                                </div>
-                            </div>
-                            {% endfor %}
-                            
-                            {% for alert in active_barangay_alerts %}
-                            <div class="d-flex justify-content-between align-items-center mb-3 p-3 rounded" style="background-color: #f8f9fa; border-left: 3px solid #fd7e14;">
-                                <div>
-                                    <h6 class="mb-1 fw-bold"><i class="fas fa-map-marker-alt me-2 text-secondary"></i>{{ alert.name }} (Barangay)
-                                        <span class="badge bg-warning text-dark ms-2">{{ alert.health_status }}</span>
-                                    </h6>
-                                    <p class="mb-0 text-muted small">{{ alert.health_reason }}</p>
-                                </div>
-                                <div>
-                                    <a href="{% url 'resolve_network_health' 'barangay' alert.id %}" class="btn btn-sm btn-outline-success rounded-pill fw-bold"><i class="fas fa-check me-1"></i>Resolve</a>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <div id="async-data-container">
-                <div class="d-flex flex-column align-items-center justify-content-center py-5">
-                    <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <h5 class="text-muted">Fetching Live Users from Routers...</h5>
-                    <p class="text-muted small">This may take a few seconds if some routers are offline.</p>
-                </div>
-            </div>
-            
-        </div>
+  <!-- Page Hero -->
+  <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in"
+       style="background: linear-gradient(135deg, #0c4a6e 0%, #0369a1 60%, #0ea5e9 100%);">
+    <div class="d-flex align-items-center">
+      <div class="hero-icon"><i class="fas fa-computer"></i></div>
+      <div>
+        <div class="hero-title">Mikrotik Active Users</div>
+        <div class="hero-sub">Live view of connected and disconnected subscribers across all routers</div>
+      </div>
     </div>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <select id="routerFilter" class="form-select" style="width:auto; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); color:white; border-radius:12px;">
+        <option value="" style="color:#0f172a;">All Routers</option>
+        {% for device in devices %}
+        <option value="{{ device.device_name }}" style="color:#0f172a;">{{ device.device_name }}</option>
+        {% endfor %}
+      </select>
+      <button type="button" class="btn-premium" style="background:rgba(245,158,11,0.25); color:#fef3c7; border:1px solid rgba(245,158,11,0.4);" data-bs-toggle="modal" data-bs-target="#updateHealthModal">
+        <i class="fas fa-heartbeat"></i> Update Network Health
+      </button>
+    </div>
+  </div>
+
+  <!-- Active Network Alerts -->
+  {% if active_device_alerts or active_barangay_alerts %}
+  <div class="dashboard-card mb-4 animate-fade-in animate-delay-1" style="overflow:hidden;">
+    <div class="section-header section-header-amber">
+      <h6><i class="fas fa-exclamation-triangle sh-icon"></i> Active Network Alerts</h6>
+      <small>{{ active_device_alerts|length|add:active_barangay_alerts|length }} active issues</small>
+    </div>
+    <div class="p-4">
+      {% for alert in active_device_alerts %}
+      <div class="d-flex justify-content-between align-items-start gap-3 mb-3 p-3 rounded-3"
+           style="background:rgba(220,38,38,0.05); border-left:3px solid #dc2626;">
+        <div>
+          <div class="fw-bold mb-1">
+            <i class="fas fa-server me-2 text-muted"></i>{{ alert.device_name }} <small class="text-muted">(Router)</small>
+            <span class="pill pill-expired ms-2" style="font-size:0.7rem;">{{ alert.health_status }}</span>
+          </div>
+          <p class="mb-0 text-muted" style="font-size:0.83rem;">{{ alert.health_reason }}</p>
+        </div>
+        <a href="{% url 'resolve_network_health' 'router' alert.id %}" class="btn-premium btn-p-success flex-shrink-0" style="padding:6px 14px; font-size:0.8rem;">
+          <i class="fas fa-check"></i> Resolve
+        </a>
+      </div>
+      {% endfor %}
+      {% for alert in active_barangay_alerts %}
+      <div class="d-flex justify-content-between align-items-start gap-3 mb-3 p-3 rounded-3"
+           style="background:rgba(245,158,11,0.05); border-left:3px solid #f59e0b;">
+        <div>
+          <div class="fw-bold mb-1">
+            <i class="fas fa-map-marker-alt me-2 text-muted"></i>{{ alert.name }} <small class="text-muted">(Barangay)</small>
+            <span class="pill pill-suspended ms-2" style="font-size:0.7rem;">{{ alert.health_status }}</span>
+          </div>
+          <p class="mb-0 text-muted" style="font-size:0.83rem;">{{ alert.health_reason }}</p>
+        </div>
+        <a href="{% url 'resolve_network_health' 'barangay' alert.id %}" class="btn-premium btn-p-success flex-shrink-0" style="padding:6px 14px; font-size:0.8rem;">
+          <i class="fas fa-check"></i> Resolve
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Async Data Container -->
+  <div id="async-data-container" class="animate-fade-in animate-delay-2">
+    <div class="dashboard-card" style="overflow:hidden;">
+      <div class="section-header section-header-blue">
+        <h6><i class="fas fa-satellite-dish sh-icon"></i> Loading Router Data...</h6>
+      </div>
+      <div class="d-flex flex-column align-items-center justify-content-center py-5">
+        <div class="spinner-border text-primary mb-3" style="width:3rem; height:3rem;" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <h5 class="text-muted mb-1">Fetching Live Users from Routers...</h5>
+        <p class="text-muted small">This may take a few seconds if some routers are offline.</p>
+      </div>
+    </div>
+  </div>
 </div>
 
 {% include 'billing/partials/update_health_modal.html' %}
@@ -95,55 +100,44 @@
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 <script>
-
-
-    document.addEventListener("DOMContentLoaded", function() {
-        const container = document.getElementById('async-data-container');
-        
-        fetch(`/mikrotik-active-users/api/data/`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.text();
-            })
-            .then(html => {
-                container.innerHTML = html;
-                // Initialize DataTables AFTER the table is injected
-                var activeTable = $('#activeUsersTable').DataTable({
-                    "order": [[ 0, "asc" ]], // Sort by username by default
-                    "pageLength": 10,
-                    "language": {
-                        "search": "Quick Search:"
-                    }
-                });
-
-                var offlineTable = $('#offlineUsersTable').DataTable({
-                    "order": [[ 0, "asc" ]], // Sort by customer name by default
-                    "pageLength": 10,
-                    "language": {
-                        "search": "Quick Search:",
-                        "emptyTable": "<div class='py-4 text-muted'><i class='fas fa-check-circle text-success fs-3 mb-2 d-block'></i> All assigned customers are currently online.</div>"
-                    }
-                });
-
-                $('#routerFilter').on('change', function () {
-                    var val = this.value;
-                    // Active Users table: Router is column index 2
-                    activeTable.column(2).search(val).draw();
-                    // Offline Users table: Router is column index 3
-                    offlineTable.column(3).search(val).draw();
-                });
-            })
-            .catch(error => {
-                console.error('Error fetching active users data:', error);
-                container.innerHTML = `
-                    <div class="alert alert-danger text-center">
-                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i><br>
-                        <strong>Error loading data.</strong> Please try refreshing the page.
-                    </div>
-                `;
+document.addEventListener("DOMContentLoaded", function() {
+    const container = document.getElementById('async-data-container');
+    fetch(`/mikrotik-active-users/api/data/`)
+        .then(response => {
+            if(!response.ok) throw new Error('Network response was not ok');
+            return response.text();
+        })
+        .then(html => {
+            container.innerHTML = html;
+            var activeTable = $('#activeUsersTable').DataTable({
+                order: [[0,'asc']], pageLength: 10,
+                language: { search: '', searchPlaceholder: 'Search users...' }
             });
-    });
+            var offlineTable = $('#offlineUsersTable').DataTable({
+                order: [[0,'asc']], pageLength: 10,
+                language: {
+                    search: '', searchPlaceholder: 'Search customers...',
+                    emptyTable: "<div class='py-4 text-muted'><i class='fas fa-check-circle text-success fs-3 mb-2 d-block'></i>All assigned customers are currently online.</div>"
+                }
+            });
+            $('#routerFilter').on('change', function() {
+                var val = this.value;
+                activeTable.column(2).search(val).draw();
+                offlineTable.column(3).search(val).draw();
+            });
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            container.innerHTML = `
+                <div class="dashboard-card" style="overflow:hidden;">
+                    <div class="empty-state">
+                        <div class="es-icon" style="color:#dc2626;"><i class="fas fa-exclamation-triangle"></i></div>
+                        <h6>Error Loading Data</h6>
+                        <p>Could not fetch router data. Please try refreshing the page.</p>
+                    </div>
+                </div>
+            `;
+        });
+});
 </script>
 {% endblock %}

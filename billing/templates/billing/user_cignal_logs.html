@@ -1,77 +1,112 @@
 {% extends "billing/base.html" %}
 {% load static %}
 
-{% block title %}Cignal Play Logs{% endblock %}
+{% block title %}Cignal Play Logs - {{ customer.full_name }} | Gametech{% endblock %}
 
 {% block content %}
-<main class="container-fluid py-3 px-3 px-md-4">
-    <!-- Messages / Notifications -->
-    {% if messages %}
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-        {% endfor %}
-    {% endif %}
+<div class="container-fluid py-4 px-3 px-md-4">
 
-    <div class="live-header-row mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
-        <h2 class="live-title mb-0">
-            <div class="kpi-icon icon-red" style="width: 48px; height: 48px; font-size: 1.4rem; margin-right: 0;">
-                <i class="fa-solid fa-satellite-dish"></i>
-            </div>
-            Transaction Logs for {{ customer.full_name }}
-        </h2>
-        <a href="{% url 'cignal_play_list' %}" class="btn btn-outline-secondary rounded-pill px-4">
-            <i class="fas fa-arrow-left me-2"></i> Back to List
-        </a>
+  <!-- Page Hero -->
+  <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in"
+       style="background: linear-gradient(135deg, #713f12 0%, #a16207 50%, #ca8a04 100%);">
+    <div class="d-flex align-items-center">
+      <div class="hero-icon"><i class="fas fa-satellite-dish"></i></div>
+      <div>
+        <div class="hero-title">Cignal Play Logs</div>
+        <div class="hero-sub">Transaction history for <strong>{{ customer.full_name }}</strong></div>
+      </div>
     </div>
+    <a href="{% url 'cignal_play_list' %}" class="btn-premium" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.3);">
+      <i class="fas fa-arrow-left"></i> Back to List
+    </a>
+  </div>
 
-    <!-- Customer Overview Filter-Glass style -->
-    <div class="filter-glass d-flex align-items-center gap-4">
-        <h6 class="mb-0 fw-bold text-muted text-uppercase letter-spacing-1">Customer Info</h6>
-        <div class="d-flex align-items-center gap-2">
-            <span class="text-muted"><i class="fas fa-user me-1"></i> Username:</span>
-            <span class="fw-bold text-primary">{{ customer.username|default:"N/A" }}</span>
-        </div>
-        <div class="d-flex align-items-center gap-2">
-            <span class="text-muted"><i class="fas fa-tv me-1"></i> Cignal No:</span>
-            <span class="badge bg-warning text-dark px-3 rounded-pill">{{ customer.cignalplay_no|default:"N/A" }}</span>
-        </div>
-    </div>
+  {% if messages %}
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }} alert-dismissible fade show rounded-3 shadow-sm mb-3" role="alert">
+    {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+  {% endif %}
 
-    <div class="dashboard-card shadow-sm">
-        <div class="card-body p-0 table-responsive">
-            <table class="table table-hover align-middle mb-0 w-100">
-                <thead style="background: rgba(0,0,0,0.03);">
-                    <tr>
-                        <th class="py-3 px-4 border-bottom">Date Recorded</th>
-                        <th class="py-3 px-4 border-bottom">Plan / Item</th>
-                        <th class="py-3 px-4 border-bottom">Start / Received Date</th>
-                        <th class="py-3 px-4 border-bottom">End Date</th>
-                        <th class="py-3 px-4 border-bottom">Processed By</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for log in logs %}
-                    <tr>
-                        <td class="px-4 py-3 text-muted">{{ log.created_at|date:"M d, Y h:i A" }}</td>
-                        <td class="px-4 py-3 fw-bold text-primary">{{ log.plan_name }}</td>
-                        <td class="px-4 py-3"><span class="badge bg-light text-dark border">{{ log.start_date|date:"M d, Y"|default:"-" }}</span></td>
-                        <td class="px-4 py-3"><span class="badge bg-light text-dark border">{{ log.end_date|date:"M d, Y"|default:"-" }}</span></td>
-                        <td class="px-4 py-3"><span class="badge bg-secondary rounded-pill"><i class="fas fa-user-shield me-1"></i> {{ log.adjusted_by|default:"-" }}</span></td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="text-center text-muted py-5">
-                            <i class="fas fa-inbox fa-3x mb-3" style="opacity: 0.3;"></i><br>
-                            No transactions recorded for this customer.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+  <!-- Customer Info Strip -->
+  <div class="filter-glass animate-fade-in animate-delay-1 d-flex align-items-center gap-4 flex-wrap">
+    <div class="d-flex align-items-center gap-2">
+      <div class="av av-sm av-blue">{{ customer.full_name|make_list|first|upper }}</div>
+      <div>
+        <div class="fw-bold" style="font-size:0.9rem;">{{ customer.full_name }}</div>
+        <div class="text-muted" style="font-size:0.78rem;">Customer</div>
+      </div>
     </div>
-</main>
+    <div class="d-flex align-items-center gap-2">
+      <span class="text-muted" style="font-size:0.83rem;"><i class="fas fa-user me-1"></i>Username:</span>
+      <span class="fw-bold" style="color:#2563eb; font-size:0.88rem;">{{ customer.username|default:"N/A" }}</span>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <span class="text-muted" style="font-size:0.83rem;"><i class="fas fa-tv me-1"></i>Cignal No.:</span>
+      <span class="pill pill-suspended" style="background:rgba(202,138,4,0.12); color:#92400e; border-color:rgba(202,138,4,0.3);">
+        <span class="pill-dot" style="background:#ca8a04;"></span>{{ customer.cignalplay_no|default:"N/A" }}
+      </span>
+    </div>
+  </div>
+
+  <!-- Logs Table -->
+  <div class="dashboard-card animate-fade-in animate-delay-2" style="overflow:hidden;">
+    <div class="section-header section-header-amber">
+      <h6><i class="fas fa-receipt sh-icon"></i> Transaction History</h6>
+      <small>{{ logs|length }} records</small>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-premium table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Date Recorded</th>
+            <th>Plan / Item</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+            <th>Processed By</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr>
+            <td>
+              <div class="fw-semibold" style="font-size:0.85rem;">{{ log.created_at|date:"M d, Y" }}</div>
+              <div class="text-muted" style="font-size:0.75rem;">{{ log.created_at|date:"h:i A" }}</div>
+            </td>
+            <td><span class="fw-bold" style="color:#2563eb;">{{ log.plan_name }}</span></td>
+            <td>
+              {% if log.start_date %}
+                <span class="pill pill-active"><span class="pill-dot"></span>{{ log.start_date|date:"M d, Y" }}</span>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if log.end_date %}
+                <span class="pill pill-expired"><span class="pill-dot"></span>{{ log.end_date|date:"M d, Y" }}</span>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="pill pill-inactive"><span class="pill-dot"></span><i class="fas fa-user-shield me-1"></i>{{ log.adjusted_by|default:"—" }}</span>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5">
+              <div class="empty-state">
+                <div class="es-icon"><i class="fas fa-inbox"></i></div>
+                <h6>No Transactions Found</h6>
+                <p>No Cignal Play transactions have been recorded for this customer.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 {% endblock %}

@@ -1,153 +1,89 @@
 {% extends 'billing/base.html' %}
 {% load static %}
 
-{% block title %}Customer Subscriptions{% endblock %}
+{% block title %}Customer Subscriptions | Gametech{% endblock %}
 
 {% block extra_css %}
 <style>
-.subscriptions-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:24px; }
-.subscriptions-title { display:flex; align-items:center; gap:12px; font-size:1.6em; font-weight:700; color:#1e293b; }
-.dark-mode .subscriptions-title { color:#f1f5f9; }
-.subscriptions-title .title-icon { width:44px; height:44px; background:linear-gradient(135deg,#16a34a,#10b981); border-radius:12px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.2rem; box-shadow:0 4px 12px rgba(22,163,74,0.3); }
-/* Global Dark Mode Fix for this page */
-.dark-mode body { background-color: #0f172a !important; color: #e2e8f0 !important; }
-.dark-mode .topbar { background-color: #1e293b !important; border-bottom: 1px solid #334155 !important; }
-.dark-mode .topbar .topbar-title { color: #f8fafc !important; }
-.dark-mode .topbar .menu-btn, .dark-mode .topbar .hide-btn, .dark-mode .topbar .show-btn { color: #94a3b8 !important; }
-.dark-mode .topbar .menu-btn:hover, .dark-mode .topbar .hide-btn:hover, .dark-mode .topbar .show-btn:hover { color: #F9B233 !important; }
-.dark-mode .topbar-right { color: #e2e8f0 !important; }
-
-/* Dashboard Brand Utilities */
-.dark-mode .text-primary { color: #38bdf8 !important; }
-.dark-mode .text-muted { color: #64748b !important; }
-.dark-mode .text-danger { color: #f87171 !important; }
-.dark-mode .text-warning { color: #fbbf24 !important; }
-.dark-mode .text-success { color: #34d399 !important; }
-
-/* KPI and Dashboard Cards (from Dashboard) */
-.kpi-card { border-radius:16px; padding:1.25rem; display:flex; align-items:center; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); border:1px solid rgba(0,0,0,0.05); transition:transform 0.2s,box-shadow 0.2s; background:#fff; }
-.dark-mode .kpi-card { background:#1e293b; box-shadow:0 4px 6px -1px rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.05); }
-.kpi-card:hover { transform:translateY(-2px); box-shadow:0 10px 15px -3px rgba(0,0,0,0.1); }
-.dark-mode .kpi-card:hover { box-shadow:0 10px 15px -3px rgba(0,0,0,0.3); }
-
-.kpi-icon { font-size:1.75rem; margin-right:1rem; width:56px; height:56px; display:flex; align-items:center; justify-content:center; border-radius:14px; background:rgba(0,0,0,0.05); }
-.dark-mode .kpi-icon { background:rgba(255,255,255,0.05); }
-.icon-green { color:#34d399; background:rgba(52,211,153,0.15) !important; }
-.icon-orange { color:#fb923c; background:rgba(251,146,60,0.15) !important; }
-.icon-red { color:#f87171; background:rgba(248,113,113,0.15) !important; }
-.icon-gray { color:#94a3b8; background:rgba(148,163,184,0.15) !important; }
-.icon-blue { color:#38bdf8; background:rgba(56,189,248,0.15) !important; }
-
-.kpi-label { font-size:0.85rem; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
-.dark-mode .kpi-label { color:#94a3b8; }
-.kpi-value { font-size:1.5rem; font-weight:700; color:#0f172a; line-height:1; }
-.dark-mode .kpi-value { color:#f8fafc; }
-
-.dashboard-card { background:#fff; border-radius:16px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); border:1px solid rgba(0,0,0,0.05); overflow:hidden; margin-bottom:28px; }
-.dark-mode .dashboard-card { background:#1e293b; box-shadow:0 4px 6px -1px rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.05); }
-.dashboard-card .card-header { background:rgba(0,0,0,0.03); border-bottom:1px solid rgba(0,0,0,0.05); padding:1rem 1.25rem; font-weight:600; color:#0f172a; display:flex; align-items:center; gap:8px; }
-.dark-mode .dashboard-card .card-header { background:rgba(15,23,42,0.4); border-bottom:1px solid rgba(255,255,255,0.05); color:#f8fafc; }
-
-.filter-input, .filter-select { padding:10px 14px; border-radius:10px; border:1px solid rgba(0,0,0,0.1); background:#f8fafc; color:#334155; font-size:0.9rem; transition:border 0.2s; width:100%; }
-.dark-mode .filter-input, .dark-mode .filter-select { background:rgba(15,23,42,0.5); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; }
-.filter-input:focus, .filter-select:focus { outline:none; border-color:#38bdf8; }
-.btn-filter { background:linear-gradient(135deg,#2151A1,#38bdf8); color:#fff; border:none; border-radius:10px; padding:10px; font-weight:600; width:100%; transition:opacity 0.2s; }
-.btn-filter:hover { opacity:0.9; }
-
-/* Table */
+/* Subs-specific styles (inner content loaded async uses these) */
 .subs-table { width:100%; border-collapse:collapse; }
-.subs-table thead tr { background:transparent; border-bottom:1px solid rgba(0,0,0,0.1); }
-.dark-mode .subs-table thead tr { background:transparent; border-bottom:1px solid rgba(255,255,255,0.1); }
-.subs-table th { padding:12px 16px; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; font-weight:600; white-space:nowrap; }
-.dark-mode .subs-table th { color:#94a3b8; }
-.subs-table th a { color: inherit; text-decoration: none; }
-.subs-table td { padding:14px 16px; font-size:0.9rem; color:#334155; border-bottom:1px solid rgba(0,0,0,0.04); vertical-align:middle; white-space:nowrap; }
-.dark-mode .subs-table td { color:#cbd5e1; border-bottom:1px solid rgba(255,255,255,0.04); }
-.subs-table tbody tr:last-child td { border-bottom:none; }
-.subs-table tbody tr:hover { background:rgba(56,189,248,0.05); }
-.dark-mode .subs-table tbody tr:hover { background:rgba(255,255,255,0.05); }
-
-/* Badges */
-.status-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:8px; font-size:0.8rem; font-weight:600; }
-.status-active { background:rgba(16,185,129,0.15); color:#10b981; }
-.status-warning { background:rgba(245,158,11,0.15); color:#f59e0b; }
-.status-danger { background:rgba(239,68,68,0.15); color:#ef4444; }
-.status-secondary { background:rgba(100,116,139,0.15); color:#64748b; }
-.dark-mode .status-active { color:#34d399; }
-.dark-mode .status-warning { color:#fbbf24; }
-.dark-mode .status-danger { color:#f87171; }
-.dark-mode .status-secondary { color:#94a3b8; }
-
-.action-btn { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:6px; color:#fff; border:none; margin-right:4px; font-size:0.8rem; transition:transform 0.15s; text-decoration:none; }
+.subs-table thead tr { border-bottom:2px solid rgba(0,0,0,0.06); }
+.dark-mode .subs-table thead tr { border-bottom-color:rgba(255,255,255,0.06); }
+.subs-table th { padding:12px 16px; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.7px; color:#475569; font-weight:700; white-space:nowrap; background:#f8faff; }
+.dark-mode .subs-table th { color:#94a3b8; background:rgba(15,23,42,0.6); }
+.subs-table td { padding:13px 16px; font-size:0.88rem; color:#334155; border-bottom:1px solid rgba(0,0,0,0.04); vertical-align:middle; }
+.dark-mode .subs-table td { color:#cbd5e1; border-bottom-color:rgba(255,255,255,0.04); }
+.subs-table tbody tr:hover { background:rgba(59,130,246,0.04); }
+.dark-mode .subs-table tbody tr:hover { background:rgba(255,255,255,0.04); }
+.action-btn { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:8px; color:#fff; border:none; margin-right:4px; font-size:0.8rem; transition:transform 0.15s; text-decoration:none; }
 .action-btn:hover { transform:scale(1.1); color:#fff; }
-.btn-view { background:#0ea5e9; }
-.btn-pay { background:#10b981; }
-.btn-rebate { background:#f59e0b; }
-.btn-adjust { background:#ef4444; }
-.btn-soa { background:#16a34a; }
-.btn-log { background:#64748b; }
-
-/* Pagination */
-.pagination-container { padding: 14px 20px; display: flex; justify-content: center; border-top: 1px solid rgba(0,0,0,0.05); }
-.dark-mode .pagination-container { border-top: 1px solid rgba(255,255,255,0.05); }
-.pagination { display: flex; list-style: none; padding: 0; margin: 0; gap: 5px; }
-.page-item .page-link { padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.1); color: #334155; text-decoration: none; }
-.dark-mode .page-item .page-link { border-color: rgba(255,255,255,0.1); color: #e2e8f0; }
-.page-item.active .page-link { background: #38bdf8; color: white; border-color: #38bdf8; }
-.page-item.disabled .page-link { opacity: 0.5; pointer-events: none; }
+.btn-view   { background:linear-gradient(135deg,#0369a1,#0ea5e9); }
+.btn-pay    { background:linear-gradient(135deg,#065f46,#10b981); }
+.btn-rebate { background:linear-gradient(135deg,#78350f,#f59e0b); }
+.btn-adjust { background:linear-gradient(135deg,#7f1d1d,#ef4444); }
+.btn-soa    { background:linear-gradient(135deg,#14532d,#16a34a); }
+.btn-log    { background:linear-gradient(135deg,#334155,#64748b); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-3 px-3 px-md-4">
-    <div class="live-header-row mb-4">
-        <h2 class="live-title">
-            <div class="kpi-icon icon-green" style="width: 48px; height: 48px; font-size: 1.4rem; margin-right: 0;">
-                <i class="fa-regular fa-address-book"></i>
-            </div>
-            Customer Subscriptions
-        </h2>
-    </div>
+<div class="container-fluid py-4 px-3 px-md-4">
 
-    <!-- ASYNC DATA CONTAINER -->
-    <div id="async-data-container">
-        <div class="d-flex flex-column align-items-center justify-content-center py-5">
-            <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <h5 class="text-muted">Loading Customer Data & Mikrotik Status...</h5>
-            <p class="text-muted small">This may take a few seconds if some routers are offline.</p>
-        </div>
+  <!-- Page Hero -->
+  <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in"
+       style="background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #059669 100%);">
+    <div class="d-flex align-items-center">
+      <div class="hero-icon"><i class="fa-regular fa-address-book"></i></div>
+      <div>
+        <div class="hero-title">Customer Subscriptions</div>
+        <div class="hero-sub">Live status of all subscriber accounts and Mikrotik connectivity</div>
+      </div>
     </div>
+    <span class="hero-badge"><i class="fas fa-satellite-dish me-1"></i> Live Router Sync</span>
+  </div>
+
+  <!-- Async Data Container -->
+  <div id="async-data-container" class="animate-fade-in animate-delay-1">
+    <div class="dashboard-card" style="overflow:hidden;">
+      <div class="section-header section-header-green">
+        <h6><i class="fas fa-spinner fa-spin sh-icon"></i> Loading Customer &amp; Router Data...</h6>
+      </div>
+      <div class="d-flex flex-column align-items-center justify-content-center py-5">
+        <div class="spinner-border text-success mb-3" style="width:3rem; height:3rem;" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <h5 class="text-muted mb-1">Loading Customer Data &amp; Mikrotik Status...</h5>
+        <p class="text-muted small">This may take a few seconds if some routers are offline.</p>
+      </div>
+    </div>
+  </div>
+
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        const container = document.getElementById('async-data-container');
-        const queryString = window.location.search;
-        
-        // Fetch the partial HTML from the API
-        fetch(`/subscriptions/api/data/${queryString}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.text();
-            })
-            .then(html => {
-                container.innerHTML = html;
-            })
-            .catch(error => {
-                console.error('Error fetching subscription data:', error);
-                container.innerHTML = `
-                    <div class="alert alert-danger text-center">
-                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i><br>
-                        <strong>Error loading data.</strong> Please try refreshing the page.
+document.addEventListener("DOMContentLoaded", function() {
+    const container = document.getElementById('async-data-container');
+    const queryString = window.location.search;
+    fetch(`/subscriptions/api/data/${queryString}`)
+        .then(response => {
+            if(!response.ok) throw new Error('Network response was not ok');
+            return response.text();
+        })
+        .then(html => { container.innerHTML = html; })
+        .catch(error => {
+            console.error('Error fetching subscription data:', error);
+            container.innerHTML = `
+                <div class="dashboard-card" style="overflow:hidden;">
+                    <div class="empty-state">
+                        <div class="es-icon" style="color:#dc2626;"><i class="fas fa-exclamation-triangle"></i></div>
+                        <h6>Error Loading Data</h6>
+                        <p>Could not load subscription data. Please try refreshing the page.</p>
                     </div>
-                `;
-            });
-    });
+                </div>
+            `;
+        });
+});
 </script>
 {% endblock %}
