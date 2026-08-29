@@ -139,6 +139,46 @@
             border: 1px solid rgba(255,255,255,0.1) !important;
         }
 
+        .quick-pay-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        .quick-btn {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 0.75rem 0.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #94a3b8;
+        }
+        .quick-btn:hover {
+            border-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.05);
+            color: #f8fafc;
+        }
+        .quick-btn.active {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+        }
+        .quick-btn .months {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: #e2e8f0;
+        }
+        .quick-btn .price {
+            font-size: 0.75rem;
+            opacity: 0.9;
+        }
     </style>
 </head>
 <body class="dark-mode">
@@ -423,6 +463,44 @@
                         </select>
                     </div>
 
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size: 0.85rem; color: #94a3b8;">Payment Options</label>
+                        <div class="quick-pay-grid">
+                            <div class="quick-btn" data-days="3">
+                                <span class="months">3 Days</span>
+                                <span class="price">₱<span class="calc-price" data-days="3">0.00</span></span>
+                            </div>
+                            <div class="quick-btn" data-days="15">
+                                <span class="months">15 Days</span>
+                                <span class="price">₱<span class="calc-price" data-days="15">0.00</span></span>
+                            </div>
+                            <div class="quick-btn active" data-months="1">
+                                <span class="months">1 Month</span>
+                                <span class="price">₱<span class="calc-price" data-mult="1">0.00</span></span>
+                            </div>
+                            <div class="quick-btn" data-months="2">
+                                <span class="months">2 Months</span>
+                                <span class="price">₱<span class="calc-price" data-mult="2">0.00</span></span>
+                            </div>
+                            <div class="quick-btn" data-months="3">
+                                <span class="months">3 Months</span>
+                                <span class="price">₱<span class="calc-price" data-mult="3">0.00</span></span>
+                            </div>
+                            <div class="quick-btn" data-months="6">
+                                <span class="months">6 Months</span>
+                                <span class="price">₱<span class="calc-price" data-mult="6">0.00</span></span>
+                            </div>
+                            <div class="quick-btn" data-months="12">
+                                <span class="months">1 Year</span>
+                                <span class="price">₱<span class="calc-price" data-mult="12">0.00</span></span>
+                            </div>
+                            <div class="quick-btn" data-months="custom" id="btn-custom">
+                                <span class="months">Custom</span>
+                                <span class="price">Enter Amount</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="mb-4">
                         <label for="amountInput" class="form-label" style="font-size: 0.85rem; color: #94a3b8;">Amount to Pay (PHP)</label>
                         <div class="input-group">
@@ -657,13 +735,63 @@
     document.addEventListener("DOMContentLoaded", function() {
         const planSelect = document.getElementById('planSelect');
         const amountInput = document.getElementById('amountInput');
+        const quickBtns = document.querySelectorAll('.quick-btn');
         
+        function updateGridMath() {
+            if (!planSelect) return;
+            const selectedOption = planSelect.options[planSelect.selectedIndex];
+            const basePrice = parseFloat(selectedOption.getAttribute('data-price') || 0);
+            const dailyRate = basePrice / 30; // 30-day month assumed
+
+            document.querySelectorAll('.calc-price').forEach(el => {
+                if (el.hasAttribute('data-days')) {
+                    const days = parseInt(el.getAttribute('data-days'));
+                    el.textContent = (dailyRate * days).toFixed(2);
+                } else if (el.hasAttribute('data-mult')) {
+                    const mult = parseInt(el.getAttribute('data-mult'));
+                    el.textContent = (basePrice * mult).toFixed(2);
+                }
+            });
+        }
+
+        // Initialize grid
+        updateGridMath();
+
+        if (quickBtns.length > 0 && amountInput) {
+            quickBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // Remove active from all
+                    quickBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+
+                    if (this.id === 'btn-custom') {
+                        amountInput.value = '';
+                        amountInput.focus();
+                        return;
+                    }
+
+                    const calcSpan = this.querySelector('.calc-price');
+                    if (calcSpan) {
+                        amountInput.value = parseFloat(calcSpan.textContent).toFixed(2);
+                    }
+                });
+            });
+        }
+
         if (planSelect && amountInput) {
             planSelect.addEventListener('change', function() {
-                const selectedOption = planSelect.options[planSelect.selectedIndex];
-                const newPrice = selectedOption.getAttribute('data-price');
-                if (newPrice) {
-                    amountInput.value = parseFloat(newPrice).toFixed(2);
+                updateGridMath();
+                
+                // Re-trigger click on active button to update amount input
+                const activeBtn = document.querySelector('.quick-btn.active');
+                if (activeBtn && activeBtn.id !== 'btn-custom') {
+                    activeBtn.click();
+                } else if (!activeBtn) {
+                    const selectedOption = planSelect.options[planSelect.selectedIndex];
+                    const newPrice = selectedOption.getAttribute('data-price');
+                    if (newPrice) {
+                        amountInput.value = parseFloat(newPrice).toFixed(2);
+                    }
                 }
             });
         }
