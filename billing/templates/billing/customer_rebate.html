@@ -1,49 +1,45 @@
 {% extends 'billing/base.html' %}
+
+{% block title %}Issue Rebate - {{ customer.pppoe_username }} | Gametech{% endblock %}
+
 {% block content %}
-<div class="container py-5 d-flex justify-content-center">
-    <div class="modern-card w-100" style="max-width: 500px;">
-        <div class="card-header-gradient-success text-center">
-            <h4 class="mb-0 fw-bold"><i class="fas fa-gift me-2"></i> Issue Rebate</h4>
-            <p class="mb-0 text-white-50 small">for {{ customer.pppoe_username }}</p>
+<div class="container-fluid py-4 px-3 px-md-4">
+  <div class="row justify-content-center animate-fade-in">
+    <div class="col-12 col-md-8 col-lg-6 col-xl-5">
+      <div class="dashboard-card" style="overflow:hidden;">
+        <!-- Card Header -->
+        <div style="background: linear-gradient(135deg, #064e3b 0%, #059669 100%); padding: 28px 24px; text-align:center;">
+          <div style="width:52px; height:52px; border-radius:16px; background:rgba(255,255,255,0.15); display:inline-flex; align-items:center; justify-content:center; font-size:1.4rem; color:white; margin-bottom:12px;">
+            <i class="fas fa-gift"></i>
+          </div>
+          <h4 class="mb-1 fw-bold" style="color:white;">Issue Rebate</h4>
+          <p class="mb-0" style="color:rgba(255,255,255,0.7); font-size:0.85rem;">for {{ customer.pppoe_username }}</p>
         </div>
-        <div class="card-body p-4">
-            <form method="post" autocomplete="off">
-                {% csrf_token %}
-                <div class="mb-3">
-                    <label class="form-label fw-bold text-muted small text-uppercase">Current Expiry</label>
-                    <input type="text" class="form-control modern-form-control" value="{{ customer.expires_at|default:'N/A' }}" readonly>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-bold text-muted small text-uppercase">Set New Expiry (Rebate)</label>
-                    <input type="datetime-local" name="new_due_date_time" class="form-control modern-form-control" id="new_due_date_time" value="{{ current_expiry_js }}" required>
-                </div>
-
-                <div class="mb-4">
-                    <label class="form-label fw-bold text-muted small text-uppercase">Reason for Rebate</label>
-                    <textarea name="note" class="form-control modern-form-control" rows="3" placeholder="Power outage, downtime, etc." required></textarea>
-                </div>
-
-                <div class="d-flex gap-2">
-                    <a href="{% url 'view_customer' customer.id %}" class="btn btn-light modern-btn flex-fill">Cancel</a>
-                    <button type="submit" class="btn btn-success modern-btn flex-fill shadow-sm">Apply Rebate</button>
-                </div>
-            </form>
+        <div class="p-4">
+          <form method="post" autocomplete="off">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label class="filter-label">Current Expiry</label>
+              <input type="text" class="form-control" value="{{ customer.expires_at|default:'N/A' }}" readonly style="background:rgba(5,150,105,0.05); border-color:rgba(5,150,105,0.2); color:#059669; font-weight:600;">
+            </div>
+            <div class="mb-3">
+              <label class="filter-label">Set New Expiry (Rebate)</label>
+              <input type="datetime-local" name="new_due_date_time" class="form-control" id="new_due_date_time" value="{{ current_expiry_js }}" required>
+            </div>
+            <div class="mb-4">
+              <label class="filter-label">Reason for Rebate</label>
+              <textarea name="note" class="form-control" rows="3" placeholder="Power outage, downtime, etc." required></textarea>
+            </div>
+            <div class="d-flex gap-2">
+              <a href="{% url 'view_customer' customer.id %}" class="btn-premium btn-p-ghost flex-fill justify-content-center">Cancel</a>
+              <button type="submit" class="btn-premium btn-p-success flex-fill justify-content-center">
+                <i class="fas fa-gift"></i> Apply Rebate
+              </button>
+            </div>
+          </form>
         </div>
+      </div>
     </div>
+  </div>
 </div>
-{% endblock %}
-
-{% block extra_css %}
-<style>
-  .modern-card { background: #fff; border-radius: 20px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.08); overflow: hidden; }
-  .dark-mode .modern-card { background: #1e293b; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-  .card-header-gradient-success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 25px 20px; border-bottom: none; }
-  .modern-form-control { border-radius: 12px; padding: 12px 15px; border: 1px solid #e2e8f0; background: #f8fafc; }
-  .dark-mode .modern-form-control { background: #0f172a; border-color: #334155; color: #f1f5f9; }
-  .dark-mode .text-muted { color: #94a3b8 !important; }
-  .modern-btn { border-radius: 12px; padding: 12px; font-weight: 600; }
-  .dark-mode .btn-light { background: #334155; border-color: #334155; color: #f1f5f9; }
-  .dark-mode .btn-light:hover { background: #475569; }
-</style>
 {% endblock %}

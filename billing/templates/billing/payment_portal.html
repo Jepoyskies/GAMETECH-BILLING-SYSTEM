@@ -1,53 +1,68 @@
-{% extends 'billing/base.html' %}
-{% block content %}
-<div class="container-fluid py-3 px-3 px-md-4">
-    <div class="live-header-row mb-4">
-        <h2 class="live-title">
-            <div class="kpi-icon icon-green" style="width: 48px; height: 48px; font-size: 1.4rem; margin-right: 0;">
-                <i class="fa-solid fa-cash-register"></i>
-            </div>
-            Process Payments
-        </h2>
-    </div>
+{% extends "billing/base.html" %}
+{% load static %}
 
-    <div class="dashboard-card">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0" id="paymentTable" style="width:100%; border-collapse: collapse;">
-                    <thead style="background: rgba(0,0,0,0.03);">
-                    <tr>
-                        <th>Username</th>
-                        <th>Full Name</th>
-                        <th>Plan</th>
-                        <th>Expiry Date</th>
-                        <th class="text-center">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for c in customers %}
-                    <tr>
-                        <td class="fw-bold">{{ c.pppoe_username }}</td>
-                        <td>{{ c.full_name }}</td>
-                        <td>{{ c.plan.name|default:"No Plan" }}</td>
-                        <td>{{ c.expires_at|date:"M d, Y H:i"|default:"N/A" }}</td>
-                        <td class="text-center">
-                            <a href="{% url 'pay_customer' c.pppoe_username %}?next={{ request.get_full_path|urlencode }}" class="btn btn-success btn-sm fw-bold">
-                                💵 Take Payment
-                            </a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="text-center py-4 text-muted">
-                            <i class="fas fa-users-slash fs-4 mb-2 d-block opacity-50"></i>
-                            No customers found in the database.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            </div>
-        </div>
+{% block title %}Process Payments | Gametech{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-3 px-md-4">
+
+  <!-- Page Hero -->
+  <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in"
+       style="background: linear-gradient(135deg, #064e3b 0%, #059669 60%, #10b981 100%);">
+    <div class="d-flex align-items-center">
+      <div class="hero-icon"><i class="fas fa-cash-register"></i></div>
+      <div>
+        <div class="hero-title">Payment Portal</div>
+        <div class="hero-sub">Process and record subscriber payments</div>
+      </div>
     </div>
+    <span class="hero-badge"><i class="fas fa-users me-1"></i> {{ customers|length }} customers</span>
+  </div>
+
+  <!-- Table Card -->
+  <div class="dashboard-card animate-fade-in animate-delay-1" style="overflow:hidden;">
+    <div class="section-header section-header-green">
+      <h6><i class="fas fa-money-bill-wave sh-icon"></i> All Customers</h6>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-premium table-hover align-middle mb-0" id="paymentTable">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Full Name</th>
+            <th>Plan</th>
+            <th>Expiry Date</th>
+            <th class="text-center">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in customers %}
+          <tr>
+            <td><span class="fw-bold" style="color:#2563eb;">{{ c.pppoe_username }}</span></td>
+            <td class="fw-semibold">{{ c.full_name }}</td>
+            <td><span class="text-muted" style="font-size:0.83rem;">{{ c.plan.name|default:"No Plan" }}</span></td>
+            <td><span class="text-muted" style="font-size:0.83rem;">{{ c.expires_at|date:"M d, Y H:i"|default:"N/A" }}</span></td>
+            <td class="text-center">
+              <a href="{% url 'pay_customer' c.pppoe_username %}?next={{ request.get_full_path|urlencode }}"
+                 class="btn-premium btn-p-success" style="padding:7px 16px; font-size:0.8rem;">
+                <i class="fas fa-money-bill-wave"></i> Take Payment
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5">
+              <div class="empty-state">
+                <div class="es-icon"><i class="fas fa-users-slash"></i></div>
+                <h6>No Customers Found</h6>
+                <p>No customers are available for payment processing.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 {% endblock %}

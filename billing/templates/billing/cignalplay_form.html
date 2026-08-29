@@ -1,50 +1,57 @@
 {% extends "billing/base.html" %}
 {% load static %}
 
-{% block title %}Cignal Play Payment{% endblock %}
+{% block title %}Cignal Play Payment - {{ customer.full_name }} | Gametech{% endblock %}
 
 {% block content %}
-<main class="container py-4 px-3 px-md-4">
-    <div class="d-flex align-items-center justify-content-between mb-4">
-        <h2 class="mb-0 fw-bold text-primary">
-            <i class="fa-solid fa-money-bill me-2"></i> Add Payment for {{ customer.full_name }}
-        </h2>
-        <a href="{% url 'cignal_play_list' %}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left me-1"></i> Back
-        </a>
-    </div>
-
-    <div class="dashboard-card">
-        <div class="card-body p-4">
-            <form method="post">
-                {% csrf_token %}
-                <div class="row g-3">
-                    <div class="col-md-12">
-                        <label class="form-label fw-bold">Plan / Item Name</label>
-                        <input type="text" name="plan_name" class="form-control" required placeholder="e.g. Cignal Play Premium">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">Start / Received Date</label>
-                        <input type="date" name="start_date" class="form-control" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">End Date</label>
-                        <input type="date" name="end_date" class="form-control">
-                        <div class="form-text">Optional for one-time add-ons.</div>
-                    </div>
-                    <div class="col-md-12">
-                        <label class="form-label fw-bold">Processed By</label>
-                        <input type="text" name="adjusted_by" class="form-control" value="{{ request.user.username }}" required>
-                    </div>
-                </div>
-                
-                <div class="mt-4 text-end">
-                    <button type="submit" class="btn btn-success shadow-sm px-4 py-2">
-                        <i class="fas fa-check me-2"></i> Save Payment
-                    </button>
-                </div>
-            </form>
+<div class="container-fluid py-4 px-3 px-md-4">
+  <div class="row justify-content-center animate-fade-in">
+    <div class="col-12 col-md-8 col-lg-6 col-xl-5">
+      <div class="dashboard-card" style="overflow:hidden;">
+        <!-- Card Header -->
+        <div style="background: linear-gradient(135deg, #713f12 0%, #ca8a04 100%); padding: 28px 24px; text-align:center;">
+          <div style="width:52px; height:52px; border-radius:16px; background:rgba(255,255,255,0.15); display:inline-flex; align-items:center; justify-content:center; font-size:1.4rem; color:white; margin-bottom:12px;">
+            <i class="fas fa-money-bill"></i>
+          </div>
+          <h4 class="mb-1 fw-bold" style="color:white;">Cignal Play Payment</h4>
+          <p class="mb-0" style="color:rgba(255,255,255,0.75); font-size:0.85rem;">for {{ customer.full_name }}</p>
         </div>
+        <div class="p-4">
+          <div class="d-flex justify-content-end mb-3">
+            <a href="{% url 'cignal_play_list' %}" class="btn-premium btn-p-ghost" style="padding:6px 14px; font-size:0.8rem;">
+              <i class="fas fa-arrow-left"></i> Back
+            </a>
+          </div>
+          <form method="post">
+            {% csrf_token %}
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="filter-label">Plan / Item Name <span style="color:red;">*</span></label>
+                <input type="text" name="plan_name" class="form-control" required placeholder="e.g. Cignal Play Premium">
+              </div>
+              <div class="col-md-6">
+                <label class="filter-label">Start / Received Date <span style="color:red;">*</span></label>
+                <input type="date" name="start_date" class="form-control" required>
+              </div>
+              <div class="col-md-6">
+                <label class="filter-label">End Date</label>
+                <input type="date" name="end_date" class="form-control">
+                <div class="form-text" style="font-size:0.75rem;">Optional for one-time add-ons.</div>
+              </div>
+              <div class="col-12">
+                <label class="filter-label">Processed By <span style="color:red;">*</span></label>
+                <input type="text" name="adjusted_by" class="form-control" value="{{ request.user.username }}" required>
+              </div>
+            </div>
+            <div class="mt-4 d-grid">
+              <button type="submit" class="btn-premium btn-p-success justify-content-center">
+                <i class="fas fa-check"></i> Save Payment
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
-</main>
+  </div>
+</div>
 {% endblock %}
