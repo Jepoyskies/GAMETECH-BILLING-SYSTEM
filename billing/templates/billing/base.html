@@ -586,20 +586,16 @@ document.addEventListener("DOMContentLoaded", function() {
         return document.querySelector('[name=csrfmiddlewaretoken]') ? document.querySelector('[name=csrfmiddlewaretoken]').value : '';
     }
 
-    function timeSince(dateStr) {
+    function formatDateTime(dateStr) {
         const date = new Date(dateStr);
-        const seconds = Math.floor((new Date() - date) / 1000);
-        let interval = seconds / 31536000;
-        if (interval > 1) return Math.floor(interval) + " years ago";
-        interval = seconds / 2592000;
-        if (interval > 1) return Math.floor(interval) + " months ago";
-        interval = seconds / 86400;
-        if (interval > 1) return Math.floor(interval) + " days ago";
-        interval = seconds / 3600;
-        if (interval > 1) return Math.floor(interval) + " hours ago";
-        interval = seconds / 60;
-        if (interval > 1) return Math.floor(interval) + " mins ago";
-        return Math.floor(seconds) + " secs ago";
+        return date.toLocaleString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric', 
+            hour: 'numeric', 
+            minute: '2-digit', 
+            hour12: true 
+        });
     }
 
     function fetchNotifications() {
@@ -655,7 +651,7 @@ document.addEventListener("DOMContentLoaded", function() {
                                         <strong class="text-truncate d-block" style="font-size: 0.92rem; color: #1e293b;">${n.title}</strong>
                                     </div>
                                     <p class="mb-1 text-muted text-break" style="font-size: 0.85rem; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${n.message}</p>
-                                    <small class="fw-medium mt-1 d-block" style="font-size: 0.75rem; color: #64748b;"><i class="far fa-clock me-1"></i>${timeSince(n.created_at)}</small>
+                                    <small class="fw-medium mt-1 d-block" style="font-size: 0.75rem; color: #64748b;"><i class="far fa-clock me-1"></i>${formatDateTime(n.created_at)}</small>
                                 </div>
                             </div>
                             ${dot}

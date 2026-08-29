@@ -257,7 +257,10 @@
         <!-- Cignal & Others -->
         <div class="col-lg-4">
             <div class="info-card">
-                <h3 class="info-title"><i class="fas fa-tv"></i> Add-ons & Extra</h3>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="info-title mb-0"><i class="fas fa-tv"></i> Add-ons & Extra</h3>
+                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#cignalModal">Apply Add-on</button>
+                </div>
                 <ul class="info-list">
                     <li>
                         <span class="info-label">Cignal Play No.</span>
@@ -445,6 +448,43 @@
         <div class="modal-footer border-top-0 pt-0">
             <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="border-radius:12px;">Cancel</button>
             <button type="submit" class="btn btn-primary" style="border-radius:12px;">Save Balance</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Cignal Play Modal -->
+<div class="modal fade" id="cignalModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:20px; border:none;">
+      <div class="modal-header border-bottom-0 pb-0">
+        <h5 class="modal-title fw-bold"><i class="fas fa-tv text-primary me-2"></i> Apply Cignal Add-on</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="{% url 'apply_cignal_addon' %}" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="customer_id" value="{{ customer.id }}">
+        <div class="modal-body py-4">
+            <div class="mb-3">
+                <label class="form-label fw-bold">Add-on Type</label>
+                <select name="addon_type" class="form-select" required>
+                    <option value="Cignal Play Add-on">Cignal Play</option>
+                    <option value="Cignal Box Add-on">Cignal Box</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold">Cignal Play/Box No. (Account Number)</label>
+                <input type="text" class="form-control" name="cignalplay_no" value="{{ customer.cignalplay_no|default:'' }}" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold">Activation Date</label>
+                <input type="date" class="form-control" name="cignalplay_date" value="{% if customer.cignalplay_date %}{{ customer.cignalplay_date|date:'Y-m-d' }}{% else %}{% now 'Y-m-d' %}{% endif %}" required>
+            </div>
+        </div>
+        <div class="modal-footer border-top-0 pt-0">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="border-radius:12px;">Cancel</button>
+            <button type="submit" class="btn btn-primary" style="border-radius:12px;">Apply / Save</button>
         </div>
       </form>
     </div>
