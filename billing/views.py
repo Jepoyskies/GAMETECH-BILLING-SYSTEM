@@ -126,17 +126,25 @@ def dashboard_view(request):
     pie_labels_js = ["Cash", "GCash", "Bank Transfer"]
     pie_data_js = [float(cash), float(gcash), float(bank)]
 
-    # Admin logins (mock/fetch last logins)
-    recent_users = User.objects.exclude(
-        last_login__isnull=True).order_by('-last_login')[:5]
+    # Admin logins (fetch last active from cache)
+    recent_users = User.objects.filter(is_active=True).exclude(last_login__isnull=True)
     recent_admin_logins = []
+    
+    from django.core.cache import cache
+    
     for u in recent_users:
-        recent_admin_logins.append({
-            'username': u.username,
-            'color': '#0d6efd',
-            'event_type': 'login',
-            'login_time': u.last_login
-        })
+        last_active = cache.get(f'seen_user_{u.id}')
+        display_time = last_active if last_active else u.last_login
+        if display_time:
+            recent_admin_logins.append({
+                'username': u.username,
+                'color': '#0d6efd',
+                'event_type': 'active' if last_active else 'login',
+                'login_time': display_time
+            })
+            
+    # Sort by display_time descending
+    recent_admin_logins = sorted(recent_admin_logins, key=lambda x: x['login_time'], reverse=True)[:5]
 
     # Top Paying Clients
     top_clients_qs = payments.values('customer__full_name', 'customer__pppoe_username').annotate(

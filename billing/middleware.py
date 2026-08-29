@@ -26,7 +26,10 @@ class ActiveUserMiddleware:
         if request.user.is_authenticated:
             if getattr(request.user, 'is_staff', False) or getattr(request.user, 'role', None) in ['Admin', 'Technician', 'CSR']:
                 cache_key = f'seen_user_{request.user.id}'
-                cache.set(cache_key, timezone.now(), 300) # Expire in 5 minutes
-                
+                last_seen = cache.get(cache_key)
+                now = timezone.now()
+                if not last_seen or (now - last_seen).total_seconds() > 60:
+                    cache.set(cache_key, now, 60*60*24*30) # 30 days
+
         response = self.get_response(request)
         return response
