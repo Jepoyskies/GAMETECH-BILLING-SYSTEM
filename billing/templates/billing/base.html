@@ -281,6 +281,17 @@ body.tv-mode {
             </button>
         </div>
         <div class="topbar-right d-flex align-items-center gap-2">
+
+            <!-- Improvement Request Button -->
+            <button type="button" class="btn btn-sm fw-bold d-flex align-items-center gap-2"
+                    data-bs-toggle="modal" data-bs-target="#improvementModal"
+                    id="improvementBtn"
+                    title="Send a request to the development team"
+                    style="background: linear-gradient(135deg, #7c3aed, #4f46e5); color: white; border: none; border-radius: 20px; padding: 6px 14px; font-size: 0.8rem; box-shadow: 0 4px 12px rgba(124,58,237,0.4); transition: all 0.25s; white-space: nowrap;">
+                <i class="fas fa-wand-magic-sparkles"></i>
+                <span class="d-none d-md-inline">Need changes, Sir? 👋</span>
+            </button>
+
             <!-- Notification Bell -->
             <div class="dropdown">
                 <button class="btn btn-sm position-relative" type="button" id="notifDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background:transparent; border:none; font-size:1.25rem; color:inherit;" title="Notifications">
@@ -866,5 +877,102 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 </script>
 {% block extra_js %}{% endblock %}
+
+<!-- Improvement Request Modal -->
+<div class="modal fade" id="improvementModal" tabindex="-1" aria-labelledby="improvementModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
+            <div class="modal-header text-white border-0 pb-2" style="background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);">
+                <div>
+                    <h5 class="modal-title fw-bold mb-0" id="improvementModalLabel">
+                        <i class="fas fa-wand-magic-sparkles me-2" style="color:#F9B233;"></i>Request an Improvement
+                    </h5>
+                    <small class="opacity-75">Tell us what you want — we'll make it happen! 🚀</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <label class="form-label fw-semibold text-dark mb-2">What would you like us to improve or add?</label>
+                <textarea id="improvementMessage" class="form-control border-0 shadow-sm" rows="5"
+                    placeholder="e.g. 'I want the customer page to show the last payment date more clearly...' or 'Can we add a report for monthly income?'"
+                    style="border-radius: 12px; font-size: 0.9rem; background: #f8faff; resize: vertical;"></textarea>
+                <div id="improvementError" class="text-danger small mt-2" style="display:none;"></div>
+                <div class="mt-3 p-3 rounded-3" style="background:#fdf4ff; border-left: 4px solid #7c3aed; font-size:0.82rem; color:#6d28d9;">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Your request will be sent directly to the development team and tracked in the system. The admin can view all requests under <strong>Administration → Improvement Requests</strong>.
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 pb-4 pt-2" style="border-radius: 0 0 20px 20px;">
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="submitImprovementBtn" class="btn rounded-pill px-5 fw-bold text-white"
+                        style="background: linear-gradient(135deg, #7c3aed, #4f46e5); box-shadow: 0 4px 12px rgba(124,58,237,0.3);">
+                    <i class="fas fa-paper-plane me-2"></i>Send Request
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('submitImprovementBtn').addEventListener('click', function() {
+    const msg = document.getElementById('improvementMessage').value.trim();
+    const errEl = document.getElementById('improvementError');
+    const btn = this;
+
+    if (!msg) {
+        errEl.textContent = 'Please describe what you would like us to improve.';
+        errEl.style.display = 'block';
+        return;
+    }
+    errEl.style.display = 'none';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending...';
+    btn.disabled = true;
+
+    fetch('/api/improvement-request/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] || ''
+        },
+        body: JSON.stringify({ message: msg })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('improvementModal'));
+            modal.hide();
+            document.getElementById('improvementMessage').value = '';
+            // Show a nice success toast
+            const toastHtml = `
+            <div id="improvToast" style="position:fixed;bottom:24px;right:24px;z-index:9999;min-width:300px;" class="toast show align-items-center text-white border-0 shadow-lg" role="alert" style="border-radius:16px;background:linear-gradient(135deg,#7c3aed,#4f46e5);">
+                <div class="d-flex" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border-radius:14px;">
+                    <div class="toast-body fw-semibold"><i class="fas fa-check-circle me-2"></i>Request sent! We'll get on it. 🚀</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="document.getElementById('improvToast').remove()"></button>
+                </div>
+            </div>`;
+            document.body.insertAdjacentHTML('beforeend', toastHtml);
+            setTimeout(() => { const t = document.getElementById('improvToast'); if(t) t.remove(); }, 4000);
+        } else {
+            errEl.textContent = data.error || 'Something went wrong. Please try again.';
+            errEl.style.display = 'block';
+        }
+    })
+    .catch(() => {
+        errEl.textContent = 'Network error. Please try again.';
+        errEl.style.display = 'block';
+    })
+    .finally(() => {
+        btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Send Request';
+        btn.disabled = false;
+    });
+});
+
+// Hover effect on improvement button
+const impBtn = document.getElementById('improvementBtn');
+if (impBtn) {
+    impBtn.addEventListener('mouseenter', () => impBtn.style.transform = 'scale(1.05)');
+    impBtn.addEventListener('mouseleave', () => impBtn.style.transform = 'scale(1)');
+}
+</script>
 </body>
 </html>

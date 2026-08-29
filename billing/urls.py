@@ -141,4 +141,8 @@ urlpatterns = [
     path('api/notifications/', views.api_notifications, name='api_notifications'),
     path('api/notifications/mark-read/<int:notif_id>/', views.api_mark_notification_read, name='api_mark_notification_read'),
     path('api/notifications/mark-all-read/', views.api_mark_all_notifications_read, name='api_mark_all_notifications_read'),
+
+    # Improvement / Feedback Requests
+    path('api/improvement-request/', views.submit_improvement_request, name='submit_improvement_request'),
+    path('improvement-requests/', views.improvement_requests_list, name='improvement_requests_list'),
 ]

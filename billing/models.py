@@ -362,6 +362,25 @@ class Notification(models.Model):
         return f"[{self.notification_type}] {self.title}"
 
 
+class ImprovementRequest(models.Model):
+    STATUS_CHOICES = (
+        ('new', 'New'),
+        ('in_progress', 'In Progress'),
+        ('done', 'Done'),
+    )
+    submitted_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True)
+    message = models.TextField(help_text="What does Sir Romnick want improved?")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
+    created_at = models.DateTimeField(auto_now_add=True)
+    dev_note = models.TextField(blank=True, null=True, help_text="Developer's response or note")
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Request by {self.submitted_by} on {self.created_at.strftime('%Y-%m-%d')}"
+
+
 @receiver(post_save, sender=User)
 def sync_superuser_to_systemadmin(sender, instance, created, **kwargs):
     """

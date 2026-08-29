@@ -17,7 +17,7 @@ from datetime import timedelta, datetime
 
 from .models import (
     SystemAdmin, SubscriptionPlan, Agent, AccountType,
-    Customer, Barangay, Payment, Rebate, SystemLog, SmsLog, CignalPlay, AuditLog, AddOnRequest, Notification
+    Customer, Barangay, Payment, Rebate, SystemLog, SmsLog, CignalPlay, AuditLog, AddOnRequest, Notification, ImprovementRequest
 )
 import requests
 from network_manager.models import MikrotikDevice, NapBox
@@ -3268,4 +3268,32 @@ def approve_cignal_request(request, request_id):
     addon_req.save()
     messages.success(request, f'Cignal request for {customer.full_name} approved and applied.')
     return redirect('add_on_requests')
+
+
+@login_required
+def submit_improvement_request(request):
+    """AJAX endpoint to submit an improvement request from Sir Romnick."""
+    if request.method == 'POST':
+        import json
+        try:
+            data = json.loads(request.body)
+            msg = data.get('message', '').strip()
+            if not msg:
+                return JsonResponse({'success': False, 'error': 'Message cannot be empty.'})
+            ImprovementRequest.objects.create(
+                submitted_by=request.user,
+                message=msg,
+            )
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid method.'})
+
+
+@login_required
+@role_required(['Admin'])
+def improvement_requests_list(request):
+    """Admin page to view all submitted improvement requests."""
+    requests_qs = ImprovementRequest.objects.select_related('submitted_by').all()
+    return render(request, 'billing/improvement_requests.html', {'improvement_requests': requests_qs})
 
