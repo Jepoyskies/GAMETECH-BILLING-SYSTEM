@@ -547,8 +547,16 @@ def winbox_dashboard(request, device_id):
     api = MikrotikAPI(device)
     
     secrets = api.get_ppp_secrets()
+    for s in secrets:
+        s['id'] = s.get('.id', '')
+        
     profiles = api.get_ppp_profiles()
+    for p in profiles:
+        p['id'] = p.get('.id', '')
+        
     active_users = api.get_active_pppoe_users()
+    for a in active_users:
+        a['id'] = a.get('.id', '')
     
     context = {
         'device': device,
