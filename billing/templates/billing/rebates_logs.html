@@ -1,74 +1,94 @@
 {% extends 'billing/base.html' %}
+
+{% block title %}Rebates & Adjustments Log | Gametech{% endblock %}
+
 {% block content %}
-<div class="container-fluid py-3 px-3 px-md-4">
-    <div class="live-header-row mb-4">
-        <h2 class="live-title">
-            <div class="kpi-icon icon-blue" style="width: 48px; height: 48px; font-size: 1.4rem; margin-right: 0;">
-                <i class="fas fa-hand-holding-usd"></i>
-            </div>
-            Rebates & Adjustments Log
-        </h2>
-    </div>
+<div class="container-fluid py-4 px-3 px-md-4">
 
-    <!-- Filters -->
-    <div class="filter-glass">
-        <form method="get" class="row g-3 align-items-end">
-            <div class="col-md-8">
-                <label class="form-label fw-bold text-muted small">Search (Username, Plan, Admin)</label>
-                <input type="text" name="search" value="{{ search }}" class="form-control"
-                    placeholder="Search adjustments...">
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100 rounded-pill"><i class="fas fa-search me-1"></i> Search</button>
-            </div>
-            <div class="col-md-2">
-                <a href="{% url 'rebates_logs' %}" class="btn btn-outline-secondary w-100 rounded-pill">Clear</a>
-            </div>
-        </form>
+  <!-- Page Hero -->
+  <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in"
+       style="background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #059669 100%);">
+    <div class="d-flex align-items-center">
+      <div class="hero-icon"><i class="fas fa-hand-holding-usd"></i></div>
+      <div>
+        <div class="hero-title">Rebates &amp; Adjustments</div>
+        <div class="hero-sub">Full log of all billing adjustments and rebates applied</div>
+      </div>
     </div>
+  </div>
 
-    <!-- Table -->
-    <div class="dashboard-card">
-        <div class="card-body p-0 table-responsive">
-            <table class="table table-hover align-middle mb-0" style="width:100%; border-collapse: collapse;">
-                <thead style="background: rgba(0,0,0,0.03);">
-                    <tr>
-                        <th>Date Adjusted</th>
-                        <th>Username</th>
-                        <th>Plan</th>
-                        <th>Days Adjusted</th>
-                        <th>Previous Expiry</th>
-                        <th>New Expiry</th>
-                        <th>Note</th>
-                        <th>Adjusted By</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for r in rebates %}
-                    <tr>
-                        <td>{{ r.paid_at|date:"M d, Y H:i" }}</td>
-                        <td class="fw-bold text-primary">{{ r.username }}</td>
-                        <td>{{ r.plan_name }}</td>
-                        <td>
-                            {% if r.days > 0 %}
-                            <span class="badge bg-success">+{{ r.days|floatformat:1 }} Days</span>
-                            {% else %}
-                            <span class="badge bg-danger">{{ r.days|floatformat:1 }} Days</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-muted">{{ r.current_expiry|date:"M d, Y H:i"|default:"N/A" }}</td>
-                        <td class="fw-bold text-success">{{ r.expires_at|date:"M d, Y H:i"|default:"N/A" }}</td>
-                        <td><small>{{ r.note }}</small></td>
-                        <td><span class="badge bg-secondary">{{ r.adjusted_by }}</span></td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="8" class="text-center py-4 text-muted fw-bold">No rebate logs found.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+  <!-- Filter -->
+  <div class="filter-glass animate-fade-in animate-delay-1">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-md-8">
+        <label class="filter-label"><i class="fas fa-search me-1"></i> Search</label>
+        <input type="text" name="search" value="{{ search }}" class="form-control" placeholder="Search by username, plan, or admin...">
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn-premium btn-p-success w-100 justify-content-center">
+          <i class="fas fa-search"></i> Search
+        </button>
+      </div>
+      <div class="col-md-2">
+        <a href="{% url 'rebates_logs' %}" class="btn-premium btn-p-ghost w-100 justify-content-center">Clear</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Table Card -->
+  <div class="dashboard-card animate-fade-in animate-delay-2" style="overflow:hidden;">
+    <div class="section-header section-header-green">
+      <h6><i class="fas fa-history sh-icon"></i> Adjustment History</h6>
     </div>
+    <div class="table-responsive">
+      <table class="table table-premium table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Date Adjusted</th>
+            <th>Username</th>
+            <th>Plan</th>
+            <th>Days Adjusted</th>
+            <th>Previous Expiry</th>
+            <th>New Expiry</th>
+            <th>Note</th>
+            <th>Adjusted By</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rebates %}
+          <tr>
+            <td>
+              <div class="fw-semibold" style="font-size:0.85rem;">{{ r.paid_at|date:"M d, Y" }}</div>
+              <div class="text-muted" style="font-size:0.75rem;">{{ r.paid_at|date:"H:i" }}</div>
+            </td>
+            <td><span class="fw-bold" style="color:#2563eb;">{{ r.username }}</span></td>
+            <td><span class="text-muted" style="font-size:0.83rem;">{{ r.plan_name }}</span></td>
+            <td>
+              {% if r.days > 0 %}
+                <span class="pill pill-active"><span class="pill-dot"></span>+{{ r.days|floatformat:1 }} Days</span>
+              {% else %}
+                <span class="pill pill-expired"><span class="pill-dot"></span>{{ r.days|floatformat:1 }} Days</span>
+              {% endif %}
+            </td>
+            <td><span class="text-muted" style="font-size:0.83rem;">{{ r.current_expiry|date:"M d, Y H:i"|default:"N/A" }}</span></td>
+            <td><span class="fw-bold" style="color:#059669; font-size:0.83rem;">{{ r.expires_at|date:"M d, Y H:i"|default:"N/A" }}</span></td>
+            <td><span class="text-muted" style="font-size:0.8rem;">{{ r.note }}</span></td>
+            <td><span class="pill pill-pending"><span class="pill-dot"></span>{{ r.adjusted_by }}</span></td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8">
+              <div class="empty-state">
+                <div class="es-icon"><i class="fas fa-hand-holding-usd"></i></div>
+                <h6>No Rebate Logs Found</h6>
+                <p>No adjustments have been recorded yet, or try a different search.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 {% endblock %}

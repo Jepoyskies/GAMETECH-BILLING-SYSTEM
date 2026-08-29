@@ -1,76 +1,87 @@
 {% extends 'billing/base.html' %}
+
+{% block title %}Payment Add-on Logs | Gametech{% endblock %}
+
 {% block content %}
-<div class="container-fluid py-3 px-3 px-md-4">
-    <div class="live-header-row mb-4">
-        <h2 class="live-title">
-            <div class="kpi-icon icon-orange" style="width: 48px; height: 48px; font-size: 1.4rem; margin-right: 0;">
-                <i class="fas fa-award"></i>
-            </div>
-            Payment Add-on Logs
-        </h2>
-    </div>
+<div class="container-fluid py-4 px-3 px-md-4">
 
-    <!-- Summary Stats in Glassmorphism -->
-    <div class="filter-glass d-flex justify-content-between align-items-center flex-wrap gap-3">
-        <h6 class="mb-0 fw-bold text-muted text-uppercase letter-spacing-1">Overview</h6>
-        <div class="d-flex gap-3">
-            <div class="d-flex align-items-center gap-2">
-                <div class="rounded-circle bg-success" style="width: 12px; height: 12px; box-shadow: 0 0 10px rgba(52, 211, 153, 0.5);"></div>
-                <span class="fw-bold text-muted">Active: <span class="text-success">{{ active_count }}</span></span>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <div class="rounded-circle bg-danger" style="width: 12px; height: 12px; box-shadow: 0 0 10px rgba(248, 113, 113, 0.5);"></div>
-                <span class="fw-bold text-muted">Expired: <span class="text-danger">{{ expired_count }}</span></span>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <div class="rounded-circle bg-secondary" style="width: 12px; height: 12px;"></div>
-                <span class="fw-bold text-muted">No Plan: <span class="text-secondary">{{ no_plan_count }}</span></span>
-            </div>
-        </div>
+  <!-- Page Hero -->
+  <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in"
+       style="background: linear-gradient(135deg, #7c2d12 0%, #ea580c 60%, #f97316 100%);">
+    <div class="d-flex align-items-center">
+      <div class="hero-icon"><i class="fas fa-satellite-dish"></i></div>
+      <div>
+        <div class="hero-title">Payment Add-on Logs</div>
+        <div class="hero-sub">Track Cignal Play and add-on payment subscriptions</div>
+      </div>
     </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <span class="hero-badge" style="background:rgba(22,163,74,0.3); border-color:rgba(22,163,74,0.4);">
+        <i class="fas fa-check-circle me-1"></i> Active: {{ active_count }}
+      </span>
+      <span class="hero-badge" style="background:rgba(220,38,38,0.3); border-color:rgba(220,38,38,0.4);">
+        <i class="fas fa-times-circle me-1"></i> Expired: {{ expired_count }}
+      </span>
+      <span class="hero-badge">
+        <i class="fas fa-minus-circle me-1"></i> No Plan: {{ no_plan_count }}
+      </span>
+    </div>
+  </div>
 
-    <div class="dashboard-card shadow-sm">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 w-100">
-                    <thead style="background: rgba(0,0,0,0.03);">
-                        <tr>
-                            <th class="py-3 px-4 border-bottom">Username</th>
-                            <th class="py-3 px-4 border-bottom">Full Name</th>
-                            <th class="py-3 px-4 border-bottom">Current Plan</th>
-                            <th class="py-3 px-4 border-bottom">Expiry Date</th>
-                            <th class="py-3 px-4 border-bottom">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for c in customers %}
-                        <tr>
-                            <td class="px-4 py-3 fw-bold text-primary">{{ c.pppoe_username|default:"<span class='badge bg-danger'>Not Connected</span>"|safe }}</td>
-                            <td class="px-4 py-3 fw-semibold">{{ c.full_name }}</td>
-                            <td class="px-4 py-3 text-muted">{{ c.plan.name|default:"N/A" }}</td>
-                            <td class="px-4 py-3 text-muted">{{ c.expires_at|date:"M d, Y H:i"|default:"-" }}</td>
-                            <td class="px-4 py-3">
-                                {% if not c.expires_at %}
-                                <span class="badge bg-secondary rounded-pill px-3 py-2">No Plan</span>
-                                {% elif c.expires_at < now %}
-                                <span class="badge bg-danger rounded-pill px-3 py-2">Expired</span>
-                                {% else %}
-                                <span class="badge bg-success rounded-pill px-3 py-2">Active</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="5" class="text-center py-5 text-muted">
-                                <i class="fas fa-box-open fa-2x mb-3" style="opacity: 0.5;"></i><br>
-                                No records found.
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+  <!-- Table Card -->
+  <div class="dashboard-card animate-fade-in animate-delay-1" style="overflow:hidden;">
+    <div class="section-header section-header-orange">
+      <h6><i class="fas fa-award sh-icon"></i> Subscriber Add-on Status</h6>
+      <small>{{ customers|length }} records</small>
     </div>
+    <div class="table-responsive">
+      <table class="table table-premium table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Full Name</th>
+            <th>Current Plan</th>
+            <th>Expiry Date</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in customers %}
+          <tr>
+            <td>
+              {% if c.pppoe_username %}
+                <span class="fw-bold" style="color:#2563eb;">{{ c.pppoe_username }}</span>
+              {% else %}
+                <span class="pill pill-expired"><span class="pill-dot"></span>Not Connected</span>
+              {% endif %}
+            </td>
+            <td class="fw-semibold">{{ c.full_name }}</td>
+            <td><span class="text-muted" style="font-size:0.85rem;">{{ c.plan.name|default:"N/A" }}</span></td>
+            <td><span class="text-muted" style="font-size:0.85rem;">{{ c.expires_at|date:"M d, Y H:i"|default:"—" }}</span></td>
+            <td>
+              {% if not c.expires_at %}
+                <span class="pill pill-inactive"><span class="pill-dot"></span>No Plan</span>
+              {% elif c.expires_at < now %}
+                <span class="pill pill-expired"><span class="pill-dot"></span>Expired</span>
+              {% else %}
+                <span class="pill pill-active"><span class="pill-dot"></span>Active</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5">
+              <div class="empty-state">
+                <div class="es-icon"><i class="fas fa-satellite-dish"></i></div>
+                <h6>No Records Found</h6>
+                <p>No add-on payment logs available.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 {% endblock %}

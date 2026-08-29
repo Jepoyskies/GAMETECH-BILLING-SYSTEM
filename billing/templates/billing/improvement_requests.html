@@ -1,89 +1,94 @@
-﻿{% extends "billing/base.html" %}
+{% extends "billing/base.html" %}
 {% load static %}
 
-{% block title %}Improvement Requests{% endblock %}
+{% block title %}Improvement Requests | Gametech{% endblock %}
 
 {% block content %}
-<main class="container-fluid py-4 px-3 px-md-4">
+<div class="container-fluid py-4 px-3 px-md-4">
 
-    <div class="live-header-row mb-4">
-        <h2 class="live-title">
-            <div class="kpi-icon icon-blue" style="width: 48px; height: 48px; font-size: 1.4rem; margin-right: 0;">
-                <i class="fa-solid fa-wand-magic-sparkles"></i>
-            </div>
-            Improvement Requests
-        </h2>
-        <small class="text-muted">Submitted by Staff and Sir Romnick via the system</small>
+  <!-- Page Hero -->
+  <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in">
+    <div class="d-flex align-items-center">
+      <div class="hero-icon"><i class="fas fa-wand-magic-sparkles"></i></div>
+      <div>
+        <div class="hero-title">Improvement Requests</div>
+        <div class="hero-sub">Feedback and change requests submitted by Sir Romnick and staff</div>
+      </div>
     </div>
+    <span class="hero-badge"><i class="fas fa-lightbulb me-1"></i> {{ improvement_requests|length }} requests</span>
+  </div>
 
-    {% if messages %}
-    {% for message in messages %}
-    <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  {% if messages %}
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }} alert-dismissible fade show rounded-3 shadow-sm mb-3" role="alert">
+    {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <!-- Requests Table -->
+  <div class="dashboard-card animate-fade-in animate-delay-1" style="overflow:hidden;">
+    <div class="section-header section-header-blue">
+      <h6><i class="fas fa-clipboard-list sh-icon"></i> All Requests</h6>
     </div>
-    {% endfor %}
-    {% endif %}
-
-    <div class="dashboard-card">
-        <div class="card-body p-0">
-            <table class="table table-hover align-middle mb-0">
-                <thead style="background: rgba(0,0,0,0.03);">
-                    <tr>
-                        <th style="width: 160px;">Submitted By</th>
-                        <th>Request / Feedback</th>
-                        <th style="width: 140px;">Date Submitted</th>
-                        <th style="width: 120px;">Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for req in improvement_requests %}
-                    <tr>
-                        <td>
-                            <div class="d-flex align-items-center gap-2">
-                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width:36px;height:36px;flex-shrink:0;">
-                                    {{ req.submitted_by.username|upper|first }}
-                                </div>
-                                <div>
-                                    <div class="fw-semibold" style="font-size:0.9rem;">{{ req.submitted_by.username }}</div>
-                                    <div class="text-muted" style="font-size:0.75rem;">{{ req.submitted_by.email|default:"—" }}</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td style="max-width:500px;">
-                            <p class="mb-0" style="white-space:pre-wrap;font-size:0.9rem;">{{ req.message }}</p>
-                            {% if req.dev_note %}
-                            <div class="mt-2 p-2 rounded" style="background:#f0fdf4;border-left:3px solid #16a34a;font-size:0.82rem;">
-                                <i class="fas fa-reply text-success me-1"></i><strong>Dev Note:</strong> {{ req.dev_note }}
-                            </div>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="text-muted" style="font-size:0.85rem;">{{ req.created_at|date:"M d, Y" }}</span><br>
-                            <span class="text-muted" style="font-size:0.75rem;">{{ req.created_at|time:"h:i A" }}</span>
-                        </td>
-                        <td>
-                            {% if req.status == 'new' %}
-                                <span class="badge" style="background:#ef4444;font-size:0.78rem;">New</span>
-                            {% elif req.status == 'in_progress' %}
-                                <span class="badge" style="background:#f59e0b;font-size:0.78rem;">In Progress</span>
-                            {% else %}
-                                <span class="badge" style="background:#16a34a;font-size:0.78rem;">Done</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="4" class="text-center py-5 text-muted">
-                            <i class="fas fa-inbox fa-2x mb-2 d-block opacity-25"></i>
-                            No improvement requests yet. When Sir Romnick clicks the button, his requests will appear here.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    <div class="table-responsive">
+      <table class="table table-premium table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th style="width:180px;">Submitted By</th>
+            <th>Request / Feedback</th>
+            <th style="width:140px;">Date</th>
+            <th style="width:120px;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in improvement_requests %}
+          <tr>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="av av-sm av-blue">{{ req.submitted_by.username|upper|first }}</div>
+                <div>
+                  <div class="fw-bold" style="font-size:0.85rem;">{{ req.submitted_by.username }}</div>
+                  <div class="text-muted" style="font-size:0.72rem;">{{ req.submitted_by.email|default:"—" }}</div>
+                </div>
+              </div>
+            </td>
+            <td style="max-width:500px;">
+              <p class="mb-0" style="white-space:pre-wrap; font-size:0.88rem;">{{ req.message }}</p>
+              {% if req.dev_note %}
+              <div class="mt-2 p-2 rounded" style="background:rgba(22,163,74,0.08); border-left:3px solid #16a34a; font-size:0.8rem;">
+                <i class="fas fa-reply text-success me-1"></i><strong>Dev Note:</strong> {{ req.dev_note }}
+              </div>
+              {% endif %}
+            </td>
+            <td>
+              <div class="fw-semibold" style="font-size:0.85rem;">{{ req.created_at|date:"M d, Y" }}</div>
+              <div class="text-muted" style="font-size:0.75rem;">{{ req.created_at|time:"h:i A" }}</div>
+            </td>
+            <td>
+              {% if req.status == 'new' %}
+                <span class="pill pill-expired"><span class="pill-dot"></span>New</span>
+              {% elif req.status == 'in_progress' %}
+                <span class="pill pill-suspended"><span class="pill-dot"></span>In Progress</span>
+              {% else %}
+                <span class="pill pill-active"><span class="pill-dot"></span>Done</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4">
+              <div class="empty-state">
+                <div class="es-icon"><i class="fas fa-lightbulb"></i></div>
+                <h6>No Improvement Requests Yet</h6>
+                <p>When Sir Romnick or staff submit feedback, it will appear here.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-
-</main>
+  </div>
+</div>
 {% endblock %}

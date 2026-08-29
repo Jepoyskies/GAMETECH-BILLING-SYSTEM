@@ -1,38 +1,37 @@
 {% extends 'billing/base.html' %}
 {% load static %}
 
-{% block extra_css %}
-{% endblock %}
+{% block title %}Dashboard | Gametech Unli Fiber{% endblock %}
 
 {% block content %}
-<div class="container py-3">
+<div class="container-fluid py-4 px-3 px-md-4">
 
-  {% if request.user.is_authenticated %}
-    <div class="alert alert-primary d-flex align-items-center mb-3" style="font-size:1.05rem;">
-      <i class="fas fa-hand-sparkles me-2"></i>
-      Welcome, <strong>{{ request.user.username }}</strong>!
+  <!-- Welcome Hero -->
+  <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4 animate-fade-in">
+    <div class="d-flex align-items-center">
+      <div class="hero-icon"><i class="fas fa-chart-pie"></i></div>
+      <div>
+        <div class="hero-title">Dashboard</div>
+        <div class="hero-sub">
+          {% if request.user.is_authenticated %}
+            Welcome back, <strong>{{ request.user.username }}</strong> — here's your business overview
+          {% else %}
+            Business overview and live metrics
+          {% endif %}
+        </div>
+      </div>
     </div>
-  {% endif %}
-
-  <!-- Header -->
-  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h2 class="fw-bold mb-0 text-primary">
-      <i class="fas fa-chart-pie"></i> Dashboard
-    </h2>
-
-    <div class="clock-tile">
-      <div class="small text-muted mb-1" style="letter-spacing:1px;">Manila Time</div>
-      <div class="clock-display fw-bold" id="live-clock-square">--:--:--</div>
+    <div class="d-flex flex-column align-items-end">
+      <div class="text-white opacity-75" style="font-size:0.75rem; letter-spacing:1px; text-transform:uppercase;">Manila Time</div>
+      <div class="fw-bold text-white" id="live-clock-square" style="font-size:1.1rem; font-family:monospace;">--:--:--</div>
     </div>
   </div>
 
-  <!-- KPI Row 1 -->
-  <div class="row g-3 mb-2">
+  <!-- KPI Row 1 — Performance -->
+  <div class="row g-3 mb-3 animate-fade-in animate-delay-1">
     <div class="col-12 col-md-6 col-xl-4">
       <div class="kpi-card h-100 {% if growth_percent >= 0 %}bg-mesh-success{% else %}bg-mesh-danger{% endif %} text-white border-0">
-        <div class="kpi-icon text-white bg-white bg-opacity-25 shadow-sm">
-          <i class="fas {{ growth_icon }}"></i>
-        </div>
+        <div class="kpi-icon text-white bg-white bg-opacity-25 shadow-sm"><i class="fas {{ growth_icon }}"></i></div>
         <div>
           <div class="kpi-label text-white text-opacity-75">Revenue Growth</div>
           <div class="kpi-value text-white">{{ growth_percent_formatted }}%</div>
@@ -40,8 +39,7 @@
         </div>
       </div>
     </div>
-
-    <div class="col-12 col-md-6 col-xl-3">
+    <div class="col-12 col-md-6 col-xl-4">
       <div class="kpi-card h-100 bg-mesh-primary text-white border-0">
         <div class="kpi-icon text-white bg-white bg-opacity-25 shadow-sm"><i class="fas fa-user-plus"></i></div>
         <div>
@@ -51,22 +49,21 @@
         </div>
       </div>
     </div>
-
-    <div class="col-12 col-md-6 col-xl-3">
+    <div class="col-12 col-md-6 col-xl-4">
       <div class="kpi-card h-100 bg-mesh-warning text-white border-0">
         <div class="kpi-icon text-white bg-white bg-opacity-25 shadow-sm"><i class="fas fa-coins"></i></div>
         <div>
           <div class="kpi-label text-white text-opacity-75">Collection Rate</div>
           <div class="kpi-value text-white">{{ collection_rate_formatted }}%</div>
-          <div class="kpi-sub text-white text-opacity-75">This month ({{ distinct_payers_this_month }}/{{ total_customers }})</div>
+          <div class="kpi-sub text-white text-opacity-75">{{ distinct_payers_this_month }}/{{ total_customers }} customers paid</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Revenue Summary -->
-  <div class="row g-3 mb-3">
-    <div class="col-6 col-md-2">
+  <!-- KPI Row 2 — Revenue Breakdown -->
+  <div class="row g-3 mb-4 animate-fade-in animate-delay-2">
+    <div class="col-6 col-sm-4 col-lg">
       <div class="kpi-card h-100">
         <div class="kpi-icon icon-blue"><i class="fas fa-calendar-day"></i></div>
         <div>
@@ -75,7 +72,7 @@
         </div>
       </div>
     </div>
-    <div class="col-6 col-md-2">
+    <div class="col-6 col-sm-4 col-lg">
       <div class="kpi-card h-100">
         <div class="kpi-icon icon-purple"><i class="fas fa-calendar-minus"></i></div>
         <div>
@@ -84,7 +81,7 @@
         </div>
       </div>
     </div>
-    <div class="col-6 col-md-2">
+    <div class="col-6 col-sm-4 col-lg">
       <div class="kpi-card h-100">
         <div class="kpi-icon icon-green"><i class="fas fa-calendar-week"></i></div>
         <div>
@@ -93,7 +90,7 @@
         </div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-sm-4 col-lg">
       <div class="kpi-card h-100">
         <div class="kpi-icon icon-orange"><i class="fas fa-calendar-alt"></i></div>
         <div>
@@ -102,7 +99,7 @@
         </div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-sm-4 col-lg">
       <div class="kpi-card h-100">
         <div class="kpi-icon icon-red"><i class="fas fa-calendar"></i></div>
         <div>
@@ -113,33 +110,32 @@
     </div>
   </div>
 
-
-  <!-- Charts (full width / whole page) -->
-  <div class="row g-3 mb-3 align-items-stretch">
-    <div class="col-12 d-flex">
-      <div class="dashboard-card flex-fill d-flex flex-column w-100">
-        <div class="card-header text-center">Sales (Last 12 Months)</div>
-        <div class="chart-container flex-grow-1">
-          <canvas id="salesMonthChart"></canvas>
-        </div>
-      </div>
+  <!-- Sales Chart — Last 12 Months -->
+  <div class="dashboard-card mb-4 animate-fade-in animate-delay-2" style="overflow:hidden;">
+    <div class="section-header section-header-blue">
+      <h6><i class="fas fa-chart-bar sh-icon"></i> Sales (Last 12 Months)</h6>
+    </div>
+    <div class="chart-container">
+      <canvas id="salesMonthChart"></canvas>
     </div>
   </div>
 
-  <!-- Charts + Admin logins -->
-  <div class="row g-3 mb-3 align-items-stretch">
-    <div class="col-12 col-lg-8 d-flex flex-column gap-3">
-      <div class="dashboard-card flex-fill d-flex flex-column">
-        <div class="card-header text-center">Sales (Last 7 Days)</div>
+  <!-- Charts + Admin Logins Row -->
+  <div class="row g-4 mb-4 align-items-stretch animate-fade-in animate-delay-3">
+    <div class="col-12 col-lg-8 d-flex flex-column gap-4">
+      <!-- Weekly Sales -->
+      <div class="dashboard-card flex-fill d-flex flex-column" style="overflow:hidden;">
+        <div class="section-header section-header-green">
+          <h6><i class="fas fa-chart-line sh-icon"></i> Sales (Last 7 Days)</h6>
+        </div>
         <div class="chart-container flex-grow-1">
           <canvas id="salesWeekChart"></canvas>
         </div>
       </div>
-
-      <div class="dashboard-card flex-fill d-flex flex-column">
-        <div class="card-header d-flex align-items-center justify-content-center gap-2">
-          <i class="fas fa-credit-card text-primary"></i>
-          Sales by Payment Method
+      <!-- Payment Method Pie -->
+      <div class="dashboard-card flex-fill d-flex flex-column" style="overflow:hidden;">
+        <div class="section-header section-header-purple">
+          <h6><i class="fas fa-credit-card sh-icon"></i> Sales by Payment Method</h6>
         </div>
         <div class="chart-container flex-grow-1">
           <canvas id="salesPieChart"></canvas>
@@ -148,13 +144,12 @@
     </div>
 
     <div class="col-12 col-lg-4 d-flex">
-      <div class="dashboard-card flex-fill d-flex flex-column">
-        <div class="card-header d-flex align-items-center gap-2">
-          <i class="fas fa-user-shield text-primary"></i> Recent Admin Logins
+      <div class="dashboard-card flex-fill d-flex flex-column" style="overflow:hidden;">
+        <div class="section-header section-header-orange">
+          <h6><i class="fas fa-user-shield sh-icon"></i> Recent Admin Logins</h6>
         </div>
-
-        <div class="table-responsive">
-          <table class="table mini-table table-hover mb-0">
+        <div class="table-responsive flex-grow-1">
+          <table class="table table-premium table-hover align-middle mb-0">
             <thead>
               <tr>
                 <th>User</th>
@@ -164,56 +159,54 @@
             </thead>
             <tbody>
               {% for row in recent_admin_logins %}
-                <tr>
-                  <td>
-                    <!-- The color code should be passed from backend (e.g. row.color) -->
-                    <span class="avatar" style="background:{{ row.color|default:'#0d6efd' }};">
-                      {{ row.username|make_list|first|upper }}
-                    </span>
-                    {{ row.username }}
-                  </td>
-                  <td>
-                    <span class="badge bg-{% if row.event_type == 'login' %}success{% else %}warning{% endif %} text-uppercase fw-semibold" style="font-size:.87em;">
-                      {{ row.event_type }}
-                    </span>
-                  </td>
-                  <td>
-                    <span title="{{ row.login_time|date:'l, F j, Y, g:i A' }}">
-                      {{ row.login_time|date:'Y-m-d H:i' }}
-                    </span>
-                  </td>
-                </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="av av-sm" style="background:{{ row.color|default:'#2151A1' }};">{{ row.username|make_list|first|upper }}</div>
+                    <span class="fw-semibold" style="font-size:0.83rem;">{{ row.username }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="pill {% if row.event_type == 'login' %}pill-active{% else %}pill-suspended{% endif %}">
+                    {{ row.event_type }}
+                  </span>
+                </td>
+                <td>
+                  <span class="text-muted" style="font-size:0.78rem;" title="{{ row.login_time|date:'l, F j, Y, g:i A' }}">
+                    {{ row.login_time|date:'M d H:i' }}
+                  </span>
+                </td>
+              </tr>
               {% empty %}
-                <tr><td colspan="3" class="text-center text-muted py-3">No login records found.</td></tr>
+              <tr><td colspan="3" class="text-center text-muted py-3">No login records found.</td></tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
-
-        <div class="mt-3 pt-2 border-top d-flex align-items-center justify-content-between">
+        <!-- System Uptime -->
+        <div class="card-footer-actions flex-shrink-0">
           <div>
             <div class="kpi-label mb-1">System Uptime</div>
-            <div class="kpi-value" id="uptime-display">00:00:00</div>
-            <div class="kpi-sub" id="uptime-sub"></div>
+            <div class="kpi-value" id="uptime-display" style="font-size:1.1rem;">00:00:00</div>
+            <div class="kpi-sub" id="uptime-sub" style="font-size:0.7rem;"></div>
           </div>
-          <button class="btn btn-outline-secondary btn-sm" id="uptime-reset" title="Reset Uptime">
-            <i class="fas fa-redo"></i>
+          <button class="btn-premium btn-p-ghost" id="uptime-reset" title="Reset Uptime" style="padding:6px 12px; font-size:0.8rem;">
+            <i class="fas fa-redo"></i> Reset
           </button>
         </div>
-
       </div>
     </div>
   </div>
 
-  <!-- Bottom row: Top paying clients + Top service plans -->
-  <div class="row g-3 mb-4 align-items-stretch">
-    <div class="col-12 col-lg-6 d-flex">
-      <div class="dashboard-card flex-fill d-flex flex-column">
-        <div class="card-header d-flex align-items-center gap-2">
-          <i class="fas fa-crown text-warning"></i> Top Paying Clients
+  <!-- Bottom Row: Top Clients + Top Plans -->
+  <div class="row g-4 mb-4 animate-fade-in animate-delay-3">
+    <div class="col-12 col-lg-6">
+      <div class="dashboard-card h-100" style="overflow:hidden;">
+        <div class="section-header section-header-amber">
+          <h6><i class="fas fa-crown sh-icon"></i> Top Paying Clients</h6>
         </div>
         <div class="table-responsive">
-          <table class="table mini-table table-hover mb-0">
+          <table class="table table-premium table-hover align-middle mb-0">
             <thead>
               <tr>
                 <th>User</th>
@@ -223,110 +216,111 @@
             </thead>
             <tbody>
               {% for c in top_clients %}
-                <tr>
-                  <td>
-                    {% if forloop.counter == 1 %}<i class="fas fa-crown text-warning me-1" title="Top Client"></i>{% endif %}
-                    <span class="avatar" style="background:{{ c.color|default:'#198754' }};">
-                      {{ c.username|make_list|first|upper }}
-                    </span>
-                    {{ c.username }}
-                  </td>
-                  <td><span class="badge bg-primary">₱{{ c.total_paid|floatformat:2 }}</span></td>
-                  <td>
-                    {% if c.last_payment %}
-                      <span title="{{ c.last_payment|date:'l, F j, Y, g:i A' }}">
-                        {{ c.last_payment|date:'Y-m-d' }}
-                      </span>
-                    {% else %}
-                      <span class="text-muted">N/A</span>
-                    {% endif %}
-                  </td>
-                </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    {% if forloop.counter == 1 %}<i class="fas fa-crown text-warning" title="Top Client"></i>{% endif %}
+                    <div class="av av-sm av-blue">{{ c.username|make_list|first|upper }}</div>
+                    <span class="fw-bold" style="font-size:0.85rem;">{{ c.username }}</span>
+                  </div>
+                </td>
+                <td><span class="fw-bold" style="color:#059669;">₱{{ c.total_paid|floatformat:2 }}</span></td>
+                <td>
+                  {% if c.last_payment %}
+                    <span class="text-muted" style="font-size:0.8rem;">{{ c.last_payment|date:'M d, Y' }}</span>
+                  {% else %}
+                    <span class="text-muted">N/A</span>
+                  {% endif %}
+                </td>
+              </tr>
               {% empty %}
-                <tr><td colspan="3" class="text-center text-muted py-3">No paying clients found.</td></tr>
+              <tr><td colspan="3" class="text-center text-muted py-3">No paying clients found.</td></tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
       </div>
     </div>
-
-    <div class="col-12 col-lg-6 d-flex">
-      <div class="dashboard-card flex-fill d-flex flex-column">
-        <div class="card-header d-flex align-items-center gap-2">
-          <i class="fas fa-wifi text-success"></i> Top Service Plans
+    <div class="col-12 col-lg-6">
+      <div class="dashboard-card h-100" style="overflow:hidden;">
+        <div class="section-header section-header-green">
+          <h6><i class="fas fa-wifi sh-icon"></i> Top Service Plans</h6>
         </div>
         <div class="table-responsive">
-          <table class="table mini-table table-hover mb-0">
+          <table class="table table-premium table-hover align-middle mb-0">
             <thead>
               <tr>
-                <th>Plan</th>
-                <th class="text-end">Customers</th>
+                <th>Plan Name</th>
+                <th class="text-end">Subscribers</th>
               </tr>
             </thead>
             <tbody>
               {% for p in top_plans %}
-                <tr>
-                  <td><span class="badge bg-success-subtle text-success border border-success-subtle">{{ p.plan_name }}</span></td>
-                  <td class="text-end fw-semibold">{{ p.cnt }}</td>
-                </tr>
+              <tr>
+                <td>
+                  <span class="pill pill-active">
+                    <span class="pill-dot"></span>{{ p.plan_name }}
+                  </span>
+                </td>
+                <td class="text-end fw-bold">{{ p.cnt }}</td>
+              </tr>
               {% empty %}
-                <tr><td colspan="2" class="text-center text-muted py-3">No plans found.</td></tr>
+              <tr><td colspan="2" class="text-center text-muted py-3">No plans found.</td></tr>
               {% endfor %}
             </tbody>
           </table>
-        </div>
-        <div class="kpi-sub mt-2">
-          Based on customers.plan_name
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Expiring Users (full width / whole page) -->
-  <div class="row g-3 mb-3 align-items-stretch">
-    <div class="col-12 d-flex">
-      <div class="dashboard-card flex-fill d-flex flex-column w-100">
-        <div class="card-header d-flex align-items-center gap-2">
-          <i class="fas fa-clock text-danger"></i> Expiring Users (Today)
-        </div>
-
-        <div class="table-responsive">
-          <table class="table mini-table table-hover mb-0">
-            <thead>
-              <tr>
-                <th>User</th>
-                <th>Plan</th>
-                <th>Expires At</th>
-                <th>Left</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for u in expiring_users %}
-                <tr>
-                  <td>{{ u.username }}</td>
-                  <td><span class="badge bg-warning text-dark">{{ u.plan_name }}</span></td>
-                  <td>{{ u.expires_at|date:'Y-m-d H:i:s' }}</td>
-                  <td>
-                    {% if u.expires_at %}
-                      {% if u.is_expired %}
-                        <span class="text-danger">Expired</span>
-                      {% else %}
-                        <span class="countdown" data-expire="{{ u.expires_at_epoch }}"></span>
-                      {% endif %}
-                    {% else %}
-                      <span class="text-muted">N/A</span>
-                    {% endif %}
-                  </td>
-                </tr>
-              {% empty %}
-                <tr><td colspan="4" class="text-center text-muted py-3">No expiring users today.</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-
-      </div>
+  <!-- Expiring Users Today -->
+  <div class="dashboard-card mb-4 animate-fade-in animate-delay-3" style="overflow:hidden;">
+    <div class="section-header section-header-red">
+      <h6><i class="fas fa-clock sh-icon"></i> Expiring Users Today</h6>
+      <small>Subscribers whose accounts expire within 24 hours</small>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-premium table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Plan</th>
+            <th>Expires At</th>
+            <th>Time Left</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in expiring_users %}
+          <tr class="row-expired">
+            <td class="fw-bold">{{ u.username }}</td>
+            <td><span class="pill pill-suspended"><span class="pill-dot"></span>{{ u.plan_name }}</span></td>
+            <td><span class="text-muted" style="font-size:0.85rem;">{{ u.expires_at|date:'M d, Y H:i:s' }}</span></td>
+            <td>
+              {% if u.expires_at %}
+                {% if u.is_expired %}
+                  <span class="pill pill-expired"><span class="pill-dot"></span>Expired</span>
+                {% else %}
+                  <span class="countdown text-warning fw-bold" data-expire="{{ u.expires_at_epoch }}"></span>
+                {% endif %}
+              {% else %}
+                <span class="text-muted">N/A</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4">
+              <div class="empty-state py-4">
+                <div class="es-icon"><i class="fas fa-check-circle" style="color:#10b981;"></i></div>
+                <h6>All clear!</h6>
+                <p>No users are expiring today.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
 
@@ -334,207 +328,107 @@
 {% endblock %}
 
 {% block extra_js %}
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script>
-    // Theme setup for charts
-    function applyChartTheme() {
-      const isDark = document.documentElement.classList.contains('dark-mode');
-      Chart.defaults.color = isDark ? '#94a3b8' : '#64748b';
-      Chart.defaults.scale.grid.color = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
-      Chart.defaults.scale.grid.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-      return isDark;
-    }
-    Chart.defaults.font.family = "'Montserrat', sans-serif";
-    applyChartTheme();
-    
-    // Variables passed from Django context
-    const months = {{ months_js|safe|default:"[]" }};
-    const salesByMonth = {{ sales_by_month_js|safe|default:"[]" }};
-    const days = {{ days_js|safe|default:"[]" }};
-    const salesByDay = {{ sales_by_day_js|safe|default:"[]" }};
-    const pieLabels = {{ pie_labels_js|safe|default:"[]" }};
-    const pieData = {{ pie_data_js|safe|default:"[]" }};
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  function applyChartTheme() {
+    const isDark = document.documentElement.classList.contains('dark-mode');
+    Chart.defaults.color = isDark ? '#94a3b8' : '#64748b';
+    Chart.defaults.scale.grid.color = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+    return isDark;
+  }
+  Chart.defaults.font.family = "'Inter', 'Montserrat', sans-serif";
+  applyChartTheme();
 
-    let monthChart, weekChart, planChart;
+  const months = {{ months_js|safe|default:"[]" }};
+  const salesByMonth = {{ sales_by_month_js|safe|default:"[]" }};
+  const days = {{ days_js|safe|default:"[]" }};
+  const salesByDay = {{ sales_by_day_js|safe|default:"[]" }};
+  const pieLabels = {{ pie_labels_js|safe|default:"[]" }};
+  const pieData = {{ pie_data_js|safe|default:"[]" }};
 
-    const monthChartCtx = document.getElementById('salesMonthChart');
-    if(monthChartCtx) {
-      monthChart = new Chart(monthChartCtx.getContext('2d'), {
-        type: 'bar',
-        data: { labels: months, datasets: [{ label: '₱ Sales', data: salesByMonth, backgroundColor: '#38bdf8', borderRadius: 6 }] },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false }},
-          scales: { y: { beginAtZero: true } }
-        }
-      });
-    }
+  let monthChart, weekChart, planChart;
 
-    const weekChartCtx = document.getElementById('salesWeekChart');
-    if(weekChartCtx) {
-      const isDark = applyChartTheme();
-      weekChart = new Chart(weekChartCtx.getContext('2d'), {
-        type: 'line',
-        data: {
-          labels: days,
-          datasets: [{
-            label: '₱ Sales',
-            data: salesByDay,
-            fill: true,
-            backgroundColor: 'rgba(52, 211, 153, 0.1)',
-            borderColor: '#34d399',
-            borderWidth: 2,
-            tension: 0.4,
-            pointBackgroundColor: isDark ? '#1e293b' : '#ffffff',
-            pointBorderColor: '#34d399',
-            pointBorderWidth: 2,
-            pointRadius: 4,
-            pointHoverRadius: 6
-          }]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false }},
-          scales: { y: { beginAtZero: true } }
-        }
-      });
-    }
-
-    const planChartCtx = document.getElementById('salesPieChart');
-    if(planChartCtx && pieLabels.length > 0) {
-      planChart = new Chart(planChartCtx.getContext('2d'), {
-        type: 'doughnut',
-        data: {
-          labels: pieLabels,
-          datasets: [{
-            label: 'Total Paid',
-            data: pieData,
-            backgroundColor: [
-              '#38bdf8', '#34d399', '#c084fc', '#fb923c', 
-              '#f472b6', '#a3e635', '#f87171', '#2dd4bf'
-            ],
-            borderWidth: 0
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { 
-              position: 'right',
-              labels: {
-                usePointStyle: true,
-                padding: 20
-              }
-            },
-            tooltip: {
-              callbacks: {
-                label: function(context) {
-                  let total = context.dataset.data.reduce((a, b) => a + b, 0);
-                  let value = context.raw;
-                  let percent = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                  return `₱${value.toLocaleString()} (${percent}%)`;
-                }
-              }
-            }
-          },
-          cutout: '70%'
-        }
-      });
-    }
-
-    window.addEventListener('themeChanged', () => {
-      const isDark = applyChartTheme();
-      if (weekChart && weekChart.data.datasets[0]) {
-        weekChart.data.datasets[0].pointBackgroundColor = isDark ? '#1e293b' : '#ffffff';
-      }
-      [monthChart, weekChart, planChart].forEach(chart => {
-        if (chart) chart.update();
-      });
+  const monthChartCtx = document.getElementById('salesMonthChart');
+  if(monthChartCtx) {
+    monthChart = new Chart(monthChartCtx.getContext('2d'), {
+      type: 'bar',
+      data: { labels: months, datasets: [{ label: '₱ Sales', data: salesByMonth, backgroundColor: '#3b82f6', borderRadius: 8 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
     });
+  }
 
-    // Countdown timers (uses epoch provided by server; display is consistent)
-    function updateCountdowns() {
-      const now = Math.floor(Date.now() / 1000);
-      document.querySelectorAll('.countdown').forEach(function(el) {
-        const expire = parseInt(el.getAttribute('data-expire'), 10);
-        if(!isNaN(expire)) {
-            const diff = expire - now;
-            if (diff > 0) {
-            const d = Math.floor(diff / 86400);
-            const h = Math.floor((diff % 86400) / 3600);
-            const m = Math.floor((diff % 3600) / 60);
-            const s = diff % 60;
-            el.textContent = (d>0 ? d+'d ' : '') + (h>0 ? h+'h ' : '') + (m>0 ? m+'m ' : '') + s + 's';
-            el.classList.remove('text-danger');
-            } else {
-            el.textContent = 'Expired';
-            el.classList.add('text-danger');
-            }
-        }
-      });
+  const weekChartCtx = document.getElementById('salesWeekChart');
+  if(weekChartCtx) {
+    const isDark = applyChartTheme();
+    weekChart = new Chart(weekChartCtx.getContext('2d'), {
+      type: 'line',
+      data: { labels: days, datasets: [{ label: '₱ Sales', data: salesByDay, fill: true, backgroundColor: 'rgba(16,185,129,0.1)', borderColor: '#10b981', borderWidth: 2.5, tension: 0.4, pointBackgroundColor: isDark ? '#1e293b' : '#ffffff', pointBorderColor: '#10b981', pointBorderWidth: 2, pointRadius: 4 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+    });
+  }
+
+  const planChartCtx = document.getElementById('salesPieChart');
+  if(planChartCtx && pieLabels.length > 0) {
+    planChart = new Chart(planChartCtx.getContext('2d'), {
+      type: 'doughnut',
+      data: { labels: pieLabels, datasets: [{ label: 'Total Paid', data: pieData, backgroundColor: ['#3b82f6','#10b981','#8b5cf6','#f59e0b','#f472b6','#a3e635','#f87171','#2dd4bf'], borderWidth: 0 }] },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right', labels: { usePointStyle: true, padding: 20 } }, tooltip: { callbacks: { label: function(c) { let t=c.dataset.data.reduce((a,b)=>a+b,0); let p=t>0?((c.raw/t)*100).toFixed(1):0; return `₱${c.raw.toLocaleString()} (${p}%)`; } } } } }
+    });
+  }
+
+  window.addEventListener('themeChanged', () => {
+    const isDark = applyChartTheme();
+    if(weekChart && weekChart.data.datasets[0]) weekChart.data.datasets[0].pointBackgroundColor = isDark ? '#1e293b' : '#ffffff';
+    [monthChart, weekChart, planChart].forEach(c => { if(c) c.update(); });
+  });
+
+  // Countdowns
+  function updateCountdowns() {
+    const now = Math.floor(Date.now() / 1000);
+    document.querySelectorAll('.countdown').forEach(el => {
+      const expire = parseInt(el.getAttribute('data-expire'), 10);
+      if(!isNaN(expire)) {
+        const diff = expire - now;
+        if(diff > 0) {
+          const d = Math.floor(diff/86400), h = Math.floor((diff%86400)/3600), m = Math.floor((diff%3600)/60), s = diff%60;
+          el.textContent = (d>0?d+'d ':'') + (h>0?h+'h ':'') + (m>0?m+'m ':'') + s+'s';
+        } else { el.textContent = 'Expired'; }
+      }
+    });
+  }
+  setInterval(updateCountdowns, 1000); updateCountdowns();
+
+  // Digital Clock (Manila)
+  function updateDigitalClock() {
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const manila = new Date(utc + (3600000 * 8));
+    const pad = n => n < 10 ? '0'+n : n;
+    const clockEl = document.getElementById('live-clock-square');
+    if(clockEl) {
+      const date = manila.toLocaleDateString('en-PH', { weekday:'short', month:'short', day:'numeric' });
+      clockEl.textContent = `${date} ${pad(manila.getHours())}:${pad(manila.getMinutes())}:${pad(manila.getSeconds())}`;
     }
-    setInterval(updateCountdowns, 1000);
-    updateCountdowns();
+  }
+  setInterval(updateDigitalClock, 1000); updateDigitalClock();
 
-    // Digital Clock (Manila)
-    function updateDigitalClock() {
-      const now = new Date();
-      const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-      const manila = new Date(utc + (3600000 * 8));
-      const pad = n => (n < 10 ? '0' + n : n);
-      const clockEl = document.getElementById('live-clock-square');
-      if (clockEl) {
-        const h = pad(manila.getHours());
-        const m = pad(manila.getMinutes());
-        const s = pad(manila.getSeconds());
-        const date = manila.toLocaleDateString('en-PH', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
-        clockEl.textContent = `${date} ${h}:${m}:${s}`;
-      }
+  // Uptime
+  (function() {
+    const pad = n => n<10?'0'+n:n;
+    const uptimeEl = document.getElementById('uptime-display');
+    const resetBtn = document.getElementById('uptime-reset');
+    const uptimeSub = document.getElementById('uptime-sub');
+    const KEY = 'dashboard_uptime_start';
+    let startEpoch = parseInt(localStorage.getItem(KEY), 10);
+    if(!startEpoch) { startEpoch = Math.floor(Date.now()/1000); localStorage.setItem(KEY, String(startEpoch)); }
+    function updateUptime() {
+      const diff = Math.max(0, Math.floor(Date.now()/1000) - startEpoch);
+      const h=Math.floor(diff/3600), m=Math.floor((diff%3600)/60), s=diff%60;
+      if(uptimeEl) uptimeEl.textContent = pad(h)+':'+pad(m)+':'+pad(s);
+      if(uptimeSub) uptimeSub.textContent = 'Since '+new Date(startEpoch*1000).toLocaleString();
     }
-    setInterval(updateDigitalClock, 1000);
-    updateDigitalClock();
-
-    // Uptime
-    (function() {
-      function pad(n) { return n < 10 ? '0' + n : n; }
-      function formatHMS(totalSec) {
-        const h = Math.floor(totalSec / 3600);
-        const m = Math.floor((totalSec % 3600) / 60);
-        const s = totalSec % 60;
-        return pad(h) + ':' + pad(m) + ':' + pad(s);
-      }
-      const uptimeEl = document.getElementById('uptime-display');
-      const resetBtn = document.getElementById('uptime-reset');
-      const uptimeSub = document.getElementById('uptime-sub');
-      const STORAGE_KEY = 'dashboard_uptime_start';
-
-      let startEpoch = parseInt(localStorage.getItem(STORAGE_KEY), 10);
-      if (!startEpoch) {
-        startEpoch = Math.floor(Date.now() / 1000);
-        localStorage.setItem(STORAGE_KEY, String(startEpoch));
-      }
-
-      function updateUptime() {
-        const nowSecs = Math.floor(Date.now() / 1000);
-        const diff = Math.max(0, nowSecs - startEpoch);
-        if (uptimeEl) uptimeEl.textContent = formatHMS(diff);
-        if (uptimeSub) uptimeSub.textContent = 'Uptime since ' + new Date(startEpoch * 1000).toLocaleString();
-      }
-
-      function resetUptime() {
-        startEpoch = Math.floor(Date.now() / 1000);
-        localStorage.setItem(STORAGE_KEY, String(startEpoch));
-        updateUptime();
-      }
-
-      if (resetBtn) resetBtn.addEventListener('click', function(e){
-        e.preventDefault();
-        resetUptime();
-      });
-
-      setInterval(updateUptime, 1000);
-      updateUptime();
-    })();
-  </script>
+    if(resetBtn) resetBtn.addEventListener('click', e => { e.preventDefault(); startEpoch=Math.floor(Date.now()/1000); localStorage.setItem(KEY,String(startEpoch)); updateUptime(); });
+    setInterval(updateUptime, 1000); updateUptime();
+  })();
+</script>
 {% endblock %}

@@ -1,159 +1,150 @@
 {% extends "billing/base.html" %}
 {% load static %}
 
-{% block title %}Auto Suspend - Past Due Customers{% endblock %}
-
-{% block extra_css %}
-<style>
-    .card-table { border-radius: 1rem; overflow: hidden; }
-    .dark-mode .card-table { background: #1e293b; border: 1px solid #334155 !important; }
-    .dark-mode .table { color: #f8fafc; }
-    .dark-mode .table-light { background-color: #0f172a; color: #e2e8f0; }
-    .table th, .table td { vertical-align: middle !important; }
-    
-    .spinner-btn { display: none; margin-right: 5px; }
-    .btn.loading .spinner-btn { display: inline-block; }
-    .btn.loading .normal-text { display: none; }
-</style>
-{% endblock %}
+{% block title %}Auto Suspend | Gametech{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4 px-3 px-md-4">
-    
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}info{% endif %} alert-dismissible fade show shadow-sm" role="alert" style="border-radius: 12px; border-left: 4px solid {% if message.tags == 'error' %}#ef4444{% else %}#3b82f6{% endif %};">
-                <i class="fas fa-info-circle me-2"></i> {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        {% endfor %}
+
+  <!-- Page Hero -->
+  <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in"
+       style="background: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 50%, #dc2626 100%);">
+    <div class="d-flex align-items-center">
+      <div class="hero-icon"><i class="fas fa-power-off"></i></div>
+      <div>
+        <div class="hero-title">Auto Suspend</div>
+        <div class="hero-sub">Review and suspend customers whose subscriptions have expired</div>
+      </div>
+    </div>
+    {% if due_customers %}
+    <span class="hero-badge"><i class="fas fa-exclamation-triangle me-1"></i> {{ due_customers|length }} past-due customers</span>
     {% endif %}
+  </div>
 
-    <div class="mb-4 d-flex align-items-center gap-3">
-        <div style="font-size: 2rem; color: #ef4444;">
-            <i class="fas fa-life-ring"></i>
-        </div>
-        <div>
-            <h2 class="mb-0 fw-bold text-dark" style="font-size: 1.8rem;">Auto Suspend</h2>
-            <p class="text-muted mb-0">Review and suspend customers whose subscriptions have expired.</p>
-        </div>
+  {% if messages %}
+  {% for message in messages %}
+  <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}info{% endif %} alert-dismissible fade show rounded-3 shadow-sm mb-3" role="alert">
+    <i class="fas fa-info-circle me-2"></i>{{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <!-- Main Card -->
+  <div class="dashboard-card animate-fade-in animate-delay-1" style="overflow:hidden;">
+    <div class="section-header section-header-red">
+      <h6><i class="fas fa-exclamation-triangle sh-icon"></i> Past Due Customers</h6>
+      {% if due_customers %}
+      <span class="hero-badge">{{ due_customers|length }} found</span>
+      {% endif %}
     </div>
 
-    <div class="dashboard-card mb-4">
-        <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
-            <h5 class="mb-0 fw-bold text-dark"><i class="fas fa-exclamation-triangle text-warning me-2"></i> Past Due Customers</h5>
-            <span class="badge bg-danger rounded-pill px-3 py-2">{{ due_customers|length }} Customers Found</span>
-        </div>
-        
-        <div class="card-body p-0">
-            {% if due_customers %}
-            <form method="POST" id="suspendForm">
-                {% csrf_token %}
-                
-                <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="form-check form-switch d-inline-block me-3">
-                            <input class="form-check-input" type="checkbox" id="selectAll" checked>
-                            <label class="form-check-label fw-semibold" for="selectAll">Select All</label>
-                        </div>
-                        <span id="selectedCount" class="text-muted small">{{ due_customers|length }} selected</span>
-                    </div>
-                    <button type="submit" class="btn btn-danger rounded-pill shadow-sm px-4 fw-semibold" id="suspendBtn" onclick="return confirm('Are you sure you want to suspend and disconnect all selected expired users now?');">
-                        <span class="spinner-border spinner-border-sm spinner-btn" role="status" aria-hidden="true"></span>
-                        <span class="normal-text"><i class="fas fa-power-off me-1"></i> Suspend &amp; Disconnect Selected</span>
-                    </button>
-                </div>
+    {% if due_customers %}
+    <form method="POST" id="suspendForm">
+      {% csrf_token %}
 
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
-                        <tr>
-                            <th class="ps-4 py-3" style="width: 50px;"></th>
-                            <th class="py-3 text-secondary">Name</th>
-                            <th class="py-3 text-secondary">Username</th>
-                            <th class="py-3 text-secondary">Expires At</th>
-                            <th class="py-3 text-secondary">Current Profile</th>
-                            <th class="pe-4 py-3 text-secondary">Router</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                            {% for c in due_customers %}
-                                <tr>
-                                    <td class="ps-4">
-                                        <input type="checkbox" class="form-check-input row-checkbox" name="usernames" value="{{ c.username }}" checked>
-                                    </td>
-                                    <td class="fw-semibold text-dark">{{ c.full_name }}</td>
-                                    <td><span class="badge bg-light text-dark border px-2 py-1">{{ c.username }}</span></td>
-                                    <td><span class="text-danger fw-semibold">{{ c.expires_at|date:"M d, Y h:i A" }}</span></td>
-                                    <td><span class="text-muted"><i class="fas fa-project-diagram me-1"></i> {{ c.mikrotik_profile }}</span></td>
-                                    <td class="pe-4"><span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2 rounded-pill"><i class="fas fa-server me-1"></i> {{ c.mikrotik_device.device_name }}</span></td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </form>
-            {% else %}
-                <div class="text-center py-5">
-                    <div style="font-size: 4rem; color: #10b981; opacity: 0.8; margin-bottom: 20px;">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
-                    <h4 class="fw-bold text-dark">All clear!</h4>
-                    <p class="text-muted">There are no past-due customers waiting to be suspended.</p>
-                </div>
-            {% endif %}
+      <!-- Toolbar -->
+      <div class="px-4 py-3 d-flex justify-content-between align-items-center flex-wrap gap-3"
+           style="background: rgba(254,242,242,0.5); border-bottom: 1px solid rgba(220,38,38,0.1);">
+        <div class="d-flex align-items-center gap-3">
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="selectAll" checked>
+            <label class="form-check-label fw-semibold" for="selectAll">Select All</label>
+          </div>
+          <span id="selectedCount" class="text-muted small"></span>
         </div>
+        <button type="submit" class="btn-premium btn-p-danger" id="suspendBtn"
+                onclick="return confirm('Are you sure you want to suspend and disconnect all selected expired users now?');">
+          <span class="spinner-border spinner-border-sm spinner-btn d-none" role="status"></span>
+          <span class="normal-text"><i class="fas fa-power-off"></i> Suspend &amp; Disconnect Selected</span>
+        </button>
+      </div>
+
+      <!-- Table -->
+      <div class="table-responsive">
+        <table class="table table-premium table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th style="width:50px;"></th>
+              <th>Full Name</th>
+              <th>Username</th>
+              <th>Expired At</th>
+              <th>Profile</th>
+              <th>Router</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in due_customers %}
+            <tr class="row-expired">
+              <td class="ps-4">
+                <input type="checkbox" class="form-check-input row-checkbox" name="usernames" value="{{ c.username }}" checked>
+              </td>
+              <td class="fw-bold">{{ c.full_name }}</td>
+              <td>
+                <span class="pill pill-inactive"><span class="pill-dot"></span>{{ c.username }}</span>
+              </td>
+              <td>
+                <span class="pill pill-expired"><span class="pill-dot"></span>{{ c.expires_at|date:"M d, Y h:i A" }}</span>
+              </td>
+              <td><span class="text-muted" style="font-size:0.83rem;"><i class="fas fa-project-diagram me-1"></i>{{ c.mikrotik_profile }}</span></td>
+              <td>
+                <span class="pill pill-inactive"><i class="fas fa-server me-1"></i>{{ c.mikrotik_device.device_name }}</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </form>
+    {% else %}
+    <div class="empty-state py-5">
+      <div class="es-icon" style="background:#f0fdf4; color:#16a34a;"><i class="fas fa-check-circle"></i></div>
+      <h6>All clear!</h6>
+      <p>There are no past-due customers waiting to be suspended. The system is up to date.</p>
     </div>
+    {% endif %}
+  </div>
 </div>
+{% endblock %}
 
 {% block extra_js %}
 <script>
-    const selectAllCheckbox = document.getElementById('selectAll');
-    const rowCheckboxes = document.querySelectorAll('.row-checkbox');
-    const selectedCountDisplay = document.getElementById('selectedCount');
-    const suspendBtn = document.getElementById('suspendBtn');
-    
-    function updateCount() {
-        if(!selectedCountDisplay) return;
-        const count = document.querySelectorAll('.row-checkbox:checked').length;
-        selectedCountDisplay.textContent = count + " selected";
-        
-        if (count === 0) {
-            suspendBtn.disabled = true;
-            suspendBtn.classList.replace('btn-danger', 'btn-secondary');
-        } else {
-            suspendBtn.disabled = false;
-            suspendBtn.classList.replace('btn-secondary', 'btn-danger');
-        }
-    }
+const selectAllCheckbox = document.getElementById('selectAll');
+const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+const selectedCountDisplay = document.getElementById('selectedCount');
+const suspendBtn = document.getElementById('suspendBtn');
 
-    if(selectAllCheckbox) {
-        selectAllCheckbox.addEventListener('change', function() {
-            rowCheckboxes.forEach(cb => cb.checked = this.checked);
-            updateCount();
-        });
-    }
+function updateCount() {
+  if(!selectedCountDisplay) return;
+  const count = document.querySelectorAll('.row-checkbox:checked').length;
+  selectedCountDisplay.textContent = count + ' selected';
+  if(suspendBtn) suspendBtn.disabled = (count === 0);
+}
 
-    rowCheckboxes.forEach(cb => {
-        cb.addEventListener('change', function() {
-            if (!this.checked) {
-                selectAllCheckbox.checked = false;
-            } else if (document.querySelectorAll('.row-checkbox:checked').length === rowCheckboxes.length) {
-                selectAllCheckbox.checked = true;
-            }
-            updateCount();
-        });
-    });
-    
-    const form = document.getElementById('suspendForm');
-    if(form) {
-        form.addEventListener('submit', function() {
-            if(suspendBtn && !suspendBtn.disabled) {
-                suspendBtn.classList.add('loading');
-                suspendBtn.disabled = true; // Prevent double submission
-            }
-        });
+if(selectAllCheckbox) {
+  selectAllCheckbox.addEventListener('change', function() {
+    rowCheckboxes.forEach(cb => cb.checked = this.checked);
+    updateCount();
+  });
+}
+rowCheckboxes.forEach(cb => {
+  cb.addEventListener('change', function() {
+    if(!this.checked) selectAllCheckbox.checked = false;
+    else if(document.querySelectorAll('.row-checkbox:checked').length === rowCheckboxes.length) selectAllCheckbox.checked = true;
+    updateCount();
+  });
+});
+
+const form = document.getElementById('suspendForm');
+if(form) {
+  form.addEventListener('submit', function() {
+    if(suspendBtn && !suspendBtn.disabled) {
+      suspendBtn.querySelector('.spinner-btn').classList.remove('d-none');
+      suspendBtn.querySelector('.normal-text').style.display = 'none';
+      suspendBtn.disabled = true;
     }
+  });
+}
+updateCount();
 </script>
-{% endblock %}
 {% endblock %}

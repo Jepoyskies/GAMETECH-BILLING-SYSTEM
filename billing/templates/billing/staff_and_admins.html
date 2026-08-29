@@ -1,146 +1,137 @@
 {% extends "billing/base.html" %}
 {% load static %}
 
-{% block title %}Staff & Admins{% endblock %}
+{% block title %}Staff & Admins | Gametech{% endblock %}
 
 {% block extra_css %}
-<!-- DataTables Bootstrap 5 CSS -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
-<!-- DataTables Responsive CSS -->
 <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
-<style>
-    #staffTable th,
-    #staffTable td {
-        padding: 0.6rem !important;
-        font-size: 0.95rem;
-    }
-
-    .badge-admin {
-        background-color: #6366f1;
-        color: white;
-    }
-
-    .badge-editor {
-        background-color: #14b8a6;
-        color: white;
-    }
-
-    .badge-viewer {
-        background-color: #94a3b8;
-        color: white;
-    }
-
-    .badge-active {
-        background-color: #22c55e;
-        color: white;
-    }
-
-    .badge-inactive {
-        background-color: #ef4444;
-        color: white;
-    }
-</style>
 {% endblock %}
 
 {% block content %}
-<main class="container-fluid py-4 px-3 px-md-4">
+<div class="container-fluid py-4 px-3 px-md-4">
 
-    <!-- Messages / Notifications -->
-    {% if messages %}
-    {% for message in messages %}
-    <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  <!-- Page Hero -->
+  <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in"
+       style="background: linear-gradient(135deg, #3b0764 0%, #6d28d9 60%, #7c3aed 100%);">
+    <div class="d-flex align-items-center">
+      <div class="hero-icon"><i class="fas fa-users-cog"></i></div>
+      <div>
+        <div class="hero-title">Staff &amp; Admins</div>
+        <div class="hero-sub">Manage system users, roles, and access levels</div>
+      </div>
     </div>
-    {% endfor %}
+    {% if request.user.role != 'Viewer' %}
+    <a href="{% url 'add_staff' %}" class="btn-premium btn-p-primary">
+      <i class="fas fa-user-plus"></i> Add Staff
+    </a>
     {% endif %}
+  </div>
 
-    <div class="d-flex align-items-center mb-4">
-        <h2 class="mb-0 fw-bold text-primary">
-            <i class="fa-solid fa-users-cog"></i> Staff & Admins
-        </h2>
+  {% if messages %}
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }} alert-dismissible fade show rounded-3 shadow-sm mb-3" role="alert">
+    {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <!-- Staff Table Card -->
+  <div class="dashboard-card animate-fade-in animate-delay-1" style="overflow:hidden;">
+    <div class="section-header section-header-purple">
+      <h6><i class="fas fa-id-badge sh-icon"></i> Team Members</h6>
+      <small>{{ staff_members|length }} accounts</small>
     </div>
-
-    <div class="mb-3">
-        <a href="{% url 'add_staff' %}" class="btn btn-outline-secondary me-2" title="Add Staff">
-            <i class="fa-solid fa-user-plus"></i> Add Staff
-        </a>
+    <div class="table-responsive">
+      <table id="staffTable" class="table table-premium table-hover align-middle dt-responsive nowrap mb-0" style="width:100%">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Full Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Date Added</th>
+            {% if request.user.role != 'Viewer' %}
+            <th class="text-center">Actions</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for staff in staff_members %}
+          <tr>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                {% if staff.role == 'Admin' %}
+                  <div class="av av-sm av-red">{{ staff.username|make_list|first|upper }}</div>
+                {% elif staff.role == 'Editor' %}
+                  <div class="av av-sm av-blue">{{ staff.username|make_list|first|upper }}</div>
+                {% else %}
+                  <div class="av av-sm" style="background:#94a3b8;">{{ staff.username|make_list|first|upper }}</div>
+                {% endif %}
+                <span class="fw-bold" style="font-size:0.88rem;">{{ staff.username }}</span>
+              </div>
+            </td>
+            <td>{{ staff.full_name }}</td>
+            <td><span class="text-muted" style="font-size:0.85rem;">{{ staff.email }}</span></td>
+            <td>
+              {% if staff.role == 'Admin' %}
+                <span class="pill" style="background:rgba(239,68,68,0.12); color:#dc2626; border:1px solid rgba(239,68,68,0.3);">
+                  <i class="fas fa-user-shield" style="font-size:0.65rem;"></i> Admin
+                </span>
+              {% elif staff.role == 'Editor' %}
+                <span class="pill" style="background:rgba(59,130,246,0.12); color:#2563eb; border:1px solid rgba(59,130,246,0.3);">
+                  <i class="fas fa-edit" style="font-size:0.65rem;"></i> Editor
+                </span>
+              {% elif staff.role == 'CSR' %}
+                <span class="pill" style="background:rgba(16,185,129,0.12); color:#059669; border:1px solid rgba(16,185,129,0.3);">
+                  <i class="fas fa-headset" style="font-size:0.65rem;"></i> CSR
+                </span>
+              {% elif staff.role == 'Technician' %}
+                <span class="pill" style="background:rgba(245,158,11,0.12); color:#d97706; border:1px solid rgba(245,158,11,0.3);">
+                  <i class="fas fa-tools" style="font-size:0.65rem;"></i> Technician
+                </span>
+              {% else %}
+                <span class="pill pill-inactive"><span class="pill-dot"></span>{{ staff.role }}</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if staff.status == 'Active' %}
+                <span class="pill pill-active"><span class="pill-dot"></span>Active</span>
+              {% else %}
+                <span class="pill pill-expired"><span class="pill-dot"></span>Inactive</span>
+              {% endif %}
+            </td>
+            <td><span class="text-muted" style="font-size:0.82rem;">{{ staff.created_at|date:"M d, Y" }}</span></td>
+            {% if request.user.role != 'Viewer' %}
+            <td class="text-center">
+              <a href="{% url 'edit_staff' staff.id %}" class="btn-premium btn-p-primary" style="padding:6px 12px; font-size:0.8rem;" title="Edit Staff">
+                <i class="fas fa-edit"></i> Edit
+              </a>
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-
-    <div class="dashboard-card">
-        <div class="card-body px-2 px-md-4">
-            <table id="staffTable" class="table table-hover table-bordered align-middle dt-responsive nowrap" style="width:100%">
-                <thead>
-                    <tr>
-                        <th>Username</th>
-                        <th>Full Name</th>
-                        <th>Email</th>
-                        <th>Role</th>
-                        <th>Status</th>
-                        <th>Date Added</th>
-                        {% if request.user.role != 'Viewer' %}
-                        <th class="text-center">Actions</th>
-                        {% endif %}
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for staff in staff_members %}
-                    <tr>
-                        <td><b>{{ staff.username }}</b></td>
-                        <td>{{ staff.full_name }}</td>
-                        <td>{{ staff.email }}</td>
-                        <td>
-                            {% if staff.role == 'Admin' %}
-                            <span class="badge badge-admin">Admin</span>
-                            {% elif staff.role == 'Editor' %}
-                            <span class="badge badge-editor">Editor</span>
-                            {% else %}
-                            <span class="badge badge-viewer">Viewer</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if staff.status == 'Active' %}
-                            <span class="badge badge-active">Active</span>
-                            {% else %}
-                            <span class="badge badge-inactive">Inactive</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ staff.created_at|date:"M d, Y" }}</td>
-                        {% if request.user.role != 'Viewer' %}
-                        <td class="text-center">
-                            <a href="{% url 'edit_staff' staff.id %}" class="btn btn-sm btn-outline-primary shadow-sm rounded-3 hover-zoom" title="Edit Staff">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                        </td>
-                        {% endif %}
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-</main>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
-<!-- JS dependencies for DataTables -->
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
-<!-- DataTables Responsive JS -->
 <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
-
 <script>
-    $(document).ready(function () {
-        $('#staffTable').DataTable({
-            "lengthMenu": [10, 25, 50],
-            "pageLength": 10,
-            "order": [[5, "desc"]], // Sort by Date Added descending
-            "responsive": true,
-            "dom": '<"d-flex flex-column flex-md-row justify-content-between align-items-center mt-4 mb-3"lf>rt<"d-flex flex-column flex-md-row justify-content-between align-items-center mt-3 mb-4"ip>'
-        });
-    });
+$(document).ready(function() {
+  $('#staffTable').DataTable({
+    responsive: true,
+    pageLength: 25,
+    order: [[5, 'desc']],
+    language: { search: '', searchPlaceholder: 'Search staff...' }
+  });
+});
 </script>
 {% endblock %}
