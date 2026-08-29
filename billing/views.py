@@ -4,7 +4,7 @@ from django.http import JsonResponse, FileResponse, HttpResponse
 import os
 from django.conf import settings
 from django.core.cache import cache
-from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.views.decorators.http import require_POST
 from .decorators import role_required
 from django.contrib import messages
