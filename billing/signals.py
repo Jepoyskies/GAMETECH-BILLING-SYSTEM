@@ -37,6 +37,27 @@ def sync_customer_to_mikrotik(sender, instance, created, **kwargs):
     if not instance.mikrotik_device or not instance.pppoe_username or not instance.pppoe_password:
         return  # Missing critical info, can't sync
 
+    # --- NEW LOGIC: Skip sync if no Mikrotik-relevant fields changed ---
+    if not created and hasattr(instance, '_original_state') and instance._original_state:
+        new_state = {
+            'Full Name': instance.full_name,
+            'Status': instance.status,
+            'Plan': instance.plan.name if instance.plan else "None",
+            'Router': instance.mikrotik_device.device_name if instance.mikrotik_device else "None",
+            'Username': instance.pppoe_username,
+            'Password': instance.pppoe_password,
+        }
+        changed = False
+        for key in new_state:
+            if str(instance._original_state.get(key)) != str(new_state.get(key)):
+                changed = True
+                break
+                
+        if not changed:
+            # None of the fields relevant to Mikrotik changed (e.g. Cignal update)
+            return
+    # -------------------------------------------------------------------
+
     # --- NEW LOGIC: Router Transfer Orphan Cleanup ---
     if getattr(instance, '_original_mikrotik_device_id', None) is not None:
         if instance._original_mikrotik_device_id != instance.mikrotik_device_id:
