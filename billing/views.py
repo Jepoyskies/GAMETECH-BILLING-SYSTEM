@@ -1122,6 +1122,7 @@ def customer_list(request):
     from network_manager.models import MikrotikDevice
     from django.utils import timezone
     from datetime import timedelta
+    from django.db.models import Case, When, Value, IntegerField
     
     customers = Customer.objects.select_related(
         'plan', 'agent', 'barangay', 'mikrotik_device').all()
@@ -1133,6 +1134,19 @@ def customer_list(request):
         customers = customers.filter(expires_at__lte=three_days_from_now, status='active')
     elif filter_type == 'advance_payment':
         customers = customers.filter(outstanding_balance__gt=0)
+        
+    customers = customers.annotate(
+        status_order=Case(
+            When(status='active', then=Value(1)),
+            When(status='pending', then=Value(2)),
+            When(status='suspended', then=Value(3)),
+            When(status='expired', then=Value(4)),
+            When(status='inactive', then=Value(5)),
+            When(status='pull out', then=Value(6)),
+            default=Value(7),
+            output_field=IntegerField(),
+        )
+    ).order_by('status_order', 'first_name')
         
     devices = MikrotikDevice.objects.all().order_by('device_name')
     from .models import Barangay

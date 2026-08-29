@@ -82,7 +82,7 @@
             All Customers
         </a>
         <a href="?filter=nearing_expiration" class="btn {% if filter_type == 'nearing_expiration' %}btn-warning text-dark{% else %}btn-outline-warning text-dark{% endif %} rounded-pill px-4 shadow-sm fw-bold">
-            <i class="fas fa-clock me-1"></i> Nearing Expiration (<= 3 Days)
+            <i class="fas fa-clock me-1"></i> Expiring Soon
         </a>
         <a href="?filter=advance_payment" class="btn {% if filter_type == 'advance_payment' %}btn-success{% else %}btn-outline-success{% endif %} rounded-pill px-4 shadow-sm fw-bold">
             <i class="fas fa-check-circle me-1"></i> Paid in Advance
@@ -110,7 +110,7 @@
                 </thead>
                 <tbody>
                     {% for customer in customers %}
-                    <tr>
+                    <tr class="{% if customer.status == 'suspended' or customer.status == 'expired' %}table-warning{% elif customer.status == 'inactive' or customer.status == 'pull out' %}table-secondary text-muted{% endif %}">
                         <td style="text-align: center;">
                             <input type="checkbox" class="form-check-input customer-checkbox shadow-sm" value="{{ customer.id }}" style="cursor: pointer;">
                         </td>
@@ -156,6 +156,8 @@
                                 <span class="badge bg-purple-subtle text-purple border border-purple-subtle px-2 py-1" style="background-color: rgba(99, 102, 241, 0.1); color: #6366f1; border-color: rgba(99, 102, 241, 0.2);">Suspended</span>
                             {% elif customer.status == 'pull out' %}
                                 <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">Pull Out</span>
+                            {% elif customer.status == 'expired' %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 fw-bold">Expired</span>
                             {% else %}
                                 <span class="badge bg-secondary px-2 py-1">{{ customer.status|title }}</span>
                             {% endif %}
@@ -274,7 +276,7 @@
             "dom": '<"d-flex flex-column flex-md-row justify-content-between align-items-center mt-4 mb-3 px-3 px-md-4"lf>rt<"d-flex flex-column flex-md-row justify-content-between align-items-center mt-3 mb-4 px-3 px-md-4"ip>',
             "lengthMenu": [10, 25, 50, 100, -1],
             "pageLength": 10,
-            "order": [[1, "asc"]], // Sort by Full Name ascending
+            "order": [], // Use backend custom sorting
             "language": {
                 "search": "",
                 "searchPlaceholder": "Search customers..."
