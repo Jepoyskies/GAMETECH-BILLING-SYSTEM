@@ -275,7 +275,8 @@ def sync_manager(request, device_id):
     
     result = api.get_all_pppoe_users()
     
-    orphans = []
+    clean_orphans = []
+    suspicious_orphans = []
     missing_on_router = []
     synced = []
     
@@ -296,7 +297,10 @@ def sync_manager(request, device_id):
                 ru['customer'] = django_customer_map.get(name)
                 synced.append(ru)
             else:
-                orphans.append(ru)
+                if ru.get('is_suspicious'):
+                    suspicious_orphans.append(ru)
+                else:
+                    clean_orphans.append(ru)
                 
         for dc in django_customers:
             if dc.pppoe_username not in router_usernames:
@@ -311,7 +315,8 @@ def sync_manager(request, device_id):
 
     context = {
         'device': device,
-        'orphans': orphans,
+        'clean_orphans': clean_orphans,
+        'suspicious_orphans': suspicious_orphans,
         'missing_on_router': missing_on_router,
         'synced': synced,
         'all_routers': all_routers,

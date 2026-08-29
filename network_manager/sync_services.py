@@ -76,15 +76,26 @@ class MikrotikAPI:
             for s in secrets:
                 name = s.get("name", "")
                 profile = s.get("profile", "")
+                comment = s.get("comment", "")
                 
                 is_active = name in active_usernames
-                is_suspicious = bool(suspicious_pattern.search(name)) or profile.lower() == 'default'
+                
+                # A user is suspicious if:
+                # 1. Name has weird characters
+                # 2. Profile is 'default'
+                # 3. Comment is empty
+                # 4. Comment doesn't contain '|' (which separates Name | Barangay)
+                has_weird_chars = bool(suspicious_pattern.search(name))
+                is_default_profile = profile.lower() == 'default'
+                is_missing_info = not comment or '|' not in comment
+                
+                is_suspicious = has_weird_chars or is_default_profile or is_missing_info
                 
                 formatted_users.append({
                     "name": name,
                     "password": s.get("password", ""),
                     "profile": profile,
-                    "comment": s.get("comment", ""),
+                    "comment": comment,
                     "is_active": is_active,
                     "is_suspicious": is_suspicious
                 })
