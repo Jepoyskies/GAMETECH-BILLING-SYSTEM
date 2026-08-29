@@ -90,9 +90,6 @@
                                 <button class="btn btn-sm btn-outline-info test-connection-btn" data-url="{% url 'test_device' device.id %}">
                                     <i class="fas fa-wifi"></i> Test Connection
                                 </button>
-                                <button class="btn btn-sm btn-outline-success sync-users-btn" data-url="{% url 'sync_device_users' device.id %}">
-                                    <i class="fas fa-sync-alt"></i> Sync Users
-                                </button>
                                 <form method="post" action="{% url 'setup_router_profiles' device.id %}" class="d-inline" onsubmit="return confirm('This will push all Django Subscription Plans to this router as PPPoE Profiles. Continue?');">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-sm btn-warning shadow-sm text-dark" title="Setup Profiles">
@@ -236,45 +233,6 @@
             });
         });
 
-        $('.sync-users-btn').click(function() {
-            if (!confirm('This will import missing customers from the MikroTik device. Proceed?')) return;
-
-            const btn = $(this);
-            const url = btn.data('url');
-            const csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
-
-            // Save original button content
-            const originalContent = '<i class="fas fa-sync-alt"></i> Sync Users';
-            
-            btn.html('<i class="fas fa-spinner fa-spin"></i> Syncing...').prop('disabled', true);
-
-            $.ajax({
-                url: url,
-                type: 'POST',
-                headers: { 'X-CSRFToken': csrfToken },
-                success: function(response) {
-                    if (response.status === 'success') {
-                        btn.html('<i class="fas fa-check"></i> Success').removeClass('btn-outline-success').addClass('btn-success');
-                        alert(response.message);
-                        setTimeout(() => location.reload(), 1500);
-                    } else {
-                        btn.html('<i class="fas fa-times"></i> Failed').removeClass('btn-outline-success').addClass('btn-danger');
-                        alert("Error: " + response.message);
-                    }
-                },
-                error: function(xhr) {
-                    btn.html('<i class="fas fa-times"></i> Error').removeClass('btn-outline-success').addClass('btn-danger');
-                    alert("A server error occurred during the request.");
-                },
-                complete: function() {
-                    if (!btn.hasClass('btn-success')) {
-                        setTimeout(() => {
-                            btn.html(originalContent).removeClass('btn-danger').addClass('btn-outline-success').prop('disabled', false);
-                        }, 3000);
-                    }
-                }
-            });
-        });
 
         let hwPollInterval = null;
 
