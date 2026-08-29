@@ -1146,7 +1146,7 @@ def customer_list(request):
             default=Value(7),
             output_field=IntegerField(),
         )
-    ).order_by('status_order', 'first_name')
+    ).order_by('status_order', 'full_name')
         
     devices = MikrotikDevice.objects.all().order_by('device_name')
     from .models import Barangay
