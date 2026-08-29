@@ -3211,32 +3211,22 @@ def apply_cignal_addon(request):
 
 @login_required
 def online_staff_api(request):
-    from django.contrib.sessions.models import Session
-    from django.utils import timezone
+    from django.core.cache import cache
     from django.contrib.auth.models import User
     
-    # Get all non-expired sessions
-    sessions = Session.objects.filter(expire_date__gte=timezone.now())
-    
-    user_id_list = []
-    for session in sessions:
-        data = session.get_decoded()
-        user_id = data.get('_auth_user_id')
-        if user_id and user_id not in user_id_list:
-            user_id_list.append(user_id)
-            
-    # Fetch user details
-    online_users = User.objects.filter(id__in=user_id_list)
+    # We only check users who could be staff (all User models typically in this app)
+    # This might be <20 users, so iterating over them and checking cache is fast enough.
+    staff_users = User.objects.all()
     
     data = []
-    for u in online_users:
-        # Check if the user is a staff or admin, not a customer
-        # We can assume all User models are staff (since customers use portal_password usually, but let's just return their username and role)
-        role = getattr(u, 'role', 'Staff')
-        data.append({
-            'username': u.username,
-            'role': role
-        })
+    for u in staff_users:
+        # The ActiveUserMiddleware sets this cache key for 5 minutes when a user is active
+        if cache.get(f'seen_user_{u.id}'):
+            role = getattr(u, 'role', 'Staff')
+            data.append({
+                'username': u.username,
+                'role': role
+            })
         
     return JsonResponse({'status': 'success', 'data': data})
 
