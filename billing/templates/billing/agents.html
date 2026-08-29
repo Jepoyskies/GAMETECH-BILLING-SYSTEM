@@ -1,154 +1,161 @@
 {% extends 'billing/base.html' %}
 
-{% block title %}Agents - Mikrotik Billing System{% endblock %}
-
-{% block content %}
-<main class="container py-4">
-
-    <div class="live-header-row mb-4">
-        <h2 class="live-title">
-            <div class="kpi-icon icon-purple" style="width: 48px; height: 48px; font-size: 1.4rem; margin-right: 0;">
-                <i class="fa fa-address-card"></i>
-            </div>
-            Agents
-        </h2>
-        <a href="{% url 'add_agent' %}" class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold">
-            <i class="fa fa-plus-circle me-2"></i> Add Agent
-        </a>
-    </div>
-
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        {% endfor %}
-    {% endif %}
-
-    <!-- Cards view (mobile-first) -->
-    <div class="row g-3 d-md-none" id="agents-cards">
-        {% if agents %}
-            {% for agent in agents %}
-            <div class="col-12">
-                <div class="dashboard-card h-100">
-                    <div class="card-body d-flex flex-column">
-                        <h5 class="card-title mb-2">{{ agent.name }}</h5>
-                        <p class="card-text mb-1"><strong>Email:</strong> {{ agent.email }}</p>
-                        <p class="card-text mb-3"><strong>Phone:</strong> {{ agent.phone|default_if_none:"" }}</p>
-
-                        <div class="mt-auto">
-                            <a href="{% url 'view_agent' agent.id %}" class="btn btn-sm btn-info me-2">View</a>
-                            <a href="{% url 'edit_agent' agent.id %}" class="btn btn-sm btn-primary me-2">Edit</a>
-                            <form method="post" action="{% url 'delete_agent' agent.id %}" onsubmit="return confirm('Are you sure you want to delete this agent?');" class="d-inline-block">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        {% else %}
-            <div class="col-12"><div class="alert alert-info">No agents found</div></div>
-        {% endif %}
-    </div>
-
-    <!-- Table view (desktop) -->
-    <div class="dashboard-card d-none d-md-block" id="agents-table">
-        <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3" style="background:transparent; border-bottom:1px solid rgba(0,0,0,0.05); padding: 1.25rem;">
-            <div>
-                <small class="text-muted fw-semibold" id="agents-info">
-                    Loading agents...
-                </small>
-            </div>
-            <div class="d-flex flex-wrap gap-2 align-items-center">
-                <select id="agents-length" class="filter-select" style="width: auto;">
-                    <option value="10">10 per page</option>
-                    <option value="25">25 per page</option>
-                    <option value="50">50 per page</option>
-                    <option value="-1">All</option>
-                </select>
-                <input type="text" id="agents-search" class="filter-input" style="width: 250px;" placeholder="Search agents..." autocomplete="off">
-            </div>
-        </div>
-        <div class="card-body p-0 table-responsive">
-        <table id="agentsDataTable" class="subs-table table-hover align-middle mb-0" style="width:100%;">
-            <thead>
-                <tr>
-                    <th class="ps-4">NAME</th>
-                    <th>EMAIL</th>
-                    <th>PHONE</th>
-                    <th class="text-center pe-4">ACTIONS</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for agent in agents %}
-                    <tr>
-                        <td>{{ agent.name }}</td>
-                        <td>{{ agent.email }}</td>
-                        <td>{{ agent.phone|default_if_none:"" }}</td>
-                        <td class="text-center pe-4">
-                            <a href="{% url 'view_agent' agent.id %}" class="btn btn-sm btn-info me-1">View</a>
-                            <a href="{% url 'edit_agent' agent.id %}" class="btn btn-sm btn-primary me-1">Edit</a>
-                            <form method="post" action="{% url 'delete_agent' agent.id %}" onsubmit="return confirm('Are you sure you want to delete this agent?');" style="display:inline-block;">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% endfor %}
-            </tbody>
-        </table>
-        </div>
-    </div>
-
-</main>
-{% endblock %}
+{% block title %}Agents | Gametech{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-3 px-md-4">
+
+  <!-- Page Hero -->
+  <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in"
+       style="background: linear-gradient(135deg, #3b0764 0%, #6d28d9 60%, #8b5cf6 100%);">
+    <div class="d-flex align-items-center">
+      <div class="hero-icon"><i class="fas fa-address-card"></i></div>
+      <div>
+        <div class="hero-title">Agents</div>
+        <div class="hero-sub">Manage sales agents, referrals, and account representatives</div>
+      </div>
+    </div>
+    <a href="{% url 'add_agent' %}" class="btn-premium" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.3);">
+      <i class="fas fa-plus-circle"></i> Add Agent
+    </a>
+  </div>
+
+  {% if messages %}
+  {% for message in messages %}
+  <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show rounded-3 shadow-sm mb-3" role="alert">
+    {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <!-- Mobile Cards -->
+  <div class="row g-3 d-md-none animate-fade-in animate-delay-1">
+    {% if agents %}
+      {% for agent in agents %}
+      <div class="col-12">
+        <div class="dashboard-card">
+          <div class="p-4">
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <div class="av av-sm av-blue">{{ agent.name|make_list|first|upper }}</div>
+              <div>
+                <div class="fw-bold">{{ agent.name }}</div>
+                <div class="text-muted" style="font-size:0.8rem;">{{ agent.email }}</div>
+              </div>
+            </div>
+            <div class="text-muted mb-3" style="font-size:0.83rem;"><i class="fas fa-phone me-1"></i>{{ agent.phone|default:"No phone" }}</div>
+            <div class="d-flex gap-2">
+              <a href="{% url 'view_agent' agent.id %}" class="btn-premium btn-p-primary" style="padding:6px 12px; font-size:0.8rem;">
+                <i class="fas fa-eye"></i> View
+              </a>
+              <a href="{% url 'edit_agent' agent.id %}" class="btn-premium btn-p-ghost" style="padding:6px 12px; font-size:0.8rem;">
+                <i class="fas fa-edit"></i> Edit
+              </a>
+              <form method="post" action="{% url 'delete_agent' agent.id %}" onsubmit="return confirm('Delete this agent?');" style="display:inline-block;">
+                {% csrf_token %}
+                <button type="submit" class="btn-premium btn-p-danger" style="padding:6px 12px; font-size:0.8rem;">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="col-12">
+        <div class="empty-state">
+          <div class="es-icon"><i class="fas fa-address-card"></i></div>
+          <h6>No Agents Found</h6>
+          <p>Add your first agent using the button above.</p>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Desktop Table -->
+  <div class="dashboard-card d-none d-md-block animate-fade-in animate-delay-1" style="overflow:hidden;">
+    <div class="section-header section-header-purple">
+      <h6><i class="fas fa-address-card sh-icon"></i> All Agents</h6>
+      <div class="d-flex gap-2 align-items-center">
+        <input type="text" id="agents-search" class="form-control form-control-sm" style="width:220px;" placeholder="Search agents..." autocomplete="off">
+        <select id="agents-length" class="form-select form-select-sm" style="width:130px;">
+          <option value="10">10 per page</option>
+          <option value="25">25 per page</option>
+          <option value="50">50 per page</option>
+          <option value="-1">All</option>
+        </select>
+      </div>
+    </div>
+    <div class="px-3 py-1">
+      <small class="text-muted" id="agents-info"></small>
+    </div>
+    <div class="table-responsive">
+      <table id="agentsDataTable" class="table table-premium table-hover align-middle mb-0" style="width:100%;">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for agent in agents %}
+          <tr>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="av av-sm av-blue">{{ agent.name|make_list|first|upper }}</div>
+                <span class="fw-bold" style="font-size:0.88rem;">{{ agent.name }}</span>
+              </div>
+            </td>
+            <td><span class="text-muted" style="font-size:0.85rem;">{{ agent.email }}</span></td>
+            <td><span class="text-muted" style="font-size:0.85rem;">{{ agent.phone|default:"—" }}</span></td>
+            <td class="text-center">
+              <div class="d-flex justify-content-center gap-1">
+                <a href="{% url 'view_agent' agent.id %}" class="btn-premium btn-p-primary" style="padding:5px 10px; font-size:0.77rem;">
+                  <i class="fas fa-eye"></i>
+                </a>
+                <a href="{% url 'edit_agent' agent.id %}" class="btn-premium btn-p-ghost" style="padding:5px 10px; font-size:0.77rem;">
+                  <i class="fas fa-edit"></i>
+                </a>
+                <form method="post" action="{% url 'delete_agent' agent.id %}" onsubmit="return confirm('Delete this agent?');" style="display:inline-block;">
+                  {% csrf_token %}
+                  <button type="submit" class="btn-premium btn-p-danger" style="padding:5px 10px; font-size:0.77rem;">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
 <script>
-    $(document).ready(function () {
-        var table = $('#agentsDataTable').DataTable({
-            "paging": true,
-            "searching": true,
-            "ordering": true,
-            "info": true,
-            "dom": 't<"pagination-container"p>'
-        });
-
-        // Wire custom search
-        $('#agents-search').on('keyup', function() {
-            table.search(this.value).draw();
-            updateInfo();
-        });
-
-        // Wire custom length
-        $('#agents-length').on('change', function() {
-            table.page.len(this.value).draw();
-            updateInfo();
-        });
-
-        // Custom Info text
-        function updateInfo() {
-            var info = table.page.info();
-            $('#agents-info').html(
-                'Showing ' + (info.start + 1) + '–' + info.end + ' of ' + info.recordsDisplay + ' records'
-            );
-        }
-        
-        table.on('draw', function() {
-            updateInfo();
-        });
-        
-        // Init
-        updateInfo();
-    });
+$(document).ready(function() {
+  var table = $('#agentsDataTable').DataTable({
+    paging: true, searching: true, ordering: true, info: true,
+    dom: 't<"pagination-container"p>'
+  });
+  $('#agents-search').on('keyup', function() { table.search(this.value).draw(); updateInfo(); });
+  $('#agents-length').on('change', function() { table.page.len(this.value).draw(); updateInfo(); });
+  function updateInfo() {
+    var info = table.page.info();
+    $('#agents-info').html('Showing ' + (info.start+1) + '–' + info.end + ' of ' + info.recordsDisplay + ' records');
+  }
+  table.on('draw', updateInfo);
+  updateInfo();
+});
 </script>
 {% endblock %}
