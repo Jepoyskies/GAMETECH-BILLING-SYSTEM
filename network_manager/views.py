@@ -529,142 +529,141 @@ def setup_router_profiles(request, device_id):
             messages.error(request, f'Failed to setup router: {str(e)}')
             
     return redirect('device_list')
-#   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
- #   W I N B O X   U I   V I E W S  
- #   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
-  
- @ r o l e _ r e q u i r e d ( [ ' A d m i n ' ,   ' T e c h n i c i a n ' ,   ' C S R ' ] )  
- @ l o g i n _ r e q u i r e d  
- d e f   w i n b o x _ r o u t e r s ( r e q u e s t ) :  
-         d e v i c e s   =   M i k r o t i k D e v i c e . o b j e c t s . a l l ( ) . o r d e r _ b y ( ' d e v i c e _ n a m e ' )  
-         r e t u r n   r e n d e r ( r e q u e s t ,   ' n e t w o r k _ m a n a g e r / w i n b o x _ r o u t e r s . h t m l ' ,   { ' d e v i c e s ' :   d e v i c e s } )  
-  
-  
- @ r o l e _ r e q u i r e d ( [ ' A d m i n ' ,   ' T e c h n i c i a n ' ,   ' C S R ' ] )  
- @ l o g i n _ r e q u i r e d  
- d e f   w i n b o x _ d a s h b o a r d ( r e q u e s t ,   d e v i c e _ i d ) :  
-         d e v i c e   =   g e t _ o b j e c t _ o r _ 4 0 4 ( M i k r o t i k D e v i c e ,   i d = d e v i c e _ i d )  
-         a p i   =   M i k r o t i k A P I ( d e v i c e )  
-          
-         s e c r e t s   =   a p i . g e t _ p p p _ s e c r e t s ( )  
-         p r o f i l e s   =   a p i . g e t _ p p p _ p r o f i l e s ( )  
-         a c t i v e _ u s e r s   =   a p i . g e t _ a c t i v e _ p p p o e _ u s e r s ( )  
-          
-         c o n t e x t   =   {  
-                 ' d e v i c e ' :   d e v i c e ,  
-                 ' s e c r e t s ' :   s e c r e t s ,  
-                 ' p r o f i l e s ' :   p r o f i l e s ,  
-                 ' a c t i v e _ u s e r s ' :   a c t i v e _ u s e r s ,  
-                 ' a c t i v e _ t a b ' :   r e q u e s t . G E T . g e t ( ' t a b ' ,   ' s e c r e t s ' )  
-         }  
-         r e t u r n   r e n d e r ( r e q u e s t ,   ' n e t w o r k _ m a n a g e r / w i n b o x _ d a s h b o a r d . h t m l ' ,   c o n t e x t )  
-  
-  
- @ r o l e _ r e q u i r e d ( [ ' A d m i n ' ,   ' T e c h n i c i a n ' ,   ' C S R ' ] )  
- @ l o g i n _ r e q u i r e d  
- d e f   w i n b o x _ s e c r e t _ a c t i o n ( r e q u e s t ,   d e v i c e _ i d ) :  
-         i f   r e q u e s t . m e t h o d   = =   ' P O S T ' :  
-                 d e v i c e   =   g e t _ o b j e c t _ o r _ 4 0 4 ( M i k r o t i k D e v i c e ,   i d = d e v i c e _ i d )  
-                 a p i   =   M i k r o t i k A P I ( d e v i c e )  
-                 a c t i o n   =   r e q u e s t . P O S T . g e t ( ' a c t i o n ' )  
-                  
-                 i f   a c t i o n   = =   ' a d d ' :  
-                         s u c c e s s ,   m s g   =   a p i . a d d _ p p p o e _ u s e r (  
-                                 r e q u e s t . P O S T . g e t ( ' n a m e ' ) ,  
-                                 r e q u e s t . P O S T . g e t ( ' p a s s w o r d ' ) ,  
-                                 r e q u e s t . P O S T . g e t ( ' p r o f i l e ' ) ,  
-                                 r e q u e s t . P O S T . g e t ( ' s e r v i c e ' ,   ' p p p o e ' ) ,  
-                                 r e q u e s t . P O S T . g e t ( ' c o m m e n t ' ,   ' ' ) ,  
-                                 d i s a b l e d = r e q u e s t . P O S T . g e t ( ' d i s a b l e d ' )   = =   ' o n '  
-                         )  
-                         i f   s u c c e s s :  
-                                 m e s s a g e s . s u c c e s s ( r e q u e s t ,   f " S e c r e t   a d d e d :   { m s g } " )  
-                         e l s e :  
-                                 m e s s a g e s . e r r o r ( r e q u e s t ,   f " E r r o r   a d d i n g   s e c r e t :   { m s g } " )  
-                                  
-                 e l i f   a c t i o n   = =   ' e d i t ' :  
-                         i n t e r n a l _ i d   =   r e q u e s t . P O S T . g e t ( ' i d ' )  
-                         s u c c e s s ,   m s g   =   a p i . u p d a t e _ p p p _ s e c r e t (  
-                                 i n t e r n a l _ i d ,  
-                                 n a m e = r e q u e s t . P O S T . g e t ( ' n a m e ' ) ,  
-                                 p a s s w o r d = r e q u e s t . P O S T . g e t ( ' p a s s w o r d ' ) ,  
-                                 p r o f i l e = r e q u e s t . P O S T . g e t ( ' p r o f i l e ' ) ,  
-                                 s e r v i c e = r e q u e s t . P O S T . g e t ( ' s e r v i c e ' ,   ' p p p o e ' ) ,  
-                                 c o m m e n t = r e q u e s t . P O S T . g e t ( ' c o m m e n t ' ,   ' ' ) ,  
-                                 d i s a b l e d = ' t r u e '   i f   r e q u e s t . P O S T . g e t ( ' d i s a b l e d ' )   = =   ' o n '   e l s e   ' f a l s e '  
-                         )  
-                         i f   s u c c e s s :  
-                                 m e s s a g e s . s u c c e s s ( r e q u e s t ,   f " S e c r e t   u p d a t e d :   { m s g } " )  
-                         e l s e :  
-                                 m e s s a g e s . e r r o r ( r e q u e s t ,   f " E r r o r   u p d a t i n g   s e c r e t :   { m s g } " )  
-                                  
-                 e l i f   a c t i o n   = =   ' d e l e t e ' :  
-                         i n t e r n a l _ i d   =   r e q u e s t . P O S T . g e t ( ' i d ' )  
-                         s u c c e s s ,   m s g   =   a p i . d e l e t e _ p p p _ s e c r e t ( i n t e r n a l _ i d )  
-                         i f   s u c c e s s :  
-                                 m e s s a g e s . s u c c e s s ( r e q u e s t ,   f " S e c r e t   d e l e t e d :   { m s g } " )  
-                         e l s e :  
-                                 m e s s a g e s . e r r o r ( r e q u e s t ,   f " E r r o r   d e l e t i n g   s e c r e t :   { m s g } " )  
-                                  
-         r e t u r n   r e d i r e c t ( f " / n e t w o r k - m a n a g e r / w i n b o x / { d e v i c e _ i d } / ? t a b = s e c r e t s " )  
-  
-  
- @ r o l e _ r e q u i r e d ( [ ' A d m i n ' ,   ' T e c h n i c i a n ' ,   ' C S R ' ] )  
- @ l o g i n _ r e q u i r e d  
- d e f   w i n b o x _ p r o f i l e _ a c t i o n ( r e q u e s t ,   d e v i c e _ i d ) :  
-         i f   r e q u e s t . m e t h o d   = =   ' P O S T ' :  
-                 d e v i c e   =   g e t _ o b j e c t _ o r _ 4 0 4 ( M i k r o t i k D e v i c e ,   i d = d e v i c e _ i d )  
-                 a p i   =   M i k r o t i k A P I ( d e v i c e )  
-                 a c t i o n   =   r e q u e s t . P O S T . g e t ( ' a c t i o n ' )  
-                  
-                 #   B u i l d   k w a r g s   f r o m   f o r m ,   i g n o r i n g   e m p t y   o n e s   e x c e p t   n a m e  
-                 k w a r g s   =   {  
-                         ' n a m e ' :   r e q u e s t . P O S T . g e t ( ' n a m e ' ) ,  
-                         ' l o c a l - a d d r e s s ' :   r e q u e s t . P O S T . g e t ( ' l o c a l _ a d d r e s s ' ,   ' ' ) ,  
-                         ' r e m o t e - a d d r e s s ' :   r e q u e s t . P O S T . g e t ( ' r e m o t e _ a d d r e s s ' ,   ' ' ) ,  
-                         ' r a t e - l i m i t ' :   r e q u e s t . P O S T . g e t ( ' r a t e _ l i m i t ' ,   ' ' )  
-                 }  
-                 #   R e m o v e   e m p t y   s t r i n g   k w a r g s   s o   R o u t e r O S   d e f a u l t s   t a k e   o v e r  
-                 k w a r g s   =   { k :   v   f o r   k ,   v   i n   k w a r g s . i t e m s ( )   i f   v }  
-                  
-                 i f   a c t i o n   = =   ' a d d ' :  
-                         s u c c e s s ,   m s g   =   a p i . a d d _ p p p _ p r o f i l e ( * * k w a r g s )  
-                         i f   s u c c e s s :  
-                                 m e s s a g e s . s u c c e s s ( r e q u e s t ,   f " P r o f i l e   a d d e d :   { m s g } " )  
-                         e l s e :  
-                                 m e s s a g e s . e r r o r ( r e q u e s t ,   f " E r r o r   a d d i n g   p r o f i l e :   { m s g } " )  
-                                  
-                 e l i f   a c t i o n   = =   ' e d i t ' :  
-                         i n t e r n a l _ i d   =   r e q u e s t . P O S T . g e t ( ' i d ' )  
-                         s u c c e s s ,   m s g   =   a p i . u p d a t e _ p p p _ p r o f i l e ( i n t e r n a l _ i d ,   * * k w a r g s )  
-                         i f   s u c c e s s :  
-                                 m e s s a g e s . s u c c e s s ( r e q u e s t ,   f " P r o f i l e   u p d a t e d :   { m s g } " )  
-                         e l s e :  
-                                 m e s s a g e s . e r r o r ( r e q u e s t ,   f " E r r o r   u p d a t i n g   p r o f i l e :   { m s g } " )  
-                                  
-                 e l i f   a c t i o n   = =   ' d e l e t e ' :  
-                         i n t e r n a l _ i d   =   r e q u e s t . P O S T . g e t ( ' i d ' )  
-                         s u c c e s s ,   m s g   =   a p i . d e l e t e _ p p p _ p r o f i l e ( i n t e r n a l _ i d )  
-                         i f   s u c c e s s :  
-                                 m e s s a g e s . s u c c e s s ( r e q u e s t ,   f " P r o f i l e   d e l e t e d :   { m s g } " )  
-                         e l s e :  
-                                 m e s s a g e s . e r r o r ( r e q u e s t ,   f " E r r o r   d e l e t i n g   p r o f i l e :   { m s g } " )  
-                                  
-         r e t u r n   r e d i r e c t ( f " / n e t w o r k - m a n a g e r / w i n b o x / { d e v i c e _ i d } / ? t a b = p r o f i l e s " )  
-  
-  
- @ r o l e _ r e q u i r e d ( [ ' A d m i n ' ,   ' T e c h n i c i a n ' ,   ' C S R ' ] )  
- @ l o g i n _ r e q u i r e d  
- d e f   w i n b o x _ k i c k _ a c t i o n ( r e q u e s t ,   d e v i c e _ i d ) :  
-         i f   r e q u e s t . m e t h o d   = =   ' P O S T ' :  
-                 d e v i c e   =   g e t _ o b j e c t _ o r _ 4 0 4 ( M i k r o t i k D e v i c e ,   i d = d e v i c e _ i d )  
-                 a p i   =   M i k r o t i k A P I ( d e v i c e )  
-                 u s e r n a m e   =   r e q u e s t . P O S T . g e t ( ' u s e r n a m e ' )  
-                 s u c c e s s ,   m s g   =   a p i . k i c k _ a c t i v e _ u s e r ( u s e r n a m e )  
-                 i f   s u c c e s s :  
-                         m e s s a g e s . s u c c e s s ( r e q u e s t ,   f " K i c k e d   u s e r   { u s e r n a m e } :   { m s g } " )  
-                 e l s e :  
-                         m e s s a g e s . e r r o r ( r e q u e s t ,   f " E r r o r   k i c k i n g   u s e r :   { m s g } " )  
-                          
-         r e t u r n   r e d i r e c t ( f " / n e t w o r k - m a n a g e r / w i n b o x / { d e v i c e _ i d } / ? t a b = a c t i v e " )  
- 
+# -------------------------------------------------------------
+# WINBOX UI VIEWS
+# -------------------------------------------------------------
+
+@role_required(['Admin', 'Technician', 'CSR'])
+@login_required
+def winbox_routers(request):
+    devices = MikrotikDevice.objects.all().order_by('device_name')
+    return render(request, 'network_manager/winbox_routers.html', {'devices': devices})
+
+
+@role_required(['Admin', 'Technician', 'CSR'])
+@login_required
+def winbox_dashboard(request, device_id):
+    device = get_object_or_404(MikrotikDevice, id=device_id)
+    api = MikrotikAPI(device)
+    
+    secrets = api.get_ppp_secrets()
+    profiles = api.get_ppp_profiles()
+    active_users = api.get_active_pppoe_users()
+    
+    context = {
+        'device': device,
+        'secrets': secrets,
+        'profiles': profiles,
+        'active_users': active_users,
+        'active_tab': request.GET.get('tab', 'secrets')
+    }
+    return render(request, 'network_manager/winbox_dashboard.html', context)
+
+
+@role_required(['Admin', 'Technician', 'CSR'])
+@login_required
+def winbox_secret_action(request, device_id):
+    if request.method == 'POST':
+        device = get_object_or_404(MikrotikDevice, id=device_id)
+        api = MikrotikAPI(device)
+        action = request.POST.get('action')
+        
+        if action == 'add':
+            success, msg = api.add_pppoe_user(
+                request.POST.get('name'),
+                request.POST.get('password'),
+                request.POST.get('profile'),
+                request.POST.get('service', 'pppoe'),
+                request.POST.get('comment', ''),
+                disabled=request.POST.get('disabled') == 'on'
+            )
+            if success:
+                messages.success(request, f"Secret added: {msg}")
+            else:
+                messages.error(request, f"Error adding secret: {msg}")
+                
+        elif action == 'edit':
+            internal_id = request.POST.get('id')
+            success, msg = api.update_ppp_secret(
+                internal_id,
+                name=request.POST.get('name'),
+                password=request.POST.get('password'),
+                profile=request.POST.get('profile'),
+                service=request.POST.get('service', 'pppoe'),
+                comment=request.POST.get('comment', ''),
+                disabled='true' if request.POST.get('disabled') == 'on' else 'false'
+            )
+            if success:
+                messages.success(request, f"Secret updated: {msg}")
+            else:
+                messages.error(request, f"Error updating secret: {msg}")
+                
+        elif action == 'delete':
+            internal_id = request.POST.get('id')
+            success, msg = api.delete_ppp_secret(internal_id)
+            if success:
+                messages.success(request, f"Secret deleted: {msg}")
+            else:
+                messages.error(request, f"Error deleting secret: {msg}")
+                
+    return redirect(f"/network-manager/winbox/{device_id}/?tab=secrets")
+
+
+@role_required(['Admin', 'Technician', 'CSR'])
+@login_required
+def winbox_profile_action(request, device_id):
+    if request.method == 'POST':
+        device = get_object_or_404(MikrotikDevice, id=device_id)
+        api = MikrotikAPI(device)
+        action = request.POST.get('action')
+        
+        # Build kwargs from form, ignoring empty ones except name
+        kwargs = {
+            'name': request.POST.get('name'),
+            'local-address': request.POST.get('local_address', ''),
+            'remote-address': request.POST.get('remote_address', ''),
+            'rate-limit': request.POST.get('rate_limit', '')
+        }
+        # Remove empty string kwargs so RouterOS defaults take over
+        kwargs = {k: v for k, v in kwargs.items() if v}
+        
+        if action == 'add':
+            success, msg = api.add_ppp_profile(**kwargs)
+            if success:
+                messages.success(request, f"Profile added: {msg}")
+            else:
+                messages.error(request, f"Error adding profile: {msg}")
+                
+        elif action == 'edit':
+            internal_id = request.POST.get('id')
+            success, msg = api.update_ppp_profile(internal_id, **kwargs)
+            if success:
+                messages.success(request, f"Profile updated: {msg}")
+            else:
+                messages.error(request, f"Error updating profile: {msg}")
+                
+        elif action == 'delete':
+            internal_id = request.POST.get('id')
+            success, msg = api.delete_ppp_profile(internal_id)
+            if success:
+                messages.success(request, f"Profile deleted: {msg}")
+            else:
+                messages.error(request, f"Error deleting profile: {msg}")
+                
+    return redirect(f"/network-manager/winbox/{device_id}/?tab=profiles")
+
+
+@role_required(['Admin', 'Technician', 'CSR'])
+@login_required
+def winbox_kick_action(request, device_id):
+    if request.method == 'POST':
+        device = get_object_or_404(MikrotikDevice, id=device_id)
+        api = MikrotikAPI(device)
+        username = request.POST.get('username')
+        success, msg = api.kick_active_user(username)
+        if success:
+            messages.success(request, f"Kicked user {username}: {msg}")
+        else:
+            messages.error(request, f"Error kicking user: {msg}")
+            
+    return redirect(f"/network-manager/winbox/{device_id}/?tab=active")
