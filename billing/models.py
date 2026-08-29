@@ -1,5 +1,7 @@
 # pyrefly: ignore [missing-import]
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.utils import timezone
 from django.contrib.auth.models import User
 from network_manager.models import MikrotikDevice
@@ -358,3 +360,33 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"[{self.notification_type}] {self.title}"
+
+
+@receiver(post_save, sender=User)
+def sync_superuser_to_systemadmin(sender, instance, created, **kwargs):
+    """
+    Automatically creates or updates a SystemAdmin record whenever a superuser is created or saved.
+    This ensures `createsuperuser` immediately shows up in the Staff & Admins list.
+    """
+    if instance.is_superuser:
+        sys_admin, was_created = SystemAdmin.objects.get_or_create(
+            username=instance.username,
+            defaults={
+                'full_name': f"{instance.first_name} {instance.last_name}".strip() or instance.username,
+                'email': instance.email or f"{instance.username}@example.com",
+                'role': 'Admin',
+                'status': 'Active' if instance.is_active else 'Inactive',
+                'password_hash': 'managed_by_django'
+            }
+        )
+        if not was_created:
+            updated = False
+            if sys_admin.role != 'Admin':
+                sys_admin.role = 'Admin'
+                updated = True
+            if sys_admin.status != ('Active' if instance.is_active else 'Inactive'):
+                sys_admin.status = 'Active' if instance.is_active else 'Inactive'
+                updated = True
+            if updated:
+                sys_admin.save(update_fields=['role', 'status'])
+

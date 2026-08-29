@@ -1,0 +1,320 @@
+{% extends 'billing/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="{% url 'winbox_routers' %}" class="btn btn-outline-secondary btn-sm mb-2"><i class="fa-solid fa-arrow-left"></i> Back to Routers</a>
+        <h2><i class="fa-solid fa-server me-2"></i> Winbox: {{ device.device_name }}</h2>
+        <p class="text-muted mb-0">{{ device.ip_address }}</p>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white pt-3 pb-0 border-bottom-0">
+        <ul class="nav nav-tabs" id="winboxTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if active_tab == 'secrets' %}active{% endif %}" id="secrets-tab" data-bs-toggle="tab" data-bs-target="#secrets" type="button" role="tab" aria-controls="secrets" aria-selected="{% if active_tab == 'secrets' %}true{% else %}false{% endif %}"><i class="fa-solid fa-key me-2"></i> PPP Secrets</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if active_tab == 'profiles' %}active{% endif %}" id="profiles-tab" data-bs-toggle="tab" data-bs-target="#profiles" type="button" role="tab" aria-controls="profiles" aria-selected="{% if active_tab == 'profiles' %}true{% else %}false{% endif %}"><i class="fa-solid fa-id-card me-2"></i> PPP Profiles</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if active_tab == 'active' %}active{% endif %}" id="active-tab" data-bs-toggle="tab" data-bs-target="#active" type="button" role="tab" aria-controls="active" aria-selected="{% if active_tab == 'active' %}true{% else %}false{% endif %}"><i class="fa-solid fa-plug-circle-bolt me-2"></i> Active Connections</button>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body">
+        <div class="tab-content" id="winboxTabsContent">
+            
+            <!-- SECRETS TAB -->
+            <div class="tab-pane fade {% if active_tab == 'secrets' %}show active{% endif %}" id="secrets" role="tabpanel" aria-labelledby="secrets-tab">
+                <div class="d-flex justify-content-between mb-3">
+                    <h5 class="mb-0 text-primary">PPP Secrets</h5>
+                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#secretModal" onclick="resetSecretModal()">
+                        <i class="fa-solid fa-plus"></i> Add Secret
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle w-100" id="secretsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Name</th>
+                                <th>Password</th>
+                                <th>Service</th>
+                                <th>Profile</th>
+                                <th>Local Address</th>
+                                <th>Remote Address</th>
+                                <th>Last Logged Out</th>
+                                <th>Comment</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in secrets %}
+                            <tr>
+                                <td class="fw-bold">{{ s.name }}</td>
+                                <td><span class="text-muted">***</span></td>
+                                <td>{{ s.service|default:"any" }}</td>
+                                <td>{{ s.profile|default:"default" }}</td>
+                                <td>{{ s.local_address|default:"-" }}</td>
+                                <td>{{ s.remote_address|default:"-" }}</td>
+                                <td>{{ s.last_logged_out|default:"-" }}</td>
+                                <td>{{ s.comment|default:"" }}</td>
+                                <td>
+                                    {% if s.disabled == 'true' or s.disabled == True %}
+                                        <span class="badge bg-danger">Disabled</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Enabled</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editSecret('{{ s.id|default:s|get_item:".id" }}', '{{ s.name|escapejs }}', '{{ s.password|escapejs }}', '{{ s.service|escapejs }}', '{{ s.profile|escapejs }}', '{{ s.comment|escapejs }}', '{{ s.disabled|escapejs }}')"><i class="fa-solid fa-edit"></i></button>
+                                    <form action="{% url 'winbox_secret_action' device.id %}" method="POST" class="d-inline" onsubmit="return confirm('Delete this secret?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="id" value="{{ s.id|default:s|get_item:".id" }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-trash"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- PROFILES TAB -->
+            <div class="tab-pane fade {% if active_tab == 'profiles' %}show active{% endif %}" id="profiles" role="tabpanel" aria-labelledby="profiles-tab">
+                <div class="d-flex justify-content-between mb-3">
+                    <h5 class="mb-0 text-primary">PPP Profiles</h5>
+                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#profileModal" onclick="resetProfileModal()">
+                        <i class="fa-solid fa-plus"></i> Add Profile
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle w-100" id="profilesTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Name</th>
+                                <th>Local Address</th>
+                                <th>Remote Address</th>
+                                <th>Rate Limit (rx/tx)</th>
+                                <th>Only One</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in profiles %}
+                            <tr>
+                                <td class="fw-bold">{{ p.name }}</td>
+                                <td>{{ p.local_address|default:"-" }}</td>
+                                <td>{{ p.remote_address|default:"-" }}</td>
+                                <td>{{ p.rate_limit|default:"Unlimited" }}</td>
+                                <td>{{ p.only_one|default:"default" }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editProfile('{{ p.id|default:p|get_item:".id" }}', '{{ p.name|escapejs }}', '{{ p.local_address|escapejs }}', '{{ p.remote_address|escapejs }}', '{{ p.rate_limit|escapejs }}')"><i class="fa-solid fa-edit"></i></button>
+                                    <form action="{% url 'winbox_profile_action' device.id %}" method="POST" class="d-inline" onsubmit="return confirm('Delete this profile?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="id" value="{{ p.id|default:p|get_item:".id" }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-trash"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- ACTIVE TAB -->
+            <div class="tab-pane fade {% if active_tab == 'active' %}show active{% endif %}" id="active" role="tabpanel" aria-labelledby="active-tab">
+                <div class="d-flex justify-content-between mb-3">
+                    <h5 class="mb-0 text-primary">Active Connections</h5>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="window.location.reload();">
+                        <i class="fa-solid fa-rotate"></i> Refresh
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle w-100" id="activeTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Username</th>
+                                <th>Service</th>
+                                <th>Caller ID (MAC)</th>
+                                <th>Address</th>
+                                <th>Uptime</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for a in active_users %}
+                            <tr>
+                                <td class="fw-bold">{{ a.name }}</td>
+                                <td>{{ a.service }}</td>
+                                <td>{{ a.caller_id }}</td>
+                                <td>{{ a.address }}</td>
+                                <td>{{ a.uptime }}</td>
+                                <td>
+                                    <form action="{% url 'winbox_kick_action' device.id %}" method="POST" class="d-inline" onsubmit="return confirm('Kick this user?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="username" value="{{ a.name }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-warning"><i class="fa-solid fa-plug-circle-xmark"></i> Kick</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Secret Modal -->
+<div class="modal fade" id="secretModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form action="{% url 'winbox_secret_action' device.id %}" method="POST" class="modal-content">
+      {% csrf_token %}
+      <input type="hidden" name="action" id="secretAction" value="add">
+      <input type="hidden" name="id" id="secretId" value="">
+      <div class="modal-header">
+        <h5 class="modal-title" id="secretModalLabel">Add Secret</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+          <div class="mb-3">
+              <label>Name (Username)</label>
+              <input type="text" class="form-control" name="name" id="secretName" required>
+          </div>
+          <div class="mb-3">
+              <label>Password</label>
+              <input type="text" class="form-control" name="password" id="secretPassword" required>
+          </div>
+          <div class="mb-3">
+              <label>Service</label>
+              <select class="form-select" name="service" id="secretService">
+                  <option value="any">any</option>
+                  <option value="pppoe" selected>pppoe</option>
+                  <option value="ovpn">ovpn</option>
+              </select>
+          </div>
+          <div class="mb-3">
+              <label>Profile</label>
+              <select class="form-select" name="profile" id="secretProfile">
+                  <option value="default">default</option>
+                  {% for p in profiles %}
+                  <option value="{{ p.name }}">{{ p.name }}</option>
+                  {% endfor %}
+              </select>
+          </div>
+          <div class="mb-3">
+              <label>Comment</label>
+              <input type="text" class="form-control" name="comment" id="secretComment">
+          </div>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="disabled" id="secretDisabled">
+            <label class="form-check-label" for="secretDisabled">Disabled</label>
+          </div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Profile Modal -->
+<div class="modal fade" id="profileModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form action="{% url 'winbox_profile_action' device.id %}" method="POST" class="modal-content">
+      {% csrf_token %}
+      <input type="hidden" name="action" id="profileAction" value="add">
+      <input type="hidden" name="id" id="profileId" value="">
+      <div class="modal-header">
+        <h5 class="modal-title" id="profileModalLabel">Add Profile</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+          <div class="mb-3">
+              <label>Name</label>
+              <input type="text" class="form-control" name="name" id="profileName" required>
+          </div>
+          <div class="mb-3">
+              <label>Local Address</label>
+              <input type="text" class="form-control" name="local_address" id="profileLocalAddress">
+          </div>
+          <div class="mb-3">
+              <label>Remote Address</label>
+              <input type="text" class="form-control" name="remote_address" id="profileRemoteAddress">
+          </div>
+          <div class="mb-3">
+              <label>Rate Limit (rx/tx)</label>
+              <input type="text" class="form-control" name="rate_limit" id="profileRateLimit" placeholder="e.g. 10M/10M">
+          </div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        $('#secretsTable').DataTable({ order: [] });
+        $('#profilesTable').DataTable({ order: [] });
+        $('#activeTable').DataTable({ order: [] });
+    });
+
+    function resetSecretModal() {
+        $('#secretModalLabel').text('Add Secret');
+        $('#secretAction').val('add');
+        $('#secretId').val('');
+        $('#secretName').val('');
+        $('#secretPassword').val('');
+        $('#secretService').val('pppoe');
+        $('#secretProfile').val('default');
+        $('#secretComment').val('');
+        $('#secretDisabled').prop('checked', false);
+    }
+
+    function editSecret(id, name, pass, service, profile, comment, disabled) {
+        $('#secretModalLabel').text('Edit Secret');
+        $('#secretAction').val('edit');
+        $('#secretId').val(id);
+        $('#secretName').val(name);
+        $('#secretPassword').val(pass);
+        $('#secretService').val(service || 'pppoe');
+        $('#secretProfile').val(profile || 'default');
+        $('#secretComment').val(comment);
+        $('#secretDisabled').prop('checked', (disabled === 'true' || disabled === 'True'));
+        $('#secretModal').modal('show');
+    }
+
+    function resetProfileModal() {
+        $('#profileModalLabel').text('Add Profile');
+        $('#profileAction').val('add');
+        $('#profileId').val('');
+        $('#profileName').val('');
+        $('#profileLocalAddress').val('');
+        $('#profileRemoteAddress').val('');
+        $('#profileRateLimit').val('');
+    }
+
+    function editProfile(id, name, local, remote, rate) {
+        $('#profileModalLabel').text('Edit Profile');
+        $('#profileAction').val('edit');
+        $('#profileId').val(id);
+        $('#profileName').val(name);
+        $('#profileLocalAddress').val(local);
+        $('#profileRemoteAddress').val(remote);
+        $('#profileRateLimit').val(rate);
+        $('#profileModal').modal('show');
+    }
+</script>
+{% endblock %}

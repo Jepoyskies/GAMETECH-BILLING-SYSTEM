@@ -26,4 +26,11 @@ urlpatterns = [
     path('napboxes/edit/<int:nap_id>/', views.edit_nap_view, name='edit_nap'),
     path('napboxes/delete/<int:nap_id>/', views.delete_nap_view, name='delete_nap'),
     path('tools/calculator/', views.fbt_plc_calculator_view, name='fbt_plc_calculator'),
+    
+    # Winbox UI URLs
+    path('winbox/', views.winbox_routers, name='winbox_routers'),
+    path('winbox/<int:device_id>/', views.winbox_dashboard, name='winbox_dashboard'),
+    path('winbox/<int:device_id>/secret-action/', views.winbox_secret_action, name='winbox_secret_action'),
+    path('winbox/<int:device_id>/profile-action/', views.winbox_profile_action, name='winbox_profile_action'),
+    path('winbox/<int:device_id>/kick-action/', views.winbox_kick_action, name='winbox_kick_action'),
 ]

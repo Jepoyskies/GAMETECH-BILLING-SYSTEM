@@ -597,3 +597,71 @@ class MikrotikAPI:
         except Exception as e:
             logger.error(f"Failed to get interface traffic from {self.device.device_name}: {e}")
             return []
+
+    # ---------------------------------------------------------
+    # Winbox UI Methods
+    # ---------------------------------------------------------
+    def get_ppp_profiles(self):
+        try:
+            api = self._get_api()
+            profiles = api.get_resource('/ppp/profile').get()
+            self.connection.disconnect()
+            return profiles
+        except Exception as e:
+            logger.error(f"Failed to get PPP profiles from {self.device.device_name}: {e}")
+            return []
+
+    def delete_ppp_secret(self, internal_id):
+        try:
+            api = self._get_api()
+            secrets = api.get_resource('/ppp/secret')
+            secrets.remove(id=internal_id)
+            self.connection.disconnect()
+            return True, "Secret deleted successfully."
+        except Exception as e:
+            logger.error(f"Failed to delete PPP secret {internal_id} on {self.device.device_name}: {e}")
+            return False, str(e)
+
+    def delete_ppp_profile(self, internal_id):
+        try:
+            api = self._get_api()
+            profiles = api.get_resource('/ppp/profile')
+            profiles.remove(id=internal_id)
+            self.connection.disconnect()
+            return True, "Profile deleted successfully."
+        except Exception as e:
+            logger.error(f"Failed to delete PPP profile {internal_id} on {self.device.device_name}: {e}")
+            return False, str(e)
+
+    def add_ppp_profile(self, **kwargs):
+        try:
+            api = self._get_api()
+            profiles = api.get_resource('/ppp/profile')
+            profiles.add(**kwargs)
+            self.connection.disconnect()
+            return True, "Profile added successfully."
+        except Exception as e:
+            logger.error(f"Failed to add PPP profile on {self.device.device_name}: {e}")
+            return False, str(e)
+
+    def update_ppp_profile(self, internal_id, **kwargs):
+        try:
+            api = self._get_api()
+            profiles = api.get_resource('/ppp/profile')
+            profiles.set(id=internal_id, **kwargs)
+            self.connection.disconnect()
+            return True, "Profile updated successfully."
+        except Exception as e:
+            logger.error(f"Failed to update PPP profile {internal_id} on {self.device.device_name}: {e}")
+            return False, str(e)
+            
+    def update_ppp_secret(self, internal_id, **kwargs):
+        try:
+            api = self._get_api()
+            secrets = api.get_resource('/ppp/secret')
+            secrets.set(id=internal_id, **kwargs)
+            self.connection.disconnect()
+            return True, "Secret updated successfully."
+        except Exception as e:
+            logger.error(f"Failed to update PPP secret {internal_id} on {self.device.device_name}: {e}")
+            return False, str(e)

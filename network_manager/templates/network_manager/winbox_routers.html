@@ -1,0 +1,52 @@
+{% extends 'billing/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fa-solid fa-server me-2"></i> Winbox UI</h2>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white py-3">
+        <h5 class="mb-0 text-primary fw-bold"><i class="fa-solid fa-network-wired me-2"></i> Select a Router</h5>
+    </div>
+    <div class="card-body">
+        <p class="text-muted">Choose a Mikrotik router below to open its embedded Winbox dashboard (manage Secrets, Profiles, and Active Connections).</p>
+        
+        <div class="row row-cols-1 row-cols-md-3 g-4 mt-2">
+            {% for device in devices %}
+            <div class="col">
+                <a href="{% url 'winbox_dashboard' device.id %}" class="text-decoration-none">
+                    <div class="card h-100 border border-primary border-opacity-25 hover-shadow transition-all">
+                        <div class="card-body text-center py-4">
+                            <div class="mb-3 text-primary">
+                                <i class="fa-solid fa-router fa-3x"></i>
+                            </div>
+                            <h5 class="card-title text-dark fw-bold">{{ device.device_name }}</h5>
+                            <p class="card-text text-muted small mb-1">{{ device.ip_address }}</p>
+                            <span class="badge {% if device.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                                {% if device.is_active %}Active{% else %}Inactive{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% empty %}
+            <div class="col-12 text-center py-5">
+                <p class="text-muted mb-0">No Mikrotik devices configured yet.</p>
+                <a href="{% url 'add_device' %}" class="btn btn-primary mt-3">Add Device</a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+.hover-shadow:hover {
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+    transform: translateY(-2px);
+}
+.transition-all {
+    transition: all .2s ease-in-out;
+}
+</style>
+{% endblock %}
