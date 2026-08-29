@@ -180,15 +180,9 @@
                         </span>
                     </li>
                     <li>
-                        <span class="info-label">Outstanding Balance</span>
-                        <span class="info-value {% if customer.outstanding_balance > 0 %}text-danger{% elif customer.outstanding_balance < 0 %}text-success{% endif %}">
-                            {% if customer.outstanding_balance < 0 %}
-                                ₱{{ customer.abs_outstanding_balance|floatformat:2 }}
-                            {% elif customer.outstanding_balance > 0 %}
-                                ₱-{{ customer.outstanding_balance|floatformat:2 }}
-                            {% else %}
-                                ₱0.00
-                            {% endif %}
+                        <span class="info-label">Advance Payment</span>
+                        <span class="info-value {% if customer.outstanding_balance > 0 %}text-success{% endif %}">
+                            ₱{{ customer.abs_outstanding_balance|floatformat:2 }}
                             {% if request.user.role == 'Admin' %}
                             <button type="button" class="btn btn-sm btn-link p-0 ms-2 text-primary" data-bs-toggle="modal" data-bs-target="#editBalanceModal"><i class="fas fa-edit"></i></button>
                             {% endif %}
@@ -429,20 +423,19 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content" style="border-radius:20px; border:none;">
       <div class="modal-header border-bottom-0 pb-0">
-        <h5 class="modal-title fw-bold"><i class="fas fa-coins text-primary me-2"></i> Edit Outstanding Balance</h5>
+        <h5 class="modal-title fw-bold"><i class="fas fa-wallet text-success me-2"></i> Edit Advance Payment</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form action="{% url 'edit_customer_balance' customer.id %}" method="post">
         {% csrf_token %}
         <div class="modal-body py-4">
-            <p class="text-muted small mb-3">Manually override the customer's outstanding balance. Use negative numbers for advance payments. This action will be audited.</p>
+            <p class="text-muted small mb-3">Manually override the customer's advance payment (wallet balance). This money will be automatically used to renew their plan when their expiration date hits. This action will be audited.</p>
             <div class="mb-3">
-                <label class="form-label fw-bold">Balance Amount (₱)</label>
-                <input type="number" step="0.01" class="form-control" name="outstanding_balance" value="{{ customer.outstanding_balance }}" required>
+                <label class="form-label fw-bold">Wallet Balance (₱)</label>
+                <input type="number" step="0.01" class="form-control" name="outstanding_balance" value="{{ customer.outstanding_balance }}" min="0" required>
             </div>
             <div class="d-flex gap-2 mb-2">
                 <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="document.querySelector('input[name=outstanding_balance]').value='0'">Set to ₱0 (Reset)</button>
-                <button type="button" class="btn btn-sm btn-outline-danger rounded-pill" onclick="document.querySelector('input[name=outstanding_balance]').value='{{ customer.plan.price|default:'0' }}'">Set to 1 Month Owed</button>
             </div>
         </div>
         <div class="modal-footer border-top-0 pt-0">

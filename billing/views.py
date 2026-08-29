@@ -1131,10 +1131,8 @@ def customer_list(request):
     if filter_type == 'nearing_expiration':
         three_days_from_now = timezone.now() + timedelta(days=3)
         customers = customers.filter(expires_at__lte=three_days_from_now, status='active')
-    elif filter_type == 'outstanding_balance':
-        customers = customers.filter(outstanding_balance__gt=0)
     elif filter_type == 'advance_payment':
-        customers = customers.filter(outstanding_balance__lt=0)
+        customers = customers.filter(outstanding_balance__gt=0)
         
     devices = MikrotikDevice.objects.all().order_by('device_name')
     from .models import Barangay
@@ -2272,8 +2270,23 @@ def pay_customer_view(request, username):
                         locked_customer.save() # Triggers Mikrotik Sync
                 # --------------------------
                 
-                # Calculate new expiration using the staggered logic
-                new_expiry = calculate_new_expiration_date(current_exp, amount_float, monthly_price)
+                # --- Option B: Wallet/Advance Payment Logic ---
+                amount_for_time = 0.0
+                advance_payment = 0.0
+                
+                if monthly_price > 0:
+                    if amount_float >= monthly_price:
+                        # Pay exactly 1 month, rest goes to wallet
+                        amount_for_time = monthly_price
+                        advance_payment = amount_float - monthly_price
+                    else:
+                        # Partial payment, all goes to time
+                        amount_for_time = amount_float
+                else:
+                    amount_for_time = amount_float
+
+                # Calculate new expiration using ONLY the amount meant for time
+                new_expiry = calculate_new_expiration_date(current_exp, amount_for_time, monthly_price)
 
                 was_suspended = locked_customer.status in ['suspended', 'inactive', 'expired']
                 
