@@ -1,0 +1,5 @@
+- `[x]` Task 1: Remove custom `<style>` block containing glassmorphism CSS.
+- `[x]` Task 2: Update HTML structure to use `.dashboard-card` instead of `.glass-card`.
+- `[x]` Task 3: Update Javascript template literals to remove hardcoded hex/neon styles and use Bootstrap utility classes.
+- `[x]` Task 4: Change title to "Live Monitoring".
+- `[x]` Task 5: Verify syntax and layout.

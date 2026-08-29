@@ -1,0 +1,20 @@
+- `[x]` **1. Winbox Comments Update**
+  - `[x]` Update `pay_customer_view` in `billing/views.py`
+  - `[x]` Update `payment_callback` in `customer_portal/views.py`
+- `[x]` **2. Time & Date Tracking**
+  - `[x]` Update `logs.html` timestamps
+  - `[x]` Update `notifications.html` timestamps
+  - `[x]` Update `view_customer.html` audit trail and payment timestamps
+- `[x]` **3. Admin Flexibility**
+  - `[x]` Verify UI modals for Edit Expiration and Edit Balance in `view_customer.html`
+- `[x]` **4. Revert / Transfer Payment**
+  - `[x]` Create `revert_transfer_payment` view in `billing/views.py`
+  - `[x]` Add route in `billing/urls.py`
+  - `[x]` Add UI button and modal in `payment_logs.html`
+- `[x]` **5. Cignal Box Application**
+  - `[x]` Create `apply_cignal_addon` view in `billing/views.py`
+  - `[x]` Add route in `billing/urls.py`
+  - `[x]` Add UI modal and apply button in `live_monitoring.html`
+- `[x]` **6. Verification & System Audit**
+  - `[x]` Run `python manage.py check`
+  - `[x]` Test features

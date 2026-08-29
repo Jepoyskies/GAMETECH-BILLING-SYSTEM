@@ -1,0 +1,5 @@
+- `[x]` Generate GitHub Actions SSH Key on Droplet
+- `[x]` Authorize SSH Key for root access
+- `[x]` Retrieve Private Key for user
+- `[x]` Create `.github/workflows/deploy.yml` locally
+- `[x]` Push workflow to GitHub

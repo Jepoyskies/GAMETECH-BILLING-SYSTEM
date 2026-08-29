@@ -1,0 +1,4 @@
+- `[x]` Modify `api_live_monitoring_data` to ping 8.8.8.8 and return router uplink status
+- `[x]` Update `live_monitoring.html` UI to show uplink status widget
+- `[x]` Update `live_monitoring.html` JavaScript to parse the new JSON structure
+- `[x]` Verify feature functionality

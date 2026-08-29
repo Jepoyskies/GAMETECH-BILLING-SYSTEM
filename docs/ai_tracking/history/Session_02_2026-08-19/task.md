@@ -1,0 +1,9 @@
+- [x] Create `@role_required` decorator in `billing/decorators.py`
+- [x] Protect Admin-only views in `billing/views.py`
+- [x] Protect Editor+Admin views in `billing/views.py`
+- [x] Protect Admin-only views in `network_manager/views.py`
+- [x] Protect Editor+Admin views in `network_manager/views.py`
+- [x] Update `base.html` sidebar to hide restricted menus
+- [x] Update `customers.html` & `view_customer.html` to hide actions for Viewers
+- [x] Update `add_on_payments.html` to hide actions for Viewers
+- [x] Update `network_manager/device_list.html` to hide actions for non-Admins

@@ -1,0 +1,6 @@
+- [x] 1. Add `now` to context in `payment_addon_logs_view` inside `billing/views.py`.
+- [x] 2. Update CSS in `billing/templates/billing/live_monitoring.html` to improve text readability (change `.text-muted` contrast, etc.).
+- [x] 3. Update CSS in `billing/templates/billing/live_monitoring.html` to hide the scrollbar for `.cell-content` or specifically `#hardwareList` using `::-webkit-scrollbar { display: none; }` and `-ms-overflow-style: none; scrollbar-width: none;`.
+- [x] 4. Replace the "Update Health" link in `live_monitoring.html` with a modal trigger button.
+- [x] 5. Add the Bootstrap modal for "Update Network Health" at the end of `live_monitoring.html`.
+- [x] 6. Verify changes in `live_monitoring.html` and `billing/views.py`.

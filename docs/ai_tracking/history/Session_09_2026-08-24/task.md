@@ -1,0 +1,5 @@
+- `[x]` Refactor `network_manager/sync_services.py` for bulletproof comment sanitization and ID handling
+- `[x]` Create `auto_reconcile_routers.py` management command
+- `[x]` Update Celery Beat schedule in `gametech_core/settings.py`
+- `[x]` Test execution of the command
+- `[x]` Write walkthrough
