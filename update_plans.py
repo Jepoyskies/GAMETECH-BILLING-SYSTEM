@@ -51,3 +51,14 @@ def update_plans():
 
 if __name__ == '__main__':
     update_plans()
+
+    # Legacy Plans
+    SubscriptionPlan.objects.get_or_create(
+        name='5Mbps', 
+        defaults={'speed_up': '5 Mbps', 'speed_down': '5 Mbps', 'price': 500, 'validity_days': 30, 'description': 'Legacy Plan'}
+    )
+    SubscriptionPlan.objects.get_or_create(
+        name='10Mbps', 
+        defaults={'speed_up': '10 Mbps', 'speed_down': '10 Mbps', 'price': 750, 'validity_days': 30, 'description': 'Legacy Plan'}
+    )
+    print('Legacy plans added.')

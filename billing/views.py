@@ -797,8 +797,37 @@ def plan_list(request):
     if hasattr(request.user, 'role') and request.user.role == 'Agent':
         return redirect('customer_list')
         
-    plans = SubscriptionPlan.objects.all().order_by('price')
-    return render(request, 'billing/service_plans.html', {'plans': plans})
+    all_plans = SubscriptionPlan.objects.all().order_by('price')
+    
+    # Categorize plans based on their names
+    categorized_plans = {
+        'Legacy Plans': [],
+        'GTipid Fiber': [],
+        'GIMI Home Fiber': [],
+        'SME Business Plans': [],
+        'Enterprise Plan': [],
+        'Other Plans': []
+    }
+    
+    for plan in all_plans:
+        name_lower = plan.name.lower()
+        if 'legacy' in name_lower or plan.name in ['5Mbps', '10Mbps']:
+            categorized_plans['Legacy Plans'].append(plan)
+        elif 'gtipid' in name_lower:
+            categorized_plans['GTipid Fiber'].append(plan)
+        elif 'gimi home' in name_lower:
+            categorized_plans['GIMI Home Fiber'].append(plan)
+        elif 'sme' in name_lower:
+            categorized_plans['SME Business Plans'].append(plan)
+        elif 'enterprise' in name_lower:
+            categorized_plans['Enterprise Plan'].append(plan)
+        else:
+            categorized_plans['Other Plans'].append(plan)
+            
+    # Filter out empty categories
+    active_categories = {k: v for k, v in categorized_plans.items() if v}
+    
+    return render(request, 'billing/service_plans.html', {'grouped_plans': active_categories})
 
 @login_required
 def sync_plans_from_mikrotik(request):
