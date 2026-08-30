@@ -463,9 +463,13 @@ body.tv-mode {
                 </div>
             </div>
 
-            <button id="themeToggle" class="btn btn-sm" style="background:transparent; border:none; font-size:1.25rem; color:inherit;" title="Toggle Dark/Light Mode">
-                <i class="fas fa-moon" id="themeIcon"></i>
+            <!-- Gamer Theme Toggle -->
+            <button id="gt-theme-toggle" title="Toggle Dark/Light Mode" aria-label="Toggle theme">
+                <i class="fas fa-sun gt-toggle-icon" id="themeIcon"></i>
+                <span class="gt-toggle-label" id="themeLabel">Light</span>
             </button>
+            <!-- CRT Scanline Flash Overlay -->
+            <div id="gt-scanline"></div>
             <!-- Profile Dropdown -->
             <div class="dropdown">
                 <button class="btn btn-sm" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background:transparent; border:none; font-size:1.25rem; color:inherit;" title="My Profile">
@@ -598,35 +602,69 @@ document.addEventListener("DOMContentLoaded", function() {
     });
     });
 
-    // Theme Toggle Logic
-    const themeToggleBtn = document.getElementById('themeToggle');
-    const themeIcon = document.getElementById('themeIcon');
-    const htmlEl = document.documentElement;
+    // =============================================
+    // GAMER THEME TOGGLE — v2.0
+    // =============================================
+    const gtToggleBtn = document.getElementById('gt-theme-toggle');
+    const themeIcon   = document.getElementById('themeIcon');
+    const themeLabel  = document.getElementById('themeLabel');
+    const gtScanline  = document.getElementById('gt-scanline');
+    const htmlEl      = document.documentElement;
 
-    function updateThemeIcon() {
-        if (htmlEl.classList.contains('dark-mode')) {
-            themeIcon.classList.remove('fa-moon');
-            themeIcon.classList.add('fa-sun');
-            themeIcon.style.color = '#F9B233'; // Sun color
+    // 8-bit click sound via Web Audio API
+    function playGamerClick(isDark) {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            // Dark mode: low-pitched bwoop. Light mode: high-pitched ping.
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(isDark ? 180 : 880, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(isDark ? 80 : 440, ctx.currentTime + 0.12);
+            gain.gain.setValueAtTime(0.08, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.15);
+        } catch(e) { /* audio not supported, silently skip */ }
+    }
+
+    // Scanline flash animation
+    function triggerScanline() {
+        if (!gtScanline) return;
+        gtScanline.classList.remove('flash');
+        void gtScanline.offsetWidth; // reflow to restart animation
+        gtScanline.classList.add('flash');
+        gtScanline.addEventListener('animationend', () => gtScanline.classList.remove('flash'), { once: true });
+    }
+
+    function updateThemeUI() {
+        const isDark = htmlEl.classList.contains('dark-mode');
+        if (isDark) {
+            themeIcon.className = 'fas fa-gamepad gt-toggle-icon';
+            if (themeLabel) themeLabel.textContent = 'DARK';
         } else {
-            themeIcon.classList.remove('fa-sun');
-            themeIcon.classList.add('fa-moon');
-            themeIcon.style.color = 'inherit';
+            themeIcon.className = 'fas fa-sun gt-toggle-icon';
+            if (themeLabel) themeLabel.textContent = 'LIGHT';
         }
     }
 
-    if (themeToggleBtn) {
-        // Initial setup
-        updateThemeIcon();
+    if (gtToggleBtn) {
+        updateThemeUI();
 
-        themeToggleBtn.addEventListener('click', () => {
-            htmlEl.classList.toggle('dark-mode');
-            const isDark = htmlEl.classList.contains('dark-mode');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            updateThemeIcon();
-            
-            // Dispatch a custom event so dashboard/live charts can listen
-            window.dispatchEvent(new Event('themeChanged'));
+        gtToggleBtn.addEventListener('click', () => {
+            triggerScanline();
+            // Small delay so the scanline starts before the color swap
+            setTimeout(() => {
+                htmlEl.classList.toggle('dark-mode');
+                const isDark = htmlEl.classList.contains('dark-mode');
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                updateThemeUI();
+                playGamerClick(isDark);
+                // Dispatch so charts/live monitoring can re-render
+                window.dispatchEvent(new Event('themeChanged'));
+            }, 80);
         });
     }
 

@@ -1,8 +1,188 @@
+/* ============================================================
+   GAMETECH BILLING SYSTEM — DESIGN TOKENS
+   CSS Custom Properties — Respond to dark/light mode
+   ============================================================ */
+:root {
+  /* Surfaces */
+  --gt-bg:               #f1f5f9;
+  --gt-surface:          #ffffff;
+  --gt-surface-2:        #f8fafc;
+  --gt-surface-3:        rgba(0,0,0,0.03);
+  --gt-border:           rgba(0,0,0,0.08);
+  --gt-border-strong:    rgba(0,0,0,0.12);
+
+  /* Text */
+  --gt-text:             #0f172a;
+  --gt-text-muted:       #64748b;
+  --gt-text-subtle:      #94a3b8;
+
+  /* Info cards (changelog, details) */
+  --gt-card-blue:        #eff6ff;
+  --gt-card-blue-border: #bfdbfe;
+  --gt-card-blue-text:   #1e40af;
+  --gt-card-green:       #f0fdf4;
+  --gt-card-green-border:#bbf7d0;
+  --gt-card-purple:      #faf5ff;
+  --gt-card-purple-border:#e9d5ff;
+  --gt-card-red:         #fef2f2;
+  --gt-card-red-border:  #fecaca;
+  --gt-card-amber:       #fefce8;
+  --gt-card-amber-border:#fef08a;
+  --gt-card-cyan:        #ecfeff;
+  --gt-card-cyan-border: #a5f3fc;
+  --gt-card-teal:        #f0fdfa;
+  --gt-card-teal-border: #99f6e4;
+  --gt-card-indigo:      #e0e7ff;
+  --gt-card-indigo-border:#c7d2fe;
+  --gt-card-orange:      #fff7ed;
+  --gt-card-orange-border:#fed7aa;
+  --gt-card-pink:        #fdf4ff;
+  --gt-card-pink-border: #f5d0fe;
+}
+
+html.dark-mode {
+  --gt-bg:               #0a0f1e;
+  --gt-surface:          #111827;
+  --gt-surface-2:        #1a2235;
+  --gt-surface-3:        rgba(255,255,255,0.03);
+  --gt-border:           rgba(255,255,255,0.07);
+  --gt-border-strong:    rgba(255,255,255,0.12);
+
+  --gt-text:             #e2e8f0;
+  --gt-text-muted:       #94a3b8;
+  --gt-text-subtle:      #64748b;
+
+  --gt-card-blue:        rgba(56,189,248,0.08);
+  --gt-card-blue-border: rgba(56,189,248,0.2);
+  --gt-card-blue-text:   #7dd3fc;
+  --gt-card-green:       rgba(52,211,153,0.08);
+  --gt-card-green-border:rgba(52,211,153,0.2);
+  --gt-card-purple:      rgba(167,139,250,0.08);
+  --gt-card-purple-border:rgba(167,139,250,0.2);
+  --gt-card-red:         rgba(248,113,113,0.08);
+  --gt-card-red-border:  rgba(248,113,113,0.2);
+  --gt-card-amber:       rgba(251,191,36,0.08);
+  --gt-card-amber-border:rgba(251,191,36,0.2);
+  --gt-card-cyan:        rgba(34,211,238,0.08);
+  --gt-card-cyan-border: rgba(34,211,238,0.2);
+  --gt-card-teal:        rgba(45,212,191,0.08);
+  --gt-card-teal-border: rgba(45,212,191,0.2);
+  --gt-card-indigo:      rgba(129,140,248,0.08);
+  --gt-card-indigo-border:rgba(129,140,248,0.2);
+  --gt-card-orange:      rgba(251,146,60,0.08);
+  --gt-card-orange-border:rgba(251,146,60,0.2);
+  --gt-card-pink:        rgba(232,121,249,0.08);
+  --gt-card-pink-border: rgba(232,121,249,0.2);
+}
+
+/* Smooth mode transition on every element */
+*, *::before, *::after {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+}
+/* But NOT transitions on animations/transforms to keep them snappy */
+.animate-fade-in, [class*="pulse"], .conn-pulse, .conn-pulse-green, .conn-pulse-red {
+  transition: none !important;
+}
+
+/* ============================================================
+   GLOBAL DARK MODE OVERRIDES — Gamer Dark Theme
+   ============================================================ */
+
+/* Base body */
+html.dark-mode body {
+  background-color: var(--gt-bg) !important;
+  color: var(--gt-text) !important;
+}
+
 /* Global Scale */
 body {
     zoom: 1;
     -moz-transform: scale(1);
     -moz-transform-origin: top center;
+}
+
+/* ============================================================
+   GAMER THEME TOGGLE BUTTON
+   ============================================================ */
+
+/* Scanline flash overlay */
+#gt-scanline {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 99999;
+  opacity: 0;
+}
+#gt-scanline.flash {
+  animation: gt-scanline-flash 0.45s ease-out forwards;
+}
+@keyframes gt-scanline-flash {
+  0%   { opacity: 0; background: linear-gradient(180deg, transparent 0%, rgba(56,189,248,0.12) 50%, transparent 100%); background-size: 100% 200%; background-position: 0% 0%; }
+  20%  { opacity: 1; background-position: 0% 100%; }
+  60%  { opacity: 0.5; }
+  100% { opacity: 0; background-position: 0% 200%; }
+}
+
+/* The toggle pill */
+#gt-theme-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 6px 10px;
+  border-radius: 50px;
+  border: 1.5px solid rgba(0,0,0,0.12);
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(12px);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334155;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  user-select: none;
+  white-space: nowrap;
+}
+#gt-theme-toggle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+}
+#gt-theme-toggle .gt-toggle-icon {
+  font-size: 1rem;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.3s ease !important;
+}
+#gt-theme-toggle:hover .gt-toggle-icon {
+  transform: rotate(-15deg) scale(1.15);
+}
+
+/* Dark mode state of the toggle */
+html.dark-mode #gt-theme-toggle {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border-color: rgba(56,189,248,0.35);
+  color: #38bdf8;
+  box-shadow: 0 0 14px rgba(56,189,248,0.2), 0 0 28px rgba(56,189,248,0.08), inset 0 0 12px rgba(56,189,248,0.05);
+}
+html.dark-mode #gt-theme-toggle:hover {
+  box-shadow: 0 0 20px rgba(56,189,248,0.35), 0 0 40px rgba(56,189,248,0.15), inset 0 0 20px rgba(56,189,248,0.08);
+  transform: translateY(-1px);
+}
+html.dark-mode #gt-theme-toggle .gt-toggle-icon {
+  filter: drop-shadow(0 0 6px rgba(56,189,248,0.8));
+  animation: gt-neon-pulse 2.5s ease-in-out infinite;
+}
+@keyframes gt-neon-pulse {
+  0%, 100% { filter: drop-shadow(0 0 4px rgba(56,189,248,0.6)); }
+  50%       { filter: drop-shadow(0 0 10px rgba(56,189,248,1)) drop-shadow(0 0 20px rgba(167,139,250,0.5)); }
+}
+
+/* Label inside toggle */
+#gt-theme-toggle .gt-toggle-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
 }
 
 /* Dark Mode Overrides */
@@ -1416,5 +1596,365 @@ tr.row-inactive { background: rgba(100,116,139,0.04)!important; }
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
+
+
+/* ============================================================
+   COMPREHENSIVE DARK MODE PATCH
+   Fixes every Bootstrap element + hardcoded color that bleeds
+   white in dark mode across every page of the system.
+   ============================================================ */
+
+/* --- Bootstrap list-group (changelog sidebar, settings tabs) --- */
+html.dark-mode .list-group-item {
+  background-color: var(--gt-surface) !important;
+  border-color: var(--gt-border) !important;
+  color: var(--gt-text) !important;
+}
+html.dark-mode .list-group-item-action:hover,
+html.dark-mode .list-group-item-action:focus {
+  background-color: rgba(255,255,255,0.05) !important;
+  color: #f8fafc !important;
+}
+html.dark-mode .list-group-item.active {
+  background: linear-gradient(135deg, #1e3a8a 0%, #4e73df 100%) !important;
+  border-color: transparent !important;
+  color: white !important;
+}
+
+/* --- Bootstrap nav-tabs --- */
+html.dark-mode .nav-tabs {
+  border-bottom-color: var(--gt-border) !important;
+}
+html.dark-mode .nav-tabs .nav-link {
+  color: var(--gt-text-muted) !important;
+  border-color: transparent !important;
+}
+html.dark-mode .nav-tabs .nav-link:hover {
+  color: var(--gt-text) !important;
+  border-color: var(--gt-border) !important;
+  background: rgba(255,255,255,0.04) !important;
+}
+html.dark-mode .nav-tabs .nav-link.active {
+  background-color: var(--gt-surface) !important;
+  border-color: var(--gt-border) var(--gt-border) var(--gt-surface) !important;
+  color: #38bdf8 !important;
+}
+html.dark-mode .tab-content {
+  background-color: transparent !important;
+}
+
+/* --- Alerts --- */
+html.dark-mode .alert-info {
+  background-color: rgba(56,189,248,0.1) !important;
+  border-color: rgba(56,189,248,0.25) !important;
+  color: #7dd3fc !important;
+}
+html.dark-mode .alert-success {
+  background-color: rgba(52,211,153,0.1) !important;
+  border-color: rgba(52,211,153,0.25) !important;
+  color: #6ee7b7 !important;
+}
+html.dark-mode .alert-warning {
+  background-color: rgba(251,191,36,0.1) !important;
+  border-color: rgba(251,191,36,0.25) !important;
+  color: #fcd34d !important;
+}
+html.dark-mode .alert-danger {
+  background-color: rgba(248,113,113,0.1) !important;
+  border-color: rgba(248,113,113,0.25) !important;
+  color: #fca5a5 !important;
+}
+html.dark-mode .alert-secondary {
+  background-color: rgba(100,116,139,0.15) !important;
+  border-color: rgba(100,116,139,0.3) !important;
+  color: #cbd5e1 !important;
+}
+
+/* --- Bootstrap subtle backgrounds --- */
+html.dark-mode .bg-light,
+html.dark-mode .bg-white,
+html.dark-mode .bg-body,
+html.dark-mode .bg-body-tertiary,
+html.dark-mode .bg-body-secondary {
+  background-color: var(--gt-surface-2) !important;
+}
+
+/* --- Bootstrap text utilities --- */
+html.dark-mode .text-dark,
+html.dark-mode .text-black,
+html.dark-mode .text-body {
+  color: var(--gt-text) !important;
+}
+html.dark-mode .text-muted,
+html.dark-mode .text-secondary {
+  color: var(--gt-text-muted) !important;
+}
+
+/* --- Borders --- */
+html.dark-mode .border,
+html.dark-mode .border-top,
+html.dark-mode .border-bottom,
+html.dark-mode .border-start,
+html.dark-mode .border-end {
+  border-color: var(--gt-border) !important;
+}
+
+/* --- Headings that might use default dark colors --- */
+html.dark-mode h1, html.dark-mode h2, html.dark-mode h3,
+html.dark-mode h4, html.dark-mode h5, html.dark-mode h6 {
+  color: var(--gt-text);
+}
+
+/* --- input-group-text --- */
+html.dark-mode .input-group-text {
+  background-color: rgba(255,255,255,0.05) !important;
+  border-color: rgba(255,255,255,0.1) !important;
+  color: var(--gt-text-muted) !important;
+}
+
+/* --- Bootstrap table variants --- */
+html.dark-mode .table-light {
+  --bs-table-bg: rgba(255,255,255,0.03) !important;
+  color: var(--gt-text) !important;
+  border-color: var(--gt-border) !important;
+}
+html.dark-mode .table-secondary {
+  --bs-table-bg: rgba(100,116,139,0.08) !important;
+  color: var(--gt-text) !important;
+}
+
+/* --- Breadcrumbs --- */
+html.dark-mode .breadcrumb-item,
+html.dark-mode .breadcrumb-item a {
+  color: var(--gt-text-muted) !important;
+}
+html.dark-mode .breadcrumb-item.active {
+  color: var(--gt-text) !important;
+}
+html.dark-mode .breadcrumb-item + .breadcrumb-item::before {
+  color: var(--gt-text-subtle) !important;
+}
+
+/* --- Progress bars --- */
+html.dark-mode .progress {
+  background-color: rgba(255,255,255,0.07) !important;
+}
+
+/* --- Accordions --- */
+html.dark-mode .accordion-item {
+  background-color: var(--gt-surface) !important;
+  border-color: var(--gt-border) !important;
+}
+html.dark-mode .accordion-button {
+  background-color: var(--gt-surface-2) !important;
+  color: var(--gt-text) !important;
+  box-shadow: none !important;
+}
+html.dark-mode .accordion-button::after {
+  filter: invert(1) brightness(2);
+}
+html.dark-mode .accordion-button:not(.collapsed) {
+  background-color: rgba(56,189,248,0.1) !important;
+  color: #38bdf8 !important;
+}
+html.dark-mode .accordion-body {
+  background-color: var(--gt-surface) !important;
+  color: var(--gt-text) !important;
+}
+
+/* --- Select2 / Custom selects --- */
+html.dark-mode .select2-container--default .select2-selection--single,
+html.dark-mode .select2-container--default .select2-selection--multiple {
+  background-color: rgba(15,23,42,0.6) !important;
+  border-color: rgba(255,255,255,0.1) !important;
+  color: var(--gt-text) !important;
+}
+html.dark-mode .select2-dropdown {
+  background-color: var(--gt-surface) !important;
+  border-color: var(--gt-border) !important;
+}
+html.dark-mode .select2-container--default .select2-results__option {
+  color: var(--gt-text) !important;
+}
+html.dark-mode .select2-container--default .select2-results__option--highlighted {
+  background-color: rgba(56,189,248,0.15) !important;
+}
+
+/* --- Changelog info cards (hardcoded background colors) --- */
+html.dark-mode [style*="background: #eff6ff"],
+html.dark-mode [style*="background:#eff6ff"] {
+  background: var(--gt-card-blue) !important;
+  border-color: var(--gt-card-blue-border) !important;
+}
+html.dark-mode [style*="background: #f0fdf4"],
+html.dark-mode [style*="background:#f0fdf4"] {
+  background: var(--gt-card-green) !important;
+  border-color: var(--gt-card-green-border) !important;
+}
+html.dark-mode [style*="background: #faf5ff"],
+html.dark-mode [style*="background:#faf5ff"] {
+  background: var(--gt-card-purple) !important;
+  border-color: var(--gt-card-purple-border) !important;
+}
+html.dark-mode [style*="background: #fef2f2"],
+html.dark-mode [style*="background:#fef2f2"] {
+  background: var(--gt-card-red) !important;
+  border-color: var(--gt-card-red-border) !important;
+}
+html.dark-mode [style*="background: #fefce8"],
+html.dark-mode [style*="background:#fefce8"] {
+  background: var(--gt-card-amber) !important;
+  border-color: var(--gt-card-amber-border) !important;
+}
+html.dark-mode [style*="background: #ecfeff"],
+html.dark-mode [style*="background:#ecfeff"] {
+  background: var(--gt-card-cyan) !important;
+  border-color: var(--gt-card-cyan-border) !important;
+}
+html.dark-mode [style*="background: #f0fdfa"],
+html.dark-mode [style*="background:#f0fdfa"] {
+  background: var(--gt-card-teal) !important;
+  border-color: var(--gt-card-teal-border) !important;
+}
+html.dark-mode [style*="background: #e0e7ff"],
+html.dark-mode [style*="background:#e0e7ff"] {
+  background: var(--gt-card-indigo) !important;
+  border-color: var(--gt-card-indigo-border) !important;
+}
+html.dark-mode [style*="background: #fff7ed"],
+html.dark-mode [style*="background:#fff7ed"] {
+  background: var(--gt-card-orange) !important;
+  border-color: var(--gt-card-orange-border) !important;
+}
+html.dark-mode [style*="background: #fdf4ff"],
+html.dark-mode [style*="background:#fdf4ff"] {
+  background: var(--gt-card-pink) !important;
+  border-color: var(--gt-card-pink-border) !important;
+}
+html.dark-mode [style*="background: #f8fafc"],
+html.dark-mode [style*="background:#f8fafc"],
+html.dark-mode [style*="background: #f1f5f9"],
+html.dark-mode [style*="background:#f1f5f9"] {
+  background: var(--gt-surface-2) !important;
+}
+html.dark-mode [style*="background: white"],
+html.dark-mode [style*="background:white"],
+html.dark-mode [style*="background: #fff"],
+html.dark-mode [style*="background:#fff"],
+html.dark-mode [style*="background-color: white"],
+html.dark-mode [style*="background-color: #fff"],
+html.dark-mode [style*="background-color:#fff"] {
+  background-color: var(--gt-surface) !important;
+  color: var(--gt-text) !important;
+}
+
+/* --- Hardcoded text colors in inline styles --- */
+html.dark-mode [style*="color: #1e3a8a"],
+html.dark-mode [style*="color:#1e3a8a"],
+html.dark-mode [style*="color: #0f172a"],
+html.dark-mode [style*="color:#0f172a"],
+html.dark-mode [style*="color: #1e293b"],
+html.dark-mode [style*="color:#1e293b"],
+html.dark-mode [style*="color: #334155"],
+html.dark-mode [style*="color:#334155"],
+html.dark-mode [style*="color: #111827"],
+html.dark-mode [style*="color:#111827"] {
+  color: #e2e8f0 !important;
+}
+html.dark-mode [style*="color: #64748b"],
+html.dark-mode [style*="color:#64748b"] {
+  color: #94a3b8 !important;
+}
+
+/* --- Footer bars and small badges that stay light --- */
+html.dark-mode .card-footer {
+  background-color: rgba(15,23,42,0.4) !important;
+  border-top-color: var(--gt-border) !important;
+  color: var(--gt-text-muted) !important;
+}
+
+/* --- Topbar (strict dark) --- */
+html.dark-mode .topbar {
+  background: linear-gradient(135deg, #0a0f1e 0%, #111827 100%) !important;
+  border-bottom: 1px solid rgba(56,189,248,0.12) !important;
+}
+
+/* --- Sidebar (already dark but needs deeper night theme) --- */
+html.dark-mode .sidebar {
+  background: linear-gradient(180deg, #060a14 0%, #0a0f1e 100%) !important;
+  border-right: 1px solid rgba(56,189,248,0.08) !important;
+}
+
+/* --- Content wrapper background --- */
+html.dark-mode .content-wrapper,
+html.dark-mode .main-content {
+  background-color: var(--gt-bg) !important;
+}
+
+/* --- Bootstrap badge light variant --- */
+html.dark-mode .badge.bg-light,
+html.dark-mode .badge.text-bg-light {
+  background-color: rgba(255,255,255,0.1) !important;
+  color: #e2e8f0 !important;
+}
+html.dark-mode .badge.bg-secondary {
+  background-color: rgba(100,116,139,0.3) !important;
+}
+
+/* --- DataTables empty/loading states --- */
+html.dark-mode .dataTables_empty {
+  color: var(--gt-text-muted) !important;
+}
+html.dark-mode .dataTables_processing {
+  background: var(--gt-surface) !important;
+  color: var(--gt-text) !important;
+  border-color: var(--gt-border) !important;
+}
+
+/* --- Modal body --- */
+html.dark-mode .modal-body {
+  background-color: var(--gt-surface) !important;
+  color: var(--gt-text) !important;
+}
+html.dark-mode .modal-header {
+  background-color: rgba(15,23,42,0.5) !important;
+  border-bottom-color: var(--gt-border) !important;
+  color: var(--gt-text) !important;
+}
+html.dark-mode .modal-title {
+  color: var(--gt-text) !important;
+}
+
+/* --- Tooltip/Popover --- */
+html.dark-mode .tooltip-inner {
+  background-color: #1e293b !important;
+  color: #e2e8f0 !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+}
+html.dark-mode .popover {
+  background-color: #1e293b !important;
+  border-color: rgba(255,255,255,0.1) !important;
+}
+html.dark-mode .popover-header {
+  background-color: rgba(15,23,42,0.5) !important;
+  color: var(--gt-text) !important;
+  border-bottom-color: var(--gt-border) !important;
+}
+html.dark-mode .popover-body {
+  color: var(--gt-text) !important;
+}
+
+/* --- Small text labels used in views --- */
+html.dark-mode small,
+html.dark-mode .small {
+  color: var(--gt-text-muted);
+}
+
+/* --- paragraph/span fallthrough for inline dark text --- */
+html.dark-mode p,
+html.dark-mode span:not([class*="badge"]):not([class*="pill"]) {
+  color: inherit;
+}
+
 
 
