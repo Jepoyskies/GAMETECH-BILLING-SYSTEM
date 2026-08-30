@@ -4,473 +4,934 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Gametech Unli Fiber</title>
-    <!-- Bootstrap and FontAwesome -->
+    <title>My Portal – Gametech Unli Fiber</title>
+    <meta name="description" content="Manage your Gametech Unli Fiber subscription, view your connection status, and pay your bills.">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="{% static 'css/theme.css' %}?v=1.3" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        // Check local storage for dark mode preference immediately to prevent flash
-        if (localStorage.getItem('theme') === 'dark') {
-            document.documentElement.classList.add('dark-mode');
-        }
+        // Apply theme immediately to prevent flash
+        (function() {
+            const theme = localStorage.getItem('gt-portal-theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
     </script>
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-            padding-bottom: 3rem;
-            transition: background-color 0.3s, color 0.3s;
+        /* ============================================================
+           PORTAL CSS DESIGN TOKENS — Light & Dark Mode
+           ============================================================ */
+        :root, [data-theme="light"] {
+            --p-bg:           #f0f4f8;
+            --p-bg-2:         #e2e8f0;
+            --p-surface:      #ffffff;
+            --p-surface-2:    #f8fafc;
+            --p-border:       rgba(0,0,0,0.08);
+            --p-text:         #0f172a;
+            --p-text-muted:   #64748b;
+            --p-text-subtle:  #94a3b8;
+            --p-nav-bg:       rgba(255,255,255,0.85);
+            --p-nav-border:   rgba(0,0,0,0.08);
+            --p-card-shadow:  0 2px 16px rgba(0,0,0,0.07);
+            --p-card-hover:   0 8px 32px rgba(0,0,0,0.12);
+            --p-input-bg:     #f1f5f9;
+            --p-input-border: rgba(0,0,0,0.1);
+            --p-overlay:      rgba(0,0,0,0.05);
+            --p-row-hover:    rgba(13,110,253,0.04);
         }
+        [data-theme="dark"] {
+            --p-bg:           #080d1a;
+            --p-bg-2:         #0d1424;
+            --p-surface:      #111827;
+            --p-surface-2:    #1a2235;
+            --p-border:       rgba(255,255,255,0.07);
+            --p-text:         #e2e8f0;
+            --p-text-muted:   #94a3b8;
+            --p-text-subtle:  #64748b;
+            --p-nav-bg:       rgba(8,13,26,0.85);
+            --p-nav-border:   rgba(255,255,255,0.06);
+            --p-card-shadow:  0 4px 24px rgba(0,0,0,0.4);
+            --p-card-hover:   0 12px 40px rgba(0,0,0,0.6);
+            --p-input-bg:     rgba(255,255,255,0.05);
+            --p-input-border: rgba(255,255,255,0.1);
+            --p-overlay:      rgba(255,255,255,0.03);
+            --p-row-hover:    rgba(56,189,248,0.04);
+        }
+
+        /* ============================================================
+           BASE
+           ============================================================ */
+        *, *::before, *::after {
+            transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+            box-sizing: border-box;
+        }
+        html, body {
+            margin: 0; padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--p-bg);
+            color: var(--p-text);
+            min-height: 100vh;
+            font-size: 15px;
+        }
+
+        /* ============================================================
+           NAVBAR
+           ============================================================ */
+        .p-navbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--p-nav-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--p-nav-border);
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        .p-navbar .brand img { height: 36px; width: auto; }
+        .p-navbar .nav-actions { display: flex; align-items: center; gap: 0.75rem; }
+
+        /* Theme toggle button */
+        .theme-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid var(--p-border);
+            background: var(--p-surface-2);
+            color: var(--p-text-muted);
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .theme-toggle:hover { background: var(--p-surface); color: var(--p-text); border-color: #facc15; }
+        [data-theme="dark"] .theme-toggle .icon-sun { display: inline; }
+        [data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+        [data-theme="light"] .theme-toggle .icon-sun { display: none; }
+        [data-theme="light"] .theme-toggle .icon-moon { display: inline; }
+
+        .p-logout-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.45rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--p-border);
+            background: transparent;
+            color: var(--p-text-muted);
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .p-logout-btn:hover { background: var(--p-surface); color: var(--p-text); }
+
+        /* ============================================================
+           HERO SECTION
+           ============================================================ */
+        .p-hero {
+            background: linear-gradient(135deg, #0d47a1 0%, #1565c0 40%, #1976d2 70%, #0288d1 100%);
+            padding: 3.5rem 0 3.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .p-hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at 70% 50%, rgba(255,255,255,0.12) 0%, transparent 60%),
+                        radial-gradient(ellipse at 10% 80%, rgba(0,0,0,0.2) 0%, transparent 50%);
+            pointer-events: none;
+        }
+        /* Subtle grid overlay */
+        .p-hero::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+        }
+        .p-hero .hero-inner {
+            position: relative;
+            z-index: 2;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 2rem;
+        }
+        .p-hero .hero-text { flex: 1; }
+        .p-hero .hero-greeting {
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            font-weight: 900;
+            color: #fff;
+            line-height: 1.1;
+            margin: 0 0 1rem;
+            letter-spacing: -0.5px;
+        }
+        .p-hero .hero-greeting span { color: #facc15; }
+        .p-hero .hero-sub {
+            font-size: 1.05rem;
+            color: rgba(255,255,255,0.78);
+            margin: 0 0 1.5rem;
+            font-weight: 400;
+            max-width: 480px;
+            line-height: 1.6;
+        }
+        .p-hero .hero-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .hero-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.9rem;
+            border-radius: 6px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.2);
+            color: #fff;
+        }
+        .hero-chip.status-active { background: rgba(16,185,129,0.2); border-color: rgba(16,185,129,0.4); color: #6ee7b7; }
+        .hero-chip.status-suspended, .hero-chip.status-expired { background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.4); color: #fca5a5; }
+        .hero-chip.status-pending { background: rgba(245,158,11,0.2); border-color: rgba(245,158,11,0.4); color: #fde68a; }
         
-        .navbar {
-            background: var(--surface-primary);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            padding: 1rem 1.5rem;
+        .p-hero .hero-logo {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.85;
+        }
+        .p-hero .hero-logo img {
+            height: clamp(100px, 18vw, 220px);
+            width: auto;
+            filter: drop-shadow(0 20px 40px rgba(0,0,0,0.3));
+        }
+        @media (max-width: 640px) {
+            .p-hero .hero-logo { display: none; }
+        }
+
+        /* ============================================================
+           ALERTS BELOW HERO
+           ============================================================ */
+        .p-alert-bar {
+            max-width: 1200px;
+            margin: 1.5rem auto 0;
+            padding: 0 1.5rem;
+        }
+        .p-alert {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            border-radius: 12px;
+            border: 1px solid transparent;
+            margin-bottom: 0.75rem;
+            font-size: 0.92rem;
+        }
+        .p-alert.warning {
+            background: rgba(245,158,11,0.08);
+            border-color: rgba(245,158,11,0.25);
+            color: #fbbf24;
+        }
+        .p-alert.danger {
+            background: rgba(239,68,68,0.08);
+            border-color: rgba(239,68,68,0.25);
+            color: #f87171;
+        }
+        .p-alert i { font-size: 1.4rem; flex-shrink: 0; }
+        .p-alert strong { font-weight: 700; display: block; margin-bottom: 2px; }
+
+        /* ============================================================
+           MAIN LAYOUT
+           ============================================================ */
+        .p-main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1.5rem 4rem;
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 1.5rem;
+            align-items: start;
+        }
+        @media (max-width: 900px) {
+            .p-main { grid-template-columns: 1fr; }
+        }
+
+        /* ============================================================
+           CARDS
+           ============================================================ */
+        .p-card {
+            background: var(--p-surface);
+            border-radius: 16px;
+            border: 1px solid var(--p-border);
+            box-shadow: var(--p-card-shadow);
+            overflow: hidden;
+            margin-bottom: 1.25rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .p-card:hover { transform: translateY(-2px); box-shadow: var(--p-card-hover); }
+        .p-card-header {
+            padding: 1.1rem 1.4rem;
+            border-bottom: 1px solid var(--p-border);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+        .p-card-header h3 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--p-text);
+            margin: 0;
+            letter-spacing: 0.01em;
+        }
+        .p-card-header .card-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+        .icon-blue   { background: rgba(59,130,246,0.12); color: #60a5fa; }
+        .icon-purple { background: rgba(139,92,246,0.12); color: #a78bfa; }
+        .icon-green  { background: rgba(16,185,129,0.12); color: #34d399; }
+        .icon-yellow { background: rgba(234,179,8,0.12);  color: #facc15; }
+        .icon-red    { background: rgba(239,68,68,0.12);  color: #f87171; }
+        .icon-cyan   { background: rgba(56,189,248,0.12); color: #38bdf8; }
+
+        /* Info list rows */
+        .p-info-list { list-style: none; margin: 0; padding: 0; }
+        .p-info-list li {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            position: sticky;
-            top: 0;
-            z-index: 10;
+            padding: 0.9rem 1.4rem;
+            border-bottom: 1px solid var(--p-border);
+            gap: 1rem;
         }
-        .navbar h1 {
-            font-size: 1.25rem;
-            margin: 0;
-            font-weight: 700;
-            background: linear-gradient(135deg, #818CF8, #C084FC);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .logout-btn {
-            color: #94a3b8;
-            text-decoration: none;
+        .p-info-list li:last-child { border-bottom: none; }
+        .p-info-list li:hover { background: var(--p-row-hover); }
+        .info-label {
+            color: var(--p-text-muted);
             font-size: 0.875rem;
             font-weight: 500;
-            transition: color 0.2s;
-            padding: 0.5rem 0.75rem;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.05);
+            white-space: nowrap;
         }
-        .logout-btn:hover {
-            color: var(--text-primary);
-            background: rgba(128, 128, 128, 0.2);
+        .info-value {
+            color: var(--p-text);
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-align: right;
+            flex-shrink: 1;
+            min-width: 0;
         }
+        .total-row {
+            background: var(--p-overlay);
+            padding: 1.1rem 1.4rem !important;
+        }
+        .total-row .info-label { font-size: 0.95rem; font-weight: 700; color: var(--p-text); }
+        .total-row .info-value { font-size: 1.5rem; font-weight: 900; color: #10b981; }
 
-        .profile-header { background:linear-gradient(135deg,#2151A1,#38bdf8); color:#fff; padding:40px; border-radius:20px; margin-bottom:24px; position:relative; overflow:hidden; box-shadow:0 10px 30px rgba(33,81,161,0.2); }
-        .profile-header::after { content:''; position:absolute; right:-50px; top:-50px; width:200px; height:200px; background:radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%); border-radius:50%; }
-        .profile-title { font-size:2rem; font-weight:700; margin:0; }
-        .profile-subtitle { font-size:1rem; opacity:0.9; margin-top:5px; }
-        .status-badge { display:inline-block; padding:6px 14px; border-radius:30px; font-size:0.85rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-top:15px; }
-        .status-badge.active { background:rgba(255,255,255,0.2); backdrop-filter:blur(10px); }
-        .status-badge.inactive { background:rgba(239,68,68,0.2); }
-        .status-badge.suspended { background:rgba(239,68,68,0.2); }
-        .status-badge.pending { background:rgba(245,158,11,0.2); }
-
-        .info-card { background: var(--surface-primary); border-radius:20px; padding:30px; border:1px solid rgba(128,128,128,0.1); box-shadow:0 4px 20px rgba(0,0,0,0.1); margin-bottom:24px; height:100%; transition: transform 0.2s, box-shadow 0.2s; }
-        .info-card:hover { transform: translateY(-5px); box-shadow:0 8px 30px rgba(0,0,0,0.15); }
-        .info-title { font-size:1.1rem; font-weight:700; color: var(--text-primary); margin-bottom:20px; display:flex; align-items:center; gap:10px; }
-        .info-title i { color: #facc15; /* Gametech Yellow */ }
-
-        .info-list { list-style:none; padding:0; margin:0; }
-        .info-list li { display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid rgba(128,128,128,0.1); }
-        .info-list li:last-child { border-bottom:none; padding-bottom:0; }
-        .info-label { color: var(--text-muted); font-size:0.9rem; font-weight:500; }
-        .info-value { color: var(--text-primary); font-size:0.95rem; font-weight:600; text-align:right; }
-
-        .payment-log { border-left:3px solid #38bdf8; padding-left:15px; margin-bottom:15px; }
-        .payment-log .amount { font-weight:700; color:#10b981; font-size:1.1rem; }
-        .payment-log .date { color:#64748b; font-size:0.85rem; }
-
-        .pay-btn-massive {
-            display: block;
-            width: 100%;
-            padding: 1.25rem;
-            background: linear-gradient(135deg, #facc15, #eab308); /* Gametech Yellow */
-            color: #1e293b;
+        /* ============================================================
+           STAT ROW (quick overview)
+           ============================================================ */
+        .p-stat-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0;
+            border-bottom: 1px solid var(--p-border);
+        }
+        .p-stat {
+            padding: 1.1rem;
             text-align: center;
-            border: none;
-            border-radius: 15px;
-            font-size: 1.25rem;
+            border-right: 1px solid var(--p-border);
+        }
+        .p-stat:last-child { border-right: none; }
+        .p-stat .stat-val {
+            font-size: 1.4rem;
             font-weight: 800;
-            text-decoration: none;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 10px 25px -5px rgba(234, 179, 8, 0.4), 0 8px 10px -6px rgba(234, 179, 8, 0.2);
-            margin-top: 1.5rem;
+            color: var(--p-text);
+            display: block;
+            line-height: 1;
+            margin-bottom: 0.25rem;
+        }
+        .p-stat .stat-lbl {
+            font-size: 0.72rem;
+            font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            color: var(--p-text-muted);
         }
-        .pay-btn-massive:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 25px -5px rgba(234, 179, 8, 0.5), 0 10px 10px -5px rgba(234, 179, 8, 0.3);
+
+        /* ============================================================
+           CONNECTION QUALITY CARD
+           ============================================================ */
+        .conn-card {
+            padding: 1.4rem;
+        }
+        .conn-status-large {
+            font-size: 2rem;
+            font-weight: 900;
+            letter-spacing: -1px;
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+        .conn-info-box {
+            background: var(--p-overlay);
+            border-radius: 10px;
+            padding: 0.9rem 1rem;
+            border-left: 3px solid rgba(128,128,128,0.2);
+            font-size: 0.88rem;
+            color: var(--p-text-muted);
+            line-height: 1.6;
+            margin-top: 1rem;
+        }
+
+        /* ============================================================
+           PAY BUTTON
+           ============================================================ */
+        .btn-pay-primary {
+            display: flex;
+            width: 100%;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            padding: 1rem 1.5rem;
+            border-radius: 14px;
+            border: none;
+            background: linear-gradient(135deg, #facc15, #eab308);
+            color: #0f172a;
+            font-size: 1.1rem;
+            font-weight: 800;
+            cursor: pointer;
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            box-shadow: 0 8px 24px rgba(234,179,8,0.35), 0 2px 8px rgba(234,179,8,0.2);
+            transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+        }
+        .btn-pay-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 16px 32px rgba(234,179,8,0.45), 0 4px 12px rgba(234,179,8,0.25);
             background: linear-gradient(135deg, #fde047, #facc15);
             color: #0f172a;
         }
-        .pay-btn-massive:active {
-            transform: translateY(0);
-        }
-    
-        /* Abstract glowing background blobs */
-        .blob { position: fixed; border-radius: 50%; filter: blur(100px); z-index: -1; animation: float 20s infinite alternate cubic-bezier(0.4, 0, 0.2, 1); }
-        .blob-1 { top: -10%; left: -10%; width: 50vw; height: 50vw; background: rgba(56, 189, 248, 0.2); }
-        .blob-2 { bottom: -20%; right: -10%; width: 60vw; height: 60vw; background: rgba(139, 92, 246, 0.15); animation-delay: -5s; }
-        .blob-3 { top: 40%; left: 40%; width: 30vw; height: 30vw; background: rgba(236, 72, 153, 0.15); animation-delay: -10s; }
-        @keyframes float { 0% { transform: translate(0, 0) scale(1); } 50% { transform: translate(5%, 10%) scale(1.1); } 100% { transform: translate(-5%, -5%) scale(0.9); } }
+        .btn-pay-primary:active { transform: translateY(0); }
 
-        .dashboard-card {
-            background: var(--surface-primary);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(128,128,128,0.1);
-            border-top: 1px solid rgba(128,128,128,0.15);
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            transition: transform 0.2s, box-shadow 0.2s;
-            margin-bottom: 24px;
+        .btn-outline-portal {
+            display: flex;
+            width: 100%;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            border: 1px solid var(--p-border);
+            background: var(--p-surface-2);
+            color: var(--p-text-muted);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
         }
-        .dashboard-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(128,128,128,0.1);
-        }
-        
-        .profile-header { 
-            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%) !important; 
-            border: none !important;
-            border-radius: 0 !important;
+        .btn-outline-portal:hover {
+            background: var(--p-surface);
+            color: var(--p-text);
+            border-color: #60a5fa;
         }
 
-        .quick-pay-grid {
+        /* ============================================================
+           SOA CARD
+           ============================================================ */
+        .soa-card-body {
+            padding: 1.5rem;
+            text-align: center;
+        }
+        .soa-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            background: rgba(56,189,248,0.1);
+            color: #38bdf8;
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+        }
+        .soa-card-body h4 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--p-text);
+            margin-bottom: 0.4rem;
+        }
+        .soa-card-body p {
+            font-size: 0.83rem;
+            color: var(--p-text-muted);
+            margin-bottom: 1.1rem;
+            line-height: 1.5;
+        }
+
+        /* ============================================================
+           ADDON BADGES
+           ============================================================ */
+        .addon-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.3rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .addon-badge.active { background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
+        .addon-badge.apply { background: rgba(59,130,246,0.1); color: #60a5fa; border: 1px solid rgba(59,130,246,0.2); }
+        .addon-badge.apply:hover { background: rgba(59,130,246,0.2); }
+
+        /* ============================================================
+           NETWORK ALERT CARD
+           ============================================================ */
+        .net-alert {
+            border-left: 4px solid #f59e0b;
+            background: var(--p-surface);
+            border-radius: 16px;
+            border-top-right-radius: 16px;
+            border-bottom-right-radius: 16px;
+            padding: 1.2rem 1.4rem;
+            margin-bottom: 1.25rem;
+            box-shadow: var(--p-card-shadow);
+        }
+        .net-alert.critical { border-left-color: #ef4444; }
+        .net-alert h4 { font-size: 0.95rem; font-weight: 700; margin: 0 0 0.4rem; }
+        .net-alert p { font-size: 0.85rem; color: var(--p-text-muted); margin: 0; line-height: 1.5; }
+
+        /* ============================================================
+           PAYMENT QUICK GRID
+           ============================================================ */
+        .quick-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 0.75rem;
-            margin-bottom: 1.5rem;
+            gap: 0.6rem;
+            margin-bottom: 1.25rem;
         }
-        .quick-btn {
-            background: #1e293b;
-            border: 1px solid #334155;
-            border-radius: 12px;
-            padding: 0.75rem 0.5rem;
+        .q-btn {
+            background: var(--p-input-bg);
+            border: 1px solid var(--p-input-border);
+            border-radius: 10px;
+            padding: 0.65rem 0.4rem;
             text-align: center;
             cursor: pointer;
             transition: all 0.2s;
+            color: var(--p-text-muted);
+        }
+        .q-btn:hover { border-color: #60a5fa; color: var(--p-text); }
+        .q-btn.active { border-color: #10b981; background: rgba(16,185,129,0.08); color: #34d399; }
+        .q-btn .q-months { font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 2px; color: var(--p-text); }
+        .q-btn .q-price { font-size: 0.7rem; opacity: 0.8; }
+
+        /* ============================================================
+           MODAL OVERRIDES
+           ============================================================ */
+        .modal-portal .modal-content {
+            background: var(--p-surface);
+            border: 1px solid var(--p-border);
+            border-radius: 20px;
+            color: var(--p-text);
+        }
+        .modal-portal .modal-header { border-bottom: 1px solid var(--p-border); }
+        .modal-portal .modal-footer { border-top: 1px solid var(--p-border); }
+        .modal-portal .form-label { color: var(--p-text-muted); font-size: 0.82rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+        .modal-portal .form-select,
+        .modal-portal .form-control,
+        .modal-portal .input-group-text {
+            background: var(--p-input-bg);
+            border: 1px solid var(--p-input-border);
+            color: var(--p-text);
+            border-radius: 10px;
+        }
+        .modal-portal .form-select:focus,
+        .modal-portal .form-control:focus {
+            background: var(--p-input-bg);
+            color: var(--p-text);
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96,165,250,0.2);
+        }
+        .modal-portal .input-group > .form-control { border-radius: 0 10px 10px 0 !important; }
+        .modal-portal .input-group-text { border-radius: 10px 0 0 10px !important; border-right: none; }
+
+        /* Amount input */
+        #amountInput { font-size: 1.4rem; font-weight: 700; }
+
+        /* ============================================================
+           PAYMENT LOG
+           ============================================================ */
+        .pay-log-item {
             display: flex;
-            flex-direction: column;
-            justify-content: center;
             align-items: center;
-            color: #94a3b8;
+            gap: 1rem;
+            padding: 0.9rem 1.4rem;
+            border-bottom: 1px solid var(--p-border);
         }
-        .quick-btn:hover {
-            border-color: #38bdf8;
-            background: rgba(56, 189, 248, 0.05);
-            color: #f8fafc;
-        }
-        .quick-btn.active {
-            border-color: #10b981;
-            background: rgba(16, 185, 129, 0.1);
-            color: #10b981;
-        }
-        .quick-btn .months {
+        .pay-log-item:last-child { border-bottom: none; }
+        .pay-log-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: rgba(16,185,129,0.1);
+            color: #34d399;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 0.85rem;
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-            color: #e2e8f0;
+            flex-shrink: 0;
         }
-        .quick-btn .price {
-            font-size: 0.75rem;
-            opacity: 0.9;
+        .pay-log-meta { flex: 1; min-width: 0; }
+        .pay-log-meta .desc { font-size: 0.88rem; font-weight: 600; color: var(--p-text); }
+        .pay-log-meta .date { font-size: 0.78rem; color: var(--p-text-muted); margin-top: 2px; }
+        .pay-log-amount { font-size: 1rem; font-weight: 700; color: #34d399; flex-shrink: 0; }
+
+        /* ============================================================
+           FOOTER
+           ============================================================ */
+        .p-footer {
+            text-align: center;
+            padding: 1.5rem;
+            font-size: 0.78rem;
+            color: var(--p-text-subtle);
+            border-top: 1px solid var(--p-border);
         }
     </style>
 </head>
 <body>
 
-<div class="blob blob-1"></div>
-<div class="blob blob-2"></div>
-<div class="blob blob-3"></div>
-
-
-<div class="navbar mb-4">
-    <img src="{% static 'assets/images/logo_white.png' %}" alt="GT Fiber Logo" style="height: 40px; width: auto;" onerror="this.src='https://via.placeholder.com/120x40/155ab6/ffffff?text=Gametech+Logo'">
-    <div class="d-flex align-items-center gap-3">
-        <button id="themeToggleBtn" class="btn btn-sm btn-outline-secondary" style="border-radius: 8px; width: 34px; height: 34px;">
-            <i class="fas fa-moon"></i>
+<!-- NAVBAR -->
+<nav class="p-navbar">
+    <div class="brand">
+        <a href="#">
+            <img src="{% static 'assets/images/logo_white.png' %}" alt="Gametech Unli Fiber"
+                 onerror="this.onerror=null;this.src='https://via.placeholder.com/140x36/1565c0/ffffff?text=GAMETECH'">
+        </a>
+    </div>
+    <div class="nav-actions">
+        <button class="theme-toggle" id="themeToggle" title="Toggle dark/light mode" aria-label="Toggle theme">
+            <i class="fas fa-sun icon-sun"></i>
+            <i class="fas fa-moon icon-moon"></i>
         </button>
-        <a href="{% url 'customer_portal:portal_logout' %}" class="logout-btn">Log Out</a>
+        <a href="{% url 'customer_portal:portal_logout' %}" class="p-logout-btn">
+            <i class="fas fa-sign-out-alt"></i> Log Out
+        </a>
+    </div>
+</nav>
+
+<!-- HERO -->
+<div class="p-hero">
+    <div class="hero-inner">
+        <div class="hero-text">
+            <h1 class="hero-greeting">
+                Welcome back,<br><span>{{ customer.full_name }}</span>!
+            </h1>
+            <p class="hero-sub">
+                Manage your unlimited fiber internet, monitor your connection, and pay your bills — all in one place.
+            </p>
+            <div class="hero-meta">
+                <span class="hero-chip">
+                    <i class="fas fa-user-circle" style="color:#facc15;"></i>
+                    {{ customer.pppoe_username }}
+                </span>
+                <span class="hero-chip status-{{ customer.status }}">
+                    <i class="fas fa-circle" style="font-size:0.5rem;"></i>
+                    {{ customer.get_status_display|default:customer.status|upper }}
+                </span>
+                {% if plan %}
+                <span class="hero-chip">
+                    <i class="fas fa-wifi"></i>
+                    {{ plan.speed_down|default:'N/A' }} Down
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="hero-logo">
+            <img src="{% static 'assets/images/logo_white.png' %}" alt=""
+                 onerror="this.style.display='none'">
+        </div>
     </div>
 </div>
 
-<div class="container py-4" style="max-width: 1200px;">
+<!-- ALERTS -->
+{% if is_expiring_soon or customer.status == 'expired' or customer.status == 'suspended' %}
+<div class="p-alert-bar">
     {% if is_expiring_soon %}
-    <div class="alert alert-warning shadow-sm mb-4" style="border-radius: 12px; border-left: 5px solid #f59e0b; background-color: rgba(245, 158, 11, 0.1); color: #fbbf24;">
-        <div class="d-flex align-items-center">
-            <i class="fas fa-clock fa-2x me-3 text-warning"></i>
-            <div>
-                <h6 class="fw-bold mb-1 text-warning">Expiring Soon!</h6>
-                <p class="mb-0 small" style="color: #fcd34d;">Your subscription is set to expire on <strong>{{ customer.expires_at|date:"M d, Y" }}</strong>. Please pay your bill soon to avoid service interruption.</p>
-            </div>
+    <div class="p-alert warning">
+        <i class="fas fa-clock"></i>
+        <div>
+            <strong>Expiring Soon!</strong>
+            Your subscription expires on <strong>{{ customer.expires_at|date:"M d, Y" }}</strong>. Renew now to avoid interruption.
         </div>
     </div>
     {% endif %}
-
     {% if customer.status == 'expired' or customer.status == 'suspended' %}
-    <div class="alert alert-danger shadow-sm mb-4" style="border-radius: 12px; border-left: 5px solid #ef4444; background-color: rgba(239, 68, 68, 0.1); color: #f87171;">
-        <div class="d-flex align-items-center">
-            <i class="fas fa-exclamation-circle fa-2x me-3 text-danger"></i>
-            <div>
-                <h6 class="fw-bold mb-1 text-danger">Account Suspended</h6>
-                <p class="mb-0 small" style="color: #fca5a5;">Your account has been suspended due to an overdue balance. Please pay your outstanding balance immediately to restore your connection.</p>
-            </div>
+    <div class="p-alert danger">
+        <i class="fas fa-exclamation-circle"></i>
+        <div>
+            <strong>Account Suspended</strong>
+            Your account has been suspended due to an overdue balance. Please pay your outstanding balance to restore service.
         </div>
     </div>
     {% endif %}
+</div>
+{% endif %}
 
-    <!-- Welcome Header -->
-    </div> <!-- Close container for full width hero -->
-    <div class="profile-header mb-5" style="padding: 60px 40px; box-shadow: 0 10px 30px rgba(13,110,253,0.3); position: relative; overflow: hidden;">
-        <div class="container" style="max-width: 1200px; display: flex; align-items: center; justify-content: space-between;">
-            <div style="z-index: 2; position: relative; max-width: 600px;">
-                <h1 class="profile-title" style="font-size: 3rem; font-weight: 800; margin: 0; color: #fff; line-height: 1.1;">Welcome back,<br>{{ customer.full_name }}!</h1>
-                <p style="font-size: 1.15rem; color: rgba(255,255,255,0.85); margin-top: 15px; font-weight: 500;">
-                    Manage your unlimited fiber connectivity, check your connection status, and pay your bills seamlessly.
-                </p>
-                <div class="mt-4 d-flex align-items-center gap-3 flex-wrap">
-                    <div style="background: rgba(0,0,0,0.25); padding: 8px 20px; border-radius: 8px; font-weight: 600; color: #fff; font-size: 0.95rem; border: 1px solid rgba(255,255,255,0.15);">
-                        <i class="fas fa-user-circle me-1" style="color: #facc15;"></i> {{ customer.pppoe_username }}
-                    </div>
-                    <div class="status-badge {{ customer.status }}" style="display: inline-block; padding: 8px 20px; border-radius: 8px; font-size: 0.95rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; background: #facc15; color: #0f172a; border: none;">
-                        {{ customer.get_status_display|default:customer.status }}
-                    </div>
-                </div>
-            </div>
-            
-            <div style="z-index: 1; position: absolute; right: 5%; opacity: 0.9; transform: scale(1.1);">
-                <img src="{% static 'assets/images/logo_white.png' %}" alt="Gametech Unli Fiber" style="height: 250px; width: auto; object-fit: contain;">
-            </div>
-        </div>
-    </div>
-    <div class="container" style="max-width: 1200px;"> <!-- Re-open container -->
+<!-- MAIN GRID -->
+<div class="p-main">
 
-    <div class="row g-4">
-        <!-- Left Column -->
-        <div class="col-lg-7">
-            <!-- Subscription Details -->
-            <div class="dashboard-card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 1.25rem 1.5rem;">
-                    <h3 class="mb-0" style="font-size: 1.2rem; font-weight: 700; color: #f8fafc;"><i class="fas fa-network-wired icon-blue me-2" style="padding: 8px; border-radius: 8px;"></i> Subscription Details</h3>
+    <!-- ===== LEFT COLUMN ===== -->
+    <div class="left-col">
+
+        <!-- Subscription Details Card -->
+        <div class="p-card">
+            <div class="p-card-header">
+                <div class="card-icon icon-blue"><i class="fas fa-network-wired"></i></div>
+                <h3>Subscription Details</h3>
+            </div>
+
+            <!-- Quick stats row -->
+            <div class="p-stat-row">
+                <div class="p-stat">
+                    <span class="stat-val">{% if plan %}{{ plan.speed_down|default:'—' }}{% else %}—{% endif %}</span>
+                    <span class="stat-lbl">Download</span>
                 </div>
-                <div class="card-body p-0">
-                    <ul class="info-list" style="list-style: none; padding: 0; margin: 0;">
-                        <li style="display: flex; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <span class="info-label" style="color: #94a3b8; font-weight: 500;">Current Plan</span>
-                            <span class="info-value" style="color: #e2e8f0; font-weight: 600;">{% if plan %}{{ plan.name }}{% else %}No Active Plan{% endif %}</span>
-                        </li>
-                        <li style="display: flex; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <span class="info-label" style="color: #94a3b8; font-weight: 500;">Monthly Fee</span>
-                            <span class="info-value" style="color: #e2e8f0; font-weight: 600;">{% if plan %}₱{{ plan.price }}{% else %}₱0.00{% endif %}</span>
-                        </li>
-                        <li style="display: flex; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <span class="info-label" style="color: #94a3b8; font-weight: 500;">Next Due Date</span>
-                            <span class="info-value" style="color: #e2e8f0; font-weight: 600;">{% if customer.expires_at %}{{ customer.expires_at|date:"M d, Y" }}{% else %}Not set{% endif %}</span>
-                        </li>
-                        <li style="display: flex; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <span class="info-label" style="color: #94a3b8; font-weight: 500;">Outstanding Balance</span>
-                            <span class="info-value" style="font-weight: 700; color: {% if customer.outstanding_balance > 0 %}#ef4444{% else %}#10b981{% endif %};">
-                                {% if customer.outstanding_balance < 0 %}
-                                    ₱{{ customer.abs_outstanding_balance }}
-                                {% elif customer.outstanding_balance > 0 %}
-                                    ₱-{{ customer.outstanding_balance }}
-                                {% else %}
-                                    ₱0.00
-                                {% endif %}
-                            </span>
-                        </li>
-                        <li style="display: flex; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <span class="info-label" style="color: #94a3b8; font-weight: 500;">Cignal Play Add-on</span>
-                            <span class="info-value" style="color: #e2e8f0; font-weight: 600;">
-                                {% if customer.cignalplay_no %}
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle">{{ customer.cignalplay_no }}</span>
-                                {% else %}
-                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="cursor: pointer;" title="Apply for this Add-on" onclick="applyForAddon('Cignal Play Add-on')"><i class="fas fa-plus-circle me-1"></i>Apply Now!</span>
-                                {% endif %}
-                            </span>
-                        </li>
-                        <li style="display: flex; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <span class="info-label" style="color: #94a3b8; font-weight: 500;">Cignal Box</span>
-                            <span class="info-value" style="color: #e2e8f0; font-weight: 600;">
-                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="cursor: pointer;" title="Apply for this Add-on" onclick="applyForAddon('Cignal Box')"><i class="fas fa-plus-circle me-1"></i>Apply Now!</span>
-                            </span>
-                        </li>
-                        <li style="display: flex; justify-content: space-between; padding: 20px 24px; background: rgba(0,0,0,0.2);">
-                            <span class="info-label" style="font-weight: 700; color: #f8fafc; font-size: 1.1rem;">Total Amount Due</span>
-                            <span class="info-value" style="font-weight: 800; font-size: 1.4rem; color: #10b981;">₱{{ customer.plan.price|add:customer.outstanding_balance|default:"0.00" }}</span>
-                        </li>
-                    </ul>
+                <div class="p-stat">
+                    <span class="stat-val">{% if plan %}{{ plan.speed_up|default:'—' }}{% else %}—{% endif %}</span>
+                    <span class="stat-lbl">Upload</span>
+                </div>
+                <div class="p-stat">
+                    <span class="stat-val" style="font-size:1rem;">
+                        {% if customer.expires_at %}{{ customer.expires_at|date:"M d" }}{% else %}—{% endif %}
+                    </span>
+                    <span class="stat-lbl">Next Due</span>
                 </div>
             </div>
 
-            <!-- Profile Info -->
-            <div class="dashboard-card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 1.25rem 1.5rem;">
-                    <h3 class="mb-0" style="font-size: 1.2rem; font-weight: 700; color: #f8fafc;"><i class="fas fa-user icon-purple me-2" style="padding: 8px; border-radius: 8px;"></i> Profile Information</h3>
-                </div>
-                <div class="card-body p-0">
-                    <ul class="info-list" style="list-style: none; padding: 0; margin: 0;">
-                        <li style="display: flex; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <span class="info-label" style="color: #94a3b8; font-weight: 500;">Assigned Agent</span>
-                            <span class="info-value" style="color: #e2e8f0; font-weight: 600;">{{ customer.agent.name|default:"Unassigned" }}</span>
-                        </li>
-                        <li style="display: flex; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <span class="info-label" style="color: #94a3b8; font-weight: 500;">Account Type</span>
-                            <span class="info-value" style="color: #e2e8f0; font-weight: 600;">{{ customer.account_type|default:"Standard" }}</span>
-                        </li>
-                        <li style="display: flex; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <span class="info-label" style="color: #94a3b8; font-weight: 500;">Contact Number</span>
-                            <span class="info-value" style="color: #e2e8f0; font-weight: 600;">{{ customer.phone|default:"Not provided" }}</span>
-                        </li>
-                        <li style="display: flex; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <span class="info-label" style="color: #94a3b8; font-weight: 500;">Email</span>
-                            <span class="info-value" style="color: #e2e8f0; font-weight: 600;">{{ customer.email|default:"Not provided" }}</span>
-                        </li>
-                        <li style="display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 16px 24px;">
-                            <span class="info-label" style="color: #94a3b8; font-weight: 500;">Installation Address</span>
-                            <span class="info-value" style="text-align: left; font-weight: 400; color: #cbd5e1;">{{ customer.address|default:"Not provided" }}</span>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- Right Column -->
-        <div class="col-lg-5">
-            
-            <div class="d-flex flex-column gap-3 mb-4">
-                <button class="pay-btn-massive" onclick="handlePaymentClick()" style="display: flex; align-items: center; justify-content: center; gap: 10px;">
-                    <i class="fas fa-bolt"></i> PAY BILL NOW
-                </button>
-                <button class="btn btn-outline-light" onclick="handleUpgradeClick()" style="padding: 12px; font-weight: 600; border-radius: 12px; border-color: rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; gap: 10px; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
-                    <i class="fas fa-arrow-up"></i> Upgrade Service Plan
-                </button>
-            </div>
-
-            <!-- Network Health Alerts (Global/Area) -->
-            {% if customer.mikrotik_device and customer.mikrotik_device.health_status != 'Excellent' %}
-            <div class="dashboard-card mb-4" style="border-left: 4px solid {% if customer.mikrotik_device.health_status == 'Outage' or customer.mikrotik_device.health_status == 'Offline' %}#ef4444{% else %}#f59e0b{% endif %};">
-                <div class="card-body p-4">
-                    <h3 style="font-size: 1.1rem; font-weight: 700; color: {% if customer.mikrotik_device.health_status == 'Outage' or customer.mikrotik_device.health_status == 'Offline' %}#ef4444{% else %}#f59e0b{% endif %}; margin-bottom: 10px;"><i class="fas fa-server me-2"></i> Network Alert ({{ customer.mikrotik_device.health_status }})</h3>
-                    <p style="margin: 0; color: #cbd5e1; font-size: 0.95rem;">{{ customer.mikrotik_device.health_reason|default:"We are currently experiencing a network issue in your area." }}</p>
-                </div>
-            </div>
-            {% elif customer.barangay and customer.barangay.health_status != 'Excellent' %}
-            <div class="dashboard-card mb-4" style="border-left: 4px solid {% if customer.barangay.health_status == 'Outage' or customer.barangay.health_status == 'Offline' %}#ef4444{% else %}#f59e0b{% endif %};">
-                <div class="card-body p-4">
-                    <h3 style="font-size: 1.1rem; font-weight: 700; color: {% if customer.barangay.health_status == 'Outage' or customer.barangay.health_status == 'Offline' %}#ef4444{% else %}#f59e0b{% endif %}; margin-bottom: 10px;"><i class="fas fa-map-marker-alt me-2"></i> Area Alert: {{ customer.barangay.name }} ({{ customer.barangay.health_status }})</h3>
-                    <p style="margin: 0; color: #cbd5e1; font-size: 0.95rem;">{{ customer.barangay.health_reason|default:"Network issue reported in your area." }}</p>
-                </div>
-            </div>
-            {% elif customer.health_status != 'Excellent' %}
-            <div class="dashboard-card mb-4" style="border-left: 4px solid {% if customer.health_status == 'Outage' or customer.health_status == 'Offline' %}#ef4444{% elif customer.health_status == 'Poor' %}#f97316{% else %}#f59e0b{% endif %};">
-                <div class="card-body p-4">
-                    <h3 style="font-size: 1.1rem; font-weight: 700; color: {% if customer.health_status == 'Outage' or customer.health_status == 'Offline' %}#ef4444{% elif customer.health_status == 'Poor' %}#f97316{% else %}#f59e0b{% endif %}; margin-bottom: 10px;"><i class="fas fa-exclamation-triangle me-2"></i> Connection Alert ({{ customer.health_status }})</h3>
-                    <p style="margin: 0; color: #cbd5e1; font-size: 0.95rem;">{{ customer.health_reason|default:"We have detected an issue with your connection." }}</p>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Connection Quality Monitoring (Personal) -->
-            <div class="dashboard-card mb-4" id="connection-monitoring-card" style="overflow: hidden; border-left: 4px solid {% if effective_status in 'Strong,Excellent,Good,Stable' %}#10b981{% elif effective_status in 'Low,Poor,Outage,Offline' %}#ef4444{% else %}#f59e0b{% endif %}; position: relative;">
-                <div class="card-body" style="padding: 24px; position: relative; z-index: 2;">
-                    <h3 style="margin: 0 0 15px 0; font-size: 1.1rem; font-weight: 700; color: #f1f5f9; display: flex; align-items: center; justify-content: space-between;">
-                        <span style="display: flex; align-items: center; gap: 10px;">
-                            <i id="connection-monitoring-icon" class="fas fa-chart-line" style="color: {% if effective_status in 'Strong,Excellent,Good,Stable' %}#10b981{% elif effective_status in 'Low,Poor,Outage,Offline' %}#ef4444{% else %}#f59e0b{% endif %};"></i> Connection Quality Monitoring
-                        </span>
-                        {% if customer.mikrotik_device and effective_status in 'Strong,Excellent,Good,Stable' %}
-                        <i class="fas fa-sync fa-spin" id="uplink-sync-icon" style="display: none; font-size: 0.8rem; color: #8b5cf6;"></i>
-                        {% endif %}
-                    </h3>
-                    
-                    <div style="display: flex; align-items: baseline; gap: 15px; margin-bottom: 20px;">
-                        <div id="connection-status-text" 
-                             data-original-status="{{ effective_status }}" 
-                             data-is-positive="{% if effective_status in 'Strong,Excellent,Good,Stable' %}true{% else %}false{% endif %}"
-                             style="font-size: 2.2rem; font-weight: 800; color: {% if customer.mikrotik_device and effective_status in 'Strong,Excellent,Good,Stable' %}#94a3b8{% elif effective_status in 'Strong,Excellent,Good,Stable' %}#10b981{% elif effective_status in 'Low,Poor,Outage,Offline' %}#ef4444{% else %}#f59e0b{% endif %}; text-transform: uppercase; letter-spacing: -1px;">
-                            {% if customer.mikrotik_device and effective_status in 'Strong,Excellent,Good,Stable' %}CHECKING...{% else %}{{ effective_status }}{% endif %}
-                        </div>
-                        {% if customer.mikrotik_device and effective_status in 'Strong,Excellent,Good,Stable' %}
-                        <div id="uplinkPing" style="font-size: 0.9rem; color: #94a3b8; font-family: monospace; font-weight: 600;">Ping: ...</div>
-                        {% endif %}
-                    </div>
-
-                    <div id="original-message-container" style="background: rgba(0, 0, 0, 0.2); border-radius: 12px; padding: 15px; border-left: 3px solid rgba(255,255,255,0.1);">
-                        {% if effective_reason %}
-                        <p style="margin: 0; font-size: 0.95rem; color: #cbd5e1; line-height: 1.6;">
-                            <strong><i class="fas {% if is_network_issue %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %} me-1"></i> {% if is_network_issue %}Network Issue:{% else %}CSR Message:{% endif %}</strong><br>
-                            <span id="csr-message-text">{{ effective_reason }}</span>
-                        </p>
+            <ul class="p-info-list">
+                <li>
+                    <span class="info-label"><i class="fas fa-box me-2" style="color:#facc15;"></i>Current Plan</span>
+                    <span class="info-value">{% if plan %}{{ plan.name }}{% else %}No Active Plan{% endif %}</span>
+                </li>
+                <li>
+                    <span class="info-label"><i class="fas fa-tag me-2" style="color:#facc15;"></i>Monthly Fee</span>
+                    <span class="info-value">{% if plan %}₱{{ plan.price }}{% else %}₱0.00{% endif %}</span>
+                </li>
+                <li>
+                    <span class="info-label"><i class="fas fa-calendar-alt me-2" style="color:#facc15;"></i>Next Due Date</span>
+                    <span class="info-value">{% if customer.expires_at %}{{ customer.expires_at|date:"M d, Y" }}{% else %}Not set{% endif %}</span>
+                </li>
+                <li>
+                    <span class="info-label"><i class="fas fa-balance-scale me-2" style="color:#facc15;"></i>Outstanding Balance</span>
+                    <span class="info-value" style="color:{% if customer.outstanding_balance > 0 %}#f87171{% else %}#34d399{% endif %};">
+                        {% if customer.outstanding_balance < 0 %}
+                            ₱{{ customer.abs_outstanding_balance }}
+                        {% elif customer.outstanding_balance > 0 %}
+                            -₱{{ customer.outstanding_balance }}
                         {% else %}
-                        <p style="margin: 0; font-size: 0.95rem; color: #94a3b8; line-height: 1.6;" id="default-message-text">
-                            Your internet connection is currently operating normally based on our monitoring.
-                        </p>
+                            ₱0.00
                         {% endif %}
+                    </span>
+                </li>
+                <li>
+                    <span class="info-label"><i class="fas fa-tv me-2" style="color:#facc15;"></i>Cignal Play</span>
+                    <span class="info-value">
+                        {% if customer.cignalplay_no %}
+                            <span class="addon-badge active"><i class="fas fa-check-circle"></i> {{ customer.cignalplay_no }}</span>
+                        {% else %}
+                            <span class="addon-badge apply" onclick="applyForAddon('Cignal Play Add-on')"><i class="fas fa-plus-circle"></i> Apply Now</span>
+                        {% endif %}
+                    </span>
+                </li>
+                <li>
+                    <span class="info-label"><i class="fas fa-satellite-dish me-2" style="color:#facc15;"></i>Cignal Box</span>
+                    <span class="info-value">
+                        <span class="addon-badge apply" onclick="applyForAddon('Cignal Box')"><i class="fas fa-plus-circle"></i> Apply Now</span>
+                    </span>
+                </li>
+                <li class="total-row">
+                    <span class="info-label">Total Amount Due</span>
+                    <span class="info-value">₱{{ customer.plan.price|add:customer.outstanding_balance|default:"0.00" }}</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Profile Info Card -->
+        <div class="p-card">
+            <div class="p-card-header">
+                <div class="card-icon icon-purple"><i class="fas fa-user"></i></div>
+                <h3>Profile Information</h3>
+            </div>
+            <ul class="p-info-list">
+                <li>
+                    <span class="info-label">Assigned Agent</span>
+                    <span class="info-value">{{ customer.agent.name|default:"Unassigned" }}</span>
+                </li>
+                <li>
+                    <span class="info-label">Account Type</span>
+                    <span class="info-value">{{ customer.account_type|default:"Standard" }}</span>
+                </li>
+                <li>
+                    <span class="info-label">Contact Number</span>
+                    <span class="info-value">{{ customer.phone|default:"Not provided" }}</span>
+                </li>
+                <li>
+                    <span class="info-label">Email</span>
+                    <span class="info-value">{{ customer.email|default:"Not provided" }}</span>
+                </li>
+                <li style="flex-direction: column; align-items: flex-start; gap: 0.35rem;">
+                    <span class="info-label">Installation Address</span>
+                    <span class="info-value" style="text-align: left; font-weight: 400; color: var(--p-text-muted);">{{ customer.address|default:"Not provided" }}</span>
+                </li>
+            </ul>
+        </div>
+
+    </div><!-- /left-col -->
+
+    <!-- ===== RIGHT COLUMN ===== -->
+    <div class="right-col">
+
+        <!-- PAY NOW + Upgrade -->
+        <div style="margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 0.65rem;">
+            <button class="btn-pay-primary" onclick="handlePaymentClick()">
+                <i class="fas fa-bolt"></i> PAY BILL NOW
+            </button>
+            <button class="btn-outline-portal" onclick="handleUpgradeClick()">
+                <i class="fas fa-arrow-up"></i> Upgrade Service Plan
+            </button>
+        </div>
+
+        <!-- Network Alerts -->
+        {% if customer.mikrotik_device and customer.mikrotik_device.health_status != 'Excellent' %}
+        <div class="net-alert {% if customer.mikrotik_device.health_status in 'Outage,Offline' %}critical{% endif %}">
+            <h4 style="color:{% if customer.mikrotik_device.health_status == 'Outage' or customer.mikrotik_device.health_status == 'Offline' %}#f87171{% else %}#fbbf24{% endif %};">
+                <i class="fas fa-server me-2"></i>Network Alert – {{ customer.mikrotik_device.health_status }}
+            </h4>
+            <p>{{ customer.mikrotik_device.health_reason|default:"We are currently experiencing a network issue in your area." }}</p>
+        </div>
+        {% elif customer.barangay and customer.barangay.health_status != 'Excellent' %}
+        <div class="net-alert {% if customer.barangay.health_status in 'Outage,Offline' %}critical{% endif %}">
+            <h4 style="color:{% if customer.barangay.health_status == 'Outage' or customer.barangay.health_status == 'Offline' %}#f87171{% else %}#fbbf24{% endif %};">
+                <i class="fas fa-map-marker-alt me-2"></i>Area Alert – {{ customer.barangay.name }}
+            </h4>
+            <p>{{ customer.barangay.health_reason|default:"Network issue reported in your area." }}</p>
+        </div>
+        {% elif customer.health_status != 'Excellent' %}
+        <div class="net-alert {% if customer.health_status in 'Outage,Offline,Poor' %}critical{% endif %}">
+            <h4 style="color:{% if customer.health_status == 'Outage' or customer.health_status == 'Offline' %}#f87171{% elif customer.health_status == 'Poor' %}#fb923c{% else %}#fbbf24{% endif %};">
+                <i class="fas fa-exclamation-triangle me-2"></i>Connection Alert – {{ customer.health_status }}
+            </h4>
+            <p>{{ customer.health_reason|default:"We have detected an issue with your connection." }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Connection Quality -->
+        <div class="p-card" id="connection-monitoring-card" style="border-left: 4px solid {% if effective_status in 'Strong,Excellent,Good,Stable' %}#10b981{% elif effective_status in 'Low,Poor,Outage,Offline' %}#ef4444{% else %}#f59e0b{% endif %};">
+            <div class="p-card-header">
+                <div class="card-icon icon-cyan"><i class="fas fa-chart-line" id="connection-monitoring-icon"></i></div>
+                <h3>Connection Quality</h3>
+                {% if customer.mikrotik_device and effective_status in 'Strong,Excellent,Good,Stable' %}
+                <i class="fas fa-sync fa-spin ms-auto" id="uplink-sync-icon" style="display:none; font-size:0.75rem; color:#8b5cf6;"></i>
+                {% endif %}
+            </div>
+            <div class="conn-card">
+                <div class="d-flex align-items-baseline gap-3 mb-2">
+                    <div class="conn-status-large"
+                         id="connection-status-text"
+                         data-original-status="{{ effective_status }}"
+                         data-is-positive="{% if effective_status in 'Strong,Excellent,Good,Stable' %}true{% else %}false{% endif %}"
+                         style="color:{% if customer.mikrotik_device and effective_status in 'Strong,Excellent,Good,Stable' %}var(--p-text-subtle){% elif effective_status in 'Strong,Excellent,Good,Stable' %}#10b981{% elif effective_status in 'Low,Poor,Outage,Offline' %}#ef4444{% else %}#f59e0b{% endif %};">
+                        {% if customer.mikrotik_device and effective_status in 'Strong,Excellent,Good,Stable' %}CHECKING...{% else %}{{ effective_status }}{% endif %}
                     </div>
-                    
-                    <div id="offline-message-container" style="display: none; background: rgba(239, 68, 68, 0.1); border-radius: 12px; padding: 15px; border-left: 3px solid rgba(239, 68, 68, 0.5);">
-                        <p style="margin: 0; font-size: 0.95rem; color: #fca5a5; line-height: 1.6;">
-                            <strong><i class="fas fa-exclamation-triangle me-1"></i> Network Alert:</strong><br>
-                            We are currently experiencing an issue connecting to the main network in your area. Our technicians have been notified. Please contact Gametech Unli Fiber support if you need immediate assistance.
-                        </p>
-                    </div>
+                    {% if customer.mikrotik_device and effective_status in 'Strong,Excellent,Good,Stable' %}
+                    <div id="uplinkPing" style="font-size:0.85rem; color:var(--p-text-muted); font-family:monospace; font-weight:600;">Ping: …</div>
+                    {% endif %}
                 </div>
-                <div style="position: absolute; right: -20px; bottom: -20px; font-size: 10rem; color: rgba(255,255,255,0.02); z-index: 1;">
-                    <i class="fas fa-wifi"></i>
+
+                <div id="original-message-container" class="conn-info-box">
+                    {% if effective_reason %}
+                        <strong><i class="fas {% if is_network_issue %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %} me-1"></i>
+                        {% if is_network_issue %}Network Issue:{% else %}CSR Message:{% endif %}</strong><br>
+                        <span id="csr-message-text">{{ effective_reason }}</span>
+                    {% else %}
+                        <span id="default-message-text">Your internet connection is currently operating normally based on our monitoring.</span>
+                    {% endif %}
+                </div>
+
+                <div id="offline-message-container" class="conn-info-box" style="display:none; border-left-color: #ef4444; background: rgba(239,68,68,0.06);">
+                    <strong style="color:#f87171;"><i class="fas fa-exclamation-triangle me-1"></i>Network Alert:</strong><br>
+                    <span style="color:var(--p-text-muted);">We are currently experiencing an issue in your area. Technicians have been notified. Contact Gametech support for immediate assistance.</span>
                 </div>
             </div>
+        </div>
 
-            <!-- Statement of Account -->
-            <div class="dashboard-card mb-4">
-                <div class="card-body text-center p-4">
-                    <i class="fas fa-file-invoice-dollar mb-3" style="font-size: 2.5rem; color: #94a3b8;"></i>
-                    <h4 style="font-size: 1.1rem; color: #f8fafc; margin-bottom: 0.5rem; font-weight: 700;">Statement of Account</h4>
-                    <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 1.25rem;">View your complete payment history and download a record of your past transactions.</p>
-                    <a href="{% url 'customer_portal:portal_statement' %}" class="btn btn-outline-light w-100" style="border-radius: 10px; font-weight: 600; padding: 10px;">
-                        <i class="fas fa-file-pdf me-2"></i> View Statement
-                    </a>
-                </div>
+        <!-- Statement of Account -->
+        <div class="p-card">
+            <div class="soa-card-body">
+                <div class="soa-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+                <h4>Statement of Account</h4>
+                <p>View your complete payment history and download a record of your past transactions.</p>
+                <a href="{% url 'customer_portal:portal_statement' %}" class="btn-outline-portal w-100">
+                    <i class="fas fa-file-pdf me-1" style="color:#ef4444;"></i> View Statement
+                </a>
             </div>
+        </div>
 
-        </div> <!-- End Right Col -->
-    </div> <!-- End Row -->
+    </div><!-- /right-col -->
 
-</div> <!-- End container -->
+</div><!-- /p-main -->
 
-<!-- Payment Modal -->
-<div class="modal fade" id="mockPaymentModal" tabindex="-1" aria-labelledby="mockPaymentModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content text-light" style="background: #1e293b; border: 1px solid #334155;">
-            <div class="modal-header border-bottom-0">
-                <h5 class="modal-title" id="mockPaymentModalLabel">
-                    <i class="fas fa-wallet text-success me-2"></i> Complete Payment
+<div class="p-footer">
+    &copy; {% now "Y" %} Gametech Unli Fiber &mdash; Customer Portal &nbsp;|&nbsp; All rights reserved.
+</div>
+
+<!-- ============================================================
+     PAYMENT MODAL
+     ============================================================ -->
+<div class="modal fade" id="mockPaymentModal" tabindex="-1" aria-labelledby="payModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-portal">
+        <div class="modal-content modal-portal">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="payModalLabel">
+                    <i class="fas fa-wallet me-2" style="color:#facc15;"></i> Complete Payment
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:{% if current_theme == 'dark' %}invert(1){% else %}none{% endif %};"></button>
             </div>
             <form method="POST" action="{% url 'customer_portal:portal_process_mock_payment' %}" id="portalPaymentForm">
                 {% csrf_token %}
-                <div class="modal-body pb-0">
-                    <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px;">
-                        Pay securely using any supported e-wallet or credit card.
-                    </p>
-                    
+                <div class="modal-body">
                     <div class="mb-3">
-                        <label for="planSelect" class="form-label" style="font-size: 0.85rem; color: #94a3b8;">Service Plan (Upgrade)</label>
-                        <select class="form-select bg-dark text-light border-0" id="planSelect" name="plan_id">
+                        <label class="form-label">Service Plan</label>
+                        <select class="form-select" id="planSelect" name="plan_id">
                             {% for p in plans %}
                                 {% if not customer.plan or p.price >= customer.plan.price %}
                                 <option value="{{ p.id }}" data-price="{{ p.price }}" {% if p.id == customer.plan_id %}selected{% endif %}>
-                                    {{ p.name }} - ₱{{ p.price }}/mo {% if p.id == customer.plan_id %}(Current Plan){% endif %}
+                                    {{ p.name }} — ₱{{ p.price }}/mo {% if p.id == customer.plan_id %}(Current Plan){% endif %}
                                 </option>
                                 {% endif %}
                             {% endfor %}
@@ -478,452 +939,314 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="paymentMethod" class="form-label" style="font-size: 0.85rem; color: #94a3b8;">Payment Method</label>
-                        <select class="form-select bg-dark text-light border-0" id="paymentMethod" name="payment_method" required>
-                            <option value="GCash" selected>GCash</option>
+                        <label class="form-label">Payment Method</label>
+                        <select class="form-select" id="paymentMethod" name="payment_method" required>
+                            <option value="GCash">GCash</option>
                             <option value="Maya">Maya</option>
-                            <option value="Bank Transfer">Bank Transfer (InstaPay/PESONet)</option>
-                            <option value="Credit Card">Credit/Debit Card</option>
+                            <option value="Bank Transfer">Bank Transfer (InstaPay / PESONet)</option>
+                            <option value="Credit Card">Credit / Debit Card</option>
                         </select>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label" style="font-size: 0.85rem; color: #94a3b8;">Payment Options</label>
-                        <div class="quick-pay-grid">
-                            <div class="quick-btn" data-days="3">
-                                <span class="months">3 Days</span>
-                                <span class="price">₱<span class="calc-price" data-days="3">0.00</span></span>
-                            </div>
-                            <div class="quick-btn" data-days="15">
-                                <span class="months">15 Days</span>
-                                <span class="price">₱<span class="calc-price" data-days="15">0.00</span></span>
-                            </div>
-                            <div class="quick-btn active" data-months="1">
-                                <span class="months">1 Month</span>
-                                <span class="price">₱<span class="calc-price" data-mult="1">0.00</span></span>
-                            </div>
-                            <div class="quick-btn" data-months="2">
-                                <span class="months">2 Months</span>
-                                <span class="price">₱<span class="calc-price" data-mult="2">0.00</span></span>
-                            </div>
-                            <div class="quick-btn" data-months="3">
-                                <span class="months">3 Months</span>
-                                <span class="price">₱<span class="calc-price" data-mult="3">0.00</span></span>
-                            </div>
-                            <div class="quick-btn" data-months="6">
-                                <span class="months">6 Months</span>
-                                <span class="price">₱<span class="calc-price" data-mult="6">0.00</span></span>
-                            </div>
-                            <div class="quick-btn" data-months="12">
-                                <span class="months">1 Year</span>
-                                <span class="price">₱<span class="calc-price" data-mult="12">0.00</span></span>
-                            </div>
-                            <div class="quick-btn" data-months="custom" id="btn-custom">
-                                <span class="months">Custom</span>
-                                <span class="price">Enter Amount</span>
-                            </div>
+                        <label class="form-label">Payment Period</label>
+                        <div class="quick-grid">
+                            <div class="q-btn" data-days="3"><span class="q-months">3 Days</span><span class="q-price">₱<span class="calc-price" data-days="3">0.00</span></span></div>
+                            <div class="q-btn" data-days="15"><span class="q-months">15 Days</span><span class="q-price">₱<span class="calc-price" data-days="15">0.00</span></span></div>
+                            <div class="q-btn active" data-months="1"><span class="q-months">1 Month</span><span class="q-price">₱<span class="calc-price" data-mult="1">0.00</span></span></div>
+                            <div class="q-btn" data-months="2"><span class="q-months">2 Months</span><span class="q-price">₱<span class="calc-price" data-mult="2">0.00</span></span></div>
+                            <div class="q-btn" data-months="3"><span class="q-months">3 Months</span><span class="q-price">₱<span class="calc-price" data-mult="3">0.00</span></span></div>
+                            <div class="q-btn" data-months="6"><span class="q-months">6 Months</span><span class="q-price">₱<span class="calc-price" data-mult="6">0.00</span></span></div>
+                            <div class="q-btn" data-months="12"><span class="q-months">1 Year</span><span class="q-price">₱<span class="calc-price" data-mult="12">0.00</span></span></div>
+                            <div class="q-btn" data-months="custom" id="btn-custom"><span class="q-months">Custom</span><span class="q-price">Enter Amount</span></div>
                         </div>
                     </div>
 
-                    <div class="mb-4">
-                        <label for="amountInput" class="form-label" style="font-size: 0.85rem; color: #94a3b8;">Amount to Pay (PHP)</label>
+                    <div class="mb-2">
+                        <label for="amountInput" class="form-label">Amount to Pay (PHP)</label>
                         <div class="input-group">
-                            <span class="input-group-text bg-dark border-0 text-light border-end-0">₱</span>
-                            <input type="number" class="form-control bg-dark text-light border-0 fw-bold" id="amountInput" name="amount" value="{{ customer.plan.price|default:'' }}" required step="0.01" style="font-size: 1.25rem;">
+                            <span class="input-group-text fw-bold">₱</span>
+                            <input type="number" class="form-control" id="amountInput" name="amount"
+                                   value="{{ customer.plan.price|default:'' }}" required step="0.01">
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top-0 pt-0">
-                    <button type="button" class="btn btn-secondary px-4 py-2" data-bs-dismiss="modal" style="border-radius: 8px;">Cancel</button>
-                    <button type="submit" class="btn btn-success px-4 py-2" style="border-radius: 8px; font-weight: 600;"><i class="fas fa-lock me-2"></i> Pay Securely</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal" style="border-radius:8px;">Cancel</button>
+                    <button type="submit" class="btn px-4 fw-bold" style="border-radius:8px; background:linear-gradient(135deg,#facc15,#eab308); color:#0f172a; border:none;">
+                        <i class="fas fa-lock me-2"></i>Pay Securely
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Addon Request Modal -->
-<div class="modal fade" id="addonModal" tabindex="-1" aria-labelledby="addonModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="background-color: #0f172a; color: #f8fafc; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+<!-- ============================================================
+     ADDON MODAL
+     ============================================================ -->
+<div class="modal fade" id="addonModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-portal">
+        <div class="modal-content modal-portal" style="border-radius:20px; overflow:hidden;">
             <div class="modal-header border-0 pb-0 justify-content-end">
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body px-5 pt-0 pb-4 text-center">
-                <!-- Icon Container -->
-                <div id="addonIconContainer" class="mb-4 d-inline-flex justify-content-center align-items-center" style="width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%); box-shadow: 0 10px 25px rgba(56, 189, 248, 0.4);">
-                    <i id="addonIcon" class="fas fa-play text-white" style="font-size: 2.5rem;"></i>
+            <div class="modal-body px-4 pt-0 pb-4 text-center">
+                <div id="addonIconContainer" class="mb-4 d-inline-flex justify-content-center align-items-center" style="width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,#38bdf8,#3b82f6);box-shadow:0 10px 25px rgba(56,189,248,0.35);">
+                    <i id="addonIcon" class="fas fa-play text-white" style="font-size:2rem;"></i>
                 </div>
-                
-                <h3 class="fw-bold mb-2" id="addonModalTypeTitle" style="letter-spacing: -0.5px;"></h3>
-                <p class="text-muted mb-4" id="addonModalSubtitle">Premium Entertainment Add-on</p>
-                
-                <div id="addonModalDescPlay" style="display: none; text-align: left; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 24px;">
-                    <h6 class="text-info fw-bold mb-2"><i class="fas fa-mobile-alt me-2"></i>Stream Anywhere</h6>
-                    <p class="text-light mb-0" style="font-size: 0.95rem; line-height: 1.6;">Access your favorite channels and movies on-the-go through the Cignal Play app on your phone, tablet, or smart TV. Perfect for streaming anywhere!</p>
+                <h3 class="fw-bold mb-2" id="addonModalTypeTitle"></h3>
+                <p class="mb-4" style="color:var(--p-text-muted);" id="addonModalSubtitle">Premium Entertainment Add-on</p>
+                <div id="addonModalDescPlay" style="display:none; text-align:left; background:var(--p-overlay); border:1px solid var(--p-border); border-radius:14px; padding:1.25rem;">
+                    <h6 class="fw-bold mb-2" style="color:#38bdf8;"><i class="fas fa-mobile-alt me-2"></i>Stream Anywhere</h6>
+                    <p style="font-size:0.9rem; color:var(--p-text-muted); margin:0; line-height:1.6;">Access your favorite channels and movies on-the-go through the Cignal Play app on any device.</p>
                 </div>
-                
-                <div id="addonModalDescBox" style="display: none; text-align: left; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 24px;">
-                    <h6 class="text-warning fw-bold mb-2"><i class="fas fa-hdd me-2"></i>Physical Set-Top Box</h6>
-                    <p class="text-light mb-0" style="font-size: 0.95rem; line-height: 1.6;">Upgrade your home entertainment with a dedicated physical set-top box. Enjoy crystal-clear HD channels directly on your living room TV with zero buffering.</p>
+                <div id="addonModalDescBox" style="display:none; text-align:left; background:var(--p-overlay); border:1px solid var(--p-border); border-radius:14px; padding:1.25rem;">
+                    <h6 class="fw-bold mb-2" style="color:#fbbf24;"><i class="fas fa-hdd me-2"></i>Physical Set-Top Box</h6>
+                    <p style="font-size:0.9rem; color:var(--p-text-muted); margin:0; line-height:1.6;">Enjoy crystal-clear HD channels directly on your TV with a dedicated set-top box.</p>
                 </div>
-                
-                <div class="alert mt-4 mb-0 text-start d-flex align-items-start" style="color: #e0f2fe; background-color: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 12px;">
-                    <i class="fas fa-info-circle mt-1 me-3 fs-5"></i>
-                    <small style="line-height: 1.5;">By clicking <strong>Request to Apply</strong>, your interest will be securely sent to the Gametech Team. One of our staff members will personally contact you to confirm the details, installation schedule, and any applicable fees.</small>
+                <div class="mt-4 p-3 text-start d-flex align-items-start gap-2" style="background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.15);border-radius:10px;font-size:0.82rem;color:var(--p-text-muted);">
+                    <i class="fas fa-info-circle mt-1" style="color:#38bdf8;flex-shrink:0;"></i>
+                    <span>By clicking <strong>Request to Apply</strong>, a Gametech team member will personally contact you to confirm details and scheduling.</span>
                 </div>
             </div>
-            <div class="modal-footer border-top-0 pt-0 pb-4 px-5 d-flex gap-2">
-                <button type="button" class="btn btn-dark flex-grow-1 py-3 fw-bold" data-bs-dismiss="modal" style="border-radius: 12px; background: rgba(255,255,255,0.1); border: none;">Cancel</button>
-                <button type="button" class="btn btn-primary flex-grow-1 py-3 fw-bold" id="addonConfirmBtn" onclick="submitAddonRequest()" style="border-radius: 12px; background: linear-gradient(135deg, #2151A1, #38bdf8); border: none; box-shadow: 0 4px 15px rgba(56, 189, 248, 0.3);"><i class="fas fa-rocket me-2"></i> Request to Apply</button>
+            <div class="modal-footer border-0 px-4 pb-4 gap-2">
+                <button type="button" class="btn btn-secondary flex-grow-1 py-2 fw-bold" data-bs-dismiss="modal" style="border-radius:10px;">Cancel</button>
+                <button type="button" class="btn flex-grow-1 py-2 fw-bold" id="addonConfirmBtn" onclick="submitAddonRequest()" style="border-radius:10px;background:linear-gradient(135deg,#1565c0,#38bdf8);color:#fff;border:none;box-shadow:0 4px 15px rgba(56,189,248,0.25);">
+                    <i class="fas fa-rocket me-2"></i>Request to Apply
+                </button>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Bootstrap + Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 {% if messages %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        {% for message in messages %}
-            Swal.fire({
-                title: '{% if message.tags == "success" %}Success!{% elif message.tags == "error" %}Error!{% else %}Notice{% endif %}',
-                text: '{{ message|escapejs }}',
-                icon: '{{ message.tags }}' === 'error' ? 'error' : '{{ message.tags }}' === 'success' ? 'success' : 'info',
-                background: '#1e293b',
-                color: '#f8fafc',
-                confirmButtonColor: '#10b981',
-                confirmButtonText: 'Great!',
-                customClass: {
-                    popup: 'swal2-dark-mode'
-                }
-            });
-        {% endfor %}
+document.addEventListener('DOMContentLoaded', function() {
+    {% for message in messages %}
+    Swal.fire({
+        title: '{% if message.tags == "success" %}Success!{% elif message.tags == "error" %}Error!{% else %}Notice{% endif %}',
+        text: '{{ message|escapejs }}',
+        icon: '{{ message.tags }}' === 'error' ? 'error' : '{{ message.tags }}' === 'success' ? 'success' : 'info',
+        background: document.documentElement.getAttribute('data-theme') === 'dark' ? '#111827' : '#fff',
+        color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#e2e8f0' : '#0f172a',
+        confirmButtonColor: '#facc15',
+        confirmButtonText: 'Got it!',
     });
+    {% endfor %}
+});
 </script>
 {% endif %}
 
 <script>
-    let currentAddonSelection = '';
+/* ============================================================
+   THEME TOGGLE
+   ============================================================ */
+(function() {
+    const btn = document.getElementById('themeToggle');
+    const root = document.documentElement;
 
-    function applyForAddon(addonType) {
-        currentAddonSelection = addonType;
-        document.getElementById('addonModalTypeTitle').textContent = addonType;
-        
-        const iconContainer = document.getElementById('addonIconContainer');
-        const icon = document.getElementById('addonIcon');
-        
-        if (addonType.includes('Play')) {
-            document.getElementById('addonModalDescPlay').style.display = 'block';
-            document.getElementById('addonModalDescBox').style.display = 'none';
-            iconContainer.style.background = 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)';
-            iconContainer.style.boxShadow = '0 10px 25px rgba(6, 182, 212, 0.4)';
-            icon.className = 'fas fa-mobile-alt text-white';
-        } else {
-            document.getElementById('addonModalDescPlay').style.display = 'none';
-            document.getElementById('addonModalDescBox').style.display = 'block';
-            iconContainer.style.background = 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)';
-            iconContainer.style.boxShadow = '0 10px 25px rgba(245, 158, 11, 0.4)';
-            icon.className = 'fas fa-hdd text-white';
-        }
-
-        const addonModal = new bootstrap.Modal(document.getElementById('addonModal'));
-        addonModal.show();
+    function applyTheme(theme) {
+        root.setAttribute('data-theme', theme);
+        localStorage.setItem('gt-portal-theme', theme);
     }
 
-    function submitAddonRequest() {
-        if(!currentAddonSelection) return;
-        
-        const btn = document.getElementById('addonConfirmBtn');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Sending...';
-        btn.disabled = true;
+    if (btn) {
+        btn.addEventListener('click', function() {
+            const current = root.getAttribute('data-theme') || 'dark';
+            applyTheme(current === 'dark' ? 'light' : 'dark');
+        });
+    }
+})();
 
-        fetch('{% url "customer_portal:portal_apply_addon" %}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: JSON.stringify({ addon_type: currentAddonSelection })
-        })
-        .then(res => res.json())
-        .then(data => {
-            const addonModalElement = document.getElementById('addonModal');
-            const addonModalInstance = bootstrap.Modal.getInstance(addonModalElement);
-            if(addonModalInstance) addonModalInstance.hide();
+/* ============================================================
+   ADDON MODAL
+   ============================================================ */
+let currentAddonSelection = '';
+function applyForAddon(addonType) {
+    currentAddonSelection = addonType;
+    document.getElementById('addonModalTypeTitle').textContent = addonType;
+    const iconContainer = document.getElementById('addonIconContainer');
+    const icon = document.getElementById('addonIcon');
+    if (addonType.includes('Play')) {
+        document.getElementById('addonModalDescPlay').style.display = 'block';
+        document.getElementById('addonModalDescBox').style.display = 'none';
+        iconContainer.style.background = 'linear-gradient(135deg,#06b6d4,#3b82f6)';
+        iconContainer.style.boxShadow = '0 10px 25px rgba(6,182,212,0.35)';
+        icon.className = 'fas fa-mobile-alt text-white';
+    } else {
+        document.getElementById('addonModalDescPlay').style.display = 'none';
+        document.getElementById('addonModalDescBox').style.display = 'block';
+        iconContainer.style.background = 'linear-gradient(135deg,#f59e0b,#ef4444)';
+        iconContainer.style.boxShadow = '0 10px 25px rgba(245,158,11,0.35)';
+        icon.className = 'fas fa-hdd text-white';
+    }
+    new bootstrap.Modal(document.getElementById('addonModal')).show();
+}
 
-            if(data.status === 'success') {
-                Swal.fire({
-                    title: 'Application Sent!',
-                    text: `Your request for ${currentAddonSelection} has been sent to the Gametech team. We will contact you shortly for confirmation.`,
-                    icon: 'success',
-                    background: '#1e293b',
-                    color: '#f8fafc',
-                    confirmButtonColor: '#10b981',
-                    customClass: { popup: 'swal2-dark-mode' }
-                });
-            } else {
-                Swal.fire({
-                    title: 'Error!',
-                    text: data.message,
-                    icon: 'error',
-                    background: '#1e293b',
-                    color: '#f8fafc',
-                    confirmButtonColor: '#ef4444',
-                    customClass: { popup: 'swal2-dark-mode' }
-                });
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            Swal.fire({
-                title: 'Error!',
-                text: 'An error occurred. Please try again later.',
-                icon: 'error',
-                background: '#1e293b',
-                color: '#f8fafc',
-                confirmButtonColor: '#ef4444',
-                customClass: { popup: 'swal2-dark-mode' }
-            });
-        })
-        .finally(() => {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
+function submitAddonRequest() {
+    if (!currentAddonSelection) return;
+    const btn = document.getElementById('addonConfirmBtn');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending...';
+    btn.disabled = true;
+    fetch('{% url "customer_portal:portal_apply_addon" %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({ addon_type: currentAddonSelection })
+    })
+    .then(r => r.json())
+    .then(data => {
+        bootstrap.Modal.getInstance(document.getElementById('addonModal'))?.hide();
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        Swal.fire({
+            title: data.status === 'success' ? 'Application Sent!' : 'Error!',
+            text: data.status === 'success' ? `Your request for ${currentAddonSelection} has been sent!` : data.message,
+            icon: data.status === 'success' ? 'success' : 'error',
+            background: isDark ? '#111827' : '#fff',
+            color: isDark ? '#e2e8f0' : '#0f172a',
+            confirmButtonColor: '#facc15',
+        });
+    })
+    .catch(() => {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        Swal.fire({ title:'Error!', text:'An error occurred. Please try again.', icon:'error', background: isDark?'#111827':'#fff', color: isDark?'#e2e8f0':'#0f172a', confirmButtonColor:'#ef4444' });
+    })
+    .finally(() => { btn.innerHTML = orig; btn.disabled = false; });
+}
+
+/* ============================================================
+   PAYMENT MODAL LOGIC
+   ============================================================ */
+function handlePaymentClick() {
+    const balance = parseFloat("{{ customer.outstanding_balance|default:'0' }}");
+    const dueDate = "{{ customer.expires_at|date:'M d, Y' }}";
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    if (balance <= 0) {
+        Swal.fire({
+            title: 'Advance Payment?',
+            text: `You are paid up until ${dueDate}. A payment now will extend your subscription further. Proceed?`,
+            icon: 'question',
+            showCancelButton: true,
+            background: isDark ? '#111827' : '#fff',
+            color: isDark ? '#e2e8f0' : '#0f172a',
+            confirmButtonColor: '#facc15',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Yes, extend!',
+        }).then(r => { if (r.isConfirmed) new bootstrap.Modal(document.getElementById('mockPaymentModal')).show(); });
+    } else {
+        new bootstrap.Modal(document.getElementById('mockPaymentModal')).show();
+    }
+}
+
+function handleUpgradeClick() {
+    new bootstrap.Modal(document.getElementById('mockPaymentModal')).show();
+    setTimeout(() => {
+        const sel = document.getElementById('planSelect');
+        if (sel) { sel.focus(); sel.style.boxShadow='0 0 0 3px rgba(96,165,250,0.3)'; setTimeout(()=>sel.style.boxShadow='', 1000); }
+    }, 400);
+}
+
+/* ============================================================
+   PAYMENT MODAL — QUICK GRID MATH
+   ============================================================ */
+document.addEventListener('DOMContentLoaded', function() {
+    const planSelect = document.getElementById('planSelect');
+    const amountInput = document.getElementById('amountInput');
+    const qBtns = document.querySelectorAll('.q-btn');
+
+    function updatePrices() {
+        if (!planSelect) return;
+        const price = parseFloat(planSelect.options[planSelect.selectedIndex]?.getAttribute('data-price') || 0);
+        const daily = price / 30;
+        document.querySelectorAll('.calc-price').forEach(el => {
+            if (el.dataset.days)  el.textContent = (daily * parseInt(el.dataset.days)).toFixed(2);
+            if (el.dataset.mult)  el.textContent = (price * parseInt(el.dataset.mult)).toFixed(2);
         });
     }
 
-    function handlePaymentClick() {
-        const outstandingBalance = parseFloat("{{ customer.outstanding_balance|default:'0' }}");
-        const nextDueDate = "{{ customer.expires_at|date:'M d, Y' }}";
-        
-        if (outstandingBalance <= 0) {
-            Swal.fire({
-                title: 'Advance Payment?',
-                text: `You are already paid up until ${nextDueDate}. Making another payment will extend your subscription further into the future. Are you sure you want to proceed?`,
-                icon: 'question',
-                showCancelButton: true,
-                background: '#1e293b',
-                color: '#f8fafc',
-                confirmButtonColor: '#10b981',
-                cancelButtonColor: '#ef4444',
-                confirmButtonText: 'Yes, extend my plan',
-                cancelButtonText: 'Cancel',
-                customClass: {
-                    popup: 'swal2-dark-mode'
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const modal = new bootstrap.Modal(document.getElementById('mockPaymentModal'));
-                    modal.show();
-                }
-            });
-        } else {
-            const modal = new bootstrap.Modal(document.getElementById('mockPaymentModal'));
-            modal.show();
-        }
-    }
+    updatePrices();
 
-    function handleUpgradeClick() {
-        const modal = new bootstrap.Modal(document.getElementById('mockPaymentModal'));
-        modal.show();
-        // Focus the plan select after modal is shown
-        setTimeout(() => {
-            const planSelect = document.getElementById('planSelect');
-            if (planSelect) {
-                planSelect.focus();
-                // Optional: show a small highlight effect on the dropdown
-                planSelect.style.boxShadow = "0 0 0 0.25rem rgba(139, 92, 246, 0.25)";
-                setTimeout(() => { planSelect.style.boxShadow = "none"; }, 1000);
-            }
-        }, 500);
-    }
-
-    document.addEventListener("DOMContentLoaded", function() {
-        const paymentForm = document.getElementById('portalPaymentForm');
-        if (paymentForm) {
-            paymentForm.addEventListener('submit', function(e) {
-                const btn = this.querySelector('button[type="submit"]');
-                if (btn) {
-                    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Processing...';
-                    btn.disabled = true;
-                    // Do not prevent default, allow form to submit
-                }
-            });
-        }
-    });
-</script>
-
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        const planSelect = document.getElementById('planSelect');
-        const amountInput = document.getElementById('amountInput');
-        const quickBtns = document.querySelectorAll('.quick-btn');
-        
-        function updateGridMath() {
-            if (!planSelect) return;
-            const selectedOption = planSelect.options[planSelect.selectedIndex];
-            const basePrice = parseFloat(selectedOption.getAttribute('data-price') || 0);
-            const dailyRate = basePrice / 30; // 30-day month assumed
-
-            document.querySelectorAll('.calc-price').forEach(el => {
-                if (el.hasAttribute('data-days')) {
-                    const days = parseInt(el.getAttribute('data-days'));
-                    el.textContent = (dailyRate * days).toFixed(2);
-                } else if (el.hasAttribute('data-mult')) {
-                    const mult = parseInt(el.getAttribute('data-mult'));
-                    el.textContent = (basePrice * mult).toFixed(2);
-                }
-            });
-        }
-
-        // Initialize grid
-        updateGridMath();
-
-        if (quickBtns.length > 0 && amountInput) {
-            quickBtns.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    // Remove active from all
-                    quickBtns.forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-
-                    if (this.id === 'btn-custom') {
-                        amountInput.value = '';
-                        amountInput.focus();
-                        return;
-                    }
-
-                    const calcSpan = this.querySelector('.calc-price');
-                    if (calcSpan) {
-                        amountInput.value = parseFloat(calcSpan.textContent).toFixed(2);
-                    }
-                });
-            });
-        }
-
-        if (planSelect && amountInput) {
-            planSelect.addEventListener('change', function() {
-                updateGridMath();
-                
-                // Re-trigger click on active button to update amount input
-                const activeBtn = document.querySelector('.quick-btn.active');
-                if (activeBtn && activeBtn.id !== 'btn-custom') {
-                    activeBtn.click();
-                } else if (!activeBtn) {
-                    const selectedOption = planSelect.options[planSelect.selectedIndex];
-                    const newPrice = selectedOption.getAttribute('data-price');
-                    if (newPrice) {
-                        amountInput.value = parseFloat(newPrice).toFixed(2);
-                    }
-                }
-            });
-        }
+    qBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            qBtns.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            if (this.id === 'btn-custom') { amountInput.value = ''; amountInput.focus(); return; }
+            const calcEl = this.querySelector('.calc-price');
+            if (calcEl) amountInput.value = parseFloat(calcEl.textContent).toFixed(2);
+        });
     });
 
-    {% if customer.mikrotik_device %}
-    function fetchRouterUplink() {
-        const statusTextNode = document.getElementById('connection-status-text');
-        if (statusTextNode && statusTextNode.getAttribute('data-is-positive') === 'false') {
-            return;
-        }
+    if (planSelect) planSelect.addEventListener('change', () => {
+        updatePrices();
+        const active = document.querySelector('.q-btn.active');
+        if (active && active.id !== 'btn-custom') active.click();
+    });
 
-        const syncIcon = document.getElementById('uplink-sync-icon');
-        if(syncIcon) syncIcon.style.display = 'inline-block';
-        
-        function setOfflineStatus() {
-            const statusText = document.getElementById('connection-status-text');
-            const card = document.getElementById('connection-monitoring-card');
-            const icon = document.getElementById('connection-monitoring-icon');
-            const pingText = document.getElementById('uplinkPing');
-            
-            if(statusText) {
-                statusText.textContent = 'OFFLINE';
-                statusText.style.color = '#ef4444';
-            }
-            if(card) card.style.borderLeftColor = '#ef4444';
-            if(icon) icon.style.color = '#ef4444';
-            if(pingText) pingText.textContent = 'Ping: Error';
-            
-            const originalMsg = document.getElementById('original-message-container');
-            const offlineMsg = document.getElementById('offline-message-container');
-            if(originalMsg) originalMsg.style.display = 'none';
-            if(offlineMsg) offlineMsg.style.display = 'block';
-        }
-        
-        fetch('{% url "customer_portal:portal_router_uplink_api" %}')
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    const statusText = document.getElementById('connection-status-text');
-                    const pingText = document.getElementById('uplinkPing');
-                    const card = document.getElementById('connection-monitoring-card');
-                    const icon = document.getElementById('connection-monitoring-icon');
-                    
-                    if(pingText) pingText.textContent = 'Ping: ' + (data.uplink_ping || '--');
-                    
-                    if (data.uplink_status === 'Offline') {
-                        setOfflineStatus();
-                    } else {
-                        if (statusText) {
-                            const originalStatus = statusText.getAttribute('data-original-status');
-                            statusText.textContent = originalStatus;
-                            
-                            let color = '#f59e0b';
-                            if (['Strong', 'Excellent', 'Good', 'Stable'].includes(originalStatus)) {
-                                color = '#10b981';
-                            } else if (['Low', 'Poor', 'Outage', 'Offline'].includes(originalStatus)) {
-                                color = '#ef4444';
-                            }
-                            
-                            statusText.style.color = color;
-                            if(card) card.style.borderLeftColor = color;
-                            if(icon) icon.style.color = color;
-                        }
-                        
-                        const originalMsg = document.getElementById('original-message-container');
-                        const offlineMsg = document.getElementById('offline-message-container');
-                        if(originalMsg) originalMsg.style.display = 'block';
-                        if(offlineMsg) offlineMsg.style.display = 'none';
-                    }
-                } else {
-                    setOfflineStatus();
-                }
-            })
-            .catch(err => setOfflineStatus())
-            .finally(() => {
-                setTimeout(() => { if(syncIcon) syncIcon.style.display = 'none'; }, 1000);
-            });
+    // Form submit loading state
+    const form = document.getElementById('portalPaymentForm');
+    if (form) form.addEventListener('submit', function() {
+        const btn = this.querySelector('button[type="submit"]');
+        if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...'; btn.disabled = true; }
+    });
+});
+
+/* ============================================================
+   ROUTER UPLINK LIVE CHECK
+   ============================================================ */
+{% if customer.mikrotik_device %}
+function fetchRouterUplink() {
+    const statusEl = document.getElementById('connection-status-text');
+    if (statusEl?.getAttribute('data-is-positive') === 'false') return;
+    const syncIcon = document.getElementById('uplink-sync-icon');
+    if (syncIcon) syncIcon.style.display = 'inline-block';
+
+    function setOffline() {
+        const s = document.getElementById('connection-status-text');
+        const c = document.getElementById('connection-monitoring-card');
+        const ico = document.getElementById('connection-monitoring-icon');
+        const ping = document.getElementById('uplinkPing');
+        if (s) { s.textContent = 'OFFLINE'; s.style.color = '#ef4444'; }
+        if (c) c.style.borderLeftColor = '#ef4444';
+        if (ico) ico.style.color = '#ef4444';
+        if (ping) ping.textContent = 'Ping: Error';
+        document.getElementById('original-message-container').style.display = 'none';
+        document.getElementById('offline-message-container').style.display = 'block';
     }
 
-    fetchRouterUplink();
-    setInterval(fetchRouterUplink, 20000);
-    {% endif %}
-</script>
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        const themeToggleBtn = document.getElementById('themeToggleBtn');
-        const root = document.documentElement;
-        
-        function updateThemeUI() {
-            if (root.classList.contains('dark-mode')) {
-                themeToggleBtn.innerHTML = '<i class="fas fa-sun text-warning"></i>';
-            } else {
-                themeToggleBtn.innerHTML = '<i class="fas fa-moon"></i>';
-            }
-        }
-        
-        updateThemeUI();
-        
-        if (themeToggleBtn) {
-            themeToggleBtn.addEventListener('click', function() {
-                root.classList.toggle('dark-mode');
-                const isDark = root.classList.contains('dark-mode');
-                localStorage.setItem('theme', isDark ? 'dark' : 'light');
-                updateThemeUI();
-            });
-        }
-    });
+    fetch('{% url "customer_portal:portal_router_uplink_api" %}')
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const s = document.getElementById('connection-status-text');
+                const ping = document.getElementById('uplinkPing');
+                const c = document.getElementById('connection-monitoring-card');
+                const ico = document.getElementById('connection-monitoring-icon');
+                if (ping) ping.textContent = 'Ping: ' + (data.uplink_ping || '--');
+                if (data.uplink_status === 'Offline') { setOffline(); return; }
+                if (s) {
+                    const orig = s.getAttribute('data-original-status');
+                    s.textContent = orig;
+                    let col = '#f59e0b';
+                    if (['Strong','Excellent','Good','Stable'].includes(orig)) col = '#10b981';
+                    else if (['Low','Poor','Outage','Offline'].includes(orig)) col = '#ef4444';
+                    s.style.color = col;
+                    if (c) c.style.borderLeftColor = col;
+                    if (ico) ico.style.color = col;
+                }
+                document.getElementById('original-message-container').style.display = 'block';
+                document.getElementById('offline-message-container').style.display = 'none';
+            } else { setOffline(); }
+        })
+        .catch(() => setOffline())
+        .finally(() => setTimeout(() => { if(syncIcon) syncIcon.style.display = 'none'; }, 1000));
+}
+fetchRouterUplink();
+setInterval(fetchRouterUplink, 20000);
+{% endif %}
 </script>
 </body>
 </html>

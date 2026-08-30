@@ -2322,20 +2322,8 @@ def pay_customer_view(request, username):
                 # --------------------------
                 
                 # --- Option B: Wallet/Advance Payment Logic ---
-                amount_for_time = 0.0
-                advance_payment = 0.0
+                amount_for_time = amount_float
                 
-                if monthly_price > 0:
-                    if amount_float >= monthly_price:
-                        # Pay exactly 1 month, rest goes to wallet
-                        amount_for_time = monthly_price
-                        advance_payment = amount_float - monthly_price
-                    else:
-                        # Partial payment, all goes to time
-                        amount_for_time = amount_float
-                else:
-                    amount_for_time = amount_float
-
                 # Calculate new expiration using ONLY the amount meant for time
                 new_expiry = calculate_new_expiration_date(current_exp, amount_for_time, monthly_price)
 
