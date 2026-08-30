@@ -535,16 +535,22 @@
 function confirmAction(e, title, text, icon) {
     e.preventDefault();
     const form = e.target;
+    const isDark = document.documentElement.classList.contains('dark-mode');
+    
     Swal.fire({
         title: title,
         text: text,
         icon: icon,
         showCancelButton: true,
-        confirmButtonColor: '#38bdf8',
-        cancelButtonColor: '#ef4444',
         confirmButtonText: 'Yes, proceed',
-        background: document.body.classList.contains('dark-mode') ? '#1e293b' : '#fff',
-        color: document.body.classList.contains('dark-mode') ? '#f1f5f9' : '#1e293b'
+        customClass: {
+            popup: isDark ? 'gt-modal-content' : '',
+            confirmButton: 'btn btn-primary rounded-pill px-4 shadow-sm',
+            cancelButton: 'btn btn-secondary rounded-pill px-4 ms-2'
+        },
+        buttonsStyling: false,
+        background: isDark ? 'rgba(13, 20, 40, 0.95)' : '#fff',
+        color: isDark ? '#f8fafc' : '#1e293b'
     }).then((result) => {
         if (result.isConfirmed) {
             form.submit();
