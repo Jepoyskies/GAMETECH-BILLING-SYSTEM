@@ -60,7 +60,8 @@ class Command(BaseCommand):
                     for k in possible_keys:
                         for actual_k in row.keys():
                             if actual_k and actual_k.lower().strip() == k:
-                                return row[actual_k]
+                                val = row[actual_k]
+                                return str(val).strip() if val else default
                     return default
 
                 for row in reader:
@@ -113,7 +114,7 @@ class Command(BaseCommand):
                         outstanding_balance=clean_balance,
                         plan=plan,
                         mikrotik_device=device,
-                        router_mac=mac
+                        mac_address=mac
                     )
                     
                     # By default, Django save() will trigger signals. 
