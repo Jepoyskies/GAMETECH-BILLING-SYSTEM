@@ -13,12 +13,21 @@
    - Created a 1-click admin UI at `/settings/import/` allowing admins to upload the CSV file directly without using the terminal.
    - Tested successfully on the DigitalOcean droplet with dummy data.
 
-3. **UI Enhancements**:
+3. **UI & UX Enhancements**:
    - Removed the global "Back" button from the top navigation bar (`base.html`) for a cleaner interface.
+   - Upgraded the Add/Edit/Pay Customer dropdowns to use **TomSelect** for searchable, efficient user selection.
+   - Enhanced the Payment forms to prominently display Plan Speeds, Outstanding Balances, and Advance Payments.
 
-4. **Documentation & Changelog**:
+4. **System Stability & Financial Logic Fixes**:
+   - Fixed the auto-suspend logic and total amount due logic to respect negative advance payments correctly.
+   - Resolved a critical bug where Winbox secrets and profiles could not be edited or deleted due to missing internal IDs.
+   - Reworked Recent Admin Logins to persistently save data via the `SystemLog` database model instead of Redis memory alone.
+   - Fixed duplicated Mikrotik profiles on plan changes.
+   - Polished dark mode/light mode themes, fixing invisible logos and duplicate toggle scripts.
+
+5. **Documentation & Changelog**:
    - Saved the `implementation_plan.md` and `walkthrough.md` for the migration module into the `docs/migration/` directory so the team can easily reference them during the real testing phase.
-   - Updated `changelog.html` and `base.html` to reflect all August 30 changes.
+   - Updated `changelog.html` and `base.html` to reflect ALL August 30 changes, perfectly formatted for Dark Mode.
 
 ## Current State of Environments
 - **Repository**: All changes (including the migration script, UI fixes, and documentation) are pushed to the `main` branch on GitHub.
