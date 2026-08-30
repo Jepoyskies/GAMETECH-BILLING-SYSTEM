@@ -51,6 +51,22 @@
                             <span class="detail-label">Monthly Price</span>
                             <span class="detail-value text-success" id="monthly-price-display"><strong>₱{{ customer.plan.price|default:0.00 }}</strong></span>
                         </li>
+                        {% if customer.outstanding_balance < 0 %}
+                        <li>
+                            <span class="detail-label">Advance Payment</span>
+                            <span class="detail-value text-success"><strong>₱{{ customer.abs_outstanding_balance|floatformat:2 }}</strong></span>
+                        </li>
+                        {% elif customer.outstanding_balance > 0 %}
+                        <li>
+                            <span class="detail-label">Outstanding Balance</span>
+                            <span class="detail-value text-danger"><strong>₱{{ customer.abs_outstanding_balance|floatformat:2 }}</strong></span>
+                        </li>
+                        {% else %}
+                        <li>
+                            <span class="detail-label">Outstanding Balance</span>
+                            <span class="detail-value text-muted"><strong>₱0.00</strong></span>
+                        </li>
+                        {% endif %}
                         <li>
                             <span class="detail-label">Current Expiry</span>
                             <span class="detail-value text-warning fw-bold">{{ customer.expires_at|date:'M d, Y h:i A'|default:'None' }}</span>
