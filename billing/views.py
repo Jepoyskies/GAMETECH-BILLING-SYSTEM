@@ -126,24 +126,53 @@ def dashboard_view(request):
     pie_labels_js = ["Cash", "GCash", "Bank Transfer"]
     pie_data_js = [float(cash), float(gcash), float(bank)]
 
-    # Admin logins (fetch last active from cache)
+    # Admin logins (fetch last active from cache and historical from SystemLog)
     recent_users = User.objects.filter(is_active=True).exclude(last_login__isnull=True)
     recent_admin_logins = []
     
     from django.core.cache import cache
+    from billing.models import SystemLog
     
+    active_usernames = set()
+    
+    # 1. Get currently active users
     for u in recent_users:
         last_active = cache.get(f'seen_user_{u.id}')
-        display_time = last_active if last_active else u.last_login
-        if display_time:
+        if last_active:
             recent_admin_logins.append({
                 'username': u.username,
                 'color': '#0d6efd',
-                'event_type': 'active' if last_active else 'login',
-                'login_time': display_time
+                'event_type': 'active',
+                'login_time': last_active
             })
+            active_usernames.add(u.username)
             
-    # Sort by display_time descending
+    # 2. Get recent historical logins
+    recent_logs = SystemLog.objects.filter(table_name='User', action='LOGIN').order_by('-changed_at')[:10]
+    for log in recent_logs:
+        # Don't show a "login" event for someone if they are currently marked "active" right now
+        # Also limit duplicates if they logged in multiple times today
+        if log.changed_by not in active_usernames:
+            recent_admin_logins.append({
+                'username': log.changed_by,
+                'color': '#0d6efd',
+                'event_type': 'login',
+                'login_time': log.changed_at
+            })
+            active_usernames.add(log.changed_by)
+            
+    # 3. Fallback for users who haven't logged in recently enough to be in SystemLog
+    for u in recent_users:
+        if u.username not in active_usernames and u.last_login:
+            recent_admin_logins.append({
+                'username': u.username,
+                'color': '#0d6efd',
+                'event_type': 'login',
+                'login_time': u.last_login
+            })
+            active_usernames.add(u.username)
+            
+    # Sort by display_time descending and take top 5
     recent_admin_logins = sorted(recent_admin_logins, key=lambda x: x['login_time'], reverse=True)[:5]
 
     # Top Paying Clients

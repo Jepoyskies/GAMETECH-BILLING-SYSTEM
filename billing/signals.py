@@ -277,3 +277,31 @@ def save_employee_profile(sender, instance, **kwargs):
     if hasattr(instance, 'employee_profile'):
         instance.employee_profile.save()
 
+from django.contrib.auth.signals import user_logged_in
+
+@receiver(user_logged_in)
+def log_user_login(sender, request, user, **kwargs):
+    """
+    Keep a historical record of when admins log in.
+    """
+    from billing.models import SystemLog
+    
+    # Get IP if possible
+    ip_addr = 'Unknown'
+    if request:
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip_addr = x_forwarded_for.split(',')[0]
+        else:
+            ip_addr = request.META.get('REMOTE_ADDR', 'Unknown')
+            
+    SystemLog.objects.create(
+        table_name='User',
+        record_id=str(user.id),
+        action='LOGIN',
+        changed_by=user.username,
+        target_name=user.username,
+        old_data=f'IP: {ip_addr}',
+        new_data='User successfully logged in.'
+    )
+
