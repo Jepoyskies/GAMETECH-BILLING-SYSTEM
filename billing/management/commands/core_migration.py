@@ -24,10 +24,12 @@ class Command(BaseCommand):
             return
 
         # Fetch PPP Secrets from Mikrotik
-        api = MikrotikAPI(device)
+        mk_api = MikrotikAPI(device)
         self.stdout.write("Fetching active PPP secrets from Mikrotik...")
         try:
-            secrets = api.get_resource('/ppp/secret').get()
+            router_api = mk_api._get_api()
+            secrets = router_api.get_resource('/ppp/secret').get()
+            mk_api.connection.disconnect()
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"Failed to connect to Mikrotik: {e}"))
             return
