@@ -619,7 +619,7 @@ def winbox_secret_action(request, device_id):
             else:
                 messages.error(request, f"Error deleting secret: {msg}")
                 
-    return redirect(f"/network-manager/winbox/{device_id}/?tab=secrets")
+    return redirect(f"/devices/winbox/{device_id}/?tab=secrets")
 
 
 @role_required(['Admin', 'Technician', 'CSR'])
@@ -663,7 +663,7 @@ def winbox_profile_action(request, device_id):
             else:
                 messages.error(request, f"Error deleting profile: {msg}")
                 
-    return redirect(f"/network-manager/winbox/{device_id}/?tab=profiles")
+    return redirect(f"/devices/winbox/{device_id}/?tab=profiles")
 
 
 @role_required(['Admin', 'Technician', 'CSR'])
@@ -679,4 +679,4 @@ def winbox_kick_action(request, device_id):
         else:
             messages.error(request, f"Error kicking user: {msg}")
             
-    return redirect(f"/network-manager/winbox/{device_id}/?tab=active")
+    return redirect(f"/devices/winbox/{device_id}/?tab=active")
