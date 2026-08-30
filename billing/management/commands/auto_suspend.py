@@ -26,13 +26,14 @@ class Command(BaseCommand):
             plan_price = customer.plan.price if customer.plan else 0
             
             # 1. Check if they have enough Advance Payment (outstanding_balance) to auto-renew
-            if plan_price > 0 and customer.outstanding_balance >= plan_price:
+            # In our system, negative outstanding_balance means credit (Advance Payment)
+            if plan_price > 0 and customer.outstanding_balance <= -plan_price:
                 # --- AUTO RENEW ---
                 from billing.views import calculate_new_expiration_date
                 new_expiry = calculate_new_expiration_date(customer.expires_at, float(plan_price), float(plan_price))
                 
                 customer.expires_at = new_expiry
-                customer.outstanding_balance -= plan_price
+                customer.outstanding_balance += plan_price
                 customer.save()
                 
                 # Log the auto-renewal payment record

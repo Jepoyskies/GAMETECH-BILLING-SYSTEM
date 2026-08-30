@@ -748,7 +748,10 @@
                 </li>
                 <li>
                     {% if customer.outstanding_balance < 0 %}
-                        <span class="info-label"><i class="fas fa-wallet me-2" style="color:#facc15;"></i>Advance Payment</span>
+                        <span class="info-label">
+                            <i class="fas fa-wallet me-2" style="color:#facc15;"></i>Advance Payment
+                            <i class="fas fa-question-circle ms-1 text-muted" style="font-size: 0.8rem; cursor: help;" title="This is your overpayment or credit. It will be automatically used to pay for your next month's bill!"></i>
+                        </span>
                         <span class="info-value" style="color:#34d399;">₱{{ customer.abs_outstanding_balance|floatformat:2 }}</span>
                     {% elif customer.outstanding_balance > 0 %}
                         <span class="info-label"><i class="fas fa-balance-scale me-2" style="color:#facc15;"></i>Outstanding Balance</span>
@@ -775,8 +778,16 @@
                     </span>
                 </li>
                 <li class="total-row">
-                    <span class="info-label">Total Amount Due</span>
-                    <span class="info-value">₱{{ customer.plan.price|add:customer.outstanding_balance|default:"0.00" }}</span>
+                    <span class="info-label">Total Amount Due this Month</span>
+                    {% if customer.status == 'active' %}
+                        {% if customer.outstanding_balance > 0 %}
+                            <span class="info-value" style="color:#f87171;">₱{{ customer.outstanding_balance|floatformat:2 }}</span>
+                        {% else %}
+                            <span class="info-value" style="color:#34d399;">₱0.00</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="info-value" style="color:#f87171;">₱{{ customer.plan.price|add:customer.outstanding_balance|floatformat:2 }}</span>
+                    {% endif %}
                 </li>
             </ul>
         </div>
