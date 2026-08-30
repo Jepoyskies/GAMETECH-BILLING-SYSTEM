@@ -66,8 +66,12 @@
                     <label class="plan-form-label">Subscription Plan</label>
                     <select name="plan_id" class="plan-form-control">
                         <option value="">-- Select Plan --</option>
-                        {% for plan in plans %}
-                        <option value="{{ plan.id }}" {% if customer.plan_id == plan.id %}selected{% endif %}>{{ plan.name }}</option>
+                        {% for category, plans in categorized_plans.items %}
+                            <optgroup label="{{ category }}">
+                            {% for plan in plans %}
+                                <option value="{{ plan.id }}" {% if customer.plan_id == plan.id %}selected{% endif %}>{{ plan.name }} - {{ plan.speed_down|default:'N/A' }} / {{ plan.speed_up|default:'N/A' }} (₱{{ plan.price }})</option>
+                            {% endfor %}
+                            </optgroup>
                         {% endfor %}
                     </select>
                 </div>

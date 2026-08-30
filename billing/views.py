@@ -1252,7 +1252,7 @@ def add_customer(request):
         messages.success(request, 'Customer added successfully!')
         return redirect('customer_list')
     context = {
-        'plans': SubscriptionPlan.objects.all().order_by('price'),
+        'categorized_plans': get_categorized_plans(),
         'devices': MikrotikDevice.objects.all(),
         'agents': Agent.objects.all(),
         'barangays': Barangay.objects.all(),
@@ -1394,7 +1394,7 @@ def edit_customer(request, customer_id):
 
     context = {
         'customer': customer,
-        'plans': SubscriptionPlan.objects.all().order_by('price'),
+        'categorized_plans': get_categorized_plans(),
         'devices': MikrotikDevice.objects.all(),
         'agents': Agent.objects.all(),
         'barangays': Barangay.objects.all(),
@@ -2805,8 +2805,33 @@ def cignalplay_form_view(request, customer_id):
     context = {
         'customer': customer
     }
-    return render(request, 'billing/cignalplay_form.html', context)
+    return render(request, 'billing/cignalplay_form.html', {'form': form})
 
+def get_categorized_plans():
+    all_plans = SubscriptionPlan.objects.all().order_by('price')
+    categorized_plans = {
+        'Legacy Plans': [],
+        'GTipid Fiber': [],
+        'GIMI Home Fiber': [],
+        'SME Business Plans': [],
+        'Enterprise Plan': [],
+        'Other Plans': []
+    }
+    for plan in all_plans:
+        name_lower = plan.name.lower()
+        if 'legacy' in name_lower or plan.name in ['5Mbps', '10Mbps']:
+            categorized_plans['Legacy Plans'].append(plan)
+        elif 'gtipid' in name_lower:
+            categorized_plans['GTipid Fiber'].append(plan)
+        elif 'gimi home' in name_lower:
+            categorized_plans['GIMI Home Fiber'].append(plan)
+        elif 'sme' in name_lower:
+            categorized_plans['SME Business Plans'].append(plan)
+        elif 'enterprise' in name_lower:
+            categorized_plans['Enterprise Plan'].append(plan)
+        else:
+            categorized_plans['Other Plans'].append(plan)
+    return {k: v for k, v in categorized_plans.items() if v}
 
 @login_required
 def user_cignal_logs_view(request, customer_id):
