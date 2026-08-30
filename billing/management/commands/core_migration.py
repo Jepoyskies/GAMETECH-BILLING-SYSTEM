@@ -18,7 +18,7 @@ class Command(BaseCommand):
         self.stdout.write(f"Starting migration from {csv_path}...")
 
         # Get active Mikrotik Device (assuming single router for now or primary router)
-        device = MikrotikDevice.objects.filter(is_active=True).first()
+        device = MikrotikDevice.objects.first()
         if not device:
             self.stdout.write(self.style.ERROR("No active Mikrotik device found. Ensure network manager is configured."))
             return
