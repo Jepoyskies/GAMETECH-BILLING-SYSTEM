@@ -747,10 +747,16 @@
                     <span class="info-value">{% if customer.expires_at %}{{ customer.expires_at|date:"M d, Y" }}{% else %}Not set{% endif %}</span>
                 </li>
                 <li>
-                    <span class="info-label"><i class="fas fa-wallet me-2" style="color:#facc15;"></i>Advance Payment</span>
-                    <span class="info-value" style="color:{% if customer.outstanding_balance > 0 %}#34d399{% else %}var(--p-text-muted){% endif %};">
-                        ₱{{ customer.outstanding_balance|default:"0.00" }}
-                    </span>
+                    {% if customer.outstanding_balance < 0 %}
+                        <span class="info-label"><i class="fas fa-wallet me-2" style="color:#facc15;"></i>Advance Payment</span>
+                        <span class="info-value" style="color:#34d399;">₱{{ customer.abs_outstanding_balance|floatformat:2 }}</span>
+                    {% elif customer.outstanding_balance > 0 %}
+                        <span class="info-label"><i class="fas fa-balance-scale me-2" style="color:#facc15;"></i>Outstanding Balance</span>
+                        <span class="info-value" style="color:#f87171;">₱{{ customer.outstanding_balance|floatformat:2 }}</span>
+                    {% else %}
+                        <span class="info-label"><i class="fas fa-balance-scale me-2" style="color:#facc15;"></i>Outstanding Balance</span>
+                        <span class="info-value" style="color:var(--p-text-muted);">₱0.00</span>
+                    {% endif %}
                 </li>
                 <li>
                     <span class="info-label"><i class="fas fa-tv me-2" style="color:#facc15;"></i>Cignal Play</span>

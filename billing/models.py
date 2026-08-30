@@ -179,7 +179,7 @@ class Customer(models.Model):
 
     @property
     def abs_outstanding_balance(self):
-        return self.outstanding_balance if self.outstanding_balance else 0
+        return abs(self.outstanding_balance) if self.outstanding_balance else 0
 
 
 class Payment(models.Model):

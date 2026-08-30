@@ -223,13 +223,31 @@
                         </span>
                     </li>
                     <li>
-                        <span class="info-label">Advance Payment</span>
-                        <span class="info-value {% if customer.outstanding_balance > 0 %}text-success{% endif %}">
-                            ₱{{ customer.abs_outstanding_balance|floatformat:2 }}
-                            {% if request.user.role == 'Admin' %}
-                            <button type="button" class="btn btn-sm btn-link p-0 ms-2 text-primary" data-bs-toggle="modal" data-bs-target="#editBalanceModal"><i class="fas fa-edit"></i></button>
-                            {% endif %}
-                        </span>
+                        {% if customer.outstanding_balance < 0 %}
+                            <span class="info-label">Advance Payment</span>
+                            <span class="info-value text-success">
+                                ₱{{ customer.abs_outstanding_balance|floatformat:2 }}
+                                {% if request.user.role == 'Admin' %}
+                                <button type="button" class="btn btn-sm btn-link p-0 ms-2 text-primary" data-bs-toggle="modal" data-bs-target="#editBalanceModal"><i class="fas fa-edit"></i></button>
+                                {% endif %}
+                            </span>
+                        {% elif customer.outstanding_balance > 0 %}
+                            <span class="info-label">Outstanding Balance</span>
+                            <span class="info-value text-danger">
+                                ₱{{ customer.outstanding_balance|floatformat:2 }}
+                                {% if request.user.role == 'Admin' %}
+                                <button type="button" class="btn btn-sm btn-link p-0 ms-2 text-primary" data-bs-toggle="modal" data-bs-target="#editBalanceModal"><i class="fas fa-edit"></i></button>
+                                {% endif %}
+                            </span>
+                        {% else %}
+                            <span class="info-label">Outstanding Balance</span>
+                            <span class="info-value text-muted">
+                                ₱0.00
+                                {% if request.user.role == 'Admin' %}
+                                <button type="button" class="btn btn-sm btn-link p-0 ms-2 text-primary" data-bs-toggle="modal" data-bs-target="#editBalanceModal"><i class="fas fa-edit"></i></button>
+                                {% endif %}
+                            </span>
+                        {% endif %}
                     </li>
                 </ul>
             </div>
