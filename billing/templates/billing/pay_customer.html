@@ -4,6 +4,7 @@
 {% block title %}Pay for {{ customer.username|default:customer.full_name }} | Gametech{% endblock %}
 
 {% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
@@ -383,6 +384,23 @@ document.addEventListener('DOMContentLoaded', function() {
     amountInput.readOnly = true; // 1 Month is active by default
     amountInput.value = monthlyPrice.toFixed(2);
     updatePreview();
+});
+</script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    new TomSelect('#plan-dropdown', {
+        create: false,
+        sortField: {
+            field: "text",
+            direction: "asc"
+        },
+        onChange: function(value) {
+            // Trigger the native change event so the existing logic catches it
+            const event = new Event('change');
+            document.getElementById('plan-dropdown').dispatchEvent(event);
+        }
+    });
 });
 </script>
 {% endblock %}
