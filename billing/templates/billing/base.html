@@ -869,7 +869,6 @@ document.addEventListener("DOMContentLoaded", function() {
     
     // Online staff JS
     function fetchOnlineStaff() {
-        const isDark = document.documentElement.classList.contains('dark-mode');
         fetch('/api/online-staff/')
             .then(r => r.json())
             .then(data => {
@@ -877,28 +876,18 @@ document.addEventListener("DOMContentLoaded", function() {
                     const list = document.getElementById('onlineStaffList');
                     const badge = document.getElementById('onlineStaffBadge');
                     const colors = ['#059669','#2563eb','#7c3aed','#dc2626','#ea580c','#0891b2'];
-                    
-                    // Theme-aware colors
-                    const rowBg     = isDark ? 'rgba(255,255,255,0.04)' : '#f8faff';
-                    const rowBorder = isDark ? 'rgba(255,255,255,0.08)' : '#e2e8f0';
-                    const nameCls   = isDark ? '#e2e8f0' : '#111827';
-                    const circBg    = isDark ? 'rgba(52,211,153,0.1)' : '#f0fdf4';
-                    const circColor = isDark ? '#6ee7b7' : '#9ca3af';
-                    const onlineBg  = isDark ? 'rgba(52,211,153,0.12)' : '#f0fdf4';
-                    const onlineClr = isDark ? '#6ee7b7' : '#16a34a';
-                    const onlineBdr = isDark ? 'rgba(52,211,153,0.3)' : '#bbf7d0';
 
                     if(data.data.length > 0) {
                         badge.style.display = 'inline-block';
                         badge.innerText = data.data.length;
-                        
+
                         let html = '<div class="p-2 d-flex flex-column gap-2">';
                         data.data.forEach((user, idx) => {
                             const color = colors[idx % colors.length];
                             const initial = user.username.charAt(0).toUpperCase();
                             const roleColor = user.role === 'Admin' ? '#dc2626' : user.role === 'CSR' ? '#2563eb' : '#059669';
                             html += `
-                            <div class="d-flex align-items-center gap-3 p-2 rounded-3" style="background: ${rowBg}; border: 1px solid ${rowBorder}; transition: background 0.2s;">
+                            <div class="d-flex align-items-center gap-3 p-2 rounded-3 gt-staff-row">
                                 <div class="position-relative flex-shrink-0">
                                     <div class="d-flex align-items-center justify-content-center rounded-circle text-white fw-bold" style="width:42px;height:42px;background:${color};font-size:1.1rem;letter-spacing:-1px;">
                                         ${initial}
@@ -906,11 +895,11 @@ document.addEventListener("DOMContentLoaded", function() {
                                     <span class="position-absolute bottom-0 end-0 border border-2 border-white rounded-circle bg-success" style="width:12px;height:12px;"></span>
                                 </div>
                                 <div class="flex-grow-1 overflow-hidden">
-                                    <div class="fw-bold" style="font-size:0.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${nameCls};">${user.username}</div>
+                                    <div class="fw-bold gt-staff-name" style="font-size:0.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${user.username}</div>
                                     <span class="badge rounded-pill" style="font-size:0.68rem;background:${roleColor}20;color:${roleColor};border:1px solid ${roleColor}40;">${user.role}</span>
                                 </div>
                                 <div class="text-end flex-shrink-0">
-                                    <span class="badge rounded-pill" style="font-size:0.65rem;background:${onlineBg};color:${onlineClr};border:1px solid ${onlineBdr};">
+                                    <span class="badge rounded-pill gt-online-badge">
                                         <i class="fas fa-circle" style="font-size:0.5rem;"></i> Online
                                     </span>
                                 </div>
@@ -921,9 +910,9 @@ document.addEventListener("DOMContentLoaded", function() {
                     } else {
                         badge.style.display = 'none';
                         list.innerHTML = `
-                        <div class="p-4 text-center" style="color:${isDark ? '#94a3b8' : '#6b7280'};">
-                            <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-2" style="width:52px;height:52px;background:${circBg};">
-                                <i class="fas fa-user-slash" style="color:${circColor};font-size:1.2rem;"></i>
+                        <div class="p-4 text-center gt-muted-text">
+                            <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-2 gt-icon-circle">
+                                <i class="fas fa-user-slash" style="font-size:1.2rem;"></i>
                             </div>
                             <div class="fw-semibold" style="font-size:0.85rem;">No one else is online</div>
                             <div style="font-size:0.75rem;opacity:0.7;">Only you are logged in right now</div>
@@ -933,6 +922,13 @@ document.addEventListener("DOMContentLoaded", function() {
             })
             .catch(err => console.error(err));
     }
+
+    // Re-render staff list when theme changes so colors update immediately
+    window.addEventListener('themeChanged', () => {
+        if(document.getElementById('onlineStaffBadge')?.style.display !== 'none') {
+            fetchOnlineStaff();
+        }
+    });
 
     
     // Fetch once on load to show badge
