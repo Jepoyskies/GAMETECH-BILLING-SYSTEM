@@ -1,7 +1,7 @@
 import os
 import django
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gametech_billing.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gametech_core.settings')
 django.setup()
 
 from billing.models import SubscriptionPlan
