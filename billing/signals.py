@@ -230,11 +230,20 @@ from network_manager.models import MikrotikDevice
 def sync_plan_on_save(sender, instance, created, **kwargs):
     """
     When a SubscriptionPlan is saved in Django, push it to all active Mikrotik devices.
+    If the name was changed, delete the old profile first.
     """
     devices = MikrotikDevice.objects.all()
     for device in devices:
         try:
             api = MikrotikAPI(device)
+            
+            # Check if name was changed
+            if hasattr(instance, '_original_name') and instance._original_name and instance._original_name != instance.name:
+                try:
+                    api.delete_plan_from_mikrotik(plan_name=instance._original_name)
+                except Exception as e:
+                    logger.warning(f"Could not delete old plan {instance._original_name} from {device.device_name} during rename: {e}")
+
             api.sync_plan_to_mikrotik(
                 plan_name=instance.name,
                 speed_up=instance.speed_up,
