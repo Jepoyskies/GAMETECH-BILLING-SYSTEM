@@ -181,6 +181,12 @@ class Customer(models.Model):
     def abs_outstanding_balance(self):
         return abs(self.outstanding_balance) if self.outstanding_balance else 0
 
+    @property
+    def advance_months_covered(self):
+        if self.outstanding_balance < 0 and self.plan and self.plan.price > 0:
+            return int(abs(self.outstanding_balance) // self.plan.price)
+        return 0
+
 
 class Payment(models.Model):
     customer = models.ForeignKey(
