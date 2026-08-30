@@ -553,15 +553,15 @@ def winbox_dashboard(request, device_id):
     
     secrets = api.get_ppp_secrets()
     for s in secrets:
-        s['id'] = s.get('.id', '')
+        s['id'] = s.get('id') or s.get('.id', '')
         
     profiles = api.get_ppp_profiles()
     for p in profiles:
-        p['id'] = p.get('.id', '')
+        p['id'] = p.get('id') or p.get('.id', '')
         
     active_users = api.get_active_pppoe_users()
     for a in active_users:
-        a['id'] = a.get('.id', '')
+        a['id'] = a.get('id') or a.get('.id', '')
     
     context = {
         'device': device,
