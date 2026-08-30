@@ -129,6 +129,7 @@ urlpatterns = [
     path('settings/barangays/edit/<int:pk>/', views.edit_barangay, name='edit_barangay'),
     path('settings/barangays/delete/<int:pk>/', views.delete_barangay, name='delete_barangay'),
     
+    path('settings/import/', views.import_legacy_data_view, name='import_legacy_data'),
     path('settings/backup/', views.backup_database_view, name='backup_database'),
     
     path('api/live-addon-requests/', views.live_addon_requests_api, name='live_addon_requests_api'),

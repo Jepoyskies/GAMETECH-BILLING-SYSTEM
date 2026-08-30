@@ -3382,3 +3382,42 @@ def improvement_requests_list(request):
 @user_passes_test(lambda u: u.is_superuser)
 def changelog_view(request):
     return render(request, 'billing/changelog.html')
+
+
+@login_required
+@role_required(['Admin'])
+def import_legacy_data_view(request):
+    import csv
+    import io
+    from django.contrib import messages
+    from django.core.management import call_command
+    from django.http import HttpResponseRedirect
+    from django.urls import reverse
+
+    if request.method == 'POST':
+        csv_file = request.FILES.get('csv_file')
+        if not csv_file:
+            messages.error(request, "Please upload a CSV file.")
+            return HttpResponseRedirect(reverse('import_legacy_data'))
+
+        if not csv_file.name.endswith('.csv'):
+            messages.error(request, "File must be a CSV.")
+            return HttpResponseRedirect(reverse('import_legacy_data'))
+
+        try:
+            # We save the file to a temp location so the management command can read it
+            import tempfile
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as tmp:
+                for chunk in csv_file.chunks():
+                    tmp.write(chunk)
+                tmp_path = tmp.name
+
+            # Run the migration command
+            call_command('core_migration', tmp_path)
+            messages.success(request, "Legacy data imported successfully!")
+        except Exception as e:
+            messages.error(request, f"Error during migration: {str(e)}")
+
+        return HttpResponseRedirect(reverse('import_legacy_data'))
+
+    return render(request, 'billing/import_data.html')
