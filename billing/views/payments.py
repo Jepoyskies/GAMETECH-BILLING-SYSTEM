@@ -436,19 +436,13 @@ def pay_customer_view(request, username):
                     link=f"/logs/payments/"
                 )
 
-            # 5. Mikrotik API Reactivation & Comments
+            # 5. Mikrotik API Reactivation
             if customer.mikrotik_device:
                 try:
                     from network_manager.services import MikrotikAPI
                     api = MikrotikAPI(customer.mikrotik_device)
                     
-                    # Mikrotik Format: paid (date) exp (date) . plan . method . admin
-                    expiry_str = new_expiry.strftime('%b %d, %Y')
-                    paid_str = timezone.now().strftime('%b %d, %Y')
-                    plan_name = customer.plan.name if customer.plan else "No Plan"
-                    admin_name = request.user.username if request.user.is_authenticated else "Admin"
-                    comment_text = f"paid {paid_str} exp {expiry_str} . {plan_name} . {payment_method} . {admin_name} . {reason}"
-                    api.set_pppoe_comment(customer.pppoe_username, comment_text)
+                    # Note: PPPoE comment generation is now handled automatically by billing/signals.py
                     
                     if was_suspended:
                         # 1. Enable the user (Removes bridge drop and enables secret)
@@ -636,11 +630,7 @@ def revert_transfer_payment(request, payment_id):
             try:
                 api_new = MikrotikAPI(new_customer.mikrotik_device)
                 
-                expiry_str = new_expiry.strftime('%b %d, %Y')
-                paid_str = payment.created_at.strftime('%b %d, %Y')
-                plan_name = new_customer.plan.name if new_customer.plan else "No Plan"
-                comment_text = f"paid {paid_str} exp {expiry_str} . {plan_name} . {payment.payment_method} . Transfer"
-                api_new.set_pppoe_comment(new_customer.pppoe_username, comment_text)
+                # Note: PPPoE comment generation is now handled automatically by billing/signals.py
                 
                 if was_suspended and new_customer.plan and new_customer.plan.name:
                     api_new.enable_pppoe_user(new_customer.pppoe_username)
