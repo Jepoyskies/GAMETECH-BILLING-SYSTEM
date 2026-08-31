@@ -89,6 +89,13 @@ def sync_customer_to_mikrotik(sender, instance, created, **kwargs):
         
         # Format the comment to include location data safely
         comment_parts = [str(instance.full_name) if instance.full_name else "Unknown"]
+        
+        if instance.phone:
+            comment_parts.append(str(instance.phone))
+            
+        if instance.expires_at:
+            comment_parts.append(f"Exp: {instance.expires_at.strftime('%Y-%m-%d')}")
+            
         if instance.barangay and instance.barangay.name:
             comment_parts.append(str(instance.barangay.name))
         elif instance.address:
