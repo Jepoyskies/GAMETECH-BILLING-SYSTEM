@@ -21,8 +21,100 @@
         margin-bottom: 1rem;
     }
 
-</style>
+    /* ============================================================
+       ULTRA-COMPACT MOBILE-FIRST ARCHITECTURE
+       Mobile (<768px): block-level cards  |  Desktop: normal table
+    ============================================================ */
+    @media (max-width: 767.98px) {
 
+        /* ── Hide desktop table chrome ── */
+        #customerTable thead { display: none !important; }
+        #customerTable,
+        #customerTable tbody { display: block !important; width: 100% !important; }
+
+        /* ── Each <tr> becomes a compact profile card ── */
+        #customerTable tbody tr {
+            display: block;
+            position: relative;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 11px 13px 9px 13px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+        #customerTable tbody tr.table-warning { border-color: #fde68a; background: #fffbeb; }
+        #customerTable tbody tr.table-secondary { border-color: #e2e8f0; background: #f8fafc; }
+
+        /* ── All <td> reset ── */
+        #customerTable tbody tr td {
+            display: block;
+            padding: 0 !important;
+            border: none !important;
+        }
+
+        /* col 1 – Checkbox: hide on mobile */
+        #customerTable tbody tr td:nth-child(1) { display: none; }
+
+        /* col 2 – Full Name: bold, leave room for button */
+        #customerTable tbody tr td:nth-child(2) {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #1e293b;
+            padding-right: 72px !important;
+        }
+
+        /* col 3 – Email: hide */
+        #customerTable tbody tr td:nth-child(3) { display: none; }
+
+        /* col 4 – Phone */
+        #customerTable tbody tr td:nth-child(4) {
+            font-size: 0.76rem;
+            color: #64748b;
+            margin-top: 3px;
+        }
+
+        /* col 5 – Plan: inline */
+        #customerTable tbody tr td:nth-child(5) {
+            display: inline !important;
+            font-size: 0.74rem;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        /* col 6 – Agent: hide */
+        #customerTable tbody tr td:nth-child(6) { display: none; }
+
+        /* col 7 – Barangay: inline next to Plan */
+        #customerTable tbody tr td:nth-child(7) {
+            display: inline !important;
+            font-size: 0.74rem;
+            color: #64748b;
+        }
+        #customerTable tbody tr td:nth-child(7)::before {
+            content: '  ·  ';
+            color: #cbd5e1;
+        }
+
+        /* col 8 – Router: hide */
+        #customerTable tbody tr td:nth-child(8) { display: none; }
+
+        /* col 9 – Status: hide the big badge; show only conn-status badge */
+        #customerTable tbody tr td:nth-child(9) { margin-top: 5px; }
+        #customerTable tbody tr td:nth-child(9) > .badge:first-child { display: none !important; }
+
+        /* col 10 – Actions: absolute top-right */
+        #customerTable tbody tr td:nth-child(10) {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        #customerTable tbody tr td:nth-child(10) .btn {
+            padding: 3px 10px;
+            font-size: 0.74rem;
+        }
+    }
+</style>
 
 {% endblock %}
 
@@ -114,19 +206,45 @@
                 <tbody>
                     {% for customer in customers %}
                     <tr class="{% if customer.status == 'suspended' or customer.status == 'expired' %}table-warning{% elif customer.status == 'inactive' or customer.status == 'pull out' %}table-secondary text-muted{% endif %}">
+                        {# col 1 – Checkbox #}
                         <td style="text-align: center;">
                             <input type="checkbox" class="form-check-input customer-checkbox shadow-sm" value="{{ customer.id }}" style="cursor: pointer;">
                         </td>
-                        <td><b>{{ customer.full_name }}</b></td>
+
+                        {# col 2 – Full Name + mobile glowing status dot #}
+                        <td>
+                            {% if customer.status == 'active' %}
+                                <span class="d-inline-block d-md-none me-1 rounded-circle align-middle"
+                                      style="width:9px;height:9px;background:#22c55e;box-shadow:0 0 6px rgba(34,197,94,0.55);"></span>
+                            {% elif customer.status == 'suspended' or customer.status == 'expired' %}
+                                <span class="d-inline-block d-md-none me-1 rounded-circle align-middle"
+                                      style="width:9px;height:9px;background:#f59e0b;box-shadow:0 0 6px rgba(245,158,11,0.55);"></span>
+                            {% elif customer.status == 'inactive' or customer.status == 'pull out' %}
+                                <span class="d-inline-block d-md-none me-1 rounded-circle align-middle"
+                                      style="width:9px;height:9px;background:#94a3b8;box-shadow:0 0 5px rgba(148,163,184,0.4);"></span>
+                            {% else %}
+                                <span class="d-inline-block d-md-none me-1 rounded-circle align-middle"
+                                      style="width:9px;height:9px;background:#64748b;box-shadow:0 0 5px rgba(100,116,139,0.4);"></span>
+                            {% endif %}
+                            <b>{{ customer.full_name }}</b>
+                        </td>
+
+                        {# col 3 – Email #}
                         <td>{{ customer.email }}</td>
+
+                        {# col 4 – Phone #}
                         <td>{{ customer.phone }}</td>
+
+                        {# col 5 – Plan (with mobile wifi icon) #}
                         <td>
                             {% if customer.plan %}
-                                {{ customer.plan.name }}
+                                <i class="fa-solid fa-wifi d-inline d-md-none text-secondary me-1" style="font-size:0.68rem;"></i>{{ customer.plan.name }}
                             {% else %}
                                 <span class="text-muted">None</span>
                             {% endif %}
                         </td>
+
+                        {# col 6 – Agent #}
                         <td>
                             {% if customer.agent %}
                                 {{ customer.agent.name }}
@@ -134,13 +252,17 @@
                                 <span class="text-muted">None</span>
                             {% endif %}
                         </td>
+
+                        {# col 7 – Barangay (with mobile pin icon) #}
                         <td>
                             {% if customer.barangay %}
-                                {{ customer.barangay.name }}
+                                <i class="fa-solid fa-location-dot d-inline d-md-none text-secondary me-1" style="font-size:0.68rem;"></i>{{ customer.barangay.name }}
                             {% else %}
                                 <span class="text-muted">None</span>
                             {% endif %}
                         </td>
+
+                        {# col 8 – Router #}
                         <td>
                             {% if customer.mikrotik_device %}
                                 {{ customer.mikrotik_device.device_name }}
@@ -148,6 +270,8 @@
                                 <span class="text-muted">None</span>
                             {% endif %}
                         </td>
+
+                        {# col 9 – Status badge (hidden on mobile) + connection indicator #}
                         <td>
                             {% if customer.status == 'active' %}
                                 <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Active</span>
@@ -156,7 +280,7 @@
                             {% elif customer.status == 'pending' %}
                                 <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">Pending</span>
                             {% elif customer.status == 'suspended' %}
-                                <span class="badge bg-purple-subtle text-purple border border-purple-subtle px-2 py-1" style="background-color: rgba(99, 102, 241, 0.1); color: #6366f1; border-color: rgba(99, 102, 241, 0.2);">Suspended</span>
+                                <span class="badge border px-2 py-1" style="background-color:rgba(99,102,241,0.1);color:#6366f1;border-color:rgba(99,102,241,0.2);">Suspended</span>
                             {% elif customer.status == 'pull out' %}
                                 <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">Pull Out</span>
                             {% elif customer.status == 'expired' %}
@@ -164,12 +288,12 @@
                             {% else %}
                                 <span class="badge bg-secondary px-2 py-1">{{ customer.status|title }}</span>
                             {% endif %}
-                            <div class="mt-1 conn-status-indicator" style="font-size: 0.75rem;" 
-                                 data-pppoe="{{ customer.pppoe_username|default:'' }}" 
-                                 data-status="{{ customer.status|lower }}" 
-                                 data-customer-id="{{ customer.id }}" 
-                                 data-health-status="{{ customer.health_status }}" 
-                                 data-health-reason="{{ customer.health_reason|escapejs }}" 
+                            <div class="mt-1 conn-status-indicator" style="font-size: 0.75rem;"
+                                 data-pppoe="{{ customer.pppoe_username|default:'' }}"
+                                 data-status="{{ customer.status|lower }}"
+                                 data-customer-id="{{ customer.id }}"
+                                 data-health-status="{{ customer.health_status }}"
+                                 data-health-reason="{{ customer.health_reason|escapejs }}"
                                  data-balance="{{ customer.outstanding_balance|default:'0' }}"
                                  data-router-id="{{ customer.mikrotik_device.id|default:'' }}"
                                  data-router-health="{{ customer.mikrotik_device.health_status|default:'Excellent' }}"
@@ -178,16 +302,18 @@
                                  data-barangay-health="{{ customer.barangay.health_status|default:'Excellent' }}"
                                  data-barangay-name="{{ customer.barangay.name|default:'Unknown Barangay' }}"></div>
                         </td>
+
+                        {# col 10 – Actions: View always visible; Edit+Delete hidden on mobile #}
                         <td>
                             <div class="d-flex gap-2">
                                 <a href="{% url 'view_customer' customer.id %}" class="btn btn-sm btn-outline-info" title="View Details">
                                     <i class="fas fa-eye"></i>
                                 </a>
                                 {% if request.user.role == 'Admin' or request.user.role == 'Editor' %}
-                                <a href="{% url 'edit_customer' customer.id %}" class="btn btn-sm btn-outline-secondary" title="Edit Customer">
+                                <a href="{% url 'edit_customer' customer.id %}" class="btn btn-sm btn-outline-secondary d-none d-md-inline-flex" title="Edit Customer">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <form action="{% url 'delete_customer' customer.id %}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this customer?');">
+                                <form action="{% url 'delete_customer' customer.id %}" method="post" class="d-none d-md-inline" onsubmit="return confirm('Are you sure you want to delete this customer?');">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Customer">
                                         <i class="fas fa-trash-alt"></i>
@@ -196,6 +322,7 @@
                                 {% endif %}
                             </div>
                         </td>
+
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -204,6 +331,8 @@
     </div>
 
 </main>
+
+
 
 <!-- Bulk SMS Modal -->
 <div class="modal fade" id="bulkSmsModal" tabindex="-1" aria-labelledby="bulkSmsModalLabel" aria-hidden="true">
