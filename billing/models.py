@@ -196,24 +196,24 @@ class Customer(models.Model):
         return 0
 
     @property
-    def is_suspicious(self):
+    def suspicious_reasons(self):
         import re
-        if not self.pppoe_username:
-            return False
+        reasons = []
+        
+        if self.pppoe_username and re.search(r'[^a-zA-Z0-9\.\-\_]', self.pppoe_username):
+            reasons.append("Username contains invalid or suspicious characters")
             
-        # Check for weird characters in username
-        if re.search(r'[^a-zA-Z0-9\.\-\_]', self.pppoe_username):
-            return True
-            
-        # Check if plan is missing or suspiciously named 'default'
         if not self.plan or self.plan.name.lower() == 'default':
-            return True
+            reasons.append("Using an unauthorized 'default' or missing plan")
             
-        # Check if barangay is missing
         if not self.barangay:
-            return True
+            reasons.append("Missing Barangay assignment")
             
-        return False
+        return reasons
+
+    @property
+    def is_suspicious(self):
+        return len(self.suspicious_reasons) > 0
 
 
 
