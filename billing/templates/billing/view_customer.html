@@ -156,18 +156,40 @@
     </div>
     {% endif %}
 
-    {% if customer.is_suspicious %}
+    {% if customer.is_suspicious and not customer.is_verified %}
     <div class="card shadow-sm border-0 rounded-4 mb-4" style="background:#fef2f2; color:#b91c1c;">
-        <div class="card-body d-flex align-items-start p-3">
-            <div class="me-3 fs-3 mt-1"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="card-body d-flex justify-content-between align-items-center p-3">
+            <div class="d-flex align-items-start">
+                <div class="me-3 fs-3 mt-1"><i class="fas fa-exclamation-triangle"></i></div>
+                <div>
+                    <strong>Suspicious Account Detected</strong>
+                    <div class="mt-1 small">This account has been flagged for the following reasons and will be auto-suspended tonight if not verified:</div>
+                    <ul class="mb-0 mt-1 ps-3 small">
+                        {% for reason in customer.suspicious_reasons %}
+                        <li>{{ reason }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% if request.user.role == 'Admin' or request.user.is_superuser %}
             <div>
-                <strong>Suspicious Account Detected</strong>
-                <div class="mt-1 small">This account has been flagged for the following reasons:</div>
-                <ul class="mb-0 mt-1 ps-3 small">
-                    {% for reason in customer.suspicious_reasons %}
-                    <li>{{ reason }}</li>
-                    {% endfor %}
-                </ul>
+                <form action="{% url 'verify_customer' customer.id %}" method="POST">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-danger rounded-pill fw-medium px-3 shadow-sm">
+                        <i class="fas fa-shield-check me-1"></i> Verify Account
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% elif customer.is_suspicious and customer.is_verified %}
+    <div class="card shadow-sm border-0 rounded-4 mb-4" style="background:#ecfdf5; color:#065f46;">
+        <div class="card-body d-flex align-items-start p-3">
+            <div class="me-3 fs-3 mt-1"><i class="fas fa-shield-alt text-success"></i></div>
+            <div>
+                <strong>Account Verified</strong>
+                <div class="mt-1 small">This account triggered suspicious flags but was manually verified by an Admin. It is protected from auto-suspension.</div>
             </div>
         </div>
     </div>

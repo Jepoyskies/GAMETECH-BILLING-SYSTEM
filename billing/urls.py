@@ -22,6 +22,8 @@ urlpatterns = [
          views.api_customer_mikrotik_status, name='api_customer_mikrotik_status'),
     path('customers/delete/<int:customer_id>/',
          views.delete_customer, name='delete_customer'),
+    path('customers/verify/<int:customer_id>/',
+         views.verify_customer, name='verify_customer'),
     path('customer/force-suspend/<str:username>/', 
          views.customer_force_suspend, name='customer_force_suspend'),
     path('customer/kick-session/<str:username>/', 

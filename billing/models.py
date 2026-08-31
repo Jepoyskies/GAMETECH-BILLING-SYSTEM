@@ -162,6 +162,9 @@ class Customer(models.Model):
     cignalplay_no = models.CharField(max_length=100, null=True, blank=True)
     cignalplay_date = models.DateTimeField(null=True, blank=True)
 
+    # --- Security & Verification ---
+    is_verified = models.BooleanField(default=False)
+
     # --- Audit Logs ---
     created_form_by = models.CharField(max_length=100, null=True, blank=True)
     adjusted_by_router = models.CharField(

@@ -13,14 +13,14 @@ class Command(BaseCommand):
         # Fetch all customers where expiration date is in the past and status is active
         due_customers = Customer.objects.filter(expires_at__lte=now, status='active')
 
-        if not due_customers.exists():
-            self.stdout.write(self.style.WARNING("No active customers are currently past due."))
-            return
-
-        self.stdout.write(self.style.WARNING(f"Found {due_customers.count()} active past due customers. Starting check..."))
-        
         suspended_count = 0
         renewed_count = 0
+        rogue_suspended_count = 0
+
+        if not due_customers.exists():
+            self.stdout.write(self.style.WARNING("No active customers are currently past due."))
+        else:
+            self.stdout.write(self.style.WARNING(f"Found {due_customers.count()} active past due customers. Starting check..."))
         
         for customer in due_customers:
             plan_price = customer.plan.price if customer.plan else 0
@@ -99,4 +99,45 @@ class Command(BaseCommand):
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f"[ERROR] Unexpected error suspending {customer.pppoe_username}: {str(e)}"))
 
-        self.stdout.write(self.style.SUCCESS(f"[DONE] Process complete. Suspended: {suspended_count} | Auto-Renewed: {renewed_count}"))
+        # -------------------------------------------------------------
+        # PART 2: Auto-Suspend Suspicious/Rogue Accounts
+        # -------------------------------------------------------------
+        rogue_customers = [c for c in Customer.objects.filter(status='active', is_verified=False) if c.is_suspicious]
+
+        if not rogue_customers:
+            self.stdout.write(self.style.WARNING("No active rogue/suspicious customers found."))
+        else:
+            self.stdout.write(self.style.WARNING(f"Found {len(rogue_customers)} unverified rogue customers. Starting check..."))
+            
+            for customer in rogue_customers:
+                if not customer.mikrotik_device:
+                    self.stdout.write(self.style.ERROR(f"[WARNING] Rogue customer {customer.pppoe_username} has no Mikrotik device assigned. Skipping."))
+                    continue
+                    
+                try:
+                    mt = MikrotikAPI(customer.mikrotik_device)
+                    # Suspend the user (kicks session, drops secret)
+                    success, message = mt.suspend_pppoe_user(customer.pppoe_username)
+                    
+                    if success:
+                        customer.status = 'suspended'
+                        customer.save()
+                        
+                        SystemLog.objects.create(
+                            table_name='Customer',
+                            record_id=str(customer.id),
+                            action='UPDATE',
+                            changed_by='System (Auto-Suspend Rogue)',
+                            target_name=customer.full_name,
+                            old_data='status: active',
+                            new_data='status: suspended (Rogue Account)'
+                        )
+                        
+                        rogue_suspended_count += 1
+                        self.stdout.write(self.style.SUCCESS(f"[SUCCESS] Suspended Rogue {customer.pppoe_username} on {customer.mikrotik_device.device_name}: {message}"))
+                    else:
+                        self.stdout.write(self.style.ERROR(f"[FAILED] Failed to suspend Rogue {customer.pppoe_username} on Mikrotik: {message}"))
+                except Exception as e:
+                    self.stdout.write(self.style.ERROR(f"[ERROR] Unexpected error suspending Rogue {customer.pppoe_username}: {str(e)}"))
+
+        self.stdout.write(self.style.SUCCESS(f"[DONE] Process complete. Suspended Due: {suspended_count} | Auto-Renewed: {renewed_count} | Suspended Rogues: {rogue_suspended_count}"))

@@ -708,3 +708,27 @@ def bulk_transfer_router(request):
     return redirect('customer_list')
 
 
+@require_POST
+@role_required(['Admin', 'Editor'])
+@login_required
+def verify_customer(request, customer_id):
+    customer = get_object_or_404(Customer, id=customer_id)
+    if not customer.is_verified:
+        customer.is_verified = True
+        customer.save(update_fields=['is_verified'])
+        
+        SystemLog.objects.create(
+            table_name='Customer',
+            record_id=str(customer.id),
+            action='UPDATE',
+            changed_by=request.user.username,
+            target_name=customer.full_name,
+            old_data='is_verified: False',
+            new_data='is_verified: True (Admin Verified Rogue Account)'
+        )
+        
+        messages.success(request, f'Account {customer.pppoe_username} has been verified and protected from auto-suspension.')
+    else:
+        messages.info(request, 'Account is already verified.')
+        
+    return redirect('view_customer', customer_id=customer.id)
