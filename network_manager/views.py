@@ -588,12 +588,12 @@ def winbox_secret_action(request, device_id):
         
         if action == 'add':
             success, msg = api.add_pppoe_user(
-                request.POST.get('name'),
-                request.POST.get('password'),
-                request.POST.get('profile'),
-                request.POST.get('service', 'pppoe'),
-                request.POST.get('comment', ''),
-                disabled=request.POST.get('disabled') == 'on'
+                name=request.POST.get('name'),
+                password=request.POST.get('password'),
+                profile=request.POST.get('profile'),
+                service=request.POST.get('service', 'pppoe'),
+                comment=request.POST.get('comment', ''),
+                disabled='yes' if request.POST.get('disabled') == 'on' else 'no'
             )
             if success:
                 messages.success(request, f"Secret added: {msg}")
