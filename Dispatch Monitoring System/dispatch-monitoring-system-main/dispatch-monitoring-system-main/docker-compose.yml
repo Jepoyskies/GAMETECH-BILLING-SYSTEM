@@ -1,0 +1,73 @@
+# Limit log size to prevent disk from filling up
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: 3
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dispatch-db
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      POSTGRES_DB: dispatch_db
+      POSTGRES_USER: dispatch
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # ports:
+    #   - "5432:5432"   # Uncomment to access DB directly from host
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dispatch -d dispatch_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dispatch-net
+
+  app:
+    build: .
+    container_name: dispatch-app
+    restart: unless-stopped
+    mem_limit: 1g
+    cpus: 1
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:5502/health').then(r => process.exit(r.ok?0:1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    ports:
+      - "5502:5502"
+    environment:
+      NODE_ENV: production
+      PORT: 5502
+      DATABASE_URL: postgresql://dispatch:${DB_PASSWORD:-changeme}@postgres:5432/dispatch_db
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: 8h
+      CORS_ORIGINS: http://${SERVER_IP:-localhost}:5502
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: dispatch
+      BACKUP_DIR: /app/backups
+      PG_DUMP_PATH: pg_dump
+      PG_RESTORE_PATH: pg_restore
+      PSQL_PATH: psql
+    volumes:
+      - dispatch_backups:/app/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - dispatch-net
+
+volumes:
+  postgres_data:
+  dispatch_backups:
+
+networks:
+  dispatch-net:
+    driver: bridge

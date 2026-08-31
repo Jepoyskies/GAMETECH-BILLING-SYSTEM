@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main, development]
+  pull_request:
+    branches: [main, development]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm install
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: TypeScript type check - backend
+        working-directory: backend
+        run: npm run typecheck
+
+      - name: TypeScript type check - frontend
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: ESLint - backend
+        working-directory: backend
+        run: npm run lint
+
+      - name: ESLint - frontend
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build

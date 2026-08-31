@@ -1,0 +1,409 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// CSR (Customer Service Representative)
+// ─────────────────────────────────────────────
+model CSR {
+  id                    Int       @id @default(autoincrement())
+  name                  String
+  email                 String?   @unique
+  password_hash         String?
+  role                  Role?
+  last_login_at         DateTime?
+  failed_login_attempts Int       @default(0)
+  locked_until          DateTime?
+  must_change_password  Boolean   @default(false)
+  deleted_at            DateTime?
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
+
+  dispatches Dispatch[]
+  monitoring MonitoringRecord[]
+  audit_logs AuditLog[]
+
+  @@index([deleted_at])
+  @@index([role])
+}
+
+// ─────────────────────────────────────────────
+// CUSTOMER MASTER
+// ─────────────────────────────────────────────
+model Customer {
+  id             Int       @id @default(autoincrement())
+  name           String
+  address        String
+  contact_number String
+  account_number String?  @unique
+  email          String?
+  barangay_city  String?
+  latitude       Float?
+  longitude      Float?
+  deleted_at     DateTime?
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+
+  dispatches         Dispatch[]
+  monitoring_records MonitoringRecord[]
+
+  @@index([contact_number])
+  @@index([deleted_at, name])
+  @@index([deleted_at, created_at])
+}
+
+// ─────────────────────────────────────────────
+// AUDIT LOG (append-only / immutable)
+// ─────────────────────────────────────────────
+model AuditLog {
+  id          Int         @id @default(autoincrement())
+  action      AuditAction
+  entity_type String
+  entity_id   Int
+  summary     String?
+  before      Json?
+  after       Json?
+  actor       CSR         @relation(fields: [actor_id], references: [id])
+  actor_id    Int
+  created_at  DateTime    @default(now())
+
+  @@index([entity_type, entity_id])
+  @@index([actor_id])
+  @@index([created_at])
+}
+
+// ─────────────────────────────────────────────
+// TEAMS
+// ─────────────────────────────────────────────
+model Team {
+  id         Int       @id @default(autoincrement())
+  name       String    @unique
+  deleted_at DateTime?
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+
+  members Technician[]
+
+  @@index([deleted_at])
+}
+
+// ─────────────────────────────────────────────
+// TECHNICIANS
+// ─────────────────────────────────────────────
+model Technician {
+  id               Int       @id @default(autoincrement())
+  name             String    @unique
+  contact_number   String?
+  target_per_day   Int       @default(0)
+  target_per_month Int       @default(0)
+  team             Team?     @relation(fields: [team_id], references: [id], onDelete: SetNull)
+  team_id          Int?
+  deleted_at       DateTime?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  dispatch_teams   DispatchTeam[]
+  monitoring_teams MonitoringTeam[]
+
+  @@index([team_id])
+  @@index([deleted_at])
+}
+
+// ─────────────────────────────────────────────
+// MASTER DISPATCH LOG
+// ─────────────────────────────────────────────
+model Dispatch {
+  id              Int       @id @default(autoincrement())
+  date            DateTime
+  client          String
+  address         String
+  contact_number  String
+  concern         String
+  sales_agent     String
+  chat_type_id    Int
+  type_id         Int
+  status_id       Int
+  latitude        Float?
+  longitude       Float?
+  remarks         String?
+  time_start      DateTime?
+  time_accomplish DateTime?
+  duration        Int?
+  done_at         DateTime?
+  done_duration   Int?
+  source_tab      SourceTab
+  ticket_number   String?
+  actions_taken   String?
+  deleted_at      DateTime?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  teams          DispatchTeam[]
+  monitoring     MonitoringRecord? @relation(fields: [monitoring_id], references: [id], onDelete: SetNull)
+  monitoring_id  Int?              @unique
+  csr            CSR               @relation(fields: [csr_id], references: [id])
+  csr_id         Int
+  customer       Customer?         @relation(fields: [customer_id], references: [id], onDelete: SetNull)
+  customer_id    Int?
+  statusOption   ConfigOption      @relation("DispatchStatus", fields: [status_id], references: [id])
+  typeOption     ConfigOption      @relation("DispatchType", fields: [type_id], references: [id])
+  chatTypeOption ConfigOption      @relation("DispatchChatType", fields: [chat_type_id], references: [id])
+
+  @@index([status_id])
+  @@index([type_id])
+  @@index([chat_type_id])
+  @@index([csr_id])
+  @@index([date])
+  @@index([source_tab])
+  @@index([done_at])
+  @@index([deleted_at])
+  @@index([customer_id])
+}
+
+model DispatchTeam {
+  id            Int        @id @default(autoincrement())
+  dispatch      Dispatch   @relation(fields: [dispatch_id], references: [id], onDelete: Cascade)
+  dispatch_id   Int
+  technician    Technician @relation(fields: [technician_id], references: [id])
+  technician_id Int
+
+  @@unique([dispatch_id, technician_id])
+  @@index([dispatch_id])
+  @@index([technician_id])
+}
+
+// ─────────────────────────────────────────────
+// MONITORING (Internet Install, Cignal Play, Client Concerns)
+// ─────────────────────────────────────────────
+model MonitoringRecord {
+  id             Int       @id @default(autoincrement())
+  tab_type       SourceTab
+  date           DateTime
+  client         String
+  address        String
+  contact_number String
+  concern        String
+  sales_agent    String?
+  latitude       Float?
+  longitude      Float?
+  status_id      Int
+  type_id        Int?
+  chat_type_id   Int?
+  remarks        String?
+  ticket_number  String?
+  actions_taken  String?
+
+  time_start      DateTime?
+  time_accomplish DateTime?
+
+  done_at       DateTime?
+  done_duration Int?
+
+  deleted_at DateTime?
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+
+  teams          MonitoringTeam[]
+  dispatch       Dispatch?
+  jobDetail      JobDetail?
+  csr            CSR              @relation(fields: [csr_id], references: [id])
+  csr_id         Int
+  customer       Customer?        @relation(fields: [customer_id], references: [id], onDelete: SetNull)
+  customer_id    Int?
+  statusOption   ConfigOption     @relation("MonitoringStatus", fields: [status_id], references: [id])
+  typeOption     ConfigOption?    @relation("MonitoringType", fields: [type_id], references: [id])
+  chatTypeOption ConfigOption?    @relation("MonitoringChatType", fields: [chat_type_id], references: [id])
+
+  @@unique([ticket_number, tab_type])
+  @@index([tab_type])
+  @@index([status_id])
+  @@index([type_id])
+  @@index([chat_type_id])
+  @@index([csr_id])
+  @@index([date])
+  @@index([done_at])
+  @@index([deleted_at])
+  @@index([customer_id])
+}
+
+model MonitoringTeam {
+  id            Int              @id @default(autoincrement())
+  record        MonitoringRecord @relation(fields: [record_id], references: [id], onDelete: Cascade)
+  record_id     Int
+  technician    Technician       @relation(fields: [technician_id], references: [id])
+  technician_id Int
+
+  @@unique([record_id, technician_id])
+  @@index([record_id])
+  @@index([technician_id])
+}
+
+// ─────────────────────────────────────────────
+// INSTALL / REPAIR JOB DETAILS (1:1 with MonitoringRecord)
+// ─────────────────────────────────────────────
+model JobDetail {
+  id        Int              @id @default(autoincrement())
+  record_id Int              @unique
+  record    MonitoringRecord @relation(fields: [record_id], references: [id], onDelete: Cascade)
+
+  // ── Pending / Assignment fields ──
+  schedule_date DateTime?
+  schedule_time String?
+  barangay_city String?
+  account_no    String?
+  job_order     String?
+  email_address String?
+
+  // ── Completion fields (set when "Mark as Done") ──
+  nap_port            String?
+  cable_length        String?
+  nap_reading         String?
+  pole_number         String?
+  plan_package        String?
+  ont_modem_sn        String?
+  signal_level        String?
+  facility            String?
+  house_reading       String?
+  special_instruction String?
+
+  // ── Post-completion fields ──
+  technician_remarks String?
+  acknowledged_by    String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([record_id])
+}
+
+// ─────────────────────────────────────────────
+// CONFIG OPTIONS (Dropdown Options)
+// ─────────────────────────────────────────────
+model ConfigOption {
+  id                     Int              @id @default(autoincrement())
+  list_type              ConfigListType
+  module                 ConfigListModule
+  label                  String
+  color                  String
+  sort_order             Int              @default(0)
+  active                 Boolean          @default(true)
+  hardcoded              Boolean          @default(false)
+  dispatch_equivalent_id Int?
+  dispatch_equivalent    ConfigOption?    @relation("ConfigOptionEquivalent", fields: [dispatch_equivalent_id], references: [id])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  dispatch_status      Dispatch[]         @relation("DispatchStatus")
+  dispatch_type        Dispatch[]         @relation("DispatchType")
+  dispatch_chat_type   Dispatch[]         @relation("DispatchChatType")
+  monitoring_status    MonitoringRecord[] @relation("MonitoringStatus")
+  monitoring_type      MonitoringRecord[] @relation("MonitoringType")
+  monitoring_chat_type MonitoringRecord[] @relation("MonitoringChatType")
+  equivalent_of        ConfigOption[]     @relation("ConfigOptionEquivalent")
+
+  @@unique([list_type, module, label])
+  @@index([list_type, module, active])
+}
+
+// ─────────────────────────────────────────────
+// BACKUP HISTORY (append-only — never included in pg_dump)
+// ─────────────────────────────────────────────
+model BackupHistory {
+  id               Int           @id @default(autoincrement())
+  backup_type      BackupType
+  trigger_source   BackupTrigger
+  status           BackupStatus
+  filename         String
+  file_size        BigInt?
+  directory        String
+  error_message    String?
+  restored_from_id Int?
+  restored_by_id   Int?
+  created_at       DateTime      @default(now())
+
+  @@index([backup_type, created_at])
+  @@index([created_at])
+  @@index([status])
+}
+
+enum BackupType {
+  FULL
+  HOURLY
+  PRESAFETY
+  RESTORE
+}
+
+enum BackupTrigger {
+  SCHEDULED
+  MANUAL
+  PRESAFETY
+  RESTORE
+}
+
+enum BackupStatus {
+  SUCCESS
+  FAILED
+}
+
+// ─────────────────────────────────────────────
+// APP CONFIG (Key-Value Settings)
+// ─────────────────────────────────────────────
+model AppConfig {
+  id         Int      @id @default(autoincrement())
+  key        String   @unique
+  value      String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────
+// MONTHLY TARGET
+// ─────────────────────────────────────────────
+model MonthlyTarget {
+  id         Int      @id @default(autoincrement())
+  month      Int
+  year       Int
+  target     Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([month, year])
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum Role {
+  SUPERADMIN
+  CSR_ADMIN
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+enum SourceTab {
+  INTERNET_INSTALL
+  CIGNAL_PLAY
+  CLIENT_CONCERNS
+}
+
+enum ConfigListType {
+  STATUS
+  TYPE
+  CHAT_TYPE
+}
+
+enum ConfigListModule {
+  DISPATCH
+  MONITORING
+}
