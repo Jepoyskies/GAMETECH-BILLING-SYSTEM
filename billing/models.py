@@ -195,6 +195,27 @@ class Customer(models.Model):
             return int(abs(self.outstanding_balance) // self.plan.price)
         return 0
 
+    @property
+    def is_suspicious(self):
+        import re
+        if not self.pppoe_username:
+            return False
+            
+        # Check for weird characters in username
+        if re.search(r'[^a-zA-Z0-9\.\-\_]', self.pppoe_username):
+            return True
+            
+        # Check if plan is missing or suspiciously named 'default'
+        if not self.plan or self.plan.name.lower() == 'default':
+            return True
+            
+        # Check if barangay is missing
+        if not self.barangay:
+            return True
+            
+        return False
+
+
 
 class Payment(models.Model):
     customer = models.ForeignKey(
