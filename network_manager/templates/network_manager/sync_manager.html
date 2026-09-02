@@ -182,6 +182,7 @@
                                 <th>Barangay</th>
                                 <th>Profile</th>
                                 <th>Status</th>
+                                <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -195,8 +196,18 @@
                                 <td><span class="fw-bold">{{ user.name }}</span></td>
                                 <td>{{ user.customer.full_name|default:"-" }}</td>
                                 <td>{{ user.customer.barangay.name|default:"-" }}</td>
-                                <td><span class="badge bg-primary badge-custom">{{ user.profile }}</span></td>
+                                <td>
+                                    <span class="badge bg-primary badge-custom">{{ user.profile }}</span>
+                                    {% if user.is_suspicious %}
+                                    <span class="badge bg-warning text-dark ms-1" title="Missing info or default profile on Router"><i class="fas fa-exclamation-triangle"></i> Suspicious Format</span>
+                                    {% endif %}
+                                </td>
                                 <td><span class="text-success"><i class="fas fa-check"></i> Synced</span></td>
+                                <td class="text-end">
+                                    {% if user.customer %}
+                                    <a href="{% url 'view_customer' user.customer.id %}" class="btn btn-sm btn-outline-secondary" target="_blank"><i class="fas fa-external-link-alt"></i> View</a>
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
