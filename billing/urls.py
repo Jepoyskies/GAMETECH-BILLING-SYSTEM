@@ -24,6 +24,7 @@ urlpatterns = [
          views.delete_customer, name='delete_customer'),
     path('customers/verify/<int:customer_id>/',
          views.verify_customer, name='verify_customer'),
+    path('customers/<int:customer_id>/unverify/', views.unverify_customer, name='unverify_customer'),
     path('customer/force-suspend/<str:username>/', 
          views.customer_force_suspend, name='customer_force_suspend'),
     path('customer/kick-session/<str:username>/', 

@@ -203,6 +203,201 @@ def edit_customer(request, customer_id):
         
         # Handle ForeignKeys (using _id allows us to assign None if empty string, or the ID directly)
         plan_id = request.POST.get('plan_id')
+from django.utils import timezone
+from django.contrib.auth.models import User
+from django.db.models import Count, Sum, Q, Max
+from django.core.paginator import Paginator
+import json
+from datetime import timedelta, datetime
+from ..models import (
+    SystemAdmin, SubscriptionPlan, Agent, AccountType,
+    Customer, Barangay, Payment, Rebate, SystemLog, SmsLog, CignalPlay, AuditLog, AddOnRequest, Notification, ImprovementRequest
+)
+import requests
+from network_manager.models import MikrotikDevice, NapBox
+from network_manager.services import MikrotikAPI
+from django.db import transaction
+import calendar
+
+@login_required
+@require_POST
+def bulk_sms_view(request):
+    import json
+    import time
+    try:
+        data = json.loads(request.body)
+        customer_ids = data.get('customer_ids', [])
+        message = data.get('message', '').strip()
+
+        if not customer_ids or not message:
+            return JsonResponse({'success': False, 'error': 'Missing customers or message.'})
+
+        customers = Customer.objects.filter(id__in=customer_ids)
+        sent_count = 0
+
+        for customer in customers:
+            if customer.phone:
+                response, is_success = send_semaphore_sms(customer.phone, message)
+                if is_success:
+                    sent_count += 1
+                time.sleep(0.1)  # Prevent rate limiting
+
+        return JsonResponse({'success': True, 'sent_count': sent_count})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def customer_list(request):
+    from network_manager.models import MikrotikDevice
+    from django.utils import timezone
+    from datetime import timedelta
+    from django.db.models import Case, When, Value, IntegerField
+    
+    customers = Customer.objects.select_related(
+        'plan', 'agent', 'barangay', 'mikrotik_device').all()
+        
+    filter_type = request.GET.get('filter', 'all')
+    
+    if filter_type == 'nearing_expiration':
+        three_days_from_now = timezone.now() + timedelta(days=3)
+        customers = customers.filter(expires_at__lte=three_days_from_now, status='active')
+    elif filter_type == 'advance_payment':
+        customers = customers.filter(outstanding_balance__gt=0)
+        
+    customers = customers.annotate(
+        status_order=Case(
+            When(status='active', then=Value(1)),
+            When(status='pending', then=Value(2)),
+            When(status='suspended', then=Value(3)),
+            When(status='expired', then=Value(4)),
+            When(status='inactive', then=Value(5)),
+            When(status='pull out', then=Value(6)),
+            default=Value(7),
+            output_field=IntegerField(),
+        )
+    ).order_by('status_order', 'full_name')
+        
+    devices = MikrotikDevice.objects.all().order_by('device_name')
+    from ..models import Barangay
+    barangays = Barangay.objects.all().order_by('name')
+    return render(request, 'billing/customer_list.html', {
+        'customers': customers,
+        'devices': devices,
+        'barangays': barangays,
+        'filter_type': filter_type
+    })
+
+
+@login_required
+@role_required(['Admin', 'Agent', 'CSR'])
+@permission_required('billing.add_customer', raise_exception=True)
+def add_customer(request):
+    if request.method == 'POST':
+        from django.utils.crypto import get_random_string
+        if request.user.role == 'Agent':
+            barangay_name = request.POST.get('barangay_name')
+            if barangay_name:
+                barangay, _ = Barangay.objects.get_or_create(
+                    name__iexact=barangay_name, 
+                    defaults={'name': barangay_name, 'health_status': 'Excellent'}
+                )
+                barangay_id = barangay.id
+            else:
+                barangay_id = None
+            latitude = None
+            longitude = None
+        else:
+            barangay_id = request.POST.get('barangay_id')
+            latitude = request.POST.get('latitude') or None
+            longitude = request.POST.get('longitude') or None
+
+        customer = Customer.objects.create(
+            full_name=request.POST.get('full_name'),
+            email=request.POST.get('email') or None,
+            phone=request.POST.get('phone'),
+            address=request.POST.get('address'),
+            pppoe_username=request.POST.get('pppoe_username') or None,
+            pppoe_password=request.POST.get('pppoe_password') or get_random_string(8),
+            status='pending' if request.user.role == 'Agent' else request.POST.get('status', 'active'),
+            plan_id=request.POST.get('plan_id'),
+            mikrotik_device_id=request.POST.get('device_id') or None,
+            agent_id=request.POST.get('agent_id'),
+            barangay_id=barangay_id,
+            account_type_id=request.POST.get('account_type_id') or None,
+            latitude=latitude,
+            longitude=longitude,
+            cignalplay_no=request.POST.get('cignalplay_no'),
+            cignalplay_date=request.POST.get('cignalplay_date') or None,
+            created_form_by=request.user.username
+        )
+        
+        from ..models import SystemLog
+        SystemLog.objects.create(
+            table_name='Customer',
+            record_id=str(customer.id),
+            action='ADD',
+            changed_by=request.user.username,
+            target_name=customer.full_name,
+            old_data="",
+            new_data=f"Name: {customer.full_name}\nPhone: {customer.phone}\nStatus: {customer.status}"
+        )
+        messages.success(request, 'Customer added successfully!')
+        return redirect('customer_list')
+    context = {
+        'categorized_plans': get_categorized_plans(),
+        'devices': MikrotikDevice.objects.all(),
+        'agents': Agent.objects.all(),
+        'barangays': Barangay.objects.all(),
+        'account_types': AccountType.objects.all(),
+        'prefill_username': request.GET.get('pppoe_username', '')
+    }
+    return render(request, 'billing/add_customer.html', context)
+
+
+@role_required(['Admin', 'Editor'])
+@login_required
+def edit_customer(request, customer_id):
+    customer = get_object_or_404(Customer, id=customer_id)
+    if request.method == 'POST':
+        old_data = []
+        new_data = []
+
+        def check_change(field_name, old_val, new_val):
+            # Treat None and empty string as equivalent for logging
+            if (old_val or "") != (new_val or ""):
+                old_data.append(f"{field_name}: {old_val}")
+                new_data.append(f"{field_name}: {new_val}")
+
+        check_change('Name', customer.full_name, request.POST.get('full_name'))
+        customer.full_name = request.POST.get('full_name')
+
+        check_change('Email', customer.email, request.POST.get('email'))
+        customer.email = request.POST.get('email') or None
+
+        check_change('Phone', customer.phone, request.POST.get('phone'))
+        customer.phone = request.POST.get('phone')
+
+        check_change('Address', customer.address, request.POST.get('address'))
+        customer.address = request.POST.get('address')
+
+        check_change('PPPoE Username', customer.pppoe_username, request.POST.get('pppoe_username'))
+        customer.pppoe_username = request.POST.get('pppoe_username') or None
+        
+        new_password = request.POST.get('pppoe_password')
+        if new_password:
+            check_change('PPPoE Password', '***', '*** (changed)')
+            customer.pppoe_password = new_password
+        elif not customer.pppoe_password:
+            from django.utils.crypto import get_random_string
+            customer.pppoe_password = get_random_string(8)
+            check_change('PPPoE Password', 'None', '*** (auto-generated)')
+            
+        check_change('Status', customer.status, request.POST.get('status', 'active'))
+        customer.status = request.POST.get('status', 'active')
+        
+        # Handle ForeignKeys (using _id allows us to assign None if empty string, or the ID directly)
+        plan_id = request.POST.get('plan_id')
         if str(customer.plan_id or "") != str(plan_id or ""):
             old_data.append(f"Plan ID: {customer.plan_id}")
             new_data.append(f"Plan ID: {plan_id}")
@@ -213,6 +408,12 @@ def edit_customer(request, customer_id):
             old_data.append(f"Device ID: {customer.mikrotik_device_id}")
             new_data.append(f"Device ID: {device_id}")
         customer.mikrotik_device_id = device_id if device_id else None
+        
+        if request.POST.get('is_verified') == 'True':
+            if not customer.is_verified:
+                old_data.append('is_verified: False')
+                new_data.append('is_verified: True')
+                customer.is_verified = True
         
         agent_id = request.POST.get('agent_id')
         if str(customer.agent_id or "") != str(agent_id or ""):
@@ -730,5 +931,31 @@ def verify_customer(request, customer_id):
         messages.success(request, f'Account {customer.pppoe_username} has been verified and protected from auto-suspension.')
     else:
         messages.info(request, 'Account is already verified.')
+        
+    return redirect('view_customer', customer_id=customer.id)
+
+
+@require_POST
+@role_required(['Admin', 'Editor'])
+@login_required
+def unverify_customer(request, customer_id):
+    customer = get_object_or_404(Customer, id=customer_id)
+    if customer.is_verified:
+        customer.is_verified = False
+        customer.save(update_fields=['is_verified'])
+        
+        SystemLog.objects.create(
+            table_name='Customer',
+            record_id=str(customer.id),
+            action='UPDATE',
+            changed_by=request.user.username,
+            target_name=customer.full_name,
+            old_data='is_verified: True',
+            new_data='is_verified: False (Admin Unverified Account)'
+        )
+        
+        messages.success(request, f'Account {customer.pppoe_username} has been unverified and is now subject to regular checks.')
+    else:
+        messages.info(request, 'Account is not verified.')
         
     return redirect('view_customer', customer_id=customer.id)

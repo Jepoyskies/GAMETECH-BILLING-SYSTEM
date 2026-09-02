@@ -173,24 +173,33 @@
             </div>
             {% if request.user.role == 'Admin' or request.user.is_superuser %}
             <div>
-                <form action="{% url 'verify_customer' customer.id %}" method="POST">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-danger rounded-pill fw-medium px-3 shadow-sm">
-                        <i class="fas fa-shield-check me-1"></i> Verify Account
-                    </button>
-                </form>
+                <a href="{% url 'edit_customer' customer.id %}?action=verify" class="btn btn-sm btn-danger rounded-pill fw-medium px-3 shadow-sm">
+                    <i class="fas fa-shield-check me-1"></i> Verify Account
+                </a>
             </div>
             {% endif %}
         </div>
     </div>
     {% elif customer.is_suspicious and customer.is_verified %}
     <div class="card shadow-sm border-0 rounded-4 mb-4" style="background:#ecfdf5; color:#065f46;">
-        <div class="card-body d-flex align-items-start p-3">
-            <div class="me-3 fs-3 mt-1"><i class="fas fa-shield-alt text-success"></i></div>
-            <div>
-                <strong>Account Verified</strong>
-                <div class="mt-1 small">This account triggered suspicious flags but was manually verified by an Admin. It is protected from auto-suspension.</div>
+        <div class="card-body d-flex justify-content-between align-items-center p-3">
+            <div class="d-flex align-items-start">
+                <div class="me-3 fs-3 mt-1"><i class="fas fa-shield-alt text-success"></i></div>
+                <div>
+                    <strong>Account Verified</strong>
+                    <div class="mt-1 small">This account triggered suspicious flags but was manually verified by an Admin. It is protected from auto-suspension.</div>
+                </div>
             </div>
+            {% if request.user.role == 'Admin' or request.user.is_superuser %}
+            <div>
+                <form action="{% url 'unverify_customer' customer.id %}" method="POST" onsubmit="return confirm('Are you sure you want to unverify this account? It may be auto-suspended if it is still flagged as suspicious.');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-success rounded-pill fw-medium px-3 shadow-sm" style="background-color: transparent; border-color: #059669; color: #059669;" onmouseover="this.style.backgroundColor='#059669'; this.style.color='#fff';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#059669';">
+                        <i class="fas fa-undo me-1"></i> Undo Verification
+                    </button>
+                </form>
+            </div>
+            {% endif %}
         </div>
     </div>
     {% endif %}

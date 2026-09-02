@@ -32,6 +32,13 @@
         <form method="post" autocomplete="off" id="edit-customer-form" novalidate>
             {% csrf_token %}
 
+            {% if request.GET.action == 'verify' %}
+            <div class="alert alert-info border-0 rounded-4 shadow-sm mb-4" style="background:#e0f2fe; color:#0369a1;">
+                <i class="fas fa-info-circle me-2"></i><strong>Verification Mode:</strong> Please ensure all missing details (like Plan, Barangay, Device) are filled in. Saving this form will mark the account as <strong>Verified</strong>.
+            </div>
+            <input type="hidden" name="is_verified" value="True">
+            {% endif %}
+
             <div class="form-section-label"><i class="fas fa-id-card me-1"></i> Basic Information</div>
 
             <div class="mb-3">
@@ -222,7 +229,13 @@
 
             <div class="d-flex align-items-center justify-content-between gap-2 mt-4">
                 <a href="{% url 'view_customer' customer.id %}" class="btn-cancel">Cancel</a>
-                <button type="submit" class="btn-submit"><i class="fas fa-save me-2"></i>Save Changes</button>
+                <button type="submit" class="btn-submit">
+                    {% if request.GET.action == 'verify' %}
+                    <i class="fas fa-shield-check me-2"></i>Save & Verify Account
+                    {% else %}
+                    <i class="fas fa-save me-2"></i>Save Changes
+                    {% endif %}
+                </button>
             </div>
         </form>
     </div>
