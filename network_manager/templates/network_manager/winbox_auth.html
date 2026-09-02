@@ -1,0 +1,45 @@
+{% extends 'billing/base.html' %}
+
+{% block content %}
+<div class="container d-flex justify-content-center align-items-center" style="min-height: 70vh;">
+    <div class="card shadow-lg border-0 rounded-4" style="max-width: 450px; width: 100%;">
+        <div class="card-header text-center text-white rounded-top-4 py-4" style="background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); border-bottom: none;">
+            <i class="fa-solid fa-lock fa-3x mb-2 text-white-50"></i>
+            <h4 class="mb-0 fw-bold">Admin Authentication Required</h4>
+        </div>
+        <div class="card-body p-4 p-md-5">
+            <p class="text-muted text-center mb-4">
+                Access to the <strong>{{ device.device_name }}</strong> Winbox Dashboard is restricted. Please enter the Admin Password to continue.
+            </p>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-danger d-flex align-items-center border-0 shadow-sm" role="alert">
+                        <i class="fa-solid fa-circle-exclamation me-2"></i>
+                        <div>{{ message }}</div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="POST" action="">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Admin Password</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-key text-muted"></i></span>
+                        <input type="password" name="admin_password" class="form-control border-start-0" placeholder="Enter password..." required autofocus>
+                    </div>
+                </div>
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary fw-bold py-2 shadow-sm" style="background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); border: none;">
+                        <i class="fa-solid fa-unlock me-2"></i> Unlock Dashboard
+                    </button>
+                    <a href="{% url 'winbox_routers' %}" class="btn btn-light py-2 text-secondary fw-semibold">
+                        Cancel & Return
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

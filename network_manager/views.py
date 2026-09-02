@@ -554,6 +554,23 @@ def winbox_routers(request):
 @login_required
 def winbox_dashboard(request, device_id):
     device = get_object_or_404(MikrotikDevice, id=device_id)
+    
+    # Check if password protection is needed
+    needs_auth = request.user.role != 'Admin' and not request.user.is_superuser
+    session_key = f'winbox_unlocked_{device_id}'
+    
+    if needs_auth and not request.session.get(session_key):
+        if request.method == 'POST':
+            password = request.POST.get('admin_password')
+            # Hardcoded admin password for now, can be moved to settings later
+            if password == 'admin123':
+                request.session[session_key] = True
+                messages.success(request, 'Winbox Dashboard unlocked successfully.')
+                return redirect('winbox_dashboard', device_id=device.id)
+            else:
+                messages.error(request, 'Incorrect Admin Password.')
+        return render(request, 'network_manager/winbox_auth.html', {'device': device})
+        
     api = MikrotikAPI(device)
     
     secrets = api.get_ppp_secrets()
