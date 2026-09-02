@@ -559,10 +559,17 @@ def winbox_dashboard(request, device_id):
     secrets = api.get_ppp_secrets()
     for s in secrets:
         s['id'] = s.get('id') or s.get('.id', '')
+        s['local_address'] = s.get('local-address', '')
+        s['remote_address'] = s.get('remote-address', '')
+        s['last_logged_out'] = s.get('last-logged-out', '')
         
     profiles = api.get_ppp_profiles()
     for p in profiles:
         p['id'] = p.get('id') or p.get('.id', '')
+        p['rate_limit'] = p.get('rate-limit', '')
+        p['only_one'] = p.get('only-one', '')
+        p['local_address'] = p.get('local-address', '')
+        p['remote_address'] = p.get('remote-address', '')
         
     active_users = api.get_active_pppoe_users()
     for a in active_users:

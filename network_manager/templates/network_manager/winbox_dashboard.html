@@ -70,7 +70,7 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <button class="btn btn-sm btn-outline-primary" onclick="editSecret('{{ s.id }}', '{{ s.name|escapejs }}', '{{ s.password|escapejs }}', '{{ s.service|escapejs }}', '{{ s.profile|escapejs }}', '{{ s.comment|escapejs }}', '{{ s.disabled|escapejs }}')"><i class="fa-solid fa-edit"></i></button>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editSecret('{{ s.id|escapejs }}', '{{ s.name|escapejs }}', '{{ s.password|escapejs }}', '{{ s.service|escapejs }}', '{{ s.profile|escapejs }}', '{{ s.comment|escapejs }}', '{{ s.disabled|escapejs }}')"><i class="fa-solid fa-edit"></i></button>
                                     <form action="{% url 'winbox_secret_action' device.id %}" method="POST" class="d-inline" onsubmit="return confirm('Delete this secret?');">
                                         {% csrf_token %}
                                         <input type="hidden" name="action" value="delete">
@@ -114,7 +114,7 @@
                                 <td>{{ p.rate_limit|default:"Unlimited" }}</td>
                                 <td>{{ p.only_one|default:"default" }}</td>
                                 <td>
-                                    <button class="btn btn-sm btn-outline-primary" onclick="editProfile('{{ p.id }}', '{{ p.name|escapejs }}', '{{ p.local_address|escapejs }}', '{{ p.remote_address|escapejs }}', '{{ p.rate_limit|escapejs }}')"><i class="fa-solid fa-edit"></i></button>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editProfile('{{ p.id|escapejs }}', '{{ p.name|escapejs }}', '{{ p.local_address|escapejs }}', '{{ p.remote_address|escapejs }}', '{{ p.rate_limit|escapejs }}')"><i class="fa-solid fa-edit"></i></button>
                                     <form action="{% url 'winbox_profile_action' device.id %}" method="POST" class="d-inline" onsubmit="return confirm('Delete this profile?');">
                                         {% csrf_token %}
                                         <input type="hidden" name="action" value="delete">
@@ -293,7 +293,7 @@
         $('#secretProfile').val(profile || 'default');
         $('#secretComment').val(comment);
         $('#secretDisabled').prop('checked', (disabled === 'true' || disabled === 'True'));
-        var myModal = new bootstrap.Modal(document.getElementById('secretModal'));
+        var myModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('secretModal'));
         myModal.show();
     }
 
@@ -315,7 +315,7 @@
         $('#profileLocalAddress').val(local);
         $('#profileRemoteAddress').val(remote);
         $('#profileRateLimit').val(rate);
-        var myModal = new bootstrap.Modal(document.getElementById('profileModal'));
+        var myModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('profileModal'));
         myModal.show();
     }
 </script>
