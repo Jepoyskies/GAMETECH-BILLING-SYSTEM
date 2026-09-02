@@ -1,5 +1,5 @@
 from django import forms
-from .models import MonitoringRecord, DispatchRecord, ConfigOption, Technician
+from .models import MonitoringRecord, DispatchRecord, ConfigOption, Technician, JobDetail
 
 class DispatchRecordForm(forms.ModelForm):
     teams = forms.ModelMultipleChoiceField(

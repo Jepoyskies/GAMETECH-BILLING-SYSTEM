@@ -1,0 +1,180 @@
+{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}Management - Gametech Unli Fiber{% endblock %}
+
+{% block extra_css %}
+<style>
+    .nav-tabs .nav-link {
+        color: #4e73df;
+        font-weight: 600;
+        border: none;
+        border-bottom: 2px solid transparent;
+        border-radius: 0;
+        padding: 12px 20px;
+    }
+    .nav-tabs .nav-link.active {
+        color: #fff;
+        background-color: #4e73df;
+        border-radius: 8px 8px 0 0;
+    }
+    .tab-content {
+        background-color: white;
+        padding: 24px;
+        border-radius: 0 8px 8px 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .card-header {
+        background-color: transparent;
+        border-bottom: 1px solid #e3e6f0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="content px-4 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 fw-bold text-gray-800">
+            <i class="fas fa-cog me-2 text-primary"></i>Management Settings
+        </h1>
+    </div>
+
+    <!-- Nav tabs -->
+    <ul class="nav nav-tabs" id="managementTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="teams-tab" data-bs-toggle="tab" data-bs-target="#teams" type="button" role="tab" aria-controls="teams" aria-selected="true">
+                <i class="fas fa-users me-2"></i>Teams
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="techs-tab" data-bs-toggle="tab" data-bs-target="#techs" type="button" role="tab" aria-controls="techs" aria-selected="false">
+                <i class="fas fa-user-hard-hat me-2"></i>Technicians
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="dropdowns-tab" data-bs-toggle="tab" data-bs-target="#dropdowns" type="button" role="tab" aria-controls="dropdowns" aria-selected="false">
+                <i class="fas fa-list-ul me-2"></i>Dropdown Options
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab panes -->
+    <div class="tab-content" id="managementTabsContent">
+        <!-- TEAMS TAB -->
+        <div class="tab-pane fade show active" id="teams" role="tabpanel" aria-labelledby="teams-tab">
+            <div class="d-flex justify-content-between mb-3">
+                <h5 class="fw-bold mb-0">Manage Teams</h5>
+                <a href="/admin/dispatch/team/add/" class="btn btn-sm btn-primary" target="_blank"><i class="fas fa-plus me-1"></i> Add Team</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Created At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for team in teams %}
+                        <tr>
+                            <td class="fw-bold">{{ team.name }}</td>
+                            <td class="text-muted">{{ team.created_at|date:"M d, Y" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="2" class="text-center text-muted">No teams found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TECHNICIANS TAB -->
+        <div class="tab-pane fade" id="techs" role="tabpanel" aria-labelledby="techs-tab">
+            <div class="d-flex justify-content-between mb-3">
+                <h5 class="fw-bold mb-0">Manage Technicians</h5>
+                <a href="/admin/dispatch/technician/add/" class="btn btn-sm btn-primary" target="_blank"><i class="fas fa-plus me-1"></i> Add Technician</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Contact</th>
+                            <th>Team</th>
+                            <th>Target / Day</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tech in technicians %}
+                        <tr>
+                            <td class="fw-bold">{{ tech.name }}</td>
+                            <td>{{ tech.contact_number|default:"-" }}</td>
+                            <td>
+                                {% if tech.team %}
+                                <span class="badge bg-secondary">{{ tech.team.name }}</span>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>{{ tech.target_per_day }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">No technicians found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- DROPDOWNS TAB -->
+        <div class="tab-pane fade" id="dropdowns" role="tabpanel" aria-labelledby="dropdowns-tab">
+            <div class="d-flex justify-content-between mb-3">
+                <h5 class="fw-bold mb-0">Dropdown Settings</h5>
+                <a href="/admin/dispatch/configoption/add/" class="btn btn-sm btn-primary" target="_blank"><i class="fas fa-plus me-1"></i> Add Option</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Module</th>
+                            <th>List Type</th>
+                            <th>Label</th>
+                            <th>Color / Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for opt in config_options %}
+                        <tr>
+                            <td><span class="badge bg-dark">{{ opt.module }}</span></td>
+                            <td>{{ opt.list_type }}</td>
+                            <td class="fw-bold">{{ opt.label }}</td>
+                            <td>
+                                {% if opt.active %}
+                                <span class="badge" style="background-color: {{ opt.color }};">Active</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">No configuration options found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="alert alert-info mt-4">
+        <i class="fas fa-info-circle me-2"></i> 
+        <strong>Note:</strong> Since this is an integrated system, adding or editing these items happens securely via the built-in Django Admin forms. Click "Add" to open the manager in a new tab.
+    </div>
+
+</main>
+{% endblock %}

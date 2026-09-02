@@ -1,0 +1,92 @@
+{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}Audit Log - Gametech Unli Fiber{% endblock %}
+
+{% block extra_css %}
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css"/>
+<style>
+    .table-container {
+        background-color: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    table.dataTable {
+        border-collapse: collapse !important;
+    }
+    table.dataTable thead th {
+        border-bottom: 2px solid #e3e6f0;
+        color: #4e73df;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="content px-4 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 fw-bold text-gray-800">
+            <i class="fas fa-history me-2 text-primary"></i>Audit Log
+        </h1>
+    </div>
+
+    <div class="table-container">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle w-100" id="auditTable">
+                <thead>
+                    <tr>
+                        <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Date & Time</th>
+                        <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Action</th>
+                        <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Entity</th>
+                        <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Actor</th>
+                        <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Summary</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>{{ log.created_at|date:"M d, Y h:i A" }}</td>
+                        <td>
+                            {% if log.action == 'CREATE' %}
+                                <span class="badge bg-success">CREATE</span>
+                            {% elif log.action == 'UPDATE' %}
+                                <span class="badge bg-primary">UPDATE</span>
+                            {% elif log.action == 'DELETE' %}
+                                <span class="badge bg-danger">DELETE</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ log.action }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ log.entity_type }} #{{ log.entity_id }}</td>
+                        <td class="fw-bold">{{ log.actor.username|default:"System" }}</td>
+                        <td class="text-muted">{{ log.summary }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<!-- DataTables JS -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    $('#auditTable').DataTable({
+        "order": [[ 0, "desc" ]],
+        "pageLength": 25,
+        "language": {
+            "search": "",
+            "searchPlaceholder": "Search logs...",
+            "emptyTable": "No audit logs available."
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Team, Technician, ConfigOption, DispatchRecord, MonitoringRecord, JobDetail
+from .models import Team, Technician, ConfigOption, DispatchRecord, MonitoringRecord, JobDetail, AuditLog
 
 @admin.register(Team)
 class TeamAdmin(admin.ModelAdmin):
@@ -36,3 +36,9 @@ class MonitoringRecordAdmin(admin.ModelAdmin):
 class JobDetailAdmin(admin.ModelAdmin):
     list_display = ('record', 'schedule_date', 'plan_package', 'job_order')
     search_fields = ('account_no', 'job_order', 'email_address')
+
+@admin.register(AuditLog)
+class AuditLogAdmin(admin.ModelAdmin):
+    list_display = ('action', 'entity_type', 'entity_id', 'actor', 'created_at')
+    list_filter = ('action', 'entity_type')
+    search_fields = ('summary', 'actor__username')

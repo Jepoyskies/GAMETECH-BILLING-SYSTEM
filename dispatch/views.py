@@ -1,9 +1,18 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from .models import DispatchRecord, MonitoringRecord, JobDetail, ConfigOption, Technician, Team
+from .models import DispatchRecord, MonitoringRecord, JobDetail, ConfigOption, Technician, Team, AuditLog
 from .forms import MonitoringRecordForm, DispatchRecordForm
 from django.contrib import messages
 from django.utils import timezone
+
+def log_audit(action, entity_type, entity_id, actor, summary=None):
+    AuditLog.objects.create(
+        action=action,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        actor=actor,
+        summary=summary
+    )
 
 @login_required
 def dashboard_view(request):
@@ -18,6 +27,7 @@ def dispatch_monitoring_view(request):
             record.csr = request.user
             record.save()
             form.save_m2m() # Save teams
+            log_audit('CREATE', 'DispatchRecord', record.id, request.user, summary=f"Created Dispatch Record for {record.client_name}")
             messages.success(request, 'Dispatch record added successfully!')
             return redirect('dispatch_monitoring')
         else:
@@ -37,6 +47,7 @@ def _handle_monitoring_view(request, tab_type, template_name):
             record.csr = request.user
             record.save()
             form.save_m2m() # Save teams
+            log_audit('CREATE', 'MonitoringRecord', record.id, request.user, summary=f"Created Monitoring Record for {record.client_name} ({tab_type})")
             messages.success(request, 'Record added successfully!')
             return redirect(request.path)
         else:
@@ -76,6 +87,8 @@ def complete_job_view(request, record_id):
             if done_option:
                 record.status_option = done_option
                 record.save()
+            
+            log_audit('UPDATE', 'JobDetail', job_detail.id, request.user, summary=f"Completed Job for {record.client_name}")
             messages.success(request, 'Job details saved and marked as Done.')
             
             # Redirect back to the correct tab
@@ -91,4 +104,20 @@ def complete_job_view(request, record_id):
         form = JobDetailForm(instance=job_detail)
         
     return render(request, 'dispatch/complete_job.html', {'form': form, 'record': record})
+
+@login_required
+def audit_log_view(request):
+    logs = AuditLog.objects.select_related('actor').order_by('-created_at')
+    return render(request, 'dispatch/audit_log.html', {'logs': logs})
+
+@login_required
+def management_view(request):
+    teams = Team.objects.all()
+    technicians = Technician.objects.select_related('team').all()
+    config_options = ConfigOption.objects.all().order_by('module', 'list_type', 'sort_order')
+    return render(request, 'dispatch/management.html', {
+        'teams': teams,
+        'technicians': technicians,
+        'config_options': config_options
+    })
 

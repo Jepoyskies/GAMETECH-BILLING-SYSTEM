@@ -8,4 +8,6 @@ urlpatterns = [
     path('cignal-install/', views.cignal_install_view, name='cignal_install'),
     path('client-concerns/', views.client_concerns_view, name='client_concerns'),
     path('complete-job/<int:record_id>/', views.complete_job_view, name='complete_job'),
+    path('audit-log/', views.audit_log_view, name='audit_log'),
+    path('management/', views.management_view, name='dispatch_management'),
 ]

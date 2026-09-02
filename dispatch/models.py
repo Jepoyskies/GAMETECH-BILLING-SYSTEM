@@ -168,3 +168,22 @@ class JobDetail(models.Model):
 
     def __str__(self):
         return f"Job Detail for {self.record}"
+
+class AuditLog(models.Model):
+    ACTION_CHOICES = (
+        ('CREATE', 'CREATE'),
+        ('UPDATE', 'UPDATE'),
+        ('DELETE', 'DELETE'),
+    )
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    entity_type = models.CharField(max_length=100) # e.g. "DispatchRecord", "MonitoringRecord"
+    entity_id = models.IntegerField()
+    summary = models.CharField(max_length=255, null=True, blank=True)
+    before_data = models.JSONField(null=True, blank=True)
+    after_data = models.JSONField(null=True, blank=True)
+    actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='dispatch_audit_logs')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.action} {self.entity_type} {self.entity_id} by {self.actor}"
+
