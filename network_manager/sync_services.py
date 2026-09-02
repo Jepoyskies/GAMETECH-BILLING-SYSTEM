@@ -89,7 +89,15 @@ class MikrotikAPI:
                 is_default_profile = profile.lower() == 'default'
                 is_missing_info = not comment or '|' not in comment
                 
-                is_suspicious = has_weird_chars or is_default_profile or is_missing_info
+                suspicious_reasons = []
+                if has_weird_chars:
+                    suspicious_reasons.append("Invalid Characters")
+                if is_default_profile:
+                    suspicious_reasons.append("Default Profile")
+                if is_missing_info:
+                    suspicious_reasons.append("Missing/Invalid Comment")
+                    
+                is_suspicious = bool(suspicious_reasons)
                 
                 formatted_users.append({
                     "name": name,
@@ -97,7 +105,8 @@ class MikrotikAPI:
                     "profile": profile,
                     "comment": comment,
                     "is_active": is_active,
-                    "is_suspicious": is_suspicious
+                    "is_suspicious": is_suspicious,
+                    "suspicious_reasons": ", ".join(suspicious_reasons)
                 })
                 
             return {"success": True, "data": formatted_users}
