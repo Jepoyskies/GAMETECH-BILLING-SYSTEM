@@ -7,4 +7,5 @@ urlpatterns = [
     path('internet-install/', views.internet_install_view, name='internet_install'),
     path('cignal-install/', views.cignal_install_view, name='cignal_install'),
     path('client-concerns/', views.client_concerns_view, name='client_concerns'),
+    path('complete-job/<int:record_id>/', views.complete_job_view, name='complete_job'),
 ]
