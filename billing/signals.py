@@ -87,44 +87,8 @@ def sync_customer_to_mikrotik(sender, instance, created, **kwargs):
         target_profile = instance.plan.name if instance.plan else "default"
         is_disabled = "no"
         
-        # Fetch latest payment for comment logic
-        latest_payment = instance.payments.order_by('-created_at').first()
-        
-        comment_parts = []
-        if latest_payment:
-            paid_str = latest_payment.created_at.strftime('%b %d, %Y')
-            expiry_str = instance.expires_at.strftime('%b %d, %Y') if instance.expires_at else "None"
-            plan_name = instance.plan.name if instance.plan else "No Plan"
-            payment_method = latest_payment.payment_method
-            admin_name = latest_payment.adjusted_by if latest_payment.adjusted_by else "Admin"
-            reason = latest_payment.reason if latest_payment.reason else ""
-            
-            pay_comment = f"paid {paid_str} exp {expiry_str} . {plan_name} . {payment_method} . {admin_name}"
-            if reason:
-                pay_comment += f" . {reason}"
-            comment_parts.append(pay_comment)
-
-        # Add Profile Details
-        profile_parts = [str(instance.full_name) if instance.full_name else "Unknown"]
-        
-        if instance.phone:
-            profile_parts.append(str(instance.phone))
-            
-        if not latest_payment and instance.expires_at:
-            profile_parts.append(f"Exp: {instance.expires_at.strftime('%Y-%m-%d')}")
-            
-        if instance.barangay and instance.barangay.name:
-            profile_parts.append(str(instance.barangay.name))
-        elif instance.address:
-            # truncate address if it's too long, safely converting to string
-            clean_addr = str(instance.address).replace('\n', ' ').replace('\r', ' ')
-            profile_parts.append(clean_addr[:30] + ('...' if len(clean_addr) > 30 else ''))
-            
-        comment_parts.append(" | ".join(profile_parts))
-        secret_comment = " || ".join(comment_parts)
-        
-        # Final cleanup for Mikrotik comment compatibility (remove non-printable chars)
-        secret_comment = "".join(c for c in secret_comment if c.isprintable())
+        # Generate standardized comment from Customer model
+        secret_comment = instance.generate_mikrotik_comment()
 
         # 2. Update the secret on the router with standard profile
         success_add, msg_add = api.add_pppoe_user(

@@ -4,7 +4,12 @@
 {% block title %}Pay for {{ customer.username|default:customer.full_name }} | Gametech{% endblock %}
 
 {% block extra_css %}
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<style>
+.plan-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -41,13 +46,10 @@
                         <li>
                             <span class="detail-label">Service Plan</span>
                             <span class="detail-value">
-                                <select id="plan-dropdown" class="plan-form-control" style="width:auto; min-width:240px; padding-top:6px; padding-bottom:6px; display:inline-block; font-weight:bold; cursor:pointer;">
-                                    {% for plan in plans %}
-                                        <option value="{{ plan.id }}" data-price="{{ plan.price }}" {% if customer.plan_id == plan.id %}selected{% endif %}>
-                                            {{ plan.name }} {% if plan.speed_down %}- {{ plan.speed_down }}{% endif %}
-                                        </option>
-                                    {% endfor %}
-                                </select>
+                                <button type="button" id="plan-select-btn" class="btn btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#planModal" style="background: rgba(14, 165, 233, 0.1); color: #0284c7; border: 1px solid rgba(14, 165, 233, 0.3); border-radius: 8px; padding: 6px 14px;">
+                                    {{ customer.plan.name }} {% if customer.plan.speed_down %}- {{ customer.plan.speed_down }}{% endif %}
+                                    <i class="fas fa-chevron-down ms-2 fs-6"></i>
+                                </button>
                             </span>
                         </li>
                         <li>
@@ -197,36 +199,116 @@
     </div>
 </div>
 
+<!-- Plan Selection Modal -->
+<div class="modal fade" id="planModal" tabindex="-1" aria-labelledby="planModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
+      <div class="modal-header border-0" style="background: linear-gradient(135deg, #3b0764 0%, #6d28d9 60%, #8b5cf6 100%); color: white; padding: 20px 24px;">
+        <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="planModalLabel"><i class="fas fa-network-wired text-warning"></i> Choose Service Plan</h5>
+        <button type="button" class="btn-close btn-close-white opacity-75" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4 bg-light">
+        <div class="row g-4">
+          {% for plan in plans %}
+          <div class="col-12 col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm plan-card {% if customer.plan_id == plan.id %}border-success{% endif %}" style="border-radius: 16px; transition: all 0.2s; {% if customer.plan_id == plan.id %}box-shadow: 0 0 0 2px #10b981 !important;{% endif %}">
+              <div class="card-body p-4 d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                  <h5 class="fw-bold mb-0 text-primary">{{ plan.name }}</h5>
+                  <span class="badge bg-primary-subtle text-primary rounded-pill">ID: {{ plan.id }}</span>
+                </div>
+                
+                <h3 class="fw-bold mb-3" style="color: #059669;">₱{{ plan.price|floatformat:2 }} <span class="fs-6 fw-normal text-muted">/ 30 days</span></h3>
+                
+                <div class="d-flex flex-column gap-2 mb-4">
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle bg-success-subtle text-success d-flex justify-content-center align-items-center" style="width: 28px; height: 28px;"><i class="fas fa-arrow-down fs-7"></i></div>
+                    <div>
+                      <div class="fw-bold lh-1">{{ plan.speed_down|default:'0' }} Mbps</div>
+                      <div class="text-muted" style="font-size: 0.75rem;">Download Speed</div>
+                    </div>
+                  </div>
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle bg-info-subtle text-info d-flex justify-content-center align-items-center" style="width: 28px; height: 28px;"><i class="fas fa-arrow-up fs-7"></i></div>
+                    <div>
+                      <div class="fw-bold lh-1">{{ plan.speed_up|default:'0' }} Mbps</div>
+                      <div class="text-muted" style="font-size: 0.75rem;">Upload Speed</div>
+                    </div>
+                  </div>
+                  {% if plan.description %}
+                  <div class="d-flex align-items-center gap-2 mt-2">
+                    <div class="rounded-circle bg-secondary text-white d-flex justify-content-center align-items-center" style="width: 28px; height: 28px; opacity:0.7;"><i class="fas fa-info fs-7"></i></div>
+                    <div class="text-muted" style="font-size: 0.8rem;">
+                      {{ plan.description }}
+                    </div>
+                  </div>
+                  {% endif %}
+                </div>
+
+                <div class="mt-auto">
+                  <button type="button" class="btn btn-primary w-100 fw-bold rounded-pill select-plan-btn" 
+                          data-id="{{ plan.id }}" 
+                          data-price="{{ plan.price }}" 
+                          data-name="{{ plan.name }} {% if plan.speed_down %}- {{ plan.speed_down }}{% endif %}">
+                    {% if customer.plan_id == plan.id %}<i class="fas fa-check-circle me-1"></i> Current Plan{% else %}Select Plan{% endif %}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     let monthlyPrice = parseFloat("{{ customer.plan.price|default:0 }}");
     const currentExpiryStr = "{{ customer.expires_at|date:'c' }}";
     
-    const planDropdown = document.getElementById('plan-dropdown');
     const hiddenPlanInput = document.getElementById('hidden_new_plan_id');
     const priceDisplay = document.getElementById('monthly-price-display');
+    const planSelectBtn = document.getElementById('plan-select-btn');
 
-    if (planDropdown) {
-        planDropdown.addEventListener('change', function() {
-            const selectedOpt = this.options[this.selectedIndex];
-            hiddenPlanInput.value = selectedOpt.value;
-            monthlyPrice = parseFloat(selectedOpt.getAttribute('data-price')) || 0;
+    document.querySelectorAll('.select-plan-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const planId = this.getAttribute('data-id');
+            const planPrice = this.getAttribute('data-price');
+            const planName = this.getAttribute('data-name');
             
-            // Update the text display
-            if (priceDisplay) {
-                priceDisplay.innerHTML = '<strong>₱' + monthlyPrice.toFixed(2) + '</strong>';
-            }
+            // Update hidden input
+            hiddenPlanInput.value = planId;
+            monthlyPrice = parseFloat(planPrice) || 0;
+            
+            // Update UI elements
+            if (priceDisplay) priceDisplay.innerHTML = '<strong>₱' + monthlyPrice.toFixed(2) + '</strong>';
+            if (planSelectBtn) planSelectBtn.innerHTML = planName + ' <i class="fas fa-chevron-down ms-2 fs-6"></i>';
+            
+            // Update active state in modal
+            document.querySelectorAll('.plan-card').forEach(card => {
+                card.style.boxShadow = 'none';
+                const cardBtn = card.querySelector('.select-plan-btn');
+                if (cardBtn) cardBtn.innerHTML = 'Select Plan';
+            });
+            const myCard = this.closest('.plan-card');
+            myCard.style.boxShadow = '0 0 0 2px #10b981';
+            this.innerHTML = '<i class="fas fa-check-circle me-1"></i> Selected';
+            
+            // Close modal
+            const modalEl = document.getElementById('planModal');
+            const modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) modalInstance.hide();
             
             // Recalculate grid buttons
             updateGridMath();
             
             // Trigger recalculation on the active button
             const activeBtn = document.querySelector('.quick-btn.active');
-            if (activeBtn) {
-                activeBtn.click(); // Re-trigger click to update amount input and preview
-            }
+            if (activeBtn) activeBtn.click();
         });
-    }
+    });
 
     // Parse Initial Date (Default Start Date)
     let initialDate = new Date();
@@ -384,23 +466,6 @@ document.addEventListener('DOMContentLoaded', function() {
     amountInput.readOnly = true; // 1 Month is active by default
     amountInput.value = monthlyPrice.toFixed(2);
     updatePreview();
-});
-</script>
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    new TomSelect('#plan-dropdown', {
-        create: false,
-        sortField: {
-            field: "text",
-            direction: "asc"
-        },
-        onChange: function(value) {
-            // Trigger the native change event so the existing logic catches it
-            const event = new Event('change');
-            document.getElementById('plan-dropdown').dispatchEvent(event);
-        }
-    });
 });
 </script>
 {% endblock %}

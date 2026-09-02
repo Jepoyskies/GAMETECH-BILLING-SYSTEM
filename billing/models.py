@@ -218,6 +218,38 @@ class Customer(models.Model):
     def is_suspicious(self):
         return len(self.suspicious_reasons) > 0
 
+    def generate_mikrotik_comment(self):
+        latest_payment = self.payments.order_by('-created_at').first()
+        
+        comment_parts = []
+        if latest_payment:
+            paid_str = latest_payment.created_at.strftime('%b %d, %Y')
+            expiry_str = self.expires_at.strftime('%b %d, %Y') if self.expires_at else "None"
+            plan_name = self.plan.name if self.plan else "No Plan"
+            payment_method = latest_payment.payment_method
+            admin_name = latest_payment.adjusted_by if latest_payment.adjusted_by else "Admin"
+            reason = latest_payment.reason if latest_payment.reason else ""
+            
+            pay_comment = f"paid {paid_str} exp {expiry_str} . {plan_name} . {payment_method} . {admin_name}"
+            if reason:
+                pay_comment += f" . {reason}"
+            comment_parts.append(pay_comment)
+
+        # Add Profile Details
+        profile_parts = [str(self.full_name) if self.full_name else "Unknown"]
+        
+        if self.phone:
+            profile_parts.append(str(self.phone))
+            
+        if not latest_payment and self.expires_at:
+            profile_parts.append(f"Exp: {self.expires_at.strftime('%Y-%m-%d')}")
+            
+        comment_parts.append(" | ".join(profile_parts))
+        secret_comment = " || ".join(comment_parts)
+        
+        # Final cleanup for Mikrotik comment compatibility (remove non-printable chars)
+        secret_comment = "".join(c for c in secret_comment if c.isprintable())
+        return secret_comment
 
 
 class Payment(models.Model):

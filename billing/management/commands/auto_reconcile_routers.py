@@ -47,14 +47,7 @@ class Command(BaseCommand):
                     target_profile = customer.plan.name if customer.plan else "default"
                     
                     # Construct safe comment
-                    comment_parts = [str(customer.full_name) if customer.full_name else "Unknown"]
-                    if customer.barangay and customer.barangay.name:
-                        comment_parts.append(str(customer.barangay.name))
-                    elif customer.address:
-                        clean_addr = str(customer.address).replace('\n', ' ').replace('\r', ' ')
-                        comment_parts.append(clean_addr[:30] + ('...' if len(clean_addr) > 30 else ''))
-                    secret_comment = " | ".join(comment_parts)
-                    secret_comment = "".join(c for c in secret_comment if c.isprintable())
+                    secret_comment = customer.generate_mikrotik_comment()
                     
                     if uname not in router_dict:
                         # MISSING ON ROUTER -> PUSH
