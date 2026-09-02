@@ -22,4 +22,5 @@ urlpatterns = [
     path('', include('billing.urls')),
     path('devices/', include('network_manager.urls')),
     path('portal/', include('customer_portal.urls')),
+    path('dispatch/', include('dispatch.urls')),
 ]

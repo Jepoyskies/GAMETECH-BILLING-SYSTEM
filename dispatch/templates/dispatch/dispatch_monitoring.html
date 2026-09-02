@@ -1,0 +1,116 @@
+{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}Master Dispatch Log | Gametech{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+<style>
+    .card {
+        border-radius: 16px;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .table > :not(caption) > * > * {
+        padding: 1rem 1rem;
+        vertical-align: middle;
+    }
+    .badge-gametech {
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="content px-4 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1 fw-bold text-gray-800">Master Dispatch Log</h1>
+            <p class="text-muted mb-0">Complete record of all operations</p>
+        </div>
+        <div>
+            <button class="btn btn-primary shadow-sm" style="border-radius: 12px; padding: 10px 20px;">
+                <i class="fas fa-plus me-2"></i> Add Record
+            </button>
+        </div>
+    </div>
+
+    <div class="card p-0 overflow-hidden">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 datatable" style="width: 100%;">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Date</th>
+                            <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Source Tab</th>
+                            <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Client Name</th>
+                            <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Address</th>
+                            <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Teams</th>
+                            <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Status</th>
+                            <th class="text-muted fw-bold text-uppercase text-end" style="font-size: 0.8rem;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in records %}
+                        <tr>
+                            <td>{{ record.date|date:"M d, Y" }}</td>
+                            <td>
+                                <span class="badge bg-secondary badge-gametech">{{ record.get_source_tab_display }}</span>
+                            </td>
+                            <td class="fw-bold">{{ record.client_name }}</td>
+                            <td class="text-muted">{{ record.address|truncatechars:30 }}</td>
+                            <td>
+                                {% for team in record.teams.all %}
+                                    <span class="badge bg-info text-dark">{{ team.name }}</span>
+                                {% empty %}
+                                    <span class="text-muted small">Unassigned</span>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                {% if record.status_option %}
+                                <span class="badge" style="background-color: {{ record.status_option.color }}">{{ record.status_option.label }}</span>
+                                {% else %}
+                                <span class="badge bg-light text-dark">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-light text-primary"><i class="fas fa-edit"></i></button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="fas fa-clipboard-list fs-1 mb-3 text-light"></i>
+                                <p class="mb-0">No dispatch records found.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('.datatable').DataTable({
+            "order": [[ 0, "desc" ]],
+            "pageLength": 25,
+            "language": {
+                "search": "",
+                "searchPlaceholder": "Search records..."
+            }
+        });
+        $('.dataTables_filter input').addClass('form-control').css({'border-radius': '8px'});
+    });
+</script>
+{% endblock %}

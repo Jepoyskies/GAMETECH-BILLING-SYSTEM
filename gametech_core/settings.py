@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'billing',
     'network_manager',
     'customer_portal',
+    'dispatch',
 ]
 
 MIDDLEWARE = [
