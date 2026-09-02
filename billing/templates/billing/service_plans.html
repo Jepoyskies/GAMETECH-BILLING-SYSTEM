@@ -66,10 +66,25 @@
 
     {% for category, plans in grouped_plans.items %}
     <div class="mb-5">
-        <h3 class="mb-4 d-flex align-items-center" style="color: var(--text-primary);">
-            <i class="fas fa-layer-group me-2" style="color: var(--theme-primary);"></i>
-            {{ category }}
-        </h3>
+        <div class="category-header mb-4 p-4 rounded-4 position-relative" style="background: linear-gradient(135deg, rgba(var(--theme-primary-rgb, 59, 130, 246), 0.05) 0%, rgba(var(--theme-secondary-rgb, 139, 92, 246), 0.05) 100%); border: 1px solid rgba(var(--theme-primary-rgb, 59, 130, 246), 0.1);">
+            <h3 class="d-flex align-items-center mb-2" style="color: var(--text-primary); font-weight: 800; letter-spacing: -0.5px;">
+                <div class="kpi-icon me-3" style="width: 42px; height: 42px; font-size: 1.1rem; background: var(--theme-primary); color: white;">
+                    {% if 'Business' in category or 'Corporate' in category %}<i class="fas fa-building"></i>
+                    {% elif 'Resid' in category %}<i class="fas fa-home"></i>
+                    {% else %}<i class="fas fa-layer-group"></i>{% endif %}
+                </div>
+                {{ category }}
+            </h3>
+            <p class="mb-0 text-muted ms-5 ps-2" style="font-size: 0.95rem; max-width: 600px;">
+                {% if 'Business' in category or 'Corporate' in category %}
+                High-performance plans featuring prioritized bandwidth, lower latency, and dedicated support built for enterprises and demanding workloads.
+                {% elif 'Resid' in category or 'Home' in category %}
+                Perfect for homes, families, and everyday browsing. Enjoy ultra-smooth streaming, gaming, and reliable connectivity.
+                {% else %}
+                Explore our {{ category|lower }} packages carefully tailored to meet your unique internet connectivity needs.
+                {% endif %}
+            </p>
+        </div>
         <div class="row g-4">
             {% for plan in plans %}
             <div class="col-12 col-md-6 col-lg-4 col-xl-3">

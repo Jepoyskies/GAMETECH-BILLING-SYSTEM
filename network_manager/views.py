@@ -377,6 +377,48 @@ def sync_push_user(request, device_id):
 
 @role_required(['Admin', 'Editor', 'CSR'])
 @login_required
+def sync_autofix_user(request, device_id):
+    """Auto-fixes a synced customer's router profile and comment to match the system database."""
+    if request.method == 'POST':
+        pppoe_username = request.POST.get('pppoe_username')
+        device = get_object_or_404(MikrotikDevice, id=device_id)
+        
+        from billing.models import Customer
+        from .sync_services import MikrotikAPI as MikrotikSyncAPI
+        
+        customer = get_object_or_404(Customer, pppoe_username=pppoe_username)
+        
+        api = MikrotikSyncAPI(
+            ip_address=device.ip_address,
+            username=device.api_username,
+            password=device.api_password,
+            port=device.api_port
+        )
+        
+        profile = customer.plan.name if customer.plan else "default"
+        comment_parts = [customer.full_name]
+        if customer.barangay:
+            comment_parts.append(customer.barangay.name)
+        elif customer.address:
+            comment_parts.append(customer.address[:30] + ('...' if len(customer.address) > 30 else ''))
+        comment = " | ".join(comment_parts)
+        
+        result = api.add_pppoe_user(
+            name=customer.pppoe_username,
+            password=customer.pppoe_password,
+            profile=profile,
+            comment=comment
+        )
+        
+        if result.get('success'):
+            messages.success(request, f"Successfully Auto-Fixed '{pppoe_username}' on the router!")
+        else:
+            messages.error(request, f"Failed to Auto-Fix '{pppoe_username}': {result.get('error')}")
+            
+    return redirect('sync_manager', device_id=device_id)
+
+@role_required(['Admin', 'Editor', 'CSR'])
+@login_required
 def sync_delete_user(request, device_id):
     if request.method == 'POST':
         pppoe_username = request.POST.get('pppoe_username')

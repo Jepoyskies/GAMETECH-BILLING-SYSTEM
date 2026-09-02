@@ -15,6 +15,7 @@ urlpatterns = [
     path('devices/<int:device_id>/sync-users/', views.sync_device_users, name='sync_device_users'),
     path('devices/<int:device_id>/sync/', views.sync_manager, name='sync_manager'),
     path('devices/<int:device_id>/sync/push/', views.sync_push_user, name='sync_push_user'),
+    path('devices/<int:device_id>/sync/autofix/', views.sync_autofix_user, name='sync_autofix_user'),
     path('devices/<int:device_id>/sync/delete/', views.sync_delete_user, name='sync_delete_user'),
     path('devices/<int:device_id>/sync/bulk/', views.sync_bulk_action, name='sync_bulk_action'),
     path('devices/hardware/<int:device_id>/',

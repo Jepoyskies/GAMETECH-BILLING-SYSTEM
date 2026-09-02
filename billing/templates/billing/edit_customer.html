@@ -347,4 +347,80 @@
         });
     });
 </script>
+
+{% if request.GET.action == 'verify' %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const form = document.getElementById('edit-customer-form');
+    
+    // Add event listener to form submission specifically for verification
+    form.addEventListener('submit', function(event) {
+        let missingFields = [];
+        
+        // Define fields to strictly require for verification
+        const fieldsToCheck = [
+            { name: 'phone', label: 'Phone Number' },
+            { name: 'plan_id', label: 'Subscription Plan' },
+            { name: 'account_type_id', label: 'Account Type' },
+            { name: 'barangay_id', label: 'Barangay' },
+            { name: 'mikrotik_device_id', label: 'Mikrotik Router' }
+        ];
+        
+        fieldsToCheck.forEach(field => {
+            const el = document.querySelector(`[name="${field.name}"]`);
+            if (el && !el.value.trim()) {
+                missingFields.push({el: el, label: field.label});
+                
+                // Add red border
+                el.style.border = '2px solid #dc3545';
+                
+                // If it's a TomSelect element, find its control
+                if (el.tomselect) {
+                    el.tomselect.control.style.border = '2px solid #dc3545';
+                }
+            } else if (el) {
+                // Clear red border if filled
+                el.style.border = '';
+                if (el.tomselect) {
+                    el.tomselect.control.style.border = '';
+                }
+            }
+        });
+        
+        if (missingFields.length > 0) {
+            // Block form submission
+            event.preventDefault();
+            event.stopImmediatePropagation(); // Prevent standard validation from hijacking if we want custom message
+            
+            const labels = missingFields.map(f => f.label).join(', ');
+            
+            // Create or update the elegant error banner
+            let alertDiv = document.getElementById('verification-alert');
+            if (!alertDiv) {
+                alertDiv = document.createElement('div');
+                alertDiv.id = 'verification-alert';
+                alertDiv.className = 'error-alert mb-4 custom-validation-alert';
+                alertDiv.style.backgroundColor = '#fff3f3';
+                alertDiv.style.color = '#dc3545';
+                alertDiv.style.borderLeft = '4px solid #dc3545';
+                alertDiv.style.padding = '12px 16px';
+                alertDiv.style.borderRadius = '8px';
+                alertDiv.style.fontWeight = '500';
+                form.insertBefore(alertDiv, form.firstChild);
+            }
+            
+            alertDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i> <b>Verification Wizard:</b> The following fields are required for a verified account: ' + labels;
+            alertDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Focus first missing
+            if (missingFields[0].el.tomselect) {
+                missingFields[0].el.tomselect.focus();
+            } else {
+                missingFields[0].el.focus();
+            }
+        }
+    });
+});
+</script>
+{% endif %}
 {% endblock %}

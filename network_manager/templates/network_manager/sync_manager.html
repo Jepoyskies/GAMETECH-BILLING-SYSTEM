@@ -208,7 +208,14 @@
                                 <td><span class="text-success"><i class="fas fa-check"></i> Synced</span></td>
                                 <td class="text-end">
                                     {% if user.customer %}
-                                    <a href="{% url 'view_customer' user.customer.id %}" class="btn btn-sm btn-outline-secondary" target="_blank"><i class="fas fa-external-link-alt"></i> View</a>
+                                    <div class="d-flex justify-content-end gap-1">
+                                        <a href="{% url 'view_customer' user.customer.id %}" class="btn btn-sm btn-outline-secondary" target="_blank" title="View Customer Profile"><i class="fas fa-external-link-alt"></i> View</a>
+                                        {% if user.is_suspicious %}
+                                        <button type="submit" formaction="{% url 'sync_autofix_user' device.id %}" formmethod="POST" name="pppoe_username" value="{{ user.name }}" class="btn btn-sm btn-outline-primary" title="Automatically correct the profile and comment on the router to match the system database">
+                                            <i class="fas fa-magic"></i> Auto-Fix
+                                        </button>
+                                        {% endif %}
+                                    </div>
                                     {% endif %}
                                 </td>
                             </tr>
