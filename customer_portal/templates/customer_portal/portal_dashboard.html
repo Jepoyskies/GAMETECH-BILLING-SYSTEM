@@ -1049,13 +1049,17 @@
             <button class="nav-link rounded-pill fw-bold px-4" id="gimi-tab" data-bs-toggle="pill" data-bs-target="#gimi-plans" type="button" role="tab" style="color: var(--p-text);">GIMI Home Fiber</button>
           </li>
           <li class="nav-item" role="presentation">
-            <button class="nav-link rounded-pill fw-bold px-4" id="sme-tab" data-bs-toggle="pill" data-bs-target="#sme-plans" type="button" role="tab" style="color: var(--p-text);">SME Plans</button>
+            <button class="nav-link rounded-pill fw-bold px-4" id="sme-tab" data-bs-toggle="pill" data-bs-target="#sme-plans" type="button" role="tab" style="color: var(--p-text);">Business Plan</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill fw-bold px-4" id="enterprise-tab" data-bs-toggle="pill" data-bs-target="#enterprise-plans" type="button" role="tab" style="color: var(--p-text);">Enterprise Plan</button>
           </li>
         </ul>
 
         <div class="tab-content" id="planTabsContent">
           <!-- GTipid -->
           <div class="tab-pane fade show active" id="gtipid-plans" role="tabpanel">
+            <p class="text-center mb-4 px-3" style="color: var(--p-text-muted);">Affordable fiber internet designed for everyday browsing, streaming, and staying connected.</p>
             <div class="row g-4">
               {% for p in plans %}{% if 'GTipid' in p.name %}{% if not customer.plan or p.price >= customer.plan.price %}
                  {% include 'customer_portal/partials/plan_card.html' %}
@@ -1065,6 +1069,7 @@
 
           <!-- GIMI -->
           <div class="tab-pane fade" id="gimi-plans" role="tabpanel">
+            <p class="text-center mb-4 px-3" style="color: var(--p-text-muted);">An upgraded home fiber experience built for streaming, gaming, remote work, and connected households. <strong>Available in selected areas only.</strong></p>
             <div class="row g-4">
               {% for p in plans %}{% if 'GIMI' in p.name %}{% if not customer.plan or p.price >= customer.plan.price %}
                  {% include 'customer_portal/partials/plan_card.html' %}
@@ -1072,10 +1077,21 @@
             </div>
           </div>
 
-          <!-- SME -->
+          <!-- SME / Business -->
           <div class="tab-pane fade" id="sme-plans" role="tabpanel">
+            <p class="text-center mb-4 px-3" style="color: var(--p-text-muted);">Reliable internet solutions designed for growing small and medium-sized businesses.</p>
             <div class="row g-4">
-              {% for p in plans %}{% if 'SME' in p.name %}{% if not customer.plan or p.price >= customer.plan.price %}
+              {% for p in plans %}{% if 'SME' in p.name or 'Business' in p.name %}{% if not customer.plan or p.price >= customer.plan.price %}
+                 {% include 'customer_portal/partials/plan_card.html' %}
+              {% endif %}{% endif %}{% endfor %}
+            </div>
+          </div>
+
+          <!-- Enterprise -->
+          <div class="tab-pane fade" id="enterprise-plans" role="tabpanel">
+            <p class="text-center mb-4 px-3" style="color: var(--p-text-muted);">Dedicated leased line connectivity for enterprises that require guaranteed performance, reliability, and uptime.</p>
+            <div class="row g-4">
+              {% for p in plans %}{% if 'Enterprise' in p.name %}{% if not customer.plan or p.price >= customer.plan.price %}
                  {% include 'customer_portal/partials/plan_card.html' %}
               {% endif %}{% endif %}{% endfor %}
             </div>
