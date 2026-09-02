@@ -208,55 +208,45 @@
         <button type="button" class="btn-close btn-close-white opacity-75" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body p-4 bg-light">
-        <div class="row g-4">
-          {% for plan in plans %}
-          <div class="col-12 col-md-6 col-lg-4">
-            <div class="card h-100 border-0 shadow-sm plan-card {% if customer.plan_id == plan.id %}border-success{% endif %}" style="border-radius: 16px; transition: all 0.2s; {% if customer.plan_id == plan.id %}box-shadow: 0 0 0 2px #10b981 !important;{% endif %}">
-              <div class="card-body p-4 d-flex flex-column">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                  <h5 class="fw-bold mb-0 text-primary">{{ plan.name }}</h5>
-                  <span class="badge bg-primary-subtle text-primary rounded-pill">ID: {{ plan.id }}</span>
-                </div>
-                
-                <h3 class="fw-bold mb-3" style="color: #059669;">₱{{ plan.price|floatformat:2 }} <span class="fs-6 fw-normal text-muted">/ 30 days</span></h3>
-                
-                <div class="d-flex flex-column gap-2 mb-4">
-                  <div class="d-flex align-items-center gap-2">
-                    <div class="rounded-circle bg-success-subtle text-success d-flex justify-content-center align-items-center" style="width: 28px; height: 28px;"><i class="fas fa-arrow-down fs-7"></i></div>
-                    <div>
-                      <div class="fw-bold lh-1">{{ plan.speed_down|default:'0' }} Mbps</div>
-                      <div class="text-muted" style="font-size: 0.75rem;">Download Speed</div>
-                    </div>
-                  </div>
-                  <div class="d-flex align-items-center gap-2">
-                    <div class="rounded-circle bg-info-subtle text-info d-flex justify-content-center align-items-center" style="width: 28px; height: 28px;"><i class="fas fa-arrow-up fs-7"></i></div>
-                    <div>
-                      <div class="fw-bold lh-1">{{ plan.speed_up|default:'0' }} Mbps</div>
-                      <div class="text-muted" style="font-size: 0.75rem;">Upload Speed</div>
-                    </div>
-                  </div>
-                  {% if plan.description %}
-                  <div class="d-flex align-items-center gap-2 mt-2">
-                    <div class="rounded-circle bg-secondary text-white d-flex justify-content-center align-items-center" style="width: 28px; height: 28px; opacity:0.7;"><i class="fas fa-info fs-7"></i></div>
-                    <div class="text-muted" style="font-size: 0.8rem;">
-                      {{ plan.description }}
-                    </div>
-                  </div>
-                  {% endif %}
-                </div>
+        <ul class="nav nav-pills mb-4 justify-content-center gap-2" id="adminPlanTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active rounded-pill fw-bold px-4" id="gtipid-admin-tab" data-bs-toggle="pill" data-bs-target="#gtipid-admin-plans" type="button" role="tab">GTipid Fiber</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill fw-bold px-4" id="gimi-admin-tab" data-bs-toggle="pill" data-bs-target="#gimi-admin-plans" type="button" role="tab">GIMI Home Fiber</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill fw-bold px-4" id="sme-admin-tab" data-bs-toggle="pill" data-bs-target="#sme-admin-plans" type="button" role="tab">SME Plans</button>
+          </li>
+        </ul>
 
-                <div class="mt-auto">
-                  <button type="button" class="btn btn-primary w-100 fw-bold rounded-pill select-plan-btn" 
-                          data-id="{{ plan.id }}" 
-                          data-price="{{ plan.price }}" 
-                          data-name="{{ plan.name }} {% if plan.speed_down %}- {{ plan.speed_down }}{% endif %}">
-                    {% if customer.plan_id == plan.id %}<i class="fas fa-check-circle me-1"></i> Current Plan{% else %}Select Plan{% endif %}
-                  </button>
-                </div>
-              </div>
+        <div class="tab-content" id="adminPlanTabsContent">
+          <!-- GTipid -->
+          <div class="tab-pane fade show active" id="gtipid-admin-plans" role="tabpanel">
+            <div class="row g-4">
+              {% for plan in plans %}{% if 'GTipid' in plan.name %}
+                 {% include 'billing/partials/plan_card.html' %}
+              {% endif %}{% endfor %}
             </div>
           </div>
-          {% endfor %}
+
+          <!-- GIMI -->
+          <div class="tab-pane fade" id="gimi-admin-plans" role="tabpanel">
+            <div class="row g-4">
+              {% for plan in plans %}{% if 'GIMI' in plan.name %}
+                 {% include 'billing/partials/plan_card.html' %}
+              {% endif %}{% endfor %}
+            </div>
+          </div>
+
+          <!-- SME -->
+          <div class="tab-pane fade" id="sme-admin-plans" role="tabpanel">
+            <div class="row g-4">
+              {% for plan in plans %}{% if 'SME' in plan.name %}
+                 {% include 'billing/partials/plan_card.html' %}
+              {% endif %}{% endfor %}
+            </div>
+          </div>
         </div>
       </div>
     </div>
