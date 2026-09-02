@@ -293,17 +293,17 @@ def sync_manager(request, device_id):
             if not name:
                 continue
             
-            is_in_django = name in django_usernames
-            if is_in_django:
+            is_in_system = name in django_usernames
+            if is_in_system:
                 ru['customer'] = django_customer_map.get(name)
-                ru['is_in_django'] = True
+                ru['is_in_system'] = True
             else:
-                ru['is_in_django'] = False
+                ru['is_in_system'] = False
 
-            if ru.get('is_suspicious'):
-                suspicious_users.append(ru)
-            elif is_in_django:
+            if is_in_system:
                 synced.append(ru)
+            elif ru.get('is_suspicious'):
+                suspicious_users.append(ru)
             else:
                 clean_orphans.append(ru)
                 

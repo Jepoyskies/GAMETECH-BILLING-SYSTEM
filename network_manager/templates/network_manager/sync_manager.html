@@ -143,7 +143,7 @@
             <div class="card sync-card border-0 mb-4">
                 <div class="card-header success-header d-flex justify-content-between align-items-center border-0">
                     <h5 class="mb-0 text-white"><i class="fas fa-check-circle me-2"></i> Active Users ({{ synced|length }})</h5>
-                    <small class="text-muted">Present in both Django and Mikrotik</small>
+                    <small class="text-muted">Present in both System and Mikrotik</small>
                 </div>
                 <div class="card-body p-0 table-responsive">
                     <form method="POST" action="{% url 'bulk_transfer_router' %}" id="bulkTransferForm">
@@ -209,7 +209,7 @@
             <div class="card sync-card border-0">
                 <div class="card-header bg-primary d-flex justify-content-between align-items-center border-0">
                     <h5 class="mb-0 text-white"><i class="fas fa-question-circle me-2"></i> Mikrotik Router Users ({{ clean_orphans|length }})</h5>
-                    <small class="text-white opacity-75">On Mikrotik, but NOT in Django</small>
+                    <small class="text-white opacity-75">On Mikrotik, but NOT in System</small>
                 </div>
                 <div class="card-body p-0 table-responsive">
                     <form method="POST" action="{% url 'sync_bulk_action' device.id %}">
@@ -261,7 +261,7 @@
                         <div class="d-flex align-items-center">
                             <span class="me-3 fw-bold text-muted">With Selected:</span>
                             <button type="submit" name="bulk_action" value="bulk_import" class="btn btn-sm btn-success me-2">
-                                <i class="fas fa-file-import"></i> Bulk Import to Django
+                                <i class="fas fa-file-import"></i> Bulk Import to System
                             </button>
                             <button type="submit" name="bulk_action" value="bulk_delete" class="btn btn-sm btn-danger" onclick="return confirm('Delete selected users from the router? This cannot be undone.');">
                                 <i class="fas fa-trash-alt"></i> Bulk Delete from Router
@@ -310,14 +310,14 @@
                                     <span class="badge bg-secondary"><i class="far fa-circle"></i> Offline</span>
                                     {% endif %}
                                     
-                                    {% if user.is_in_django %}
-                                    <span class="badge bg-danger ms-1" title="In Django Database"><i class="fas fa-database"></i> In Django</span>
+                                    {% if user.is_in_system %}
+                                    <span class="badge bg-danger ms-1" title="In System Database"><i class="fas fa-database"></i> In System</span>
                                     {% endif %}
                                 </td>
                                 <td><span class="badge bg-secondary badge-custom">{{ user.profile }}</span></td>
                                 <td class="text-muted">{{ user.comment|default:"-" }}</td>
                                 <td class="text-end">
-                                    {% if not user.is_in_django %}
+                                    {% if not user.is_in_system %}
                                     <button type="submit" formaction="{% url 'sync_bulk_action' device.id %}" formmethod="POST" name="selected_users" value="{{ user.name }}" class="btn btn-sm btn-outline-success">
                                         <input type="hidden" name="bulk_action" value="bulk_import">
                                         <i class="fas fa-file-import"></i> Auto-Import
@@ -335,7 +335,7 @@
                         <div class="d-flex align-items-center">
                             <span class="me-3 fw-bold text-muted">With Selected:</span>
                             <button type="submit" name="bulk_action" value="bulk_import" class="btn btn-sm btn-success me-2">
-                                <i class="fas fa-file-import"></i> Bulk Import to Django
+                                <i class="fas fa-file-import"></i> Bulk Import to System
                             </button>
                             <button type="submit" name="bulk_action" value="bulk_delete" class="btn btn-sm btn-danger" onclick="return confirm('Delete selected users from the router? This cannot be undone.');">
                                 <i class="fas fa-trash-alt"></i> Bulk Delete from Router
@@ -350,7 +350,7 @@
             <div class="card sync-card border-0">
                 <div class="card-header danger-header d-flex justify-content-between align-items-center border-0">
                     <h5 class="mb-0 text-white"><i class="fas fa-cloud-download-alt me-2"></i> Missing on Router ({{ missing_on_router|length }})</h5>
-                    <small class="text-white opacity-75">In Django, but NOT on Mikrotik</small>
+                    <small class="text-white opacity-75">In System, but NOT on Mikrotik</small>
                 </div>
                 <div class="card-body p-0 table-responsive">
                     <form method="POST" action="{% url 'sync_bulk_action' device.id %}">
