@@ -1,0 +1,174 @@
+{% extends 'billing/base.html' %}
+{% load static %}
+
+{% block title %}Downdetector (NOC){% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --up-color: #10b981;
+        --degraded-color: #f59e0b;
+        --down-color: #ef4444;
+        --card-bg: #ffffff;
+    }
+    
+    :root.dark-mode {
+        --card-bg: #1e293b;
+    }
+
+    .service-card {
+        background-color: var(--card-bg);
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        border-top: 4px solid #ccc;
+        transition: transform 0.2s, box-shadow 0.2s;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    
+    .service-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+    
+    .service-card.status-Up {
+        border-top-color: var(--up-color);
+    }
+    .service-card.status-Degraded {
+        border-top-color: var(--degraded-color);
+    }
+    .service-card.status-Down {
+        border-top-color: var(--down-color);
+    }
+
+    .service-name {
+        font-weight: 700;
+        font-size: 1.25rem;
+        margin-bottom: 5px;
+    }
+    
+    .service-type {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-muted);
+        margin-bottom: 15px;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: white;
+    }
+
+    .status-badge.status-Up { background-color: var(--up-color); }
+    .status-badge.status-Degraded { background-color: var(--degraded-color); color: #000; }
+    .status-badge.status-Down { background-color: var(--down-color); }
+
+    .latency-val {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-top: 15px;
+    }
+    
+    .latency-val small {
+        font-size: 0.8rem;
+        font-weight: 400;
+        color: var(--text-muted);
+    }
+</style>
+
+<div class="dashboard-container p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold m-0"><i class="fas fa-globe text-primary me-2"></i> Downdetector Network Status</h2>
+            <p class="text-muted mb-0">Live monitoring of popular third-party services</p>
+        </div>
+        <div>
+            <button class="btn btn-primary" onclick="fetchDowndetectorData()">
+                <i class="fas fa-sync-alt me-1"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-4" id="servicesGrid">
+        {% for s in services %}
+        <div class="col-12 col-md-6 col-lg-4 col-xl-3">
+            <div class="service-card status-{{ s.status }}" id="card-{{ s.id }}">
+                <div>
+                    <div class="service-name">{{ s.name }}</div>
+                    <div class="service-type"><i class="{% if s.service_type == 'Game' %}fas fa-gamepad{% else %}fas fa-globe{% endif %} me-1"></i> {{ s.service_type }}</div>
+                    
+                    <div class="status-badge status-{{ s.status }}" id="badge-{{ s.id }}">
+                        {% if s.status == 'Up' %}<i class="fas fa-check-circle me-1"></i>
+                        {% elif s.status == 'Degraded' %}<i class="fas fa-exclamation-triangle me-1"></i>
+                        {% else %}<i class="fas fa-times-circle me-1"></i>{% endif %}
+                        {{ s.status }}
+                    </div>
+                </div>
+                
+                <div class="latency-val text-end" id="latency-{{ s.id }}">
+                    {% if s.latency_ms is not None %}
+                        {{ s.latency_ms }}<small>ms</small>
+                    {% else %}
+                        -- <small>ms</small>
+                    {% endif %}
+                </div>
+                
+                <div class="text-muted text-end" style="font-size: 0.7rem; margin-top: 5px;">
+                    Last Checked: <span id="checked-{{ s.id }}">{{ s.last_checked|date:"Y-m-d H:i:s" }}</span>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center text-muted p-5">
+            <i class="fas fa-satellite-dish fa-3x mb-3"></i>
+            <h5>No services are being monitored.</h5>
+            <p>Add services in the Django Admin to start monitoring.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    function fetchDowndetectorData() {
+        fetch("{% url 'api_downdetector_data' %}")
+            .then(r => r.json())
+            .then(data => {
+                data.services.forEach(s => {
+                    let card = document.getElementById('card-' + s.id);
+                    let badge = document.getElementById('badge-' + s.id);
+                    let latency = document.getElementById('latency-' + s.id);
+                    let checked = document.getElementById('checked-' + s.id);
+                    
+                    if(card) {
+                        card.className = 'service-card status-' + s.status;
+                    }
+                    if(badge) {
+                        badge.className = 'status-badge status-' + s.status;
+                        let icon = '<i class="fas fa-check-circle me-1"></i>';
+                        if(s.status === 'Degraded') icon = '<i class="fas fa-exclamation-triangle me-1"></i>';
+                        else if(s.status === 'Down') icon = '<i class="fas fa-times-circle me-1"></i>';
+                        badge.innerHTML = icon + ' ' + s.status;
+                    }
+                    if(latency) {
+                        latency.innerHTML = s.latency_ms !== null ? s.latency_ms + '<small>ms</small>' : '-- <small>ms</small>';
+                    }
+                    if(checked) {
+                        checked.innerText = s.last_checked || '--';
+                    }
+                });
+            })
+            .catch(err => console.error("Error fetching downdetector data:", err));
+    }
+    
+    // Auto refresh every 30 seconds
+    setInterval(fetchDowndetectorData, 30000);
+</script>
+{% endblock %}

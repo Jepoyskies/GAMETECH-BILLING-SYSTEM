@@ -1,0 +1,104 @@
+{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}Message Templates | Gametech{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-3 px-md-4">
+    <div class="row mb-3">
+        <div class="col-12">
+            <a href="{% url 'settings' %}" class="btn btn-secondary rounded-pill px-4"><i class="fas fa-arrow-left"></i> Back to Settings</a>
+        </div>
+    </div>
+
+    <!-- Page Hero -->
+    <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4 animate-fade-in"
+         style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 25px;">
+        <div class="d-flex align-items-center position-relative z-1">
+            <div class="hero-icon" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-envelope-open-text text-white"></i></div>
+            <div>
+                <div class="hero-title text-white" style="font-weight: 800;">Message Templates</div>
+                <div class="hero-sub text-white-50" style="font-weight: 500;">Manage automated SMS and Email content</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Sidebar Helpers -->
+        <div class="col-lg-4 mb-4">
+            <div class="dashboard-card h-100">
+                <div class="card-header">
+                    <i class="fas fa-info-circle text-info"></i> How it works
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">
+                        These templates are used automatically by the system when you check "Send SMS" or "Send Email" during payment confirmation.
+                    </p>
+                    <h6 class="fw-bold mb-2">Supported Placeholders:</h6>
+                    <ul class="list-group list-group-flush mb-0 small text-muted">
+                        <li class="list-group-item bg-transparent px-0"><code>{customer_name}</code> - Full name of the customer</li>
+                        <li class="list-group-item bg-transparent px-0"><code>{paid_amount}</code> - Amount paid</li>
+                        <li class="list-group-item bg-transparent px-0"><code>{new_expiration}</code> - The new expiration date</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Templates Editor -->
+        <div class="col-lg-8 mb-4">
+            <div class="dashboard-card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-edit text-primary"></i> Edit Templates</span>
+                </div>
+                <div class="card-body">
+                    <!-- Nav Tabs -->
+                    <ul class="nav nav-tabs mb-4" id="templateTabs" role="tablist">
+                        {% for t in templates %}
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link {% if forloop.first %}active{% endif %}" 
+                                        id="tab-{{ t.id }}" 
+                                        data-bs-toggle="tab" 
+                                        data-bs-target="#pane-{{ t.id }}" 
+                                        type="button" role="tab">
+                                    {% if t.type == 'SMS' %}<i class="fas fa-sms text-primary"></i>{% else %}<i class="fas fa-envelope text-info"></i>{% endif %}
+                                    {{ t.name }}
+                                </button>
+                            </li>
+                        {% endfor %}
+                    </ul>
+
+                    <!-- Tab Panes -->
+                    <div class="tab-content" id="templateTabsContent">
+                        {% for t in templates %}
+                            <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="pane-{{ t.id }}" role="tabpanel">
+                                <form method="POST" action="{% url 'update_message_template' t.id %}">
+                                    {% csrf_token %}
+                                    
+                                    {% if t.type == 'EMAIL' %}
+                                    <div class="form-group mb-3">
+                                        <label class="form-label fw-bold">Subject Line</label>
+                                        <input type="text" name="subject" class="form-control" value="{{ t.subject|default:'' }}" required>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <div class="form-group mb-3">
+                                        <label class="form-label fw-bold">Message Body</label>
+                                        <textarea name="body" class="form-control" rows="8" required>{{ t.body }}</textarea>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-end">
+                                        <button type="submit" class="btn btn-primary rounded-pill px-4">
+                                            <i class="fas fa-save me-1"></i> Save Changes
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

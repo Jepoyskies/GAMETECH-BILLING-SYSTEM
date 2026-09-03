@@ -44,6 +44,66 @@
     </div>
   </div>
 
+  <!-- Bulk Action Bar -->
+  <div id="bulk-action-bar" class="bulk-action-bar d-none" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); padding: 15px 25px; border-radius: 50px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 1050; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 15px;">
+      <span class="text-white fw-bold"><span id="selected-count">0</span> Customers Selected</span>
+      <div class="vr bg-light opacity-25" style="width: 2px;"></div>
+      <button class="btn btn-sm btn-primary rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#bulkSmsModal">
+          <i class="fas fa-sms me-1"></i> Send SMS
+      </button>
+      <button class="btn btn-sm btn-info rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#bulkEmailModal">
+          <i class="fas fa-envelope me-1"></i> Send Email
+      </button>
+  </div>
+
+  <!-- Bulk SMS Modal -->
+  <div class="modal fade" id="bulkSmsModal" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content" style="background: var(--card-bg); border: 1px solid rgba(255,255,255,0.1);">
+              <div class="modal-header border-bottom-0">
+                  <h5 class="modal-title"><i class="fas fa-sms text-primary"></i> Send Bulk SMS</h5>
+                  <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                  <div class="form-group">
+                      <label class="form-label text-muted">Message Content</label>
+                      <textarea id="bulkSmsMessage" class="form-control" rows="4" style="background: rgba(0,0,0,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.1);" placeholder="Type your SMS message here..."></textarea>
+                  </div>
+              </div>
+              <div class="modal-footer border-top-0">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                  <button type="button" class="btn btn-primary" onclick="sendBulkAction('sms')">Send SMS <i class="fas fa-paper-plane ms-1"></i></button>
+              </div>
+          </div>
+      </div>
+  </div>
+
+  <!-- Bulk Email Modal -->
+  <div class="modal fade" id="bulkEmailModal" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content" style="background: var(--card-bg); border: 1px solid rgba(255,255,255,0.1);">
+              <div class="modal-header border-bottom-0">
+                  <h5 class="modal-title"><i class="fas fa-envelope text-info"></i> Send Bulk Email</h5>
+                  <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                  <div class="form-group mb-3">
+                      <label class="form-label text-muted">Subject</label>
+                      <input type="text" id="bulkEmailSubject" class="form-control" style="background: rgba(0,0,0,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.1);" placeholder="Important Notice">
+                  </div>
+                  <div class="form-group">
+                      <label class="form-label text-muted">Message Content</label>
+                      <textarea id="bulkEmailMessage" class="form-control" rows="6" style="background: rgba(0,0,0,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.1);" placeholder="Type your email message here..."></textarea>
+                  </div>
+              </div>
+              <div class="modal-footer border-top-0">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                  <button type="button" class="btn btn-info" onclick="sendBulkAction('email')">Send Email <i class="fas fa-paper-plane ms-1"></i></button>
+              </div>
+          </div>
+      </div>
+  </div>
+
 </div>
 {% endblock %}
 
@@ -57,7 +117,10 @@ document.addEventListener("DOMContentLoaded", function() {
             if(!response.ok) throw new Error('Network response was not ok');
             return response.text();
         })
-        .then(html => { container.innerHTML = html; })
+        .then(html => { 
+            container.innerHTML = html;
+            initCheckboxes(); 
+        })
         .catch(error => {
             console.error('Error fetching subscription data:', error);
             container.innerHTML = `
@@ -71,5 +134,97 @@ document.addEventListener("DOMContentLoaded", function() {
             `;
         });
 });
+
+function initCheckboxes() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.customer-checkbox');
+    const bulkBar = document.getElementById('bulk-action-bar');
+    const countSpan = document.getElementById('selected-count');
+
+    function updateBulkBar() {
+        const checkedCount = document.querySelectorAll('.customer-checkbox:checked').length;
+        countSpan.textContent = checkedCount;
+        if (checkedCount > 0) {
+            bulkBar.classList.remove('d-none');
+        } else {
+            bulkBar.classList.add('d-none');
+            if(selectAll) selectAll.checked = false;
+        }
+    }
+
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            checkboxes.forEach(cb => cb.checked = selectAll.checked);
+            updateBulkBar();
+        });
+    }
+
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', updateBulkBar);
+    });
+}
+
+function getSelectedIds() {
+    return Array.from(document.querySelectorAll('.customer-checkbox:checked')).map(cb => parseInt(cb.value));
+}
+
+function sendBulkAction(type) {
+    const ids = getSelectedIds();
+    if (ids.length === 0) return;
+
+    let payload = { customer_ids: ids };
+    let endpoint = '';
+    
+    if (type === 'sms') {
+        const msg = document.getElementById('bulkSmsMessage').value;
+        if(!msg) return alert("Message cannot be empty.");
+        payload.message = msg;
+        endpoint = '/customers/bulk-sms/';
+    } else {
+        const sub = document.getElementById('bulkEmailSubject').value || 'Important Notice';
+        const msg = document.getElementById('bulkEmailMessage').value;
+        if(!msg) return alert("Message cannot be empty.");
+        payload.subject = sub;
+        payload.message = msg;
+        endpoint = '/customers/bulk-email/';
+    }
+
+    fetch(endpoint, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if(data.success) {
+            alert(`Successfully sent ${data.sent_count} messages!`);
+            location.reload();
+        } else {
+            alert("Error: " + data.error);
+        }
+    })
+    .catch(err => {
+        alert("Network error occurred.");
+    });
+}
+
+// CSRF helper
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
 </script>
 {% endblock %}

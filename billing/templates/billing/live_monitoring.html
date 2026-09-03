@@ -338,6 +338,21 @@
         font-weight: 600;
         color: var(--success);
     }
+    
+    /* Search Modal Styles */
+    .search-customer-btn {
+        background-color: var(--hero-bg);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: opacity 0.2s;
+    }
+    .search-customer-btn:hover {
+        opacity: 0.9;
+        color: white;
+    }
 
     #customSearch {
         background-color: var(--card-bg);
@@ -384,6 +399,9 @@
             <div class="hero-title">
                 <h1>Live Monitoring</h1>
                 <div class="hero-actions">
+                    <button type="button" class="search-customer-btn" data-bs-toggle="modal" data-bs-target="#searchCustomerModal">
+                        <i class="fas fa-search me-1"></i> Search Customer
+                    </button>
                     <button type="button" class="btn-update" data-bs-toggle="modal" data-bs-target="#updateHealthModal">
                         <i class="fas fa-heartbeat me-1"></i> Update Health
                     </button>
@@ -645,6 +663,45 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-0" id="viewAllModalBody">
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Customer Modal -->
+    <div class="modal fade" id="searchCustomerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content gt-modal-content">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-search text-primary me-2"></i> Search Customer</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Select Customer</label>
+                        <select class="form-select" id="customerSearchSelect" style="width: 100%;">
+                            <option value="">Search by Name...</option>
+                            {% for c in customers %}
+                                <option value="{{ c.id }}">{{ c.full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div id="searchCustomerDetails" style="display: none;" class="mt-4">
+                        <div class="p-3 rounded bg-light border">
+                            <h6 class="fw-bold mb-3" id="searchCustName">Customer Name</h6>
+                            <div class="row g-2 text-sm">
+                                <div class="col-6"><span class="text-muted">Status:</span> <strong id="searchCustStatus">...</strong></div>
+                                <div class="col-6"><span class="text-muted">Uptime:</span> <strong id="searchCustUptime">...</strong></div>
+                                <div class="col-6"><span class="text-muted">Download:</span> <strong id="searchCustDl" class="text-info">...</strong></div>
+                                <div class="col-6"><span class="text-muted">Upload:</span> <strong id="searchCustUl" class="text-warning">...</strong></div>
+                                <div class="col-12"><span class="text-muted">MAC:</span> <strong id="searchCustMac">...</strong></div>
+                            </div>
+                            <div class="mt-3 text-end">
+                                <a href="#" id="searchCustLink" class="btn btn-primary btn-sm px-4 rounded-pill">View Profile</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1058,7 +1115,7 @@
             .then(r => r.json())
             .then(d => {
                 if (id !== currentPollId) return; // Drop old responses
-                allData = d.data || [];
+                allData = d.users || [];
                 maxRx = 0; maxTx = 0;
                 allData.forEach(u => {
                     if (u.rx_mbps > maxRx) maxRx = u.rx_mbps;
@@ -1135,6 +1192,65 @@
             "order": [[1, "desc"]], // Sort by bandwidth descending by default
             "responsive": true,
             "dom": 'rt' // Only show processing (r) and table (t)
+        });
+
+        // Initialize Select2 for Customer Search
+        $('#customerSearchSelect').select2({
+            dropdownParent: $('#searchCustomerModal'),
+            placeholder: "Search by Name...",
+            allowClear: true
+        });
+
+        let searchInterval = null;
+        $('#customerSearchSelect').on('change', function() {
+            const customerId = $(this).val();
+            const detailsDiv = document.getElementById('searchCustomerDetails');
+            
+            if (searchInterval) {
+                clearInterval(searchInterval);
+                searchInterval = null;
+            }
+            
+            if (!customerId) {
+                detailsDiv.style.display = 'none';
+                return;
+            }
+            
+            detailsDiv.style.display = 'block';
+            document.getElementById('searchCustName').innerText = $(this).find("option:selected").text();
+            document.getElementById('searchCustLink').href = '/customers/view/' + customerId + '/';
+            
+            function fetchCustomerLiveStatus() {
+                fetch('/api/customer/' + customerId + '/mikrotik-status/')
+                    .then(response => response.json())
+                    .then(data => {
+                        let statusColor = data.mt_status === 'Connected' ? 'text-success' : 'text-danger';
+                        document.getElementById('searchCustStatus').innerHTML = `<span class="${statusColor}">${data.mt_status}</span>`;
+                        document.getElementById('searchCustUptime').innerText = data.uptime !== 'N/A' ? data.uptime : (data.last_logged_out !== 'N/A' ? 'Offline since ' + data.last_logged_out : 'N/A');
+                        document.getElementById('searchCustMac').innerText = data.live_mac;
+                        
+                        if (data.rx_mbps !== undefined && data.tx_mbps !== undefined) {
+                            document.getElementById('searchCustDl').innerText = data.rx_mbps + ' Mbps';
+                            document.getElementById('searchCustUl').innerText = data.tx_mbps + ' Mbps';
+                        } else {
+                            document.getElementById('searchCustDl').innerText = '0.0 Mbps';
+                            document.getElementById('searchCustUl').innerText = '0.0 Mbps';
+                        }
+                    })
+                    .catch(error => console.error('Error fetching status:', error));
+            }
+            
+            fetchCustomerLiveStatus();
+            searchInterval = setInterval(fetchCustomerLiveStatus, 5000);
+        });
+
+        // Clear interval when modal closes
+        $('#searchCustomerModal').on('hidden.bs.modal', function () {
+            if (searchInterval) {
+                clearInterval(searchInterval);
+                searchInterval = null;
+            }
+            $('#customerSearchSelect').val('').trigger('change');
         });
 
         // Wire up custom search bar to DataTables

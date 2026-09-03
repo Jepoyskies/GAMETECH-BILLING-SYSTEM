@@ -250,11 +250,22 @@ def save_marker_positions(request):
                         customer.save()
                     except Customer.DoesNotExist:
                         pass
-                        
-            return JsonResponse({'success': True})
-        except Exception as e:
-            return JsonResponse({'success': False, 'message': str(e)})
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
             
-    return JsonResponse({'success': False, 'message': 'Invalid request method.'}, status=405)
+        return JsonResponse({'status': 'success'})
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
 
 
+@login_required
+def downdetector_view(request):
+    """
+    Renders the downdetector dashboard displaying the status of monitored services.
+    """
+    from billing.models import MonitoredService
+    services = MonitoredService.objects.all().order_by('name')
+    context = {
+        'page_title': 'Downdetector',
+        'services': services,
+    }
+    return render(request, 'billing/downdetector.html', context)

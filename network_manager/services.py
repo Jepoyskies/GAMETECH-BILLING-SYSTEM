@@ -579,21 +579,28 @@ class MikrotikAPI:
 
     def get_interfaces_traffic(self, interface_names):
         """
-        Retrieves live traffic from specified interfaces.
+        Retrieves live traffic from specified interfaces individually to prevent batch failures.
         interface_names: list of interface names
         """
         if not interface_names:
             return []
+        traffic_results = []
         try:
             api = self._get_api()
-            interfaces_str = ",".join(interface_names)
             interfaces_api = api.get_resource('/interface')
-            traffic = interfaces_api.call('monitor-traffic', {
-                'interface': interfaces_str,
-                'once': ''
-            })
+            for name in interface_names:
+                try:
+                    traffic = interfaces_api.call('monitor-traffic', {
+                        'interface': name,
+                        'once': ''
+                    })
+                    if traffic:
+                        traffic_results.extend(traffic)
+                except Exception:
+                    # Ignore single interface errors (e.g. disconnected)
+                    pass
             self.connection.disconnect()
-            return traffic
+            return traffic_results
         except Exception as e:
             logger.error(f"Failed to get interface traffic from {self.device.device_name}: {e}")
             return []

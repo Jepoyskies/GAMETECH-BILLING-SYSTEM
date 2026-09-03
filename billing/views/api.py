@@ -184,7 +184,7 @@ def subscription_plans_data_api(request):
     # 3. Time bounds
     now = timezone.now()
     soon = now + timedelta(days=7)
-    one_month_ago = now - timedelta(days=30)
+    one_week_ago = now - timedelta(days=7)
 
     # 4. Apply Filters (except connection, which requires live MT data)
     if search:
@@ -201,10 +201,10 @@ def subscription_plans_data_api(request):
     elif status_filter == 'expired':
         customers = customers.filter(
             Q(expires_at__isnull=True)
-            | Q(expires_at__lte=now, expires_at__gt=one_month_ago)
+            | Q(expires_at__lte=now, expires_at__gt=one_week_ago)
         )
     elif status_filter == 'inactive':
-        customers = customers.filter(expires_at__lte=one_month_ago)
+        customers = customers.filter(expires_at__lte=one_week_ago)
 
     if device_filter:
         customers = customers.filter(
@@ -266,7 +266,7 @@ def subscription_plans_data_api(request):
         # Status
         if not c.expires_at:
             count_expired += 1
-        elif c.expires_at <= one_month_ago:
+        elif c.expires_at <= one_week_ago:
             count_inactive += 1
         elif c.expires_at <= now:
             count_expired += 1
@@ -323,7 +323,7 @@ def subscription_plans_data_api(request):
 
         'now': now,
         'soon': soon,
-        'one_month_ago': one_month_ago,
+        'one_week_ago': one_week_ago,
     }
     
     q = request.GET.copy()
@@ -357,6 +357,18 @@ def api_customer_mikrotik_status(request, customer_id):
                     data['mt_status'] = "Connected"
                     data['uptime'] = au.get('uptime', 'N/A')
                     data['live_mac'] = au.get('caller-id', 'N/A')
+                    
+                    # Fetch bandwidth from cache to avoid blocking
+                    from django.core.cache import cache
+                    live_data = cache.get('live_monitoring_data')
+                    data['rx_mbps'] = 0.0
+                    data['tx_mbps'] = 0.0
+                    if live_data and 'users' in live_data:
+                        for user_data in live_data['users']:
+                            if user_data.get('user') == customer.pppoe_username:
+                                data['rx_mbps'] = user_data.get('rx_mbps', 0.0)
+                                data['tx_mbps'] = user_data.get('tx_mbps', 0.0)
+                                break
                     break
             
             # Fetch secrets to get last-logged-out if disconnected
@@ -437,6 +449,26 @@ def resolve_addon_request_api(request):
         return JsonResponse({'status': 'error', 'message': 'Request not found'}, status=404)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@login_required
+def api_downdetector_data(request):
+    """
+    Returns the JSON data of monitored services status.
+    """
+    from billing.models import MonitoredService
+    services = MonitoredService.objects.all().order_by('name')
+    data = []
+    for s in services:
+        data.append({
+            'id': s.id,
+            'name': s.name,
+            'type': s.service_type,
+            'status': s.status,
+            'latency_ms': s.latency_ms,
+            'last_checked': s.last_checked.strftime('%Y-%m-%d %H:%M:%S') if s.last_checked else None
+        })
+    return JsonResponse({'services': data})
 
 
 @login_required

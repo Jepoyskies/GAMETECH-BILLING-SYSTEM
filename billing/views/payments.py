@@ -232,6 +232,22 @@ def customer_rebate_view(request, username):
                 note=note,
                 adjusted_by=request.user.username
             )
+            
+            # 2.5 Update SLA Rebates Given if this was an SLA rebate
+            ticket_id = request.POST.get('ticket_id')
+            if ticket_id:
+                from dispatch.models import DispatchRecord
+                try:
+                    ticket = DispatchRecord.objects.get(id=ticket_id, customer=customer)
+                    # For simplicity, if manual rebate is given for a ticket, we just mark the current owed_days
+                    delta = timezone.now() - ticket.created_at
+                    hours_open = delta.total_seconds() / 3600
+                    owed_days = int(hours_open // 24)
+                    if owed_days > ticket.sla_rebates_given:
+                        ticket.sla_rebates_given = owed_days
+                        ticket.save()
+                except Exception:
+                    pass
 
             # 3. TODO: Sprint 4 - Call Mikrotik API to update PPPoE comment/disconnect
             
@@ -245,9 +261,30 @@ def customer_rebate_view(request, username):
             }
             return render(request, 'billing/payment_success.html', context)
 
+    # Check for SLA breaches
+    from dispatch.models import DispatchRecord
+    import datetime
+    
+    open_tickets = DispatchRecord.objects.filter(done_at__isnull=True, customer=customer)
+    sla_breaches = []
+    
+    for ticket in open_tickets:
+        delta = timezone.now() - ticket.created_at
+        hours_open = delta.total_seconds() / 3600
+        if hours_open >= 24:
+            owed_days = int(hours_open // 24)
+            if owed_days > ticket.sla_rebates_given:
+                sla_breaches.append({
+                    'ticket_id': ticket.id,
+                    'hours_open': int(hours_open),
+                    'owed_days': owed_days - ticket.sla_rebates_given,
+                    'concern': ticket.concern
+                })
+
     context = {
         'customer': customer,
-        'current_expiry_js': customer.expires_at.strftime('%Y-%m-%dT%H:%M:%S') if customer.expires_at else timezone.now().strftime('%Y-%m-%dT%H:%M:%S')
+        'current_expiry_js': customer.expires_at.strftime('%Y-%m-%dT%H:%M:%S') if customer.expires_at else timezone.now().strftime('%Y-%m-%dT%H:%M:%S'),
+        'sla_breaches': sla_breaches
     }
     return render(request, 'billing/customer_rebate.html', context)
 
@@ -260,7 +297,14 @@ def customer_rollback_view(request, username):
     if request.method == 'POST':
         rollback_to_str = request.POST.get('rollback_to')
         note = request.POST.get('note')
+        rollback_amount_str = request.POST.get('rollback_amount', '0')
         
+        try:
+            from decimal import Decimal
+            rollback_amount = Decimal(rollback_amount_str)
+        except Exception:
+            rollback_amount = Decimal('0.00')
+
         if rollback_to_str:
             new_expiry = timezone.datetime.fromisoformat(rollback_to_str)
             if timezone.is_naive(new_expiry):
@@ -268,30 +312,46 @@ def customer_rollback_view(request, username):
 
             old_expiry = customer.expires_at
 
-            # 1. Update Customer Expiry (Rollback)
+            # 1. Update Customer Expiry (Rollback) & Balance
             customer.expires_at = new_expiry
+            if rollback_amount > 0:
+                customer.outstanding_balance += rollback_amount
             customer.save()
 
-            # 2. Log the Rollback
-            from ..models import Rebate
+            # 2. Log the Rollback (Rebate model)
+            from ..models import Rebate, Payment
             Rebate.objects.create(
                 customer=customer,
                 username=customer.pppoe_username,
                 plan_name=customer.plan.name if customer.plan else None,
                 current_expiry=old_expiry,
                 expires_at=new_expiry,
+                amount=rollback_amount,
                 note=f"Rollback: {note}",
                 adjusted_by=request.user.username
             )
 
-            # 3. TODO: Sprint 4 - Mikrotik API Sync
+            # 3. Create a negative payment record so it reflects accurately in ledger
+            if rollback_amount > 0:
+                Payment.objects.create(
+                    customer=customer,
+                    username=customer.pppoe_username,
+                    plan_name=customer.plan.name if customer.plan else None,
+                    amount=-rollback_amount,
+                    payment_method='Rollback',
+                    reason=f"Rollback: {note}",
+                    adjusted_by=request.user.username,
+                    paid_at=timezone.now()
+                )
+
+            # 4. TODO: Sprint 4 - Mikrotik API Sync
 
             context = {
                 'customer': customer,
                 'new_expiry': new_expiry.strftime('%Y-%m-%d %H:%M:%S'),
                 'adjusted_by': request.user.username,
-                'action_type': 'Rollback Expiry',
-                'amount': '0.00'
+                'action_type': 'Rollback Expiry & Amount' if rollback_amount > 0 else 'Rollback Expiry',
+                'amount': str(rollback_amount)
             }
             return render(request, 'billing/payment_success.html', context)
 
@@ -435,6 +495,53 @@ def pay_customer_view(request, username):
                     notification_type='payment',
                     link=f"/logs/payments/"
                 )
+
+            # Process User Notifications (SMS/Email)
+            send_sms = request.POST.get('send_sms') == 'on'
+            send_email = request.POST.get('send_email') == 'on'
+
+            if send_sms or send_email:
+                context = {
+                    '{customer_name}': customer.full_name,
+                    '{paid_amount}': str(amount),
+                    '{new_expiration}': new_expiry.strftime('%Y-%m-%d %H:%M') if new_expiry else ''
+                }
+                
+                if send_sms and customer.phone:
+                    template_sms = MessageTemplate.objects.filter(type='SMS').first()
+                    if template_sms:
+                        msg = template_sms.body
+                        for k, v in context.items():
+                            msg = msg.replace(k, str(v))
+                        from billing.views import send_semaphore_sms
+                        res, success = send_semaphore_sms(customer.phone, msg)
+                        SmsLog.objects.create(
+                            customer=customer,
+                            phone=customer.phone,
+                            message=msg,
+                            status='Sent' if success else 'Failed',
+                            response=res
+                        )
+                
+                if send_email and customer.email:
+                    template_email = MessageTemplate.objects.filter(type='EMAIL').first()
+                    if template_email:
+                        subj = template_email.subject or 'Payment Confirmation'
+                        msg = template_email.body
+                        for k, v in context.items():
+                            subj = subj.replace(k, str(v))
+                            msg = msg.replace(k, str(v))
+                        try:
+                            from django.core.mail import send_mail
+                            send_mail(
+                                subj,
+                                msg,
+                                settings.DEFAULT_FROM_EMAIL,
+                                [customer.email],
+                                fail_silently=False,
+                            )
+                        except Exception as e:
+                            print(f"Email failed: {e}")
 
             # 5. Mikrotik API Reactivation
             if customer.mikrotik_device:

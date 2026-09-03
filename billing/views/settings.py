@@ -16,7 +16,7 @@ import json
 from datetime import timedelta, datetime
 from ..models import (
     SystemAdmin, SubscriptionPlan, Agent, AccountType,
-    Customer, Barangay, Payment, Rebate, SystemLog, SmsLog, CignalPlay, AuditLog, AddOnRequest, Notification, ImprovementRequest
+    Customer, Barangay, Payment, Rebate, SystemLog, SmsLog, CignalPlay, AuditLog, AddOnRequest, Notification, ImprovementRequest, MessageTemplate
 )
 import requests
 from network_manager.models import MikrotikDevice, NapBox
@@ -392,4 +392,23 @@ def import_legacy_data_view(request):
 
     return render(request, 'billing/import_data.html')
 
+@login_required
+@role_required(['Admin'])
+def message_templates_view(request):
+    templates = MessageTemplate.objects.all().order_by('id')
+    return render(request, 'billing/message_templates.html', {
+        'templates': templates
+    })
+
+@login_required
+@role_required(['Admin'])
+@require_POST
+def update_message_template(request, template_id):
+    template = get_object_or_404(MessageTemplate, id=template_id)
+    template.body = request.POST.get('body', template.body)
+    if template.type == 'EMAIL':
+        template.subject = request.POST.get('subject', template.subject)
+    template.save()
+    messages.success(request, f"Template '{template.name}' updated successfully.")
+    return redirect('message_templates')
 

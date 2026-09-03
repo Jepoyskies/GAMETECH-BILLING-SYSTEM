@@ -84,6 +84,8 @@ class DispatchRecord(models.Model):
     ticket_number = models.CharField(max_length=100, null=True, blank=True)
     actions_taken = models.TextField(null=True, blank=True)
     
+    sla_rebates_given = models.IntegerField(default=0, help_text="Number of 24h SLA rebate days automatically given")
+    
     teams = models.ManyToManyField(Technician, related_name='dispatches')
     csr = models.ForeignKey(User, on_delete=models.RESTRICT, related_name='handled_dispatches')
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True, related_name='dispatches')

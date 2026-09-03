@@ -838,6 +838,25 @@
             </button>
         </div>
 
+        <!-- Service Disruptions -->
+        {% if issue_services %}
+        <div class="net-alert critical mb-3" style="border-left-color: #f59e0b; background: rgba(245,158,11,0.05);">
+            <h4 style="color:#fbbf24;">
+                <i class="fas fa-globe me-2"></i>Service Disruptions
+            </h4>
+            <p style="margin-bottom: 8px;">The following popular services are currently experiencing issues globally. This is an issue with their servers and not your internet connection.</p>
+            <ul style="list-style: none; padding: 0; margin: 0; font-size: 0.85rem; color: var(--p-text);">
+                {% for s in issue_services %}
+                <li style="margin-bottom: 4px;">
+                    <i class="{% if s.service_type == 'Game' %}fas fa-gamepad{% else %}fas fa-globe{% endif %} me-1 text-muted"></i>
+                    <strong>{{ s.name }}</strong> is <span class="{% if s.status == 'Down' %}text-danger{% else %}text-warning{% endif %}">{{ s.status|lower }}</span> 
+                    <span class="text-muted small">({{ s.latency_ms|default:"timeout" }} ms)</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
         <!-- Network Alerts -->
         {% if customer.mikrotik_device and customer.mikrotik_device.health_status != 'Excellent' %}
         <div class="net-alert {% if customer.mikrotik_device.health_status in 'Outage,Offline' %}critical{% endif %}">
@@ -979,6 +998,15 @@
                             <input type="number" class="form-control" id="amountInput" name="amount"
                                    value="{{ customer.plan.price|default:'' }}" required step="0.01">
                         </div>
+                    </div>
+
+                    <!-- Estimated Next Expiration -->
+                    <div class="mb-2 p-3 text-center" style="background: rgba(16,185,129,0.06); border: 1px dashed rgba(16,185,129,0.3); border-radius: 10px;">
+                        <span style="font-size: 0.85rem; color: var(--p-text-muted);">Estimated Next Expiration:</span><br>
+                        <span id="estimatedNextExpiration" style="font-size: 1.15rem; font-weight: 700; color: #10b981;">
+                            {% if customer.expires_at %}{{ customer.expires_at|date:'M d, Y' }}{% else %}Unknown{% endif %}
+                        </span>
+                        <div style="font-size: 0.75rem; color: var(--p-text-muted); margin-top: 4px;">Based on your payment amount</div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -1265,16 +1293,50 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     updatePrices();
+    
+    // Setup Expiration Estimator
+    const estimatedNextExpiration = document.getElementById('estimatedNextExpiration');
+    const origDateStr = "{% if customer.expires_at %}{{ customer.expires_at|date:'Y-m-d' }}{% else %}{% now 'Y-m-d' %}{% endif %}";
+
+    function recalculateEstimatedExpiration() {
+        if (!estimatedNextExpiration) return;
+        const val = parseFloat(amountInput.value) || 0;
+        const dailyRate = monthlyPrice / 30;
+        let daysToAdd = 0;
+        if (dailyRate > 0) {
+            daysToAdd = Math.floor(val / dailyRate);
+        }
+        
+        let d = new Date(origDateStr);
+        if (isNaN(d.getTime())) { d = new Date(); }
+        d.setDate(d.getDate() + daysToAdd);
+        
+        estimatedNextExpiration.textContent = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    // Recalculate on manual typing
+    amountInput.addEventListener('input', recalculateEstimatedExpiration);
 
     qBtns.forEach(btn => {
         btn.addEventListener('click', function() {
             qBtns.forEach(b => b.classList.remove('active'));
             this.classList.add('active');
-            if (this.id === 'btn-custom') { amountInput.value = ''; amountInput.focus(); return; }
+            if (this.id === 'btn-custom') { 
+                amountInput.value = ''; 
+                amountInput.focus(); 
+                recalculateEstimatedExpiration();
+                return; 
+            }
             const calcEl = this.querySelector('.calc-price');
-            if (calcEl) amountInput.value = parseFloat(calcEl.textContent).toFixed(2);
+            if (calcEl) {
+                amountInput.value = parseFloat(calcEl.textContent).toFixed(2);
+                recalculateEstimatedExpiration();
+            }
         });
     });
+
+    // Run once on load for the default selected grid button (1 Month)
+    recalculateEstimatedExpiration();
 
     document.querySelectorAll('.select-plan-btn').forEach(btn => {
         btn.addEventListener('click', function() {

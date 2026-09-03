@@ -310,6 +310,7 @@ class Rebate(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, related_name='rebates')
     username = models.CharField(max_length=255, null=True, blank=True)
     plan_name = models.CharField(max_length=255, null=True, blank=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     days = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     current_expiry = models.DateTimeField(null=True, blank=True)
     expires_at = models.DateTimeField(null=True, blank=True)
@@ -449,6 +450,44 @@ class ImprovementRequest(models.Model):
 
     def __str__(self):
         return f"Request by {self.submitted_by} on {self.created_at.strftime('%Y-%m-%d')}"
+
+
+class MonitoredService(models.Model):
+    SERVICE_TYPES = (
+        ('Website', 'Website'),
+        ('Game', 'Game'),
+    )
+    STATUS_CHOICES = (
+        ('Up', 'Up'),
+        ('Degraded', 'Degraded'),
+        ('Down', 'Down'),
+    )
+    name = models.CharField(max_length=100)
+    service_type = models.CharField(max_length=50, choices=SERVICE_TYPES, default='Website')
+    target = models.CharField(max_length=255, help_text="URL or IP Address to ping")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Up')
+    latency_ms = models.IntegerField(null=True, blank=True)
+    last_checked = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return f"{self.name} ({self.status})"
+
+
+class MessageTemplate(models.Model):
+    TEMPLATE_TYPES = (
+        ('SMS', 'SMS'),
+        ('EMAIL', 'Email'),
+    )
+    name = models.CharField(max_length=100, unique=True, help_text="e.g. 'Payment Success'")
+    type = models.CharField(max_length=10, choices=TEMPLATE_TYPES)
+    subject = models.CharField(max_length=200, blank=True, null=True, help_text="Subject line (for emails only)")
+    body = models.TextField(help_text="Message content. Supported placeholders: {customer_name}, {paid_amount}, {new_expiration}")
+    
+    def __str__(self):
+        return f"{self.name} ({self.type})"
 
 
 @receiver(post_save, sender=User)

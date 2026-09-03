@@ -76,6 +76,9 @@ def portal_dashboard(request):
     if customer.expires_at and customer.status == 'active':
         if customer.expires_at <= timezone.now() + timedelta(days=3):
             is_expiring_soon = True
+            
+    from billing.models import MonitoredService
+    issue_services = MonitoredService.objects.exclude(status='Up').order_by('-latency_ms')[:10]
         
     context = {
         'customer': customer,
@@ -85,7 +88,8 @@ def portal_dashboard(request):
         'is_network_issue': is_network_issue,
         'is_expiring_soon': is_expiring_soon,
         'payments': payments,
-        'plans': plans
+        'plans': plans,
+        'issue_services': issue_services
     }
     return render(request, 'customer_portal/portal_dashboard.html', context)
 

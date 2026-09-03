@@ -9,6 +9,7 @@ urlpatterns = [
     # Customer routes
     path('customers/', views.customer_list, name='customer_list'),
     path('customers/bulk-sms/', views.bulk_sms_view, name='bulk_sms_view'),
+    path('customers/bulk-email/', views.bulk_email_view, name='bulk_email_view'),
     path('customers/add/', views.add_customer, name='add_customer'),
     path('customers/edit/<int:customer_id>/',
          views.edit_customer, name='edit_customer'),
@@ -45,6 +46,10 @@ urlpatterns = [
     path('api/offline-users/', views.api_offline_users, name='api_offline_users'),
     path('api/router-uplink/', views.api_router_uplink, name='api_router_uplink'),
     path('api/active-usernames/', views.api_active_pppoe_usernames, name='api_active_pppoe_usernames'),
+    
+    # Downdetector routes
+    path('downdetector/', views.downdetector_view, name='downdetector'),
+    path('api/downdetector/', views.api_downdetector_data, name='api_downdetector_data'),
 
 
     # Subscription / Service Plans routes
@@ -134,6 +139,8 @@ urlpatterns = [
     
     path('settings/import/', views.import_legacy_data_view, name='import_legacy_data'),
     path('settings/backup/', views.backup_database_view, name='backup_database'),
+    path('settings/templates/', views.message_templates_view, name='message_templates'),
+    path('settings/templates/update/<int:template_id>/', views.update_message_template, name='update_message_template'),
     
     path('api/live-addon-requests/', views.live_addon_requests_api, name='live_addon_requests_api'),
     path('api/resolve-addon-request/', views.resolve_addon_request_api, name='resolve_addon_request_api'),
