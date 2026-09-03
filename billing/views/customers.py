@@ -368,11 +368,11 @@ def view_customer(request, customer_id):
     all_logs = []
     
     # 1. System Logs
-    sys_logs = SystemLog.objects.filter(record_id=str(customer.id), table_name='Customer').order_by('-created_at')
+    sys_logs = SystemLog.objects.filter(record_id=str(customer.id), table_name='Customer').order_by('-changed_at')
     for log in sys_logs:
         all_logs.append({
             'type': 'system',
-            'date': log.created_at,
+            'date': log.changed_at,
             'title': f"Profile {log.action}",
             'details': log.new_data,
             'user': log.changed_by
