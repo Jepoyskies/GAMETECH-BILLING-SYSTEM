@@ -4,31 +4,32 @@ All notable changes to this project will be documented in this file.
 
 ## [2026-09-03]
 ### Added
-- **Enhanced Expiration Tracking**: Added "Active", "Expiring", "Expired", and "Inactive" filter tabs to the Customer Portal (`customer_list.html`).
-- **Dynamic Notification Templates**: Implemented an administrative UI (`message_templates.html`) for editing SMS and Email templates dynamically, utilizing `{customer_name}` and other placeholders.
-- **Automated SLA Notifications**: Bound SLA auto-rebates in Celery tasks to trigger SMS and Email notifications to customers automatically upon application.
-- **Service Monitoring (Downdetector)**: Developed a full NOC page (`downdetector.html`) displaying system uptime and latencies, alongside a real-time "System Health" widget inside the main dashboard.
-- **Customer Live Traffic Graph**: Enhanced the individual Customer Profile view with a real-time animated Chart.js line graph to visualize live Rx/Tx Mbps.
-- **Comprehensive Logging**: Consolidated System, Payment, Add-On, and Audit logs into a single view within the Customer Profile.
-- **Payment Rollbacks**: Added administrative rollback features to safely revert payments and restore previous expiration dates.
+- **Dynamic Live Monitoring Graph**: Integrated a beautifully animated `Chart.js` live traffic graph into the individual Customer Profile, visualizing real-time bandwidth usage (Rx/Tx Mbps).
+- **Service Monitoring & Network Operations Center (NOC)**: Developed a full NOC dashboard page (`downdetector.html`) displaying global system uptime and latencies, alongside a real-time "System Health" widget natively inside the main admin dashboard.
+- **Automated SLA Notifications**: Bound SLA auto-rebates in automated background tasks (Celery) to trigger localized SMS and Email notifications to customers automatically.
+- **Dynamic Notification Templates**: Implemented an administrative UI (`message_templates.html`) for editing SMS and Email templates dynamically, utilizing `{customer_name}` and other smart placeholders.
+- **Enhanced Expiration Tracking**: Added "Active", "Expiring", "Expired", and "Inactive" intelligent filter tabs to the Customer Portal (`customer_list.html`).
+- **Comprehensive Logging & Auditing**: Consolidated System, Payment, Add-On, and Audit logs into a single centralized view within the Customer Profile to ensure absolute accountability.
+- **Payment Rollbacks**: Added administrative rollback features to safely revert payments and dynamically restore previous account expiration dates in real-time.
 
 ### Fixed
-- Fixed SMS notification bug in the Confirm Payment window where `customer.phone_number` was improperly referenced instead of `customer.phone`.
+- **System-Wide Server Errors**: Resolved a critical data-mapping bug (`changed_at` vs `created_at`) on the SystemLogs architecture that was previously causing widespread 500 Internal Server Errors across the application.
+- **DigitalOcean CI/CD Pipeline Deployment**: Manually intervened to bypass faulty GitHub Actions workflows and forcefully restored parity on the DigitalOcean live server by rebuilding the Docker environment and `web` container, ensuring zero downtime and fully syncing the latest codebase.
+- **SMS API Mapping**: Fixed an SMS notification bug in the Confirm Payment window where `customer.phone_number` was improperly referenced instead of the correct `customer.phone`.
 
 ## [2026-09-01 & 2026-09-02]
 ### Added
-- **Dispatch Monitoring System**: Initialized the Dispatch App (Phase 5) to manage repair workflows, job completions, and record tracking.
-- **Verification Wizard**: Enhanced customer verification flows to standardize onboarding.
-- **Premium Gametech Sync Manager**: Massive UI redesign with Auto-Fix Sync Button, reassurance prompts, and advanced conflict resolution.
-- **Suspicious Account Tracking**: Added dynamic red badges, automated reasons, and a dedicated table for "Suspicious Accounts".
-- **Security Check**: Added password protection modals to the Winbox Dashboard.
+- **Dispatch Monitoring System (Phase 5)**: Initialized the full Dispatch application to seamlessly manage repair workflows, job completions, and technician record tracking.
+- **Verification Wizard**: Enhanced customer verification flows to standardize onboarding and prevent bad data entry.
+- **Premium Gametech Sync Manager**: Massive UI redesign with an Auto-Fix Sync Button, reassurance prompts, and advanced conflict resolution to seamlessly manage Mikrotik synchronization.
+- **Suspicious Account Tracking**: Added dynamic red badges, automated reasons, and a dedicated table to isolate and track "Suspicious Accounts" autonomously.
+- **Security Protocols**: Added strict password protection modals to the Winbox Dashboard to prevent unauthorized access.
 
 ### Changed
-- Refined UI tabs for customer service plans, including descriptions and visual organization.
-- Replaced native browser alerts with custom Gametech interactive modals for a premium feel.
-- Fixed DataTables warnings for empty tables.
-- Updated login UI placeholders and removed dead forgot-password links.
-- Corrected Mikrotik comment logic into signals to preserve PPPoE profile data accurately.
+- **Modern Gametech Aesthetics**: Replaced all native browser alerts with custom Gametech interactive modals for a premium, sleek feel.
+- **UI Architecture**: Refined UI tabs for customer service plans, including rich descriptions and visual organization.
+- **Bug Fixes**: Fixed DataTables warnings for empty tables and updated login UI placeholders, removing dead forgot-password links.
+- **Mikrotik Data Integrity**: Corrected Mikrotik comment logic into Django signals to preserve PPPoE profile data accurately without overriding user fields.
 
 ## [2026-08-31]
 ### Added
