@@ -1,0 +1,178 @@
+﻿{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}Manage Monitored Services | Gametech{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-3 px-md-4">
+
+  <!-- Page Hero -->
+  <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4 animate-fade-in"
+       style="background: linear-gradient(135deg, #0c4a6e 0%, #0284c7 60%, #38bdf8 100%);">
+    <div class="d-flex align-items-center">
+      <div class="hero-icon"><i class="fas fa-globe"></i></div>
+      <div>
+        <div class="hero-title">Downdetector Sites</div>
+        <div class="hero-sub">Add, edit, and remove websites and services to monitor</div>
+      </div>
+    </div>
+    <a href="{% url 'downdetector' %}" class="hero-badge text-decoration-none">
+      <i class="fas fa-eye me-1"></i> View Live Status
+    </a>
+  </div>
+
+  {% if messages %}
+  {% for msg in messages %}
+  <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show mb-3" role="alert">
+    <i class="fas fa-info-circle me-2"></i> {{ msg }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <div class="row g-4">
+
+    <!-- Left: Add/Edit Form -->
+    <div class="col-lg-4">
+      <div class="dashboard-card h-100" style="overflow:hidden;">
+        <div class="section-header" style="background:linear-gradient(90deg,#0284c7,#38bdf8);">
+          <h6><i class="fas fa-plus-circle sh-icon"></i> <span id="form-action-label">Add New Service</span></h6>
+        </div>
+        <div class="p-4">
+          <form method="post" action="{% url 'manage_monitored_services' %}" id="service-form">
+            {% csrf_token %}
+            <input type="hidden" name="pk" id="form-pk" value="">
+            <input type="hidden" name="action" value="save">
+
+            <div class="mb-3">
+              <label class="filter-label">Service Name <span class="text-danger">*</span></label>
+              <input type="text" name="name" id="form-name" class="form-control"
+                     placeholder="e.g. Facebook, YouTube, Netflix" required maxlength="100">
+            </div>
+
+            <div class="mb-3">
+              <label class="filter-label">Target URL or IP <span class="text-danger">*</span></label>
+              <input type="text" name="target" id="form-target" class="form-control"
+                     placeholder="e.g. https://facebook.com or 8.8.8.8" required maxlength="255">
+              <small class="text-muted">Enter a full URL to ping or a direct IP address.</small>
+            </div>
+
+            <div class="mb-4">
+              <label class="filter-label">Type</label>
+              <select name="service_type" id="form-type" class="form-select">
+                <option value="Website">Website</option>
+                <option value="Game">Game Server</option>
+              </select>
+            </div>
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn-premium btn-p-success flex-grow-1 justify-content-center py-2">
+                <i class="fas fa-save"></i> <span id="form-submit-label">Add Service</span>
+              </button>
+              <button type="button" class="btn-premium btn-p-ghost py-2 px-3" onclick="resetForm()" id="cancel-btn" style="display:none;">
+                <i class="fas fa-times"></i> Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Services Table -->
+    <div class="col-lg-8">
+      <div class="dashboard-card" style="overflow:hidden;">
+        <div class="section-header" style="background:linear-gradient(90deg,#0284c7,#38bdf8);">
+          <h6><i class="fas fa-list sh-icon"></i> Monitored Services ({{ services|length }})</h6>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-premium table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Target</th>
+                <th>Status</th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for svc in services %}
+              <tr>
+                <td class="fw-bold">{{ svc.name }}</td>
+                <td>
+                  {% if svc.service_type == 'Game' %}
+                  <span class="badge" style="background:#7c3aed;font-size:.75rem;"><i class="fas fa-gamepad me-1"></i> Game</span>
+                  {% else %}
+                  <span class="badge" style="background:#0284c7;font-size:.75rem;"><i class="fas fa-globe me-1"></i> Website</span>
+                  {% endif %}
+                </td>
+                <td><code style="font-size:.78rem;color:#64748b;">{{ svc.target }}</code></td>
+                <td>
+                  {% if svc.status == 'Up' %}
+                  <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> Up</span>
+                  {% elif svc.status == 'Degraded' %}
+                  <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-circle me-1"></i> Degraded</span>
+                  {% else %}
+                  <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i> Down</span>
+                  {% endif %}
+                </td>
+                <td class="text-center">
+                  <div class="d-flex justify-content-center gap-2">
+                    <button class="btn btn-sm btn-warning fw-bold px-2 py-1"
+                            onclick="editService({{ svc.pk }}, '{{ svc.name|escapejs }}', '{{ svc.target|escapejs }}', '{{ svc.service_type }}')"
+                            title="Edit">
+                      <i class="fas fa-pen"></i>
+                    </button>
+                    <form method="post" action="{% url 'manage_monitored_services' %}"
+                          onsubmit="return confirm('Delete {{ svc.name }}?');" class="d-inline">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="delete">
+                      <input type="hidden" name="pk" value="{{ svc.pk }}">
+                      <button type="submit" class="btn btn-sm btn-danger fw-bold px-2 py-1" title="Delete">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="5">
+                  <div class="empty-state">
+                    <div class="es-icon"><i class="fas fa-globe-slash"></i></div>
+                    <h6>No Services Configured</h6>
+                    <p>Add your first website or game server to monitor using the form on the left.</p>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function editService(pk, name, target, type) {
+    document.getElementById('form-pk').value = pk;
+    document.getElementById('form-name').value = name;
+    document.getElementById('form-target').value = target;
+    document.getElementById('form-type').value = type;
+    document.getElementById('form-action-label').textContent = 'Edit Service';
+    document.getElementById('form-submit-label').textContent = 'Save Changes';
+    document.getElementById('cancel-btn').style.display = '';
+    document.getElementById('form-name').focus();
+    window.scrollTo({top: 0, behavior: 'smooth'});
+}
+function resetForm() {
+    document.getElementById('service-form').reset();
+    document.getElementById('form-pk').value = '';
+    document.getElementById('form-action-label').textContent = 'Add New Service';
+    document.getElementById('form-submit-label').textContent = 'Add Service';
+    document.getElementById('cancel-btn').style.display = 'none';
+}
+</script>
+{% endblock %}

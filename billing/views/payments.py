@@ -219,6 +219,14 @@ def customer_rebate_view(request, username):
             # 1. Update Customer Expiry
             customer.expires_at = new_expiry
             # customer.sms_sent_at = None  # TODO: Uncomment when SMS is added
+            
+            # Dynamic Status Update based on rebate time
+            was_suspended = customer.status in ['suspended', 'inactive', 'expired']
+            if new_expiry <= timezone.now() and customer.status == 'active':
+                customer.status = 'expired'
+            elif new_expiry > timezone.now() and was_suspended:
+                customer.status = 'active'
+                
             customer.save()
 
             # 2. Log the Rebate
@@ -316,6 +324,14 @@ def customer_rollback_view(request, username):
             customer.expires_at = new_expiry
             if rollback_amount > 0:
                 customer.outstanding_balance += rollback_amount
+                
+            # 1.b Dynamic Status Update based on rollback time
+            was_suspended = customer.status in ['suspended', 'inactive', 'expired']
+            if new_expiry <= timezone.now() and customer.status == 'active':
+                customer.status = 'expired'
+            elif new_expiry > timezone.now() and was_suspended:
+                customer.status = 'active'
+                
             customer.save()
 
             # 2. Log the Rollback (Rebate model)
@@ -689,6 +705,14 @@ def revert_transfer_payment(request, payment_id):
                     wrong_customer.expires_at = wrong_customer.expires_at - timedelta(days=days_to_subtract)
             
             wrong_customer.outstanding_balance += payment.amount
+            
+            # Dynamic Status Update based on rollback time
+            was_suspended = wrong_customer.status in ['suspended', 'inactive', 'expired']
+            if wrong_customer.expires_at and wrong_customer.expires_at <= timezone.now() and wrong_customer.status == 'active':
+                wrong_customer.status = 'expired'
+            elif wrong_customer.expires_at and wrong_customer.expires_at > timezone.now() and was_suspended:
+                wrong_customer.status = 'active'
+                
             wrong_customer.save()
             
             # --- Apply to New Customer ---

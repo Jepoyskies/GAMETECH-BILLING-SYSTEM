@@ -269,3 +269,55 @@ def downdetector_view(request):
         'services': services,
     }
     return render(request, 'billing/downdetector.html', context)
+
+
+@login_required
+@role_required(['Admin'])
+def manage_monitored_services_view(request):
+    """
+    Admin CRUD view for managing the list of monitored services in the Downdetector.
+    Handles create (POST with no pk), edit (POST with pk), and delete (POST with action=delete).
+    """
+    from billing.models import MonitoredService
+    
+    if request.method == 'POST':
+        action = request.POST.get('action', 'save')
+        pk = request.POST.get('pk')
+        
+        if action == 'delete' and pk:
+            service = get_object_or_404(MonitoredService, pk=pk)
+            name = service.name
+            service.delete()
+            messages.success(request, f'"{name}" has been removed from monitoring.')
+            return redirect('manage_monitored_services')
+        
+        # Create or update
+        name = request.POST.get('name', '').strip()
+        target = request.POST.get('target', '').strip()
+        service_type = request.POST.get('service_type', 'Website')
+        
+        if not name or not target:
+            messages.error(request, 'Name and Target URL/IP are required.')
+            return redirect('manage_monitored_services')
+        
+        if pk:
+            service = get_object_or_404(MonitoredService, pk=pk)
+            service.name = name
+            service.target = target
+            service.service_type = service_type
+            service.save()
+            messages.success(request, f'"{name}" updated successfully.')
+        else:
+            MonitoredService.objects.create(
+                name=name,
+                target=target,
+                service_type=service_type,
+            )
+            messages.success(request, f'"{name}" added to monitoring list.')
+        
+        return redirect('manage_monitored_services')
+    
+    # GET
+    from billing.models import MonitoredService
+    services = MonitoredService.objects.all().order_by('name')
+    return render(request, 'billing/manage_monitored_services.html', {'services': services})

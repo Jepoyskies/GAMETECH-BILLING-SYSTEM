@@ -49,6 +49,7 @@ urlpatterns = [
     # Downdetector routes
     path('downdetector/', views.downdetector_view, name='downdetector'),
     path('api/downdetector/', views.api_downdetector_data, name='api_downdetector_data'),
+    path('admin/downdetector/manage/', views.manage_monitored_services_view, name='manage_monitored_services'),
 
     # Dashboard API routes
     path('api/top-clients/', views.api_top_clients, name='api_top_clients'),

@@ -46,6 +46,7 @@ def sync_customer_to_mikrotik(sender, instance, created, **kwargs):
             'Router': instance.mikrotik_device.device_name if instance.mikrotik_device else "None",
             'Username': instance.pppoe_username,
             'Password': instance.pppoe_password,
+            'Expiration': instance.expires_at.strftime('%Y-%m-%d %H:%M') if instance.expires_at else "None"
         }
         changed = False
         for key in new_state:

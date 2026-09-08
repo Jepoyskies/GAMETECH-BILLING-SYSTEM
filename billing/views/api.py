@@ -53,16 +53,15 @@ def mikrotik_active_users_data_api(request):
 @login_required
 def api_live_monitoring_data(request):
     from django.core.cache import cache
-    response_data = cache.get('live_monitoring_data')
+    try:
+        response_data = cache.get('live_monitoring_data')
+    except Exception:
+        response_data = None
     
-    # Fallback if cache is empty or expired
+    # Fallback if cache is empty or expired (or Redis is not running)
     if not response_data:
-        response_data = {
-            'users': [],
-            'routers': [],
-            'offline_users': [],
-            'total_active_subs': 0
-        }
+        from billing.utils import get_live_monitoring_data_sync
+        response_data = get_live_monitoring_data_sync()
         
     return JsonResponse(response_data)
 
