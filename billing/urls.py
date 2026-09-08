@@ -46,10 +46,13 @@ urlpatterns = [
     path('api/offline-users/', views.api_offline_users, name='api_offline_users'),
     path('api/router-uplink/', views.api_router_uplink, name='api_router_uplink'),
     path('api/active-usernames/', views.api_active_pppoe_usernames, name='api_active_pppoe_usernames'),
-    
     # Downdetector routes
     path('downdetector/', views.downdetector_view, name='downdetector'),
     path('api/downdetector/', views.api_downdetector_data, name='api_downdetector_data'),
+
+    # Dashboard API routes
+    path('api/top-clients/', views.api_top_clients, name='api_top_clients'),
+    path('api/popular-plans/', views.api_popular_plans, name='api_popular_plans'),
 
 
     # Subscription / Service Plans routes

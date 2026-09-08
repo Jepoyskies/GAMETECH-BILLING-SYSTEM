@@ -34,20 +34,50 @@ def dashboard_view(request):
 
     # KPIs
     total_customers = Customer.objects.count()
-    new_customers_this_month = Customer.objects.filter(
-        created_at__month=today.month, created_at__year=today.year).count()
+    new_customers_qs = Customer.objects.filter(created_at__month=today.month, created_at__year=today.year)
+    new_customers_this_month = new_customers_qs.count()
+    
+    new_customers_list = []
+    for c in new_customers_qs.order_by('-created_at')[:10]:
+        new_customers_list.append({
+            'username': c.pppoe_username or c.full_name,
+            'plan_name': c.plan.name if c.plan else 'N/A',
+            'created_at': c.created_at
+        })
 
-    # Totals
+    # Totals and Breakdowns
     yesterday = today - timedelta(days=1)
     start_of_week = today - timedelta(days=today.weekday())
     
     payments = Payment.objects.all()
     
-    total_today = payments.filter(created_at__date=today).aggregate(t=Sum('amount'))['t'] or 0
-    total_yesterday = payments.filter(created_at__date=yesterday).aggregate(t=Sum('amount'))['t'] or 0
-    total_week = payments.filter(created_at__date__gte=start_of_week).aggregate(t=Sum('amount'))['t'] or 0
-    total_month = payments.filter(created_at__month=today.month, created_at__year=today.year).aggregate(t=Sum('amount'))['t'] or 0
-    total_year = payments.filter(created_at__year=today.year).aggregate(t=Sum('amount'))['t'] or 0
+    def get_breakdown(qs):
+        methods = list(qs.values('payment_method').annotate(total=Sum('amount')).order_by('-total'))
+        recent = list(qs.order_by('-created_at')[:8])
+        recent_list = []
+        for p in recent:
+            recent_list.append({
+                'username': p.username or (p.customer.pppoe_username if p.customer else 'Unknown'),
+                'amount': float(p.amount),
+                'method': p.payment_method,
+                'date': p.created_at
+            })
+        return {
+            'methods': methods,
+            'recent': recent_list
+        }
+
+    qs_today = payments.filter(created_at__date=today)
+    qs_yesterday = payments.filter(created_at__date=yesterday)
+    qs_week = payments.filter(created_at__date__gte=start_of_week)
+    qs_month = payments.filter(created_at__month=today.month, created_at__year=today.year)
+    qs_year = payments.filter(created_at__year=today.year)
+    
+    total_today = qs_today.aggregate(t=Sum('amount'))['t'] or 0
+    total_yesterday = qs_yesterday.aggregate(t=Sum('amount'))['t'] or 0
+    total_week = qs_week.aggregate(t=Sum('amount'))['t'] or 0
+    total_month = qs_month.aggregate(t=Sum('amount'))['t'] or 0
+    total_year = qs_year.aggregate(t=Sum('amount'))['t'] or 0
 
     totals = {
         'today': f"{total_today:,.2f}",
@@ -55,6 +85,14 @@ def dashboard_view(request):
         'week': f"{total_week:,.2f}",
         'month': f"{total_month:,.2f}",
         'year': f"{total_year:,.2f}",
+    }
+    
+    breakdowns = {
+        'today': get_breakdown(qs_today),
+        'yesterday': get_breakdown(qs_yesterday),
+        'week': get_breakdown(qs_week),
+        'month': get_breakdown(qs_month),
+        'year': get_breakdown(qs_year),
     }
 
     # Revenue Growth
@@ -190,10 +228,12 @@ def dashboard_view(request):
         'growth_color': growth_color,
         'growth_percent_formatted': f"{growth_percent:.1f}",
         'new_customers_this_month': new_customers_this_month,
+        'new_customers_list': new_customers_list,
         'collection_rate_formatted': f"{collection_rate:.1f}",
         'distinct_payers_this_month': distinct_payers_this_month,
         'total_customers': total_customers,
         'totals': totals,
+        'breakdowns': breakdowns,
         'recent_admin_logins': recent_admin_logins,
         'top_clients': top_clients,
         'top_plans': top_plans,

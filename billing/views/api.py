@@ -579,3 +579,68 @@ def api_active_pppoe_usernames(request):
     })
 
 
+
+@login_required
+def api_top_clients(request):
+    filter_type = request.GET.get('filter', 'month')
+    now = timezone.localtime()
+    
+    payments = Payment.objects.all()
+    
+    if filter_type == 'week':
+        # Start of current week (Monday)
+        start_date = now - timedelta(days=now.weekday())
+        start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        payments = payments.filter(created_at__gte=start_date)
+    elif filter_type == 'year':
+        payments = payments.filter(created_at__year=now.year)
+    else: # 'month' is default
+        payments = payments.filter(created_at__month=now.month, created_at__year=now.year)
+        
+    top_clients_qs = payments.values(
+        'customer__full_name', 
+        'customer__pppoe_username',
+        'customer__plan__name'
+    ).annotate(
+        total_paid=Sum('amount'), 
+        last_payment=Max('created_at')
+    ).order_by('-total_paid')[:50] # Top 50 clients
+    
+    data = []
+    for c in top_clients_qs:
+        if c['customer__full_name'] or c['customer__pppoe_username']:
+            data.append({
+                'username': c['customer__pppoe_username'] or c['customer__full_name'],
+                'plan_name': c['customer__plan__name'] or 'N/A',
+                'total_paid': float(c['total_paid'] or 0),
+            })
+            
+    return JsonResponse({'status': 'success', 'data': data})
+
+@login_required
+def api_popular_plans(request):
+    filter_type = request.GET.get('filter', 'month')
+    now = timezone.localtime()
+    
+    customers = Customer.objects.all()
+    
+    if filter_type == 'week':
+        # Start of current week (Monday)
+        start_date = now - timedelta(days=now.weekday())
+        start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        customers = customers.filter(created_at__gte=start_date)
+    elif filter_type == 'year':
+        customers = customers.filter(created_at__year=now.year)
+    else: # 'month' is default
+        customers = customers.filter(created_at__month=now.month, created_at__year=now.year)
+        
+    top_plans_qs = customers.values('plan__name').annotate(cnt=Count('id')).order_by('-cnt')[:50]
+    
+    data = []
+    for p in top_plans_qs:
+        data.append({
+            'plan_name': p['plan__name'] or 'None',
+            'cnt': p['cnt']
+        })
+        
+    return JsonResponse({'status': 'success', 'data': data})

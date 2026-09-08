@@ -3,30 +3,1072 @@
 
 {% block title %}Dashboard | Gametech Unli Fiber{% endblock %}
 
-{% block content %}
-<div class="container-fluid py-4 px-3 px-md-4">
+{% block extra_css %}
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
-  <!-- Welcome Hero -->
-  <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4 animate-fade-in">
-    <div class="d-flex align-items-center">
-      <div class="hero-icon"><i class="fas fa-chart-pie"></i></div>
-      <div>
-        <div class="hero-title">Dashboard</div>
-        <div class="hero-sub">
-          {% if request.user.is_authenticated %}
-            Welcome back, <strong>{{ request.user.username }}</strong> — here's your business overview
-          {% else %}
-            Business overview and live metrics
-          {% endif %}
+  .dashboard-wrapper {
+    font-family: 'Outfit', sans-serif;
+    padding-bottom: 2rem;
+  }
+
+  /* Glass Card Base */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 24px;
+    box-shadow: 0 10px 40px -10px rgba(31, 38, 135, 0.08);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+  }
+
+  /* Dark Mode Overrides */
+  html.dark-mode .glass-card {
+    background: rgba(53, 51, 205, 0.2);
+    border: 1px solid rgba(53, 51, 205, 0.4);
+    box-shadow: 0 15px 35px 0 rgba(0, 0, 0, 0.4);
+  }
+
+  .glass-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px -10px rgba(31, 38, 135, 0.15);
+  }
+
+  html.dark-mode .glass-card:hover {
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .glass-card.no-hover {
+    transition: none !important;
+  }
+  .glass-card.no-hover:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+  html.dark-mode .glass-card.no-hover:hover {
+    box-shadow: none !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  /* Custom Chart Blue Button */
+  .btn-outline-chart-blue {
+    color: #2151A1;
+    border-color: #2151A1;
+  }
+  .btn-outline-chart-blue:hover,
+  .btn-check:checked + .btn-outline-chart-blue {
+    background-color: #2151A1;
+    border-color: #2151A1;
+    color: #ffffff;
+  }
+  .btn-check:focus + .btn-outline-chart-blue {
+    box-shadow: 0 0 0 0.25rem rgba(33, 81, 161, 0.25);
+  }
+
+  /* KPI Icons & Text Gradients */
+  .kpi-icon-premium {
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    margin-bottom: 1.2rem;
+    position: relative;
+    z-index: 2;
+  }
+
+  .kpi-icon-premium::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: inherit;
+    filter: blur(10px);
+    opacity: 0.6;
+    z-index: -1;
+  }
+
+  .text-gradient {
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline-block;
+  }
+
+  /* Gradient Sets */
+  .grad-blue {
+    background: linear-gradient(135deg, #3b82f6 0%, #2dd4bf 100%);
+    color: white;
+  }
+
+  .grad-purple {
+    background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+    color: white;
+  }
+
+  .grad-green {
+    background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+    color: white;
+  }
+
+  .grad-orange {
+    background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+    color: white;
+  }
+
+  .grad-red {
+    background: linear-gradient(135deg, #ef4444 0%, #f43f5e 100%);
+    color: white;
+  }
+
+  /* Hero Banner */
+  .hero-glass {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+    border-radius: 28px;
+    padding: 2.5rem;
+    color: white;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 20px 50px -10px rgba(30, 58, 138, 0.5);
+  }
+
+  .hero-glass::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at center, rgba(56, 189, 248, 0.15) 0%, transparent 50%);
+    animation: rotate 25s linear infinite;
+    pointer-events: none;
+  }
+
+  @keyframes rotate {
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  .clock-display {
+    font-family: 'Courier New', Courier, monospace;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    padding: 0.8rem 1.5rem;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-weight: 700;
+    letter-spacing: 2px;
+  }
+
+  /* Beautiful Tables */
+  .glass-table {
+    width: 100%;
+    color: inherit;
+    margin-bottom: 0;
+  }
+
+  .glass-table th {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    font-weight: 600;
+    color: #64748b;
+    padding: 1rem 1.2rem;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+  }
+
+  html.dark-mode .glass-table th {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    color: #94a3b8;
+  }
+
+  .glass-table td {
+    padding: 1.2rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+    vertical-align: middle;
+    font-size: 0.95rem;
+  }
+
+  html.dark-mode .glass-table td {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  }
+
+  .glass-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .glass-table tr:hover td {
+    background: rgba(0, 0, 0, 0.02);
+  }
+
+  html.dark-mode .glass-table tr:hover td {
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  /* Fade & Slide Animations */
+  .fade-in-up {
+    animation: fadeInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .d1 {
+    animation-delay: 0.1s;
+  }
+
+  .d2 {
+    animation-delay: 0.2s;
+  }
+
+  .d3 {
+    animation-delay: 0.3s;
+  }
+
+  .d4 {
+    animation-delay: 0.4s;
+  }
+
+  @keyframes fadeInUp {
+    0% {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Glow Dots & Badges */
+  .glow-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
+  }
+
+  .glow-success {
+    background: #10b981;
+    box-shadow: 0 0 10px #10b981;
+  }
+
+  .glow-warning {
+    background: #f59e0b;
+    box-shadow: 0 0 10px #f59e0b;
+  }
+
+  .glow-danger {
+    background: #ef4444;
+    box-shadow: 0 0 10px #ef4444;
+  }
+
+  .premium-badge {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  html.dark-mode .premium-badge {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  /* Avatar */
+  .avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: white;
+    font-size: 1.1rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Modal Close btn inversion for dark mode */
+  html.dark-mode .btn-close {
+    filter: invert(1);
+  }
+
+  /* Dashboard Specific Sidebar Override (White) */
+  html:not(.dark-mode) .sidebar {
+    background: #ffffff !important;
+    color: #2151A1 !important;
+    border-right: 1px solid #f0f0f0;
+    box-shadow: 2px 0 15px rgba(33, 81, 161, 0.05);
+  }
+
+  html:not(.dark-mode) .sidebar-header {
+    background: #ffffff !important;
+    border-bottom: 1px solid #f0f0f0 !important;
+  }
+
+  html:not(.dark-mode) .sidebar-footer {
+    background: #ffffff !important;
+    border-top: 1px solid #f0f0f0 !important;
+    color: #19407A !important;
+  }
+
+  html:not(.dark-mode) .sidebar ul li .menu-link {
+    color: #19407A !important;
+  }
+
+  html:not(.dark-mode) .sidebar ul li .menu-link .icon {
+    color: #2151A1 !important;
+    opacity: 0.7;
+  }
+
+  html:not(.dark-mode) .sidebar ul li .menu-link:hover,
+  html:not(.dark-mode) .sidebar ul li .menu-link.active {
+    background: rgba(249, 178, 51, 0.15) !important;
+    /* Light yellow/orange tint */
+    color: #2151A1 !important;
+    border-left: 4px solid #F9B233 !important;
+  }
+
+  html:not(.dark-mode) .sidebar ul li .menu-link:hover .icon,
+  html:not(.dark-mode) .sidebar ul li .menu-link.active .icon {
+    color: #F9B233 !important;
+    opacity: 1;
+  }
+
+  html:not(.dark-mode) .sidebar .close-btn {
+    color: #2151A1 !important;
+  }
+
+  /* --- NEW DASHBOARD UI STYLES --- */
+  .custom-hero-banner {
+    background: #2151A1;
+    color: white;
+    padding: 3.5rem 2.5rem 6.5rem 2.5rem;
+    margin: -1.5rem -1.5rem 0 -1.5rem;
+    /* stretches beyond container padding */
+    border-radius: 0 0 40px 40px;
+    position: relative;
+  }
+
+  .hero-title-wrapper {
+    border-left: 6px solid #F9B233;
+    padding-left: 1.2rem;
+    margin-bottom: 1rem;
+  }
+
+  .hero-title {
+    font-weight: 700;
+    font-size: 2.8rem;
+    margin-bottom: 0.2rem;
+    font-family: 'Montserrat', sans-serif;
+    letter-spacing: -0.5px;
+  }
+
+  .hero-subtitle {
+    font-size: 1.05rem;
+    opacity: 0.9;
+    font-weight: 400;
+    font-family: 'Montserrat', sans-serif;
+    margin-bottom: 0;
+  }
+
+  .kpi-cards-row {
+    margin-top: -4.5rem;
+    /* pulls cards up into the blue banner */
+    position: relative;
+    z-index: 10;
+  }
+
+  .kpi-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.8rem 1.5rem;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    height: 100%;
+    border: 1px solid rgba(0, 0, 0, 0.02);
+    position: relative;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  @media (min-width: 768px) {
+    .kpi-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+    }
+    .kpi-card:hover .kpi-label,
+    .kpi-card:hover .kpi-value,
+    .kpi-card:hover .kpi-card-icon i {
+      color: #F9B233 !important;
+    }
+  }
+  
+  /* Expand Icon Button */
+  .expand-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: rgba(100, 116, 139, 0.5); /* fallback light mode */
+    z-index: 10;
+  }
+  html.dark-mode .expand-btn {
+    color: rgba(236, 238, 243, 0.5);
+  }
+  .expand-btn svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+  .expand-btn:hover {
+    color: #F9B233;
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+  html.dark-mode .expand-btn:hover {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  .secondary-kpi-card .expand-btn {
+    top: 0.25rem;
+    right: 0.25rem;
+    padding: 0.35rem;
+  }
+  .secondary-kpi-card .expand-btn svg {
+    width: 1rem;
+    height: 1rem;
+  }
+  @media (min-width: 768px) {
+    .expand-btn {
+      display: none !important;
+    }
+    .bottom-card .expand-btn {
+      display: flex !important;
+    }
+  }
+
+  .kpi-card-icon {
+    width: 70px;
+    height: 70px;
+    background: #e2e8f0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1.5rem;
+    flex-shrink: 0;
+  }
+
+  .kpi-card-icon i {
+    font-size: 1.8rem;
+    color: #94a3b8;
+  }
+
+  .kpi-card-content {
+    flex-grow: 1;
+  }
+
+  .kpi-value {
+    color: #2151A1;
+    font-weight: 700;
+    font-size: 2.2rem;
+    line-height: 1.1;
+    margin-bottom: 0.4rem;
+    font-family: 'Montserrat', sans-serif;
+    transition: color 0.3s ease;
+  }
+
+  .kpi-label {
+    color: #2151A1;
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-family: 'Montserrat', sans-serif;
+    transition: color 0.3s ease;
+  }
+
+  .kpi-eye-icon {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    color: #1e293b;
+    font-size: 1.1rem;
+    cursor: pointer;
+    opacity: 0.8;
+  }
+
+  .kpi-eye-icon:hover {
+    opacity: 1;
+    color: #F9B233;
+  }
+
+  /* Dark Mode Overrides for New UI */
+  html.dark-mode .custom-hero-banner {
+    background: linear-gradient(to right, rgba(3, 73, 203, 0.15), transparent), #15171b;
+  }
+
+  html.dark-mode .kpi-card {
+    background: rgba(53, 51, 205, 0.2);
+    border-color: rgba(53, 51, 205, 0.4);
+  }
+  @media (min-width: 768px) {
+    html.dark-mode .kpi-card:hover {
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+      border-color: rgba(53, 51, 205, 0.6);
+    }
+    html.dark-mode .kpi-card:hover .kpi-label,
+    html.dark-mode .kpi-card:hover .kpi-value,
+    html.dark-mode .kpi-card:hover .kpi-card-icon i {
+      color: #fbae1a !important;
+    }
+  }
+
+  html.dark-mode .kpi-card-icon {
+    background: rgba(53, 51, 205, 0.4);
+  }
+
+  html.dark-mode .kpi-card-icon i {
+    color: #fbae1a !important;
+  }
+
+  html.dark-mode .kpi-value,
+  html.dark-mode .kpi-label {
+    color: #e2e8f0;
+  }
+
+  html.dark-mode .kpi-eye-icon {
+    color: #94a3b8;
+  }
+
+  .secondary-kpi-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.2rem 0.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    height: 100%;
+    border: 1px solid rgba(0, 0, 0, 0.02);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+  }
+
+  @media (min-width: 768px) {
+    .secondary-kpi-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+    }
+
+    .secondary-kpi-card:hover .kpi-label,
+    .secondary-kpi-card:hover .kpi-value {
+      color: #F9B233 !important;
+    }
+  }
+
+  html.dark-mode .secondary-kpi-card {
+    background: rgba(53, 51, 205, 0.2);
+    border-color: rgba(53, 51, 205, 0.4);
+  }
+
+  @media (min-width: 768px) {
+    html.dark-mode .secondary-kpi-card:hover {
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+      border-color: rgba(53, 51, 205, 0.6);
+    }
+
+    html.dark-mode .secondary-kpi-card:hover .kpi-label,
+    html.dark-mode .secondary-kpi-card:hover .kpi-value {
+      color: #fbae1a !important;
+    }
+  }
+
+  /* Dark Mode Overrides for Bottom Cards (Active UI) */
+  html.dark-mode .bottom-card .fw-bold.text-uppercase { color: #eceef3 !important; }
+  html.dark-mode .bottom-card .rounded-circle i { color: #fbae1a !important; text-shadow: 0 0 10px rgba(251, 174, 26, 0.3); }
+  html.dark-mode .bottom-card .rounded-circle { background: rgba(255,255,255,0.05) !important; border: 1px solid rgba(255,255,255,0.1) !important; }
+  html.dark-mode .bottom-card .glass-table th { color: #eceef3 !important; opacity: 1 !important; border-bottom-color: rgba(255, 255, 255, 0.1) !important; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 1px; }
+  html.dark-mode .bottom-card .text-muted { color: rgba(236, 238, 243, 0.7) !important; }
+  html.dark-mode .bottom-card .fw-semibold.text-dark { color: #ffffff !important; }
+  
+  html.dark-mode .bottom-card .avatar-circle { background: rgba(59, 130, 246, 0.2) !important; color: #93c5fd !important; border: 1px solid rgba(59, 130, 246, 0.3) !important; }
+  html.dark-mode .bottom-card td.text-end[style*="color: #2151A1"] { color: #60a5fa !important; }
+  
+  /* Glowing Pills for Badges */
+  html.dark-mode .bottom-card .premium-badge { padding: 4px 10px !important; border-radius: 12px !important; font-size: 0.75rem !important; font-weight: bold !important; display: inline-block; }
+  html.dark-mode .bottom-card .premium-badge[style*="3b82f6"] { 
+    background: rgba(59, 130, 246, 0.2) !important; color: #93c5fd !important; border: 1px solid rgba(59, 130, 246, 0.3) !important; 
+  }
+  html.dark-mode .bottom-card .premium-badge[style*="10b981"] { 
+    background: rgba(52, 211, 153, 0.2) !important; color: #6ee7b7 !important; border: 1px solid rgba(52, 211, 153, 0.3) !important; 
+  }
+  html.dark-mode .bottom-card .premium-badge[style*="ef4444"] { 
+    background: rgba(248, 113, 113, 0.2) !important; color: #fca5a5 !important; border: 1px solid rgba(248, 113, 113, 0.3) !important; 
+  }
+  html.dark-mode .bottom-card .countdown {
+    background: rgba(251, 174, 26, 0.15) !important; color: #fbae1a !important; border: 1px solid rgba(251, 174, 26, 0.3) !important; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; display: inline-block;
+  }
+
+  /* Dark Mode Overrides for Chart Filter Buttons */
+  html.dark-mode .btn-outline-chart-blue {
+    color: #fbae1a !important;
+    border-color: rgba(251, 174, 26, 0.4) !important;
+  }
+  html.dark-mode .btn-outline-chart-blue:hover,
+  html.dark-mode .btn-check:checked + .btn-outline-chart-blue {
+    background-color: rgba(251, 174, 26, 0.15) !important;
+    border-color: #fbae1a !important;
+    color: #fbae1a !important;
+  }
+  html.dark-mode .btn-check:focus + .btn-outline-chart-blue {
+    box-shadow: 0 0 0 0.25rem rgba(251, 174, 26, 0.25) !important;
+  }
+
+  /* Sleek Radial Card Design */
+  .sleek-radial-card {
+    background: linear-gradient(135deg, rgba(236, 240, 243, 0.8), rgba(255, 255, 255, 0.4));
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    backdrop-filter: blur(10px);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  html.dark-mode .sleek-radial-card {
+    background: linear-gradient(135deg, rgba(53, 51, 205, 0.2), rgba(21, 23, 27, 0.6));
+    border: 1px solid rgba(53, 51, 205, 0.3);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  }
+
+  .sleek-radial-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 1.5rem;
+    font-family: 'Poppins', 'Montserrat', sans-serif;
+  }
+
+  html.dark-mode .sleek-radial-title {
+    color: #eceef3;
+  }
+
+  .sleek-radial-canvas-container {
+    flex-grow: 1;
+    position: relative;
+    height: 250px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Mobile View: Only expand icon is clickable on cards */
+  @media (max-width: 767.98px) {
+    .kpi-card, .secondary-kpi-card {
+      pointer-events: none;
+    }
+    .expand-btn {
+      pointer-events: auto;
+    }
+  }
+  /* Mobile Transaction Card Overrides */
+  .mobile-tx-card {
+    background: rgba(255,255,255,0.4);
+    border: 1px solid rgba(0,0,0,0.05);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .mobile-tx-user { font-weight: 700; font-size: 0.875rem; color: #1e293b; margin-bottom: 0.35rem; }
+  .mobile-tx-badge {
+    display: inline-flex; align-items: center; gap: 0.375rem;
+    background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.1);
+    padding: 0.125rem 0.5rem; border-radius: 9999px;
+    font-size: 10px; font-weight: 600; color: #475569;
+  }
+  .mobile-tx-amount { font-weight: 700; font-size: 1.125rem; color: #10b981; margin-bottom: 0.15rem; }
+  .mobile-tx-date { font-size: 10px; font-weight: 500; color: rgba(71,85,105,0.8); }
+  
+  html.dark-mode .mobile-tx-card {
+    background: rgba(53, 51, 205, 0.2);
+    border: 1px solid rgba(53, 51, 205, 0.4);
+    backdrop-filter: blur(4px);
+  }
+  html.dark-mode .mobile-tx-user { color: #ffffff; }
+  html.dark-mode .mobile-tx-badge {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #eceef3;
+  }
+  html.dark-mode .mobile-tx-amount { color: #34d399; letter-spacing: 0.025em; }
+  html.dark-mode .mobile-tx-date { color: rgba(236,238,243,0.6); }
+
+  /* Limit table rows on mobile for bottom cards */
+  @media (max-width: 767.98px) {
+    .limit-mobile-rows tbody tr:nth-child(n+4) {
+      display: none !important;
+    }
+  }
+
+  /* Premium Dark Modals Overrides */
+  html.dark-mode .premium-modal .glass-card {
+    background: #15171b !important;
+    border: 1px solid rgba(53, 51, 205, 0.5) !important;
+  }
+  html.dark-mode .premium-modal thead {
+    background: #15171b !important;
+    border-bottom: 1px solid rgba(53, 51, 205, 0.4) !important;
+  }
+  html.dark-mode .premium-modal thead th {
+    color: #eceef3 !important;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  html.dark-mode .premium-modal .modal-title {
+    color: #ffffff !important;
+  }
+  html.dark-mode .premium-modal .fa-crown {
+    color: #fbae1a !important; /* Gold */
+  }
+  
+  /* Filter Buttons for Top Clients */
+  html.dark-mode .premium-modal .btn-outline-chart-blue {
+    color: rgba(236, 238, 243, 0.6) !important;
+    border-color: transparent !important;
+  }
+  html.dark-mode .premium-modal .btn-check:checked + .btn-outline-chart-blue {
+    color: #fbae1a !important;
+    background: rgba(251, 174, 26, 0.1) !important;
+    border: 1px solid rgba(251, 174, 26, 0.3) !important;
+  }
+
+  /* Table Data Overrides */
+  html.dark-mode .premium-modal .table-value {
+    color: #93c5fd !important; /* blue-300 */
+  }
+  html.dark-mode .premium-modal .table-rank {
+    color: rgba(236, 238, 243, 0.4) !important;
+    font-weight: bold;
+    font-size: 0.75rem;
+  }
+  html.dark-mode .premium-modal .table-text-dark {
+    color: #ffffff !important;
+  }
+  html.dark-mode .premium-modal tr {
+    border-bottom-color: rgba(255,255,255,0.05) !important;
+  }
+  html.dark-mode .premium-modal tbody tr:hover {
+    background: rgba(255,255,255,0.02) !important;
+  }
+
+  /* Premium Light Modals Overrides */
+  html:not(.dark-mode) .premium-modal .glass-card {
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+  }
+  html:not(.dark-mode) .premium-modal .modal-header {
+    border-bottom: none !important;
+    padding-bottom: 1rem !important;
+  }
+  html:not(.dark-mode) .premium-modal thead {
+    background: #ffffff !important;
+    border-bottom: 2px solid #f3f4f6 !important;
+  }
+  html:not(.dark-mode) .premium-modal thead th {
+    color: #9ca3af !important;
+    border: none !important;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  html:not(.dark-mode) .premium-modal .modal-title {
+    color: #1f2937 !important;
+  }
+  html:not(.dark-mode) .premium-modal .btn-group {
+    background: #f3f4f6 !important;
+    padding: 0.25rem !important;
+    border-radius: 0.5rem !important;
+    box-shadow: none !important;
+  }
+  html:not(.dark-mode) .premium-modal .btn-outline-chart-blue {
+    color: #6b7280 !important;
+    border: none !important;
+    background: transparent !important;
+    font-weight: 600 !important;
+  }
+  html:not(.dark-mode) .premium-modal .btn-outline-chart-blue:hover {
+    color: #1f2937 !important;
+  }
+  html:not(.dark-mode) .premium-modal .btn-check:checked + .btn-outline-chart-blue {
+    color: #ffffff !important;
+    background: #0349cb !important;
+    border-radius: 0.375rem !important;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+  }
+  html:not(.dark-mode) .premium-modal .table-text-dark { color: #1f2937 !important; }
+  html:not(.dark-mode) .premium-modal .table-rank { color: #d1d5db !important; }
+  html:not(.dark-mode) .premium-modal .table-value { color: #0349cb !important; font-size: 1rem !important; }
+  html:not(.dark-mode) .premium-modal tr { border-bottom-color: #f9fafb !important; }
+  html:not(.dark-mode) .premium-modal tbody tr:hover { background: #f9fafb !important; }
+
+  /* Modal Icons & Custom Scrollbar */
+  .modal-icon-wrapper {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: #eff6ff; color: #0349cb;
+    display: flex; align-items: center; justify-content: center; font-size: 1.125rem;
+  }
+  html.dark-mode .modal-icon-wrapper {
+    background: rgba(3, 73, 203, 0.2); color: #60a5fa;
+  }
+  .modal-icon-wrapper.gold-icon { background: #fffbeb; color: #fbae1a; }
+  html.dark-mode .modal-icon-wrapper.gold-icon { background: rgba(251, 174, 26, 0.1); color: #fbae1a; }
+  
+  .custom-close-btn {
+    background: rgba(0,0,0,0.05);
+    border-radius: 50%;
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    border: none;
+    color: #9ca3af;
+    opacity: 0.8;
+    transition: all 0.2s;
+  }
+  .custom-close-btn:hover {
+    opacity: 1; background: rgba(0,0,0,0.1); color: #4b5563;
+  }
+  html.dark-mode .custom-close-btn {
+    background: rgba(255,255,255,0.05); color: #cbd5e1;
+  }
+  html.dark-mode .custom-close-btn:hover {
+    background: rgba(255,255,255,0.1); color: #ffffff;
+  }
+
+  .premium-modal .table-responsive::-webkit-scrollbar { width: 6px; }
+  .premium-modal .table-responsive::-webkit-scrollbar-track { background: transparent; }
+  .premium-modal .table-responsive::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+  .premium-modal .table-responsive::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+  html.dark-mode .premium-modal .table-responsive::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+  html.dark-mode .premium-modal .table-responsive::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- New UI Build Area -->
+<div class="container-fluid py-4 px-3 px-md-4 dashboard-wrapper" id="new-dashboard-ui">
+
+  <!-- Custom Hero Banner -->
+  <div class="custom-hero-banner">
+    <!-- Inner Max-Width Wrapper to prevent infinite stretching -->
+    <div class="w-100 mx-auto d-flex align-items-center justify-content-between gap-4 gap-lg-5" style="max-width: 1024px;">
+      <div class="hero-title-wrapper mb-0">
+        <h1 class="hero-title">Welcome Back, {{ request.user.username }}</h1>
+        <p class="hero-subtitle mb-2">Here is how your business is performing today</p>
+        <div style="opacity: 0.85; font-size: 0.95rem; font-weight: 500; font-family: 'Montserrat', sans-serif;">
+          <i class="fas fa-clock me-1"></i> Manila Time: <span id="live-clock-square" style="font-family: 'Courier New', monospace; font-weight: bold; letter-spacing: 1px;">--:--:--</span>
         </div>
       </div>
-    </div>
-    <div class="d-flex flex-column align-items-end">
-      <div class="text-white opacity-75" style="font-size:0.75rem; letter-spacing:1px; text-transform:uppercase;">Manila Time</div>
-      <div class="fw-bold text-white" id="live-clock-square" style="font-size:1.1rem; font-family:monospace;">--:--:--</div>
+      
+      <!-- Protected Image Container with flex-shrink-0 -->
+      <div class="d-none d-md-block flex-shrink-0">
+        <img src="{% static 'images/GIMI ICON.gif' %}" alt="GIMI Mascot" style="height: 160px; width: 160px; object-fit: contain; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 50%; box-shadow: 0 10px 25px rgba(0,0,0,0.3); border: 3px solid rgba(255,255,255,0.2);">
+      </div>
     </div>
   </div>
 
+  <!-- KPI Cards Row -->
+  <div class="row g-4 kpi-cards-row">
+    <!-- Revenue Growth -->
+    <div class="col-12 col-md-4">
+      <div class="kpi-card" data-bs-toggle="modal" data-bs-target="#revenueModal">
+        <div class="expand-btn" title="Expand">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M4 4l6 6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 9V4h-5m5 0l-6 6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 15v5h5m-5 0l6-6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 15v5h-5m5 0l-6-6" />
+          </svg>
+        </div>
+        <div class="kpi-card-icon">
+          <i class="fas fa-chart-line"></i>
+        </div>
+        <div class="kpi-card-content">
+          <div class="kpi-value">{{ growth_percent_formatted|default:"0.0" }}%</div>
+          <div class="kpi-label">REVENUE GROWTH</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- New Customers -->
+    <div class="col-12 col-md-4">
+      <div class="kpi-card" data-bs-toggle="modal" data-bs-target="#customersModal">
+        <div class="expand-btn" title="Expand">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M4 4l6 6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 9V4h-5m5 0l-6 6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 15v5h5m-5 0l6-6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 15v5h-5m5 0l-6-6" />
+          </svg>
+        </div>
+        <div class="kpi-card-icon">
+          <i class="fas fa-user-plus"></i>
+        </div>
+        <div class="kpi-card-content">
+          <div class="kpi-value">{{ new_customers_this_month|default:"0" }}</div>
+          <div class="kpi-label">NEW CUSTOMERS</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Collection Rate -->
+    <div class="col-12 col-md-4">
+      <div class="kpi-card" data-bs-toggle="modal" data-bs-target="#collectionModal">
+        <div class="expand-btn" title="Expand">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M4 4l6 6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 9V4h-5m5 0l-6 6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 15v5h5m-5 0l6-6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 15v5h-5m5 0l-6-6" />
+          </svg>
+        </div>
+        <div class="kpi-card-icon">
+          <i class="fas fa-coins"></i>
+        </div>
+        <div class="kpi-card-content">
+          <div class="kpi-value">{{ collection_rate_formatted|default:"0.0" }}%</div>
+          <div class="kpi-label">COLLECTION RATE</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Secondary KPI Cards Row (Totals) -->
+  <div class="row g-3 mt-2">
+    <!-- Today -->
+    <div class="col-6 col-lg">
+      <div class="secondary-kpi-card" data-bs-toggle="modal" data-bs-target="#breakdownModal_today">
+        <div class="expand-btn" title="Expand">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M4 4l6 6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 9V4h-5m5 0l-6 6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 15v5h5m-5 0l6-6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 15v5h-5m5 0l-6-6" />
+          </svg>
+        </div>
+        <div class="kpi-label mb-2" style="font-size: 0.7rem;">TODAY</div>
+        <div class="kpi-value" style="font-size: 1.25rem; white-space: nowrap;">₱ {{ totals.today|default:"0.00" }}
+        </div>
+      </div>
+    </div>
+    <!-- Yesterday -->
+    <div class="col-6 col-lg">
+      <div class="secondary-kpi-card" data-bs-toggle="modal" data-bs-target="#breakdownModal_yesterday">
+        <div class="expand-btn" title="Expand">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M4 4l6 6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 9V4h-5m5 0l-6 6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 15v5h5m-5 0l6-6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 15v5h-5m5 0l-6-6" />
+          </svg>
+        </div>
+        <div class="kpi-label mb-2" style="font-size: 0.7rem;">YESTERDAY</div>
+        <div class="kpi-value" style="font-size: 1.25rem; white-space: nowrap;">₱ {{ totals.yesterday|default:"0.00" }}
+        </div>
+      </div>
+    </div>
+    <!-- This Week -->
+    <div class="col-6 col-lg">
+      <div class="secondary-kpi-card" data-bs-toggle="modal" data-bs-target="#breakdownModal_week">
+        <div class="expand-btn" title="Expand">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M4 4l6 6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 9V4h-5m5 0l-6 6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 15v5h5m-5 0l6-6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 15v5h-5m5 0l-6-6" />
+          </svg>
+        </div>
+        <div class="kpi-label mb-2" style="font-size: 0.7rem;">THIS WEEK</div>
+        <div class="kpi-value" style="font-size: 1.25rem; white-space: nowrap;">₱ {{ totals.week|default:"0.00" }}</div>
+      </div>
+    </div>
+    <!-- This Month -->
+    <div class="col-6 col-lg">
+      <div class="secondary-kpi-card" data-bs-toggle="modal" data-bs-target="#breakdownModal_month">
+        <div class="expand-btn" title="Expand">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M4 4l6 6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 9V4h-5m5 0l-6 6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 15v5h5m-5 0l6-6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 15v5h-5m5 0l-6-6" />
+          </svg>
+        </div>
+        <div class="kpi-label mb-2" style="font-size: 0.7rem;">THIS MONTH</div>
+        <div class="kpi-value" style="font-size: 1.25rem; white-space: nowrap;">₱ {{ totals.month|default:"0.00" }}
+        </div>
+      </div>
+    </div>
+    <!-- This Year -->
+    <div class="col-12 col-lg">
+      <div class="secondary-kpi-card" data-bs-toggle="modal" data-bs-target="#breakdownModal_year">
+        <div class="expand-btn" title="Expand">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M4 4l6 6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 9V4h-5m5 0l-6 6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 15v5h5m-5 0l6-6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 15v5h-5m5 0l-6-6" />
+          </svg>
+        </div>
+        <div class="kpi-label mb-2" style="font-size: 0.7rem;">THIS YEAR</div>
+        <div class="kpi-value" style="font-size: 1.25rem; white-space: nowrap;">₱ {{ totals.year|default:"0.00" }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sales Overview Chart -->
+  <div class="glass-card p-4 mt-4 fade-in-up d2" style="border-radius: 20px;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h5 class="fw-bold mb-0">Sales Overview</h5>
+      <div>
+        <div class="btn-group shadow-sm" role="group" aria-label="Sales Overview Filter">
+          <input type="radio" class="btn-check sales-toggle" name="salesFilter" id="salesFilter12m" value="12m" autocomplete="off">
+          <label class="btn btn-outline-chart-blue btn-sm fw-bold px-3" for="salesFilter12m">12 Months</label>
+
+          <input type="radio" class="btn-check sales-toggle" name="salesFilter" id="salesFilter7d" value="7d" autocomplete="off" checked>
+          <label class="btn btn-outline-chart-blue btn-sm fw-bold px-3" for="salesFilter7d">7 Days</label>
+        </div>
+      </div>
+    </div>
+    <div style="height: 350px;">
+      <canvas id="dashboardSalesChart"></canvas>
+    </div>
+  </div>
+
+<<<<<<< HEAD
   <!-- KPI Row 1 — Performance -->
   <div class="row g-3 mb-3 animate-fade-in animate-delay-1">
     <div class="col-12 col-md-6 col-xl-4">
@@ -217,72 +1259,179 @@
 
   <!-- Bottom Row: Top Clients + Top Plans -->
   <div class="row g-4 mb-4 animate-fade-in animate-delay-3">
+=======
+  <!-- Data Cards Row -->
+  <div class="row g-4 mt-2 fade-in-up d3">
+    <!-- Recent Logins -->
+>>>>>>> eb4fd87 (Update dashboard UI and organize scripts)
     <div class="col-12 col-lg-6">
-      <div class="dashboard-card h-100" style="overflow:hidden;">
-        <div class="section-header section-header-amber">
-          <h6><i class="fas fa-crown sh-icon"></i> Top Paying Clients</h6>
+      <div class="glass-card no-hover p-5 h-100 bottom-card position-relative" data-bs-toggle="modal" data-bs-target="#recentLoginsModal" style="cursor: pointer;">
+        <button class="expand-btn p-2 rounded-lg transition duration-200 position-absolute top-0 end-0 m-2" title="Expand" style="pointer-events: auto;" data-bs-toggle="modal" data-bs-target="#recentLoginsModal">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" style="width: 20px; height: 20px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"></path>
+          </svg>
+        </button>
+        <div class="d-flex align-items-center mb-4">
+          <div class="d-flex align-items-center justify-content-center rounded-circle" style="width: 42px; height: 42px; background: #f1f5f9; color: #64748b; margin-right: 12px; font-size: 1.1rem;">
+            <i class="fas fa-shield-alt"></i>
+          </div>
+          <div class="fw-bold text-uppercase" style="color: #2151A1; font-size: 0.85rem; letter-spacing: 1px;">Recent Logins</div>
         </div>
-        <div class="table-responsive">
-          <table class="table table-premium table-hover align-middle mb-0">
-            <thead>
-              <tr>
-                <th>User</th>
-                <th>Total Paid</th>
-                <th>Last Payment</th>
-              </tr>
-            </thead>
+        <div class="table-responsive limit-mobile-rows">
+          <table class="glass-table w-100">
             <tbody>
-              {% for c in top_clients %}
-              <tr>
-                <td>
-                  <div class="d-flex align-items-center gap-2">
-                    {% if forloop.counter == 1 %}<i class="fas fa-crown text-warning" title="Top Client"></i>{% endif %}
-                    <div class="av av-sm av-blue">{{ c.username|make_list|first|upper }}</div>
-                    <span class="fw-bold" style="font-size:0.85rem;">{{ c.username }}</span>
+              {% for row in recent_admin_logins|slice:":5" %}
+              <tr style="border-bottom: 1px solid rgba(0,0,0,0.04);">
+                <td class="ps-3 py-3">
+                  <div class="d-flex align-items-center gap-3">
+                    <div class="avatar-circle flex-shrink-0" style="background: rgba(33, 81, 161, 0.1); color: #2151A1; width: 32px; height: 32px; font-size: 0.9rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                      {{ row.username|make_list|first|upper }}
+                    </div>
+                    <div>
+                      <div class="fw-semibold text-dark">{{ row.username }}</div>
+                      <div class="text-muted" style="font-size: 0.75rem;">{{ row.login_time|date:'M d, g:i A' }}</div>
+                    </div>
                   </div>
                 </td>
-                <td><span class="fw-bold" style="color:#059669;">₱{{ c.total_paid|floatformat:2 }}</span></td>
-                <td>
-                  {% if c.last_payment %}
-                    <span class="text-muted" style="font-size:0.8rem;">{{ c.last_payment|date:'M d, Y' }}</span>
+                <td class="text-end pe-3 py-3">
+                  {% if row.event_type == 'login' %}
+                  <span class="premium-badge" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; font-size: 0.7rem; padding: 5px 10px;"><span class="glow-dot glow-primary"></span> Login</span>
                   {% else %}
-                    <span class="text-muted">N/A</span>
+                  <span class="premium-badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; font-size: 0.7rem; padding: 5px 10px;"><span class="glow-dot glow-success"></span> Active</span>
                   {% endif %}
                 </td>
               </tr>
               {% empty %}
-              <tr><td colspan="3" class="text-center text-muted py-3">No paying clients found.</td></tr>
+              <tr><td colspan="2" class="text-center text-muted py-5">No recent activity.</td></tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
       </div>
     </div>
+
+    <!-- Top Clients -->
     <div class="col-12 col-lg-6">
-      <div class="dashboard-card h-100" style="overflow:hidden;">
-        <div class="section-header section-header-green">
-          <h6><i class="fas fa-wifi sh-icon"></i> Top Service Plans</h6>
+      <div class="glass-card no-hover p-5 h-100 bottom-card position-relative" data-bs-toggle="modal" data-bs-target="#topClientsModal" style="cursor: pointer;">
+        <button class="expand-btn p-2 rounded-lg transition duration-200 position-absolute top-0 end-0 m-2" title="Expand" style="pointer-events: auto;" data-bs-toggle="modal" data-bs-target="#topClientsModal">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" style="width: 20px; height: 20px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"></path>
+          </svg>
+        </button>
+        <div class="d-flex align-items-center justify-content-between mb-4">
+          <div class="d-flex align-items-center">
+            <div class="d-flex align-items-center justify-content-center rounded-circle" style="width: 42px; height: 42px; background: #f1f5f9; color: #64748b; margin-right: 12px; font-size: 1.1rem;">
+              <i class="fas fa-crown"></i>
+            </div>
+            <div class="fw-bold text-uppercase" style="color: #2151A1; font-size: 0.85rem; letter-spacing: 1px;">Top Clients</div>
+          </div>
         </div>
-        <div class="table-responsive">
-          <table class="table table-premium table-hover align-middle mb-0">
+        <div class="table-responsive limit-mobile-rows">
+          <table class="glass-table w-100">
             <thead>
               <tr>
-                <th>Plan Name</th>
-                <th class="text-end">Subscribers</th>
+                <th class="ps-3" style="font-size: 0.7rem;">Client</th>
+                <th class="text-end pe-3" style="font-size: 0.7rem;">Revenue</th>
               </tr>
             </thead>
             <tbody>
-              {% for p in top_plans %}
-              <tr>
-                <td>
-                  <span class="pill pill-active">
-                    <span class="pill-dot"></span>{{ p.plan_name }}
-                  </span>
+              {% for c in top_clients|slice:":5" %}
+              <tr style="border-bottom: 1px solid rgba(0,0,0,0.04);">
+                <td class="ps-3 py-4">
+                  <div class="fw-semibold text-dark">{{ c.username }}</div>
                 </td>
-                <td class="text-end fw-bold">{{ p.cnt }}</td>
+                <td class="text-end pe-3 py-4 fw-bold" style="color: #2151A1;">&#8369;{{ c.total_paid|floatformat:0 }}</td>
               </tr>
               {% empty %}
-              <tr><td colspan="2" class="text-center text-muted py-3">No plans found.</td></tr>
+              <tr><td colspan="2" class="text-center py-5 opacity-50">No data available.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Popular Plans -->
+    <div class="col-12 col-lg-6">
+      <div class="glass-card no-hover p-5 h-100 bottom-card position-relative" data-bs-toggle="modal" data-bs-target="#popularPlansModal" style="cursor: pointer;">
+        <button class="expand-btn p-2 rounded-lg transition duration-200 position-absolute top-0 end-0 m-2" title="Expand" style="pointer-events: auto;" data-bs-toggle="modal" data-bs-target="#popularPlansModal">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" style="width: 20px; height: 20px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"></path>
+          </svg>
+        </button>
+        <div class="d-flex align-items-center mb-4">
+          <div class="d-flex align-items-center justify-content-center rounded-circle" style="width: 42px; height: 42px; background: #f1f5f9; color: #64748b; margin-right: 12px; font-size: 1.1rem;">
+            <i class="fas fa-wifi"></i>
+          </div>
+          <div class="fw-bold text-uppercase" style="color: #2151A1; font-size: 0.85rem; letter-spacing: 1px;">Popular Plans</div>
+        </div>
+        <div class="table-responsive limit-mobile-rows">
+          <table class="glass-table w-100">
+            <thead>
+              <tr>
+                <th class="ps-3" style="font-size: 0.7rem;">Plan</th>
+                <th class="text-end pe-3" style="font-size: 0.7rem;">Users</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in top_plans|slice:":5" %}
+              <tr style="border-bottom: 1px solid rgba(0,0,0,0.04);">
+                <td class="ps-3 py-4 fw-semibold text-dark">{{ p.plan_name }}</td>
+                <td class="text-end pe-3 py-4 fw-bold" style="color: #2151A1;">{{ p.cnt }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="2" class="text-center py-5 opacity-50">No data available.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Expiring Soon -->
+    <div class="col-12 col-lg-6">
+      <div class="glass-card no-hover p-5 h-100 bottom-card position-relative" data-bs-toggle="modal" data-bs-target="#expiringSoonModal" style="cursor: pointer;">
+        <button class="expand-btn p-2 rounded-lg transition duration-200 position-absolute top-0 end-0 m-2" title="Expand" style="pointer-events: auto;" data-bs-toggle="modal" data-bs-target="#expiringSoonModal">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" style="width: 20px; height: 20px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"></path>
+          </svg>
+        </button>
+        <div class="d-flex align-items-center mb-4">
+          <div class="d-flex align-items-center justify-content-center rounded-circle" style="width: 42px; height: 42px; background: #f1f5f9; color: #64748b; margin-right: 12px; font-size: 1.1rem;">
+            <i class="fas fa-clock"></i>
+          </div>
+          <div class="fw-bold text-uppercase" style="color: #2151A1; font-size: 0.85rem; letter-spacing: 1px;">Expiring Soon</div>
+        </div>
+        <div class="table-responsive limit-mobile-rows">
+          <table class="glass-table w-100">
+            <thead>
+              <tr>
+                <th class="ps-3" style="font-size: 0.7rem;">Client</th>
+                <th class="text-end pe-3" style="font-size: 0.7rem;">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for u in expiring_users|slice:":5" %}
+              <tr style="border-bottom: 1px solid rgba(0,0,0,0.04);">
+                <td class="ps-3 py-4">
+                  <div class="fw-semibold text-dark">{{ u.username }}</div>
+                  <div class="text-muted" style="font-size: 0.75rem;">{{ u.plan_name }}</div>
+                </td>
+                <td class="text-end pe-3 py-4">
+                  {% if u.is_expired %}
+                  <span class="premium-badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; font-size: 0.7rem; padding: 5px 10px;"><span class="glow-dot glow-danger"></span> Expired</span>
+                  {% else %}
+                  <span class="countdown fw-semibold" data-expire="{{ u.expires_at_epoch }}" style="font-size: 0.8rem; color: #f59e0b; font-family: monospace;"></span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="2" class="text-center py-5 opacity-50">
+                  <i class="fas fa-check-circle fa-lg mb-2 text-success"></i>
+                  <div style="font-size: 0.85rem;">All clear!</div>
+                </td>
+              </tr>
               {% endfor %}
             </tbody>
           </table>
@@ -290,70 +1439,801 @@
       </div>
     </div>
   </div>
-
-  <!-- Expiring Users Today -->
-  <div class="dashboard-card mb-4 animate-fade-in animate-delay-3" style="overflow:hidden;">
-    <div class="section-header section-header-red">
-      <h6><i class="fas fa-clock sh-icon"></i> Expiring Users Today</h6>
-      <small>Subscribers whose accounts expire within 24 hours</small>
-    </div>
-    <div class="table-responsive">
-      <table class="table table-premium table-hover align-middle mb-0">
-        <thead>
-          <tr>
-            <th>Username</th>
-            <th>Plan</th>
-            <th>Expires At</th>
-            <th>Time Left</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for u in expiring_users %}
-          <tr class="row-expired">
-            <td class="fw-bold">{{ u.username }}</td>
-            <td><span class="pill pill-suspended"><span class="pill-dot"></span>{{ u.plan_name }}</span></td>
-            <td><span class="text-muted" style="font-size:0.85rem;">{{ u.expires_at|date:'M d, Y H:i:s' }}</span></td>
-            <td>
-              {% if u.expires_at %}
-                {% if u.is_expired %}
-                  <span class="pill pill-expired"><span class="pill-dot"></span>Expired</span>
-                {% else %}
-                  <span class="countdown text-warning fw-bold" data-expire="{{ u.expires_at_epoch }}"></span>
-                {% endif %}
-              {% else %}
-                <span class="text-muted">N/A</span>
-              {% endif %}
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="4">
-              <div class="empty-state py-4">
-                <div class="es-icon"><i class="fas fa-check-circle" style="color:#10b981;"></i></div>
-                <h6>All clear!</h6>
-                <p>No users are expiring today.</p>
+  <!-- Top Clients Modal -->
+  <div class="modal fade premium-modal" id="topClientsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content" style="background: transparent; border: none;">
+        <div class="glass-card w-100" style="border-radius: 28px;">
+          <div class="modal-header border-bottom-0 pb-3 px-4 pt-4 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+              <div class="modal-icon-wrapper gold-icon">
+                <i class="fa-solid fa-crown"></i>
               </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+              <h4 class="modal-title fw-bold m-0">Top Clients Overview</h4>
+            </div>
+            <button type="button" class="custom-close-btn" data-bs-dismiss="modal" aria-label="Close">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+          <div class="modal-body px-4 pb-4 pt-2">
+            <div class="d-flex justify-content-center mb-4">
+              <div class="btn-group shadow-sm" role="group">
+                <input type="radio" class="btn-check top-clients-filter" name="topClientsFilter" id="tcWeek" value="week" autocomplete="off">
+                <label class="btn btn-outline-chart-blue px-4 py-2" for="tcWeek">This Week</label>
+              
+                <input type="radio" class="btn-check top-clients-filter" name="topClientsFilter" id="tcMonth" value="month" autocomplete="off" checked>
+                <label class="btn btn-outline-chart-blue px-4 py-2" for="tcMonth">This Month</label>
+              
+                <input type="radio" class="btn-check top-clients-filter" name="topClientsFilter" id="tcYear" value="year" autocomplete="off">
+                <label class="btn btn-outline-chart-blue px-4 py-2" for="tcYear">This Year</label>
+              </div>
+            </div>
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+              <table class="glass-table w-100" id="topClientsTable">
+                <thead style="position: sticky; top: 0; background: rgba(255, 255, 255, 0.9); z-index: 1;">
+                  <tr>
+                    <th class="ps-3" style="font-size: 0.75rem;">Client Name</th>
+                    <th style="font-size: 0.75rem;">Plan</th>
+                    <th class="text-end pe-3" style="font-size: 0.75rem;">Revenue</th>
+                  </tr>
+                </thead>
+                <tbody id="topClientsTbody">
+                  <tr><td colspan="3" class="text-center py-5 text-muted">Loading data...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
+  <!-- Recent Logins Modal -->
+  <div class="modal fade premium-modal" id="recentLoginsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content" style="background: transparent; border: none;">
+        <div class="glass-card w-100" style="border-radius: 28px;">
+          <div class="modal-header border-bottom-0 pb-3 px-4 pt-4 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+              <div class="modal-icon-wrapper">
+                <i class="fa-solid fa-shield-alt"></i>
+              </div>
+              <h4 class="modal-title fw-bold m-0">Recent Logins</h4>
+            </div>
+            <button type="button" class="custom-close-btn" data-bs-dismiss="modal" aria-label="Close">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+          <div class="modal-body px-4 pb-4 pt-2">
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+              <table class="glass-table w-100">
+                <thead style="position: sticky; top: 0; background: rgba(255, 255, 255, 0.9); z-index: 1;">
+                  <tr>
+                    <th class="ps-3" style="font-size: 0.75rem;">User</th>
+                    <th class="text-end pe-3" style="font-size: 0.75rem;">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in recent_admin_logins|slice:":10" %}
+                  <tr style="border-bottom: 1px solid rgba(0,0,0,0.04);">
+                    <td class="ps-3 py-3">
+                      <div class="d-flex align-items-center gap-3">
+                        <div class="table-rank" style="width: 20px;">#{{ forloop.counter }}</div>
+                        <div class="avatar-circle flex-shrink-0" style="background: rgba(33, 81, 161, 0.1); color: #2151A1; width: 32px; height: 32px; font-size: 0.9rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                          {{ row.username|make_list|first|upper }}
+                        </div>
+                        <div>
+                          <div class="fw-semibold text-dark table-text-dark">{{ row.username }}</div>
+                          <div class="text-muted" style="font-size: 0.75rem;">{{ row.login_time|date:'M d, g:i A' }}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="text-end pe-3 py-3">
+                      {% if row.event_type == 'login' %}
+                      <span class="premium-badge" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; font-size: 0.7rem; padding: 5px 10px;"><span class="glow-dot glow-primary"></span> Login</span>
+                      {% else %}
+                      <span class="premium-badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; font-size: 0.7rem; padding: 5px 10px;"><span class="glow-dot glow-success"></span> Active</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr><td colspan="2" class="text-center text-muted py-5">No recent activity.</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popular Plans Modal -->
+  <div class="modal fade premium-modal" id="popularPlansModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content" style="background: transparent; border: none;">
+        <div class="glass-card w-100" style="border-radius: 28px;">
+          <div class="modal-header border-bottom-0 pb-3 px-4 pt-4 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+              <div class="modal-icon-wrapper">
+                <i class="fa-solid fa-wifi"></i>
+              </div>
+              <h4 class="modal-title fw-bold m-0">Popular Plans</h4>
+            </div>
+            <button type="button" class="custom-close-btn" data-bs-dismiss="modal" aria-label="Close">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+          <div class="modal-body px-4 pb-4 pt-2">
+            <div class="d-flex justify-content-center mb-4">
+              <div class="btn-group shadow-sm" role="group">
+                <input type="radio" class="btn-check popular-plans-filter" name="popularPlansFilter" id="ppWeek" value="week" autocomplete="off">
+                <label class="btn btn-outline-chart-blue px-4 py-2" for="ppWeek">This Week</label>
+              
+                <input type="radio" class="btn-check popular-plans-filter" name="popularPlansFilter" id="ppMonth" value="month" autocomplete="off" checked>
+                <label class="btn btn-outline-chart-blue px-4 py-2" for="ppMonth">This Month</label>
+              
+                <input type="radio" class="btn-check popular-plans-filter" name="popularPlansFilter" id="ppYear" value="year" autocomplete="off">
+                <label class="btn btn-outline-chart-blue px-4 py-2" for="ppYear">This Year</label>
+              </div>
+            </div>
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+              <table class="glass-table w-100">
+                <thead style="position: sticky; top: 0; background: rgba(255, 255, 255, 0.9); z-index: 1;">
+                  <tr>
+                    <th class="ps-3" style="font-size: 0.7rem;">Plan</th>
+                    <th class="text-end pe-3" style="font-size: 0.7rem;">Users</th>
+                  </tr>
+                </thead>
+                <tbody id="popularPlansTbody">
+                  {% for p in top_plans|slice:":10" %}
+                  <tr style="border-bottom: 1px solid rgba(0,0,0,0.04);">
+                    <td class="ps-3 py-4 d-flex align-items-center gap-3">
+                      <span class="table-rank">#{{ forloop.counter }}</span>
+                      <span class="fw-semibold text-dark table-text-dark">{{ p.plan_name }}</span>
+                    </td>
+                    <td class="text-end pe-3 py-4 fw-bold table-value" style="color: #2151A1;">{{ p.cnt }}</td>
+                  </tr>
+                  {% empty %}
+                  <tr><td colspan="2" class="text-center py-5 opacity-50">No data available.</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Expiring Soon Modal -->
+  <div class="modal fade premium-modal" id="expiringSoonModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content" style="background: transparent; border: none;">
+        <div class="glass-card w-100" style="border-radius: 28px;">
+          <div class="modal-header border-bottom-0 pb-3 px-4 pt-4 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+              <div class="modal-icon-wrapper">
+                <i class="fa-solid fa-clock"></i>
+              </div>
+              <h4 class="modal-title fw-bold m-0">Expiring Soon</h4>
+            </div>
+            <button type="button" class="custom-close-btn" data-bs-dismiss="modal" aria-label="Close">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+          <div class="modal-body px-4 pb-4 pt-2">
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+              <table class="glass-table w-100">
+                <thead style="position: sticky; top: 0; background: rgba(255, 255, 255, 0.9); z-index: 1;">
+                  <tr>
+                    <th class="ps-3" style="font-size: 0.7rem;">Client</th>
+                    <th class="text-end pe-3" style="font-size: 0.7rem;">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for u in expiring_users|slice:":10" %}
+                  <tr style="border-bottom: 1px solid rgba(0,0,0,0.04);">
+                    <td class="ps-3 py-4">
+                      <div class="d-flex align-items-center gap-3">
+                        <span class="table-rank">#{{ forloop.counter }}</span>
+                        <div>
+                          <div class="fw-semibold text-dark table-text-dark">{{ u.username }}</div>
+                          <div class="text-muted" style="font-size: 0.75rem;">{{ u.plan_name }}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="text-end pe-3 py-4">
+                      {% if u.is_expired %}
+                      <span class="premium-badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; font-size: 0.7rem; padding: 5px 10px;"><span class="glow-dot glow-danger"></span> Expired</span>
+                      {% else %}
+                      <span class="countdown fw-semibold" data-expire="{{ u.expires_at_epoch }}" style="font-size: 0.8rem; color: #f59e0b; font-family: monospace;"></span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="2" class="text-center py-5 opacity-50">
+                      <i class="fas fa-check-circle fa-lg mb-2 text-success"></i>
+                      <div style="font-size: 0.85rem;">All clear!</div>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Revenue Growth Modal -->
+
+  <div class="modal fade" id="revenueModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content" style="background: transparent; border: none;">
+        <div class="glass-card w-100" style="border-radius: 28px;">
+          <div class="modal-header border-bottom-0 pb-3 px-4 pt-4">
+            <h4 class="modal-title fw-bold"><i class="fas fa-chart-line me-2 text-primary"></i> Revenue Statistics</h4>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body p-4">
+            <div class="row g-4">
+              <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h6 class="fw-bold mb-0 text-muted text-uppercase" id="revenueChartTitle">Revenue (Last 12 Months)
+                  </h6>
+                  <div class="btn-group btn-group-sm" role="group">
+                    <input type="radio" class="btn-check" name="btnrevfilter" id="btnrev12m" autocomplete="off" checked>
+                    <label class="btn btn-outline-primary" for="btnrev12m">12 Months</label>
+
+                    <input type="radio" class="btn-check" name="btnrevfilter" id="btnrev7d" autocomplete="off">
+                    <label class="btn btn-outline-primary" for="btnrev7d">7 Days</label>
+                  </div>
+                </div>
+                <div style="height: 350px;"><canvas id="revenueMainChart"></canvas></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- New Customers Modal -->
+  <div class="modal fade" id="customersModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content" style="background: transparent; border: none;">
+        <div class="glass-card w-100" style="border-radius: 28px;">
+          <div class="modal-header border-bottom-0 pb-3 px-4 pt-4">
+            <h4 class="modal-title fw-bold"><i class="fas fa-user-plus me-2 text-primary"></i> New Customers</h4>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body p-4">
+            <div class="table-responsive">
+              <table class="glass-table mb-0">
+                <thead>
+                  <tr>
+                    <th class="ps-0">Client</th>
+                    <th>Plan</th>
+                    <th class="text-end pe-0">Joined Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for c in new_customers_list %}
+                  <tr>
+                    <td class="ps-0 fw-bold">{{ c.username }}</td>
+                    <td><span class="premium-badge"><span class="glow-dot glow-success"></span> {{ c.plan_name }}</span>
+                    </td>
+                    <td class="text-end pe-0 text-muted">{{ c.created_at|date:"M d, Y" }}</td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="3" class="text-center py-4 opacity-50">No new customers this month.</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collection Rate Modal -->
+  <div class="modal fade" id="collectionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content" style="background: transparent; border: none;">
+        <div class="glass-card w-100" style="border-radius: 28px;">
+          <div class="modal-header border-bottom-0 pb-3 px-4 pt-4">
+            <h4 class="modal-title fw-bold"><i class="fas fa-coins me-2 text-primary"></i> Collection Statistics</h4>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body p-4">
+            <div class="row g-4 justify-content-center">
+              
+              <!-- Left Chart: Overall Collection Rate -->
+              <div class="col-12 col-md-6">
+                <div class="sleek-radial-card">
+                  <h6 class="sleek-radial-title">Overall Collection Rate</h6>
+                  <div class="sleek-radial-canvas-container">
+                    <canvas id="collectionRateChart"></canvas>
+                  </div>
+                  <div id="collectionRateData" 
+                       data-rate="{{ collection_rate_formatted|default:'0' }}" 
+                       data-subtitle="{{ distinct_payers_this_month }} of {{ total_customers }} paid"
+                       style="display: none;">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Chart: By Payment Method -->
+              <div class="col-12 col-md-6">
+                <div class="sleek-radial-card">
+                  <h6 class="sleek-radial-title">By Payment Method</h6>
+                  <div class="sleek-radial-canvas-container">
+                    <canvas id="salesPieChart"></canvas>
+                  </div>
+                  <div id="paymentMethodData" 
+                       data-title="Totals" 
+                       data-subtitle="Breakdown"
+                       style="display: none;">
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Revenue Breakdowns Modals for each Period -->
+  {% for key, bd in breakdowns.items %}
+  <div class="modal fade" id="breakdownModal_{{ key }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content" style="background: transparent; border: none;">
+        <div class="glass-card w-100" style="border-radius: 28px;">
+          <div class="modal-header border-bottom-0 pb-3 px-4 pt-4">
+            <h4 class="modal-title fw-bold">
+              <i class="fas fa-search-dollar me-2 text-primary"></i> 
+              {% if key == 'today' %}Today's
+              {% elif key == 'yesterday' %}Yesterday's
+              {% elif key == 'week' %}This Week's
+              {% elif key == 'month' %}This Month's
+              {% elif key == 'year' %}This Year's
+              {% endif %} Revenue Breakdown
+            </h4>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body p-4">
+            <!-- Payment Methods Summary -->
+            <h6 class="fw-bold mb-3 text-muted text-uppercase">By Payment Method</h6>
+            <div class="row g-3 mb-4">
+              {% for m in bd.methods %}
+              <div class="col-12 col-md-4">
+                <div class="glass-card no-hover p-3 text-center" style="border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); box-shadow: none;">
+                  <div class="text-primary fw-bold mb-1" style="font-size: 0.75rem; text-transform: uppercase;">{{ m.payment_method }}</div>
+                  <h5 class="fw-bold text-primary mb-0">₱{{ m.total|floatformat:2 }}</h5>
+                </div>
+              </div>
+              {% empty %}
+              <div class="col-12 text-muted text-center py-2">No revenue data for this period.</div>
+              {% endfor %}
+            </div>
+
+            <!-- Recent Transactions Table -->
+            <h6 class="fw-bold mb-3 text-muted text-uppercase mt-2">Latest Transactions</h6>
+            
+            <!-- Desktop Table View -->
+            <div class="table-responsive d-none d-md-block">
+              <table class="glass-table mb-0" style="white-space: nowrap;">
+                <thead>
+                  <tr>
+                    <th class="ps-0">Customer</th>
+                    <th>Method</th>
+                    <th>Date & Time</th>
+                    <th class="text-end pe-0">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for r in bd.recent %}
+                  <tr>
+                    <td class="ps-0 fw-bold">{{ r.username }}</td>
+                    <td>
+                      <span class="premium-badge">
+                        <span class="glow-dot {% if r.method == 'Cash' %}glow-success{% elif r.method == 'GCash' %}glow-warning{% else %}glow-primary{% endif %}"></span>
+                        {{ r.method }}
+                      </span>
+                    </td>
+                    <td class="text-muted" style="font-size: 0.85rem;">{{ r.date|date:"M d, g:i A" }}</td>
+                    <td class="text-end pe-0 fw-bold text-success">₱{{ r.amount|floatformat:2 }}</td>
+                  </tr>
+                  {% empty %}
+                  <tr><td colspan="4" class="text-center py-4 opacity-50">No recent transactions.</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Mobile Card View -->
+            <div class="d-block d-md-none">
+              {% for r in bd.recent %}
+              <div class="mobile-tx-card">
+                <!-- Left Side: User & Method -->
+                <div>
+                  <div class="mobile-tx-user">{{ r.username }}</div>
+                  <div class="mobile-tx-badge">
+                    <span class="glow-dot {% if r.method == 'Cash' %}glow-success{% elif r.method == 'GCash' %}glow-warning{% else %}glow-primary{% endif %}" style="width: 8px; height: 8px;"></span>
+                    <span>{{ r.method }}</span>
+                  </div>
+                </div>
+                <!-- Right Side: Amount & Date -->
+                <div class="text-end">
+                  <div class="mobile-tx-amount">₱{{ r.amount|floatformat:2 }}</div>
+                  <div class="mobile-tx-date">{{ r.date|date:"M d, g:i A" }}</div>
+                </div>
+              </div>
+              {% empty %}
+              <div class="text-center py-4 opacity-50 text-muted">No recent transactions.</div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+</div>
+
+<!-- Legacy Dashboard Content (Hidden but logic preserved) -->
+<div id="legacy-dashboard-content" style="display: none;">
+  <div class="container-fluid px-3 px-md-4 dashboard-wrapper">
+
+    <!-- Welcome Hero -->
+    <div class="hero-glass mb-4 fade-in-up">
+      <div class="row align-items-center position-relative z-1">
+        <div class="col-md-8">
+          <h2 class="fw-bold mb-2" style="font-size: 2.2rem; letter-spacing: -0.5px;">
+            Welcome back, <span class="text-gradient grad-blue">{{ request.user.username }}</span> 👋
+          </h2>
+          <p class="mb-0 opacity-75 fs-5">Here's what's happening with your network today.</p>
+        </div>
+        <div class="col-md-4 text-md-end mt-4 mt-md-0">
+          <div class="d-inline-block text-start">
+            <div class="text-uppercase opacity-75 mb-1" style="font-size: 0.75rem; letter-spacing: 2px;">Manila Time
+            </div>
+            <div class="clock-display" id="live-clock-square">--:--:--</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Primary Metrics (Top Row) -->
+    <div class="row g-4 mb-4">
+      <!-- Revenue Growth -->
+      <div class="col-12 col-md-4 fade-in-up d1">
+        <div class="glass-card p-4">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <div class="text-uppercase fw-bold text-muted mb-2" style="font-size: 0.8rem; letter-spacing: 1px;">
+                Revenue Growth</div>
+              <h3 class="fw-bold mb-0" style="font-size: 2.5rem;">{{ growth_percent_formatted }}%</h3>
+              <div class="mt-2 fw-medium {% if growth_percent >= 0 %}text-success{% else %}text-danger{% endif %}">
+                <i class="fas {{ growth_icon }} me-1"></i>vs last month
+              </div>
+            </div>
+            <div class="kpi-icon-premium {% if growth_percent >= 0 %}grad-green{% else %}grad-red{% endif %}">
+              <i class="fas fa-chart-line"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- New Customers -->
+      <div class="col-12 col-md-4 fade-in-up d2">
+        <div class="glass-card p-4">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <div class="text-uppercase fw-bold text-muted mb-2" style="font-size: 0.8rem; letter-spacing: 1px;">New
+                Customers</div>
+              <h3 class="fw-bold mb-0" style="font-size: 2.5rem;">{{ new_customers_this_month }}</h3>
+              <div class="mt-2 fw-medium text-primary">
+                <i class="fas fa-arrow-trend-up me-1"></i>This month
+              </div>
+            </div>
+            <div class="kpi-icon-premium grad-blue">
+              <i class="fas fa-user-plus"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Collection Rate -->
+      <div class="col-12 col-md-4 fade-in-up d3">
+        <div class="glass-card p-4">
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+              <div class="text-uppercase fw-bold text-muted mb-2" style="font-size: 0.8rem; letter-spacing: 1px;">
+                Collection Rate</div>
+              <h3 class="fw-bold mb-0" style="font-size: 2.5rem;">{{ collection_rate_formatted }}%</h3>
+            </div>
+            <div class="kpi-icon-premium grad-orange">
+              <i class="fas fa-coins"></i>
+            </div>
+          </div>
+          <!-- Progress Bar -->
+          <div class="progress" style="height: 8px; border-radius: 4px; background: rgba(128,128,128,0.2);">
+            <div class="progress-bar grad-orange" role="progressbar"
+              style="width: {{ collection_rate_formatted }}%; border-radius: 4px;"
+              aria-valuenow="{{ collection_rate_formatted }}" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+          <div class="mt-2 text-muted fw-medium" style="font-size: 0.85rem;">
+            {{ distinct_payers_this_month }} of {{ total_customers }} users paid
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Secondary Revenue Metrics (Row 2) -->
+    <div class="row g-3 mb-5 fade-in-up d4">
+      <div class="col-6 col-md-4 col-xl">
+        <div class="glass-card p-3 p-xl-4 text-center">
+          <div class="text-muted fw-bold text-uppercase mb-1" style="font-size: 0.75rem;">Today</div>
+          <h4 class="fw-bold mb-0 text-gradient grad-blue">₱{{ totals.today|default:"0.00" }}</h4>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-xl">
+        <div class="glass-card p-3 p-xl-4 text-center">
+          <div class="text-muted fw-bold text-uppercase mb-1" style="font-size: 0.75rem;">Yesterday</div>
+          <h4 class="fw-bold mb-0 text-gradient grad-purple">₱{{ totals.yesterday|default:"0.00" }}</h4>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-xl">
+        <div class="glass-card p-3 p-xl-4 text-center">
+          <div class="text-muted fw-bold text-uppercase mb-1" style="font-size: 0.75rem;">This Week</div>
+          <h4 class="fw-bold mb-0 text-gradient grad-green">₱{{ totals.week|default:"0.00" }}</h4>
+        </div>
+      </div>
+      <div class="col-6 col-md-6 col-xl">
+        <div class="glass-card p-3 p-xl-4 text-center">
+          <div class="text-muted fw-bold text-uppercase mb-1" style="font-size: 0.75rem;">This Month</div>
+          <h4 class="fw-bold mb-0 text-gradient grad-orange">₱{{ totals.month|default:"0.00" }}</h4>
+        </div>
+      </div>
+      <div class="col-12 col-md-6 col-xl">
+        <div class="glass-card p-3 p-xl-4 text-center">
+          <div class="text-muted fw-bold text-uppercase mb-1" style="font-size: 0.75rem;">This Year</div>
+          <h4 class="fw-bold mb-0 text-gradient grad-red">₱{{ totals.year|default:"0.00" }}</h4>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analytics Button & Logs Section -->
+    <div class="row g-4 mb-4 fade-in-up d4">
+
+      <!-- Analytics Modal Trigger Card -->
+      <div class="col-12 col-xl-8">
+        <div class="glass-card p-4 d-flex flex-column justify-content-center align-items-center text-center"
+          style="min-height: 350px;">
+          <div class="mb-4">
+            <div class="kpi-icon-premium grad-blue mx-auto mb-3" style="width: 80px; height: 80px; font-size: 2.2rem;">
+              <i class="fas fa-chart-pie"></i>
+            </div>
+            <h4 class="fw-bold mb-2">Revenue Analytics</h4>
+            <p class="text-muted mx-auto" style="max-width: 400px; font-size: 0.95rem;">
+              Access comprehensive visual insights including monthly sales trends, weekly performance, and payment
+              method breakdowns.
+            </p>
+          </div>
+          <button class="btn btn-primary btn-lg rounded-pill px-5 fw-bold"
+            style="background: linear-gradient(135deg, #3b82f6, #2dd4bf); border: none; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);"
+            data-bs-toggle="modal" data-bs-target="#analyticsModal">
+            <i class="fas fa-expand-arrows-alt me-2"></i> View Analytics Charts
+          </button>
+        </div>
+      </div>
+
+      <!-- Admin Logs -->
+      <div class="col-12 col-xl-4 d-flex flex-column gap-4">
+        <div class="glass-card p-4 flex-grow-1 bottom-card">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="fw-bold mb-0"><i class="fas fa-shield-alt me-2 text-warning"></i>Recent Logins</h5>
+          </div>
+          <div class="table-responsive">
+            <table class="glass-table">
+              <tbody>
+                {% for row in recent_admin_logins %}
+                <tr>
+                  <td class="ps-0 py-2">
+                    <div class="d-flex align-items-center gap-3">
+                      <div class="avatar-circle" style="background: {{ row.color|default:'#3b82f6' }};">
+                        {{ row.username|make_list|first|upper }}
+                      </div>
+                      <div>
+                        <div class="fw-bold">{{ row.username }}</div>
+                        <div class="text-muted" style="font-size: 0.75rem;">
+                          {{ row.login_time|date:'M d, Y g:i A' }}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="text-end pe-0 py-2">
+                    {% if row.event_type == 'login' %}
+                    <span class="premium-badge text-primary"><span class="glow-dot glow-warning"></span> Login</span>
+                    {% else %}
+                    <span class="premium-badge text-success"><span class="glow-dot glow-success"></span> Active</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="2" class="text-center text-muted py-4">No recent activity.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Data Tables -->
+    <div class="row g-4 fade-in-up d4">
+      <!-- Top Clients -->
+      <div class="col-12 col-lg-4">
+        <div class="glass-card p-4 h-100 bottom-card">
+          <h5 class="fw-bold mb-4"><i class="fas fa-crown me-2 text-warning"></i>Top Clients</h5>
+          <div class="table-responsive">
+            <table class="glass-table">
+              <thead>
+                <tr>
+                  <th class="ps-0">Client</th>
+                  <th class="text-end pe-0">Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for c in top_clients %}
+                <tr>
+                  <td class="ps-0">
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="fw-bold text-truncate" style="max-width: 150px;">{{ c.username }}</div>
+                    </div>
+                  </td>
+                  <td class="text-end pe-0 fw-bold text-success">₱{{ c.total_paid|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="2" class="text-center py-4 opacity-50">No data available.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Plans -->
+      <div class="col-12 col-lg-4">
+        <div class="glass-card p-4 h-100 bottom-card">
+          <h5 class="fw-bold mb-4"><i class="fas fa-wifi me-2 text-primary"></i>Popular Plans</h5>
+          <div class="table-responsive">
+            <table class="glass-table">
+              <thead>
+                <tr>
+                  <th class="ps-0">Plan Name</th>
+                  <th class="text-end pe-0">Users</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in top_plans %}
+                <tr>
+                  <td class="ps-0 fw-bold"><span class="glow-dot glow-success"></span> {{ p.plan_name }}</td>
+                  <td class="text-end pe-0 fw-bold">{{ p.cnt }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="2" class="text-center py-4 opacity-50">No data available.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Expiring Users -->
+      <div class="col-12 col-lg-4">
+        <div class="glass-card p-4 h-100 bottom-card">
+          <h5 class="fw-bold mb-4"><i class="fas fa-clock me-2 text-danger"></i>Expiring Soon</h5>
+          <div class="table-responsive">
+            <table class="glass-table">
+              <thead>
+                <tr>
+                  <th class="ps-0">Client</th>
+                  <th class="text-end pe-0">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for u in expiring_users %}
+                <tr>
+                  <td class="ps-0">
+                    <div class="fw-bold text-truncate" style="max-width: 120px;">{{ u.username }}</div>
+                    <div class="text-muted" style="font-size: 0.75rem;">{{ u.plan_name }}</div>
+                  </td>
+                  <td class="text-end pe-0">
+                    {% if u.is_expired %}
+                    <span class="premium-badge text-danger"><span class="glow-dot glow-danger"></span> Expired</span>
+                    {% else %}
+                    <span class="countdown fw-bold text-warning" data-expire="{{ u.expires_at_epoch }}"
+                      style="font-family: monospace;"></span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="2" class="text-center py-5">
+                    <div class="opacity-50">
+                      <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
+                      <div>All clear! No pending expirations.</div>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Old Analytics Modal Removed -->
+
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <script>
+  let revenueChart, planChart, dashboardChart;
+
   function applyChartTheme() {
     const isDark = document.documentElement.classList.contains('dark-mode');
     Chart.defaults.color = isDark ? '#94a3b8' : '#64748b';
     Chart.defaults.scale.grid.color = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+    
+    if (typeof dashboardChart !== 'undefined' && dashboardChart) {
+      const dsCtx = document.getElementById('dashboardSalesChart').getContext('2d');
+      let grad = dsCtx.createLinearGradient(0, 0, 0, 350);
+      if (isDark) {
+        grad.addColorStop(0, 'rgba(251, 174, 26, 0.4)');
+        grad.addColorStop(1, 'rgba(251, 174, 26, 0.02)');
+        dashboardChart.data.datasets[0].borderColor = '#fbae1a';
+        dashboardChart.data.datasets[0].pointBorderColor = '#fbae1a';
+      } else {
+        grad.addColorStop(0, 'rgba(33, 81, 161, 0.4)');
+        grad.addColorStop(1, 'rgba(33, 81, 161, 0.02)');
+        dashboardChart.data.datasets[0].borderColor = '#2151A1';
+        dashboardChart.data.datasets[0].pointBorderColor = '#2151A1';
+      }
+      dashboardChart.data.datasets[0].backgroundColor = grad;
+      dashboardChart.update();
+    }
     return isDark;
   }
-  Chart.defaults.font.family = "'Inter', 'Montserrat', sans-serif";
+  window.addEventListener('themeChanged', applyChartTheme);
+  Chart.defaults.font.family = "'Outfit', sans-serif";
+  
+  // Register datalabels plugin globally but disable it by default
+  Chart.register(ChartDataLabels);
+  Chart.defaults.plugins.datalabels.display = false;
+
   applyChartTheme();
 
   const months = {{ months_js|safe|default:"[]" }};
@@ -363,52 +2243,321 @@
   const pieLabels = {{ pie_labels_js|safe|default:"[]" }};
   const pieData = {{ pie_data_js|safe|default:"[]" }};
 
-  let monthChart, weekChart, planChart;
 
-  const monthChartCtx = document.getElementById('salesMonthChart');
-  if(monthChartCtx) {
-    monthChart = new Chart(monthChartCtx.getContext('2d'), {
-      type: 'bar',
-      data: { labels: months, datasets: [{ label: '₱ Sales', data: salesByMonth, backgroundColor: '#3b82f6', borderRadius: 8 }] },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-    });
-  }
 
-  const weekChartCtx = document.getElementById('salesWeekChart');
-  if(weekChartCtx) {
-    const isDark = applyChartTheme();
-    weekChart = new Chart(weekChartCtx.getContext('2d'), {
+  // Dashboard Sales Overview Chart
+  const dsCtx = document.getElementById('dashboardSalesChart');
+  if (dsCtx) {
+    const isDarkInit = document.documentElement.classList.contains('dark-mode');
+    let initGrad = dsCtx.getContext('2d').createLinearGradient(0, 0, 0, 350);
+    if (isDarkInit) {
+      initGrad.addColorStop(0, 'rgba(251, 174, 26, 0.4)');
+      initGrad.addColorStop(1, 'rgba(251, 174, 26, 0.02)');
+    } else {
+      initGrad.addColorStop(0, 'rgba(33, 81, 161, 0.4)');
+      initGrad.addColorStop(1, 'rgba(33, 81, 161, 0.02)');
+    }
+
+    dashboardChart = new Chart(dsCtx.getContext('2d'), {
       type: 'line',
-      data: { labels: days, datasets: [{ label: '₱ Sales', data: salesByDay, fill: true, backgroundColor: 'rgba(16,185,129,0.1)', borderColor: '#10b981', borderWidth: 2.5, tension: 0.4, pointBackgroundColor: isDark ? '#1e293b' : '#ffffff', pointBorderColor: '#10b981', pointBorderWidth: 2, pointRadius: 4 }] },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+      data: {
+        labels: days,
+        datasets: [{
+          data: salesByDay,
+          fill: true,
+          backgroundColor: initGrad,
+          borderColor: isDarkInit ? '#fbae1a' : '#2151A1',
+          borderWidth: 3,
+          tension: 0.4,
+          pointBackgroundColor: '#ffffff',
+          pointBorderColor: isDarkInit ? '#fbae1a' : '#2151A1',
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 7
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+            titleFont: { size: 14, family: 'Outfit' },
+            bodyFont: { size: 14, family: 'Outfit' },
+            padding: 12,
+            cornerRadius: 12,
+            displayColors: false,
+            callbacks: { label: function (c) { return '₱ ' + c.parsed.y.toLocaleString(); } }
+          },
+          datalabels: {
+            display: true,
+            color: document.documentElement.classList.contains('dark-mode') ? '#e2e8f0' : '#1e293b',
+            font: { family: 'Outfit', weight: 'bold', size: 12 },
+            align: 'top',
+            offset: 8,
+            formatter: function(value) {
+              if (value >= 1000) {
+                return (value / 1000).toFixed(1) + 'k';
+              }
+              return value;
+            }
+          }
+        },
+        scales: {
+          y: { 
+            beginAtZero: true, 
+            border: { display: false },
+            grid: { color: 'rgba(0,0,0,0.05)', borderDash: [5, 5] },
+            ticks: { font: { family: 'Outfit' } }
+          },
+          x: { 
+            border: { display: false }, 
+            grid: { display: false },
+            ticks: { font: { family: 'Outfit' } }
+          }
+        },
+        interaction: { intersect: false, mode: 'index' }
+      }
+    });
+
+    // Toggle Filter Logic
+    document.querySelectorAll('.sales-toggle').forEach(radio => {
+      radio.addEventListener('change', function () {
+        if (this.value === '7d') {
+          dashboardChart.data.labels = days;
+          dashboardChart.data.datasets[0].data = salesByDay;
+        } else {
+          dashboardChart.data.labels = months;
+          dashboardChart.data.datasets[0].data = salesByMonth;
+        }
+        dashboardChart.update();
+      });
     });
   }
 
-  const planChartCtx = document.getElementById('salesPieChart');
-  if(planChartCtx && pieLabels.length > 0) {
-    planChart = new Chart(planChartCtx.getContext('2d'), {
-      type: 'doughnut',
-      data: { labels: pieLabels, datasets: [{ label: 'Total Paid', data: pieData, backgroundColor: ['#3b82f6','#10b981','#8b5cf6','#f59e0b','#f472b6','#a3e635','#f87171','#2dd4bf'], borderWidth: 0 }] },
-      options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right', labels: { usePointStyle: true, padding: 20 } }, tooltip: { callbacks: { label: function(c) { let t=c.dataset.data.reduce((a,b)=>a+b,0); let p=t>0?((c.raw/t)*100).toFixed(1):0; return `₱${c.raw.toLocaleString()} (${p}%)`; } } } } }
+  const revenueModalEl = document.getElementById('revenueModal');
+  if (revenueModalEl) {
+    revenueModalEl.addEventListener('shown.bs.modal', function () {
+
+      const ctx = document.getElementById('revenueMainChart');
+      if (ctx && !revenueChart) {
+        let gradBlue = ctx.getContext('2d').createLinearGradient(0, 0, 0, 400);
+        gradBlue.addColorStop(0, 'rgba(59, 130, 246, 0.8)');
+        gradBlue.addColorStop(1, 'rgba(59, 130, 246, 0.1)');
+
+        let gradGreen = ctx.getContext('2d').createLinearGradient(0, 0, 0, 400);
+        gradGreen.addColorStop(0, 'rgba(16, 185, 129, 0.8)');
+        gradGreen.addColorStop(1, 'rgba(16, 185, 129, 0.1)');
+
+        revenueChart = new Chart(ctx.getContext('2d'), {
+          type: 'line',
+          data: {
+            labels: months,
+            datasets: [{
+              label: 'Revenue',
+              data: salesByMonth,
+              fill: true,
+              backgroundColor: gradBlue,
+              borderColor: '#3b82f6',
+              borderWidth: 3,
+              tension: 0.4,
+              pointBackgroundColor: '#ffffff',
+              pointBorderColor: '#3b82f6',
+              pointBorderWidth: 2,
+              pointRadius: 4,
+              pointHoverRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                titleFont: { size: 14, family: 'Outfit' },
+                bodyFont: { size: 14, family: 'Outfit' },
+                padding: 12,
+                cornerRadius: 12,
+                displayColors: false,
+                callbacks: { label: function (c) { return '₱ ' + c.parsed.y.toLocaleString(); } }
+              }
+            },
+            scales: {
+              y: { beginAtZero: true, border: { display: false } },
+              x: { border: { display: false }, grid: { display: false } }
+            },
+            interaction: { intersect: false, mode: 'index' }
+          }
+        });
+
+        // Filter Logic
+        document.getElementById('btnrev12m').addEventListener('change', function () {
+          if (this.checked) {
+            document.getElementById('revenueChartTitle').innerText = 'Revenue (Last 12 Months)';
+            revenueChart.data.labels = months;
+            revenueChart.data.datasets[0].data = salesByMonth;
+            revenueChart.data.datasets[0].backgroundColor = gradBlue;
+            revenueChart.data.datasets[0].borderColor = '#3b82f6';
+            revenueChart.data.datasets[0].pointBorderColor = '#3b82f6';
+            revenueChart.update();
+          }
+        });
+
+        document.getElementById('btnrev7d').addEventListener('change', function () {
+          if (this.checked) {
+            document.getElementById('revenueChartTitle').innerText = 'Revenue (Last 7 Days)';
+            revenueChart.data.labels = days;
+            revenueChart.data.datasets[0].data = salesByDay;
+            revenueChart.data.datasets[0].backgroundColor = gradGreen;
+            revenueChart.data.datasets[0].borderColor = '#10b981';
+            revenueChart.data.datasets[0].pointBorderColor = '#10b981';
+            revenueChart.update();
+          }
+        });
+      }
     });
   }
 
-  window.addEventListener('themeChanged', () => {
-    const isDark = applyChartTheme();
-    if(weekChart && weekChart.data.datasets[0]) weekChart.data.datasets[0].pointBackgroundColor = isDark ? '#1e293b' : '#ffffff';
-    [monthChart, weekChart, planChart].forEach(c => { if(c) c.update(); });
+  // Handle Popular Plans filter changes
+  document.querySelectorAll('.popular-plans-filter').forEach(radio => {
+    radio.addEventListener('change', function() {
+      loadPopularPlans(this.value);
+    });
   });
+
+  const popularPlansModalEl = document.getElementById('popularPlansModal');
+  if (popularPlansModalEl) {
+    popularPlansModalEl.addEventListener('show.bs.modal', function () {
+      document.getElementById('ppMonth').checked = true;
+      loadPopularPlans('month');
+    });
+  }
+
+  // Handle revenue period toggle in main chart.js
+  const radialCenterTextPlugin = {
+    id: 'radialCenterText',
+    beforeDraw(chart) {
+      if (chart.config.options.elements && chart.config.options.elements.center) {
+        const ctx = chart.ctx;
+        const centerConfig = chart.config.options.elements.center;
+        
+        ctx.save();
+        const centerX = (chart.chartArea.left + chart.chartArea.right) / 2;
+        const centerY = (chart.chartArea.top + chart.chartArea.bottom) / 2;
+
+        const isDark = document.documentElement.classList.contains('dark-mode');
+
+        // Draw Title
+        ctx.font = 'bold 36px Poppins, sans-serif';
+        ctx.fillStyle = isDark ? '#ffffff' : '#1e293b';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(centerConfig.title || '', centerX, centerY - 10);
+
+        // Draw Subtitle
+        ctx.font = '500 12px Montserrat, sans-serif';
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText(centerConfig.subtitle || '', centerX, centerY + 25);
+        
+        ctx.restore();
+      }
+    }
+  };
+  Chart.register(radialCenterTextPlugin);
+
+  let collectionChart;
+  const collectionModalEl = document.getElementById('collectionModal');
+  if (collectionModalEl) {
+    collectionModalEl.addEventListener('shown.bs.modal', function () {
+      const isDark = document.documentElement.classList.contains('dark-mode');
+      const emptyColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+      // Monochromatic sleek blues for Payment Method
+      const sleekBlues = ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe']; 
+
+      // 1. Overall Collection Rate Chart
+      const rateCtx = document.getElementById('collectionRateChart');
+      if (rateCtx && !collectionChart) {
+        const rateDataEl = document.getElementById('collectionRateData');
+        const rateVal = parseFloat(rateDataEl.getAttribute('data-rate'));
+        const subTxt = rateDataEl.getAttribute('data-subtitle');
+        
+        collectionChart = new Chart(rateCtx.getContext('2d'), {
+          type: 'doughnut',
+          data: {
+            labels: ['Collected', 'Pending'],
+            datasets: [{
+              data: [rateVal, 100 - rateVal],
+              backgroundColor: ['#2563eb', emptyColor],
+              borderWidth: 0,
+              borderRadius: [10, 0] // Rounded edges for the filled part
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false, cutout: '80%',
+            plugins: {
+              legend: { display: false },
+              tooltip: { enabled: false }
+            },
+            elements: {
+              center: { title: rateVal + '%', subtitle: subTxt }
+            }
+          }
+        });
+      }
+
+      // 2. By Payment Method Chart (salesPieChart)
+      const pieCtx = document.getElementById('salesPieChart');
+      if (pieCtx && pieLabels.length > 0 && !planChart) {
+        const pmDataEl = document.getElementById('paymentMethodData');
+        const subTxt = pmDataEl.getAttribute('data-subtitle');
+        
+        // Use total transactions or simply the count of labels
+        const total = pieData.reduce((a, b) => a + b, 0);
+
+        planChart = new Chart(pieCtx.getContext('2d'), {
+          type: 'doughnut',
+          data: {
+            labels: pieLabels,
+            datasets: [{
+              data: pieData,
+              backgroundColor: sleekBlues,
+              borderWidth: isDark ? 2 : 2,
+              borderColor: isDark ? '#1a1d24' : '#ffffff',
+              hoverOffset: 4
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false, cutout: '80%',
+            plugins: {
+              legend: { position: 'right', labels: { usePointStyle: true, padding: 15, font: { family: 'Poppins', size: 11 }, color: isDark ? '#cbd5e1' : '#475569' } }
+            },
+            elements: {
+              center: { title: total.toString(), subtitle: subTxt }
+            }
+          }
+        });
+      }
+    });
+  }
 
   // Countdowns
   function updateCountdowns() {
     const now = Math.floor(Date.now() / 1000);
     document.querySelectorAll('.countdown').forEach(el => {
       const expire = parseInt(el.getAttribute('data-expire'), 10);
-      if(!isNaN(expire)) {
+      if (!isNaN(expire)) {
         const diff = expire - now;
-        if(diff > 0) {
-          const d = Math.floor(diff/86400), h = Math.floor((diff%86400)/3600), m = Math.floor((diff%3600)/60), s = diff%60;
-          el.textContent = (d>0?d+'d ':'') + (h>0?h+'h ':'') + (m>0?m+'m ':'') + s+'s';
+        if (diff > 0) {
+          const d = Math.floor(diff / 86400);
+          const h = Math.floor((diff % 86400) / 3600);
+          if (d > 0) {
+            el.textContent = d + 'd ' + h + 'h';
+          } else {
+            const m = Math.floor((diff % 3600) / 60);
+            el.textContent = h + 'h ' + m + 'm';
+          }
         } else { el.textContent = 'Expired'; }
       }
     });
@@ -420,34 +2569,27 @@
     const now = new Date();
     const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
     const manila = new Date(utc + (3600000 * 8));
-    const pad = n => n < 10 ? '0'+n : n;
+    const pad = n => n < 10 ? '0' + n : n;
     const clockEl = document.getElementById('live-clock-square');
-    if(clockEl) {
-      const date = manila.toLocaleDateString('en-PH', { weekday:'short', month:'short', day:'numeric' });
+    if (clockEl) {
+      const date = manila.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
       clockEl.textContent = `${date} ${pad(manila.getHours())}:${pad(manila.getMinutes())}:${pad(manila.getSeconds())}`;
     }
   }
   setInterval(updateDigitalClock, 1000); updateDigitalClock();
 
-  // Uptime
-  (function() {
-    const pad = n => n<10?'0'+n:n;
-    const uptimeEl = document.getElementById('uptime-display');
-    const resetBtn = document.getElementById('uptime-reset');
-    const uptimeSub = document.getElementById('uptime-sub');
-    const KEY = 'dashboard_uptime_start';
-    let startEpoch = parseInt(localStorage.getItem(KEY), 10);
-    if(!startEpoch) { startEpoch = Math.floor(Date.now()/1000); localStorage.setItem(KEY, String(startEpoch)); }
-    function updateUptime() {
-      const diff = Math.max(0, Math.floor(Date.now()/1000) - startEpoch);
-      const h=Math.floor(diff/3600), m=Math.floor((diff%3600)/60), s=diff%60;
-      if(uptimeEl) uptimeEl.textContent = pad(h)+':'+pad(m)+':'+pad(s);
-      if(uptimeSub) uptimeSub.textContent = 'Since '+new Date(startEpoch*1000).toLocaleString();
+  // Dashboard-specific Sidebar Logo Swap
+  const sidebarLogo = document.querySelector('.sidebar-header img');
+  if (sidebarLogo) {
+    function updateSidebarLogo() {
+      sidebarLogo.src = document.documentElement.classList.contains('dark-mode')
+        ? "{% static 'assets/images/logo_white.png' %}"
+        : "{% static 'assets/images/logo_black.png' %}";
     }
-    if(resetBtn) resetBtn.addEventListener('click', e => { e.preventDefault(); startEpoch=Math.floor(Date.now()/1000); localStorage.setItem(KEY,String(startEpoch)); updateUptime(); });
-    setInterval(updateUptime, 1000); updateUptime();
-  })();
-  
+    updateSidebarLogo();
+    new MutationObserver(updateSidebarLogo).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  }
+
   // System Health Widget
   function fetchSystemHealth() {
     fetch("{% url 'api_downdetector_data' %}")
@@ -499,5 +2641,90 @@
   fetchSystemHealth();
   setInterval(fetchSystemHealth, 30000);
 
+  // Fetch Top Clients for Modal
+  function loadTopClients(filterType) {
+    const tbody = document.getElementById('topClientsTbody');
+    tbody.innerHTML = '<tr><td colspan="3" class="text-center py-5 text-muted"><i class="fas fa-spinner fa-spin me-2"></i> Loading data...</td></tr>';
+    
+    fetch(`/api/top-clients/?filter=${filterType}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          tbody.innerHTML = '';
+          if (data.data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center py-5 text-muted">No revenue data found for this period.</td></tr>';
+            return;
+          }
+          data.data.forEach((client, index) => {
+            const html = `
+              <tr style="border-bottom: 1px solid rgba(0,0,0,0.04);">
+                <td class="ps-3 py-3">
+                  <div class="d-flex align-items-center gap-3">
+                    <div class="table-rank" style="width: 20px;">#${index + 1}</div>
+                    <div class="fw-semibold text-dark table-text-dark">${client.username}</div>
+                  </div>
+                </td>
+                <td class="py-3 text-muted" style="font-size: 0.85rem;">${client.plan_name}</td>
+                <td class="text-end pe-3 py-3 fw-bold table-value" style="color: #2151A1;">₱${client.total_paid.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+              </tr>
+            `;
+            tbody.insertAdjacentHTML('beforeend', html);
+          });
+        }
+      })
+      .catch(err => {
+        console.error('Error fetching top clients:', err);
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center py-5 text-danger">Error loading data.</td></tr>';
+      });
+  }
+
+  // Fetch Popular Plans for Modal
+  function loadPopularPlans(filterType) {
+    const tbody = document.getElementById('popularPlansTbody');
+    tbody.innerHTML = '<tr><td colspan="2" class="text-center py-5 text-muted"><i class="fas fa-spinner fa-spin me-2"></i> Loading data...</td></tr>';
+    
+    fetch(`/api/popular-plans/?filter=${filterType}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          tbody.innerHTML = '';
+          if (data.data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="2" class="text-center py-5 text-muted">No popular plans data found for this period.</td></tr>';
+            return;
+          }
+          data.data.forEach((plan, index) => {
+            const html = `
+              <tr style="border-bottom: 1px solid rgba(0,0,0,0.04);">
+                <td class="ps-3 py-4 d-flex align-items-center gap-3">
+                  <span class="table-rank">#${index + 1}</span>
+                  <span class="fw-semibold text-dark table-text-dark">${plan.plan_name}</span>
+                </td>
+                <td class="text-end pe-3 py-4 fw-bold table-value" style="color: #2151A1;">${plan.cnt}</td>
+              </tr>
+            `;
+            tbody.insertAdjacentHTML('beforeend', html);
+          });
+        }
+      })
+      .catch(err => {
+        console.error('Error fetching popular plans:', err);
+        tbody.innerHTML = '<tr><td colspan="2" class="text-center py-5 text-danger">Error loading data.</td></tr>';
+      });
+  }
+
+  document.querySelectorAll('.top-clients-filter').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      loadTopClients(e.target.value);
+    });
+  });
+
+  const topClientsModal = document.getElementById('topClientsModal');
+  if (topClientsModal) {
+    topClientsModal.addEventListener('show.bs.modal', () => {
+      // Load default checked filter (month)
+      const activeFilter = document.querySelector('.top-clients-filter:checked').value;
+      loadTopClients(activeFilter);
+    });
+  }
 </script>
 {% endblock %}
