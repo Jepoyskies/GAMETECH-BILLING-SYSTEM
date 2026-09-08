@@ -29,13 +29,13 @@ def portal_login(request):
 def portal_dashboard(request):
     customer_id = request.session.get('customer_id')
     if not customer_id:
-        return redirect('login')
+        return redirect('customer_portal:portal_login')
         
     try:
         customer = Customer.objects.get(id=customer_id)
     except Customer.DoesNotExist:
         request.session.flush()
-        return redirect('login')
+        return redirect('customer_portal:portal_login')
         
     if customer.must_change_password:
         return redirect('customer_portal:force_change_password')
@@ -80,6 +80,12 @@ def portal_dashboard(request):
     from billing.models import MonitoredService
     issue_services = MonitoredService.objects.exclude(status='Up').order_by('-latency_ms')[:10]
         
+    # Calculate days until expiry for countdown widget
+    days_until_expiry = None
+    if customer.expires_at:
+        delta = customer.expires_at - timezone.now()
+        days_until_expiry = delta.days  # Can be negative if expired
+
     context = {
         'customer': customer,
         'plan': plan,
@@ -89,7 +95,8 @@ def portal_dashboard(request):
         'is_expiring_soon': is_expiring_soon,
         'payments': payments,
         'plans': plans,
-        'issue_services': issue_services
+        'issue_services': issue_services,
+        'days_until_expiry': days_until_expiry,
     }
     return render(request, 'customer_portal/portal_dashboard.html', context)
 
@@ -97,13 +104,13 @@ def portal_dashboard(request):
 def portal_statement_view(request):
     customer_id = request.session.get('customer_id')
     if not customer_id:
-        return redirect('login')
+        return redirect('customer_portal:portal_login')
         
     try:
         customer = Customer.objects.get(id=customer_id)
     except Customer.DoesNotExist:
         request.session.flush()
-        return redirect('login')
+        return redirect('customer_portal:portal_login')
         
     if customer.must_change_password:
         return redirect('customer_portal:force_change_password')
@@ -129,18 +136,18 @@ def portal_statement_view(request):
 
 def portal_logout(request):
     request.session.flush()
-    return redirect('login')
+    return redirect('customer_portal:portal_login')
 
 def force_change_password(request):
     customer_id = request.session.get('customer_id')
     if not customer_id:
-        return redirect('login')
+        return redirect('customer_portal:portal_login')
         
     try:
         customer = Customer.objects.get(id=customer_id)
     except Customer.DoesNotExist:
         request.session.flush()
-        return redirect('login')
+        return redirect('customer_portal:portal_login')
         
     if not customer.must_change_password:
         return redirect('customer_portal:portal_dashboard')
@@ -236,7 +243,7 @@ def portal_process_mock_payment(request):
     if request.method == 'POST':
         customer_id = request.session.get('customer_id')
         if not customer_id:
-            return redirect('login')
+            return redirect('customer_portal:portal_login')
             
         amount = request.POST.get('amount')
         plan_id = request.POST.get('plan_id')

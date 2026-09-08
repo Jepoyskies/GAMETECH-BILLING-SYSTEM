@@ -16,7 +16,7 @@ import json
 from datetime import timedelta, datetime
 from ..models import (
     SystemAdmin, SubscriptionPlan, Agent, AccountType,
-    Customer, Barangay, Payment, Rebate, SystemLog, SmsLog, CignalPlay, AuditLog, AddOnRequest, Notification, ImprovementRequest
+    Customer, Barangay, Payment, Rebate, SystemLog, SmsLog, CignalPlay, AuditLog, AddOnRequest, Notification, ImprovementRequest, MessageTemplate
 )
 import requests
 from network_manager.models import MikrotikDevice, NapBox
@@ -257,8 +257,21 @@ def customer_rebate_view(request, username):
                 except Exception:
                     pass
 
-            # 3. TODO: Sprint 4 - Call Mikrotik API to update PPPoE comment/disconnect
-            
+            # 3. Sync to Mikrotik — kick/reactivate as needed based on new expiry
+            if customer.mikrotik_device and customer.pppoe_username:
+                try:
+                    from network_manager.services import MikrotikAPI
+                    api = MikrotikAPI(customer.mikrotik_device)
+                    if customer.status == 'active':
+                        # Reactivate if they were suspended before
+                        api.enable_pppoe_user(customer.pppoe_username)
+                        if customer.plan and customer.plan.name:
+                            api.set_user_pppoe_profile(customer.pppoe_username, customer.plan.name)
+                    api.kick_active_user(customer.pppoe_username)
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).warning(f"Rebate Mikrotik sync failed for {customer.pppoe_username}: {e}")
+
             # 4. Pass data to success page for copying
             context = {
                 'customer': customer,
@@ -360,7 +373,19 @@ def customer_rollback_view(request, username):
                     paid_at=timezone.now()
                 )
 
-            # 4. TODO: Sprint 4 - Mikrotik API Sync
+            # 4. Sync to Mikrotik — kick/suspend as needed based on reverted expiry
+            if customer.mikrotik_device and customer.pppoe_username:
+                try:
+                    from network_manager.services import MikrotikAPI
+                    api = MikrotikAPI(customer.mikrotik_device)
+                    if customer.status == 'active':
+                        api.enable_pppoe_user(customer.pppoe_username)
+                        if customer.plan and customer.plan.name:
+                            api.set_user_pppoe_profile(customer.pppoe_username, customer.plan.name)
+                    api.kick_active_user(customer.pppoe_username)
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).warning(f"Rollback Mikrotik sync failed for {customer.pppoe_username}: {e}")
 
             context = {
                 'customer': customer,
@@ -489,6 +514,9 @@ def pay_customer_view(request, username):
                     locked_customer.status = 'active'
                 
                 locked_customer.save()
+                
+                # Capture was_suspended AFTER save so Mikrotik block outside uses locked state
+                _was_suspended_for_mikrotik = was_suspended
 
                 # 4. Log the Payment
                 payment = Payment.objects.create(
@@ -565,15 +593,19 @@ def pay_customer_view(request, username):
                     from network_manager.services import MikrotikAPI
                     api = MikrotikAPI(customer.mikrotik_device)
                     
-                    # Note: PPPoE comment generation is now handled automatically by billing/signals.py
+                    # Use the was_suspended flag captured from the locked_customer inside the atomic block
+                    _ws = locals().get('_was_suspended_for_mikrotik', was_suspended)
                     
-                    if was_suspended:
+                    if _ws:
                         # 1. Enable the user (Removes bridge drop and enables secret)
                         api.enable_pppoe_user(customer.pppoe_username)
                         # 2. Update the profile back to their plan, or default if none
                         target_profile = customer.plan.name if customer.plan and customer.plan.name else "default"
                         api.set_user_pppoe_profile(customer.pppoe_username, target_profile)
                         # 3. Kick them so they reconnect and get the new profile
+                        api.kick_active_user(customer.pppoe_username)
+                    else:
+                        # Even if not previously suspended, kick so router updates comment/profile
                         api.kick_active_user(customer.pppoe_username)
                 except Exception as e:
                     import logging

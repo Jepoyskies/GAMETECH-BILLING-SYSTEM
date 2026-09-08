@@ -1257,13 +1257,57 @@
     </div>
   </div>
 
+
+  <!-- Expiring Soon Alert —— NEW BONUS WIDGET -->
+  {% if expiring_users %}
+  <div class="row mb-4 animate-fade-in animate-delay-3">
+    <div class="col-12">
+      <div class="dashboard-card" style="overflow:hidden; border-left: 4px solid #f59e0b;">
+        <div class="section-header d-flex justify-content-between align-items-center" style="background:linear-gradient(to right,#78350f,#92400e); padding:12px 20px;">
+          <h6 class="m-0 text-white" style="font-weight:700;"><i class="fas fa-exclamation-triangle me-2"></i> Expiring Soon / Overdue</h6>
+          <a href="{% url 'customer_list' %}" class="btn btn-sm btn-light text-warning" style="font-size:0.75rem; font-weight:600; padding:4px 10px; border-radius:6px;">View All</a>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-premium align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Plan</th>
+                <th>Status</th>
+                <th>Expires / Due</th>
+                <th class="text-end">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for u in expiring_users %}
+              <tr>
+                <td><strong>{{ u.username }}</strong></td>
+                <td><span class="badge bg-secondary" style="font-size:0.72rem;">{{ u.plan_name }}</span></td>
+                <td>
+                  {% if u.is_expired %}
+                    <span class="badge" style="background:#dc2626;"><i class="fas fa-times-circle me-1"></i>Expired</span>
+                  {% else %}
+                    <span class="badge" style="background:#d97706;"><i class="fas fa-clock me-1"></i>Expiring Soon</span>
+                  {% endif %}
+                </td>
+                <td style="color:{% if u.is_expired %}#dc2626{% else %}#d97706{% endif %}; font-weight:600;">
+                  {{ u.expires_at|date:"M d, Y h:i A" }}
+                </td>
+                <td class="text-end">
+                  <a href="/payment-portal/pay/{{ u.username }}/" class="btn btn-sm" style="background:#059669; color:white; border-radius:6px; font-size:0.75rem; font-weight:600;"><i class="fas fa-credit-card me-1"></i>Pay</a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Bottom Row: Top Clients + Top Plans -->
   <div class="row g-4 mb-4 animate-fade-in animate-delay-3">
-=======
-  <!-- Data Cards Row -->
-  <div class="row g-4 mt-2 fade-in-up d3">
-    <!-- Recent Logins -->
->>>>>>> eb4fd87 (Update dashboard UI and organize scripts)
     <div class="col-12 col-lg-6">
       <div class="glass-card no-hover p-5 h-100 bottom-card position-relative" data-bs-toggle="modal" data-bs-target="#recentLoginsModal" style="cursor: pointer;">
         <button class="expand-btn p-2 rounded-lg transition duration-200 position-absolute top-0 end-0 m-2" title="Expand" style="pointer-events: auto;" data-bs-toggle="modal" data-bs-target="#recentLoginsModal">

@@ -715,6 +715,76 @@
                 <h3>Subscription Details</h3>
             </div>
 
+            <!-- ▼ PAYMENT DUE COUNTDOWN WIDGET ▼ -->
+            {% if customer.expires_at %}
+            {% with days=days_until_expiry %}
+            <div id="due-countdown-widget" style="
+                margin: 0 0 1.25rem 0;
+                border-radius: 14px;
+                padding: 1.1rem 1.3rem;
+                {% if days is not None and days <= 0 %}
+                background: linear-gradient(135deg, rgba(239,68,68,0.12), rgba(220,38,38,0.08));
+                border: 1px solid rgba(239,68,68,0.3);
+                {% elif days is not None and days <= 3 %}
+                background: linear-gradient(135deg, rgba(251,191,36,0.12), rgba(245,158,11,0.08));
+                border: 1px solid rgba(251,191,36,0.3);
+                {% else %}
+                background: linear-gradient(135deg, rgba(52,211,153,0.10), rgba(16,185,129,0.07));
+                border: 1px solid rgba(52,211,153,0.25);
+                {% endif %}
+            ">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:0.75rem; flex-wrap:wrap;">
+                    <div>
+                        <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--p-text-muted); margin-bottom:4px;">
+                            <i class="fas fa-calendar-check me-1"></i> Payment Due
+                        </div>
+                        <div style="font-size:1.55rem; font-weight:800; line-height:1;
+                            {% if days is not None and days <= 0 %}color:#f87171;
+                            {% elif days is not None and days <= 3 %}color:#fbbf24;
+                            {% else %}color:#34d399;{% endif %}">
+                            {% if days is not None %}
+                                {% if days <= 0 %}
+                                    <i class="fas fa-exclamation-circle me-1" style="font-size:1.2rem;"></i>Expired
+                                {% elif days == 0 %}
+                                    Today!
+                                {% elif days == 1 %}
+                                    Tomorrow!
+                                {% else %}
+                                    {{ days }} day{{ days|pluralize }} left
+                                {% endif %}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </div>
+                        <div style="font-size:0.78rem; color:var(--p-text-muted); margin-top:4px;">
+                            {% if days is not None and days <= 0 %}
+                                <span style="color:#f87171;">Due was {{ customer.expires_at|date:"M d, Y h:i A" }}</span>
+                            {% else %}
+                                Due: <strong>{{ customer.expires_at|date:"M d, Y h:i A" }}</strong>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <button onclick="document.getElementById('payModal')?.dispatchEvent(new Event('show')) || document.querySelector('[data-bs-target=\'#payModal\']')?.click()" 
+                            style="background:{% if days is not None and days <= 0 %}#dc2626{% elif days is not None and days <= 3 %}#d97706{% else %}#059669{% endif %}; color:white; border:none; border-radius:10px; padding:0.6rem 1.1rem; font-weight:700; font-size:0.82rem; cursor:pointer; white-space:nowrap; transition:opacity 0.2s;"
+                            onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'"
+                            data-bs-toggle="modal" data-bs-target="#payModal">
+                        <i class="fas fa-credit-card me-1"></i>
+                        {% if days is not None and days <= 0 %}Renew Now{% else %}Pay Bill{% endif %}
+                    </button>
+                </div>
+                {% if days is not None and days > 0 %}
+                <!-- Progress bar -->
+                <div style="margin-top:0.85rem; background:rgba(255,255,255,0.1); border-radius:99px; height:5px; overflow:hidden;">
+                    <div style="height:100%; border-radius:99px; width:{% widthratio days 30 100 %}%;
+                        background:{% if days <= 3 %}#fbbf24{% else %}#34d399{% endif %};
+                        max-width:100%; transition:width 0.5s ease;"></div>
+                </div>
+                {% endif %}
+            </div>
+            {% endwith %}
+            {% endif %}
+            <!-- ▲ PAYMENT DUE COUNTDOWN WIDGET ▲ -->
+
             <!-- Quick stats row -->
             <div class="p-stat-row">
                 <div class="p-stat">

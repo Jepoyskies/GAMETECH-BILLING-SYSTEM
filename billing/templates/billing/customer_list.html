@@ -300,6 +300,17 @@
                             {% else %}
                                 <span class="badge bg-secondary px-2 py-1">{{ customer.status|title }}</span>
                             {% endif %}
+
+                            {% if customer.expires_at %}
+                            <div class="mt-1" style="font-size:0.7rem; font-weight:600;">
+                                {% if customer.status == 'expired' or customer.status == 'suspended' %}
+                                    <span class="text-danger"><i class="fas fa-exclamation-triangle"></i> Expired {{ customer.expires_at|date:"M d" }}</span>
+                                {% else %}
+                                    <span class="text-warning"><i class="fas fa-clock"></i> Due {{ customer.expires_at|date:"M d" }}</span>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
                             <div class="mt-1 conn-status-indicator" style="font-size: 0.75rem;"
                                  data-pppoe="{{ customer.pppoe_username|default:'' }}"
                                  data-status="{{ customer.status|lower }}"
