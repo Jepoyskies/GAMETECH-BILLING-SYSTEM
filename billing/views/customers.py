@@ -23,6 +23,7 @@ from network_manager.models import MikrotikDevice, NapBox
 from network_manager.services import MikrotikAPI
 from django.db import transaction
 import calendar
+from .services import get_categorized_plans
 
 @login_required
 @require_POST
