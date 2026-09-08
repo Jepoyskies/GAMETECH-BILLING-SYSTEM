@@ -29,8 +29,11 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush" id="list-tab" role="tablist" style="border-radius: 0 0 16px 16px; overflow: hidden; max-height: 70vh; overflow-y: auto;">
-                        <a class="list-group-item list-group-item-action active py-3 fw-semibold border-0" id="list-aug31-list" data-bs-toggle="list" href="#list-aug31" role="tab" style="font-size: 0.9rem;">
-                            August 31, 2026 <br><small class="text-white-50">Auto-Suspend Engine, Mikrotik Sync</small>
+                        <a class="list-group-item list-group-item-action active py-3 fw-semibold border-0" id="list-sep8-list" data-bs-toggle="list" href="#list-sep8" role="tab" style="font-size: 0.9rem;">
+                            Sept 2–8, 2026 <br><small class="text-white-50">Admin Overhaul, Rebates, Rollbacks, Monitoring</small>
+                        </a>
+                        <a class="list-group-item list-group-item-action py-3 fw-semibold border-0" id="list-aug31-list" data-bs-toggle="list" href="#list-aug31" role="tab" style="font-size: 0.9rem;">
+                            August 31, 2026 <br><small class="text-muted">Auto-Suspend Engine, Mikrotik Sync</small>
                         </a>
                         <a class="list-group-item list-group-item-action py-3 fw-semibold border-0" id="list-aug30-list" data-bs-toggle="list" href="#list-aug30" role="tab" style="font-size: 0.9rem;">
                             August 30, 2026 <br><small class="text-muted">Legacy Migration, Sync Fixes</small>
@@ -73,11 +76,131 @@
                 <div class="card-body p-4 p-lg-5">
                     <div class="tab-content" id="nav-tabContent">
                         
+                        <!-- SEPTEMBER 2–8 -->
+                        <div class="tab-pane fade show active" id="list-sep8" role="tabpanel" aria-labelledby="list-sep8-list">
+                            <h3 class="fw-bold mb-4 border-bottom pb-3" style="color: #1e3a8a;">
+                                September 2–8, 2026: Admin Overhaul, Live Monitoring, Financial Engine
+                                <span class="badge bg-success ms-2 fs-6 align-middle" style="border-radius: 8px;">Latest Build</span>
+                            </h3>
+
+                            <p class="lead text-muted mb-4">A massive multi-session sprint covering the Admin Control Center redesign, enhanced financial operations (Rebates, Rollbacks, Transfers), Live Monitoring per-router views, customer portal improvements, and payment notification controls.</p>
+
+                            <!-- Admin Panel Overhaul -->
+                            <div class="card border-0 mb-4" style="background:#f0f9ff; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#0284c7;"><i class="fas fa-shield-alt me-2"></i> Admin Panel — Full Owner Control Center</h5>
+                                    <p>The <strong>Admin Panel</strong> was completely overhauled from a sparse 3-card page into a comprehensive <strong>4-section Owner Control Center</strong>. The owner now has full flexibility to manage every part of the system from one place.</p>
+                                    <ul class="mb-0">
+                                        <li><strong>Section A — Staff &amp; Access:</strong> Staff Accounts, Agents, Account Types</li>
+                                        <li><strong>Section B — Billing Config:</strong> Internet Plans (edit prices/speeds), Payment Logs (edit), Rebate Logs, Add-on Logs, Barangays, Message Templates</li>
+                                        <li><strong>Section C — Network:</strong> Mikrotik Devices, NAP Boxes, Downdetector Sites (CRUD), PON Calculator</li>
+                                        <li><strong>Section D — System Tools:</strong> System Logs, DB Backup, Import Data, Improvement Requests, Changelog</li>
+                                        <li>The <strong>Settings page</strong> was simultaneously restructured into 3 clean sections: My Account, Billing &amp; Operations, Tools &amp; Extras — with an Admin Quick Links section visible only to Admins.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Downdetector CRUD -->
+                            <div class="card border-0 mb-4" style="background:#f0fdf4; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#059669;"><i class="fas fa-globe me-2"></i> Downdetector — Full CRUD Management</h5>
+                                    <p>Previously, admins had to use the Django backend to add or remove monitored websites. Now a dedicated <strong>Manage Downdetector Sites</strong> page exists with:</p>
+                                    <ul class="mb-0">
+                                        <li>Inline form to <strong>add</strong> new sites (name, URL/IP, type: Website or Game Server)</li>
+                                        <li><strong>Edit</strong> existing services via click-to-edit form population</li>
+                                        <li><strong>Delete</strong> services with confirmation dialog</li>
+                                        <li>Live status badges (Up/Degraded/Down) shown per entry</li>
+                                        <li>Accessible from Admin Control Center → Network section</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Rebates -->
+                            <div class="card border-0 mb-4" style="background:#fefce8; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#d97706;"><i class="fas fa-hand-holding-usd me-2"></i> Rebates — Mikrotik-Aware Free Day Extension</h5>
+                                    <p>Rebates are applied when a customer's internet was not repaired within 24 hours (SLA breach). The rebate system was upgraded to:</p>
+                                    <ul class="mb-0">
+                                        <li>Extend the customer's <code>expires_at</code> by the rebate amount (days or hours)</li>
+                                        <li>Dynamically flip customer <code>status</code> to <code>active</code> if they were expired/suspended, or keep <code>active</code> if still within their billing period</li>
+                                        <li><strong>Background SLA task</strong> (<code>auto_process_sla_rebates</code> via Celery) now autonomously restores internet for customers whose SLA ticket was open when they expired — they are revived without staff intervention</li>
+                                        <li>The <code>post_save</code> signal in <code>billing/signals.py</code> detects the status change and pushes enable/enable-profile/kick commands to the Mikrotik router, preventing free surfing</li>
+                                        <li>Manual rebate view also updated with same Mikrotik sync logic</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Rollbacks -->
+                            <div class="card border-0 mb-4" style="background:#fdf4ff; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#7c3aed;"><i class="fas fa-undo me-2"></i> Rollbacks &amp; Transfer Reverts — Full Mikrotik Sync</h5>
+                                    <p>Rollback is used when a payment was entered incorrectly and needs to be reversed. Transfer Revert is used when a payment was transferred to the wrong customer. Both were updated to:</p>
+                                    <ul class="mb-0">
+                                        <li>Revert <code>expires_at</code> to the previous value stored in the Payment record</li>
+                                        <li>Dynamically evaluate whether the reverted date is in the future or past — setting status to <code>active</code> or <code>expired</code> accordingly</li>
+                                        <li>The status flip triggers the <code>post_save</code> signal which syncs the Mikrotik router (suspend or reactivate as needed)</li>
+                                        <li><code>expires_at</code> field change was added to the signal monitor so any expiration date change (not just status) triggers a re-evaluation</li>
+                                        <li>All operations wrapped in <code>transaction.atomic()</code> with <code>select_for_update()</code> to prevent race conditions</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Live Monitoring -->
+                            <div class="card border-0 mb-4" style="background:#f0f9ff; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#0284c7;"><i class="fas fa-satellite-dish me-2"></i> Live Monitoring — Per-Router &amp; Per-Customer Views</h5>
+                                    <p>The Live Monitoring page was enhanced from an overall system overview to a multi-level monitoring dashboard:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>Overall View:</strong> System-wide summary of all Mikrotik routers (online/offline), total active PPPoE sessions, bandwidth stats</li>
+                                        <li><strong>Per-Router View:</strong> Click any router to see its individual metrics — connected users, upload/download speeds, uptime, active PPPoE sessions list</li>
+                                        <li><strong>Per-Customer View:</strong> Staff can see any individual customer's real-time status without leaving the monitoring page</li>
+                                        <li>Detection fixes: Router speed and upload/download now correctly pull from the <code>/interface/monitor-traffic</code> API endpoint</li>
+                                        <li>Router online/offline detection fixed — uses connection timeout as the primary indicator</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Customer Portal Payment Due -->
+                            <div class="card border-0 mb-4" style="background:#f0fdf4; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#059669;"><i class="fas fa-calendar-check me-2"></i> Customer Portal — Payment Due Date Display</h5>
+                                    <p>The customer self-service portal was updated to prominently display <strong>when the next payment is due</strong>:</p>
+                                    <ul class="mb-0">
+                                        <li>Due date shown on the main portal dashboard in a highlighted card</li>
+                                        <li>The <strong>Payment Window</strong> (when customer clicks Pay) also shows the next due date before confirming</li>
+                                        <li>Countdown badge shows days remaining (e.g. "5 days left") with color changes: green → yellow → red as it approaches</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Payment SMS/Email Toggle -->
+                            <div class="card border-0 mb-4" style="background:#fff7ed; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#ea580c;"><i class="fas fa-bell me-2"></i> Payment Confirmation — SMS &amp; Email Toggle</h5>
+                                    <p>Before confirming a payment, staff can now choose whether to send a notification to the customer:</p>
+                                    <ul class="mb-0">
+                                        <li>Two toggle switches added to the payment form: <strong>Send SMS Notification</strong> and <strong>Send Email Notification</strong> — both checked by default</li>
+                                        <li>Unchecking either switch prevents that channel from firing</li>
+                                        <li>The backend <code>pay_customer_view</code> reads these POST values and conditionally calls the Semaphore SMS API or Django <code>send_mail()</code></li>
+                                        <li>SMS and Email logs are still created whether or not the message was sent, for audit purposes</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Analytics Fix -->
+                            <div class="card border-0 mb-4" style="background:#fdf4ff; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#7c3aed;"><i class="fas fa-chart-line me-2"></i> Analytics — Sidebar Link Fixed</h5>
+                                    <p>The <strong>Analytics</strong> sidebar nav item was missing its URL and showed as broken. It now correctly points to the <strong>Payment Logs / Reports</strong> page which contains sales, revenue, and financial analytics. A dedicated Analytics dashboard may be added in a future sprint.</p>
+                                </div>
+                            </div>
+
+                        </div>
+
                         <!-- AUGUST 31 -->
-                        <div class="tab-pane fade show active" id="list-aug31" role="tabpanel" aria-labelledby="list-aug31-list">
+                        <div class="tab-pane fade" id="list-aug31" role="tabpanel" aria-labelledby="list-aug31-list">
                             <h3 class="fw-bold mb-4 border-bottom pb-3" style="color: #1e3a8a;">
                                 August 31, 2026: Auto-Suspend Engine & Mikrotik Sync Overhaul
-                                <span class="badge bg-success ms-2 fs-6 align-middle" style="border-radius: 8px;">Latest Build</span>
                             </h3>
 
                             <!-- Item -->
