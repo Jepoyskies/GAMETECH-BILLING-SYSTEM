@@ -849,14 +849,19 @@ function sendSingleAction(type) {
         
         function fetchStatus() {
             fetch(`/customers/api/status/${customerId}/`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     // Update Status
                     const statusContainer = document.getElementById('mt-status-container');
                     if (data.mt_status === 'Connected') {
                         statusContainer.innerHTML = '<span class="text-success"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Connected</span>';
                     } else {
-                        statusContainer.innerHTML = '<span class="text-danger"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>' + data.mt_status + '</span>';
+                        statusContainer.innerHTML = '<span class="text-danger"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>' + (data.mt_status || 'Error') + '</span>';
                     }
 
                     // Update MAC
@@ -879,17 +884,19 @@ function sendSingleAction(type) {
                             // Update Chart
                             const now = new Date().toLocaleTimeString('en-US', { hour12: false, hour: "numeric", minute: "numeric", second: "numeric" });
                             
-                            trafficChart.data.labels.push(now);
-                            trafficChart.data.datasets[0].data.push(parseFloat(data.rx_mbps)); // DL
-                            trafficChart.data.datasets[1].data.push(parseFloat(data.tx_mbps)); // UL
-                            
-                            // Keep only last 15 points
-                            if (trafficChart.data.labels.length > 15) {
-                                trafficChart.data.labels.shift();
-                                trafficChart.data.datasets[0].data.shift();
-                                trafficChart.data.datasets[1].data.shift();
+                            if (typeof trafficChart !== 'undefined' && trafficChart !== null) {
+                                trafficChart.data.labels.push(now);
+                                trafficChart.data.datasets[0].data.push(parseFloat(data.rx_mbps)); // DL
+                                trafficChart.data.datasets[1].data.push(parseFloat(data.tx_mbps)); // UL
+                                
+                                // Keep only last 15 points
+                                if (trafficChart.data.labels.length > 15) {
+                                    trafficChart.data.labels.shift();
+                                    trafficChart.data.datasets[0].data.shift();
+                                    trafficChart.data.datasets[1].data.shift();
+                                }
+                                trafficChart.update('none'); // Update without full animation
                             }
-                            trafficChart.update('none'); // Update without full animation
                         }
                     } else {
                         if (data.last_logged_out !== 'N/A') {
@@ -905,10 +912,16 @@ function sendSingleAction(type) {
                 })
                 .catch(error => {
                     console.error("Error fetching Mikrotik status:", error);
-                    document.getElementById('mt-status-container').innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-triangle me-1" style="font-size:0.6rem;"></i>Error</span>';
-                    document.getElementById('uptime-container').style.display = 'none';
-                    document.getElementById('last-logged-out-container').style.display = 'none';
-                    document.getElementById('mt-live-mac').innerText = 'N/A';
+                    document.getElementById('mt-status-container').innerHTML = '<span class="text-danger" title="' + error.message + '"><i class="fas fa-exclamation-triangle me-1" style="font-size:0.6rem;"></i>Error</span>';
+                    
+                    const uptimeContainer = document.getElementById('uptime-container');
+                    const lastLoggedOutContainer = document.getElementById('last-logged-out-container');
+                    
+                    if(uptimeContainer) uptimeContainer.style.display = 'none';
+                    if(lastLoggedOutContainer) lastLoggedOutContainer.style.display = 'none';
+                    
+                    const macEl = document.getElementById('mt-live-mac');
+                    if(macEl) macEl.innerText = 'N/A';
                 });
         }
 
