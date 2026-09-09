@@ -351,7 +351,7 @@
   .custom-hero-banner {
     background: #2151A1;
     color: white;
-    padding: 3.5rem 2.5rem 6.5rem 2.5rem;
+    padding: 3.5rem 1.5rem 6.5rem 1.5rem;
     margin: -1.5rem -1.5rem 0 -1.5rem;
     /* stretches beyond container padding */
     border-radius: 0 0 40px 40px;
@@ -885,7 +885,7 @@
   <!-- Custom Hero Banner -->
   <div class="custom-hero-banner">
     <!-- Inner Max-Width Wrapper to prevent infinite stretching -->
-    <div class="w-100 mx-auto d-flex align-items-center justify-content-between gap-4 gap-lg-5" style="max-width: 1024px;">
+    <div class="w-100 d-flex align-items-center justify-content-between gap-4 gap-lg-5">
       <div class="hero-title-wrapper mb-0">
         <h1 class="hero-title">Welcome Back, {{ request.user.username }}</h1>
         <p class="hero-subtitle mb-2">Here is how your business is performing today</p>
@@ -1068,246 +1068,10 @@
     </div>
   </div>
 
-<<<<<<< HEAD
-  <!-- KPI Row 1 — Performance -->
-  <div class="row g-3 mb-3 animate-fade-in animate-delay-1">
-    <div class="col-12 col-md-6 col-xl-4">
-      <div class="kpi-card h-100 {% if growth_percent >= 0 %}bg-mesh-success{% else %}bg-mesh-danger{% endif %} text-white border-0">
-        <div class="kpi-icon text-white bg-white bg-opacity-25 shadow-sm"><i class="fas {{ growth_icon }}"></i></div>
-        <div>
-          <div class="kpi-label text-white text-opacity-75">Revenue Growth</div>
-          <div class="kpi-value text-white">{{ growth_percent_formatted }}%</div>
-          <div class="kpi-sub text-white text-opacity-75">vs last month</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-12 col-md-6 col-xl-4">
-      <div class="kpi-card h-100 bg-mesh-primary text-white border-0">
-        <div class="kpi-icon text-white bg-white bg-opacity-25 shadow-sm"><i class="fas fa-user-plus"></i></div>
-        <div>
-          <div class="kpi-label text-white text-opacity-75">New Customers</div>
-          <div class="kpi-value text-white">{{ new_customers_this_month }}</div>
-          <div class="kpi-sub text-white text-opacity-75">This month</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-12 col-md-6 col-xl-4">
-      <div class="kpi-card h-100 bg-mesh-warning text-white border-0">
-        <div class="kpi-icon text-white bg-white bg-opacity-25 shadow-sm"><i class="fas fa-coins"></i></div>
-        <div>
-          <div class="kpi-label text-white text-opacity-75">Collection Rate</div>
-          <div class="kpi-value text-white">{{ collection_rate_formatted }}%</div>
-          <div class="kpi-sub text-white text-opacity-75">{{ distinct_payers_this_month }}/{{ total_customers }} customers paid</div>
-        </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- KPI Row 2 — Revenue Breakdown -->
-  <div class="row g-3 mb-4 animate-fade-in animate-delay-2">
-    <div class="col-6 col-sm-4 col-lg">
-      <div class="kpi-card h-100">
-        <div class="kpi-icon icon-blue"><i class="fas fa-calendar-day"></i></div>
-        <div>
-          <div class="kpi-label">Today</div>
-          <div class="kpi-value">₱{{ totals.today|default:"0.00" }}</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-sm-4 col-lg">
-      <div class="kpi-card h-100">
-        <div class="kpi-icon icon-purple"><i class="fas fa-calendar-minus"></i></div>
-        <div>
-          <div class="kpi-label">Yesterday</div>
-          <div class="kpi-value">₱{{ totals.yesterday|default:"0.00" }}</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-sm-4 col-lg">
-      <div class="kpi-card h-100">
-        <div class="kpi-icon icon-green"><i class="fas fa-calendar-week"></i></div>
-        <div>
-          <div class="kpi-label">This Week</div>
-          <div class="kpi-value">₱{{ totals.week|default:"0.00" }}</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-sm-4 col-lg">
-      <div class="kpi-card h-100">
-        <div class="kpi-icon icon-orange"><i class="fas fa-calendar-alt"></i></div>
-        <div>
-          <div class="kpi-label">This Month</div>
-          <div class="kpi-value">₱{{ totals.month|default:"0.00" }}</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-sm-4 col-lg">
-      <div class="kpi-card h-100">
-        <div class="kpi-icon icon-red"><i class="fas fa-calendar"></i></div>
-        <div>
-          <div class="kpi-label">This Year</div>
-          <div class="kpi-value">₱{{ totals.year|default:"0.00" }}</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Sales Chart — Last 12 Months -->
-  <div class="dashboard-card mb-4 animate-fade-in animate-delay-2" style="overflow:hidden;">
-    <div class="section-header section-header-blue">
-      <h6><i class="fas fa-chart-bar sh-icon"></i> Sales (Last 12 Months)</h6>
-    </div>
-    <div class="chart-container">
-      <canvas id="salesMonthChart"></canvas>
-    </div>
-  </div>
-
-  <!-- Charts + Admin Logins Row -->
-  <div class="row g-4 mb-4 align-items-stretch animate-fade-in animate-delay-3">
-    <div class="col-12 col-lg-8 d-flex flex-column gap-4">
-      <!-- Weekly Sales -->
-      <div class="dashboard-card flex-fill d-flex flex-column" style="overflow:hidden;">
-        <div class="section-header section-header-green">
-          <h6><i class="fas fa-chart-line sh-icon"></i> Sales (Last 7 Days)</h6>
-        </div>
-        <div class="chart-container flex-grow-1">
-          <canvas id="salesWeekChart"></canvas>
-        </div>
-      </div>
-      <!-- Payment Method Pie -->
-      <div class="dashboard-card flex-fill d-flex flex-column" style="overflow:hidden;">
-        <div class="section-header section-header-purple">
-          <h6><i class="fas fa-credit-card sh-icon"></i> Sales by Payment Method</h6>
-        </div>
-        <div class="chart-container flex-grow-1">
-          <canvas id="salesPieChart"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-12 col-lg-4 d-flex">
-      <div class="dashboard-card flex-fill d-flex flex-column" style="overflow:hidden;">
-        <div class="section-header section-header-orange">
-          <h6><i class="fas fa-user-shield sh-icon"></i> Recent Admin Logins</h6>
-        </div>
-        <div class="table-responsive flex-grow-1">
-          <table class="table table-premium table-hover align-middle mb-0">
-            <thead>
-              <tr>
-                <th>User</th>
-                <th>Event</th>
-                <th>Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for row in recent_admin_logins %}
-              <tr>
-                <td>
-                  <div class="d-flex align-items-center gap-2">
-                    <div class="av av-sm" style="background:{{ row.color|default:'#2151A1' }};">{{ row.username|make_list|first|upper }}</div>
-                    <span class="fw-semibold" style="font-size:0.83rem;">{{ row.username }}</span>
-                  </div>
-                </td>
-                <td>
-                  <span class="pill {% if row.event_type == 'login' %}pill-active{% else %}pill-suspended{% endif %}">
-                    {{ row.event_type }}
-                  </span>
-                </td>
-                <td>
-                  <span class="text-muted" style="font-size:0.78rem;" title="{{ row.login_time|date:'l, F j, Y, g:i A' }}">
-                    {{ row.login_time|date:'M d g:i A' }}
-                  </span>
-                </td>
-              </tr>
-              {% empty %}
-              <tr><td colspan="3" class="text-center text-muted py-3">No login records found.</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        <!-- System Uptime -->
-        <div class="card-footer-actions flex-shrink-0">
-          <div>
-            <div class="kpi-label mb-1">System Uptime</div>
-            <div class="kpi-value" id="uptime-display" style="font-size:1.1rem;">00:00:00</div>
-            <div class="kpi-sub" id="uptime-sub" style="font-size:0.7rem;"></div>
-          </div>
-          <button class="btn-premium btn-p-ghost" id="uptime-reset" title="Reset Uptime" style="padding:6px 12px; font-size:0.8rem;">
-            <i class="fas fa-redo"></i> Reset
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Downdetector System Health Widget -->
-  <div class="row mb-4 animate-fade-in animate-delay-3">
-    <div class="col-12">
-      <div class="dashboard-card h-100" style="overflow:hidden;">
-        <div class="section-header d-flex justify-content-between align-items-center" style="background: linear-gradient(to right, #3b82f6, #2563eb); padding: 12px 20px;">
-          <h6 class="m-0 text-white" style="font-weight: 600;"><i class="fas fa-heartbeat me-2"></i> System Health</h6>
-          <a href="{% url 'downdetector' %}" class="btn btn-sm btn-light text-primary" style="font-size:0.75rem; font-weight:600; padding: 4px 10px; border-radius: 6px;">View NOC</a>
-        </div>
-        <div class="p-3">
-            <div id="system-health-widget-content" class="d-flex flex-wrap gap-2">
-                <span class="text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading health data...</span>
-            </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-
-  <!-- Expiring Soon Alert —— NEW BONUS WIDGET -->
-  {% if expiring_users %}
-  <div class="row mb-4 animate-fade-in animate-delay-3">
-    <div class="col-12">
-      <div class="dashboard-card" style="overflow:hidden; border-left: 4px solid #f59e0b;">
-        <div class="section-header d-flex justify-content-between align-items-center" style="background:linear-gradient(to right,#78350f,#92400e); padding:12px 20px;">
-          <h6 class="m-0 text-white" style="font-weight:700;"><i class="fas fa-exclamation-triangle me-2"></i> Expiring Soon / Overdue</h6>
-          <a href="{% url 'customer_list' %}" class="btn btn-sm btn-light text-warning" style="font-size:0.75rem; font-weight:600; padding:4px 10px; border-radius:6px;">View All</a>
-        </div>
-        <div class="table-responsive">
-          <table class="table table-premium align-middle mb-0">
-            <thead>
-              <tr>
-                <th>Customer</th>
-                <th>Plan</th>
-                <th>Status</th>
-                <th>Expires / Due</th>
-                <th class="text-end">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for u in expiring_users %}
-              <tr>
-                <td><strong>{{ u.username }}</strong></td>
-                <td><span class="badge bg-secondary" style="font-size:0.72rem;">{{ u.plan_name }}</span></td>
-                <td>
-                  {% if u.is_expired %}
-                    <span class="badge" style="background:#dc2626;"><i class="fas fa-times-circle me-1"></i>Expired</span>
-                  {% else %}
-                    <span class="badge" style="background:#d97706;"><i class="fas fa-clock me-1"></i>Expiring Soon</span>
-                  {% endif %}
-                </td>
-                <td style="color:{% if u.is_expired %}#dc2626{% else %}#d97706{% endif %}; font-weight:600;">
-                  {{ u.expires_at|date:"M d, Y h:i A" }}
-                </td>
-                <td class="text-end">
-                  <a href="/payment-portal/pay/{{ u.username }}/" class="btn btn-sm" style="background:#059669; color:white; border-radius:6px; font-size:0.75rem; font-weight:600;"><i class="fas fa-credit-card me-1"></i>Pay</a>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
-  <!-- Bottom Row: Top Clients + Top Plans -->
-  <div class="row g-4 mb-4 animate-fade-in animate-delay-3">
+  <!-- Data Cards Row -->
+  <div class="row g-4 mt-2 fade-in-up d3">
+    <!-- Recent Logins -->
     <div class="col-12 col-lg-6">
       <div class="glass-card no-hover p-5 h-100 bottom-card position-relative" data-bs-toggle="modal" data-bs-target="#recentLoginsModal" style="cursor: pointer;">
         <button class="expand-btn p-2 rounded-lg transition duration-200 position-absolute top-0 end-0 m-2" title="Expand" style="pointer-events: auto;" data-bs-toggle="modal" data-bs-target="#recentLoginsModal">
