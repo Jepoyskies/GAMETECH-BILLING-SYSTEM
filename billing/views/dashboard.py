@@ -256,6 +256,8 @@ def dashboard_view(request):
     pie_labels_js = stats["pie_labels_js"]
     pie_data_js = stats["pie_data_js"]
     # -------------------
+    
+    payments = Payment.objects.all()
 
     # Admin logins (fetch last active from cache and historical from SystemLog)
     recent_users = User.objects.filter(is_active=True).exclude(last_login__isnull=True)
