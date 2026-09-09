@@ -246,29 +246,35 @@ def edit_customer(request, customer_id):
         check_change('Status', customer.status, request.POST.get('status', 'active'))
         customer.status = request.POST.get('status', 'active')
         
-        # Handle ForeignKeys (using _id allows us to assign None if empty string, or the ID directly)
+        # Handle ForeignKeys — resolve to human-readable names for clear audit logs
         plan_id = request.POST.get('plan_id')
         if str(customer.plan_id or "") != str(plan_id or ""):
-            old_data.append(f"Plan ID: {customer.plan_id}")
-            new_data.append(f"Plan ID: {plan_id}")
+            old_plan_name = customer.plan.name if customer.plan else "None"
+            new_plan_name = SubscriptionPlan.objects.filter(pk=plan_id).values_list('name', flat=True).first() or "None" if plan_id else "None"
+            old_data.append(f"Plan: {old_plan_name}")
+            new_data.append(f"Plan: {new_plan_name}")
         customer.plan_id = plan_id if plan_id else None
         
         device_id = request.POST.get('device_id')
         if str(customer.mikrotik_device_id or "") != str(device_id or ""):
-            old_data.append(f"Device ID: {customer.mikrotik_device_id}")
-            new_data.append(f"Device ID: {device_id}")
+            old_dev_name = customer.mikrotik_device.device_name if customer.mikrotik_device else "None"
+            new_dev_name = MikrotikDevice.objects.filter(pk=device_id).values_list('device_name', flat=True).first() or "None" if device_id else "None"
+            old_data.append(f"Router: {old_dev_name}")
+            new_data.append(f"Router: {new_dev_name}")
         customer.mikrotik_device_id = device_id if device_id else None
         
         if request.POST.get('is_verified') == 'True':
             if not customer.is_verified:
-                old_data.append('is_verified: False')
-                new_data.append('is_verified: True')
+                old_data.append('Verified: No')
+                new_data.append('Verified: Yes')
                 customer.is_verified = True
         
         agent_id = request.POST.get('agent_id')
         if str(customer.agent_id or "") != str(agent_id or ""):
-            old_data.append(f"Agent ID: {customer.agent_id}")
-            new_data.append(f"Agent ID: {agent_id}")
+            old_agent_name = customer.agent.name if customer.agent else "None"
+            new_agent_name = Agent.objects.filter(pk=agent_id).values_list('name', flat=True).first() or "None" if agent_id else "None"
+            old_data.append(f"Agent: {old_agent_name}")
+            new_data.append(f"Agent: {new_agent_name}")
         customer.agent_id = agent_id if agent_id else None
         
         if request.user.role == 'Agent':
@@ -279,25 +285,29 @@ def edit_customer(request, customer_id):
                     defaults={'name': barangay_name, 'health_status': 'Excellent'}
                 )
                 if str(customer.barangay_id or "") != str(barangay.id):
-                    old_data.append(f"Barangay ID: {customer.barangay_id}")
-                    new_data.append(f"Barangay ID: {barangay.id}")
+                    old_data.append(f"Barangay: {customer.barangay.name if customer.barangay else 'None'}")
+                    new_data.append(f"Barangay: {barangay.name}")
                 customer.barangay_id = barangay.id
             else:
                 if customer.barangay_id is not None:
-                    old_data.append(f"Barangay ID: {customer.barangay_id}")
-                    new_data.append(f"Barangay ID: None")
+                    old_data.append(f"Barangay: {customer.barangay.name if customer.barangay else 'None'}")
+                    new_data.append(f"Barangay: None")
                 customer.barangay_id = None
         else:
             barangay_id = request.POST.get('barangay_id')
             if str(customer.barangay_id or "") != str(barangay_id or ""):
-                old_data.append(f"Barangay ID: {customer.barangay_id}")
-                new_data.append(f"Barangay ID: {barangay_id}")
+                old_bar_name = customer.barangay.name if customer.barangay else "None"
+                new_bar_name = Barangay.objects.filter(pk=barangay_id).values_list('name', flat=True).first() or "None" if barangay_id else "None"
+                old_data.append(f"Barangay: {old_bar_name}")
+                new_data.append(f"Barangay: {new_bar_name}")
             customer.barangay_id = barangay_id if barangay_id else None
         
         account_type_id = request.POST.get('account_type_id')
         if str(customer.account_type_id or "") != str(account_type_id or ""):
-            old_data.append(f"Account Type ID: {customer.account_type_id}")
-            new_data.append(f"Account Type ID: {account_type_id}")
+            old_at_name = customer.account_type.type_name if customer.account_type else "None"
+            new_at_name = AccountType.objects.filter(pk=account_type_id).values_list('type_name', flat=True).first() or "None" if account_type_id else "None"
+            old_data.append(f"Account Type: {old_at_name}")
+            new_data.append(f"Account Type: {new_at_name}")
         customer.account_type_id = account_type_id if account_type_id else None
         
         if request.user.role != 'Agent':
@@ -368,7 +378,7 @@ def view_customer(request, customer_id):
     # Combine logs
     all_logs = []
     
-    # 1. System Logs
+    # 1. System Logs — pass the raw object so format_log_details can render it properly
     sys_logs = SystemLog.objects.filter(record_id=str(customer.id), table_name='Customer').order_by('-changed_at')
     for log in sys_logs:
         all_logs.append({
@@ -376,7 +386,8 @@ def view_customer(request, customer_id):
             'date': log.changed_at,
             'title': f"Profile {log.action}",
             'details': log.new_data,
-            'user': log.changed_by
+            'user': log.changed_by,
+            'log_obj': log,  # pass raw object for format_log_details
         })
         
     # 2. Payments
@@ -386,7 +397,8 @@ def view_customer(request, customer_id):
             'date': p.created_at,
             'title': f"Payment: ₱{p.amount}",
             'details': f"Method: {p.payment_method}",
-            'user': 'System'
+            'user': 'System',
+            'log_obj': None,
         })
         
     # 3. Add-ons / Cignal Play
@@ -397,7 +409,8 @@ def view_customer(request, customer_id):
             'date': a.requested_at,
             'title': f"Add-on: {a.addon_type}",
             'details': f"Status: {a.status}",
-            'user': 'Customer/System'
+            'user': 'Customer/System',
+            'log_obj': None,
         })
         
     # 4. Audit Logs (force reactivations etc)
@@ -408,7 +421,8 @@ def view_customer(request, customer_id):
             'date': al.timestamp,
             'title': f"Action: {al.action_type}",
             'details': al.remarks,
-            'user': al.admin_user.username if al.admin_user else 'System'
+            'user': al.admin_user.username if al.admin_user else 'System',
+            'log_obj': None,
         })
         
     # Sort all logs by date descending

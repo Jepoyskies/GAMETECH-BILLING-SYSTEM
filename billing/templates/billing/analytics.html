@@ -1,0 +1,89 @@
+{% extends 'billing/base.html' %}
+{% load static %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-0 text-white">Financial Analytics Dashboard</h2>
+        <p class="text-muted mb-0">Track MRR, churn rates, and growth.</p>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card bg-dark text-white border-secondary h-100">
+            <div class="card-body">
+                <h6 class="text-muted text-uppercase fw-bold mb-2">Monthly Recurring Revenue (MRR)</h6>
+                <h3 class="fw-bold text-success mb-0">₱{{ mrr|floatformat:2 }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-dark text-white border-secondary h-100">
+            <div class="card-body">
+                <h6 class="text-muted text-uppercase fw-bold mb-2">Active Customers</h6>
+                <h3 class="fw-bold text-primary mb-0">{{ active_customers }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-dark text-white border-secondary h-100">
+            <div class="card-body">
+                <h6 class="text-muted text-uppercase fw-bold mb-2">Churned / Inactive</h6>
+                <h3 class="fw-bold text-danger mb-0">{{ churned_customers }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-dark text-white border-secondary h-100">
+            <div class="card-body">
+                <h6 class="text-muted text-uppercase fw-bold mb-2">Recent Signups (30 Days)</h6>
+                <h3 class="fw-bold text-info mb-0">+{{ recent_signups }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card bg-dark text-white border-secondary">
+            <div class="card-body">
+                <h5 class="fw-bold mb-4">Plan Distribution</h5>
+                <canvas id="planChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const planData = {{ plan_distribution|safe }};
+        const labels = planData.map(item => item.name);
+        const data = planData.map(item => item.user_count);
+        
+        const ctx = document.getElementById('planChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#0dcaf0'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: { color: '#e2e8f0' }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

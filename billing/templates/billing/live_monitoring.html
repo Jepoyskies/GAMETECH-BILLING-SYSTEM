@@ -1267,6 +1267,7 @@
                     let statusText = document.getElementById('uplinkStatus');
                     let pingText = document.getElementById('uplinkPing');
                     statusText.innerText = r.uplink_status;
+                    statusText.classList.remove('syncing');
                     pingText.innerText = "Ping: " + r.uplink_ping;
 
                     box.classList.remove('border-danger', 'border-warning', 'border-info', 'border-success');
@@ -1281,7 +1282,21 @@
                     }
                 }
             })
-            .catch(err => console.error("Uplink ping error", err));
+            .catch(err => {
+                console.error("Uplink ping error", err);
+                let box = document.getElementById('kpi-uplink-box');
+                let statusText = document.getElementById('uplinkStatus');
+                let pingText = document.getElementById('uplinkPing');
+                if (statusText) {
+                    statusText.innerText = "Error";
+                    statusText.classList.remove('syncing');
+                    pingText.innerText = "ping: failed";
+                    if (box) {
+                        box.classList.remove('border-info', 'border-warning', 'border-success');
+                        box.classList.add('border-danger');
+                    }
+                }
+            });
 
         loadHardwareData();
         loadNetworkAlerts();
@@ -1325,7 +1340,9 @@
         $('#customerSearchSelect').select2({
             dropdownParent: $('#searchCustomerModal'),
             placeholder: "Search by Name...",
-            allowClear: true
+            allowClear: true,
+            theme: 'bootstrap-5',
+            width: '100%'
         });
 
         let searchInterval = null;
