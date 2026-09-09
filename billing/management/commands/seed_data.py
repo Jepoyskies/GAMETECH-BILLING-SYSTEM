@@ -1,78 +1,144 @@
 from django.core.management.base import BaseCommand
-from billing.models import AccountType, Agent, Barangay, SubscriptionPlan
+import random
+from datetime import timedelta
+from django.utils import timezone
+from billing.models import SubscriptionPlan, Customer, Payment
+from django.db import connection
 
 class Command(BaseCommand):
-    help = 'Seeds the database with default Account Types, Agents, and Barangays.'
+    help = 'Seeds the database with mock data for the dashboard'
 
     def handle(self, *args, **kwargs):
-        # 1. Seed Account Types
-        account_types = ['Residential', 'Commercial', 'VIP', 'Government']
-        for at_name in account_types:
-            obj, created = AccountType.objects.get_or_create(type_name=at_name)
-            if created:
-                self.stdout.write(self.style.SUCCESS(f"Created Account Type: {at_name}"))
-            else:
-                self.stdout.write(f"Account Type already exists: {at_name}")
+        self.stdout.write("Deleting old dummy data using raw SQL to bypass signals...")
+        with connection.cursor() as cursor:
+            cursor.execute("DELETE FROM billing_payment;")
+            cursor.execute("DELETE FROM billing_customer;")
+            cursor.execute("DELETE FROM billing_subscriptionplan;")
 
-        # 2. Seed Agents
-        agents = [
-            {'name': 'Walk-in / Direct', 'email': 'walkin@example.com', 'phone': '00000000000'},
-            {'name': 'Agent John Doe', 'email': 'john@example.com', 'phone': '09123456789'},
-            {'name': 'Agent Jane Smith', 'email': 'jane@example.com', 'phone': '09987654321'},
-        ]
-        for agent_data in agents:
-            obj, created = Agent.objects.get_or_create(
-                name=agent_data['name'],
-                defaults={'email': agent_data['email'], 'phone': agent_data['phone']}
-            )
-            if created:
-                self.stdout.write(self.style.SUCCESS(f"Created Agent: {agent_data['name']}"))
-            else:
-                self.stdout.write(f"Agent already exists: {agent_data['name']}")
-
-        # 3. Seed Barangays
-        barangays = [
-            'Barangay 1',
-            'Barangay 2',
-            'Barangay 3',
-            'Poblacion',
-            'San Jose',
-            'San Isidro'
-        ]
-        for brgy_name in barangays:
-            obj, created = Barangay.objects.get_or_create(name=brgy_name)
-            if created:
-                self.stdout.write(self.style.SUCCESS(f"Created Barangay: {brgy_name}"))
-            else:
-                self.stdout.write(f"Barangay already exists: {brgy_name}")
-
-        # 4. Seed Subscription Plans
-        plans = [
-            {'name': '5Mbps', 'speed_up': '5 Mbps', 'speed_down': '5 Mbps', 'price': 500.00},
-            {'name': '10Mbps', 'speed_up': '10 Mbps', 'speed_down': '10 Mbps', 'price': 750.00},
-            {'name': '20Mbps', 'speed_up': '20 Mbps', 'speed_down': '20 Mbps', 'price': 1000.00},
-            {'name': '30Mbps', 'speed_up': '30 Mbps', 'speed_down': '30 Mbps', 'price': 1250.00},
-            {'name': '50Mbps', 'speed_up': '50 Mbps', 'speed_down': '50 Mbps', 'price': 1500.00},
+        self.stdout.write("Creating Subscription Plans...")
+        plans_data = [
+            ("pppoe-20m", 1500.00),
+            ("pppoe-30m", 2000.00),
+            ("pppoe-50m", 2500.00),
+            ("pppoe-20m speedboost60", 1800.00),
+            ("pppoe-15m_888", 888.00),
+            ("pppoe-10m", 1000.00),
+            ("pppoe-100m", 3500.00),
+            ("pppoe-15m_700", 700.00),
         ]
         
-        for plan_data in plans:
-            obj, created = SubscriptionPlan.objects.get_or_create(
-                name=plan_data['name'],
-                defaults={
-                    'speed_up': plan_data['speed_up'],
-                    'speed_down': plan_data['speed_down'],
-                    'price': plan_data['price'],
-                    'validity_days': 30
-                }
+        plans = {}
+        for name, price in plans_data:
+            plan = SubscriptionPlan.objects.create(
+                name=name,
+                speed_up="10 Mbps",
+                speed_down="10 Mbps",
+                price=price,
+                validity_days=30
             )
-            # Ensure price is updated if the plan already exists but was 0.00
-            if not created and obj.price == 0.00:
-                obj.price = plan_data['price']
-                obj.save()
-                self.stdout.write(self.style.SUCCESS(f"Updated Plan Price: {plan_data['name']} to {plan_data['price']}"))
-            elif created:
-                self.stdout.write(self.style.SUCCESS(f"Created Plan: {plan_data['name']}"))
-            else:
-                self.stdout.write(f"Plan already exists: {plan_data['name']}")
+            plans[name] = plan
 
-        self.stdout.write(self.style.SUCCESS('\nSuccessfully seeded default system data!'))
+        self.stdout.write("Creating Customers...")
+        now = timezone.localtime()
+        
+        customers_to_create = []
+        
+        # 44 new customers this month
+        for i in range(44):
+            c = Customer(
+                full_name=f"New Customer {i}",
+                pppoe_username=f"newcust{i}",
+                plan=plans["pppoe-20m"],
+                status='active',
+            )
+            customers_to_create.append(c)
+            
+        # Rest 1825 customers older
+        for i in range(1825):
+            plan_name = random.choices(
+                ["pppoe-20m", "pppoe-30m", "pppoe-50m", "pppoe-100m"],
+                weights=[1412, 168, 122, 24]
+            )[0]
+            
+            c = Customer(
+                full_name=f"Customer {i}",
+                pppoe_username=f"user_{i}",
+                plan=plans[plan_name],
+                status='active',
+                expires_at=now + timedelta(days=random.randint(-10, 30))
+            )
+            customers_to_create.append(c)
+
+        Customer.objects.bulk_create(customers_to_create, batch_size=500)
+        self.stdout.write(f"Created {Customer.objects.count()} customers.")
+
+        # Update created_at
+        idx = 0
+        for c in Customer.objects.all():
+            if idx < 44:
+                # new
+                new_date = now - timedelta(days=random.randint(0, 10))
+            else:
+                new_date = now - timedelta(days=random.randint(30, 365))
+            Customer.objects.filter(id=c.id).update(created_at=new_date)
+            idx += 1
+
+        all_customers = list(Customer.objects.all())
+
+        self.stdout.write("Creating Payments...")
+        payments_to_create = []
+        
+        def create_payments_for_target(amount_target, start_dt, end_dt):
+            current_amount = 0
+            methods = ['Cash', 'GCash', 'Bank Transfer']
+            while current_amount < amount_target:
+                amount = min(random.choice([888, 1000, 1500, 2000]), amount_target - current_amount)
+                if amount <= 0: break
+                
+                c = random.choice(all_customers)
+                delta = end_dt - start_dt
+                random_secs = random.randint(0, int(delta.total_seconds()))
+                payment_time = start_dt + timedelta(seconds=random_secs)
+                
+                p = Payment(
+                    customer=c,
+                    username=c.pppoe_username,
+                    amount=amount,
+                    payment_method=random.choice(methods)
+                )
+                # Need to attach the random date as an attribute so we can update it later
+                p._random_date = payment_time
+                payments_to_create.append(p)
+                current_amount += amount
+
+        t_start = now.replace(hour=0, minute=0, second=0)
+        create_payments_for_target(28812.00, t_start, now)
+        
+        y_start = t_start - timedelta(days=1)
+        create_payments_for_target(42833.00, y_start, t_start)
+        
+        w_start = now - timedelta(days=now.weekday())
+        w_start = w_start.replace(hour=0, minute=0, second=0)
+        if y_start > w_start:
+            create_payments_for_target(166268.00, w_start, y_start)
+            
+        m_start = now.replace(day=1, hour=0, minute=0, second=0)
+        if w_start > m_start:
+            create_payments_for_target(519142.00, m_start, w_start)
+
+        last_month_dt = m_start - timedelta(days=15)
+        lm_start = last_month_dt.replace(day=1, hour=0, minute=0, second=0)
+        create_payments_for_target(1634748.00, lm_start, m_start)
+        
+        y_start = now.replace(month=1, day=1, hour=0, minute=0, second=0)
+        if lm_start > y_start:
+            create_payments_for_target(4201746.53, y_start, lm_start)
+
+        Payment.objects.bulk_create(payments_to_create, batch_size=500)
+        
+        # Update created_at
+        for p in payments_to_create:
+            Payment.objects.filter(id=p.id).update(created_at=p._random_date)
+            
+        self.stdout.write(f"Created {Payment.objects.count()} payments.")
+        self.stdout.write("Seed complete!")
