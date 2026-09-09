@@ -615,12 +615,23 @@ def pay_customer_view(request, username):
 
             # 4. Success Output
             
-            # Generate Messenger Template
-            messenger_msg = f"Hi {customer.full_name},\n\nThank you for your payment of ₱{amount} via {payment_method}. Your internet connection is now active until {new_expiry.strftime('%B %d, %Y')}."
-            if is_upgrade:
-                messenger_msg += f"\n\nThank you for upgrading to {new_plan.name}! Enjoy your faster speeds."
-            elif is_downgrade:
-                messenger_msg += f"\n\nYour plan has been successfully updated to {new_plan.name}. If you wish to upgrade soon for faster speeds, you can always let us know!"
+            # Generate Text Template
+            template_text = MessageTemplate.objects.filter(type='TEXT').first()
+            if template_text:
+                messenger_msg = template_text.body
+                context_replacements = {
+                    '{customer_name}': customer.full_name,
+                    '{paid_amount}': str(amount),
+                    '{new_expiration}': new_expiry.strftime('%B %d, %Y') if new_expiry else ''
+                }
+                for k, v in context_replacements.items():
+                    messenger_msg = messenger_msg.replace(k, str(v))
+            else:
+                messenger_msg = f"Hi {customer.full_name},\n\nThank you for your payment of ₱{amount} via {payment_method}. Your internet connection is now active until {new_expiry.strftime('%B %d, %Y')}."
+                if is_upgrade:
+                    messenger_msg += f"\n\nThank you for upgrading to {new_plan.name}! Enjoy your faster speeds."
+                elif is_downgrade:
+                    messenger_msg += f"\n\nYour plan has been successfully updated to {new_plan.name}. If you wish to upgrade soon for faster speeds, you can always let us know!"
             
             context = {
                 'customer': customer,

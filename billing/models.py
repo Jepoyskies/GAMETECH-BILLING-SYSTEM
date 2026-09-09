@@ -480,6 +480,7 @@ class MessageTemplate(models.Model):
     TEMPLATE_TYPES = (
         ('SMS', 'SMS'),
         ('EMAIL', 'Email'),
+        ('TEXT', 'Text Template'),
     )
     name = models.CharField(max_length=100, unique=True, help_text="e.g. 'Payment Success'")
     type = models.CharField(max_length=10, choices=TEMPLATE_TYPES)
