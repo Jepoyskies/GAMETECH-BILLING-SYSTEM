@@ -15,7 +15,7 @@ import environ
 import os
 
 env = environ.Env(
-    DEBUG=True
+    DEBUG=(bool, False)
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
