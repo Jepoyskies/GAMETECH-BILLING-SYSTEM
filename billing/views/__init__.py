@@ -4,7 +4,11 @@ from django.http import JsonResponse, FileResponse, HttpResponse
 import os
 from django.conf import settings
 from django.core.cache import cache
-from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
+from django.contrib.auth.decorators import (
+    login_required,
+    user_passes_test,
+    permission_required,
+)
 from django.views.decorators.http import require_POST
 from billing.decorators import role_required
 from django.contrib import messages
@@ -15,14 +19,28 @@ from django.core.paginator import Paginator
 import json
 from datetime import timedelta, datetime
 from billing.models import (
-    SystemAdmin, SubscriptionPlan, Agent, AccountType,
-    Customer, Barangay, Payment, Rebate, SystemLog, SmsLog, CignalPlay, AuditLog, AddOnRequest, Notification, ImprovementRequest
+    SystemAdmin,
+    SubscriptionPlan,
+    Agent,
+    AccountType,
+    Customer,
+    Barangay,
+    Payment,
+    Rebate,
+    SystemLog,
+    SmsLog,
+    CignalPlay,
+    AuditLog,
+    AddOnRequest,
+    Notification,
+    ImprovementRequest,
 )
 import requests
 from network_manager.models import MikrotikDevice, NapBox
 from network_manager.services import MikrotikAPI
 from django.db import transaction
 import calendar
+
 
 def add_one_month(dt: datetime) -> datetime:
     """Adds exactly one calendar month to a datetime object."""
@@ -33,7 +51,9 @@ def add_one_month(dt: datetime) -> datetime:
     return dt.replace(year=year, month=month, day=day)
 
 
-def calculate_new_expiration_date(current_expiration_date: datetime, payment_amount: float, plan_monthly_price: float) -> datetime:
+def calculate_new_expiration_date(
+    current_expiration_date: datetime, payment_amount: float, plan_monthly_price: float
+) -> datetime:
     if plan_monthly_price <= 0 or payment_amount <= 0:
         return current_expiration_date
 
@@ -50,13 +70,13 @@ def calculate_new_expiration_date(current_expiration_date: datetime, payment_amo
 
 
 def send_semaphore_sms(phone, message):
-    api_key = 'a1be64e85146a946d40aeb1677d37a48'
-    url = 'https://api.semaphore.co/api/v4/messages'
+    api_key = "a1be64e85146a946d40aeb1677d37a48"
+    url = "https://api.semaphore.co/api/v4/messages"
     payload = {
-        'apikey': api_key,
-        'number': phone,
-        'message': message,
-        'sendername': 'SEMAPHORE'
+        "apikey": api_key,
+        "number": phone,
+        "message": message,
+        "sendername": "SEMAPHORE",
     }
     try:
         response = requests.post(url, data=payload, timeout=10)

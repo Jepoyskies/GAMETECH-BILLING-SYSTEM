@@ -6,9 +6,8 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('billing', '0012_delete_serviceplan'),
-        ('billing', '0012_systemlog'),
+        ("billing", "0012_delete_serviceplan"),
+        ("billing", "0012_systemlog"),
     ]
 
-    operations = [
-    ]
+    operations = []

@@ -7,37 +7,39 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('billing', '0004_agent_barangay_alter_customer_agent_and_more'),
+        ("billing", "0004_agent_barangay_alter_customer_agent_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='agent',
-            name='created_at',
+            model_name="agent",
+            name="created_at",
             field=models.DateTimeField(
-                auto_now_add=True, default=django.utils.timezone.now),
+                auto_now_add=True, default=django.utils.timezone.now
+            ),
             preserve_default=False,
         ),
         migrations.AddField(
-            model_name='agent',
-            name='password_hash',
+            model_name="agent",
+            name="password_hash",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='agent',
-            name='email',
+            model_name="agent",
+            name="email",
             field=models.EmailField(
-                default='unknown@example.com', max_length=254, unique=True),
+                default="unknown@example.com", max_length=254, unique=True
+            ),
             preserve_default=False,
         ),
         migrations.AlterField(
-            model_name='agent',
-            name='name',
+            model_name="agent",
+            name="name",
             field=models.CharField(max_length=255),
         ),
         migrations.AlterField(
-            model_name='agent',
-            name='phone',
+            model_name="agent",
+            name="phone",
             field=models.CharField(blank=True, max_length=50, null=True),
         ),
     ]

@@ -6,18 +6,35 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('billing', '0022_merge_20260819_1549'),
+        ("billing", "0022_merge_20260819_1549"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='customer',
-            name='health_reason',
-            field=models.TextField(blank=True, help_text='Message for the customer regarding their connection status.', null=True),
+            model_name="customer",
+            name="health_reason",
+            field=models.TextField(
+                blank=True,
+                help_text="Message for the customer regarding their connection status.",
+                null=True,
+            ),
         ),
         migrations.AlterField(
-            model_name='customer',
-            name='health_status',
-            field=models.CharField(choices=[('Low', 'Low'), ('Poor', 'Poor'), ('Unstable', 'Unstable'), ('Stable', 'Stable'), ('Good', 'Good'), ('Strong', 'Strong'), ('Excellent', 'Excellent'), ('Outage', 'Outage')], default='Good', max_length=20),
+            model_name="customer",
+            name="health_status",
+            field=models.CharField(
+                choices=[
+                    ("Low", "Low"),
+                    ("Poor", "Poor"),
+                    ("Unstable", "Unstable"),
+                    ("Stable", "Stable"),
+                    ("Good", "Good"),
+                    ("Strong", "Strong"),
+                    ("Excellent", "Excellent"),
+                    ("Outage", "Outage"),
+                ],
+                default="Good",
+                max_length=20,
+            ),
         ),
     ]

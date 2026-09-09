@@ -6,9 +6,8 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('billing', '0008_payment'),
-        ('billing', '0009_customer_expires_at'),
+        ("billing", "0008_payment"),
+        ("billing", "0009_customer_expires_at"),
     ]
 
-    operations = [
-    ]
+    operations = []

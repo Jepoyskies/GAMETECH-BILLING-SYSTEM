@@ -6,13 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('billing', '0019_auditlog'),
+        ("billing", "0019_auditlog"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='customer',
-            name='sync_status',
-            field=models.CharField(choices=[('Synced', 'Synced'), ('Failed', 'Failed')], default='Synced', max_length=20),
+            model_name="customer",
+            name="sync_status",
+            field=models.CharField(
+                choices=[("Synced", "Synced"), ("Failed", "Failed")],
+                default="Synced",
+                max_length=20,
+            ),
         ),
     ]

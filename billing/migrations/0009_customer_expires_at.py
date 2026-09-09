@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('billing', '0008_remove_customer_adjusted_by_referral_and_more'),
+        ("billing", "0008_remove_customer_adjusted_by_referral_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='customer',
-            name='expires_at',
+            model_name="customer",
+            name="expires_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
     ]

@@ -7,21 +7,36 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('billing', '0013_merge_0012_delete_serviceplan_0012_systemlog'),
+        ("billing", "0013_merge_0012_delete_serviceplan_0012_systemlog"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='CustomerMacHistory',
+            name="CustomerMacHistory",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('mac_address', models.CharField(max_length=100)),
-                ('detected_at', models.DateTimeField(auto_now_add=True)),
-                ('customer', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='mac_history', to='billing.customer')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("mac_address", models.CharField(max_length=100)),
+                ("detected_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "customer",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="mac_history",
+                        to="billing.customer",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'customer_mac_history',
-                'ordering': ['-detected_at'],
+                "db_table": "customer_mac_history",
+                "ordering": ["-detected_at"],
             },
         ),
     ]

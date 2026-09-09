@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('billing', '0030_customer_portal_password'),
+        ("billing", "0030_customer_portal_password"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='customer',
-            name='must_change_password',
+            model_name="customer",
+            name="must_change_password",
             field=models.BooleanField(default=True),
         ),
     ]

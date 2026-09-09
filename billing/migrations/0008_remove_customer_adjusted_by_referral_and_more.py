@@ -7,140 +7,164 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('billing', '0007_systemadmin'),
-        ('network_manager', '0004_mikrotikdevice_created_at_and_more'),
+        ("billing", "0007_systemadmin"),
+        ("network_manager", "0004_mikrotikdevice_created_at_and_more"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='customer',
-            name='adjusted_by_referral',
+            model_name="customer",
+            name="adjusted_by_referral",
         ),
         migrations.RemoveField(
-            model_name='customer',
-            name='connection',
+            model_name="customer",
+            name="connection",
         ),
         migrations.RemoveField(
-            model_name='customer',
-            name='expires_at',
+            model_name="customer",
+            name="expires_at",
         ),
         migrations.RemoveField(
-            model_name='customer',
-            name='last_expiry_sms_sent',
+            model_name="customer",
+            name="last_expiry_sms_sent",
         ),
         migrations.RemoveField(
-            model_name='customer',
-            name='last_sms_due',
+            model_name="customer",
+            name="last_sms_due",
         ),
         migrations.RemoveField(
-            model_name='customer',
-            name='pppoe_profile',
+            model_name="customer",
+            name="pppoe_profile",
         ),
         migrations.RemoveField(
-            model_name='customer',
-            name='referral_received',
+            model_name="customer",
+            name="referral_received",
         ),
         migrations.RemoveField(
-            model_name='customer',
-            name='service_plan',
+            model_name="customer",
+            name="service_plan",
         ),
         migrations.RemoveField(
-            model_name='customer',
-            name='username',
+            model_name="customer",
+            name="username",
         ),
         migrations.AddField(
-            model_name='customer',
-            name='plan',
+            model_name="customer",
+            name="plan",
             field=models.ForeignKey(
-                null=True, on_delete=django.db.models.deletion.SET_NULL, to='billing.subscriptionplan'),
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="billing.subscriptionplan",
+            ),
         ),
         migrations.AddField(
-            model_name='customer',
-            name='pppoe_username',
-            field=models.CharField(
-                blank=True, max_length=255, null=True, unique=True),
+            model_name="customer",
+            name="pppoe_username",
+            field=models.CharField(blank=True, max_length=255, null=True, unique=True),
         ),
         migrations.AlterField(
-            model_name='customer',
-            name='account_type',
+            model_name="customer",
+            name="account_type",
             field=models.ForeignKey(
-                null=True, on_delete=django.db.models.deletion.SET_NULL, to='billing.accounttype'),
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="billing.accounttype",
+            ),
         ),
         migrations.AlterField(
-            model_name='customer',
-            name='address',
+            model_name="customer",
+            name="address",
             field=models.TextField(blank=True, null=True),
         ),
         migrations.AlterField(
-            model_name='customer',
-            name='agent',
+            model_name="customer",
+            name="agent",
             field=models.ForeignKey(
-                null=True, on_delete=django.db.models.deletion.SET_NULL, to='billing.agent'),
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="billing.agent",
+            ),
         ),
         migrations.AlterField(
-            model_name='customer',
-            name='barangay',
+            model_name="customer",
+            name="barangay",
             field=models.ForeignKey(
-                null=True, on_delete=django.db.models.deletion.SET_NULL, to='billing.barangay'),
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="billing.barangay",
+            ),
         ),
         migrations.AlterField(
-            model_name='customer',
-            name='cignalplay_date',
+            model_name="customer",
+            name="cignalplay_date",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AlterField(
-            model_name='customer',
-            name='cignalplay_no',
+            model_name="customer",
+            name="cignalplay_no",
             field=models.CharField(blank=True, max_length=100, null=True),
         ),
         migrations.AlterField(
-            model_name='customer',
-            name='created_form_by',
+            model_name="customer",
+            name="created_form_by",
             field=models.CharField(blank=True, max_length=100, null=True),
         ),
         migrations.AlterField(
-            model_name='customer',
-            name='email',
-            field=models.EmailField(
-                blank=True, max_length=254, null=True, unique=True),
+            model_name="customer",
+            name="email",
+            field=models.EmailField(blank=True, max_length=254, null=True, unique=True),
         ),
         migrations.AlterField(
-            model_name='customer',
-            name='full_name',
+            model_name="customer",
+            name="full_name",
             field=models.CharField(max_length=255),
         ),
         migrations.AlterField(
-            model_name='customer',
-            name='latitude',
+            model_name="customer",
+            name="latitude",
             field=models.DecimalField(
-                blank=True, decimal_places=8, max_digits=12, null=True),
+                blank=True, decimal_places=8, max_digits=12, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='customer',
-            name='longitude',
+            model_name="customer",
+            name="longitude",
             field=models.DecimalField(
-                blank=True, decimal_places=8, max_digits=12, null=True),
+                blank=True, decimal_places=8, max_digits=12, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='customer',
-            name='mac_address',
+            model_name="customer",
+            name="mac_address",
             field=models.CharField(blank=True, max_length=100, null=True),
         ),
         migrations.AlterField(
-            model_name='customer',
-            name='mikrotik_device',
+            model_name="customer",
+            name="mikrotik_device",
             field=models.ForeignKey(
-                null=True, on_delete=django.db.models.deletion.SET_NULL, to='network_manager.mikrotikdevice'),
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="network_manager.mikrotikdevice",
+            ),
         ),
         migrations.AlterField(
-            model_name='customer',
-            name='pppoe_password',
+            model_name="customer",
+            name="pppoe_password",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='customer',
-            name='status',
-            field=models.CharField(choices=[('active', 'Active'), ('inactive', 'Inactive'), ('pending', 'Pending'), (
-                'suspended', 'Suspended'), ('pull out', 'Pull Out')], default='active', max_length=20),
+            model_name="customer",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("active", "Active"),
+                    ("inactive", "Inactive"),
+                    ("pending", "Pending"),
+                    ("suspended", "Suspended"),
+                    ("pull out", "Pull Out"),
+                ],
+                default="active",
+                max_length=20,
+            ),
         ),
     ]
