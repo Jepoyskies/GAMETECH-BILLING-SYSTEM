@@ -6,7 +6,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
 from django.views.decorators.http import require_POST
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from billing.decorators import role_required
 from django.contrib import messages
 from django.utils import timezone
@@ -345,3 +345,7 @@ def online_staff_api(request):
     return JsonResponse({'status': 'success', 'data': data})
 
 
+
+def custom_logout_view(request):
+    logout(request)
+    return redirect('login')
