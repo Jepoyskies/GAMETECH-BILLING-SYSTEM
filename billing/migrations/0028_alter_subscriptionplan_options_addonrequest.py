@@ -7,25 +7,40 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('billing', '0027_alter_systemadmin_role'),
+        ("billing", "0027_alter_systemadmin_role"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='subscriptionplan',
-            options={'ordering': ['price']},
+            name="subscriptionplan",
+            options={"ordering": ["price"]},
         ),
         migrations.CreateModel(
-            name='AddOnRequest',
+            name="AddOnRequest",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('addon_type', models.CharField(max_length=100)),
-                ('status', models.CharField(default='Pending', max_length=20)),
-                ('requested_at', models.DateTimeField(auto_now_add=True)),
-                ('customer', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='addon_requests', to='billing.customer')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("addon_type", models.CharField(max_length=100)),
+                ("status", models.CharField(default="Pending", max_length=20)),
+                ("requested_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "customer",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="addon_requests",
+                        to="billing.customer",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-requested_at'],
+                "ordering": ["-requested_at"],
             },
         ),
     ]

@@ -6,28 +6,46 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('billing', '0020_customer_sync_status'),
+        ("billing", "0020_customer_sync_status"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='barangay',
-            name='health_reason',
+            model_name="barangay",
+            name="health_reason",
             field=models.TextField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='barangay',
-            name='health_status',
-            field=models.CharField(choices=[('Excellent', 'Excellent'), ('Moderate', 'Moderate'), ('Poor', 'Poor'), ('Outage', 'Outage')], default='Excellent', max_length=20),
+            model_name="barangay",
+            name="health_status",
+            field=models.CharField(
+                choices=[
+                    ("Excellent", "Excellent"),
+                    ("Moderate", "Moderate"),
+                    ("Poor", "Poor"),
+                    ("Outage", "Outage"),
+                ],
+                default="Excellent",
+                max_length=20,
+            ),
         ),
         migrations.AddField(
-            model_name='customer',
-            name='health_reason',
+            model_name="customer",
+            name="health_reason",
             field=models.TextField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='customer',
-            name='health_status',
-            field=models.CharField(choices=[('Excellent', 'Excellent'), ('Moderate', 'Moderate'), ('Poor', 'Poor'), ('Outage', 'Outage')], default='Excellent', max_length=20),
+            model_name="customer",
+            name="health_status",
+            field=models.CharField(
+                choices=[
+                    ("Excellent", "Excellent"),
+                    ("Moderate", "Moderate"),
+                    ("Poor", "Poor"),
+                    ("Outage", "Outage"),
+                ],
+                default="Excellent",
+                max_length=20,
+            ),
         ),
     ]

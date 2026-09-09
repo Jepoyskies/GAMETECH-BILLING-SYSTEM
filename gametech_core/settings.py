@@ -14,9 +14,7 @@ from pathlib import Path
 import environ
 import os
 
-env = environ.Env(
-    DEBUG=(bool, False)
-)
+env = environ.Env(DEBUG=(bool, False))
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,80 +24,80 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-&#1lotwp@bi@r%8e25pr-41x=pux%otc3&u9jxx!r5=!i0y^aq'
+SECRET_KEY = "django-insecure-&#1lotwp@bi@r%8e25pr-41x=pux%otc3&u9jxx!r5=!i0y^aq"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env('DEBUG')
+DEBUG = env("DEBUG")
 
-ALLOWED_HOSTS = ['*']
-CSRF_TRUSTED_ORIGINS = ['http://143.198.207.144', 'https://143.198.207.144']
+ALLOWED_HOSTS = ["*"]
+CSRF_TRUSTED_ORIGINS = ["http://143.198.207.144", "https://143.198.207.144"]
 
 # Trust the Nginx Reverse Proxy Headers
 USE_X_FORWARDED_HOST = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'http')
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "http")
 
 # Application definition
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'billing',
-    'network_manager',
-    'customer_portal',
-    'dispatch',
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "billing",
+    "network_manager",
+    "customer_portal",
+    "dispatch",
 ]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'billing.middleware.ThreadLocalUserMiddleware',
-    'billing.middleware.ActiveUserMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "billing.middleware.ThreadLocalUserMiddleware",
+    "billing.middleware.ActiveUserMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'gametech_core.urls'
+ROOT_URLCONF = "gametech_core.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'gametech_core.wsgi.application'
+WSGI_APPLICATION = "gametech_core.wsgi.application"
 
 
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
 DATABASES = {
-    'default': env.db('DATABASE_URL', default=f'sqlite:///{BASE_DIR}/db.sqlite3')
+    "default": env.db("DATABASE_URL", default=f"sqlite:///{BASE_DIR}/db.sqlite3")
 }
 
 # Celery Configuration
-CELERY_BROKER_URL = env('CELERY_BROKER_URL', default='redis://localhost:6379/0')
+CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
 
 
 # Password validation
@@ -107,16 +105,16 @@ CELERY_TASK_SERIALIZER = 'json'
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
@@ -124,9 +122,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'Asia/Manila'
+TIME_ZONE = "Asia/Manila"
 
 USE_I18N = True
 
@@ -136,32 +134,32 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
-STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 STATICFILES_DIRS = [
-    BASE_DIR / 'static',
+    BASE_DIR / "static",
 ]
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
 MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+    "default": {
+        "BACKEND": "django.core.mail.backends.console.EmailBackend",
     },
 }
 # Forced reload to detect new templates folder
 
 # Authentication Redirects
-LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = '/'
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "/"
 
 # Caching
 CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': os.environ.get('CELERY_BROKER_URL', 'redis://redis:6379/1'),
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/1"),
     }
 }
 
@@ -169,24 +167,24 @@ CACHES = {
 from celery.schedules import crontab
 
 CELERY_BEAT_SCHEDULE = {
-    'auto-suspend-hourly': {
-        'task': 'billing.tasks.auto_suspend_task',
-        'schedule': crontab(minute='0'),  # Run at the top of every hour
+    "auto-suspend-hourly": {
+        "task": "billing.tasks.auto_suspend_task",
+        "schedule": crontab(minute="0"),  # Run at the top of every hour
     },
-    'auto-sms-daily': {
-        'task': 'billing.tasks.auto_sms_task',
-        'schedule': crontab(hour='9', minute='0'),  # Run daily at 9:00 AM
+    "auto-sms-daily": {
+        "task": "billing.tasks.auto_sms_task",
+        "schedule": crontab(hour="9", minute="0"),  # Run daily at 9:00 AM
     },
-    'auto-sync-failed-5min': {
-        'task': 'billing.tasks.auto_sync_failed_task',
-        'schedule': crontab(minute='*/5'),  # Run every 5 minutes
+    "auto-sync-failed-5min": {
+        "task": "billing.tasks.auto_sync_failed_task",
+        "schedule": crontab(minute="*/5"),  # Run every 5 minutes
     },
-    'auto-reconcile-routers-30min': {
-        'task': 'billing.tasks.auto_reconcile_routers_task',
-        'schedule': crontab(minute='*/30'),  # Run every 30 minutes
+    "auto-reconcile-routers-30min": {
+        "task": "billing.tasks.auto_reconcile_routers_task",
+        "schedule": crontab(minute="*/30"),  # Run every 30 minutes
     },
-    'fetch-live-monitoring-10sec': {
-        'task': 'billing.tasks.fetch_live_monitoring_data_task',
-        'schedule': 10.0,  # Run every 10 seconds
+    "fetch-live-monitoring-10sec": {
+        "task": "billing.tasks.fetch_live_monitoring_data_task",
+        "schedule": 10.0,  # Run every 10 seconds
     },
 }

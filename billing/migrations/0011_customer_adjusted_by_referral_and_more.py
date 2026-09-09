@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('billing', '0010_merge_0008_payment_0009_customer_expires_at'),
+        ("billing", "0010_merge_0008_payment_0009_customer_expires_at"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='customer',
-            name='adjusted_by_referral',
+            model_name="customer",
+            name="adjusted_by_referral",
             field=models.CharField(blank=True, max_length=100, null=True),
         ),
         migrations.AddField(
-            model_name='customer',
-            name='referral_received',
-            field=models.CharField(blank=True, default='0', max_length=50, null=True),
+            model_name="customer",
+            name="referral_received",
+            field=models.CharField(blank=True, default="0", max_length=50, null=True),
         ),
     ]

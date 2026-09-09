@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('billing', '0029_notification'),
+        ("billing", "0029_notification"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='customer',
-            name='portal_password',
+            model_name="customer",
+            name="portal_password",
             field=models.CharField(blank=True, max_length=50, null=True),
         ),
     ]

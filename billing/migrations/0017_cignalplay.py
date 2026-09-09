@@ -7,24 +7,42 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('billing', '0016_smslog'),
+        ("billing", "0016_smslog"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='CignalPlay',
+            name="CignalPlay",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('plan_name', models.CharField(max_length=255)),
-                ('start_date', models.DateTimeField(blank=True, null=True)),
-                ('end_date', models.DateTimeField(blank=True, null=True)),
-                ('adjusted_by', models.CharField(blank=True, max_length=100, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('customer', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='cignal_plans', to='billing.customer')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("plan_name", models.CharField(max_length=255)),
+                ("start_date", models.DateTimeField(blank=True, null=True)),
+                ("end_date", models.DateTimeField(blank=True, null=True)),
+                (
+                    "adjusted_by",
+                    models.CharField(blank=True, max_length=100, null=True),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "customer",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="cignal_plans",
+                        to="billing.customer",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'cignal_play',
-                'ordering': ['-created_at'],
+                "db_table": "cignal_play",
+                "ordering": ["-created_at"],
             },
         ),
     ]

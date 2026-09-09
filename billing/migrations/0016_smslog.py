@@ -6,23 +6,31 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('billing', '0015_rebate'),
+        ("billing", "0015_rebate"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='SmsLog',
+            name="SmsLog",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('phone', models.CharField(max_length=20)),
-                ('message', models.TextField()),
-                ('response', models.TextField(blank=True, null=True)),
-                ('status', models.CharField(default='success', max_length=20)),
-                ('sent_at', models.DateTimeField(auto_now_add=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("phone", models.CharField(max_length=20)),
+                ("message", models.TextField()),
+                ("response", models.TextField(blank=True, null=True)),
+                ("status", models.CharField(default="success", max_length=20)),
+                ("sent_at", models.DateTimeField(auto_now_add=True)),
             ],
             options={
-                'db_table': 'sms_log',
-                'ordering': ['-sent_at'],
+                "db_table": "sms_log",
+                "ordering": ["-sent_at"],
             },
         ),
     ]

@@ -6,18 +6,49 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('billing', '0036_rebate_amount'),
+        ("billing", "0036_rebate_amount"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='MessageTemplate',
+            name="MessageTemplate",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(help_text="e.g. 'Payment Success'", max_length=100, unique=True)),
-                ('type', models.CharField(choices=[('SMS', 'SMS'), ('EMAIL', 'Email')], max_length=10)),
-                ('subject', models.CharField(blank=True, help_text='Subject line (for emails only)', max_length=200, null=True)),
-                ('body', models.TextField(help_text='Message content. Supported placeholders: {customer_name}, {paid_amount}, {new_expiration}')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "name",
+                    models.CharField(
+                        help_text="e.g. 'Payment Success'", max_length=100, unique=True
+                    ),
+                ),
+                (
+                    "type",
+                    models.CharField(
+                        choices=[("SMS", "SMS"), ("EMAIL", "Email")], max_length=10
+                    ),
+                ),
+                (
+                    "subject",
+                    models.CharField(
+                        blank=True,
+                        help_text="Subject line (for emails only)",
+                        max_length=200,
+                        null=True,
+                    ),
+                ),
+                (
+                    "body",
+                    models.TextField(
+                        help_text="Message content. Supported placeholders: {customer_name}, {paid_amount}, {new_expiration}"
+                    ),
+                ),
             ],
         ),
     ]

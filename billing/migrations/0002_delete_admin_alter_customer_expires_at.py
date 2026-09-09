@@ -6,16 +6,16 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('billing', '0001_initial'),
+        ("billing", "0001_initial"),
     ]
 
     operations = [
         migrations.DeleteModel(
-            name='Admin',
+            name="Admin",
         ),
         migrations.AlterField(
-            model_name='customer',
-            name='expires_at',
+            model_name="customer",
+            name="expires_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
     ]

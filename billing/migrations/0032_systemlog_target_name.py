@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('billing', '0031_customer_must_change_password'),
+        ("billing", "0031_customer_must_change_password"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='systemlog',
-            name='target_name',
+            model_name="systemlog",
+            name="target_name",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
     ]
