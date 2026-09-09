@@ -562,7 +562,6 @@ def pay_customer_view(request, username):
                         from billing.views import send_semaphore_sms
                         res, success = send_semaphore_sms(customer.phone, msg)
                         SmsLog.objects.create(
-                            customer=customer,
                             phone=customer.phone,
                             message=msg,
                             status='Sent' if success else 'Failed',
