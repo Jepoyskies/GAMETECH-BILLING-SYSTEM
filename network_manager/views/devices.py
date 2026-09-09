@@ -3,8 +3,8 @@ from django.contrib.auth.decorators import login_required
 from billing.decorators import role_required
 from django.contrib import messages
 from django.http import JsonResponse
-from .models import MikrotikDevice
-from .services import MikrotikAPI
+from network_manager.models import MikrotikDevice
+from network_manager.services import MikrotikAPI
 
 @login_required
 def device_list(request):
@@ -79,7 +79,7 @@ def test_device_connection(request, device_id):
         device = get_object_or_404(MikrotikDevice, id=device_id)
 
         try:
-            from .services import MikrotikAPI
+            from network_manager.services import MikrotikAPI
             api = MikrotikAPI(device)
             # Try to fetch something simple to confirm connection
             api_conn = api._get_api()
@@ -98,7 +98,7 @@ def sync_device_users(request, device_id):
         device = get_object_or_404(MikrotikDevice, id=device_id)
 
         try:
-            from .services import MikrotikAPI
+            from network_manager.services import MikrotikAPI
             from billing.models import Customer, SubscriptionPlan
             
             api = MikrotikAPI(device)
@@ -138,7 +138,7 @@ def sync_device_users(request, device_id):
 def device_hardware_api(request, device_id):
     device = get_object_or_404(MikrotikDevice, id=device_id)
     try:
-        from .services import MikrotikAPI
+        from network_manager.services import MikrotikAPI
         api = MikrotikAPI(device)
         api_conn = api._get_api()
         

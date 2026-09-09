@@ -6,7 +6,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
 from django.views.decorators.http import require_POST
-from ..decorators import role_required
+from billing.decorators import role_required
 from django.contrib import messages
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -14,7 +14,7 @@ from django.db.models import Count, Sum, Q, Max
 from django.core.paginator import Paginator
 import json
 from datetime import timedelta, datetime
-from ..models import (
+from billing.models import (
     SystemAdmin, SubscriptionPlan, Agent, AccountType,
     Customer, Barangay, Payment, Rebate, SystemLog, SmsLog, CignalPlay, AuditLog, AddOnRequest, Notification, ImprovementRequest
 )
@@ -230,7 +230,7 @@ def api_customer_mikrotik_status(request, customer_id):
     return JsonResponse(data)
 
 def api_network_alerts(request):
-    from ..models import Barangay, Customer
+    from billing.models import Barangay, Customer
     from network_manager.models import MikrotikDevice
     active_device_alerts = MikrotikDevice.objects.exclude(health_status='Excellent')
     active_barangay_alerts = Barangay.objects.exclude(health_status='Excellent')

@@ -1,7 +1,7 @@
 import logging
 import socket
 import routeros_api
-from .models import MikrotikDevice
+from network_manager.models import MikrotikDevice
 
 logger = logging.getLogger(__name__)
 

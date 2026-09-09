@@ -3,8 +3,8 @@ from django.contrib.auth.decorators import login_required
 from billing.decorators import role_required
 from django.contrib import messages
 from django.http import JsonResponse
-from .models import MikrotikDevice
-from .services import MikrotikAPI
+from network_manager.models import MikrotikDevice
+from network_manager.services import MikrotikAPI
 
 @login_required
 def fbt_plc_calculator_view(request):

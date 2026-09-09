@@ -6,7 +6,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
 from django.views.decorators.http import require_POST
-from ..decorators import role_required
+from billing.decorators import role_required
 from django.contrib import messages
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -14,7 +14,7 @@ from django.db.models import Count, Sum, Q, Max
 from django.core.paginator import Paginator
 import json
 from datetime import timedelta, datetime
-from ..models import (
+from billing.models import (
     SystemAdmin, SubscriptionPlan, Agent, AccountType,
     Customer, Barangay, Payment, Rebate, SystemLog, SmsLog, CignalPlay, AuditLog, AddOnRequest, Notification, ImprovementRequest
 )
@@ -23,7 +23,7 @@ from network_manager.models import MikrotikDevice, NapBox
 from network_manager.services import MikrotikAPI
 from django.db import transaction
 import calendar
-from .services import get_categorized_plans
+from billing.views.services import get_categorized_plans
 
 @login_required
 @role_required(['Admin', 'Agent', 'CSR'])
@@ -68,7 +68,7 @@ def add_customer(request):
             created_form_by=request.user.username
         )
         
-        from ..models import SystemLog
+        from billing.models import SystemLog
         SystemLog.objects.create(
             table_name='Customer',
             record_id=str(customer.id),
@@ -221,7 +221,7 @@ def edit_customer(request, customer_id):
         customer.health_reason = request.POST.get('health_reason')
             
         if old_data or new_data:
-            from ..models import SystemLog
+            from billing.models import SystemLog
             SystemLog.objects.create(
                 table_name='Customer',
                 record_id=str(customer.id),
@@ -257,7 +257,7 @@ def view_customer(request, customer_id):
     live_mac = "Loading..."
     last_logged_out = "Loading..."
     
-    from ..models import SystemLog, Payment, AuditLog, AddOnRequest, CignalPlay
+    from billing.models import SystemLog, Payment, AuditLog, AddOnRequest, CignalPlay
     
     # Combine logs
     all_logs = []

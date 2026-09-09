@@ -6,7 +6,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
 from django.views.decorators.http import require_POST
-from ..decorators import role_required
+from billing.decorators import role_required
 from django.contrib import messages
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -14,7 +14,7 @@ from django.db.models import Count, Sum, Q, Max
 from django.core.paginator import Paginator
 import json
 from datetime import timedelta, datetime
-from ..models import (
+from billing.models import (
     SystemAdmin, SubscriptionPlan, Agent, AccountType,
     Customer, Barangay, Payment, Rebate, SystemLog, SmsLog, CignalPlay, AuditLog, AddOnRequest, Notification, ImprovementRequest
 )
@@ -23,7 +23,7 @@ from network_manager.models import MikrotikDevice, NapBox
 from network_manager.services import MikrotikAPI
 from django.db import transaction
 import calendar
-from .services import get_categorized_plans
+from billing.views.services import get_categorized_plans
 
 @login_required
 def customer_list(request):
@@ -64,7 +64,7 @@ def customer_list(request):
     ).order_by('status_order', 'full_name')
         
     devices = MikrotikDevice.objects.all().order_by('device_name')
-    from ..models import Barangay
+    from billing.models import Barangay
     barangays = Barangay.objects.all().order_by('name')
     return render(request, 'billing/customer_list.html', {
         'customers': customers,
@@ -75,7 +75,7 @@ def customer_list(request):
 
 @login_required
 def mac_history_view(request):
-    from ..models import CustomerMacHistory
+    from billing.models import CustomerMacHistory
     history = CustomerMacHistory.objects.select_related('customer').all()
     search = request.GET.get('search', '').strip()
     if search:

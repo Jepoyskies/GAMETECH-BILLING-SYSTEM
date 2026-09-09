@@ -6,7 +6,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
 from django.views.decorators.http import require_POST
-from ..decorators import role_required
+from billing.decorators import role_required
 from django.contrib import messages
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -14,7 +14,7 @@ from django.db.models import Count, Sum, Q, Max
 from django.core.paginator import Paginator
 import json
 from datetime import timedelta, datetime
-from ..models import (
+from billing.models import (
     SystemAdmin, SubscriptionPlan, Agent, AccountType,
     Customer, Barangay, Payment, Rebate, SystemLog, SmsLog, CignalPlay, AuditLog, AddOnRequest, Notification, ImprovementRequest
 )
@@ -23,7 +23,7 @@ from network_manager.models import MikrotikDevice, NapBox
 from network_manager.services import MikrotikAPI
 from django.db import transaction
 import calendar
-from .services import get_categorized_plans
+from billing.views.services import get_categorized_plans
 
 @login_required
 @permission_required('billing.change_customer', raise_exception=True)
@@ -131,7 +131,7 @@ def edit_customer_expiration(request, customer_id):
         new_date_str = request.POST.get('expires_at')
         if new_date_str:
             from django.utils.dateparse import parse_datetime
-            from ..models import SystemLog
+            from billing.models import SystemLog
             new_date = parse_datetime(new_date_str)
             if new_date:
                 old_date = customer.expires_at.strftime("%Y-%m-%d %H:%M:%S") if customer.expires_at else "None"
@@ -166,7 +166,7 @@ def edit_customer_balance(request, customer_id):
         if new_balance_str is not None:
             try:
                 from decimal import Decimal
-                from ..models import SystemLog, Notification
+                from billing.models import SystemLog, Notification
                 from django.utils.dateparse import parse_datetime
                 
                 new_balance = Decimal(new_balance_str)

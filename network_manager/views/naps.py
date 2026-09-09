@@ -3,19 +3,19 @@ from django.contrib.auth.decorators import login_required
 from billing.decorators import role_required
 from django.contrib import messages
 from django.http import JsonResponse
-from .models import MikrotikDevice
-from .services import MikrotikAPI
+from network_manager.models import MikrotikDevice
+from network_manager.services import MikrotikAPI
 
 @login_required
 def nap_list_view(request):
-    from .models import NapBox
+    from network_manager.models import NapBox
     naps = NapBox.objects.all().order_by('-created_at')
     return render(request, 'network_manager/nap_list.html', {'naps': naps})
 
 @role_required(['Admin', 'Editor', 'CSR'])
 @login_required
 def add_nap_view(request):
-    from .models import NapBox
+    from network_manager.models import NapBox
     if request.method == 'POST':
         napbox_no = request.POST.get('napbox_no')
         nap_latitude = request.POST.get('nap_latitude')
@@ -34,7 +34,7 @@ def add_nap_view(request):
 @role_required(['Admin', 'Editor', 'CSR'])
 @login_required
 def edit_nap_view(request, nap_id):
-    from .models import NapBox
+    from network_manager.models import NapBox
     nap = get_object_or_404(NapBox, id=nap_id)
     if request.method == 'POST':
         nap.napbox_no = request.POST.get('napbox_no')
@@ -53,7 +53,7 @@ def edit_nap_view(request, nap_id):
 @role_required(['Admin', 'Editor', 'CSR'])
 @login_required
 def delete_nap_view(request, nap_id):
-    from .models import NapBox
+    from network_manager.models import NapBox
     if request.method == 'POST':
         nap = get_object_or_404(NapBox, id=nap_id)
         nap.delete()
