@@ -459,27 +459,61 @@ def edit_customer_expiration(request, customer_id):
 def edit_customer_balance(request, customer_id):
     customer = get_object_or_404(Customer, id=customer_id)
     if request.method == 'POST':
+        admin_password = request.POST.get('admin_password')
         new_balance_str = request.POST.get('outstanding_balance')
+        new_expiration_str = request.POST.get('new_expiration_date')
+
+        if not request.user.check_password(admin_password):
+            messages.error(request, "Incorrect admin password. Balance reset cancelled for security reasons.")
+            return redirect('view_customer', customer_id=customer.id)
+
         if new_balance_str is not None:
             try:
                 from decimal import Decimal
-                from ..models import SystemLog
+                from ..models import SystemLog, Notification
+                from django.utils.dateparse import parse_datetime
+                
                 new_balance = Decimal(new_balance_str)
                 old_balance = customer.outstanding_balance
+                old_expiration = customer.expires_at
+
+                # Parse and update expiration date
+                if new_expiration_str:
+                    new_expiration = parse_datetime(new_expiration_str)
+                    if new_expiration:
+                        customer.expires_at = new_expiration
+
                 customer.outstanding_balance = new_balance
                 customer.save()
+                
+                # Check if it was a reset/decrease
+                is_reset = new_balance < old_balance or new_balance == Decimal('0.00')
+                action_name = 'BALANCE_RESET' if is_reset else 'UPDATE'
+
                 SystemLog.objects.create(
                     table_name='Customer',
                     record_id=str(customer.id),
-                    action='UPDATE',
+                    action=action_name,
                     changed_by=request.user.username,
                     target_name=customer.full_name,
-                    old_data=f"Balance: ₱{old_balance}",
-                    new_data=f"Balance: ₱{new_balance}"
+                    old_data=f"Balance: ₱{old_balance} | Expires: {old_expiration.strftime('%Y-%m-%d') if old_expiration else 'None'}",
+                    new_data=f"Balance: ₱{new_balance} | Expires: {customer.expires_at.strftime('%Y-%m-%d') if customer.expires_at else 'None'}"
                 )
-                messages.success(request, f"Balance for {customer.full_name} has been successfully updated.")
-            except:
-                messages.error(request, "Invalid balance amount.")
+
+                # Send global alert to all admins if balance was reset
+                if is_reset:
+                    Notification.objects.create(
+                        message=f"CRITICAL: {request.user.username} performed a balance override for {customer.full_name}. Balance changed from ₱{old_balance} to ₱{new_balance}.",
+                        type='alert',
+                        link=f"/customers/view/{customer.id}/"
+                    )
+
+                messages.success(request, f"Advance payment for {customer.full_name} has been securely updated.")
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Error resetting balance: {e}")
+                messages.error(request, "Invalid balance amount or expiration date format.")
     return redirect('view_customer', customer_id=customer.id)
 
 
