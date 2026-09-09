@@ -16,23 +16,24 @@
 .sidebar {
     position: fixed; top: 0; left: 0; bottom: 0;
     width: 250px;
-    background: linear-gradient(135deg, #2151A1 0%, #19407A 100%);
-    color: #fff;
+    background: #ffffff;
+    border-right: 1px solid #e5e7eb;
+    color: #4b5563;
     transition: width 0.3s, left 0.3s;
     z-index: 1040;
     display: flex; flex-direction: column; min-height: 100vh;
-    box-shadow: 2px 0 10px rgba(33,81,161,0.10);
+    box-shadow: 4px 0 24px rgba(0,0,0,0.02);
 }
 .sidebar.collapsed { width: 70px; }
 .sidebar-header {
     padding: 1.5rem 1.2rem 1rem 1.2rem; text-align: center;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-    background: rgba(0,0,0,0.02);
+    border-bottom: 1px solid #e5e7eb;
+    background: #ffffff;
 }
 .sidebar-header img { max-width: 150px; transition: max-width 0.3s; }
 .sidebar.collapsed .sidebar-header img { max-width: 34px; }
 .sidebar .close-btn { position: absolute; top: 18px; right: 18px; background: none; border: none;
-                      color: #fff; font-size: 1.6rem; display: none; }
+                      color: #4b5563; font-size: 1.6rem; display: none; }
 @media (max-width: 991.98px) {
     .sidebar { left: -260px; width: 250px; }
     .sidebar.open { left: 0; }
@@ -42,7 +43,7 @@
 .sidebar ul { list-style: none; margin: 0; padding: 0; }
 .sidebar ul li { margin: 0.2rem 0; }
 .sidebar ul li .menu-link {
-    display: flex; align-items: center; color: #fff;
+    display: flex; align-items: center; color: #4b5563;
     padding: 0.85rem 1.5rem; transition: background 0.2s, color 0.2s;
     font-weight: 500; border-left: 4px solid transparent; text-decoration: none;
     font-size: 1rem; border-radius: 0 24px 24px 0;
@@ -50,18 +51,32 @@
 .sidebar ul li .menu-link .icon {
     display: inline-flex; width: 2rem; justify-content: center;
     margin-right: 1rem; font-size: 1.2rem; transition: margin 0.3s;
-    color: #F9B233;
+    color: #9ca3af;
 }
 .sidebar.collapsed ul li .menu-link .icon { margin-right: 0; }
 .sidebar.collapsed ul li .menu-link span:not(.icon) { display: none; }
-.sidebar ul li .menu-link.active, .sidebar ul li .menu-link:hover {
-    background: linear-gradient(90deg, #F9B23322 0%, #2151A1 90%);
-    color: #F9B233;
-    border-left: 4px solid #F9B233;
+.sidebar ul li .menu-link.active {
+    background: rgba(3, 73, 203, 0.05);
+    color: #0349cb;
+    border-left: 4px solid #fbae1a;
+    font-weight: 600;
 }
-.sidebar ul li .menu-link.active .icon,
-.sidebar ul li .menu-link:hover .icon {
-    color: #F9B233;
+.sidebar ul li .menu-link.active .icon {
+    color: #0349cb;
+}
+.sidebar ul li .menu-link:hover:not(.active) {
+    background: #f9fafb;
+    color: #0349cb;
+}
+.sidebar ul li .menu-link:hover:not(.active) .icon {
+    color: #0349cb;
+}
+.sidebar ul li .menu-link.logout-btn:hover {
+    background: #fef2f2 !important;
+    color: #dc2626 !important;
+}
+.sidebar ul li .menu-link.logout-btn:hover .icon {
+    color: #dc2626 !important;
 }
 .sub-menu-link {
     padding-left: 3.5rem !important;
@@ -189,7 +204,7 @@ body.tv-mode {
 <body class="bg-light">
 <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
-        <a href="#"><img src="{% static 'assets/images/logo_white.png' %}" alt="Logo"></a>
+        <a href="#"><img src="{% static 'assets/images/logo_black.png' %}" alt="Logo"></a>
         <button class="close-btn" id="closeSidebar" type="button">&times;</button>
     </div>
     <nav>
@@ -277,7 +292,7 @@ body.tv-mode {
             <li class="mt-2">
                 <form action="{% url 'logout' %}" method="post" class="d-inline w-100 m-0 p-0" onsubmit="return confirm('Are you sure you want to log out?');">
                     {% csrf_token %}
-                    <button type="submit" class="menu-link w-100 text-start" style="background:none; border:none;">
+                    <button type="submit" class="menu-link logout-btn w-100 text-start" style="background:none; border:none;">
                         <span class="icon"><i class="fas fa-sign-out-alt"></i></span> <span>Logout</span>
                     </button>
                 </form>
@@ -318,74 +333,17 @@ body.tv-mode {
                 <span class="d-none d-md-inline">Need changes, Sir? 👋</span>
             </button>
 
-            <!-- Notification Bell -->
-            <div class="dropdown">
-                <button class="btn btn-sm position-relative" type="button" id="notifDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background:transparent; border:none; font-size:1.25rem; color:inherit;" title="Notifications">
-                    <i class="fas fa-bell"></i>
-                    <span id="notifBadge" class="position-absolute top-25 start-75 translate-middle p-1 bg-danger border border-light rounded-circle" style="display: none;">
-                        <span class="visually-hidden">New alerts</span>
-                    </span>
-                </button>
-                <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 notif-menu gt-dropdown-menu" aria-labelledby="notifDropdown" style="width: 380px; border-radius: 20px; overflow: hidden; padding: 0; backdrop-filter: blur(20px);">
-                    <!-- Premium gradient header -->
-                    <div class="px-4 py-3 d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #2563eb 100%);">
-                        <div>
-                            <h6 class="mb-0 fw-bold text-white d-flex align-items-center gap-2">
-                                <i class="fas fa-bell" style="color:#F9B233;"></i> Notifications
-                            </h6>
-                            <small class="text-white opacity-75" id="notifSubtitle">Loading...</small>
-                        </div>
-                        <button class="btn btn-sm fw-bold" id="markAllReadBtn" style="background: rgba(255,255,255,0.15); color: white; border-radius: 20px; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.25); backdrop-filter: blur(4px);">
-                            <i class="fas fa-check-double me-1"></i>Mark all read
-                        </button>
-                    </div>
-                    <div id="notifList" style="max-height: 420px; overflow-y: auto; overflow-x: hidden;">
-                        <div class="p-5 text-center text-muted small" id="notifEmptyState">
-                            <div class="mb-3">
-                                <div class="d-inline-flex justify-content-center align-items-center rounded-circle gt-icon-circle">
-                                    <i class="fas fa-bell-slash fa-2x" style="color: #93c5fd;"></i>
-                                </div>
-                            </div>
-                            <span class="fw-bold text-secondary" style="font-size: 0.95rem;">You're all caught up!</span><br>
-                            <span style="font-size: 0.8rem; opacity: 0.7;">No new notifications right now.</span>
-                        </div>
-                    </div>
-                    <div class="px-4 py-2 border-top text-center gt-dropdown-footer">
-                        <a href="{% url 'notifications_list' %}" class="text-decoration-none small fw-bold gt-footer-link">View All Notifications <i class="fas fa-arrow-right ms-1"></i></a>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Online Staff -->
-            <div class="dropdown">
-                <button class="btn btn-sm position-relative" type="button" id="onlineStaffDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background:transparent; border:none; font-size:1.25rem; color:inherit;" title="Currently Logged In Users" onclick="fetchOnlineStaff()">
-                    <i class="fas fa-users"></i>
-                    <span id="onlineStaffBadge" class="position-absolute top-25 start-75 translate-middle badge rounded-pill bg-success" style="font-size: 0.6rem; display: none;">0</span>
-                </button>
-                <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 gt-dropdown-menu" aria-labelledby="onlineStaffDropdown" style="width: 310px; border-radius: 20px; padding: 0; backdrop-filter: blur(20px); overflow: hidden;">
-                    <!-- Premium green gradient header -->
-                    <div class="px-4 py-3" style="background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #059669 100%);">
-                        <h6 class="mb-0 fw-bold text-white d-flex align-items-center gap-2">
-                            <i class="fas fa-shield-alt" style="color:#6ee7b7;"></i> Currently Logged In
-                        </h6>
-                        <small class="text-white opacity-75">Live session monitoring</small>
-                    </div>
-                    <div id="onlineStaffList" style="max-height: 340px; overflow-y: auto;">
-                        <div class="p-4 text-center gt-muted-text" style="font-size:0.85rem;">
-                            <div class="mb-2">
-                                <div class="d-inline-flex align-items-center justify-content-center rounded-circle gt-icon-circle">
-                                    <i class="fas fa-spinner fa-spin" style="color:#10b981;"></i>
-                                </div>
-                            </div>
-                            Loading active sessions...
-                        </div>
-                    </div>
-                    <div class="px-4 py-2 border-top text-center gt-dropdown-footer" style="font-size:0.75rem;">
-                        <i class="fas fa-circle text-success me-1" style="font-size:0.6rem;"></i> <span class="gt-muted-text">Updates every 60 seconds</span>
-                    </div>
-                </div>
-            </div>
+            <!-- Gamer Theme Toggle -->
+            <button id="gt-theme-toggle" title="Toggle Dark/Light Mode" aria-label="Toggle theme">
+                <i class="fas fa-sun gt-toggle-icon" id="themeIcon"></i>
+                <span class="gt-toggle-label" id="themeLabel">Light</span>
+            </button>
+            <!-- CRT Scanline Flash Overlay -->
+            <div id="gt-scanline"></div>
+            <!-- Profile Dropdown -->
 
+            <!-- Subtle Vertical Divider -->
+            <div class="vr mx-2" style="background-color: #d1d5db; width: 1.5px;"></div>
 
             <!-- Changelog / What's New -->
             <div class="dropdown">
@@ -511,16 +469,77 @@ body.tv-mode {
                 </div>
             </div>
 
-            <!-- Gamer Theme Toggle -->
-            <button id="gt-theme-toggle" title="Toggle Dark/Light Mode" aria-label="Toggle theme">
-                <i class="fas fa-sun gt-toggle-icon" id="themeIcon"></i>
-                <span class="gt-toggle-label" id="themeLabel">Light</span>
-            </button>
-            <!-- CRT Scanline Flash Overlay -->
-            <div id="gt-scanline"></div>
-            <!-- Profile Dropdown -->
+            <!-- Online Staff -->
             <div class="dropdown">
-                <button class="btn btn-sm" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background:transparent; border:none; font-size:1.25rem; color:inherit;" title="My Profile">
+                <button class="btn btn-sm position-relative" type="button" id="onlineStaffDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background:transparent; border:none; font-size:1.25rem; color:inherit;" title="Currently Logged In Users" onclick="fetchOnlineStaff()">
+                    <i class="fas fa-users"></i>
+                    <span id="onlineStaffBadge" class="position-absolute top-25 start-75 translate-middle badge rounded-pill bg-success" style="font-size: 0.6rem; display: none;">0</span>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 gt-dropdown-menu" aria-labelledby="onlineStaffDropdown" style="width: 310px; border-radius: 20px; padding: 0; backdrop-filter: blur(20px); overflow: hidden;">
+                    <!-- Premium green gradient header -->
+                    <div class="px-4 py-3" style="background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #059669 100%);">
+                        <h6 class="mb-0 fw-bold text-white d-flex align-items-center gap-2">
+                            <i class="fas fa-shield-alt" style="color:#6ee7b7;"></i> Currently Logged In
+                        </h6>
+                        <small class="text-white opacity-75">Live session monitoring</small>
+                    </div>
+                    <div id="onlineStaffList" style="max-height: 340px; overflow-y: auto;">
+                        <div class="p-4 text-center gt-muted-text" style="font-size:0.85rem;">
+                            <div class="mb-2">
+                                <div class="d-inline-flex align-items-center justify-content-center rounded-circle gt-icon-circle">
+                                    <i class="fas fa-spinner fa-spin" style="color:#10b981;"></i>
+                                </div>
+                            </div>
+                            Loading active sessions...
+                        </div>
+                    </div>
+                    <div class="px-4 py-2 border-top text-center gt-dropdown-footer" style="font-size:0.75rem;">
+                        <i class="fas fa-circle text-success me-1" style="font-size:0.6rem;"></i> <span class="gt-muted-text">Updates every 60 seconds</span>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Notification Bell -->
+            <div class="dropdown">
+                <button class="btn btn-sm position-relative" type="button" id="notifDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background:transparent; border:none; font-size:1.25rem; color:inherit;" title="Notifications">
+                    <i class="fas fa-bell"></i>
+                    <span id="notifBadge" class="position-absolute top-25 start-75 translate-middle p-1 bg-danger border border-light rounded-circle" style="display: none;">
+                        <span class="visually-hidden">New alerts</span>
+                    </span>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 notif-menu gt-dropdown-menu" aria-labelledby="notifDropdown" style="width: 380px; border-radius: 20px; overflow: hidden; padding: 0; backdrop-filter: blur(20px);">
+                    <!-- Premium gradient header -->
+                    <div class="px-4 py-3 d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #2563eb 100%);">
+                        <div>
+                            <h6 class="mb-0 fw-bold text-white d-flex align-items-center gap-2">
+                                <i class="fas fa-bell" style="color:#F9B233;"></i> Notifications
+                            </h6>
+                            <small class="text-white opacity-75" id="notifSubtitle">Loading...</small>
+                        </div>
+                        <button class="btn btn-sm fw-bold" id="markAllReadBtn" style="background: rgba(255,255,255,0.15); color: white; border-radius: 20px; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.25); backdrop-filter: blur(4px);">
+                            <i class="fas fa-check-double me-1"></i>Mark all read
+                        </button>
+                    </div>
+                    <div id="notifList" style="max-height: 420px; overflow-y: auto; overflow-x: hidden;">
+                        <div class="p-5 text-center text-muted small" id="notifEmptyState">
+                            <div class="mb-3">
+                                <div class="d-inline-flex justify-content-center align-items-center rounded-circle gt-icon-circle">
+                                    <i class="fas fa-bell-slash fa-2x" style="color: #93c5fd;"></i>
+                                </div>
+                            </div>
+                            <span class="fw-bold text-secondary" style="font-size: 0.95rem;">You're all caught up!</span><br>
+                            <span style="font-size: 0.8rem; opacity: 0.7;">No new notifications right now.</span>
+                        </div>
+                    </div>
+                    <div class="px-4 py-2 border-top text-center gt-dropdown-footer">
+                        <a href="{% url 'notifications_list' %}" class="text-decoration-none small fw-bold gt-footer-link">View All Notifications <i class="fas fa-arrow-right ms-1"></i></a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="dropdown">
+                <button class="btn btn-sm ms-2" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background:transparent; border:none; font-size:1.25rem; color:inherit;" title="My Profile">
                     <i class="fas fa-user-circle"></i>
                 </button>
                 <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 profile-menu" aria-labelledby="profileDropdown" style="width: 300px; border-radius: 16px; overflow: hidden; padding: 0;">
