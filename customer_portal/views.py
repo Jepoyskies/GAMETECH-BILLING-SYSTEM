@@ -73,8 +73,11 @@ def portal_dashboard(request):
         is_network_issue = True
         
     is_expiring_soon = False
-    if customer.expires_at and customer.status == 'active':
-        if customer.expires_at <= timezone.now() + timedelta(days=3):
+    days_until_expiry = 0
+    if customer.expires_at:
+        delta = customer.expires_at - timezone.now()
+        days_until_expiry = max(0, delta.days)
+        if customer.status == 'active' and days_until_expiry <= 3:
             is_expiring_soon = True
             
     from billing.models import MonitoredService
@@ -93,6 +96,7 @@ def portal_dashboard(request):
         'effective_reason': effective_reason,
         'is_network_issue': is_network_issue,
         'is_expiring_soon': is_expiring_soon,
+        'days_until_expiry': days_until_expiry,
         'payments': payments,
         'plans': plans,
         'issue_services': issue_services,
@@ -399,3 +403,33 @@ def portal_apply_addon(request):
         return JsonResponse({'status': 'success', 'message': 'Request submitted successfully. Our staff will contact you soon.'})
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
+
+def submit_ticket(request):
+    if request.method == 'POST':
+        customer_id = request.session.get('customer_id')
+        if not customer_id:
+            return redirect('customer_portal:portal_login')
+            
+        try:
+            customer = Customer.objects.get(id=customer_id)
+        except Customer.DoesNotExist:
+            return redirect('customer_portal:portal_login')
+            
+        issue_type = request.POST.get('issue_type')
+        description = request.POST.get('description')
+        
+        from dispatch.models import ClientConcern
+        ClientConcern.objects.create(
+            customer=customer,
+            concern=f"[{issue_type}] {description}",
+            status='Pending',
+            reported_date=timezone.now().date(),
+            contact_number=customer.phone,
+            address=customer.address
+        )
+        
+        messages.success(request, "Your ticket has been submitted. Our technical dispatch team will review it shortly.")
+        return redirect('customer_portal:portal_dashboard')
+        
+    return render(request, 'customer_portal/submit_ticket.html')

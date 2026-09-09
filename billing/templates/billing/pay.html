@@ -139,6 +139,21 @@
                     <form action="{% url 'pay_customer' customer.pppoe_username %}" method="post" autocomplete="off" id="renew-form">
                         {% csrf_token %}
                         
+                        <!-- Prominent Current Expiry Banner -->
+                        <div style="background: rgba(245, 158, 11, 0.1); border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <div style="font-size: 0.85rem; font-weight: 600; color: #d97706; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.2rem;"><i class="fas fa-clock me-1"></i> Current Expiry</div>
+                                <div style="font-size: 1.15rem; font-weight: 700; color: var(--text-color);">
+                                    {{ customer.expires_at|date:'M d, Y h:i A'|default:'None / Not Set' }}
+                                </div>
+                            </div>
+                            {% if customer.status == 'expired' or customer.status == 'suspended' %}
+                            <span class="badge bg-danger" style="font-size: 0.85rem;">{{ customer.status|title }}</span>
+                            {% else %}
+                            <span class="badge bg-success" style="font-size: 0.85rem;">Active</span>
+                            {% endif %}
+                        </div>
+                        
                         <div class="mb-4">
                             <label for="start_date">Calculate Expiry From (Base Date)</label>
                             <input type="datetime-local" id="start_date" name="start_date" class="form-control" required>

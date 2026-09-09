@@ -622,6 +622,8 @@
             border-top: 1px solid var(--p-border);
         }
     </style>
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{% static 'manifest.json' %}">
 </head>
 <body>
 
@@ -638,6 +640,7 @@
             <i class="fas fa-sun icon-sun"></i>
             <i class="fas fa-moon icon-moon"></i>
         </button>
+        <a href="{% url 'customer_portal:submit_ticket' %}" class="btn btn-sm btn-outline-primary me-2 px-3 fw-bold rounded-pill" style="border: 1px solid var(--p-border);"><i class="fas fa-headset me-2"></i>Support</a>
         <a href="{% url 'customer_portal:portal_logout' %}" class="p-logout-btn">
             <i class="fas fa-sign-out-alt"></i> Log Out
         </a>
@@ -707,6 +710,27 @@
 
     <!-- ===== LEFT COLUMN ===== -->
     <div class="left-col">
+
+        <!-- Expiry Countdown Widget -->
+        {% if customer.status != 'expired' and customer.status != 'suspended' and customer.expires_at %}
+        <div class="p-card" style="background: {% if days_until_expiry <= 3 %}linear-gradient(135deg, #ef4444 0%, #dc2626 100%){% elif days_until_expiry <= 7 %}linear-gradient(135deg, #f59e0b 0%, #d97706 100%){% else %}linear-gradient(135deg, #10b981 0%, #059669 100%){% endif %}; color: white; border: none; box-shadow: 0 10px 25px {% if days_until_expiry <= 3 %}rgba(239, 68, 68, 0.4){% elif days_until_expiry <= 7 %}rgba(245, 158, 11, 0.4){% else %}rgba(16, 185, 129, 0.4){% endif %}; transform: translateY(-4px);">
+            <div class="p-card-header" style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">
+                <div class="card-icon" style="background: rgba(255,255,255,0.2); color: white;"><i class="fas fa-hourglass-half"></i></div>
+                <h3 style="color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">Subscription Expiry</h3>
+            </div>
+            <div style="padding: 1.5rem; text-align: center;">
+                <div style="font-size: 3rem; font-weight: 800; line-height: 1; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                    {{ days_until_expiry }}
+                </div>
+                <div style="font-size: 1rem; font-weight: 500; opacity: 0.9; margin-top: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">
+                    Days Left
+                </div>
+                <div style="margin-top: 1rem; font-size: 0.85rem; opacity: 0.8; background: rgba(0,0,0,0.15); padding: 8px; border-radius: 8px;">
+                    Renews on: <strong>{{ customer.expires_at|date:"M d, Y" }}</strong>
+                </div>
+            </div>
+        </div>
+        {% endif %}
 
         <!-- Subscription Details Card -->
         <div class="p-card">
@@ -1515,5 +1539,19 @@ fetchRouterUplink();
 setInterval(fetchRouterUplink, 20000);
 {% endif %}
 </script>
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/serviceworker.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('ServiceWorker registration failed: ', error);
+                    });
+            });
+        }
+    </script>
 </body>
 </html>

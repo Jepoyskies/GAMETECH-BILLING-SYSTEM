@@ -843,10 +843,68 @@ function sendSingleAction(type) {
         }
     });
 
-    // Fetch live Mikrotik status asynchronously and poll every 5 seconds
+    // Include Chart.js before initializing it
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
     document.addEventListener("DOMContentLoaded", function() {
         const customerId = "{{ customer.id }}";
         
+        // 1. Initialize Chart.js First
+        const ctx = document.getElementById('liveTrafficChart').getContext('2d');
+        const trafficChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'Download (Mbps)',
+                        borderColor: '#38bdf8',
+                        backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        data: []
+                    },
+                    {
+                        label: 'Upload (Mbps)',
+                        borderColor: '#fbbf24',
+                        backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        data: []
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)'
+                    }
+                },
+                scales: {
+                    x: { display: false },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0,0,0,0.05)' },
+                        ticks: { font: { size: 10 } }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            }
+        });
+
+        // 2. Define and start Mikrotik Polling
         function fetchStatus() {
             fetch(`/customers/api/status/${customerId}/`)
                 .then(response => {
@@ -856,7 +914,6 @@ function sendSingleAction(type) {
                     return response.json();
                 })
                 .then(data => {
-                    // Update Status
                     const statusContainer = document.getElementById('mt-status-container');
                     if (data.mt_status === 'Connected') {
                         statusContainer.innerHTML = '<span class="text-success"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Connected</span>';
@@ -864,10 +921,8 @@ function sendSingleAction(type) {
                         statusContainer.innerHTML = '<span class="text-danger"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>' + (data.mt_status || 'Error') + '</span>';
                     }
 
-                    // Update MAC
                     document.getElementById('mt-live-mac').innerText = data.live_mac;
 
-                    // Handle Uptime/Last Logged Out Visibility
                     const uptimeContainer = document.getElementById('uptime-container');
                     const lastLoggedOutContainer = document.getElementById('last-logged-out-container');
 
@@ -876,12 +931,10 @@ function sendSingleAction(type) {
                         uptimeContainer.style.display = 'flex';
                         lastLoggedOutContainer.style.display = 'none';
                         
-                        // Update Live Bandwidth
                         if (data.rx_mbps !== undefined && data.tx_mbps !== undefined) {
                             document.getElementById('live-dl-val').innerHTML = data.rx_mbps + ' <span style="font-size: 0.9rem; font-weight: 600;">Mbps</span>';
                             document.getElementById('live-ul-val').innerHTML = data.tx_mbps + ' <span style="font-size: 0.9rem; font-weight: 600;">Mbps</span>';
                             
-                            // Update Chart
                             const now = new Date().toLocaleTimeString('en-US', { hour12: false, hour: "numeric", minute: "numeric", second: "numeric" });
                             
                             if (typeof trafficChart !== 'undefined' && trafficChart !== null) {
@@ -925,80 +978,13 @@ function sendSingleAction(type) {
                 });
         }
 
-        // Initial fetch
         fetchStatus();
-        
-        // Polling every 5 seconds
         setInterval(fetchStatus, 5000);
-    });
-</script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    // Initialize Chart.js
-    const ctx = document.getElementById('liveTrafficChart').getContext('2d');
-    const trafficChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: [
-                {
-                    label: 'Download (Mbps)',
-                    borderColor: '#38bdf8', // info color
-                    backgroundColor: 'rgba(56, 189, 248, 0.1)',
-                    borderWidth: 2,
-                    tension: 0.4,
-                    fill: true,
-                    data: []
-                },
-                {
-                    label: 'Upload (Mbps)',
-                    borderColor: '#fbbf24', // warning color
-                    backgroundColor: 'rgba(251, 191, 36, 0.1)',
-                    borderWidth: 2,
-                    tension: 0.4,
-                    fill: true,
-                    data: []
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    mode: 'index',
-                    intersect: false,
-                    backgroundColor: 'rgba(15, 23, 42, 0.9)'
-                }
-            },
-            scales: {
-                x: {
-                    display: false // Hide x-axis labels to look cleaner
-                },
-                y: {
-                    beginAtZero: true,
-                    grid: {
-                        color: 'rgba(0,0,0,0.05)'
-                    },
-                    ticks: {
-                        font: { size: 10 }
-                    }
-                }
-            },
-            interaction: {
-                mode: 'nearest',
-                axis: 'x',
-                intersect: false
-            }
-        }
-    });
 
-        // Auto-resolve Addon Request
+        // 3. Auto-resolve Addon Request
         const urlParams = new URLSearchParams(window.location.search);
         const resolveAddonId = urlParams.get('resolve_addon');
         if (resolveAddonId) {
-            // Send AJAX to resolve
             fetch('{% url "resolve_addon_request_api" %}', {
                 method: 'POST',
                 headers: {
@@ -1010,18 +996,13 @@ function sendSingleAction(type) {
             .then(res => res.json())
             .then(data => {
                 if(data.status === 'success') {
-                    // Highlight the Edit Profile button so admin remembers to add it
                     const editBtn = document.querySelector('a.btn-edit[href*="/edit/"]');
                     if(editBtn) {
                         editBtn.classList.remove('btn-edit');
                         editBtn.classList.add('bg-danger', 'text-white', 'pulse-animation');
                         editBtn.innerHTML = '<i class="fas fa-exclamation-circle"></i> Complete Add-on Here';
-                        
-                        // Show Bootstrap Toast or Alert
                         alert("Add-on Application processed!\nPlease click the 'Complete Add-on Here' button to update the customer's Cignal Play details.");
                     }
-                    
-                    // Clean URL
                     window.history.replaceState({}, document.title, window.location.pathname);
                 }
             });

@@ -163,4 +163,11 @@ urlpatterns = [
     
     # Changelog / System Updates
     path('changelog/', views.changelog_view, name='changelog'),
+    
+    # Xendit Integration
+    path('customer/<int:customer_id>/xendit/invoice/', views.create_xendit_invoice, name='create_xendit_invoice'),
+    path('webhooks/xendit/', views.xendit_webhook, name='xendit_webhook'),
+    
+    # Analytics
+    path('analytics/', views.analytics_dashboard, name='analytics_dashboard'),
 ]

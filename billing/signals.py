@@ -31,6 +31,7 @@ def track_customer_changes(sender, instance, **kwargs):
 
 @receiver(post_save, sender=Customer)
 def sync_customer_to_mikrotik(sender, instance, created, **kwargs):
+    if kwargs.get('raw'): return
     """
     Syncs the customer's PPPoE secret to their assigned Mikrotik device when saved.
     """
@@ -129,6 +130,7 @@ def sync_customer_to_mikrotik(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=Customer)
 def audit_customer_changes(sender, instance, created, **kwargs):
+    if kwargs.get('raw'): return
     """
     Logs changes to Customer fields into SystemLog for audit purposes.
     """
@@ -179,6 +181,7 @@ def audit_customer_changes(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=Customer)
 def notify_customer_status_change(sender, instance, created, **kwargs):
+    if kwargs.get('raw'): return
     """
     Creates a high-priority system notification when a customer is suspended or expired.
     """
@@ -219,6 +222,7 @@ from network_manager.models import MikrotikDevice
 
 @receiver(post_save, sender=SubscriptionPlan)
 def sync_plan_on_save(sender, instance, created, **kwargs):
+    if kwargs.get('raw'): return
     """
     When a SubscriptionPlan is saved in Django, push it to all active Mikrotik devices.
     If the name was changed, delete the old profile first.
@@ -263,6 +267,7 @@ from .models import EmployeeProfile
 
 @receiver(post_save, sender=User)
 def create_employee_profile(sender, instance, created, **kwargs):
+    if kwargs.get('raw'): return
     """
     Automatically create an EmployeeProfile when a new User is created.
     """

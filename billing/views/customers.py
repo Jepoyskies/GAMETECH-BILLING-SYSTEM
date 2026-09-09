@@ -647,11 +647,11 @@ def sms_view(request):
         return redirect('sms_messaging')
 
     search = request.GET.get('search', '')
-    customers = Customer.objects.exclude(username__isnull=True).exclude(username='')
+    customers = Customer.objects.exclude(pppoe_username__isnull=True).exclude(pppoe_username='')
     
     if search:
         customers = customers.filter(
-            Q(username__icontains=search) |
+            Q(pppoe_username__icontains=search) |
             Q(full_name__icontains=search) |
             Q(phone__icontains=search) |
             Q(address__icontains=search) |
@@ -690,7 +690,7 @@ def auto_suspend_view(request):
         errors = []
         
         # Group by device to minimize connections
-        customers_to_suspend = Customer.objects.filter(username__in=usernames).select_related('mikrotik_device')
+        customers_to_suspend = Customer.objects.filter(pppoe_username__in=usernames).select_related('mikrotik_device')
         device_users = {}
         for c in customers_to_suspend:
             if c.mikrotik_device:
@@ -701,11 +701,11 @@ def auto_suspend_view(request):
         for device, users in device_users.items():
             api = MikrotikAPI(device)
             for user in users:
-                success, msg = api.suspend_pppoe_user(user.username)
+                success, msg = api.suspend_pppoe_user(user.pppoe_username)
                 if success:
                     suspended_count += 1
                 else:
-                    errors.append(f"Failed to suspend {user.username}: {msg}")
+                    errors.append(f"Failed to suspend {user.pppoe_username}: {msg}")
                     
         if suspended_count > 0:
             messages.success(request, f'Successfully suspended {suspended_count} users.')
@@ -719,7 +719,7 @@ def auto_suspend_view(request):
     past_due_customers = Customer.objects.filter(
         expires_at__lte=timezone.now(),
         mikrotik_device__isnull=False
-    ).exclude(username__isnull=True).exclude(username='').select_related('mikrotik_device')
+    ).exclude(pppoe_username__isnull=True).exclude(pppoe_username='').select_related('mikrotik_device')
 
     display_customers = []
     

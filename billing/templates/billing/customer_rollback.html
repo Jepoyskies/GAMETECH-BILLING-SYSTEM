@@ -23,6 +23,18 @@
           <form method="post" autocomplete="off">
             {% csrf_token %}
             <div class="mb-3">
+              <label class="filter-label">Current Status</label>
+              {% if customer.status == 'active' %}
+                <div class="p-2 rounded" style="background:rgba(16,185,129,0.1); color:#10b981; font-weight:600; border:1px solid rgba(16,185,129,0.2);">
+                  <i class="fas fa-plug me-2"></i>Active (PPPoE Enabled)
+                </div>
+              {% else %}
+                <div class="p-2 rounded" style="background:rgba(239,68,68,0.1); color:#ef4444; font-weight:600; border:1px solid rgba(239,68,68,0.2);">
+                  <i class="fas fa-plug-circle-xmark me-2"></i>{{ customer.status|title }} (PPPoE Disabled)
+                </div>
+              {% endif %}
+            </div>
+            <div class="mb-3">
               <label class="filter-label">Current Expiry</label>
               <input type="text" class="form-control" value="{{ customer.expires_at|default:'N/A' }}" readonly style="background:rgba(220,38,38,0.05); border-color:rgba(220,38,38,0.2); color:#dc2626; font-weight:600;">
             </div>
