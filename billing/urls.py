@@ -88,7 +88,7 @@ urlpatterns = [
     path('api/online-staff/', views.online_staff_api, name='online_staff_api'),
     
     # Auth Extensions
-    path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
+    path('logout/', views.custom_logout_view, name='logout'),
     path('change-password/', auth_views.PasswordChangeView.as_view(
         template_name='billing/change_password.html',
         success_url='/profile/?password_changed=1'
