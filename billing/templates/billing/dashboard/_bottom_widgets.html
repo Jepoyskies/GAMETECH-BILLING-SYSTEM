@@ -1,0 +1,178 @@
+<!-- Dashboard Partial: Bottom Row Widgets -->
+  <!-- Bottom Row: Top Clients + Top Plans -->
+  <div class="row g-4 mb-4 animate-fade-in animate-delay-3">
+    <div class="col-12 col-lg-6">
+      <div class="glass-card no-hover p-5 h-100 bottom-card position-relative" data-bs-toggle="modal" data-bs-target="#recentLoginsModal" style="cursor: pointer;">
+        <button class="expand-btn p-2 rounded-lg transition duration-200 position-absolute top-0 end-0 m-2" title="Expand" style="pointer-events: auto;" data-bs-toggle="modal" data-bs-target="#recentLoginsModal">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" style="width: 20px; height: 20px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"></path>
+          </svg>
+        </button>
+        <div class="d-flex align-items-center mb-4">
+          <div class="d-flex align-items-center justify-content-center rounded-circle" style="width: 42px; height: 42px; background: #f1f5f9; color: #64748b; margin-right: 12px; font-size: 1.1rem;">
+            <i class="fas fa-shield-alt"></i>
+          </div>
+          <div class="fw-bold text-uppercase" style="color: #2151A1; font-size: 0.85rem; letter-spacing: 1px;">Recent Logins</div>
+        </div>
+        <div class="table-responsive limit-mobile-rows">
+          <table class="glass-table w-100">
+            <tbody>
+              {% for row in recent_admin_logins|slice:":5" %}
+              <tr style="border-bottom: 1px solid rgba(0,0,0,0.04);">
+                <td class="ps-3 py-3">
+                  <div class="d-flex align-items-center gap-3">
+                    <div class="avatar-circle flex-shrink-0" style="background: rgba(33, 81, 161, 0.1); color: #2151A1; width: 32px; height: 32px; font-size: 0.9rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                      {{ row.username|make_list|first|upper }}
+                    </div>
+                    <div>
+                      <div class="fw-semibold text-dark">{{ row.username }}</div>
+                      <div class="text-muted" style="font-size: 0.75rem;">{{ row.login_time|date:'M d, g:i A' }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="text-end pe-3 py-3">
+                  {% if row.event_type == 'login' %}
+                  <span class="premium-badge" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; font-size: 0.7rem; padding: 5px 10px;"><span class="glow-dot glow-primary"></span> Login</span>
+                  {% else %}
+                  <span class="premium-badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; font-size: 0.7rem; padding: 5px 10px;"><span class="glow-dot glow-success"></span> Active</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="2" class="text-center text-muted py-5">No recent activity.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Clients -->
+    <div class="col-12 col-lg-6">
+      <div class="glass-card no-hover p-5 h-100 bottom-card position-relative" data-bs-toggle="modal" data-bs-target="#topClientsModal" style="cursor: pointer;">
+        <button class="expand-btn p-2 rounded-lg transition duration-200 position-absolute top-0 end-0 m-2" title="Expand" style="pointer-events: auto;" data-bs-toggle="modal" data-bs-target="#topClientsModal">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" style="width: 20px; height: 20px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"></path>
+          </svg>
+        </button>
+        <div class="d-flex align-items-center justify-content-between mb-4">
+          <div class="d-flex align-items-center">
+            <div class="d-flex align-items-center justify-content-center rounded-circle" style="width: 42px; height: 42px; background: #f1f5f9; color: #64748b; margin-right: 12px; font-size: 1.1rem;">
+              <i class="fas fa-crown"></i>
+            </div>
+            <div class="fw-bold text-uppercase" style="color: #2151A1; font-size: 0.85rem; letter-spacing: 1px;">Top Clients</div>
+          </div>
+        </div>
+        <div class="table-responsive limit-mobile-rows">
+          <table class="glass-table w-100">
+            <thead>
+              <tr>
+                <th class="ps-3" style="font-size: 0.7rem;">Client</th>
+                <th class="text-end pe-3" style="font-size: 0.7rem;">Revenue</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in top_clients|slice:":5" %}
+              <tr style="border-bottom: 1px solid rgba(0,0,0,0.04);">
+                <td class="ps-3 py-4">
+                  <div class="fw-semibold text-dark">{{ c.username }}</div>
+                </td>
+                <td class="text-end pe-3 py-4 fw-bold" style="color: #2151A1;">&#8369;{{ c.total_paid|floatformat:0 }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="2" class="text-center py-5 opacity-50">No data available.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Popular Plans -->
+    <div class="col-12 col-lg-6">
+      <div class="glass-card no-hover p-5 h-100 bottom-card position-relative" data-bs-toggle="modal" data-bs-target="#popularPlansModal" style="cursor: pointer;">
+        <button class="expand-btn p-2 rounded-lg transition duration-200 position-absolute top-0 end-0 m-2" title="Expand" style="pointer-events: auto;" data-bs-toggle="modal" data-bs-target="#popularPlansModal">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" style="width: 20px; height: 20px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"></path>
+          </svg>
+        </button>
+        <div class="d-flex align-items-center mb-4">
+          <div class="d-flex align-items-center justify-content-center rounded-circle" style="width: 42px; height: 42px; background: #f1f5f9; color: #64748b; margin-right: 12px; font-size: 1.1rem;">
+            <i class="fas fa-wifi"></i>
+          </div>
+          <div class="fw-bold text-uppercase" style="color: #2151A1; font-size: 0.85rem; letter-spacing: 1px;">Popular Plans</div>
+        </div>
+        <div class="table-responsive limit-mobile-rows">
+          <table class="glass-table w-100">
+            <thead>
+              <tr>
+                <th class="ps-3" style="font-size: 0.7rem;">Plan</th>
+                <th class="text-end pe-3" style="font-size: 0.7rem;">Users</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in top_plans|slice:":5" %}
+              <tr style="border-bottom: 1px solid rgba(0,0,0,0.04);">
+                <td class="ps-3 py-4 fw-semibold text-dark">{{ p.plan_name }}</td>
+                <td class="text-end pe-3 py-4 fw-bold" style="color: #2151A1;">{{ p.cnt }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="2" class="text-center py-5 opacity-50">No data available.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Expiring Soon -->
+    <div class="col-12 col-lg-6">
+      <div class="glass-card no-hover p-5 h-100 bottom-card position-relative" data-bs-toggle="modal" data-bs-target="#expiringSoonModal" style="cursor: pointer;">
+        <button class="expand-btn p-2 rounded-lg transition duration-200 position-absolute top-0 end-0 m-2" title="Expand" style="pointer-events: auto;" data-bs-toggle="modal" data-bs-target="#expiringSoonModal">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" style="width: 20px; height: 20px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"></path>
+          </svg>
+        </button>
+        <div class="d-flex align-items-center mb-4">
+          <div class="d-flex align-items-center justify-content-center rounded-circle" style="width: 42px; height: 42px; background: #f1f5f9; color: #64748b; margin-right: 12px; font-size: 1.1rem;">
+            <i class="fas fa-clock"></i>
+          </div>
+          <div class="fw-bold text-uppercase" style="color: #2151A1; font-size: 0.85rem; letter-spacing: 1px;">Expiring Soon</div>
+        </div>
+        <div class="table-responsive limit-mobile-rows">
+          <table class="glass-table w-100">
+            <thead>
+              <tr>
+                <th class="ps-3" style="font-size: 0.7rem;">Client</th>
+                <th class="text-end pe-3" style="font-size: 0.7rem;">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for u in expiring_users|slice:":5" %}
+              <tr style="border-bottom: 1px solid rgba(0,0,0,0.04);">
+                <td class="ps-3 py-4">
+                  <div class="fw-semibold text-dark">{{ u.username }}</div>
+                  <div class="text-muted" style="font-size: 0.75rem;">{{ u.plan_name }}</div>
+                </td>
+                <td class="text-end pe-3 py-4">
+                  {% if u.is_expired %}
+                  <span class="premium-badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; font-size: 0.7rem; padding: 5px 10px;"><span class="glow-dot glow-danger"></span> Expired</span>
+                  {% else %}
+                  <span class="countdown fw-semibold" data-expire="{{ u.expires_at_epoch }}" style="font-size: 0.8rem; color: #f59e0b; font-family: monospace;"></span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="2" class="text-center py-5 opacity-50">
+                  <i class="fas fa-check-circle fa-lg mb-2 text-success"></i>
+                  <div style="font-size: 0.85rem;">All clear!</div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>

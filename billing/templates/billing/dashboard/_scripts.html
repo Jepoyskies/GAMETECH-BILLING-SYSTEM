@@ -1,0 +1,528 @@
+<!-- Dashboard Partial: All Dashboard JavaScript -->
+<script>
+  let revenueChart, planChart, dashboardChart;
+
+  function applyChartTheme() {
+    const isDark = document.documentElement.classList.contains('dark-mode');
+    Chart.defaults.color = isDark ? '#94a3b8' : '#64748b';
+    Chart.defaults.scale.grid.color = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+    
+    if (typeof dashboardChart !== 'undefined' && dashboardChart) {
+      const dsCtx = document.getElementById('dashboardSalesChart').getContext('2d');
+      let grad = dsCtx.createLinearGradient(0, 0, 0, 350);
+      if (isDark) {
+        grad.addColorStop(0, 'rgba(251, 174, 26, 0.4)');
+        grad.addColorStop(1, 'rgba(251, 174, 26, 0.02)');
+        dashboardChart.data.datasets[0].borderColor = '#fbae1a';
+        dashboardChart.data.datasets[0].pointBorderColor = '#fbae1a';
+      } else {
+        grad.addColorStop(0, 'rgba(33, 81, 161, 0.4)');
+        grad.addColorStop(1, 'rgba(33, 81, 161, 0.02)');
+        dashboardChart.data.datasets[0].borderColor = '#2151A1';
+        dashboardChart.data.datasets[0].pointBorderColor = '#2151A1';
+      }
+      dashboardChart.data.datasets[0].backgroundColor = grad;
+      dashboardChart.update();
+    }
+    return isDark;
+  }
+  window.addEventListener('themeChanged', applyChartTheme);
+  Chart.defaults.font.family = "'Outfit', sans-serif";
+  
+  // Register datalabels plugin globally but disable it by default
+  Chart.register(ChartDataLabels);
+  Chart.defaults.plugins.datalabels.display = false;
+
+  applyChartTheme();
+
+  const months = {{ months_js|safe|default:"[]" }};
+  const salesByMonth = {{ sales_by_month_js|safe|default:"[]" }};
+  const days = {{ days_js|safe|default:"[]" }};
+  const salesByDay = {{ sales_by_day_js|safe|default:"[]" }};
+  const pieLabels = {{ pie_labels_js|safe|default:"[]" }};
+  const pieData = {{ pie_data_js|safe|default:"[]" }};
+
+
+
+  // Dashboard Sales Overview Chart
+  const dsCtx = document.getElementById('dashboardSalesChart');
+  if (dsCtx) {
+    const isDarkInit = document.documentElement.classList.contains('dark-mode');
+    let initGrad = dsCtx.getContext('2d').createLinearGradient(0, 0, 0, 350);
+    if (isDarkInit) {
+      initGrad.addColorStop(0, 'rgba(251, 174, 26, 0.4)');
+      initGrad.addColorStop(1, 'rgba(251, 174, 26, 0.02)');
+    } else {
+      initGrad.addColorStop(0, 'rgba(33, 81, 161, 0.4)');
+      initGrad.addColorStop(1, 'rgba(33, 81, 161, 0.02)');
+    }
+
+    dashboardChart = new Chart(dsCtx.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: days,
+        datasets: [{
+          data: salesByDay,
+          fill: true,
+          backgroundColor: initGrad,
+          borderColor: isDarkInit ? '#fbae1a' : '#2151A1',
+          borderWidth: 3,
+          tension: 0.4,
+          pointBackgroundColor: '#ffffff',
+          pointBorderColor: isDarkInit ? '#fbae1a' : '#2151A1',
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 7
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+            titleFont: { size: 14, family: 'Outfit' },
+            bodyFont: { size: 14, family: 'Outfit' },
+            padding: 12,
+            cornerRadius: 12,
+            displayColors: false,
+            callbacks: { label: function (c) { return '₱ ' + c.parsed.y.toLocaleString(); } }
+          },
+          datalabels: {
+            display: true,
+            color: document.documentElement.classList.contains('dark-mode') ? '#e2e8f0' : '#1e293b',
+            font: { family: 'Outfit', weight: 'bold', size: 12 },
+            align: 'top',
+            offset: 8,
+            formatter: function(value) {
+              if (value >= 1000) {
+                return (value / 1000).toFixed(1) + 'k';
+              }
+              return value;
+            }
+          }
+        },
+        scales: {
+          y: { 
+            beginAtZero: true, 
+            border: { display: false },
+            grid: { color: 'rgba(0,0,0,0.05)', borderDash: [5, 5] },
+            ticks: { font: { family: 'Outfit' } }
+          },
+          x: { 
+            border: { display: false }, 
+            grid: { display: false },
+            ticks: { font: { family: 'Outfit' } }
+          }
+        },
+        interaction: { intersect: false, mode: 'index' }
+      }
+    });
+
+    // Toggle Filter Logic
+    document.querySelectorAll('.sales-toggle').forEach(radio => {
+      radio.addEventListener('change', function () {
+        if (this.value === '7d') {
+          dashboardChart.data.labels = days;
+          dashboardChart.data.datasets[0].data = salesByDay;
+        } else {
+          dashboardChart.data.labels = months;
+          dashboardChart.data.datasets[0].data = salesByMonth;
+        }
+        dashboardChart.update();
+      });
+    });
+  }
+
+  const revenueModalEl = document.getElementById('revenueModal');
+  if (revenueModalEl) {
+    revenueModalEl.addEventListener('shown.bs.modal', function () {
+
+      const ctx = document.getElementById('revenueMainChart');
+      if (ctx && !revenueChart) {
+        let gradBlue = ctx.getContext('2d').createLinearGradient(0, 0, 0, 400);
+        gradBlue.addColorStop(0, 'rgba(59, 130, 246, 0.8)');
+        gradBlue.addColorStop(1, 'rgba(59, 130, 246, 0.1)');
+
+        let gradGreen = ctx.getContext('2d').createLinearGradient(0, 0, 0, 400);
+        gradGreen.addColorStop(0, 'rgba(16, 185, 129, 0.8)');
+        gradGreen.addColorStop(1, 'rgba(16, 185, 129, 0.1)');
+
+        revenueChart = new Chart(ctx.getContext('2d'), {
+          type: 'line',
+          data: {
+            labels: months,
+            datasets: [{
+              label: 'Revenue',
+              data: salesByMonth,
+              fill: true,
+              backgroundColor: gradBlue,
+              borderColor: '#3b82f6',
+              borderWidth: 3,
+              tension: 0.4,
+              pointBackgroundColor: '#ffffff',
+              pointBorderColor: '#3b82f6',
+              pointBorderWidth: 2,
+              pointRadius: 4,
+              pointHoverRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                titleFont: { size: 14, family: 'Outfit' },
+                bodyFont: { size: 14, family: 'Outfit' },
+                padding: 12,
+                cornerRadius: 12,
+                displayColors: false,
+                callbacks: { label: function (c) { return '₱ ' + c.parsed.y.toLocaleString(); } }
+              }
+            },
+            scales: {
+              y: { beginAtZero: true, border: { display: false } },
+              x: { border: { display: false }, grid: { display: false } }
+            },
+            interaction: { intersect: false, mode: 'index' }
+          }
+        });
+
+        // Filter Logic
+        document.getElementById('btnrev12m').addEventListener('change', function () {
+          if (this.checked) {
+            document.getElementById('revenueChartTitle').innerText = 'Revenue (Last 12 Months)';
+            revenueChart.data.labels = months;
+            revenueChart.data.datasets[0].data = salesByMonth;
+            revenueChart.data.datasets[0].backgroundColor = gradBlue;
+            revenueChart.data.datasets[0].borderColor = '#3b82f6';
+            revenueChart.data.datasets[0].pointBorderColor = '#3b82f6';
+            revenueChart.update();
+          }
+        });
+
+        document.getElementById('btnrev7d').addEventListener('change', function () {
+          if (this.checked) {
+            document.getElementById('revenueChartTitle').innerText = 'Revenue (Last 7 Days)';
+            revenueChart.data.labels = days;
+            revenueChart.data.datasets[0].data = salesByDay;
+            revenueChart.data.datasets[0].backgroundColor = gradGreen;
+            revenueChart.data.datasets[0].borderColor = '#10b981';
+            revenueChart.data.datasets[0].pointBorderColor = '#10b981';
+            revenueChart.update();
+          }
+        });
+      }
+    });
+  }
+
+  // Handle Popular Plans filter changes
+  document.querySelectorAll('.popular-plans-filter').forEach(radio => {
+    radio.addEventListener('change', function() {
+      loadPopularPlans(this.value);
+    });
+  });
+
+  const popularPlansModalEl = document.getElementById('popularPlansModal');
+  if (popularPlansModalEl) {
+    popularPlansModalEl.addEventListener('show.bs.modal', function () {
+      document.getElementById('ppMonth').checked = true;
+      loadPopularPlans('month');
+    });
+  }
+
+  // Handle revenue period toggle in main chart.js
+  const radialCenterTextPlugin = {
+    id: 'radialCenterText',
+    beforeDraw(chart) {
+      if (chart.config.options.elements && chart.config.options.elements.center) {
+        const ctx = chart.ctx;
+        const centerConfig = chart.config.options.elements.center;
+        
+        ctx.save();
+        const centerX = (chart.chartArea.left + chart.chartArea.right) / 2;
+        const centerY = (chart.chartArea.top + chart.chartArea.bottom) / 2;
+
+        const isDark = document.documentElement.classList.contains('dark-mode');
+
+        // Draw Title
+        ctx.font = 'bold 36px Poppins, sans-serif';
+        ctx.fillStyle = isDark ? '#ffffff' : '#1e293b';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(centerConfig.title || '', centerX, centerY - 10);
+
+        // Draw Subtitle
+        ctx.font = '500 12px Montserrat, sans-serif';
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText(centerConfig.subtitle || '', centerX, centerY + 25);
+        
+        ctx.restore();
+      }
+    }
+  };
+  Chart.register(radialCenterTextPlugin);
+
+  let collectionChart;
+  const collectionModalEl = document.getElementById('collectionModal');
+  if (collectionModalEl) {
+    collectionModalEl.addEventListener('shown.bs.modal', function () {
+      const isDark = document.documentElement.classList.contains('dark-mode');
+      const emptyColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+      // Monochromatic sleek blues for Payment Method
+      const sleekBlues = ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe']; 
+
+      // 1. Overall Collection Rate Chart
+      const rateCtx = document.getElementById('collectionRateChart');
+      if (rateCtx && !collectionChart) {
+        const rateDataEl = document.getElementById('collectionRateData');
+        const rateVal = parseFloat(rateDataEl.getAttribute('data-rate'));
+        const subTxt = rateDataEl.getAttribute('data-subtitle');
+        
+        collectionChart = new Chart(rateCtx.getContext('2d'), {
+          type: 'doughnut',
+          data: {
+            labels: ['Collected', 'Pending'],
+            datasets: [{
+              data: [rateVal, 100 - rateVal],
+              backgroundColor: ['#2563eb', emptyColor],
+              borderWidth: 0,
+              borderRadius: [10, 0] // Rounded edges for the filled part
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false, cutout: '80%',
+            plugins: {
+              legend: { display: false },
+              tooltip: { enabled: false }
+            },
+            elements: {
+              center: { title: rateVal + '%', subtitle: subTxt }
+            }
+          }
+        });
+      }
+
+      // 2. By Payment Method Chart (salesPieChart)
+      const pieCtx = document.getElementById('salesPieChart');
+      if (pieCtx && pieLabels.length > 0 && !planChart) {
+        const pmDataEl = document.getElementById('paymentMethodData');
+        const subTxt = pmDataEl.getAttribute('data-subtitle');
+        
+        // Use total transactions or simply the count of labels
+        const total = pieData.reduce((a, b) => a + b, 0);
+
+        planChart = new Chart(pieCtx.getContext('2d'), {
+          type: 'doughnut',
+          data: {
+            labels: pieLabels,
+            datasets: [{
+              data: pieData,
+              backgroundColor: sleekBlues,
+              borderWidth: isDark ? 2 : 2,
+              borderColor: isDark ? '#1a1d24' : '#ffffff',
+              hoverOffset: 4
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false, cutout: '80%',
+            plugins: {
+              legend: { position: 'right', labels: { usePointStyle: true, padding: 15, font: { family: 'Poppins', size: 11 }, color: isDark ? '#cbd5e1' : '#475569' } }
+            },
+            elements: {
+              center: { title: total.toString(), subtitle: subTxt }
+            }
+          }
+        });
+      }
+    });
+  }
+
+  // Countdowns
+  function updateCountdowns() {
+    const now = Math.floor(Date.now() / 1000);
+    document.querySelectorAll('.countdown').forEach(el => {
+      const expire = parseInt(el.getAttribute('data-expire'), 10);
+      if (!isNaN(expire)) {
+        const diff = expire - now;
+        if (diff > 0) {
+          const d = Math.floor(diff / 86400);
+          const h = Math.floor((diff % 86400) / 3600);
+          if (d > 0) {
+            el.textContent = d + 'd ' + h + 'h';
+          } else {
+            const m = Math.floor((diff % 3600) / 60);
+            el.textContent = h + 'h ' + m + 'm';
+          }
+        } else { el.textContent = 'Expired'; }
+      }
+    });
+  }
+  setInterval(updateCountdowns, 1000); updateCountdowns();
+
+  // Digital Clock (Manila)
+  function updateDigitalClock() {
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const manila = new Date(utc + (3600000 * 8));
+    const pad = n => n < 10 ? '0' + n : n;
+    const clockEl = document.getElementById('live-clock-square');
+    if (clockEl) {
+      const date = manila.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      clockEl.textContent = `${date} ${pad(manila.getHours())}:${pad(manila.getMinutes())}:${pad(manila.getSeconds())}`;
+    }
+  }
+  setInterval(updateDigitalClock, 1000); updateDigitalClock();
+
+  // Dashboard-specific Sidebar Logo Swap
+  const sidebarLogo = document.querySelector('.sidebar-header img');
+  if (sidebarLogo) {
+    function updateSidebarLogo() {
+      sidebarLogo.src = document.documentElement.classList.contains('dark-mode')
+        ? "{% static 'assets/images/logo_white.png' %}"
+        : "{% static 'assets/images/logo_black.png' %}";
+    }
+    updateSidebarLogo();
+    new MutationObserver(updateSidebarLogo).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  }
+
+  // System Health Widget
+  function fetchSystemHealth() {
+    fetch("{% url 'api_downdetector_data' %}")
+      .then(r => r.json())
+      .then(data => {
+        const container = document.getElementById('system-health-widget-content');
+        if(!container) return;
+        
+        if(!data.services || data.services.length === 0) {
+            container.innerHTML = '<span class="text-muted w-100 text-center d-block py-2">No services monitored.</span>';
+            return;
+        }
+        
+        container.innerHTML = '';
+        data.services.forEach(s => {
+            let bgColor = '#10b981'; // Up
+            let icon = 'fa-check-circle';
+            let textColor = '#ffffff';
+            
+            if(s.status === 'Degraded') {
+                bgColor = '#f59e0b';
+                icon = 'fa-exclamation-triangle';
+                textColor = '#000000';
+            } else if(s.status === 'Down') {
+                bgColor = '#ef4444';
+                icon = 'fa-times-circle';
+            }
+            
+            const badge = document.createElement('div');
+            badge.className = 'd-flex align-items-center justify-content-between p-2 px-3 rounded shadow-sm';
+            badge.style.backgroundColor = bgColor;
+            badge.style.color = textColor;
+            badge.style.flex = '1 1 calc(25% - 0.5rem)';
+            badge.style.minWidth = '200px';
+            
+            badge.innerHTML = `
+                <div class="fw-bold" style="font-size: 0.9rem;">${s.name}</div>
+                <div class="d-flex align-items-center gap-2">
+                    <span style="font-size: 0.8rem; font-weight: 600;"><i class="fas ${icon} me-1"></i>${s.status}</span>
+                    <span style="font-size: 0.75rem; opacity: 0.8;">${s.latency_ms !== null ? s.latency_ms + 'ms' : '--'}</span>
+                </div>
+            `;
+            container.appendChild(badge);
+        });
+      })
+      .catch(err => console.error("Error fetching system health:", err));
+  }
+  
+  fetchSystemHealth();
+  setInterval(fetchSystemHealth, 30000);
+
+  // Fetch Top Clients for Modal
+  function loadTopClients(filterType) {
+    const tbody = document.getElementById('topClientsTbody');
+    tbody.innerHTML = '<tr><td colspan="3" class="text-center py-5 text-muted"><i class="fas fa-spinner fa-spin me-2"></i> Loading data...</td></tr>';
+    
+    fetch(`/api/top-clients/?filter=${filterType}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          tbody.innerHTML = '';
+          if (data.data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center py-5 text-muted">No revenue data found for this period.</td></tr>';
+            return;
+          }
+          data.data.forEach((client, index) => {
+            const html = `
+              <tr style="border-bottom: 1px solid rgba(0,0,0,0.04);">
+                <td class="ps-3 py-3">
+                  <div class="d-flex align-items-center gap-3">
+                    <div class="table-rank" style="width: 20px;">#${index + 1}</div>
+                    <div class="fw-semibold text-dark table-text-dark">${client.username}</div>
+                  </div>
+                </td>
+                <td class="py-3 text-muted" style="font-size: 0.85rem;">${client.plan_name}</td>
+                <td class="text-end pe-3 py-3 fw-bold table-value" style="color: #2151A1;">₱${client.total_paid.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+              </tr>
+            `;
+            tbody.insertAdjacentHTML('beforeend', html);
+          });
+        }
+      })
+      .catch(err => {
+        console.error('Error fetching top clients:', err);
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center py-5 text-danger">Error loading data.</td></tr>';
+      });
+  }
+
+  // Fetch Popular Plans for Modal
+  function loadPopularPlans(filterType) {
+    const tbody = document.getElementById('popularPlansTbody');
+    tbody.innerHTML = '<tr><td colspan="2" class="text-center py-5 text-muted"><i class="fas fa-spinner fa-spin me-2"></i> Loading data...</td></tr>';
+    
+    fetch(`/api/popular-plans/?filter=${filterType}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          tbody.innerHTML = '';
+          if (data.data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="2" class="text-center py-5 text-muted">No popular plans data found for this period.</td></tr>';
+            return;
+          }
+          data.data.forEach((plan, index) => {
+            const html = `
+              <tr style="border-bottom: 1px solid rgba(0,0,0,0.04);">
+                <td class="ps-3 py-4 d-flex align-items-center gap-3">
+                  <span class="table-rank">#${index + 1}</span>
+                  <span class="fw-semibold text-dark table-text-dark">${plan.plan_name}</span>
+                </td>
+                <td class="text-end pe-3 py-4 fw-bold table-value" style="color: #2151A1;">${plan.cnt}</td>
+              </tr>
+            `;
+            tbody.insertAdjacentHTML('beforeend', html);
+          });
+        }
+      })
+      .catch(err => {
+        console.error('Error fetching popular plans:', err);
+        tbody.innerHTML = '<tr><td colspan="2" class="text-center py-5 text-danger">Error loading data.</td></tr>';
+      });
+  }
+
+  document.querySelectorAll('.top-clients-filter').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      loadTopClients(e.target.value);
+    });
+  });
+
+  const topClientsModal = document.getElementById('topClientsModal');
+  if (topClientsModal) {
+    topClientsModal.addEventListener('show.bs.modal', () => {
+      // Load default checked filter (month)
+      const activeFilter = document.querySelector('.top-clients-filter:checked').value;
+      loadTopClients(activeFilter);
+    });
+  }
+</script>

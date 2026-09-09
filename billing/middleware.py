@@ -24,12 +24,14 @@ class ActiveUserMiddleware:
 
     def __call__(self, request):
         if request.user.is_authenticated:
-            if getattr(request.user, 'is_staff', False) or getattr(request.user, 'role', None) in ['Admin', 'Technician', 'CSR']:
-                cache_key = f'seen_user_{request.user.id}'
-                last_seen = cache.get(cache_key)
-                now = timezone.now()
-                if not last_seen or (now - last_seen).total_seconds() > 60:
-                    cache.set(cache_key, now, 60*60*24*30) # 30 days
+            # Ignore background polling endpoints to prevent artificial activity tracking
+            if not request.path.startswith('/api/') and '/network/health/' not in request.path:
+                if getattr(request.user, 'is_staff', False) or getattr(request.user, 'role', None) in ['Admin', 'Technician', 'CSR']:
+                    cache_key = f'seen_user_{request.user.id}'
+                    last_seen = cache.get(cache_key)
+                    now = timezone.now()
+                    if not last_seen or (now - last_seen).total_seconds() > 60:
+                        cache.set(cache_key, now, 60*60*24*30) # 30 days
 
         response = self.get_response(request)
         return response

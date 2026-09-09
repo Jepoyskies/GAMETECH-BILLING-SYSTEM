@@ -148,17 +148,22 @@ def dashboard_view(request):
     
     active_usernames = set()
     
+    from django.utils import timezone
+    now = timezone.now()
+    
     # 1. Get currently active users
     for u in recent_users:
         last_active = cache.get(f'seen_user_{u.id}')
         if last_active:
+            is_active = (now - last_active).total_seconds() < 300
             recent_admin_logins.append({
                 'username': u.username,
                 'color': '#0d6efd',
-                'event_type': 'active',
+                'event_type': 'active' if is_active else 'login',
                 'login_time': last_active
             })
-            active_usernames.add(u.username)
+            if is_active:
+                active_usernames.add(u.username)
             
     # 2. Get recent historical logins
     recent_logs = SystemLog.objects.filter(table_name='User', action='LOGIN').order_by('-changed_at')[:10]
