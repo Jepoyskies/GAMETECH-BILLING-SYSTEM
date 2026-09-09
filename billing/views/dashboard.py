@@ -143,12 +143,8 @@ def dashboard_view(request):
     recent_users = User.objects.filter(is_active=True).exclude(last_login__isnull=True)
     recent_admin_logins = []
     
-    from django.core.cache import cache
-    from billing.models import SystemLog
-    
     active_usernames = set()
     
-    from django.utils import timezone
     now = timezone.now()
     
     # 1. Get currently active users
