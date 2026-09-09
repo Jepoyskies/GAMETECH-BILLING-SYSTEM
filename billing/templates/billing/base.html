@@ -936,6 +936,23 @@ document.addEventListener("DOMContentLoaded", function() {
     
     // Fetch once on load to show badge
     setTimeout(fetchOnlineStaff, 2000);
+    // Poll every 5 seconds for a truly live list
+    setInterval(fetchOnlineStaff, 5000);
+
+    // Idle timeout: automatically log out after 5 minutes of inactivity
+    let idleTimeout;
+    function resetIdleTimeout() {
+        clearTimeout(idleTimeout);
+        idleTimeout = setTimeout(() => {
+            window.location.href = '/logout/';
+        }, 5 * 60 * 1000); // 5 minutes
+    }
+    
+    // Listen for any interaction to reset the timer
+    ['mousemove', 'mousedown', 'keypress', 'touchmove', 'scroll'].forEach(evt => {
+        document.addEventListener(evt, resetIdleTimeout, false);
+    });
+    resetIdleTimeout();
 });
 </script>
 {% block extra_js %}{% endblock %}

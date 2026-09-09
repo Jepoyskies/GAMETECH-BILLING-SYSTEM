@@ -1,0 +1,78 @@
+<!-- Dashboard Partial: Charts and Admin Logins Row -->
+  <!-- Charts + Admin Logins Row -->
+  <div class="row g-4 mb-4 align-items-stretch animate-fade-in animate-delay-3">
+    <div class="col-12 col-lg-8 d-flex flex-column gap-4">
+      <!-- Weekly Sales -->
+      <div class="dashboard-card flex-fill d-flex flex-column" style="overflow:hidden;">
+        <div class="section-header section-header-green">
+          <h6><i class="fas fa-chart-line sh-icon"></i> Sales (Last 7 Days)</h6>
+        </div>
+        <div class="chart-container flex-grow-1">
+          <canvas id="salesWeekChart"></canvas>
+        </div>
+      </div>
+      <!-- Payment Method Pie -->
+      <div class="dashboard-card flex-fill d-flex flex-column" style="overflow:hidden;">
+        <div class="section-header section-header-purple">
+          <h6><i class="fas fa-credit-card sh-icon"></i> Sales by Payment Method</h6>
+        </div>
+        <div class="chart-container flex-grow-1">
+          <canvas id="salesPieChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-4 d-flex">
+      <div class="dashboard-card flex-fill d-flex flex-column" style="overflow:hidden;">
+        <div class="section-header section-header-orange">
+          <h6><i class="fas fa-user-shield sh-icon"></i> Recent Admin Logins</h6>
+        </div>
+        <div class="table-responsive flex-grow-1">
+          <table class="table table-premium table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Event</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in recent_admin_logins %}
+              <tr>
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="av av-sm" style="background:{{ row.color|default:'#2151A1' }};">{{ row.username|make_list|first|upper }}</div>
+                    <span class="fw-semibold" style="font-size:0.83rem;">{{ row.username }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="pill {% if row.event_type == 'login' %}pill-active{% else %}pill-suspended{% endif %}">
+                    {{ row.event_type }}
+                  </span>
+                </td>
+                <td>
+                  <span class="text-muted" style="font-size:0.78rem;" title="{{ row.login_time|date:'l, F j, Y, g:i A' }}">
+                    {{ row.login_time|date:'M d g:i A' }}
+                  </span>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="3" class="text-center text-muted py-3">No login records found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <!-- System Uptime -->
+        <div class="card-footer-actions flex-shrink-0">
+          <div>
+            <div class="kpi-label mb-1">System Uptime</div>
+            <div class="kpi-value" id="uptime-display" style="font-size:1.1rem;">00:00:00</div>
+            <div class="kpi-sub" id="uptime-sub" style="font-size:0.7rem;"></div>
+          </div>
+          <button class="btn-premium btn-p-ghost" id="uptime-reset" title="Reset Uptime" style="padding:6px 12px; font-size:0.8rem;">
+            <i class="fas fa-redo"></i> Reset
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>

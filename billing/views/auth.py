@@ -329,10 +329,13 @@ def online_staff_api(request):
     # This might be <20 users, so iterating over them and checking cache is fast enough.
     staff_users = User.objects.all()
     
+    from django.utils import timezone
+    now = timezone.now()
+    
     data = []
     for u in staff_users:
-        # The ActiveUserMiddleware sets this cache key for 5 minutes when a user is active
-        if cache.get(f'seen_user_{u.id}'):
+        last_seen = cache.get(f'seen_user_{u.id}')
+        if last_seen and (now - last_seen).total_seconds() < 300:
             role = getattr(u, 'role', 'Staff')
             data.append({
                 'username': u.username,

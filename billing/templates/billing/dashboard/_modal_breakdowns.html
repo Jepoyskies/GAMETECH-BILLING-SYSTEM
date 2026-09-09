@@ -1,0 +1,97 @@
+<!-- Dashboard Partial: Revenue Breakdown Modals -->
+  <!-- Revenue Breakdowns Modals for each Period -->
+  {% for key, bd in breakdowns.items %}
+  <div class="modal fade" id="breakdownModal_{{ key }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content" style="background: transparent; border: none;">
+        <div class="glass-card w-100" style="border-radius: 28px;">
+          <div class="modal-header border-bottom-0 pb-3 px-4 pt-4">
+            <h4 class="modal-title fw-bold">
+              <i class="fas fa-search-dollar me-2 text-primary"></i> 
+              {% if key == 'today' %}Today's
+              {% elif key == 'yesterday' %}Yesterday's
+              {% elif key == 'week' %}This Week's
+              {% elif key == 'month' %}This Month's
+              {% elif key == 'year' %}This Year's
+              {% endif %} Revenue Breakdown
+            </h4>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body p-4">
+            <!-- Payment Methods Summary -->
+            <h6 class="fw-bold mb-3 text-muted text-uppercase">By Payment Method</h6>
+            <div class="row g-3 mb-4">
+              {% for m in bd.methods %}
+              <div class="col-12 col-md-4">
+                <div class="glass-card no-hover p-3 text-center" style="border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); box-shadow: none;">
+                  <div class="text-primary fw-bold mb-1" style="font-size: 0.75rem; text-transform: uppercase;">{{ m.payment_method }}</div>
+                  <h5 class="fw-bold text-primary mb-0">₱{{ m.total|floatformat:2 }}</h5>
+                </div>
+              </div>
+              {% empty %}
+              <div class="col-12 text-muted text-center py-2">No revenue data for this period.</div>
+              {% endfor %}
+            </div>
+
+            <!-- Recent Transactions Table -->
+            <h6 class="fw-bold mb-3 text-muted text-uppercase mt-2">Latest Transactions</h6>
+            
+            <!-- Desktop Table View -->
+            <div class="table-responsive d-none d-md-block">
+              <table class="glass-table mb-0" style="white-space: nowrap;">
+                <thead>
+                  <tr>
+                    <th class="ps-0">Customer</th>
+                    <th>Method</th>
+                    <th>Date & Time</th>
+                    <th class="text-end pe-0">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for r in bd.recent %}
+                  <tr>
+                    <td class="ps-0 fw-bold">{{ r.username }}</td>
+                    <td>
+                      <span class="premium-badge">
+                        <span class="glow-dot {% if r.method == 'Cash' %}glow-success{% elif r.method == 'GCash' %}glow-warning{% else %}glow-primary{% endif %}"></span>
+                        {{ r.method }}
+                      </span>
+                    </td>
+                    <td class="text-muted" style="font-size: 0.85rem;">{{ r.date|date:"M d, g:i A" }}</td>
+                    <td class="text-end pe-0 fw-bold text-success">₱{{ r.amount|floatformat:2 }}</td>
+                  </tr>
+                  {% empty %}
+                  <tr><td colspan="4" class="text-center py-4 opacity-50">No recent transactions.</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Mobile Card View -->
+            <div class="d-block d-md-none">
+              {% for r in bd.recent %}
+              <div class="mobile-tx-card">
+                <!-- Left Side: User & Method -->
+                <div>
+                  <div class="mobile-tx-user">{{ r.username }}</div>
+                  <div class="mobile-tx-badge">
+                    <span class="glow-dot {% if r.method == 'Cash' %}glow-success{% elif r.method == 'GCash' %}glow-warning{% else %}glow-primary{% endif %}" style="width: 8px; height: 8px;"></span>
+                    <span>{{ r.method }}</span>
+                  </div>
+                </div>
+                <!-- Right Side: Amount & Date -->
+                <div class="text-end">
+                  <div class="mobile-tx-amount">₱{{ r.amount|floatformat:2 }}</div>
+                  <div class="mobile-tx-date">{{ r.date|date:"M d, g:i A" }}</div>
+                </div>
+              </div>
+              {% empty %}
+              <div class="text-center py-4 opacity-50 text-muted">No recent transactions.</div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}

@@ -1,0 +1,62 @@
+<!-- Dashboard Partial: Expiring Soon Modal -->
+  <!-- Expiring Soon Modal -->
+  <div class="modal fade premium-modal" id="expiringSoonModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content" style="background: transparent; border: none;">
+        <div class="glass-card w-100" style="border-radius: 28px;">
+          <div class="modal-header border-bottom-0 pb-3 px-4 pt-4 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+              <div class="modal-icon-wrapper">
+                <i class="fa-solid fa-clock"></i>
+              </div>
+              <h4 class="modal-title fw-bold m-0">Expiring Soon</h4>
+            </div>
+            <button type="button" class="custom-close-btn" data-bs-dismiss="modal" aria-label="Close">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+          <div class="modal-body px-4 pb-4 pt-2">
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+              <table class="glass-table w-100">
+                <thead style="position: sticky; top: 0; background: rgba(255, 255, 255, 0.9); z-index: 1;">
+                  <tr>
+                    <th class="ps-3" style="font-size: 0.7rem;">Client</th>
+                    <th class="text-end pe-3" style="font-size: 0.7rem;">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for u in expiring_users|slice:":10" %}
+                  <tr style="border-bottom: 1px solid rgba(0,0,0,0.04);">
+                    <td class="ps-3 py-4">
+                      <div class="d-flex align-items-center gap-3">
+                        <span class="table-rank">#{{ forloop.counter }}</span>
+                        <div>
+                          <div class="fw-semibold text-dark table-text-dark">{{ u.username }}</div>
+                          <div class="text-muted" style="font-size: 0.75rem;">{{ u.plan_name }}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="text-end pe-3 py-4">
+                      {% if u.is_expired %}
+                      <span class="premium-badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; font-size: 0.7rem; padding: 5px 10px;"><span class="glow-dot glow-danger"></span> Expired</span>
+                      {% else %}
+                      <span class="countdown fw-semibold" data-expire="{{ u.expires_at_epoch }}" style="font-size: 0.8rem; color: #f59e0b; font-family: monospace;"></span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="2" class="text-center py-5 opacity-50">
+                      <i class="fas fa-check-circle fa-lg mb-2 text-success"></i>
+                      <div style="font-size: 0.85rem;">All clear!</div>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
