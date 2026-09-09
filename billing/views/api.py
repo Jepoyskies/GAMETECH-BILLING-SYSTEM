@@ -354,8 +354,26 @@ def api_customer_mikrotik_status(request, customer_id):
             for au in active_users:
                 if au.get('name') == customer.pppoe_username:
                     data['mt_status'] = "Connected"
-                    data['uptime'] = au.get('uptime', 'N/A')
+                    
+                    uptime_str = au.get('uptime', 'N/A')
+                    data['uptime'] = uptime_str
                     data['live_mac'] = au.get('caller-id', 'N/A')
+                    
+                    if 'w' in uptime_str:
+                        data['stability'] = "Excellent"
+                        data['stability_color'] = "success"
+                    elif 'd' in uptime_str:
+                        data['stability'] = "Good"
+                        data['stability_color'] = "primary"
+                    elif 'h' in uptime_str:
+                        data['stability'] = "Fine"
+                        data['stability_color'] = "info"
+                    elif 'm' in uptime_str or 's' in uptime_str:
+                        data['stability'] = "Unstable / Recent"
+                        data['stability_color'] = "warning"
+                    else:
+                        data['stability'] = ""
+                        data['stability_color'] = ""
                     
                     # Fetch bandwidth from cache to avoid blocking
                     from django.core.cache import cache

@@ -408,7 +408,10 @@
         <!-- Live Monitoring -->
         <div class="col-lg-6">
             <div class="info-card h-100 mb-0">
-                <h3 class="info-title"><i class="fas fa-satellite-dish text-success"></i> Live Monitoring</h3>
+                <h3 class="info-title">
+                    <i class="fas fa-satellite-dish text-success"></i> Live Monitoring
+                    <span id="live-stability-badge" class="badge ms-2" style="display:none; font-size: 0.75rem;"></span>
+                </h3>
                 <div class="live-monitor-box mb-3 shadow-sm" style="background: #1e3a8a; border-radius: 12px; padding: 25px 0; display: flex; text-align: center;">
                     <div class="monitor-metric border-end" style="border-color: rgba(255,255,255,0.2) !important; flex: 1;">
                         <div class="monitor-metric-title" style="color: #e2e8f0; font-size: 0.8rem; font-weight: bold; letter-spacing: 1px;"><i class="fas fa-download me-2"></i>DOWNLOAD</div>
@@ -942,11 +945,18 @@ function sendSingleAction(type) {
 
                     const uptimeContainer = document.getElementById('uptime-container');
                     const lastLoggedOutContainer = document.getElementById('last-logged-out-container');
+                    const stabilityBadge = document.getElementById('live-stability-badge');
 
                     if (data.mt_status === 'Connected') {
                         document.getElementById('mt-uptime').innerText = data.uptime;
                         uptimeContainer.style.display = 'flex';
                         lastLoggedOutContainer.style.display = 'none';
+                        
+                        if (data.stability && stabilityBadge) {
+                            stabilityBadge.innerText = data.stability;
+                            stabilityBadge.className = 'badge ms-2 bg-' + data.stability_color;
+                            stabilityBadge.style.display = 'inline-block';
+                        }
                         
                         if (data.rx_mbps !== undefined && data.tx_mbps !== undefined) {
                             document.getElementById('live-dl-val').innerHTML = data.rx_mbps + ' <span style="font-size: 0.9rem; font-weight: 600;">Mbps</span>';
@@ -969,6 +979,7 @@ function sendSingleAction(type) {
                             }
                         }
                     } else {
+                        if (stabilityBadge) stabilityBadge.style.display = 'none';
                         if (data.last_logged_out !== 'N/A') {
                             document.getElementById('mt-last-logged-out').innerText = data.last_logged_out;
                             lastLoggedOutContainer.style.display = 'flex';
