@@ -1,0 +1,83 @@
+<!-- Base Partial: Bulk Modals -->
+<!-- Bulk SMS Modal -->
+<div class="modal fade" id="bulkSmsModal" tabindex="-1" aria-labelledby="bulkSmsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header text-white" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 16px 16px 0 0;">
+                <h5 class="modal-title fw-bold" id="bulkSmsModalLabel"><i class="fas fa-comment-sms me-2"></i>Compose Bulk SMS</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted fw-bold mb-3">You are about to send an SMS to <span id="modalSelectedCount" class="text-success fs-5">0</span> customer(s).</p>
+                <div class="form-group">
+                    <label for="bulkSmsMessage" class="form-label fw-bold">Message</label>
+                    <textarea id="bulkSmsMessage" class="form-control" rows="5" placeholder="Type your message here..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-0" style="border-radius: 0 0 16px 16px;">
+                <button type="button" class="btn btn-secondary rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="btnSendBulkSms" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">Send Now <i class="fas fa-paper-plane ms-2"></i></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Bulk Email Modal -->
+    <div class="modal fade" id="bulkEmailModal" tabindex="-1" aria-labelledby="bulkEmailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                <div class="modal-header text-white" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 16px 16px 0 0;">
+                    <h5 class="modal-title fw-bold" id="bulkEmailModalLabel"><i class="fas fa-envelope me-2"></i>Compose Bulk Email</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted fw-bold mb-3">You are about to send an Email to <span id="modalSelectedEmailCount" class="text-warning fs-5">0</span> customer(s).</p>
+                    <div class="form-group mb-3">
+                        <label for="bulkEmailSubject" class="form-label fw-bold">Subject</label>
+                        <input type="text" id="bulkEmailSubject" class="form-control" placeholder="Type email subject...">
+                    </div>
+                    <div class="form-group">
+                        <label for="bulkEmailMessage" class="form-label fw-bold">Message</label>
+                        <textarea id="bulkEmailMessage" class="form-control" rows="5" placeholder="Type your message here..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0" style="border-radius: 0 0 16px 16px;">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="btnSendBulkEmail" class="btn btn-warning text-white rounded-pill px-4 fw-bold shadow-sm">Send Now <i class="fas fa-paper-plane ms-2"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Transfer Modal -->
+    <div class="modal fade" id="bulkTransferModal" tabindex="-1" aria-labelledby="bulkTransferModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title fw-bold" id="bulkTransferModalLabel"><i class="fas fa-exchange-alt me-2"></i>Transfer Router</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="bulkTransferForm" method="POST" action="{% url 'bulk_transfer_router' %}">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <p>You are about to transfer <strong id="transferCountDisplay">0</strong> customers to a new Mikrotik router. This will automatically delete their PPPoE secret on their old router and recreate it on the new router.</p>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Select Target Router</label>
+                            <select name="target_device_id" class="form-select" required>
+                                <option value="">-- Choose Router --</option>
+                                {% for device in devices %}
+                                <option value="{{ device.id }}">{{ device.device_name }} ({{ device.ip_address }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <!-- Hidden inputs for customer IDs will be appended here by JS -->
+                        <div id="transferCustomerInputs"></div>
+                    </div>
+                    <div class="modal-footer bg-light border-top-0">
+                        <button type="button" class="btn btn-secondary rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-info text-white rounded-pill px-4 fw-bold shadow-sm">Confirm Transfer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>

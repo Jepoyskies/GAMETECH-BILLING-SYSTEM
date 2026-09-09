@@ -1,0 +1,100 @@
+<!-- Base Partial: Sidebar -->
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <a href="#"><img src="{% static 'assets/images/logo_black.png' %}" alt="Logo"></a>
+        <button class="close-btn" id="closeSidebar" type="button">&times;</button>
+    </div>
+    <nav>
+        <ul id="sidebarNav" class="list-unstyled">
+            {% if request.user.role != 'Agent' %}
+            <li><a href="{% url 'dashboard' %}" class="menu-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"><span class="icon"><i class="fas fa-chart-pie"></i></span> <span>Dashboard</span></a></li>
+            <!-- Billing & CRM -->
+            <li>
+                <a href="#billingSubmenu" data-bs-toggle="collapse" aria-expanded="{% if 'customer' in request.resolver_match.url_name or 'subscription' in request.resolver_match.url_name or 'plan' in request.resolver_match.url_name or 'payment' in request.resolver_match.url_name %}true{% else %}false{% endif %}" class="menu-link dropdown-toggle {% if 'customer' in request.resolver_match.url_name or 'subscription' in request.resolver_match.url_name or 'plan' in request.resolver_match.url_name or 'payment' in request.resolver_match.url_name %}active{% endif %}">
+                    <span class="icon"><i class="fas fa-users"></i></span> <span>Billing & CRM</span>
+                </a>
+                <ul class="collapse list-unstyled {% if 'customer' in request.resolver_match.url_name or 'subscription' in request.resolver_match.url_name or 'plan' in request.resolver_match.url_name or 'payment' in request.resolver_match.url_name %}show{% endif %}" id="billingSubmenu" data-bs-parent="#sidebarNav">
+                    <li><a href="{% url 'customer_list' %}" class="menu-link sub-menu-link {% if 'customer' in request.resolver_match.url_name %}active{% endif %}"><span>Customers</span></a></li>
+                    <li><a href="{% url 'subscription_plans' %}" class="menu-link sub-menu-link {% if 'subscription' in request.resolver_match.url_name %}active{% endif %}"><span>Subscriptions</span></a></li>
+                    <li><a href="{% url 'plan_list' %}" class="menu-link sub-menu-link {% if 'plan' in request.resolver_match.url_name and 'subscription' not in request.resolver_match.url_name %}active{% endif %}"><span>Internet Plans</span></a></li>
+                    <li><a href="{% url 'add_on_payments' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'add_on_payments' %}active{% endif %}"><span>Payments</span></a></li>
+                    <li><a href="{% url 'payment_logs' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'payment_logs' %}active{% endif %}"><span>Payment logs</span></a></li>
+                </ul>
+            </li>
+            {% endif %}
+
+            {% if request.user.role in 'Admin,Technician,CSR' %}
+            <!-- Network Operations -->
+            <li>
+                <a href="#networkSubmenu" data-bs-toggle="collapse" aria-expanded="{% if request.resolver_match.url_name == 'live_monitoring' or request.resolver_match.url_name == 'downdetector' or 'device' in request.resolver_match.url_name or request.resolver_match.url_name == 'mikrotik_active_users' or request.resolver_match.url_name == 'geomap' %}true{% else %}false{% endif %}" class="menu-link dropdown-toggle {% if request.resolver_match.url_name == 'live_monitoring' or request.resolver_match.url_name == 'downdetector' or 'device' in request.resolver_match.url_name or request.resolver_match.url_name == 'mikrotik_active_users' or request.resolver_match.url_name == 'geomap' %}active{% endif %}">
+                    <span class="icon"><i class="fa-solid fa-network-wired"></i></span> <span>Network Ops</span>
+                </a>
+                <ul class="collapse list-unstyled {% if request.resolver_match.url_name == 'live_monitoring' or request.resolver_match.url_name == 'downdetector' or 'device' in request.resolver_match.url_name or request.resolver_match.url_name == 'mikrotik_active_users' or request.resolver_match.url_name == 'geomap' or 'winbox' in request.resolver_match.url_name %}show{% endif %}" id="networkSubmenu" data-bs-parent="#sidebarNav">
+                    <li><a href="{% url 'live_monitoring' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'live_monitoring' %}active{% endif %}"><span>Live Monitoring</span></a></li>
+                    <li><a href="{% url 'downdetector' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'downdetector' %}active{% endif %}"><span>Downdetector</span></a></li>
+                    <li><a href="{% url 'device_list' %}" class="menu-link sub-menu-link {% if 'device' in request.resolver_match.url_name %}active{% endif %}"><span>Mikrotik Devices</span></a></li>
+                    <li><a href="{% url 'mikrotik_active_users' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'mikrotik_active_users' %}active{% endif %}"><span>Active Users</span></a></li>
+                    <li><a href="{% url 'geomap' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'geomap' %}active{% endif %}"><span>GeoMap</span></a></li>
+                    <li><a href="{% url 'winbox_routers' %}" class="menu-link sub-menu-link {% if 'winbox' in request.resolver_match.url_name %}active{% endif %}"><span>Winbox Dashboard</span></a></li>
+                </ul>
+            </li>
+            {% endif %}
+            
+            {% if request.user.role in 'Admin,Technician,CSR' %}
+            <!-- Dispatch System -->
+            <li>
+                <a href="#dispatchSubmenu" data-bs-toggle="collapse" aria-expanded="{% if 'dispatch' in request.path or 'internet-install' in request.path or 'cignal-install' in request.path or 'client-concerns' in request.path %}true{% else %}false{% endif %}" class="menu-link dropdown-toggle {% if 'dispatch' in request.path or 'internet-install' in request.path or 'cignal-install' in request.path or 'client-concerns' in request.path %}active{% endif %}">
+                    <span class="icon"><i class="fas fa-truck-fast"></i></span> <span>Dispatch System</span>
+                </a>
+                <ul class="collapse list-unstyled {% if 'dispatch' in request.path or 'internet-install' in request.path or 'cignal-install' in request.path or 'client-concerns' in request.path or 'audit-log' in request.path or 'management' in request.path %}show{% endif %}" id="dispatchSubmenu" data-bs-parent="#sidebarNav">
+                    <li><a href="{% url 'dispatch_dashboard' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'dispatch_dashboard' %}active{% endif %}"><span>Dashboard</span></a></li>
+                    <li><a href="{% url 'dispatch_monitoring' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'dispatch_monitoring' %}active{% endif %}"><span>Master Log</span></a></li>
+                    <li><a href="{% url 'internet_install' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'internet_install' %}active{% endif %}"><span>Internet Install</span></a></li>
+                    <li><a href="{% url 'cignal_install' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'cignal_install' %}active{% endif %}"><span>Cignal Play</span></a></li>
+                    <li><a href="{% url 'client_concerns' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'client_concerns' %}active{% endif %}"><span>Client Concerns</span></a></li>
+                    
+                    <div class="p-2 text-white opacity-50 mt-2" style="font-size:0.7rem; text-transform: uppercase; margin-left: 20px;">Directory</div>
+                    <li><a href="{% url 'customer_list' %}" class="menu-link sub-menu-link"><span>Customer</span></a></li>
+                    
+                    <div class="p-2 text-white opacity-50 mt-2" style="font-size:0.7rem; text-transform: uppercase; margin-left: 20px;">System</div>
+                    <li><a href="{% url 'dispatch_management' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'dispatch_management' %}active{% endif %}"><span>Management</span></a></li>
+                    <li><a href="{% url 'audit_log' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'audit_log' %}active{% endif %}"><span>Audit Log</span></a></li>
+                </ul>
+            </li>
+            {% endif %}
+            
+            {% if request.user.role == 'Admin' %}
+            <!-- Administration -->
+            <li>
+                <a href="#adminSubmenu" data-bs-toggle="collapse" aria-expanded="{% if 'agent' in request.path or request.resolver_match.url_name == 'system_logs' or request.resolver_match.url_name == 'settings' or request.resolver_match.url_name == 'admin_panel' or request.resolver_match.url_name == 'improvement_requests_list' %}true{% else %}false{% endif %}" class="menu-link dropdown-toggle {% if 'agent' in request.path or request.resolver_match.url_name == 'system_logs' or request.resolver_match.url_name == 'settings' or request.resolver_match.url_name == 'admin_panel' or request.resolver_match.url_name == 'improvement_requests_list' %}active{% endif %}">
+                    <span class="icon"><i class="fas fa-cogs"></i></span> <span>Administration</span>
+                </a>
+                <ul class="collapse list-unstyled {% if 'agent' in request.path or request.resolver_match.url_name == 'system_logs' or request.resolver_match.url_name == 'settings' or request.resolver_match.url_name == 'admin_panel' or request.resolver_match.url_name == 'improvement_requests_list' %}show{% endif %}" id="adminSubmenu" data-bs-parent="#sidebarNav">
+                    <li><a href="{% url 'agent_list' %}" class="menu-link sub-menu-link {% if 'agent' in request.path %}active{% endif %}"><span>Agents</span></a></li>
+                    <li><a href="{% url 'system_logs' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'system_logs' %}active{% endif %}"><span>Logs</span></a></li>
+                    <li><a href="{% url 'settings' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'settings' %}active{% endif %}"><span>Settings</span></a></li>
+                    <li><a href="{% url 'admin_panel' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'admin_panel' %}active{% endif %}"><span>Admin Panel</span></a></li>
+                    <li>
+                        <a href="{% url 'improvement_requests_list' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'improvement_requests_list' %}active{% endif %}">
+                            <span>Improvement Requests</span>
+                            <span class="ms-1" style="font-size:0.6rem;background:#7c3aed;color:white;border-radius:8px;padding:1px 5px;">NEW</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+            {% endif %}
+            
+        </ul>
+    </nav>
+    <div class="sidebar-footer mt-auto" style="padding: 1rem; padding-bottom: 0.5rem;">
+        <form action="{% url 'logout' %}" method="post" class="m-0 p-0" onsubmit="return confirm('Are you sure you want to log out?');">
+            {% csrf_token %}
+            <button type="submit" class="menu-link logout-btn w-100 text-start" style="background:none; border:none; border-radius: 8px;">
+                <span class="icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></span> <span>Logout</span>
+            </button>
+        </form>
+        <div class="text-center mt-3 mb-1">
+            <small style="color: #9ca3af; font-size: 0.75rem;">&copy; {% now 'Y' %} Gametech Unli Fiber</small>
+        </div>
+    </div>
+</div>

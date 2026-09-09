@@ -1,0 +1,319 @@
+<!-- Base Partial: Scripts -->
+<!-- Bootstrap + Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+
+{% if messages %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    {% for message in messages %}
+    Swal.fire({
+        title: '{% if message.tags == "success" %}Success!{% elif message.tags == "error" %}Error!{% else %}Notice{% endif %}',
+        text: '{{ message|escapejs }}',
+        icon: '{{ message.tags }}' === 'error' ? 'error' : '{{ message.tags }}' === 'success' ? 'success' : 'info',
+        background: document.documentElement.getAttribute('data-theme') === 'dark' ? '#111827' : '#fff',
+        color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#e2e8f0' : '#0f172a',
+        confirmButtonColor: '#facc15',
+        confirmButtonText: 'Got it!',
+    });
+    {% endfor %}
+});
+</script>
+{% endif %}
+
+<script>
+/* ============================================================
+   THEME TOGGLE
+   ============================================================ */
+(function() {
+    const btn = document.getElementById('themeToggle');
+    const root = document.documentElement;
+
+    function applyTheme(theme) {
+        root.setAttribute('data-theme', theme);
+        localStorage.setItem('gt-portal-theme', theme);
+        
+        // Handle logo swap
+        const navbarLogo = document.getElementById('navbar-logo');
+        if (navbarLogo) {
+            navbarLogo.src = (theme === 'dark') ? "{% static 'assets/images/logo_white.png' %}" : "{% static 'assets/images/logo_black.png' %}";
+        }
+    }
+
+    if (btn) {
+        btn.addEventListener('click', function() {
+            const current = root.getAttribute('data-theme') || 'dark';
+            applyTheme(current === 'dark' ? 'light' : 'dark');
+        });
+    }
+
+    // Apply logo color on page load based on current theme
+    const currentTheme = root.getAttribute('data-theme') || 'dark';
+    const navbarLogo = document.getElementById('navbar-logo');
+    if (navbarLogo) {
+        navbarLogo.src = (currentTheme === 'dark') ? "{% static 'assets/images/logo_white.png' %}" : "{% static 'assets/images/logo_black.png' %}";
+    }
+})();
+
+/* ============================================================
+   ADDON MODAL
+   ============================================================ */
+let currentAddonSelection = '';
+function applyForAddon(addonType) {
+    currentAddonSelection = addonType;
+    document.getElementById('addonModalTypeTitle').textContent = addonType;
+    const iconContainer = document.getElementById('addonIconContainer');
+    const icon = document.getElementById('addonIcon');
+    if (addonType.includes('Play')) {
+        document.getElementById('addonModalDescPlay').style.display = 'block';
+        document.getElementById('addonModalDescBox').style.display = 'none';
+        iconContainer.style.background = 'linear-gradient(135deg,#06b6d4,#3b82f6)';
+        iconContainer.style.boxShadow = '0 10px 25px rgba(6,182,212,0.35)';
+        icon.className = 'fas fa-mobile-alt text-white';
+    } else {
+        document.getElementById('addonModalDescPlay').style.display = 'none';
+        document.getElementById('addonModalDescBox').style.display = 'block';
+        iconContainer.style.background = 'linear-gradient(135deg,#f59e0b,#ef4444)';
+        iconContainer.style.boxShadow = '0 10px 25px rgba(245,158,11,0.35)';
+        icon.className = 'fas fa-hdd text-white';
+    }
+    new bootstrap.Modal(document.getElementById('addonModal')).show();
+}
+
+function submitAddonRequest() {
+    if (!currentAddonSelection) return;
+    const btn = document.getElementById('addonConfirmBtn');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending...';
+    btn.disabled = true;
+    fetch('{% url "customer_portal:portal_apply_addon" %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({ addon_type: currentAddonSelection })
+    })
+    .then(r => r.json())
+    .then(data => {
+        bootstrap.Modal.getInstance(document.getElementById('addonModal'))?.hide();
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        Swal.fire({
+            title: data.status === 'success' ? 'Application Sent!' : 'Error!',
+            text: data.status === 'success' ? `Your request for ${currentAddonSelection} has been sent!` : data.message,
+            icon: data.status === 'success' ? 'success' : 'error',
+            background: isDark ? '#111827' : '#fff',
+            color: isDark ? '#e2e8f0' : '#0f172a',
+            confirmButtonColor: '#facc15',
+        });
+    })
+    .catch(() => {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        Swal.fire({ title:'Error!', text:'An error occurred. Please try again.', icon:'error', background: isDark?'#111827':'#fff', color: isDark?'#e2e8f0':'#0f172a', confirmButtonColor:'#ef4444' });
+    })
+    .finally(() => { btn.innerHTML = orig; btn.disabled = false; });
+}
+
+/* ============================================================
+   PAYMENT MODAL LOGIC
+   ============================================================ */
+function handlePaymentClick() {
+    const balance = parseFloat("{{ customer.outstanding_balance|default:'0' }}");
+    const dueDate = "{{ customer.expires_at|date:'M d, Y' }}";
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    if (balance <= 0) {
+        Swal.fire({
+            title: 'Advance Payment?',
+            text: `You are paid up until ${dueDate}. A payment now will extend your subscription further. Proceed?`,
+            icon: 'question',
+            showCancelButton: true,
+            background: isDark ? '#111827' : '#fff',
+            color: isDark ? '#e2e8f0' : '#0f172a',
+            confirmButtonColor: '#facc15',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Yes, extend!',
+        }).then(r => { if (r.isConfirmed) new bootstrap.Modal(document.getElementById('mockPaymentModal')).show(); });
+    } else {
+        new bootstrap.Modal(document.getElementById('mockPaymentModal')).show();
+    }
+}
+
+function handleUpgradeClick() {
+    new bootstrap.Modal(document.getElementById('mockPaymentModal')).show();
+    setTimeout(() => {
+        const sel = document.getElementById('plan-select-btn');
+        if (sel) { sel.click(); }
+    }, 400);
+}
+
+/* ============================================================
+   PAYMENT MODAL — QUICK GRID MATH & PLAN MODAL
+   ============================================================ */
+document.addEventListener('DOMContentLoaded', function() {
+    let monthlyPrice = parseFloat("{{ customer.plan.price|default:0 }}");
+    const amountInput = document.getElementById('amountInput');
+    const qBtns = document.querySelectorAll('.q-btn');
+    const hiddenPlanInput = document.getElementById('hidden_new_plan_id');
+    const planSelectBtnText = document.getElementById('selected-plan-text');
+
+    function updatePrices() {
+        const daily = monthlyPrice / 30;
+        document.querySelectorAll('.calc-price').forEach(el => {
+            if (el.dataset.days)  el.textContent = (daily * parseInt(el.dataset.days)).toFixed(2);
+            if (el.dataset.mult)  el.textContent = (monthlyPrice * parseInt(el.dataset.mult)).toFixed(2);
+        });
+    }
+
+    updatePrices();
+    
+    // Setup Expiration Estimator
+    const estimatedNextExpiration = document.getElementById('estimatedNextExpiration');
+    const origDateStr = "{% if customer.expires_at %}{{ customer.expires_at|date:'Y-m-d' }}{% else %}{% now 'Y-m-d' %}{% endif %}";
+
+    function recalculateEstimatedExpiration() {
+        if (!estimatedNextExpiration) return;
+        const val = parseFloat(amountInput.value) || 0;
+        const dailyRate = monthlyPrice / 30;
+        let daysToAdd = 0;
+        if (dailyRate > 0) {
+            daysToAdd = Math.floor(val / dailyRate);
+        }
+        
+        let d = new Date(origDateStr);
+        if (isNaN(d.getTime())) { d = new Date(); }
+        d.setDate(d.getDate() + daysToAdd);
+        
+        estimatedNextExpiration.textContent = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    // Recalculate on manual typing
+    amountInput.addEventListener('input', recalculateEstimatedExpiration);
+
+    qBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            qBtns.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            if (this.id === 'btn-custom') { 
+                amountInput.value = ''; 
+                amountInput.focus(); 
+                recalculateEstimatedExpiration();
+                return; 
+            }
+            const calcEl = this.querySelector('.calc-price');
+            if (calcEl) {
+                amountInput.value = parseFloat(calcEl.textContent).toFixed(2);
+                recalculateEstimatedExpiration();
+            }
+        });
+    });
+
+    // Run once on load for the default selected grid button (1 Month)
+    recalculateEstimatedExpiration();
+
+    document.querySelectorAll('.select-plan-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const planId = this.getAttribute('data-id');
+            const planPrice = this.getAttribute('data-price');
+            const planName = this.getAttribute('data-name');
+            
+            if (hiddenPlanInput) hiddenPlanInput.value = planId;
+            monthlyPrice = parseFloat(planPrice) || 0;
+            
+            if (planSelectBtnText) planSelectBtnText.innerHTML = planName + ' — ₱' + monthlyPrice.toFixed(2) + '/mo';
+            
+            document.querySelectorAll('.plan-card').forEach(card => {
+                card.style.boxShadow = 'none';
+                const cardBtn = card.querySelector('.select-plan-btn');
+                if (cardBtn) {
+                    cardBtn.innerHTML = 'Select Plan';
+                    cardBtn.style.background = 'var(--p-input-bg)';
+                    cardBtn.style.color = 'var(--p-text)';
+                    cardBtn.style.borderColor = 'var(--p-input-border)';
+                }
+            });
+            const myCard = this.closest('.plan-card');
+            myCard.style.boxShadow = '0 0 0 2px #10b981';
+            this.innerHTML = '<i class="fas fa-check-circle me-1"></i> Selected';
+            this.style.background = '#10b981';
+            this.style.color = '#fff';
+            this.style.borderColor = '#10b981';
+            
+            updatePrices();
+            
+            const activeBtn = document.querySelector('.q-btn.active');
+            if (activeBtn && activeBtn.id !== 'btn-custom') activeBtn.click();
+        });
+    });
+
+    // Form submit loading state
+    const form = document.getElementById('portalPaymentForm');
+    if (form) form.addEventListener('submit', function() {
+        const btn = this.querySelector('button[type="submit"]');
+        if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...'; btn.disabled = true; }
+    });
+});
+
+/* ============================================================
+   ROUTER UPLINK LIVE CHECK
+   ============================================================ */
+{% if customer.mikrotik_device %}
+function fetchRouterUplink() {
+    const statusEl = document.getElementById('connection-status-text');
+    if (statusEl?.getAttribute('data-is-positive') === 'false') return;
+    const syncIcon = document.getElementById('uplink-sync-icon');
+    if (syncIcon) syncIcon.style.display = 'inline-block';
+
+    function setOffline() {
+        const s = document.getElementById('connection-status-text');
+        const c = document.getElementById('connection-monitoring-card');
+        const ico = document.getElementById('connection-monitoring-icon');
+        const ping = document.getElementById('uplinkPing');
+        if (s) { s.textContent = 'OFFLINE'; s.style.color = '#ef4444'; }
+        if (c) c.style.borderLeftColor = '#ef4444';
+        if (ico) ico.style.color = '#ef4444';
+        if (ping) ping.textContent = 'Ping: Error';
+        document.getElementById('original-message-container').style.display = 'none';
+        document.getElementById('offline-message-container').style.display = 'block';
+    }
+
+    fetch('{% url "customer_portal:portal_router_uplink_api" %}')
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const s = document.getElementById('connection-status-text');
+                const ping = document.getElementById('uplinkPing');
+                const c = document.getElementById('connection-monitoring-card');
+                const ico = document.getElementById('connection-monitoring-icon');
+                if (ping) ping.textContent = 'Ping: ' + (data.uplink_ping || '--');
+                if (data.uplink_status === 'Offline') { setOffline(); return; }
+                if (s) {
+                    const orig = s.getAttribute('data-original-status');
+                    s.textContent = orig;
+                    let col = '#f59e0b';
+                    if (['Strong','Excellent','Good','Stable'].includes(orig)) col = '#10b981';
+                    else if (['Low','Poor','Outage','Offline'].includes(orig)) col = '#ef4444';
+                    s.style.color = col;
+                    if (c) c.style.borderLeftColor = col;
+                    if (ico) ico.style.color = col;
+                }
+                document.getElementById('original-message-container').style.display = 'block';
+                document.getElementById('offline-message-container').style.display = 'none';
+            } else { setOffline(); }
+        })
+        .catch(() => setOffline())
+        .finally(() => setTimeout(() => { if(syncIcon) syncIcon.style.display = 'none'; }, 1000));
+}
+fetchRouterUplink();
+setInterval(fetchRouterUplink, 20000);
+{% endif %}
+</script>
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/serviceworker.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('ServiceWorker registration failed: ', error);
+                    });
+            });
+        }

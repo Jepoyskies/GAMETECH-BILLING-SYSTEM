@@ -1,0 +1,110 @@
+<!-- Base Partial: Right Column -->
+    <!-- ===== RIGHT COLUMN ===== -->
+    <div class="right-col">
+
+        <!-- PAY NOW + Upgrade -->
+        <div style="margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 0.65rem;">
+            <button class="btn-pay-primary" onclick="handlePaymentClick()">
+                <i class="fas fa-bolt"></i> PAY BILL NOW
+            </button>
+            <button class="btn-outline-portal" onclick="handleUpgradeClick()">
+                <i class="fas fa-arrow-up"></i> Upgrade Service Plan
+            </button>
+        </div>
+
+        <!-- Service Disruptions -->
+        {% if issue_services %}
+        <div class="net-alert critical mb-3" style="border-left-color: #f59e0b; background: rgba(245,158,11,0.05);">
+            <h4 style="color:#fbbf24;">
+                <i class="fas fa-globe me-2"></i>Service Disruptions
+            </h4>
+            <p style="margin-bottom: 8px;">The following popular services are currently experiencing issues globally. This is an issue with their servers and not your internet connection.</p>
+            <ul style="list-style: none; padding: 0; margin: 0; font-size: 0.85rem; color: var(--p-text);">
+                {% for s in issue_services %}
+                <li style="margin-bottom: 4px;">
+                    <i class="{% if s.service_type == 'Game' %}fas fa-gamepad{% else %}fas fa-globe{% endif %} me-1 text-muted"></i>
+                    <strong>{{ s.name }}</strong> is <span class="{% if s.status == 'Down' %}text-danger{% else %}text-warning{% endif %}">{{ s.status|lower }}</span> 
+                    <span class="text-muted small">({{ s.latency_ms|default:"timeout" }} ms)</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Network Alerts -->
+        {% if customer.mikrotik_device and customer.mikrotik_device.health_status != 'Excellent' %}
+        <div class="net-alert {% if customer.mikrotik_device.health_status in 'Outage,Offline' %}critical{% endif %}">
+            <h4 style="color:{% if customer.mikrotik_device.health_status == 'Outage' or customer.mikrotik_device.health_status == 'Offline' %}#f87171{% else %}#fbbf24{% endif %};">
+                <i class="fas fa-server me-2"></i>Network Alert – {{ customer.mikrotik_device.health_status }}
+            </h4>
+            <p>{{ customer.mikrotik_device.health_reason|default:"We are currently experiencing a network issue in your area." }}</p>
+        </div>
+        {% elif customer.barangay and customer.barangay.health_status != 'Excellent' %}
+        <div class="net-alert {% if customer.barangay.health_status in 'Outage,Offline' %}critical{% endif %}">
+            <h4 style="color:{% if customer.barangay.health_status == 'Outage' or customer.barangay.health_status == 'Offline' %}#f87171{% else %}#fbbf24{% endif %};">
+                <i class="fas fa-map-marker-alt me-2"></i>Area Alert – {{ customer.barangay.name }}
+            </h4>
+            <p>{{ customer.barangay.health_reason|default:"Network issue reported in your area." }}</p>
+        </div>
+        {% elif customer.health_status != 'Excellent' %}
+        <div class="net-alert {% if customer.health_status in 'Outage,Offline,Poor' %}critical{% endif %}">
+            <h4 style="color:{% if customer.health_status == 'Outage' or customer.health_status == 'Offline' %}#f87171{% elif customer.health_status == 'Poor' %}#fb923c{% else %}#fbbf24{% endif %};">
+                <i class="fas fa-exclamation-triangle me-2"></i>Connection Alert – {{ customer.health_status }}
+            </h4>
+            <p>{{ customer.health_reason|default:"We have detected an issue with your connection." }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Connection Quality -->
+        <div class="p-card" id="connection-monitoring-card" style="border-left: 4px solid {% if effective_status in 'Strong,Excellent,Good,Stable' %}#10b981{% elif effective_status in 'Low,Poor,Outage,Offline' %}#ef4444{% else %}#f59e0b{% endif %};">
+            <div class="p-card-header">
+                <div class="card-icon icon-cyan"><i class="fas fa-chart-line" id="connection-monitoring-icon"></i></div>
+                <h3>Connection Quality</h3>
+                {% if customer.mikrotik_device and effective_status in 'Strong,Excellent,Good,Stable' %}
+                <i class="fas fa-sync fa-spin ms-auto" id="uplink-sync-icon" style="display:none; font-size:0.75rem; color:#8b5cf6;"></i>
+                {% endif %}
+            </div>
+            <div class="conn-card">
+                <div class="d-flex align-items-baseline gap-3 mb-2">
+                    <div class="conn-status-large"
+                         id="connection-status-text"
+                         data-original-status="{{ effective_status }}"
+                         data-is-positive="{% if effective_status in 'Strong,Excellent,Good,Stable' %}true{% else %}false{% endif %}"
+                         style="color:{% if customer.mikrotik_device and effective_status in 'Strong,Excellent,Good,Stable' %}var(--p-text-subtle){% elif effective_status in 'Strong,Excellent,Good,Stable' %}#10b981{% elif effective_status in 'Low,Poor,Outage,Offline' %}#ef4444{% else %}#f59e0b{% endif %};">
+                        {% if customer.mikrotik_device and effective_status in 'Strong,Excellent,Good,Stable' %}CHECKING...{% else %}{{ effective_status }}{% endif %}
+                    </div>
+                    {% if customer.mikrotik_device and effective_status in 'Strong,Excellent,Good,Stable' %}
+                    <div id="uplinkPing" style="font-size:0.85rem; color:var(--p-text-muted); font-family:monospace; font-weight:600;">Ping: …</div>
+                    {% endif %}
+                </div>
+
+                <div id="original-message-container" class="conn-info-box">
+                    {% if effective_reason %}
+                        <strong><i class="fas {% if is_network_issue %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %} me-1"></i>
+                        {% if is_network_issue %}Network Issue:{% else %}CSR Message:{% endif %}</strong><br>
+                        <span id="csr-message-text">{{ effective_reason }}</span>
+                    {% else %}
+                        <span id="default-message-text">Your internet connection is currently operating normally based on our monitoring.</span>
+                    {% endif %}
+                </div>
+
+                <div id="offline-message-container" class="conn-info-box" style="display:none; border-left-color: #ef4444; background: rgba(239,68,68,0.06);">
+                    <strong style="color:#f87171;"><i class="fas fa-exclamation-triangle me-1"></i>Network Alert:</strong><br>
+                    <span style="color:var(--p-text-muted);">We are currently experiencing an issue in your area. Technicians have been notified. Contact Gametech support for immediate assistance.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statement of Account -->
+        <div class="p-card">
+            <div class="soa-card-body">
+                <div class="soa-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+                <h4>Statement of Account</h4>
+                <p>View your complete payment history and download a record of your past transactions.</p>
+                <a href="{% url 'customer_portal:portal_statement' %}" class="btn-outline-portal w-100">
+                    <i class="fas fa-file-pdf me-1" style="color:#ef4444;"></i> View Statement
+                </a>
+            </div>
+        </div>
+
+    </div><!-- /right-col -->

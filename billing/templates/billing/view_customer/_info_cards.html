@@ -1,0 +1,153 @@
+<!-- Base Partial: Info Cards -->
+    <div class="row g-4">
+        <!-- Basic Info -->
+        <div class="col-lg-4">
+            <div class="info-card">
+                <h3 class="info-title"><i class="fas fa-user"></i> Basic Information</h3>
+                <ul class="info-list">
+                    <li>
+                        <span class="info-label">Email</span>
+                        <span class="info-value">{{ customer.email|default:"—" }}</span>
+                    </li>
+                    <li>
+                        <span class="info-label">Phone</span>
+                        <span class="info-value">{{ customer.phone|default:"—" }}</span>
+                    </li>
+                    <li>
+                        <span class="info-label">Account Type</span>
+                        <span class="info-value">{{ customer.account_type.type_name|default:"—" }}</span>
+                    </li>
+                    <li>
+                        <span class="info-label">Agent</span>
+                        <span class="info-value">{{ customer.agent.name|default:"—" }}</span>
+                    </li>
+                    <li>
+                        <span class="info-label">Expiration Date</span>
+                        <span class="info-value">
+                            {{ customer.expires_at|date:"M d, Y h:i A"|default:"—" }}
+                            {% if request.user.role == 'Admin' %}
+                            <button type="button" class="btn btn-sm btn-link p-0 ms-2 text-primary" data-bs-toggle="modal" data-bs-target="#editExpirationModal"><i class="fas fa-edit"></i></button>
+                            {% endif %}
+                        </span>
+                    </li>
+                    <li>
+                        <span class="info-label">Last Paid Date</span>
+                        <span class="info-value">
+                            {% if payments %}
+                                {{ payments.0.created_at|date:"M d, Y h:i A" }}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </span>
+                    </li>
+                    <li>
+                        {% if customer.outstanding_balance < 0 %}
+                            <span class="info-label">Advance Payment</span>
+                            <span class="info-value text-success">
+                                ₱{{ customer.abs_outstanding_balance|floatformat:2 }}
+                                {% if request.user.role == 'Admin' %}
+                                <button type="button" class="btn btn-sm btn-link p-0 ms-2 text-primary" data-bs-toggle="modal" data-bs-target="#editBalanceModal"><i class="fas fa-edit"></i></button>
+                                {% endif %}
+                            </span>
+                        {% elif customer.outstanding_balance > 0 %}
+                            <span class="info-label">Outstanding Balance</span>
+                            <span class="info-value text-danger">
+                                ₱{{ customer.outstanding_balance|floatformat:2 }}
+                                {% if request.user.role == 'Admin' %}
+                                <button type="button" class="btn btn-sm btn-link p-0 ms-2 text-primary" data-bs-toggle="modal" data-bs-target="#editBalanceModal"><i class="fas fa-edit"></i></button>
+                                {% endif %}
+                            </span>
+                        {% else %}
+                            <span class="info-label">Outstanding Balance</span>
+                            <span class="info-value text-muted">
+                                ₱0.00
+                                {% if request.user.role == 'Admin' %}
+                                <button type="button" class="btn btn-sm btn-link p-0 ms-2 text-primary" data-bs-toggle="modal" data-bs-target="#editBalanceModal"><i class="fas fa-edit"></i></button>
+                                {% endif %}
+                            </span>
+                        {% endif %}
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Network Info -->
+        <div class="col-lg-4">
+            <div class="info-card">
+                <h3 class="info-title"><i class="fas fa-network-wired"></i> Network Details</h3>
+                <ul class="info-list">
+                    <li>
+                        <span class="info-label">Plan</span>
+                        <span class="info-value">{{ customer.plan.name|default:"—" }}</span>
+                    </li>
+                    <li>
+                        <span class="info-label">Router</span>
+                        <span class="info-value">{{ customer.mikrotik_device.device_name|default:"—" }}</span>
+                    </li>
+                    <li>
+                        <span class="info-label">PPPoE Username</span>
+                        <span class="info-value">{{ customer.pppoe_username|default:"—" }}</span>
+                    </li>
+                    <li>
+                        <span class="info-label">PPPoE Password</span>
+                        <span class="info-value">{{ customer.pppoe_password|default:"—" }}</span>
+                    </li>
+                    <li>
+                        <span class="info-label">Portal Password <i class="fas fa-lock text-primary ms-1" title="Customer Portal Login Password"></i></span>
+                        <span class="info-value font-monospace fw-bold text-primary">{{ customer.portal_password|default:"—" }}</span>
+                    </li>
+                    <li>
+                        <span class="info-label">
+                            Live MT Status
+                            <i class="fas fa-question-circle text-muted ms-1" style="cursor:help;" data-bs-toggle="tooltip" data-bs-html="true" title="<div class='text-start p-1' style='font-size: 0.85rem; line-height: 1.4;'><div class='mb-2'><span class='text-success fw-bold me-1'>&bull;</span> <b>Connected:</b> Internet is active.</div><div class='mb-2'><span class='text-danger fw-bold me-1'>&bull;</span> <b>Disconnected (Inactive):</b> Home router is turned off or unplugged (No PPPoE session).</div><div class='mb-2'><span class='text-danger fw-bold me-1'>&bull;</span> <b>Offline (Router Off):</b> The main ISP router lost its internet connection.</div><div class='mb-2'><span class='text-warning fw-bold me-1'>&bull;</span> <b>Suspended:</b> Account is unpaid.</div><div><span class='text-secondary fw-bold me-1'>&bull;</span> <b>API Unreachable:</b> System cannot connect to the ISP Mikrotik router.</div></div>"></i>
+                        </span>
+                        <span class="info-value" id="mt-status-container">
+                            {% if mt_status == 'Loading...' %}
+                                <span class="text-secondary"><i class="fas fa-spinner fa-spin me-1" style="font-size:0.6rem;"></i>Loading...</span>
+                            {% elif mt_status == 'Connected' %}
+                                <span class="text-success"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Connected</span>
+                            {% else %}
+                                <span class="text-danger"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>{{ mt_status|default:"Disconnected" }}</span>
+                            {% endif %}
+                        </span>
+                    </li>
+                    <li id="uptime-container">
+                        <span class="info-label">Uptime</span>
+                        <span class="info-value" id="mt-uptime">{{ uptime }}</span>
+                    </li>
+                    <li>
+                        <span class="info-label">MAC Address</span>
+                        <span class="info-value" id="mt-live-mac">{{ customer.mac_address|default:live_mac }}</span>
+                    </li>
+                    <li id="last-logged-out-container">
+                        <span class="info-label">Last Logged Out</span>
+                        <span class="info-value" id="mt-last-logged-out">{{ last_logged_out }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Cignal & Others -->
+        <div class="col-lg-4">
+            <div class="info-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="info-title mb-0"><i class="fas fa-tv"></i> Add-ons & Extra</h3>
+                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#cignalModal">Apply Add-on</button>
+                </div>
+                <ul class="info-list">
+                    <li>
+                        <span class="info-label">Cignal Play No.</span>
+                        <span class="info-value">{{ customer.cignalplay_no|default:"—" }}</span>
+                    </li>
+                    <li>
+                        <span class="info-label">Cignal Date</span>
+                        <span class="info-value">{{ customer.cignalplay_date|date:"M d, Y"|default:"—" }}</span>
+                    </li>
+                    <li>
+                        <span class="info-label">Join Date</span>
+                        <span class="info-value">{{ customer.created_at|date:"M d, Y" }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>

@@ -1,0 +1,199 @@
+<!-- Base Partial: Modals -->
+<!-- ============================================================
+     PAYMENT MODAL
+     ============================================================ -->
+<div class="modal fade" id="mockPaymentModal" tabindex="-1" aria-labelledby="payModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-portal">
+        <div class="modal-content modal-portal">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="payModalLabel">
+                    <i class="fas fa-wallet me-2" style="color:#facc15;"></i> Complete Payment
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:{% if current_theme == 'dark' %}invert(1){% else %}none{% endif %};"></button>
+            </div>
+            <form method="POST" action="{% url 'customer_portal:portal_process_mock_payment' %}" id="portalPaymentForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Service Plan</label>
+                        <div>
+                            <button type="button" id="plan-select-btn" class="btn w-100 fw-bold d-flex justify-content-between align-items-center" data-bs-target="#planModal" data-bs-toggle="modal" data-bs-dismiss="modal" style="background: var(--p-input-bg); border: 1px solid var(--p-input-border); color: var(--p-text); padding: 0.75rem 1rem; border-radius: 10px;">
+                                <span id="selected-plan-text">{% if customer.plan %}{{ customer.plan.name }} — ₱{{ customer.plan.price }}/mo (Current Plan){% else %}Select Plan{% endif %}</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <input type="hidden" name="plan_id" id="hidden_new_plan_id" value="{{ customer.plan_id|default:'' }}">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Payment Method</label>
+                        <select class="form-select" id="paymentMethod" name="payment_method" required>
+                            <option value="GCash">GCash</option>
+                            <option value="Maya">Maya</option>
+                            <option value="Bank Transfer">Bank Transfer (InstaPay / PESONet)</option>
+                            <option value="Credit Card">Credit / Debit Card</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Payment Period</label>
+                        <div class="quick-grid">
+                            <div class="q-btn" data-days="3"><span class="q-months">3 Days</span><span class="q-price">₱<span class="calc-price" data-days="3">0.00</span></span></div>
+                            <div class="q-btn" data-days="15"><span class="q-months">15 Days</span><span class="q-price">₱<span class="calc-price" data-days="15">0.00</span></span></div>
+                            <div class="q-btn active" data-months="1"><span class="q-months">1 Month</span><span class="q-price">₱<span class="calc-price" data-mult="1">0.00</span></span></div>
+                            <div class="q-btn" data-months="2"><span class="q-months">2 Months</span><span class="q-price">₱<span class="calc-price" data-mult="2">0.00</span></span></div>
+                            <div class="q-btn" data-months="3"><span class="q-months">3 Months</span><span class="q-price">₱<span class="calc-price" data-mult="3">0.00</span></span></div>
+                            <div class="q-btn" data-months="6"><span class="q-months">6 Months</span><span class="q-price">₱<span class="calc-price" data-mult="6">0.00</span></span></div>
+                            <div class="q-btn" data-months="12"><span class="q-months">1 Year</span><span class="q-price">₱<span class="calc-price" data-mult="12">0.00</span></span></div>
+                            <div class="q-btn" data-months="custom" id="btn-custom"><span class="q-months">Custom</span><span class="q-price">Enter Amount</span></div>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label for="amountInput" class="form-label">Amount to Pay (PHP)</label>
+                        <div class="input-group">
+                            <span class="input-group-text fw-bold">₱</span>
+                            <input type="number" class="form-control" id="amountInput" name="amount"
+                                   value="{{ customer.plan.price|default:'' }}" required step="0.01">
+                        </div>
+                    </div>
+
+                    <!-- Current and Estimated Expiration -->
+                    <div class="mb-2 p-3 d-flex justify-content-between align-items-center" style="background: rgba(16,185,129,0.06); border: 1px dashed rgba(16,185,129,0.3); border-radius: 10px;">
+                        <div class="text-start" style="flex: 1;">
+                            <span style="font-size: 0.75rem; color: var(--p-text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em;">Current Due Date</span><br>
+                            <span style="font-size: 1.05rem; font-weight: 600; color: var(--p-text);">
+                                {% if customer.expires_at %}{{ customer.expires_at|date:'M d, Y' }}{% else %}Not Set{% endif %}
+                            </span>
+                        </div>
+                        <div class="text-center" style="flex: 0 0 auto;">
+                            <i class="fas fa-arrow-right" style="color: #10b981; font-size: 1.2rem; opacity: 0.8;"></i>
+                        </div>
+                        <div class="text-end" style="flex: 1;">
+                            <span style="font-size: 0.75rem; color: #10b981; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">New Due Date</span><br>
+                            <span id="estimatedNextExpiration" style="font-size: 1.15rem; font-weight: 800; color: #10b981;">
+                                {% if customer.expires_at %}{{ customer.expires_at|date:'M d, Y' }}{% else %}Unknown{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal" style="border-radius:8px;">Cancel</button>
+                    <button type="submit" class="btn px-4 fw-bold" style="border-radius:8px; background:linear-gradient(135deg,#facc15,#eab308); color:#0f172a; border:none;">
+                        <i class="fas fa-lock me-2"></i>Pay Securely
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     ADDON MODAL
+     ============================================================ -->
+<div class="modal fade" id="addonModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-portal">
+        <div class="modal-content modal-portal" style="border-radius:20px; overflow:hidden;">
+            <div class="modal-header border-0 pb-0 justify-content-end">
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4 pt-0 pb-4 text-center">
+                <div id="addonIconContainer" class="mb-4 d-inline-flex justify-content-center align-items-center" style="width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,#38bdf8,#3b82f6);box-shadow:0 10px 25px rgba(56,189,248,0.35);">
+                    <i id="addonIcon" class="fas fa-play text-white" style="font-size:2rem;"></i>
+                </div>
+                <h3 class="fw-bold mb-2" id="addonModalTypeTitle"></h3>
+                <p class="mb-4" style="color:var(--p-text-muted);" id="addonModalSubtitle">Premium Entertainment Add-on</p>
+                <div id="addonModalDescPlay" style="display:none; text-align:left; background:var(--p-overlay); border:1px solid var(--p-border); border-radius:14px; padding:1.25rem;">
+                    <h6 class="fw-bold mb-2" style="color:#38bdf8;"><i class="fas fa-mobile-alt me-2"></i>Stream Anywhere</h6>
+                    <p style="font-size:0.9rem; color:var(--p-text-muted); margin:0; line-height:1.6;">Access your favorite channels and movies on-the-go through the Cignal Play app on any device.</p>
+                </div>
+                <div id="addonModalDescBox" style="display:none; text-align:left; background:var(--p-overlay); border:1px solid var(--p-border); border-radius:14px; padding:1.25rem;">
+                    <h6 class="fw-bold mb-2" style="color:#fbbf24;"><i class="fas fa-hdd me-2"></i>Physical Set-Top Box</h6>
+                    <p style="font-size:0.9rem; color:var(--p-text-muted); margin:0; line-height:1.6;">Enjoy crystal-clear HD channels directly on your TV with a dedicated set-top box.</p>
+                </div>
+                <div class="mt-4 p-3 text-start d-flex align-items-start gap-2" style="background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.15);border-radius:10px;font-size:0.82rem;color:var(--p-text-muted);">
+                    <i class="fas fa-info-circle mt-1" style="color:#38bdf8;flex-shrink:0;"></i>
+                    <span>By clicking <strong>Request to Apply</strong>, a Gametech team member will personally contact you to confirm details and scheduling.</span>
+                </div>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4 gap-2">
+                <button type="button" class="btn btn-secondary flex-grow-1 py-2 fw-bold" data-bs-dismiss="modal" style="border-radius:10px;">Cancel</button>
+                <button type="button" class="btn flex-grow-1 py-2 fw-bold" id="addonConfirmBtn" onclick="submitAddonRequest()" style="border-radius:10px;background:linear-gradient(135deg,#1565c0,#38bdf8);color:#fff;border:none;box-shadow:0 4px 15px rgba(56,189,248,0.25);">
+                    <i class="fas fa-rocket me-2"></i>Request to Apply
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     PLAN SELECTION MODAL
+     ============================================================ -->
+<div class="modal fade" id="planModal" tabindex="-1" aria-labelledby="planModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden; background: var(--p-surface);">
+      <div class="modal-header border-0" style="background: linear-gradient(135deg, #3b0764 0%, #6d28d9 60%, #8b5cf6 100%); color: white; padding: 20px 24px;">
+        <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="planModalLabel"><i class="fas fa-network-wired text-warning"></i> Choose Service Plan</h5>
+        <button type="button" class="btn-close btn-close-white opacity-75" data-bs-target="#mockPaymentModal" data-bs-toggle="modal" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4" style="background: var(--p-bg);">
+        <ul class="nav nav-pills mb-4 justify-content-center gap-2" id="planTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active rounded-pill fw-bold px-4" id="gtipid-tab" data-bs-toggle="pill" data-bs-target="#gtipid-plans" type="button" role="tab" style="color: var(--p-text);">GTipid Fiber</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill fw-bold px-4" id="gimi-tab" data-bs-toggle="pill" data-bs-target="#gimi-plans" type="button" role="tab" style="color: var(--p-text);">GIMI Home Fiber</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill fw-bold px-4" id="sme-tab" data-bs-toggle="pill" data-bs-target="#sme-plans" type="button" role="tab" style="color: var(--p-text);">Business Plan</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill fw-bold px-4" id="enterprise-tab" data-bs-toggle="pill" data-bs-target="#enterprise-plans" type="button" role="tab" style="color: var(--p-text);">Enterprise Plan</button>
+          </li>
+        </ul>
+
+        <div class="tab-content" id="planTabsContent">
+          <!-- GTipid -->
+          <div class="tab-pane fade show active" id="gtipid-plans" role="tabpanel">
+            <p class="text-center mb-4 px-3" style="color: var(--p-text-muted);">Affordable fiber internet designed for everyday browsing, streaming, and staying connected.</p>
+            <div class="row g-4">
+              {% for p in plans %}{% if 'GTipid' in p.name %}{% if not customer.plan or p.price >= customer.plan.price %}
+                 {% include 'customer_portal/partials/plan_card.html' %}
+              {% endif %}{% endif %}{% endfor %}
+            </div>
+          </div>
+
+          <!-- GIMI -->
+          <div class="tab-pane fade" id="gimi-plans" role="tabpanel">
+            <p class="text-center mb-4 px-3" style="color: var(--p-text-muted);">An upgraded home fiber experience built for streaming, gaming, remote work, and connected households. <strong>Available in selected areas only.</strong></p>
+            <div class="row g-4">
+              {% for p in plans %}{% if 'GIMI' in p.name %}{% if not customer.plan or p.price >= customer.plan.price %}
+                 {% include 'customer_portal/partials/plan_card.html' %}
+              {% endif %}{% endif %}{% endfor %}
+            </div>
+          </div>
+
+          <!-- SME / Business -->
+          <div class="tab-pane fade" id="sme-plans" role="tabpanel">
+            <p class="text-center mb-4 px-3" style="color: var(--p-text-muted);">Reliable internet solutions designed for growing small and medium-sized businesses.</p>
+            <div class="row g-4">
+              {% for p in plans %}{% if 'SME' in p.name or 'Business' in p.name %}{% if not customer.plan or p.price >= customer.plan.price %}
+                 {% include 'customer_portal/partials/plan_card.html' %}
+              {% endif %}{% endif %}{% endfor %}
+            </div>
+          </div>
+
+          <!-- Enterprise -->
+          <div class="tab-pane fade" id="enterprise-plans" role="tabpanel">
+            <p class="text-center mb-4 px-3" style="color: var(--p-text-muted);">Dedicated leased line connectivity for enterprises that require guaranteed performance, reliability, and uptime.</p>
+            <div class="row g-4">
+              {% for p in plans %}{% if 'Enterprise' in p.name %}{% if not customer.plan or p.price >= customer.plan.price %}
+                 {% include 'customer_portal/partials/plan_card.html' %}
+              {% endif %}{% endif %}{% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

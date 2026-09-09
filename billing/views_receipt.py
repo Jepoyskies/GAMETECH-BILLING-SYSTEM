@@ -1,4 +1,4 @@
-﻿
+
 @login_required
 def payment_receipt_view(request, payment_id):
     payment = get_object_or_404(Payment, id=payment_id)
@@ -11,18 +11,18 @@ def payment_receipt_view(request, payment_id):
     action_type = payment.reason or 'Standard Renewal'
 
     # Reconstruct Messenger Template
-    messenger_msg = f""Hi {customer.full_name if customer else payment.username},
+    messenger_msg = f"""Hi {customer.full_name if customer else payment.username},
 
-Thank you for your payment of P{payment.amount} via {payment.payment_method}. Your internet connection is now active until {payment.new_expiry.strftime('%B %d, %Y') if hasattr(payment, 'new_expiry') and payment.new_expiry else payment.expires_at.strftime('%B %d, %Y') if payment.expires_at else 'N/A'}.""
+Thank you for your payment of P{payment.amount} via {payment.payment_method}. Your internet connection is now active until {payment.new_expiry.strftime('%B %d, %Y') if hasattr(payment, 'new_expiry') and payment.new_expiry else payment.expires_at.strftime('%B %d, %Y') if payment.expires_at else 'N/A'}."""
 
     if 'Upgrade' in action_type:
-        messenger_msg += f""
+        messenger_msg += f"""
 
-Thank you for upgrading! Enjoy your faster speeds.""
+Thank you for upgrading! Enjoy your faster speeds."""
     elif 'Downgrade' in action_type:
-        messenger_msg += f""
+        messenger_msg += f"""
 
-Your plan has been successfully updated. If you wish to upgrade soon for faster speeds, you can always let us know!""
+Your plan has been successfully updated. If you wish to upgrade soon for faster speeds, you can always let us know!"""
 
     context = {
         'customer': customer,

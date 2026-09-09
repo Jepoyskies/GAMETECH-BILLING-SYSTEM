@@ -1,0 +1,211 @@
+<!-- Base Partial: Left Column -->
+    <!-- ===== LEFT COLUMN ===== -->
+    <div class="left-col">
+
+        <!-- Expiry Countdown Widget -->
+        {% if customer.status != 'expired' and customer.status != 'suspended' and customer.expires_at %}
+        <div class="p-card" style="background: {% if days_until_expiry <= 3 %}linear-gradient(135deg, #ef4444 0%, #dc2626 100%){% elif days_until_expiry <= 7 %}linear-gradient(135deg, #f59e0b 0%, #d97706 100%){% else %}linear-gradient(135deg, #10b981 0%, #059669 100%){% endif %}; color: white; border: none; box-shadow: 0 10px 25px {% if days_until_expiry <= 3 %}rgba(239, 68, 68, 0.4){% elif days_until_expiry <= 7 %}rgba(245, 158, 11, 0.4){% else %}rgba(16, 185, 129, 0.4){% endif %}; transform: translateY(-4px);">
+            <div class="p-card-header" style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">
+                <div class="card-icon" style="background: rgba(255,255,255,0.2); color: white;"><i class="fas fa-hourglass-half"></i></div>
+                <h3 style="color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">Subscription Expiry</h3>
+            </div>
+            <div style="padding: 1.5rem; text-align: center;">
+                <div style="font-size: 3rem; font-weight: 800; line-height: 1; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                    {{ days_until_expiry }}
+                </div>
+                <div style="font-size: 1rem; font-weight: 500; opacity: 0.9; margin-top: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">
+                    Days Left
+                </div>
+                <div style="margin-top: 1rem; font-size: 0.85rem; opacity: 0.8; background: rgba(0,0,0,0.15); padding: 8px; border-radius: 8px;">
+                    Renews on: <strong>{{ customer.expires_at|date:"M d, Y" }}</strong>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Subscription Details Card -->
+        <div class="p-card">
+            <div class="p-card-header">
+                <div class="card-icon icon-blue"><i class="fas fa-network-wired"></i></div>
+                <h3>Subscription Details</h3>
+            </div>
+
+            <!-- ▼ PAYMENT DUE COUNTDOWN WIDGET ▼ -->
+            {% if customer.expires_at %}
+            {% with days=days_until_expiry %}
+            <div id="due-countdown-widget" style="
+                margin: 0 0 1.25rem 0;
+                border-radius: 14px;
+                padding: 1.1rem 1.3rem;
+                {% if days is not None and days <= 0 %}
+                background: linear-gradient(135deg, rgba(239,68,68,0.12), rgba(220,38,38,0.08));
+                border: 1px solid rgba(239,68,68,0.3);
+                {% elif days is not None and days <= 3 %}
+                background: linear-gradient(135deg, rgba(251,191,36,0.12), rgba(245,158,11,0.08));
+                border: 1px solid rgba(251,191,36,0.3);
+                {% else %}
+                background: linear-gradient(135deg, rgba(52,211,153,0.10), rgba(16,185,129,0.07));
+                border: 1px solid rgba(52,211,153,0.25);
+                {% endif %}
+            ">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:0.75rem; flex-wrap:wrap;">
+                    <div>
+                        <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--p-text-muted); margin-bottom:4px;">
+                            <i class="fas fa-calendar-check me-1"></i> Payment Due
+                        </div>
+                        <div style="font-size:1.55rem; font-weight:800; line-height:1;
+                            {% if days is not None and days <= 0 %}color:#f87171;
+                            {% elif days is not None and days <= 3 %}color:#fbbf24;
+                            {% else %}color:#34d399;{% endif %}">
+                            {% if days is not None %}
+                                {% if days <= 0 %}
+                                    <i class="fas fa-exclamation-circle me-1" style="font-size:1.2rem;"></i>Expired
+                                {% elif days == 0 %}
+                                    Today!
+                                {% elif days == 1 %}
+                                    Tomorrow!
+                                {% else %}
+                                    {{ days }} day{{ days|pluralize }} left
+                                {% endif %}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </div>
+                        <div style="font-size:0.78rem; color:var(--p-text-muted); margin-top:4px;">
+                            {% if days is not None and days <= 0 %}
+                                <span style="color:#f87171;">Due was {{ customer.expires_at|date:"M d, Y h:i A" }}</span>
+                            {% else %}
+                                Due: <strong>{{ customer.expires_at|date:"M d, Y h:i A" }}</strong>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <button onclick="document.getElementById('payModal')?.dispatchEvent(new Event('show')) || document.querySelector('[data-bs-target=\'#payModal\']')?.click()" 
+                            style="background:{% if days is not None and days <= 0 %}#dc2626{% elif days is not None and days <= 3 %}#d97706{% else %}#059669{% endif %}; color:white; border:none; border-radius:10px; padding:0.6rem 1.1rem; font-weight:700; font-size:0.82rem; cursor:pointer; white-space:nowrap; transition:opacity 0.2s;"
+                            onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'"
+                            data-bs-toggle="modal" data-bs-target="#payModal">
+                        <i class="fas fa-credit-card me-1"></i>
+                        {% if days is not None and days <= 0 %}Renew Now{% else %}Pay Bill{% endif %}
+                    </button>
+                </div>
+                {% if days is not None and days > 0 %}
+                <!-- Progress bar -->
+                <div style="margin-top:0.85rem; background:rgba(255,255,255,0.1); border-radius:99px; height:5px; overflow:hidden;">
+                    <div style="height:100%; border-radius:99px; width:{% widthratio days 30 100 %}%;
+                        background:{% if days <= 3 %}#fbbf24{% else %}#34d399{% endif %};
+                        max-width:100%; transition:width 0.5s ease;"></div>
+                </div>
+                {% endif %}
+            </div>
+            {% endwith %}
+            {% endif %}
+            <!-- ▲ PAYMENT DUE COUNTDOWN WIDGET ▲ -->
+
+            <!-- Quick stats row -->
+            <div class="p-stat-row">
+                <div class="p-stat">
+                    <span class="stat-val">{% if plan %}{{ plan.speed_down|default:'—' }}{% else %}—{% endif %}</span>
+                    <span class="stat-lbl">Download</span>
+                </div>
+                <div class="p-stat">
+                    <span class="stat-val">{% if plan %}{{ plan.speed_up|default:'—' }}{% else %}—{% endif %}</span>
+                    <span class="stat-lbl">Upload</span>
+                </div>
+                <div class="p-stat">
+                    <span class="stat-val" style="font-size:1rem;">
+                        {% if customer.expires_at %}{{ customer.expires_at|date:"M d" }}{% else %}—{% endif %}
+                    </span>
+                    <span class="stat-lbl">Next Due</span>
+                </div>
+            </div>
+
+            <ul class="p-info-list">
+                <li>
+                    <span class="info-label"><i class="fas fa-box me-2" style="color:#facc15;"></i>Current Plan</span>
+                    <span class="info-value">{% if plan %}{{ plan.name }}{% else %}No Active Plan{% endif %}</span>
+                </li>
+                <li>
+                    <span class="info-label"><i class="fas fa-tag me-2" style="color:#facc15;"></i>Monthly Fee</span>
+                    <span class="info-value">{% if plan %}₱{{ plan.price }}{% else %}₱0.00{% endif %}</span>
+                </li>
+                <li>
+                    <span class="info-label"><i class="fas fa-calendar-alt me-2" style="color:#facc15;"></i>Next Due Date</span>
+                    <span class="info-value">{% if customer.expires_at %}{{ customer.expires_at|date:"M d, Y" }}{% else %}Not set{% endif %}</span>
+                </li>
+                <li>
+                    {% if customer.outstanding_balance < 0 %}
+                        <span class="info-label">
+                            <i class="fas fa-wallet me-2" style="color:#facc15;"></i>Advance Payment
+                            <i class="fas fa-question-circle ms-1" style="color: var(--p-text-muted); font-size: 0.8rem; cursor: help;" 
+                               title="You have advance payment and it will automatically pay your bill for the next {% if customer.advance_months_covered >= 1 %}{{ customer.advance_months_covered }} month(s){% else %}few days/weeks{% endif %}!"></i>
+                        </span>
+                        <span class="info-value" style="color:#34d399;">₱{{ customer.abs_outstanding_balance|floatformat:2 }}</span>
+                    {% elif customer.outstanding_balance > 0 %}
+                        <span class="info-label"><i class="fas fa-balance-scale me-2" style="color:#facc15;"></i>Outstanding Balance</span>
+                        <span class="info-value" style="color:#f87171;">₱{{ customer.outstanding_balance|floatformat:2 }}</span>
+                    {% else %}
+                        <span class="info-label"><i class="fas fa-balance-scale me-2" style="color:#facc15;"></i>Outstanding Balance</span>
+                        <span class="info-value" style="color:var(--p-text-muted);">₱0.00</span>
+                    {% endif %}
+                </li>
+                <li>
+                    <span class="info-label"><i class="fas fa-tv me-2" style="color:#facc15;"></i>Cignal Play</span>
+                    <span class="info-value">
+                        {% if customer.cignalplay_no %}
+                            <span class="addon-badge active"><i class="fas fa-check-circle"></i> {{ customer.cignalplay_no }}</span>
+                        {% else %}
+                            <span class="addon-badge apply" onclick="applyForAddon('Cignal Play Add-on')"><i class="fas fa-plus-circle"></i> Apply Now</span>
+                        {% endif %}
+                    </span>
+                </li>
+                <li>
+                    <span class="info-label"><i class="fas fa-satellite-dish me-2" style="color:#facc15;"></i>Cignal Box</span>
+                    <span class="info-value">
+                        <span class="addon-badge apply" onclick="applyForAddon('Cignal Box')"><i class="fas fa-plus-circle"></i> Apply Now</span>
+                    </span>
+                </li>
+                <li class="total-row">
+                    <span class="info-label">Total Amount Due this Month</span>
+                    {% if customer.status == 'active' %}
+                        {% if customer.outstanding_balance > 0 %}
+                            <span class="info-value" style="color:#f87171;">₱{{ customer.outstanding_balance|floatformat:2 }}</span>
+                        {% else %}
+                            <span class="info-value" style="color:#34d399;">₱0.00</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="info-value" style="color:#f87171;">₱{{ customer.plan.price|add:customer.outstanding_balance|floatformat:2 }}</span>
+                    {% endif %}
+                </li>
+            </ul>
+        </div>
+
+        <!-- Profile Info Card -->
+        <div class="p-card">
+            <div class="p-card-header">
+                <div class="card-icon icon-purple"><i class="fas fa-user"></i></div>
+                <h3>Profile Information</h3>
+            </div>
+            <ul class="p-info-list">
+                <li>
+                    <span class="info-label">Assigned Agent</span>
+                    <span class="info-value">{{ customer.agent.name|default:"Unassigned" }}</span>
+                </li>
+                <li>
+                    <span class="info-label">Account Type</span>
+                    <span class="info-value">{{ customer.account_type|default:"Standard" }}</span>
+                </li>
+                <li>
+                    <span class="info-label">Contact Number</span>
+                    <span class="info-value">{{ customer.phone|default:"Not provided" }}</span>
+                </li>
+                <li>
+                    <span class="info-label">Email</span>
+                    <span class="info-value">{{ customer.email|default:"Not provided" }}</span>
+                </li>
+                <li style="flex-direction: column; align-items: flex-start; gap: 0.35rem;">
+                    <span class="info-label">Installation Address</span>
+                    <span class="info-value" style="text-align: left; font-weight: 400; color: var(--p-text-muted);">{{ customer.address|default:"Not provided" }}</span>
+                </li>
+            </ul>
+        </div>
+
+    </div><!-- /left-col -->

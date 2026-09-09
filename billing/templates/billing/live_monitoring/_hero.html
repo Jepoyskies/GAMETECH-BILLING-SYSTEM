@@ -1,0 +1,83 @@
+<!-- Base Partial: Hero Section -->
+    <div class="hero-card">
+        <div class="hero-header">
+            <div class="hero-title">
+                <h1>Live Monitoring</h1>
+                <div class="hero-actions">
+                    <button type="button" class="search-customer-btn" data-bs-toggle="modal" data-bs-target="#searchCustomerModal">
+                        <i class="fas fa-search me-1"></i> Search Customer
+                    </button>
+                    <button type="button" class="btn-update" data-bs-toggle="modal" data-bs-target="#updateHealthModal">
+                        <i class="fas fa-heartbeat me-1"></i> Update Health
+                    </button>
+                    <select id="routerFilter" class="select-speed me-1">
+                        <option value="ALL">Overall System</option>
+                        {% for device in devices %}
+                            <option value="{{ device.ip_address }}">{{ device.device_name }}</option>
+                        {% endfor %}
+                    </select>
+                    <select id="interval" class="select-speed">
+                        <option value="1000">Ultra-Fast (1s)</option>
+                        <option value="2000" selected>Fast (2s)</option>
+                        <option value="5000">Normal (5s)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="metric-item border border-2 rounded-3 p-3 mb-3"
+            style="position: relative; z-index: 2; border-color: rgba(255,255,255,0.2) !important; background-color: rgba(255,255,255,0.05);"
+            id="kpi-uplink-box">
+            <span class="metric-label"><i class="fas fa-network-wired me-1"></i> Router Uplink</span>
+            <div class="metric-value syncing" id="uplinkStatus">
+                Syncing... <i class="fas fa-sync fa-spin" style="font-size: 20px;"></i>
+            </div>
+            <span class="metric-sub" id="uplinkPing">ping: -</span>
+        </div>
+
+        <div class="metrics-grid">
+
+            <div class="metric-item border border-2 rounded-3 p-3"
+                style="border-color: rgba(255,255,255,0.2) !important; background-color: rgba(255,255,255,0.05);">
+                <span class="metric-label"><i class="fas fa-download me-1"></i> Total Download</span>
+                <div class="metric-value" id="kpi-dl">0.0 <span style="font-size: 1rem;">Mbps</span></div>
+            </div>
+
+            <div class="metric-item border border-2 rounded-3 p-3"
+                style="border-color: rgba(255,255,255,0.2) !important; background-color: rgba(255,255,255,0.05);">
+                <span class="metric-label"><i class="fas fa-upload me-1"></i> Total Upload</span>
+                <div class="metric-value" id="kpi-ul">0.0 <span style="font-size: 1rem;">Mbps</span></div>
+            </div>
+
+            <div class="metric-item border border-2 rounded-3 p-3"
+                style="grid-column: span 2; border-color: rgba(255,255,255,0.2) !important; background-color: rgba(255,255,255,0.05);">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="metric-label"><i class="fas fa-chart-line me-1"></i> Total Bandwidth</span>
+                    <div class="metric-value m-0" id="kpi-bw" style="font-size: 1.25rem;">0.0 <span
+                            style="font-size: 0.85rem; font-weight: 500;">Mbps</span></div>
+                </div>
+                <div style="height: 100px; width: 100%; position: relative;">
+                    <canvas id="bandwidthChart"></canvas>
+                </div>
+            </div>
+
+            <div class="metric-item border border-2 rounded-3 p-3"
+                style="border-color: rgba(255,255,255,0.2) !important; background-color: rgba(255,255,255,0.05);">
+                <span class="metric-label"><i class="fas fa-users me-1"></i> Active Users</span>
+                <div class="metric-value" style="font-size: 1.5rem;"><span id="kpi-users">0</span><span
+                        style="font-size: 1rem;">/<span id="totalActiveSubs">0</span></span></div>
+            </div>
+
+            <div class="metric-item border border-2 rounded-3 p-3"
+                style="border-color: rgba(255,255,255,0.2) !important; background-color: rgba(255,255,255,0.05);">
+                <span class="metric-label"><i class="fas fa-trophy me-1"></i> Top User</span>
+                <div class="metric-value" id="kpi-top-user" style="font-size: 1.5rem; word-break: break-all;">Jane Doe
+                </div>
+            </div>
+        </div>
+
+        <div class="hero-illustration" style="background-color: transparent;">
+            <img src="{% static 'images/Gimiwithlaptop.png' %}" alt="Live Monitoring Character"
+                style="width: 100%; height: 100%; object-fit: contain;">
+        </div>
+    </div>

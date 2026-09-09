@@ -1,0 +1,88 @@
+<!-- Base Partial: Activity Logs -->
+    <!-- Customer Logs Table -->
+    <div class="row mt-4 mb-4">
+        <div class="col-12">
+            <div class="dashboard-card animate-fade-in" style="overflow:hidden;">
+                <!-- Section Header -->
+                <div class="section-header section-header-blue">
+                    <h6><i class="fas fa-list-alt sh-icon"></i> Activity Records</h6>
+                    <small>Recent customer logs</small>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-premium table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Date &amp; Time</th>
+                                <th>Performed By</th>
+                                <th>Action</th>
+                                <th style="min-width:340px;">Change Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in all_logs|slice:":20" %}
+                            <tr>
+                                <!-- Date -->
+                                <td style="white-space:nowrap;">
+                                    <div class="fw-bold" style="font-size:0.88rem;">{{ log.date|date:"M d, Y" }}</div>
+                                    <div class="text-muted" style="font-size:0.78rem;">{{ log.date|date:"h:i A" }}</div>
+                                </td>
+
+                                <!-- Performed By -->
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="av av-sm av-blue">{{ log.user|first|upper|default:"U" }}</div>
+                                        <div>
+                                            <div class="fw-bold" style="font-size:0.85rem;">{{ log.user|default:"System" }}</div>
+                                            <div style="font-size:0.72rem;" class="text-muted"><i class="fas fa-user me-1"></i>Actor</div>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- Action Badge -->
+                                <td>
+                                    {% if 'UPDATE' in log.title|upper %}
+                                        <span class="pill pill-pending"><span class="pill-dot"></span>{{ log.title|upper }}</span>
+                                    {% elif 'ADD' in log.title|upper or 'CREATE' in log.title|upper or 'PAYMENT' in log.title|upper %}
+                                        <span class="pill pill-active"><span class="pill-dot"></span>{{ log.title|upper }}</span>
+                                    {% elif 'DELETE' in log.title|upper or 'REMOVE' in log.title|upper or 'RESET' in log.title|upper %}
+                                        <span class="pill pill-expired"><span class="pill-dot"></span>{{ log.title|upper }}</span>
+                                    {% else %}
+                                        <span class="pill pill-pending"><span class="pill-dot"></span>{{ log.title|upper }}</span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Change Details -->
+                                <td style="font-size: 0.85rem; color: #64748b;">
+                                    {% if log.log_obj %}
+                                        {{ log.log_obj|format_log_details }}
+                                    {% else %}
+                                        <div class="p-2 rounded-2 bg-light text-dark border" style="font-size:0.85rem;">
+                                            {{ log.details|linebreaksbr|default:"No details" }}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4">
+                                    <div class="empty-state py-4">
+                                        <div class="es-icon"><i class="fas fa-file-search"></i></div>
+                                        <h6>No logs found</h6>
+                                        <p>No recent activity for this customer.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if all_logs|length > 20 %}
+                <div class="card-footer-actions">
+                    <div class="text-muted small">Showing last 20 logs.</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

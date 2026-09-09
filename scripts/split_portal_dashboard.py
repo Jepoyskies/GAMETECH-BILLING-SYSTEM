@@ -1,4 +1,36 @@
-{% load static %}
+import os
+
+ROOT = r"c:\Users\alber\OneDrive\Documents\Vscode\GAMETECH-BILLING-SYSTEM"
+SRC = os.path.join(ROOT, "customer_portal", "templates", "customer_portal", "portal_dashboard.html")
+DEST = os.path.join(ROOT, "customer_portal", "templates", "customer_portal", "portal_dashboard")
+
+os.makedirs(DEST, exist_ok=True)
+
+with open(SRC, encoding="utf-8") as f:
+    lines = f.readlines()
+
+def write_partial(filename, line_start, line_end, header_comment=""):
+    content = "".join(lines[line_start-1 : line_end])
+    if header_comment:
+        content = f"<!-- Base Partial: {header_comment} -->\n{content}"
+    filepath = os.path.join(DEST, filename)
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(content)
+    print(f"Created {filename} ({line_end - line_start + 1} lines)")
+
+print("Extracting portal_dashboard partials...")
+
+write_partial("_styles.html", 21, 624, "Styles")
+write_partial("_navbar.html", 630, 648, "Navbar")
+write_partial("_hero.html", 650, 682, "Hero Section")
+write_partial("_alerts.html", 684, 706, "Alerts")
+write_partial("_left_column.html", 711, 920, "Left Column")
+write_partial("_right_column.html", 922, 1030, "Right Column")
+write_partial("_footer.html", 1034, 1036, "Footer")
+write_partial("_modals.html", 1038, 1235, "Modals")
+write_partial("_scripts.html", 1237, len(lines)-3, "Scripts") # Exclude </body> </html>
+
+orchestrator = r'''{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -41,3 +73,9 @@
 
 </body>
 </html>
+'''
+
+with open(SRC, "w", encoding="utf-8") as f:
+    f.write(orchestrator)
+
+print(f"Rewrote portal_dashboard.html as orchestrator ({len(orchestrator.splitlines())} lines)")

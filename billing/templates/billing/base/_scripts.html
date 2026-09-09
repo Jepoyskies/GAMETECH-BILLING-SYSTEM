@@ -1,0 +1,385 @@
+<!-- Base Partial: Scripts -->
+<!-- Layout scripts (put at end for better performance) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const sidebar = document.getElementById('sidebar');
+    const openSidebarBtn = document.getElementById('openSidebar');
+    const closeSidebarBtn = document.getElementById('closeSidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    const hideSidebarBtn = document.getElementById('hideSidebar');
+    const mainContent = document.getElementById('mainContent');
+    const showSidebarBtn = document.getElementById('showSidebar');
+
+    // Restore state
+    let collapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+    if (collapsed && window.innerWidth >= 992) {
+        sidebar.classList.add('collapsed');
+        if (mainContent) mainContent.classList.add('full');
+        if (hideSidebarBtn) hideSidebarBtn.style.display = 'none';
+        if (showSidebarBtn) showSidebarBtn.style.display = 'inline-block';
+    }
+
+    function openSidebar() {
+        sidebar.classList.add('open');
+        sidebar.classList.remove('collapsed');
+        mainContent.classList.remove('full');
+        if (window.innerWidth < 992) {
+            sidebarOverlay.classList.add('active');
+        }
+        if (window.innerWidth >= 992) {
+            if (showSidebarBtn) showSidebarBtn.style.display = 'none';
+        }
+    }
+
+    function closeSidebar() {
+        sidebar.classList.remove('open');
+        sidebar.classList.remove('collapsed');
+        if (window.innerWidth < 992) {
+            sidebarOverlay.classList.remove('active');
+        } else {
+            mainContent.classList.add('full');
+        }
+        if (window.innerWidth >= 992) {
+            if (showSidebarBtn) showSidebarBtn.style.display = 'inline-block';
+        }
+    }
+
+    function hideSidebar() {
+        if (window.innerWidth >= 992) {
+            sidebar.classList.add('collapsed');
+            sidebar.classList.remove('open');
+            mainContent.classList.add('full');
+            if (showSidebarBtn) showSidebarBtn.style.display = 'inline-block';
+            if (hideSidebarBtn) hideSidebarBtn.style.display = 'none';
+            localStorage.setItem('sidebarCollapsed', 'true');
+        }
+    }
+
+    function showSidebar() {
+        if (window.innerWidth >= 992) {
+            sidebar.classList.remove('collapsed');
+            mainContent.classList.remove('full');
+            if (hideSidebarBtn) hideSidebarBtn.style.display = 'inline-block';
+            if (showSidebarBtn) showSidebarBtn.style.display = 'none';
+            localStorage.setItem('sidebarCollapsed', 'false');
+        }
+    }
+
+    if (openSidebarBtn) openSidebarBtn.addEventListener('click', openSidebar);
+    if (closeSidebarBtn) closeSidebarBtn.addEventListener('click', closeSidebar);
+    if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
+    if (hideSidebarBtn) hideSidebarBtn.addEventListener('click', hideSidebar);
+    if (showSidebarBtn) showSidebarBtn.addEventListener('click', showSidebar);
+
+    // Expand sidebar if dropdown clicked while collapsed
+    const dropdownToggles = document.querySelectorAll('.dropdown-toggle');
+    dropdownToggles.forEach(toggle => {
+        toggle.addEventListener('click', function(e) {
+            if (sidebar.classList.contains('collapsed')) {
+                showSidebar();
+            }
+        });
+    });
+    });
+
+    // =============================================
+    // GAMER THEME TOGGLE — v2.0
+    // =============================================
+    const gtToggleBtn = document.getElementById('gt-theme-toggle');
+    const themeIcon   = document.getElementById('themeIcon');
+    const themeLabel  = document.getElementById('themeLabel');
+    const gtScanline  = document.getElementById('gt-scanline');
+    const htmlEl      = document.documentElement;
+
+    // 8-bit click sound via Web Audio API
+    function playGamerClick(isDark) {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            // Dark mode: low-pitched bwoop. Light mode: high-pitched ping.
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(isDark ? 180 : 880, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(isDark ? 80 : 440, ctx.currentTime + 0.12);
+            gain.gain.setValueAtTime(0.08, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.15);
+        } catch(e) { /* audio not supported, silently skip */ }
+    }
+
+    // Scanline flash animation
+    function triggerScanline() {
+        if (!gtScanline) return;
+        gtScanline.classList.remove('flash');
+        void gtScanline.offsetWidth; // reflow to restart animation
+        gtScanline.classList.add('flash');
+        gtScanline.addEventListener('animationend', () => gtScanline.classList.remove('flash'), { once: true });
+    }
+
+    function updateThemeUI() {
+        const isDark = htmlEl.classList.contains('dark-mode');
+        if (isDark) {
+            themeIcon.className = 'fas fa-gamepad gt-toggle-icon';
+            if (themeLabel) themeLabel.textContent = 'DARK';
+        } else {
+            themeIcon.className = 'fas fa-sun gt-toggle-icon';
+            if (themeLabel) themeLabel.textContent = 'LIGHT';
+        }
+    }
+
+    if (gtToggleBtn) {
+        updateThemeUI();
+
+        gtToggleBtn.addEventListener('click', () => {
+            triggerScanline();
+            // Small delay so the scanline starts before the color swap
+            setTimeout(() => {
+                htmlEl.classList.toggle('dark-mode');
+                const isDark = htmlEl.classList.contains('dark-mode');
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                updateThemeUI();
+                playGamerClick(isDark);
+                // Dispatch so charts/live monitoring can re-render
+                window.dispatchEvent(new Event('themeChanged'));
+            }, 80);
+        });
+    }
+
+    // Global DataTables Placeholder & Icon Injector
+    document.addEventListener("DOMContentLoaded", function() {
+        const observer = new MutationObserver(function() {
+            // Safely remove text node from labels so the input stays visible
+            document.querySelectorAll('.dataTables_filter label').forEach(label => {
+                Array.from(label.childNodes).forEach(node => {
+                    if (node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '') {
+                        node.textContent = '';
+                    }
+                });
+            });
+            document.querySelectorAll('.dataTables_length label').forEach(label => {
+                Array.from(label.childNodes).forEach(node => {
+                    if (node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '') {
+                        node.textContent = '';
+                    }
+                });
+            });
+
+            const dtInputs = document.querySelectorAll('.dataTables_filter input:not([placeholder])');
+            dtInputs.forEach(input => {
+                input.setAttribute('placeholder', 'Search records...');
+                input.classList.add('dt-premium-search');
+            });
+            const dtSelects = document.querySelectorAll('.dataTables_length select:not(.dt-premium-select)');
+            dtSelects.forEach(select => {
+                select.classList.add('dt-premium-select');
+                // Replace default text if possible
+                Array.from(select.options).forEach(opt => {
+                    if (!opt.text.includes('per page')) {
+                        opt.text = opt.value + ' per page';
+                    }
+                });
+            });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+        
+        // Convert Django Messages to Floating Toasts
+        const toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; max-width: 450px;';
+        document.body.appendChild(toastContainer);
+        
+        // Grab alerts that look like messages (usually have 'fa-check-circle' or are direct children of the main container)
+        document.querySelectorAll('.content-wrapper .alert').forEach(alert => {
+            // Avoid moving static alerts like form errors inside forms
+            if(alert.closest('form')) return;
+            
+            toastContainer.appendChild(alert);
+            alert.style.animation = 'slideInRight 0.3s ease-out forwards';
+            alert.style.cursor = 'pointer';
+            alert.title = "Click to dismiss";
+            alert.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.2)';
+            
+            // Auto dismiss after 5 seconds
+            setTimeout(() => {
+                alert.style.opacity = '0';
+                alert.style.transition = 'opacity 0.5s';
+                setTimeout(() => alert.remove(), 500);
+            }, 5000);
+            
+            // Click to dismiss
+            alert.addEventListener('click', () => alert.remove());
+        });
+    });
+</script>
+<style>
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    
+    // Online staff JS
+    function fetchOnlineStaff() {
+        fetch('/api/online-staff/')
+            .then(r => r.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    const list = document.getElementById('onlineStaffList');
+                    const badge = document.getElementById('onlineStaffBadge');
+                    const colors = ['#059669','#2563eb','#7c3aed','#dc2626','#ea580c','#0891b2'];
+
+                    if(data.data.length > 0) {
+                        badge.style.display = 'inline-block';
+                        badge.innerText = data.data.length;
+
+                        let html = '<div class="p-2 d-flex flex-column gap-2">';
+                        data.data.forEach((user, idx) => {
+                            const color = colors[idx % colors.length];
+                            const initial = user.username.charAt(0).toUpperCase();
+                            const roleColor = user.role === 'Admin' ? '#dc2626' : user.role === 'CSR' ? '#2563eb' : '#059669';
+                            html += `
+                            <div class="d-flex align-items-center gap-3 p-2 rounded-3 gt-staff-row">
+                                <div class="position-relative flex-shrink-0">
+                                    <div class="d-flex align-items-center justify-content-center rounded-circle text-white fw-bold" style="width:42px;height:42px;background:${color};font-size:1.1rem;letter-spacing:-1px;">
+                                        ${initial}
+                                    </div>
+                                    <span class="position-absolute bottom-0 end-0 border border-2 border-white rounded-circle bg-success" style="width:12px;height:12px;"></span>
+                                </div>
+                                <div class="flex-grow-1 overflow-hidden">
+                                    <div class="fw-bold gt-staff-name" style="font-size:0.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${user.username}</div>
+                                    <span class="badge rounded-pill" style="font-size:0.68rem;background:${roleColor}20;color:${roleColor};border:1px solid ${roleColor}40;">${user.role}</span>
+                                </div>
+                                <div class="text-end flex-shrink-0">
+                                    <span class="badge rounded-pill gt-online-badge">
+                                        <i class="fas fa-circle" style="font-size:0.5rem;"></i> Online
+                                    </span>
+                                </div>
+                            </div>`;
+                        });
+                        html += '</div>';
+                        list.innerHTML = html;
+                    } else {
+                        badge.style.display = 'none';
+                        list.innerHTML = `
+                        <div class="p-4 text-center gt-muted-text">
+                            <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-2 gt-icon-circle">
+                                <i class="fas fa-user-slash" style="font-size:1.2rem;"></i>
+                            </div>
+                            <div class="fw-semibold" style="font-size:0.85rem;">No one else is online</div>
+                            <div style="font-size:0.75rem;opacity:0.7;">Only you are logged in right now</div>
+                        </div>`;
+                    }
+                }
+            })
+            .catch(err => console.error(err));
+    }
+
+    // Re-render staff list when theme changes so colors update immediately
+    window.addEventListener('themeChanged', () => {
+        if(document.getElementById('onlineStaffBadge')?.style.display !== 'none') {
+            fetchOnlineStaff();
+        }
+    });
+
+    
+    // Fetch once on load to show badge
+    setTimeout(fetchOnlineStaff, 2000);
+    // Poll every 5 seconds for a truly live list
+    setInterval(fetchOnlineStaff, 5000);
+
+    // Idle timeout: automatically log out after 5 minutes of inactivity
+    let idleTimeout;
+    function resetIdleTimeout() {
+        clearTimeout(idleTimeout);
+        idleTimeout = setTimeout(() => {
+            window.location.href = '/logout/';
+        }, 5 * 60 * 1000); // 5 minutes
+    }
+    
+    // Listen for any interaction to reset the timer
+    ['mousemove', 'mousedown', 'keypress', 'touchmove', 'scroll'].forEach(evt => {
+        document.addEventListener(evt, resetIdleTimeout, false);
+    });
+    resetIdleTimeout();
+});
+</script>
+{% block extra_js %}{% endblock %}
+<script>
+document.getElementById('submitImprovementBtn').addEventListener('click', function() {
+    const msg = document.getElementById('improvementMessage').value.trim();
+    const errEl = document.getElementById('improvementError');
+    const btn = this;
+
+    if (!msg) {
+        errEl.textContent = 'Please describe what you would like us to improve.';
+        errEl.style.display = 'block';
+        return;
+    }
+    errEl.style.display = 'none';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending...';
+    btn.disabled = true;
+
+    fetch('/api/improvement-request/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] || ''
+        },
+        body: JSON.stringify({ message: msg })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('improvementModal'));
+            modal.hide();
+            document.getElementById('improvementMessage').value = '';
+            
+            // Show success toast using Gametech brand styling
+            if (!document.getElementById('improvToast')) {
+                const toastHTML = `
+                <div id="improvToast" style="position:fixed;bottom:24px;right:24px;z-index:9999;min-width:300px;" class="toast show align-items-center text-white border-0 shadow-lg" role="alert" style="border-radius:16px;background:#0349cb;">
+                    <div class="d-flex" style="background:#0349cb;border-radius:14px;">
+                        <div class="toast-body d-flex align-items-center gap-3 py-3 px-4">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:36px;height:36px;background:rgba(255,255,255,0.2);">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <div>
+                                <strong class="d-block mb-1">Request Sent!</strong>
+                                <span style="opacity:0.9;font-size:0.85rem;">The devs will look into it.</span>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-3 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>`;
+                document.body.insertAdjacentHTML('beforeend', toastHTML);
+                setTimeout(() => { const t = document.getElementById('improvToast'); if(t) t.remove(); }, 4000);
+            }
+        } else {
+            errEl.textContent = data.error || 'Something went wrong. Please try again.';
+            errEl.style.display = 'block';
+        }
+    })
+    .catch(() => {
+        errEl.textContent = 'Network error. Please try again.';
+        errEl.style.display = 'block';
+    })
+    .finally(() => {
+        btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Send Request';
+        btn.disabled = false;
+    });
+});
+
+// Hover effect on improvement button
+const impBtn = document.getElementById('improvementBtn');
+if (impBtn) {
+    impBtn.addEventListener('mouseenter', () => impBtn.style.transform = 'scale(1.05)');
+    impBtn.addEventListener('mouseleave', () => impBtn.style.transform = 'scale(1)');
+}
+</script>

@@ -1,0 +1,24 @@
+<!-- Base Partial: Alerts -->
+<!-- ALERTS -->
+{% if is_expiring_soon or customer.status == 'expired' or customer.status == 'suspended' %}
+<div class="p-alert-bar">
+    {% if is_expiring_soon %}
+    <div class="p-alert warning">
+        <i class="fas fa-clock"></i>
+        <div>
+            <strong>Expiring Soon!</strong>
+            Your subscription expires on <strong>{{ customer.expires_at|date:"M d, Y" }}</strong>. Renew now to avoid interruption.
+        </div>
+    </div>
+    {% endif %}
+    {% if customer.status == 'expired' or customer.status == 'suspended' %}
+    <div class="p-alert danger">
+        <i class="fas fa-exclamation-circle"></i>
+        <div>
+            <strong>Account Suspended</strong>
+            Your account has been suspended due to an overdue balance. Please pay your outstanding balance to restore service.
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}

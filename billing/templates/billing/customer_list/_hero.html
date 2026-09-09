@@ -1,0 +1,41 @@
+<!-- Base Partial: Hero & Top Actions -->
+    <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4 animate-fade-in"
+         style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #60a5fa 100%);">
+        <div class="d-flex align-items-center">
+            <div class="hero-icon"><i class="fa-solid fa-users"></i></div>
+            <div>
+                <div class="hero-title">Customers List</div>
+                <div class="hero-sub">Manage and view all subscriber accounts</div>
+            </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            {% if request.user.role != 'Agent' %}
+            <select id="routerFilter" class="form-select form-select-sm" style="background:rgba(255,255,255,0.15); border-color:rgba(255,255,255,0.3); color:white; border-radius:30px; font-weight:600;">
+                <option value="" style="color:#1e293b;">All Routers</option>
+                {% for device in devices %}
+                <option value="{{ device.device_name }}" style="color:#1e293b;">{{ device.device_name }}</option>
+                {% endfor %}
+            </select>
+            <select id="barangayFilter" class="form-select form-select-sm" style="background:rgba(255,255,255,0.15); border-color:rgba(255,255,255,0.3); color:white; border-radius:30px; font-weight:600;">
+                <option value="" style="color:#1e293b;">All Barangays</option>
+                {% for barangay in barangays %}
+                <option value="{{ barangay.name }}" style="color:#1e293b;">{{ barangay.name }}</option>
+                {% endfor %}
+            </select>
+            {% endif %}
+            {% if request.user.role in 'Admin,Agent,CSR' %}
+            <button type="button" id="btnBulkSms" class="btn-premium" style="background:#10b981; border:none; padding:6px 14px; font-size:0.8rem;" disabled data-bs-toggle="modal" data-bs-target="#bulkSmsModal">
+                <i class="fas fa-comment-sms"></i> SMS (<span id="selectedCount">0</span>)
+            </button>
+            <button type="button" id="btnBulkEmail" class="btn-premium" style="background:#f59e0b; border:none; padding:6px 14px; font-size:0.8rem;" disabled data-bs-toggle="modal" data-bs-target="#bulkEmailModal">
+                <i class="fas fa-envelope"></i> Email (<span id="selectedEmailCount">0</span>)
+            </button>
+            <button type="button" id="btnBulkTransfer" class="btn-premium" style="background:#0ea5e9; border:none; padding:6px 14px; font-size:0.8rem;" disabled data-bs-toggle="modal" data-bs-target="#bulkTransferModal">
+                <i class="fas fa-exchange-alt"></i> Transfer (<span id="selectedTransferCount">0</span>)
+            </button>
+            <a href="{% url 'add_customer' %}" class="btn-premium" style="background:rgba(255,255,255,0.25); color:white; border:1px solid rgba(255,255,255,0.4); padding:6px 14px; font-size:0.8rem;">
+                <i class="fa-solid fa-user-plus"></i> Add Customer
+            </a>
+            {% endif %}
+        </div>
+    </div>
