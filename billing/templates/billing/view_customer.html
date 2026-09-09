@@ -1,5 +1,6 @@
 {% extends "billing/base.html" %}
 {% load static %}
+{% load log_filters %}
 
 {% block title %}View Customer: {{ customer.full_name }}{% endblock %}
 
@@ -498,7 +499,13 @@
 
                                 <!-- Change Details -->
                                 <td style="font-size: 0.85rem; color: #64748b;">
-                                    {{ log.details|linebreaksbr }}
+                                    {% if log.log_obj %}
+                                        {{ log.log_obj|format_log_details }}
+                                    {% else %}
+                                        <div class="p-2 rounded-2 bg-light text-dark border" style="font-size:0.85rem;">
+                                            {{ log.details|linebreaksbr|default:"No details" }}
+                                        </div>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% empty %}

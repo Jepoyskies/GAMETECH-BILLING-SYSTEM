@@ -1,0 +1,65 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit a Support Ticket</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        (function() {
+            const theme = localStorage.getItem('gt-portal-theme') || 'dark';
+            document.documentElement.setAttribute('data-bs-theme', theme);
+        })();
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .card-custom { border-radius: 1rem; border: 1px solid rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body class="bg-body-tertiary">
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card card-custom shadow-lg">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <img src="{% static 'assets/images/logo_white.png' %}" alt="Gametech Logo" height="60" class="mb-3">
+                        <h2 class="fw-bold">Submit a Support Ticket</h2>
+                        <p class="text-muted">Having issues with your internet connection or need assistance? Fill out the form below and our technical dispatch team will look into it immediately.</p>
+                    </div>
+                    
+                    <form method="POST" action="{% url 'customer_portal:submit_ticket' %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="issue_type" class="form-label fw-bold">Issue Type</label>
+                            <select class="form-select" id="issue_type" name="issue_type" required>
+                                <option value="" disabled selected>Select an issue...</option>
+                                <option value="No Internet">No Internet Connection</option>
+                                <option value="Slow Speed">Slow Speed / Lag</option>
+                                <option value="Router Issue">Router / Modem Issue</option>
+                                <option value="Relocation">Relocation Request</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="description" class="form-label fw-bold">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="5" placeholder="Please describe the issue in detail..." required></textarea>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg rounded-pill fw-bold">Submit Ticket</button>
+                            <a href="{% url 'customer_portal:portal_dashboard' %}" class="btn btn-outline-secondary btn-lg rounded-pill">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
