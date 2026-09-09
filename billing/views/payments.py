@@ -24,6 +24,7 @@ from network_manager.models import MikrotikDevice, NapBox
 from network_manager.services import MikrotikAPI
 from django.db import transaction
 import calendar
+from billing.views import calculate_new_expiration_date
 
 @login_required
 def payment_logs_view(request):
