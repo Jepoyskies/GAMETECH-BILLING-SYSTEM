@@ -49,8 +49,6 @@ def calculate_new_expiration_date(current_expiration_date: datetime, payment_amo
     return current_expiration_date + timedelta(days=days_granted)
 
 
-@login_required
-@role_required(['Admin', 'Editor', 'CSR'])
 def send_semaphore_sms(phone, message):
     api_key = 'a1be64e85146a946d40aeb1677d37a48'
     url = 'https://api.semaphore.co/api/v4/messages'
