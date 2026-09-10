@@ -30,8 +30,9 @@ All Claude Code and Anthropic Claude assistants operating in this repository **M
 4. **URL-To-File Fast Map**:
    - When a user provides a URL, look up the target files in `gametech_filing_index.md`. Never grep `urls.py` or scan template directories.
 
-5. **The Orchestrator Pattern**:
-   - Template files and Python view files must not exceed 400 lines. Break large UI pages into modular partials (`_hero.html`, `_scripts.html`, `_styles.html`).
+5. **The Orchestrator Pattern & 400-Line Circuit Breaker**:
+   - Template files, scripts, and Python view files must not exceed 400 lines.
+   - **Just-In-Time Operation Cleanup**: If any file touched exceeds 400 lines, do NOT add more code to it. Split it into focused partials under 250 lines (`{% include %}` or sub-modules) with `diff: 0` tag parity before completing the task. Never scan the whole repo to split files; only clean files naturally touched by ongoing tasks.
 
 6. **Automatic Production Deployment**:
    - Once verified locally:

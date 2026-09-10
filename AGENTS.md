@@ -153,6 +153,18 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
     | `live_monitoring_data` | Cached Mikrotik live monitoring API response | 30s | `billing/views/api/dashboard.py`, `billing/tasks.py` | Overwritten on each poll cycle |
     | `dashboard_stats_{date}` | Cached dashboard statistics for a specific date | 300s (5min) | `billing/views/dashboard.py` | Expires naturally |
 
+24. **THE 400-LINE CIRCUIT BREAKER LAW (Just-In-Time Operation Cleanup)**:
+    * **THE TRIGGER**: Whenever an AI touches, edits, or diagnoses a bug in ANY file that exceeds **400 lines** (template, script, or view):
+      * **FORBIDDEN**: Appending new code or speculative patches to an already bloated file.
+      * **MANDATORY**: Perform an opportunistic "Operation Cleanup" on that specific file:
+        1. Slices the file into focused partials/modules under **250 lines** each using the Orchestrator Pattern (`{% include %}` tags or sub-modules).
+        2. Applies Ponytail to cut dead code, redundant intervals, and duplicate library calls.
+        3. Verifies tag parity (`div_diff: 0, script_diff: 0`).
+    * **TOKEN ECONOMICS (One-Time Investment, Permanent Dividend)**:
+      * **NEVER** run broad scans to split files across the entire repo at once (prevents credit depletion).
+      * Clean oversized files **ONLY as they are naturally touched by ongoing user tasks**.
+      * The modularization cost is paid **exactly once**. Every future AI task on that feature permanently saves **70–80% of tokens** by reading small, focused partials instead of monoliths.
+
 ---
 
 ### 🧼 2. Codebase Cleanliness & Architecture Standards
