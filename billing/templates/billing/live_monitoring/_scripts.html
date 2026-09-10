@@ -630,15 +630,25 @@
         }
 
         // Initialize Select2 for Customer Search safely
-        if ($.fn.select2) {
-            $('#customerSearchSelect').select2({
-                dropdownParent: $('#searchCustomerModal'),
-                placeholder: "Search by Name...",
-                allowClear: true,
-                theme: 'bootstrap-5',
-                width: '100%'
-            });
+        function initCustomerSearchSelect() {
+            if ($.fn.select2) {
+                $('#customerSearchSelect').select2({
+                    dropdownParent: $('#searchCustomerModal'),
+                    placeholder: "Search by Name...",
+                    allowClear: true,
+                    theme: 'bootstrap-5',
+                    width: '100%'
+                });
+            }
         }
+        initCustomerSearchSelect();
+
+        $('#searchCustomerModal').on('shown.bs.modal', function () {
+            initCustomerSearchSelect();
+            if ($.fn.select2) {
+                $('#customerSearchSelect').select2('open');
+            }
+        });
 
         let searchInterval = null;
         $('#customerSearchSelect').on('change', function() {
