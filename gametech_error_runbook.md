@@ -177,9 +177,24 @@
 
 ---
 
+### ERR-009: Server Error (500) on Setup Profiles or Sync Manager (`ModuleNotFoundError: network_manager.views.sync_services`)
+* **Symptoms**:
+  * Clicking "Setup Profiles" (`/devices/devices/<id>/setup-profiles/`) or "Sync Manager" (`/devices/devices/<id>/sync/`) immediately throws `Server Error (500)`.
+  * Traceback shows `ModuleNotFoundError: No module named 'network_manager.views.sync_services'`.
+* **Root Causes**:
+  * In `network_manager/views/devices.py` and `network_manager/views/sync.py`, code imported `from .sync_services import MikrotikAPI as MikrotikSyncAPI`. Because views are in the `network_manager.views` subpackage, Python looked for `network_manager/views/sync_services.py` instead of the root module `network_manager/sync_services.py`.
+* **Exact Target Files**:
+  * `network_manager/views/devices.py` (`setup_router_profiles`)
+  * `network_manager/views/sync.py` (`sync_manager`, `sync_push_user`, `sync_autofix_user`, `sync_delete_user`, `sync_bulk_action`)
+* **1-Step Fix**:
+  * Change `from .sync_services import MikrotikAPI as MikrotikSyncAPI` to `from network_manager.sync_services import MikrotikAPI as MikrotikSyncAPI`.
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 Whenever a non-obvious bug or architecture defect is resolved:
 1. Assign a new `ERR-XXX` identifier.
 2. Fill in: **Symptoms**, **Root Causes**, **Exact Target Files**, and **1-Step Fix**.
 3. Keep entries short, actionable, and sniper-focused.
+

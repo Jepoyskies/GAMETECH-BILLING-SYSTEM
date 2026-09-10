@@ -10,7 +10,7 @@ from network_manager.services import MikrotikAPI
 @login_required
 def sync_manager(request, device_id):
     from billing.models import Customer
-    from .sync_services import MikrotikAPI as MikrotikSyncAPI
+    from network_manager.sync_services import MikrotikAPI as MikrotikSyncAPI
     
     device = get_object_or_404(MikrotikDevice, id=device_id)
     
@@ -95,7 +95,7 @@ def sync_push_user(request, device_id):
         device = get_object_or_404(MikrotikDevice, id=device_id)
         
         from billing.models import Customer
-        from .sync_services import MikrotikAPI as MikrotikSyncAPI
+        from network_manager.sync_services import MikrotikAPI as MikrotikSyncAPI
         
         customer = get_object_or_404(Customer, pppoe_username=pppoe_username, mikrotik_device=device)
         
@@ -140,7 +140,7 @@ def sync_autofix_user(request, device_id):
         device = get_object_or_404(MikrotikDevice, id=device_id)
         
         from billing.models import Customer
-        from .sync_services import MikrotikAPI as MikrotikSyncAPI
+        from network_manager.sync_services import MikrotikAPI as MikrotikSyncAPI
         
         customer = get_object_or_404(Customer, pppoe_username=pppoe_username)
         
@@ -180,7 +180,7 @@ def sync_delete_user(request, device_id):
         pppoe_username = request.POST.get('pppoe_username')
         device = get_object_or_404(MikrotikDevice, id=device_id)
         
-        from .sync_services import MikrotikAPI as MikrotikSyncAPI
+        from network_manager.sync_services import MikrotikAPI as MikrotikSyncAPI
         
         api = MikrotikSyncAPI(
             ip_address=device.ip_address,
@@ -211,7 +211,7 @@ def sync_bulk_action(request, device_id):
             return redirect('sync_manager', device_id=device_id)
 
         from billing.models import Customer
-        from .sync_services import MikrotikAPI as MikrotikSyncAPI
+        from network_manager.sync_services import MikrotikAPI as MikrotikSyncAPI
         
         api = MikrotikSyncAPI(
             ip_address=device.ip_address,

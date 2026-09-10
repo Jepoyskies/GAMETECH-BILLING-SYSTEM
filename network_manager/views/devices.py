@@ -182,7 +182,7 @@ def setup_router_profiles(request, device_id):
     if request.method == 'POST':
         device = get_object_or_404(MikrotikDevice, id=device_id)
         from billing.models import SubscriptionPlan
-        from .sync_services import MikrotikAPI as MikrotikSyncAPI
+        from network_manager.sync_services import MikrotikAPI as MikrotikSyncAPI
         
         try:
             api = MikrotikSyncAPI(
