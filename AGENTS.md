@@ -29,7 +29,7 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
 
 4. **USE THE BLUEPRINTS (Never Scan Models or Routes)**:
    * Need database model fields, foreign keys, URL routes, background tasks, or Mikrotik contracts?
-   * Inspect `gametech_architecture_map.txt` (~2,082 lines / ~8.5K tokens).
+   * **NEVER** read the full `gametech_architecture_map.txt` (83KB / 2,174 lines / ~20K+ tokens). Use `grep_search` to find the specific model, route, or task name within it.
    * **NEVER** scan `billing/models.py` (2,000+ lines), `views/`, or multiple apps to figure out relationships.
 
 5. **USE THE FILING & LOCATION DIRECTORY (`gametech_filing_index.md`)**:
@@ -44,8 +44,11 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
    * **ALWAYS** use targeted replacement tools (`replace_file_content` / diffs) to edit ONLY the 2–15 lines with the bug.
    * **NEVER** rewrite an entire file or re-emit hundreds of unchanged lines.
 
-8. **THE 3-TOOL TURN LIMIT**:
-   * If you cannot locate an issue after 2–3 pinpoint searches, **STOP IMMEDIATELY**. Do not crawl the repository. Ask the user for the specific file, template, or URL.
+8. **THE 3-STEP ESCALATION PROTOCOL (Hard Ceiling on Debugging Depth)**:
+   * **Step 1**: `grep_search` for the exact symbol, function, class, or error string.
+   * **Step 2**: Read 50–80 line slice of the found file.
+   * **Step 3**: If still unclear → **STOP**. Ask: _"Can you paste the browser console error, the exact URL, or the specific file/function name?"_
+   * **FORBIDDEN**: Continuing past 3 steps by opening additional files or running broad scans.
 
 9. **AUTOMATIC DEPLOYMENT & PRODUCTION SYNC (Zero Deployment Lag)**:
    * Once changes are made and verified locally:
@@ -57,6 +60,37 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
 
 10. **CONTINUOUS RUNBOOK ENRICHMENT**:
     * Whenever an AI solves a novel bug or architecture quirk not yet documented, it **MUST** append a new `ERR-XXX` entry to `gametech_error_runbook.md` before finishing the task.
+
+11. **URL-TO-FILE FAST MAP (Kill the "where is this page?" guesswork)**:
+    * When the user pastes a URL (e.g. `http://143.198.207.144/portal/dashboard/`), **resolve it by checking `gametech_filing_index.md` URL column FIRST**.
+    * **FORBIDDEN**: Grepping through `urls.py`, scanning template directories, or opening `views.py` to find which page a URL maps to.
+    * The filing index already maps: URL → View → Template → Models in a single row.
+
+12. **DOCKER-FIRST ERROR CAPTURE (Hard-Mandated for ALL 500 Errors)**:
+    * For **ANY** Server Error (500), the AI **MUST** run this command first, before opening any code:
+      ```
+      ssh root@143.198.207.144 "docker logs --tail 50 gametech-billing-system_web_1 2>&1 | tail -30"
+      ```
+    * The traceback gives the exact file and line number. Only after reading the traceback may the AI open the pinpointed file.
+    * **FORBIDDEN**: Guessing the cause by reading view/model files before checking logs.
+
+13. **TEMPLATE INCLUDE-CHAIN VERIFICATION (Stop Orphan Partial Bugs)**:
+    * When creating or editing a template partial (e.g. `_modal_ticket.html`), **ALWAYS verify it is actually included** in a parent template.
+    * Use: `grep_search` for the partial filename within the parent template folder.
+    * If it's not included anywhere → add the `{% include %}` tag in the parent orchestrator. Otherwise the partial is dead code and the feature will be invisible.
+
+14. **REDIS/CACHE VERIFY BEFORE REWRITING LOGIC**:
+    * If a feature uses Redis cache (e.g. active sessions, telemetry, online status) and data is not appearing:
+      * **FIRST** verify Redis has the expected keys:
+        ```
+        ssh root@143.198.207.144 "docker exec gametech-billing-system_redis_1 redis-cli KEYS 'pattern*'"
+        ```
+      * **DO NOT** rewrite Python view/signal logic until you confirm whether the cache key exists, is empty, or is missing.
+
+15. **THE NO-REPEAT-FAILURE WALL (Max 2 Attempts Per Approach)**:
+    * If the AI attempts a fix and it **DOESN'T WORK**, it **MUST NOT** retry the same approach.
+    * Instead: (a) check `docker logs` for the NEW error, (b) ask the user for browser console output, or (c) pivot to an entirely different approach.
+    * **Maximum 2 attempts** on the same bug using the same strategy before escalating to the user with a clear diagnosis of what was tried and what failed.
 
 ---
 

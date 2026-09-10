@@ -135,3 +135,18 @@
 | **Verify container status** | `ssh root@143.198.207.144 "docker compose ps"` |
 | **Execute Python in container** | `@' <python_code> '@ \| ssh root@143.198.207.144 "docker exec -i gametech-billing-system_web_1 python"` |
 | **Verify Div Balance** | `python -c "content = open('<file>', 'r', encoding='utf-8').read(); import re; o=len(re.findall(r'<div\b', content)); c=len(re.findall(r'</div>', content)); print(o-c)"` |
+| **Check Redis keys** | `ssh root@143.198.207.144 "docker exec gametech-billing-system_redis_1 redis-cli KEYS '*pattern*'"` |
+
+---
+
+## ⚠️ 5. DANGER FILES (Never Read Fully — `grep_search` ONLY)
+
+> **Rule**: These files are too large to ingest. Reading them fully burns thousands of tokens and bloats every subsequent AI turn. Use `grep_search` to find specific symbols within them.
+
+| File | Size | Why Dangerous | What to Do Instead |
+| :--- | :--- | :--- | :--- |
+| `billing/models.py` | 2,000+ lines | Every model in one file | `grep_search` for model/field name, or check `gametech_architecture_map.txt` |
+| `gametech_architecture_map.txt` | 83KB / 2,174 lines | Full schema + routes dump | `grep_search` for specific model, URL, or task name |
+| `static/css/theme/layout_and_darkmode.css` | 500+ lines | Massive CSS file | `grep_search` for specific selector or class name |
+| `billing/templates/billing/base/_topbar.html` | 300+ lines | Dense topbar with dropdowns | `grep_search` for the specific ID or section |
+| `billing/views/` (any file > 300 lines) | Varies | Monolith risk | `grep_search` for function name, read 50-line slice |
