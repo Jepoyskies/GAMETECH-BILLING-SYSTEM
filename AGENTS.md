@@ -6,25 +6,35 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
 
 ---
 
-### 🛡️ 1. Absolute Token Preservation Rules (Save User Credits)
+### ⚡ THE ZERO-SCAN DEBUGGING LAW (Save Maximum Credits)
 
-1. **Targeted Scoping (The 1-File Principle)**:
-   * Focus **strictly** on the specific file(s) mentioned in the prompt.
-   * Do **NOT** explore unrelated directories, views, or models "just in case". If the user asks about a button in `_hero.html`, do not touch or read `views.py`.
-2. **Never Read Monolithic Files**:
-   * **FORBIDDEN**: Reading 300+ line files without slice constraints.
-   * **MANDATORY**: Use `grep_search` to pinpoint the exact line number of the symbol, class, or tag.
-   * Read **only** the required slice (e.g. `StartLine: 40, EndLine: 90`, max 50–80 lines).
-3. **Leverage the Architecture Blueprint First**:
-   * For database models, fields, foreign keys, URL routes, background Celery tasks, and hardware contracts, inspect `gametech_architecture_map.txt` (~2,082 lines / ~8.5K tokens).
-   * **NEVER** run recursive directory scans or build 1-million-token context dumps.
-4. **Surgical In-Place Replacements Only**:
-   * **ALWAYS** use targeted line replacement tools (`replace_file_content` / targeted diffs).
+1. **NO UNNECESSARY SCANNING (Hard Ban on Exploratory Crawling)**:
+   * **FORBIDDEN**: Running directory scans (`list_dir`), file searches (`find_by_name`), or opening unrelated files "just to explore".
+   * **FORBIDDEN**: Opening Python views/models when the user reports a frontend/template issue, and vice versa.
+   * **STRICT 1-FILE SCOPE**: Touch and inspect ONLY the file(s) explicitly named in the prompt or pinpointed by an error traceback.
+
+2. **LOG-FIRST DEBUGGING (Never Guess by Reading Code)**:
+   * When diagnosing an error (500, crash, freeze, or broken button):
+     * **DO NOT** guess by reading multiple files across the repository.
+     * **DO** inspect the exact error traceback first via `docker logs --tail 30 gametech-billing-system_web_1` or browser console error.
+     * The traceback pinpoints the EXACT file and line number in 1 step — eliminating 95% of exploratory token waste.
+
+3. **STRICT 50–80 LINE READING LIMIT (Never Read Full Files)**:
+   * **FORBIDDEN**: Reading 150+ lines of code in a single view. Ingesting full 1,000-line files burns 5,000–10,000 tokens on EVERY subsequent turn!
+   * **MANDATORY**: Use `grep_search` to find the exact function, symbol, or tag.
+   * Read **ONLY** the localized slice (e.g. `StartLine: 40, EndLine: 90`, max 50–80 lines).
+
+4. **USE THE BLUEPRINT (Never Scan Models or Routes)**:
+   * Need database model fields, foreign keys, URL routes, background tasks, or Mikrotik contracts?
+   * Inspect `gametech_architecture_map.txt` (~2,082 lines / ~8.5K tokens).
+   * **NEVER** scan `billing/models.py` (2,000+ lines), `views/`, or multiple apps to figure out relationships.
+
+5. **SURGICAL IN-PLACE EDITS ONLY**:
+   * **ALWAYS** use targeted replacement tools (`replace_file_content` / diffs) to edit ONLY the 2–15 lines with the bug.
    * **NEVER** rewrite an entire file or re-emit hundreds of unchanged lines.
-5. **Zero Verbose Code Dumps in Chat**:
-   * Do **not** regurgitate full files or large code blocks in chat responses. Provide a concise explanation of what was changed, line references, and a clickable file link.
-6. **The 3-Tool Turn Limit**:
-   * Stop exploratory "wandering". If you cannot locate an issue after 2–3 pinpoint searches, stop and ask the user for the exact file or URL instead of recursively crawling the repo.
+
+6. **THE 3-TOOL TURN LIMIT**:
+   * If you cannot locate an issue after 2–3 pinpoint searches, **STOP IMMEDIATELY**. Do not crawl the repository. Ask the user for the specific file, template, or URL.
 
 ---
 
