@@ -406,30 +406,64 @@ def portal_apply_addon(request):
 
 
 def submit_ticket(request):
-    if request.method == 'POST':
-        customer_id = request.session.get('customer_id')
-        if not customer_id:
-            return redirect('customer_portal:portal_login')
-            
-        try:
-            customer = Customer.objects.get(id=customer_id)
-        except Customer.DoesNotExist:
-            return redirect('customer_portal:portal_login')
-            
-        issue_type = request.POST.get('issue_type')
-        description = request.POST.get('description')
+    customer_id = request.session.get('customer_id')
+    if not customer_id:
+        return redirect('customer_portal:portal_login')
         
-        from dispatch.models import ClientConcern
-        ClientConcern.objects.create(
-            customer=customer,
-            concern=f"[{issue_type}] {description}",
-            status='Pending',
-            reported_date=timezone.now().date(),
-            contact_number=customer.phone,
-            address=customer.address
+    try:
+        customer = Customer.objects.get(id=customer_id)
+    except Customer.DoesNotExist:
+        request.session.flush()
+        return redirect('customer_portal:portal_login')
+
+    if request.method == 'POST':
+        issue_type = request.POST.get('issue_type') or 'General Concern'
+        description = request.POST.get('description') or ''
+        
+        from dispatch.models import DispatchRecord, MonitoringRecord, ConfigOption
+        from django.contrib.auth.models import User
+
+        admin_user = User.objects.filter(is_superuser=True).first() or User.objects.first()
+
+        status_opt = (
+            ConfigOption.objects.filter(module='DISPATCH', list_type='STATUS', label__icontains='Pending').first()
+            or ConfigOption.objects.filter(module='DISPATCH', list_type='STATUS').first()
+        )
+        mon_status_opt = (
+            ConfigOption.objects.filter(module='MONITORING', list_type='STATUS', label__icontains='Pending').first()
+            or ConfigOption.objects.filter(module='MONITORING', list_type='STATUS').first()
         )
         
-        messages.success(request, "Your ticket has been submitted. Our technical dispatch team will review it shortly.")
+        ticket_no = f"TKT-{timezone.now().strftime('%y%m%d%H%M%S')}"
+
+        dispatch_record = DispatchRecord.objects.create(
+            date=timezone.now().date(),
+            client_name=customer.full_name,
+            address=customer.address or "Not provided",
+            contact_number=customer.phone or "Not provided",
+            concern=f"[{issue_type}] {description}",
+            source_tab='CLIENT_CONCERNS',
+            ticket_number=ticket_no,
+            status_option=status_opt,
+            customer=customer,
+            csr=admin_user,
+        )
+
+        MonitoringRecord.objects.create(
+            tab_type='CLIENT_CONCERNS',
+            date=timezone.now().date(),
+            client_name=customer.full_name,
+            address=customer.address or "Not provided",
+            contact_number=customer.phone or "Not provided",
+            concern=f"[{issue_type}] {description}",
+            ticket_number=ticket_no,
+            status_option=mon_status_opt,
+            dispatch=dispatch_record,
+            customer=customer,
+            csr=admin_user,
+        )
+        
+        messages.success(request, f"Your ticket ({ticket_no}) has been submitted. Our technical dispatch team will review it shortly.")
         return redirect('customer_portal:portal_dashboard')
         
-    return render(request, 'customer_portal/submit_ticket.html')
+    return render(request, 'customer_portal/submit_ticket.html', {'customer': customer})

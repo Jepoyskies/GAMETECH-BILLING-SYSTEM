@@ -206,11 +206,25 @@
 
 ---
 
+### ERR-011: Server Error (500) on Submit Ticket (`ImportError: cannot import name 'ClientConcern' from 'dispatch.models'`)
+* **Symptoms**:
+  * Submitting a support ticket via `/portal/submit-ticket/` throws `Server Error (500)`.
+  * Traceback shows `ImportError: cannot import name 'ClientConcern' from 'dispatch.models'`.
+* **Root Causes**:
+  * `customer_portal/views.py` (`submit_ticket`) attempted to import a non-existent model `ClientConcern`. In Gametech Dispatch, client tickets and concerns are stored in `DispatchRecord` (with `source_tab='CLIENT_CONCERNS'`) and `MonitoringRecord` (with `tab_type='CLIENT_CONCERNS'`).
+* **Exact Target Files**:
+  * `customer_portal/views.py` (`submit_ticket`)
+* **1-Step Fix**:
+  * Create `DispatchRecord` and `MonitoringRecord` with `source_tab='CLIENT_CONCERNS'`, linked to `customer`, a generated ticket number, default admin `csr`, and appropriate `ConfigOption` statuses.
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 Whenever a non-obvious bug or architecture defect is resolved:
 1. Assign a new `ERR-XXX` identifier.
 2. Fill in: **Symptoms**, **Root Causes**, **Exact Target Files**, and **1-Step Fix**.
 3. Keep entries short, actionable, and sniper-focused.
+
 
 
