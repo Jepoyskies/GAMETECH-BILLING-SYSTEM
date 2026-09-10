@@ -323,9 +323,10 @@
         });
     }
 
-    function openCustomerLiveChart(username) {
+    function openCustomerLiveChart(username, displayName) {
         modalCustomer = username;
-        document.getElementById('modalCustomerTitle').innerText = username;
+        let titleText = (displayName && displayName !== username) ? `${displayName} (${username})` : username;
+        document.getElementById('modalCustomerTitle').innerText = titleText;
         
         // Reset chart data
         custRxData.fill(0);
@@ -347,12 +348,21 @@
         document.getElementById('kpi-bw').innerHTML = `${totalBw.toFixed(1)} <span class="text-muted small">Mbps</span>`;
         document.getElementById('kpi-users').innerText = allData.length;
 
-        let topUser = 'Jane Doe';
-        if (allData.length > 0) {
-            let sorted = [...allData].sort((a, b) => (b.rx_mbps + b.tx_mbps) - (a.rx_mbps + a.tx_mbps));
-            topUser = sorted[0].user;
+        let topUserEl = document.getElementById('kpi-top-user');
+        if (topUserEl) {
+            if (allData.length > 0) {
+                let sorted = [...allData].sort((a, b) => (b.rx_mbps + b.tx_mbps) - (a.rx_mbps + a.tx_mbps));
+                let topItem = sorted[0];
+                let displayName = topItem.customer_name || topItem.user;
+                if (topItem.customer_name && topItem.customer_name !== topItem.user) {
+                    topUserEl.innerHTML = `<span>${displayName}</span><span class="d-block text-white-50" style="font-size: 0.75rem; font-weight: normal; margin-top: 2px;"><i class="fas fa-user-tag me-1"></i>${topItem.user}</span>`;
+                } else {
+                    topUserEl.innerText = displayName;
+                }
+            } else {
+                topUserEl.innerText = 'Jane Doe';
+            }
         }
-        document.getElementById('kpi-top-user').innerText = topUser;
 
         // Update Chart
         rxChartData.shift(); rxChartData.push(rx);
@@ -373,9 +383,21 @@
             let txPct = maxTx > 0 ? (u.tx_mbps / maxTx) * 100 : 0;
             let totalBw = u.rx_mbps + u.tx_mbps;
 
+            let custDisplay = u.customer_name || u.user;
+            let custSub = (u.customer_name && u.customer_name !== u.user)
+                ? `<div class="small text-muted"><i class="fas fa-user-tag me-1"></i>${u.user} &bull; <i class="fas fa-network-wired ms-1 me-1"></i>${u.ip}</div>`
+                : `<div class="small text-muted"><i class="fas fa-network-wired me-1"></i>${u.ip}</div>`;
+
+            let nameHtml = u.customer_id
+                ? `<a href="/customers/view/${u.customer_id}/" class="text-decoration-none fw-bold text-body" style="font-size:1.0rem;">${custDisplay}</a>`
+                : `<div class="fw-bold text-body" style="font-size:1.0rem;">${custDisplay}</div>`;
+
+            let safeDisplay = (custDisplay || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            let safeUser = (u.user || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
             rows.push([
-                `<div class="fw-bold text-body" style="font-size:1.0rem;">${u.user}</div>
-             <div class="small text-muted"><i class="fas fa-network-wired me-1"></i>${u.ip}</div>`,
+                `${nameHtml}
+                 ${custSub}`,
 
                 `<div class="d-flex justify-content-between mb-1">
                 <span class="text-primary small fw-semibold"><i class="fas fa-download me-1"></i>${Number(u.rx_mbps).toFixed(1)} M</span>
@@ -390,7 +412,7 @@
 
                 `<div class="small text-muted"><i class="fas fa-clock me-1"></i>${u.uptime}</div>`,
                 
-                `<div class="text-end"><button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="openCustomerLiveChart('${u.user}')"><i class="fas fa-chart-line me-1"></i> Chart</button></div>`
+                `<div class="text-end"><button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="openCustomerLiveChart('${safeUser}', '${safeDisplay}')"><i class="fas fa-chart-line me-1"></i> Chart</button></div>`
             ]);
         });
 

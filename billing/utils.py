@@ -44,6 +44,19 @@ def get_live_monitoring_data_sync():
         "total_active_subs": 0,
     }
 
+    # Build lookup map of PPPoE username -> customer metadata
+    customer_map = {}
+    for c in (
+        Customer.objects.exclude(pppoe_username__isnull=True)
+        .exclude(pppoe_username="")
+        .values("id", "full_name", "pppoe_username")
+    ):
+        raw_user = c["pppoe_username"]
+        info = {"id": c["id"], "full_name": c["full_name"]}
+        customer_map[raw_user] = info
+        if raw_user.lower() not in customer_map:
+            customer_map[raw_user.lower()] = info
+
     devices = MikrotikDevice.objects.all()
     for device in devices:
         try:
@@ -84,9 +97,20 @@ def get_live_monitoring_data_sync():
             for au in active_users:
                 username = au.get("name")
                 tr = traffic_dict.get(username, {"rx_mbps": 0.0, "tx_mbps": 0.0})
+                cust_match = customer_map.get(username) or (
+                    customer_map.get(username.lower()) if username else None
+                )
+                customer_name = (
+                    cust_match["full_name"].strip()
+                    if (cust_match and cust_match.get("full_name"))
+                    else username
+                )
+                customer_id = cust_match["id"] if cust_match else None
                 response_data["users"].append(
                     {
                         "user": username,
+                        "customer_name": customer_name,
+                        "customer_id": customer_id,
                         "ip": au.get("address", ""),
                         "uptime": au.get("uptime", "0s"),
                         "rx_mbps": tr["rx_mbps"],
