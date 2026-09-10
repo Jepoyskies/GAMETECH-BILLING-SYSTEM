@@ -12,14 +12,18 @@ This workspace strictly adheres to the protocols defined in:
 
 | Request Type | Check FIRST | Then |
 |---|---|---|
-| **500 / Server Error** | `ssh root@143.198.207.144 "docker logs --tail 50 gametech-billing-system_web_1 2>&1 \| tail -30"` | Traceback → file:line → 50-line read |
+| **500 / Server Error** | `ssh root@143.198.207.144 "docker logs --since 2m gametech-billing-system_web_1 2>&1 \| tail -40"` | Traceback → file:line → 50-line read |
 | **UI broken / wrong layout** | `gametech_error_runbook.md` symptom index | Template partial → CSS selector |
 | **"Where is this page?" / URL paste** | `gametech_filing_index.md` URL column | Never grep urls.py or scan dirs |
 | **Data not showing / cache empty** | Redis keys: `ssh root@143.198.207.144 "docker exec gametech-billing-system_redis_1 redis-cli KEYS 'pattern*'"` | Then view logic |
+| **API returns wrong/empty data** | `curl` the endpoint directly to see raw JSON shape | Compare with frontend JS `fetch()` handler |
 | **Add a new feature** | `gametech_filing_index.md` Recipes section | Follow the recipe step-by-step |
 | **Model/field/FK question** | `grep_search gametech_architecture_map.txt` for the model name | Never open `billing/models.py` |
 | **Mikrotik / router issue** | `gametech_error_runbook.md` ERR-004 | `network_manager/services/` |
 | **Payment / balance mismatch** | `gametech_error_runbook.md` ERR-005 | `billing/signals.py` → `payments.py` |
+| **Static CSS/JS not updating in prod** | Was `collectstatic` run? Check browser cache (Ctrl+Shift+R) | Then check file path in template `{% static %}` tag |
+| **New page / feature request** | `gametech_filing_index.md` Recipes section | Follow orchestrator pattern for templates |
+| **Permission / 403 error** | Check `@login_required` and `user.is_staff` in the view | Then check URL routing order in `urls.py` |
 
 ---
 
@@ -32,13 +36,18 @@ This workspace strictly adheres to the protocols defined in:
 6. **Automatic Deployment Sync**: Commit, push to `origin main`, pull on the production droplet (`143.198.207.144`), and restart container if necessary.
 7. **Runbook Enrichment**: Document newly solved errors into `gametech_error_runbook.md`.
 8. **No Repeat Failures**: Max 2 attempts per approach. If same fix fails twice, escalate to user.
+9. **Batch Deploys**: For multi-file tasks, make ALL edits → single commit → single push → single restart.
+10. **Verify API Contracts**: Before rewriting backend logic, `curl` the API to see actual response shape.
 
 ---
 
 ## 🚨 Quick-Reference Commands (Copy-Paste Ready)
 
 ```bash
-# Check production logs (ALWAYS first for 500s)
+# Check production logs — time-bounded (PREFERRED for recent 500s)
+ssh root@143.198.207.144 "docker logs --since 2m gametech-billing-system_web_1 2>&1 | tail -40"
+
+# Check production logs — tail-based (when timing is unknown)
 ssh root@143.198.207.144 "docker logs --tail 50 gametech-billing-system_web_1 2>&1 | tail -30"
 
 # Deploy to production
@@ -47,9 +56,15 @@ ssh root@143.198.207.144 "cd /root/GAMETECH-BILLING-SYSTEM && git pull origin ma
 # Restart after Python/template changes
 ssh root@143.198.207.144 "docker restart gametech-billing-system_web_1"
 
+# Collectstatic after CSS/JS changes (MANDATORY)
+ssh root@143.198.207.144 "docker exec gametech-billing-system_web_1 python manage.py collectstatic --noinput"
+
 # Check Redis cache keys
 ssh root@143.198.207.144 "docker exec gametech-billing-system_redis_1 redis-cli KEYS '*pattern*'"
 
 # Check div balance in a template
 python -c "content = open('path/to/template.html', 'r', encoding='utf-8').read(); import re; o = len(re.findall(r'<div\b', content)); c = len(re.findall(r'</div>', content)); print(f'opens: {o}, closes: {c}, diff: {o-c}')"
+
+# Verify API response shape (replace URL as needed)
+ssh root@143.198.207.144 "curl -s http://localhost:8000/api/endpoint/ | python3 -m json.tool | head -20"
 ```

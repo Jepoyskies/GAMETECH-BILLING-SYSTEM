@@ -92,6 +92,39 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
     * Instead: (a) check `docker logs` for the NEW error, (b) ask the user for browser console output, or (c) pivot to an entirely different approach.
     * **Maximum 2 attempts** on the same bug using the same strategy before escalating to the user with a clear diagnosis of what was tried and what failed.
 
+16. **STATIC FILE COLLECTSTATIC GUARD (CSS/JS Production Sync)**:
+    * After modifying ANY file inside `static/` (CSS, JS, images), the deployment step **MUST** include:
+      ```
+      ssh root@143.198.207.144 "docker exec gametech-billing-system_web_1 python manage.py collectstatic --noinput"
+      ```
+    * **FORBIDDEN**: Pushing static file changes without running `collectstatic`. Changes will appear locally but be invisible in production.
+
+17. **API RESPONSE SHAPE VERIFICATION (Frontend-Backend Contract)**:
+    * When debugging "data not showing" or "API returns empty/wrong data":
+      1. **FIRST** hit the API endpoint directly via `curl` or browser to see the actual JSON shape.
+      2. **THEN** compare with what the frontend JS `fetch()` handler expects (e.g. `data.uplinks` vs `data.router_uplink_status`).
+      * **DO NOT** rewrite backend view logic before confirming the response contract matches the frontend consumer.
+
+18. **BATCH COMMITS FOR MULTI-FILE CHANGES (Minimize Deploy Cycles)**:
+    * When a task involves 3+ file edits:
+      1. Make ALL edits first.
+      2. Single `git add` + `git commit` + `git push`.
+      3. Single production `git pull` + single container restart.
+    * **FORBIDDEN**: Running `docker restart` more than once per task unless debugging requires a mid-task verification.
+
+19. **TIME-BOUNDED CONTAINER LOGS (Read Fresh, Not Stale)**:
+    * When checking production logs for a 500 error, prefer `--since` over `--tail` to avoid stale noise from hours ago:
+      ```
+      ssh root@143.198.207.144 "docker logs --since 2m gametech-billing-system_web_1 2>&1 | tail -40"
+      ```
+    * Use `--tail 50` only when the error timing is unknown. Use `--since 2m` when you just reproduced the error.
+
+20. **JS EVENT DELEGATION FOR DYNAMIC ELEMENTS (Stop Dead Handlers)**:
+    * When adding JS event handlers for elements inside dynamically-loaded content (Select2 dropdowns, AJAX-populated lists, modal content):
+      * **ALWAYS** use event delegation: `$(document).on('change', '#selector', handler)` instead of `$('#selector').on('change', handler)`.
+      * Verify the handler fires by adding a temporary `console.log()` check before writing complex logic.
+    * Elements rendered after `$(document).ready()` will NOT have directly-bound handlers — delegation is mandatory.
+
 ---
 
 ### 🧼 2. Codebase Cleanliness & Architecture Standards
