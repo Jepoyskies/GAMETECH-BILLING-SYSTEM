@@ -15,6 +15,7 @@
 | **ERR-004** | Mikrotik Router Uplink / Ping Down or Packet Loss | `network_manager/services.py`, `billing/views/network.py` | Hardware API |
 | **ERR-005** | Customer payment / balance mismatch or router out of sync | `billing/signals.py`, `billing/views/payments.py` | DB / Signals |
 | **ERR-006** | DigitalOcean Docker container not loading new code | `/root/GAMETECH-BILLING-SYSTEM`, Docker bind mount | Deployment |
+| **ERR-007** | Server Error (500) on Changelog / Template Syntax Error | `billing/templates/billing/changelog.html` | Template Syntax |
 
 ---
 
@@ -144,6 +145,21 @@
     ```bash
     ssh root@143.198.207.144 "docker logs --tail 25 gametech-billing-system_web_1"
     ```
+
+---
+
+### ERR-007: Server Error (500) on Template Syntax / Premature `{% endblock %}`
+* **Symptoms**:
+  * Navigating to `/changelog/` or a documentation/content page throws `Server Error (500)`.
+  * Gunicorn log shows `TemplateSyntaxError: Invalid block tag on line XXX: 'endblock'. Did you forget to register or load this tag?`.
+* **Root Causes**:
+  * Raw Django template tags (e.g. `{% load static %}`, `{% endblock %}`, `{% load log_filters %}`) written inside documentation/changelog text or `<code>` tags without escaping them.
+  * The Django template compiler treats them as executable tags, prematurely closing `{% block content %}` in the middle of the template.
+* **Exact Target Files**:
+  * `billing/templates/billing/changelog.html` (or affected template)
+* **1-Step Fix**:
+  * Escape literal template tags with HTML entities:
+    `&#123;% load static %&#125;`, `&#123;% endblock %&#125;`.
 
 ---
 
