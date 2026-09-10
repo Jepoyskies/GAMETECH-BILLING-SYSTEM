@@ -147,10 +147,15 @@ def api_router_uplink(request):
                         uplink_status = "Offline"
                         uplink_ping = "Timeout"
                     else:
-                        avg_rtt_str = result.get("avg-rtt", "0ms")
-                        rtt_ms = int(avg_rtt_str.replace("ms", ""))
-                        uplink_ping = f"{rtt_ms}ms"
-                        uplink_status = "Unstable" if rtt_ms > 150 else "Online"
+                        avg_rtt_str = str(result.get("avg-rtt", "0ms"))
+                        try:
+                            clean_val = avg_rtt_str.replace("ms", "").strip()
+                            rtt_ms = round(float(clean_val))
+                            uplink_ping = f"{rtt_ms}ms"
+                            uplink_status = "Unstable" if rtt_ms > 150 else "Online"
+                        except Exception:
+                            uplink_ping = avg_rtt_str
+                            uplink_status = "Online"
             except Exception as e:
                 uplink_status = "Offline"
                 uplink_ping = "Error"

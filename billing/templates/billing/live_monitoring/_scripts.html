@@ -14,6 +14,11 @@
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+<!-- Select2 CSS & JS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 <script>
     let allData = [];
     let maxRx = 0;
@@ -530,18 +535,29 @@
                     let r = d.routers[0];
                     let box = document.getElementById('kpi-uplink-box');
                     let pingText = document.getElementById('uplinkPing');
-                    statusText.innerText = r.uplink_status;
-                    pingText.innerText = "Ping: " + r.uplink_ping;
+                    if (statusText) statusText.innerText = r.uplink_status;
+                    if (pingText) pingText.innerText = "Ping: " + r.uplink_ping;
 
-                    box.classList.remove('border-danger', 'border-warning', 'border-info', 'border-success');
-                    box.style.setProperty('border-color', '', 'important');
+                    if (box) {
+                        box.classList.remove('border-danger', 'border-warning', 'border-info', 'border-success');
+                        box.style.setProperty('border-color', '', 'important');
 
-                    if (r.uplink_status === 'Offline') {
+                        if (r.uplink_status === 'Offline') {
+                            box.classList.add('border-danger');
+                        } else if (r.uplink_status === 'Unstable') {
+                            box.classList.add('border-warning');
+                        } else {
+                            box.classList.add('border-info');
+                        }
+                    }
+                } else {
+                    let box = document.getElementById('kpi-uplink-box');
+                    let pingText = document.getElementById('uplinkPing');
+                    if (statusText) statusText.innerText = "Offline";
+                    if (pingText) pingText.innerText = "Ping: -";
+                    if (box) {
+                        box.classList.remove('border-info', 'border-warning', 'border-success');
                         box.classList.add('border-danger');
-                    } else if (r.uplink_status === 'Unstable') {
-                        box.classList.add('border-warning');
-                    } else {
-                        box.classList.add('border-info');
                     }
                 }
             })
@@ -588,25 +604,41 @@
     });
 
     $(document).ready(function () {
-        initChart();
-        initCustomerChart();
-        liveTrafficTable = $('#liveTrafficTable').DataTable({
-            "paging": false,
-            "info": false,
-            "lengthChange": false,
-            "order": [[1, "desc"]], // Sort by bandwidth descending by default
-            "responsive": true,
-            "dom": 'rt' // Only show processing (r) and table (t)
-        });
+        // Start polling immediately so metrics update without delay
+        startInterval();
 
-        // Initialize Select2 for Customer Search
-        $('#customerSearchSelect').select2({
-            dropdownParent: $('#searchCustomerModal'),
-            placeholder: "Search by Name...",
-            allowClear: true,
-            theme: 'bootstrap-5',
-            width: '100%'
-        });
+        try {
+            initChart();
+            initCustomerChart();
+        } catch (e) {
+            console.error("Chart init error:", e);
+        }
+
+        try {
+            if ($.fn.DataTable) {
+                liveTrafficTable = $('#liveTrafficTable').DataTable({
+                    "paging": false,
+                    "info": false,
+                    "lengthChange": false,
+                    "order": [[1, "desc"]],
+                    "responsive": true,
+                    "dom": 'rt'
+                });
+            }
+        } catch (e) {
+            console.error("DataTable init error:", e);
+        }
+
+        // Initialize Select2 for Customer Search safely
+        if ($.fn.select2) {
+            $('#customerSearchSelect').select2({
+                dropdownParent: $('#searchCustomerModal'),
+                placeholder: "Search by Name...",
+                allowClear: true,
+                theme: 'bootstrap-5',
+                width: '100%'
+            });
+        }
 
         let searchInterval = null;
         $('#customerSearchSelect').on('change', function() {
