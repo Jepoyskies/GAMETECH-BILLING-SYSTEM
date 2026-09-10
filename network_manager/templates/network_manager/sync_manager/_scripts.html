@@ -1,0 +1,138 @@
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+    function showGametechAlert(message) {
+        var modal = new bootstrap.Modal(document.getElementById('gametechAlertModal'));
+        $('#gametechAlertModalBody').text(message);
+        modal.show();
+    }
+
+    $(document).ready(function() {
+        $('.datatable').DataTable({
+            "pageLength": 10,
+            "lengthChange": false,
+            "info": true,
+            "searching": true,
+            "destroy": true,
+            "order": [] // Disable initial sorting
+        });
+
+        // Initialize DataTables
+        var syncedTable = $('#syncedTable').DataTable({
+            "pageLength": 10,
+            "searching": true,
+            "destroy": true,
+            "order": []
+        });
+
+        // Barangay Filter for Synced Table
+        $('#barangayFilter').on('change', function() {
+            var val = $.fn.dataTable.util.escapeRegex($(this).val());
+            syncedTable.column(3).search(val ? '^' + val + '$' : '', true, false).draw();
+        });
+
+        // Select All for Synced Table
+        $('#selectAllSynced').change(function() {
+            var isChecked = $(this).prop('checked');
+            // Only check visible checkboxes in the DataTable
+            $('.synced-check:visible').prop('checked', isChecked);
+        });
+
+        $('.synced-check').change(function(){
+            if(false == $(this).prop("checked")){
+                $("#selectAllSynced").prop('checked', false); 
+            }
+            if ($('.synced-check:visible:checked').length == $('.synced-check:visible').length ){
+                $("#selectAllSynced").prop('checked', true);
+            }
+        });
+
+        // Bulk Transfer Form Validation
+        $('#bulkTransferForm').on('submit', function(e) {
+            var submitterName = e.originalEvent && e.originalEvent.submitter ? e.originalEvent.submitter.name : '';
+            if (submitterName === 'pppoe_username') {
+                return true; // Bypass validation for Auto-Fix button
+            }
+
+            var checkboxes = $(this).find('input[name="customer_ids"]:checked');
+            var target = $(this).find('select[name="target_device_id"]').val();
+            
+            if (checkboxes.length === 0) {
+                e.preventDefault();
+                showGametechAlert('Please select at least one customer to move.');
+                return false;
+            }
+            if (!target) {
+                e.preventDefault();
+                showGametechAlert('Please select a target router.');
+                return false;
+            }
+        });
+        
+        // Select All for Clean Orphans
+        $('#selectAllCleanOrphans').change(function() {
+            $('.clean-orphan-check').prop('checked', $(this).prop('checked'));
+        });
+        
+        // Select All for Suspicious Orphans
+        $('#selectAllSuspiciousOrphans').change(function() {
+            $('.suspicious-orphan-check').prop('checked', $(this).prop('checked'));
+        });
+        
+        // Form Validation for Bulk Actions
+        $('form:not(#bulkTransferForm)').on('submit', function(e) {
+            var submitBtn = $(document.activeElement);
+            if (submitBtn.attr('name') === 'bulk_action') {
+                var checkboxes = $(this).find('input[name="selected_users"]:checked');
+                if (checkboxes.length === 0) {
+                    e.preventDefault();
+                    
+                    // Show a nice inline alert instead of reloading the page
+                    const alertHtml = `
+                    <div class="alert alert-warning alert-dismissible fade show mt-2 custom-validation-alert" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i> Please select at least one user using the checkboxes first.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>`;
+                    
+                    $(this).find('.custom-validation-alert').remove();
+                    $(this).find('.card-body').prepend(alertHtml);
+                }
+            }
+        });
+
+        // Select All for Missing
+        $('#selectAllMissing').change(function() {
+            $('.missing-check').prop('checked', $(this).prop('checked'));
+        });
+        
+        // Uncheck 'Select All' if one is manually unchecked
+        $('.clean-orphan-check').change(function(){
+            if(false == $(this).prop("checked")){
+                $("#selectAllCleanOrphans").prop('checked', false); 
+            }
+            if ($('.clean-orphan-check:checked').length == $('.clean-orphan-check').length ){
+                $("#selectAllCleanOrphans").prop('checked', true);
+            }
+        });
+        
+        $('.suspicious-orphan-check').change(function(){
+            if(false == $(this).prop("checked")){
+                $("#selectAllSuspiciousOrphans").prop('checked', false); 
+            }
+            if ($('.suspicious-orphan-check:checked').length == $('.suspicious-orphan-check').length ){
+                $("#selectAllSuspiciousOrphans").prop('checked', true);
+            }
+        });
+
+        $('.missing-check').change(function(){
+            if(false == $(this).prop("checked")){
+                $("#selectAllMissing").prop('checked', false); 
+            }
+            if ($('.missing-check:checked').length == $('.missing-check').length ){
+                $("#selectAllMissing").prop('checked', true);
+            }
+        });
+    });
+</script>

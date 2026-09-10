@@ -1,0 +1,92 @@
+<!-- Synced Users -->
+<div class="card sync-card border-0 mb-4">
+    <div class="card-header success-header d-flex justify-content-between align-items-center border-0">
+        <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i> Active Users ({{ synced|length }})</h5>
+        <small>Present in both System and Mikrotik</small>
+    </div>
+    <div class="card-body p-0 table-responsive">
+        <form method="POST" action="{% url 'bulk_transfer_router' %}" id="bulkTransferForm">
+            {% csrf_token %}
+            <div class="filter-bar d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <label class="fw-bold mb-0 text-muted text-nowrap"><i class="fas fa-filter text-primary"></i> Filter Barangay:</label>
+                    <select id="barangayFilter" class="form-select form-select-sm shadow-sm" style="max-width: 200px;">
+                        <option value="">All Barangays</option>
+                        {% for brgy in barangays %}
+                        <option value="{{ brgy.name }}">{{ brgy.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <label class="fw-bold mb-0 text-muted text-nowrap">Move Selected To:</label>
+                    <select name="target_device_id" class="form-select form-select-sm shadow-sm" style="max-width: 200px;" required>
+                        <option value="">-- Select Router --</option>
+                        {% for r in all_routers %}
+                            {% if r.id != device.id %}
+                            <option value="{{ r.id }}">{{ r.device_name }} ({{ r.ip_address }})</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-sm btn-primary" onclick="return confirm('Are you sure you want to move the selected users to this router?');">
+                        <i class="fas fa-exchange-alt"></i> Move
+                    </button>
+                </div>
+            </div>
+            <table class="table table-hover mb-0 datatable" id="syncedTable">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;"><input type="checkbox" class="form-check-input" id="selectAllSynced"></th>
+                        <th>PPPoE Username</th>
+                        <th>Customer Name</th>
+                        <th>Barangay</th>
+                        <th>Profile</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in synced %}
+                    <tr>
+                        <td>
+                            {% if user.customer %}
+                            <input type="checkbox" class="form-check-input synced-check" name="customer_ids" value="{{ user.customer.id }}" data-barangay="{{ user.customer.barangay.name|default:'' }}">
+                            {% endif %}
+                        </td>
+                        <td><span class="fw-bold">{{ user.name }}</span></td>
+                        <td>{{ user.customer.full_name|default:"-" }}</td>
+                        <td>{{ user.customer.barangay.name|default:"-" }}</td>
+                        <td>
+                            <span class="gametech-pill pill-primary">{{ user.profile }}</span>
+                            {% if user.is_suspicious %}
+                            <div class="mt-1">
+                                <span class="gametech-pill pill-danger" title="{{ user.suspicious_reasons|default:'Suspicious' }}"><i class="fas fa-exclamation-triangle me-1"></i> Suspicious Account</span>
+                            </div>
+                            <small class="text-danger d-block mt-1 fw-bold" style="font-size: 0.75rem;">{{ user.suspicious_reasons }}</small>
+                            {% endif %}
+                        </td>
+                        <td><span class="gametech-pill pill-success"><span class="status-dot dot-online"></span> Synced</span></td>
+                        <td class="text-end">
+                            {% if user.customer %}
+                            <div class="d-flex justify-content-end gap-1">
+                                <a href="{% url 'view_customer' user.customer.id %}" class="btn btn-sm btn-outline-secondary" target="_blank" title="View Customer Profile"><i class="fas fa-external-link-alt"></i> View</a>
+                                {% if user.is_suspicious %}
+                                    {% if user.customer.plan and user.customer.barangay %}
+                                    <button type="submit" formnovalidate formaction="{% url 'sync_autofix_user' device.id %}" formmethod="POST" name="pppoe_username" value="{{ user.name }}" class="btn btn-sm btn-outline-primary" title="Automatically correct the profile and comment on the router to match the system database" onclick="return confirm('Are you sure you want to Auto-Fix this account?\n\nThis is completely safe! It will simply update the router to match the Plan and Barangay exactly as it is saved in our system database.');">
+                                        <i class="fas fa-magic"></i> Auto-Fix
+                                    </button>
+                                    {% else %}
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" title="Cannot Auto-Fix because the customer is missing a Subscription Plan or Barangay in the system." onclick="showGametechAlert('This customer is missing a Subscription Plan or Barangay in the System Database. Please complete their profile first before auto-fixing.')">
+                                        <i class="fas fa-magic"></i> Auto-Fix
+                                    </button>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </form>
+    </div>
+</div>
