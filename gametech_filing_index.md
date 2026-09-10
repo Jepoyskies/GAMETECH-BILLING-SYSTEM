@@ -18,6 +18,7 @@
 | **Background Cron Tasks** | `billing/tasks.py` | Triggered by Celery Beat | Monitored in Live Monitoring NOC | Celery Beat in `gametech_core/settings.py` |
 | **Field Dispatch / Tickets** | `dispatch/views.py` | `dispatch/urls.py` (`/dispatch/`) | `dispatch/templates/dispatch/` | `dispatch/models.py` (`JobOrder`) |
 | **Customer Self-Service Portal** | `customer_portal/views.py` | `customer_portal/urls.py` (`/portal/`) | `customer_portal/templates/` | `customer_portal/models.py` |
+| **Top Navigation & Active Sessions** | `billing/views/auth.py` (`online_staff_api`)<br>`billing/middleware.py` | `billing/urls.py` (`/api/online-staff/`) | `billing/templates/billing/base/_topbar.html`<br>`billing/templates/billing/base/_scripts.html` | `User`, `Customer`, Redis Cache (`seen_user_*`, `seen_customer_*`, `active_portal_customers`) |
 | **Design System / Dark Mode** | N/A | Global Static | `static/css/theme/tokens_and_base.css`<br>`static/css/theme/components.css`<br>`static/css/theme/layout_and_darkmode.css` | N/A |
 
 ---
