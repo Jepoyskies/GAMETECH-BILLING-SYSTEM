@@ -40,9 +40,14 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
    * Before investigating any reported bug, UI defect, or freeze, **ALWAYS** check `gametech_error_runbook.md`.
    * If the symptom matches a known pattern (e.g. grey screen, white Select2 dropdown, stuck telemetry dots `...`, Mikrotik timeout), jump directly to the diagnosed target files and execute the verified 1-step fix.
 
-7. **SURGICAL IN-PLACE EDITS ONLY**:
+7. **SURGICAL IN-PLACE EDITS & THE PONYTAIL LADDER**:
    * **ALWAYS** use targeted replacement tools (`replace_file_content` / diffs) to edit ONLY the 2–15 lines with the bug.
    * **NEVER** rewrite an entire file or re-emit hundreds of unchanged lines.
+   * **THE PONYTAIL MANDATE (Write Less, Delete More)**: Every time code is added, edited, or debugged, apply the ladder before writing:
+     1. **YAGNI**: Reject speculative abstractions, unrequested boilerplate, and unnecessary wrappers.
+     2. **Reuse**: Check for existing project helpers/patterns before writing new logic.
+     3. **Stdlib/Native First**: Use Python, Django, or browser built-ins before reaching for custom helpers or new libraries.
+     4. **Shortest Working Diff**: One line before ten. Deletion over addition. Fix the root cause once at the source rather than patching multiple callers.
 
 8. **THE 3-STEP ESCALATION PROTOCOL (Hard Ceiling on Debugging Depth)**:
    * **Step 1**: `grep_search` for the exact symbol, function, class, or error string.
