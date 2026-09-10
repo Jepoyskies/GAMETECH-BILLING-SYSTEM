@@ -345,9 +345,6 @@ def view_customer(request, customer_id):
     uptime = "Loading..."
     live_mac = "Loading..."
     last_logged_out = "Loading..."
-
-    from billing.models import SystemLog, Payment, AuditLog, AddOnRequest, CignalPlay
-
     # Combine logs
     all_logs = []
 
