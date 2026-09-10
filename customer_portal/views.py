@@ -489,7 +489,7 @@ def submit_ticket(request):
                 title=f"New Ticket: {customer.full_name} ({issue_type})",
                 message=f"[{ticket_no}] {description or issue_type}",
                 notification_type='network',
-                link='/dispatch/?tab=concerns',
+                link='/dispatch/client-concerns/',
             )
         except Exception:
             pass

@@ -15,6 +15,23 @@ def log_audit(action, entity_type, entity_id, actor, summary=None):
     )
 
 @login_required
+def dispatch_index_view(request):
+    tab = request.GET.get('tab', '').lower()
+    if tab in ('concerns', 'client_concerns'):
+        return redirect('client_concerns')
+    elif tab in ('internet', 'internet_install'):
+        return redirect('internet_install')
+    elif tab in ('cignal', 'cignal_install'):
+        return redirect('cignal_install')
+    elif tab in ('monitoring', 'master'):
+        return redirect('dispatch_monitoring')
+    elif tab == 'dashboard':
+        return redirect('dispatch_dashboard')
+    elif tab == 'management':
+        return redirect('dispatch_management')
+    return redirect('client_concerns')
+
+@login_required
 def dashboard_view(request):
     return render(request, 'dispatch/dashboard.html')
 
