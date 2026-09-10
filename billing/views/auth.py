@@ -373,16 +373,14 @@ def unified_login_view(request):
 def online_staff_api(request):
     from django.core.cache import cache
     from django.contrib.auth.models import User
-
-    # We only check users who could be staff (all User models typically in this app)
-    # This might be <20 users, so iterating over them and checking cache is fast enough.
-    staff_users = User.objects.all()
-
     from django.utils import timezone
+    from billing.models import Customer
 
     now = timezone.now()
 
-    data = []
+    # 1. Staff users
+    staff_users = User.objects.all()
+    staff_data = []
     for u in staff_users:
         last_seen = cache.get(f"seen_user_{u.id}")
         if last_seen:
@@ -399,9 +397,60 @@ def online_staff_api(request):
 
             if last_seen and (now - last_seen).total_seconds() < 300:
                 role = getattr(u, "role", "Staff")
-                data.append({"username": u.username, "role": role})
+                staff_data.append({"username": u.username, "role": role})
 
-    return JsonResponse({"status": "success", "data": data})
+    # 2. Customer portal users
+    active_customer_ids = set()
+    active_customers_cache = cache.get("active_portal_customers") or {}
+    for cid_str, ts_str in active_customers_cache.items():
+        try:
+            from django.utils.dateparse import parse_datetime
+            ts = parse_datetime(ts_str)
+            if ts and getattr(ts, 'tzinfo', None) is None:
+                ts = timezone.make_aware(ts)
+            if ts and (now - ts).total_seconds() < 300:
+                active_customer_ids.add(int(cid_str))
+        except Exception:
+            pass
+
+    # Fallback/compliment with unexpired database sessions for active portal customers
+    try:
+        from django.contrib.sessions.models import Session
+        unexpired_sessions = Session.objects.filter(expire_date__gte=now)[:50]
+        for s in unexpired_sessions:
+            try:
+                s_data = s.get_decoded()
+                cid = s_data.get("customer_id")
+                if cid:
+                    active_customer_ids.add(int(cid))
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    customer_data = []
+    if active_customer_ids:
+        customers = Customer.objects.filter(id__in=active_customer_ids).select_related("plan")
+        for c in customers:
+            customer_data.append({
+                "id": c.id,
+                "name": c.full_name or c.pppoe_username,
+                "username": c.pppoe_username or "",
+                "plan": c.plan.name if c.plan else "",
+                "status": c.status or "active",
+            })
+
+    total_count = len(staff_data) + len(customer_data)
+
+    return JsonResponse({
+        "status": "success",
+        "data": staff_data,
+        "staff": staff_data,
+        "customers": customer_data,
+        "staff_count": len(staff_data),
+        "customer_count": len(customer_data),
+        "total_count": total_count,
+    })
 
 
 def custom_logout_view(request):

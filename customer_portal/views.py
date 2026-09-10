@@ -20,6 +20,15 @@ def portal_login(request):
         try:
             customer = Customer.objects.get(pppoe_username=pppoe_username, pppoe_password=pppoe_password)
             request.session['customer_id'] = customer.id
+            try:
+                from django.core.cache import cache
+                now = timezone.now()
+                cache.set(f"seen_customer_{customer.id}", now, 300)
+                active = cache.get("active_portal_customers") or {}
+                active[str(customer.id)] = now.isoformat()
+                cache.set("active_portal_customers", active, 600)
+            except Exception:
+                pass
             return redirect('customer_portal:portal_dashboard')
         except Customer.DoesNotExist:
             messages.error(request, 'Invalid PPPoE username or password.')
@@ -139,6 +148,17 @@ def portal_statement_view(request):
     return render(request, 'customer_portal/portal_statement.html', context)
 
 def portal_logout(request):
+    customer_id = request.session.get('customer_id')
+    if customer_id:
+        try:
+            from django.core.cache import cache
+            cache.delete(f"seen_customer_{customer_id}")
+            active = cache.get("active_portal_customers") or {}
+            if str(customer_id) in active:
+                del active[str(customer_id)]
+                cache.set("active_portal_customers", active, 600)
+        except Exception:
+            pass
     request.session.flush()
     return redirect('customer_portal:portal_login')
 

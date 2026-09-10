@@ -58,4 +58,32 @@ class ActiveUserMiddleware:
                         cache.set(cache_key, now, 60 * 60 * 24 * 30)  # 30 days
 
         response = self.get_response(request)
+
+        # Track active Customer Portal subscriber sessions
+        try:
+            customer_id = request.session.get("customer_id")
+            if customer_id and not request.path.startswith("/static/"):
+                now = timezone.now()
+                cache_key = f"seen_customer_{customer_id}"
+                last_seen = cache.get(cache_key)
+                if not last_seen or (isinstance(last_seen, timezone.datetime) and (now - last_seen).total_seconds() > 30):
+                    cache.set(cache_key, now, 300)
+                    active_customers = cache.get("active_portal_customers") or {}
+                    active_customers[str(customer_id)] = now.isoformat()
+                    # Clean expired (older than 5 minutes)
+                    from django.utils.dateparse import parse_datetime
+                    cleaned = {}
+                    for cid_str, ts_str in active_customers.items():
+                        try:
+                            ts = parse_datetime(ts_str)
+                            if ts and getattr(ts, 'tzinfo', None) is None:
+                                ts = timezone.make_aware(ts)
+                            if ts and (now - ts).total_seconds() < 300:
+                                cleaned[cid_str] = ts_str
+                        except Exception:
+                            pass
+                    cache.set("active_portal_customers", cleaned, 600)
+        except Exception:
+            pass
+
         return response

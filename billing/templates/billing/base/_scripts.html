@@ -228,57 +228,159 @@ document.addEventListener("DOMContentLoaded", function() {
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     
-    // Online staff JS
+    // Online sessions JS (Staff & Customers)
+    let currentOnlineTab = 'staff';
+    let cachedOnlineData = { staff: [], customers: [] };
+
+    function switchOnlineTab(tab, event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        currentOnlineTab = tab;
+        const btnStaff = document.getElementById('tabBtnStaff');
+        const btnCust = document.getElementById('tabBtnCustomer');
+        if (btnStaff && btnCust) {
+            if (tab === 'staff') {
+                btnStaff.style.background = '#059669';
+                btnStaff.style.color = '#ffffff';
+                btnStaff.style.boxShadow = '0 2px 6px rgba(0,0,0,0.25)';
+                btnCust.style.background = 'transparent';
+                btnCust.style.color = 'rgba(255,255,255,0.75)';
+                btnCust.style.boxShadow = 'none';
+            } else {
+                btnCust.style.background = '#059669';
+                btnCust.style.color = '#ffffff';
+                btnCust.style.boxShadow = '0 2px 6px rgba(0,0,0,0.25)';
+                btnStaff.style.background = 'transparent';
+                btnStaff.style.color = 'rgba(255,255,255,0.75)';
+                btnStaff.style.boxShadow = 'none';
+            }
+        }
+        renderOnlineList();
+    }
+
+    function renderOnlineList() {
+        const list = document.getElementById('onlineStaffList');
+        if (!list) return;
+
+        const colors = ['#059669','#2563eb','#7c3aed','#dc2626','#ea580c','#0891b2'];
+
+        if (currentOnlineTab === 'staff') {
+            const staff = cachedOnlineData.staff || [];
+            if (staff.length > 0) {
+                let html = '<div class="p-2 d-flex flex-column gap-2">';
+                staff.forEach((user, idx) => {
+                    const color = colors[idx % colors.length];
+                    const initial = (user.username || 'S').charAt(0).toUpperCase();
+                    const roleColor = user.role === 'Admin' ? '#dc2626' : user.role === 'CSR' ? '#2563eb' : '#059669';
+                    html += `
+                    <div class="d-flex align-items-center gap-3 p-2 rounded-3 gt-staff-row">
+                        <div class="position-relative flex-shrink-0">
+                            <div class="d-flex align-items-center justify-content-center rounded-circle text-white fw-bold" style="width:40px;height:40px;background:${color};font-size:1.05rem;letter-spacing:-1px;">
+                                ${initial}
+                            </div>
+                            <span class="position-absolute bottom-0 end-0 border border-2 border-white rounded-circle bg-success" style="width:11px;height:11px;"></span>
+                        </div>
+                        <div class="flex-grow-1 overflow-hidden">
+                            <div class="fw-bold gt-staff-name" style="font-size:0.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${user.username}</div>
+                            <span class="badge rounded-pill" style="font-size:0.65rem;background:${roleColor}20;color:${roleColor};border:1px solid ${roleColor}40;">${user.role}</span>
+                        </div>
+                        <div class="text-end flex-shrink-0">
+                            <span class="badge rounded-pill gt-online-badge">
+                                <i class="fas fa-circle" style="font-size:0.5rem;"></i> Online
+                            </span>
+                        </div>
+                    </div>`;
+                });
+                html += '</div>';
+                list.innerHTML = html;
+            } else {
+                list.innerHTML = `
+                <div class="p-4 text-center gt-muted-text">
+                    <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-2 gt-icon-circle">
+                        <i class="fas fa-user-slash" style="font-size:1.2rem;"></i>
+                    </div>
+                    <div class="fw-semibold" style="font-size:0.85rem;">No staff online</div>
+                    <div style="font-size:0.75rem;opacity:0.7;">No other staff active right now</div>
+                </div>`;
+            }
+        } else {
+            // Customer tab
+            const customers = cachedOnlineData.customers || [];
+            if (customers.length > 0) {
+                let html = '<div class="p-2 d-flex flex-column gap-2">';
+                customers.forEach((cust, idx) => {
+                    const color = colors[(idx + 2) % colors.length];
+                    const initial = (cust.name || cust.username || 'C').charAt(0).toUpperCase();
+                    html += `
+                    <a href="/customers/view/${cust.id}/" class="text-decoration-none d-flex align-items-center gap-3 p-2 rounded-3 gt-staff-row" style="color:inherit; transition: background 0.15s ease;">
+                        <div class="position-relative flex-shrink-0">
+                            <div class="d-flex align-items-center justify-content-center rounded-circle text-white fw-bold" style="width:40px;height:40px;background:${color};font-size:1.05rem;">
+                                ${initial}
+                            </div>
+                            <span class="position-absolute bottom-0 end-0 border border-2 border-white rounded-circle bg-success" style="width:11px;height:11px;"></span>
+                        </div>
+                        <div class="flex-grow-1 overflow-hidden">
+                            <div class="fw-bold gt-staff-name" style="font-size:0.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${cust.name}</div>
+                            <div class="d-flex align-items-center gap-1 mt-1">
+                                <span class="badge bg-secondary bg-opacity-25 text-secondary" style="font-size:0.62rem; font-family: monospace;">@${cust.username}</span>
+                                ${cust.plan ? `<span class="badge bg-success bg-opacity-15 text-success" style="font-size:0.62rem;">${cust.plan}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="text-end flex-shrink-0">
+                            <span class="badge rounded-pill gt-online-badge">
+                                <i class="fas fa-circle" style="font-size:0.5rem;"></i> Active
+                            </span>
+                        </div>
+                    </a>`;
+                });
+                html += '</div>';
+                list.innerHTML = html;
+            } else {
+                list.innerHTML = `
+                <div class="p-4 text-center gt-muted-text">
+                    <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-2 gt-icon-circle">
+                        <i class="fas fa-user-clock" style="font-size:1.2rem;"></i>
+                    </div>
+                    <div class="fw-semibold" style="font-size:0.85rem;">No customers online</div>
+                    <div style="font-size:0.75rem;opacity:0.7;">No active Customer Portal sessions</div>
+                </div>`;
+            }
+        }
+    }
+
     function fetchOnlineStaff() {
         fetch('/api/online-staff/')
             .then(r => r.json())
             .then(data => {
                 if(data.status === 'success') {
-                    const list = document.getElementById('onlineStaffList');
+                    cachedOnlineData.staff = data.staff || data.data || [];
+                    cachedOnlineData.customers = data.customers || [];
+
                     const badge = document.getElementById('onlineStaffBadge');
-                    const colors = ['#059669','#2563eb','#7c3aed','#dc2626','#ea580c','#0891b2'];
+                    const totalPill = document.getElementById('onlineTotalPill');
+                    const staffCountEl = document.getElementById('staffTabCount');
+                    const custCountEl = document.getElementById('customerTabCount');
 
-                    if(data.data.length > 0) {
-                        badge.style.display = 'inline-block';
-                        badge.innerText = data.data.length;
+                    const staffCount = cachedOnlineData.staff.length;
+                    const custCount = cachedOnlineData.customers.length;
+                    const totalCount = (typeof data.total_count === 'number') ? data.total_count : (staffCount + custCount);
 
-                        let html = '<div class="p-2 d-flex flex-column gap-2">';
-                        data.data.forEach((user, idx) => {
-                            const color = colors[idx % colors.length];
-                            const initial = user.username.charAt(0).toUpperCase();
-                            const roleColor = user.role === 'Admin' ? '#dc2626' : user.role === 'CSR' ? '#2563eb' : '#059669';
-                            html += `
-                            <div class="d-flex align-items-center gap-3 p-2 rounded-3 gt-staff-row">
-                                <div class="position-relative flex-shrink-0">
-                                    <div class="d-flex align-items-center justify-content-center rounded-circle text-white fw-bold" style="width:42px;height:42px;background:${color};font-size:1.1rem;letter-spacing:-1px;">
-                                        ${initial}
-                                    </div>
-                                    <span class="position-absolute bottom-0 end-0 border border-2 border-white rounded-circle bg-success" style="width:12px;height:12px;"></span>
-                                </div>
-                                <div class="flex-grow-1 overflow-hidden">
-                                    <div class="fw-bold gt-staff-name" style="font-size:0.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${user.username}</div>
-                                    <span class="badge rounded-pill" style="font-size:0.68rem;background:${roleColor}20;color:${roleColor};border:1px solid ${roleColor}40;">${user.role}</span>
-                                </div>
-                                <div class="text-end flex-shrink-0">
-                                    <span class="badge rounded-pill gt-online-badge">
-                                        <i class="fas fa-circle" style="font-size:0.5rem;"></i> Online
-                                    </span>
-                                </div>
-                            </div>`;
-                        });
-                        html += '</div>';
-                        list.innerHTML = html;
-                    } else {
-                        badge.style.display = 'none';
-                        list.innerHTML = `
-                        <div class="p-4 text-center gt-muted-text">
-                            <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-2 gt-icon-circle">
-                                <i class="fas fa-user-slash" style="font-size:1.2rem;"></i>
-                            </div>
-                            <div class="fw-semibold" style="font-size:0.85rem;">No one else is online</div>
-                            <div style="font-size:0.75rem;opacity:0.7;">Only you are logged in right now</div>
-                        </div>`;
+                    if (staffCountEl) staffCountEl.innerText = staffCount;
+                    if (custCountEl) custCountEl.innerText = custCount;
+                    if (totalPill) totalPill.innerText = `${totalCount} Active`;
+
+                    if (badge) {
+                        if (totalCount > 0) {
+                            badge.style.display = 'inline-block';
+                            badge.innerText = totalCount;
+                        } else {
+                            badge.style.display = 'none';
+                        }
                     }
+
+                    renderOnlineList();
                 }
             })
             .catch(err => console.error(err));
