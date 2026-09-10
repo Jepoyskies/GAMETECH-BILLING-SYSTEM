@@ -41,6 +41,7 @@ This workspace strictly adheres to the protocols defined in:
 10. **Verify API Contracts**: Before rewriting backend logic, `curl` the API to see actual response shape.
 11. **No Git Archeology**: Never run `git log`, `git reflog`, `git diff`, or `git blame` to understand features. See AGENTS.md Rule #22.
 12. **Cache Sync on State Changes**: Verify Redis invalidation when editing Login/Logout/Delete views. See AGENTS.md Rule #21.
+13. **400-Line Circuit Breaker**: When touching a file > 400 lines, split into < 250 line partials before completing the task. See AGENTS.md Rule #24.
 
 ---
 

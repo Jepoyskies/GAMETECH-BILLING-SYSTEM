@@ -41,3 +41,12 @@ All Claude Code and Anthropic Claude assistants operating in this repository **M
      3. `ssh root@143.198.207.144 "cd /root/GAMETECH-BILLING-SYSTEM && git pull origin main"`
      4. If Python/templates changed: `ssh root@143.198.207.144 "docker restart gametech-billing-system_web_1"`
      5. If static CSS/JS changed: `ssh root@143.198.207.144 "docker exec gametech-billing-system_web_1 python manage.py collectstatic --noinput"`
+
+7. **3-Step Escalation & No-Repeat Failures**:
+   - Step 1: `grep_search` for the exact symbol → Step 2: Read 50–80 line slice → Step 3: **STOP** and ask user for browser console error or exact URL.
+   - **FORBIDDEN**: Continuing past 3 steps by opening additional files or running broad scans.
+   - Max 2 attempts per approach. If same fix fails twice, pivot to a different strategy or escalate to user.
+
+8. **Template Include-Chain Verification**:
+   - When creating or editing a template partial (e.g. `_modal_ticket.html`), **ALWAYS verify** it is actually `{% include %}`'d in a parent template using `grep_search`.
+   - If it's not included anywhere → add the `{% include %}` tag. Otherwise the partial is dead code.
