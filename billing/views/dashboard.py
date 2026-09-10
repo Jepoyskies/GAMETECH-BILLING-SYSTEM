@@ -55,6 +55,12 @@ def dashboard_view(request):
     # -------------------
     cache_key = f'dashboard_stats_{today.strftime("%Y%m%d")}'
     stats = cache.get(cache_key)
+    
+    if stats and isinstance(stats, str):
+        try:
+            stats = json.loads(stats)
+        except Exception:
+            stats = None
 
     if not stats:
         # KPIs
@@ -229,6 +235,7 @@ def dashboard_view(request):
             "growth_icon": growth_icon,
             "growth_color": growth_color,
             "collection_rate": collection_rate,
+            "distinct_payers_this_month": distinct_payers_this_month,
             "months_js": months_js,
             "sales_by_month_js": sales_by_month_js,
             "days_js": days_js,
@@ -240,21 +247,22 @@ def dashboard_view(request):
         cache.set(cache_key, stats, 300)
 
     # Unpack from cache
-    total_customers = stats["total_customers"]
-    new_customers_this_month = stats["new_customers_this_month"]
-    new_customers_list = stats["new_customers_list"]
-    totals = stats["totals"]
-    breakdowns = stats["breakdowns"]
-    growth_percent = stats["growth_percent"]
-    growth_icon = stats["growth_icon"]
-    growth_color = stats["growth_color"]
-    collection_rate = stats["collection_rate"]
-    months_js = stats["months_js"]
-    sales_by_month_js = stats["sales_by_month_js"]
-    days_js = stats["days_js"]
-    sales_by_day_js = stats["sales_by_day_js"]
-    pie_labels_js = stats["pie_labels_js"]
-    pie_data_js = stats["pie_data_js"]
+    total_customers = stats.get("total_customers", 0)
+    new_customers_this_month = stats.get("new_customers_this_month", 0)
+    new_customers_list = stats.get("new_customers_list", [])
+    totals = stats.get("totals", {})
+    breakdowns = stats.get("breakdowns", {})
+    growth_percent = stats.get("growth_percent", 0.0)
+    growth_icon = stats.get("growth_icon", "fa-arrow-up")
+    growth_color = stats.get("growth_color", "text-success")
+    collection_rate = stats.get("collection_rate", 0.0)
+    distinct_payers_this_month = stats.get("distinct_payers_this_month", 0)
+    months_js = stats.get("months_js", [])
+    sales_by_month_js = stats.get("sales_by_month_js", [])
+    days_js = stats.get("days_js", [])
+    sales_by_day_js = stats.get("sales_by_day_js", [])
+    pie_labels_js = stats.get("pie_labels_js", [])
+    pie_data_js = stats.get("pie_data_js", [])
     # -------------------
     
     payments = Payment.objects.all()
@@ -271,17 +279,29 @@ def dashboard_view(request):
     for u in recent_users:
         last_active = cache.get(f"seen_user_{u.id}")
         if last_active:
-            is_active = (now - last_active).total_seconds() < 300
-            recent_admin_logins.append(
-                {
-                    "username": u.username,
-                    "color": "#0d6efd",
-                    "event_type": "active" if is_active else "login",
-                    "login_time": last_active,
-                }
-            )
-            if is_active:
-                active_usernames.add(u.username)
+            if isinstance(last_active, str):
+                from django.utils.dateparse import parse_datetime
+                parsed = parse_datetime(last_active)
+                if parsed:
+                    last_active = parsed
+                else:
+                    last_active = None
+            
+            if last_active and getattr(last_active, 'tzinfo', None) is None:
+                last_active = timezone.make_aware(last_active)
+                
+            if last_active:
+                is_active = (now - last_active).total_seconds() < 300
+                recent_admin_logins.append(
+                    {
+                        "username": u.username,
+                        "color": "#0d6efd",
+                        "event_type": "active" if is_active else "login",
+                        "login_time": last_active,
+                    }
+                )
+                if is_active:
+                    active_usernames.add(u.username)
 
     # 2. Get recent historical logins
     recent_logs = SystemLog.objects.filter(table_name="User", action="LOGIN").order_by(

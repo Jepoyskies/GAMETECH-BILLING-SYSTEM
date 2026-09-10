@@ -166,7 +166,14 @@ def api_router_uplink(request):
             api.connection.disconnect()
         except Exception as e:
             # Device unreachable or API error
-            pass
+            routers.append(
+                {
+                    "id": device.id,
+                    "name": device.device_name,
+                    "uplink_status": "Offline",
+                    "uplink_ping": "Unreachable",
+                }
+            )
 
     return JsonResponse({"routers": routers})
 

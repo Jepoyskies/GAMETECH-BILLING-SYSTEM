@@ -1,0 +1,43 @@
+import os
+
+# The files we actually care about
+ALLOWED_EXTENSIONS = {'.py', '.html', '.js', '.css'}
+
+# The folders that the AI should NEVER read (this filters out 8,500+ junk files)
+IGNORED_DIRS = {
+    'venv', '__pycache__', '.git', '.github', '.agents', 
+    'migrations', 'docker', 'nginx_logs', 'scripts'
+}
+
+OUTPUT_FILE = 'gametech_context.txt'
+
+def create_smart_dump():
+    with open(OUTPUT_FILE, 'w', encoding='utf-8') as outfile:
+        outfile.write("GAMETECH UNLI FIBER BILLING SYSTEM - CODEBASE CONTEXT\n")
+        outfile.write("="*60 + "\n\n")
+
+        for root, dirs, files in os.walk('.'):
+            # Skip ignored directories completely
+            dirs[:] = [d for d in dirs if d not in IGNORED_DIRS]
+            
+            for file in files:
+                ext = os.path.splitext(file)[1]
+                if ext in ALLOWED_EXTENSIONS:
+                    filepath = os.path.join(root, file)
+                    
+                    # Optional: Skip massive minified vendor files if you have them
+                    if 'min.js' in file or 'bootstrap' in file:
+                        continue
+                        
+                    try:
+                        with open(filepath, 'r', encoding='utf-8') as infile:
+                            content = infile.read()
+                            outfile.write(f"--- FILE: {filepath} ---\n")
+                            outfile.write(content + "\n\n")
+                    except Exception as e:
+                        print(f"Could not read {filepath}: {e}")
+
+    print(f"Done! Created {OUTPUT_FILE}")
+
+if __name__ == "__main__":
+    create_smart_dump()

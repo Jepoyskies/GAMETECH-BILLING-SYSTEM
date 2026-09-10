@@ -56,6 +56,7 @@ def api_live_monitoring_data(request):
         from billing.utils import get_live_monitoring_data_sync
 
         response_data = get_live_monitoring_data_sync()
+        cache.set("live_monitoring_data", response_data, timeout=30)
 
     return JsonResponse(response_data)
 

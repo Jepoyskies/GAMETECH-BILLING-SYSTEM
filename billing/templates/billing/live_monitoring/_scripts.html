@@ -523,13 +523,14 @@
         fetch("{% url 'api_router_uplink' %}")
             .then(r => r.json())
             .then(d => {
+                let statusText = document.getElementById('uplinkStatus');
+                if (statusText) statusText.classList.remove('syncing');
+
                 if (d.routers && d.routers.length > 0) {
                     let r = d.routers[0];
                     let box = document.getElementById('kpi-uplink-box');
-                    let statusText = document.getElementById('uplinkStatus');
                     let pingText = document.getElementById('uplinkPing');
                     statusText.innerText = r.uplink_status;
-                    statusText.classList.remove('syncing');
                     pingText.innerText = "Ping: " + r.uplink_ping;
 
                     box.classList.remove('border-danger', 'border-warning', 'border-info', 'border-success');
@@ -635,9 +636,15 @@
                         document.getElementById('searchCustUptime').innerText = data.uptime !== 'N/A' ? data.uptime : (data.last_logged_out !== 'N/A' ? 'Offline since ' + data.last_logged_out : 'N/A');
                         document.getElementById('searchCustMac').innerText = data.live_mac;
                         
+                        if (data.stability) {
+                            document.getElementById('searchCustStability').innerHTML = `<span class="text-${data.stability_color}">${data.stability}</span>`;
+                        } else {
+                            document.getElementById('searchCustStability').innerText = 'N/A';
+                        }
+                        
                         if (data.rx_mbps !== undefined && data.tx_mbps !== undefined) {
-                            document.getElementById('searchCustDl').innerText = data.rx_mbps + ' Mbps';
-                            document.getElementById('searchCustUl').innerText = data.tx_mbps + ' Mbps';
+                            document.getElementById('searchCustDl').innerText = data.tx_mbps + ' Mbps';
+                            document.getElementById('searchCustUl').innerText = data.rx_mbps + ' Mbps';
                         } else {
                             document.getElementById('searchCustDl').innerText = '0.0 Mbps';
                             document.getElementById('searchCustUl').innerText = '0.0 Mbps';

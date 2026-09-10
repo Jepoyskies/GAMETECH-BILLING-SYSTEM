@@ -385,9 +385,21 @@ def online_staff_api(request):
     data = []
     for u in staff_users:
         last_seen = cache.get(f"seen_user_{u.id}")
-        if last_seen and (now - last_seen).total_seconds() < 300:
-            role = getattr(u, "role", "Staff")
-            data.append({"username": u.username, "role": role})
+        if last_seen:
+            if isinstance(last_seen, str):
+                from django.utils.dateparse import parse_datetime
+                parsed = parse_datetime(last_seen)
+                if parsed:
+                    last_seen = parsed
+                else:
+                    last_seen = None
+
+            if last_seen and getattr(last_seen, 'tzinfo', None) is None:
+                last_seen = timezone.make_aware(last_seen)
+
+            if last_seen and (now - last_seen).total_seconds() < 300:
+                role = getattr(u, "role", "Staff")
+                data.append({"username": u.username, "role": role})
 
     return JsonResponse({"status": "success", "data": data})
 
