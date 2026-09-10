@@ -30,7 +30,7 @@
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush" id="list-tab" role="tablist" style="border-radius: 0 0 16px 16px; overflow: hidden; max-height: 70vh; overflow-y: auto;">
                         <a class="list-group-item list-group-item-action active py-3 fw-semibold border-0" id="list-sep10-list" data-bs-toggle="list" href="#list-sep10" role="tab" style="font-size: 0.9rem;">
-                            September 10, 2026 <br><small class="text-white-50">Live Monitor Fix, Sniper Rules, Code Clean</small>
+                            September 10, 2026 <br><small class="text-white-50">Multi-Router Uplink, Dispatch Fix, AI Rule Engine v3.0</small>
                         </a>
                         <a class="list-group-item list-group-item-action py-3 fw-semibold border-0" id="list-sep9-list" data-bs-toggle="list" href="#list-sep9" role="tab" style="font-size: 0.9rem;">
                             September 9, 2026 <br><small class="text-muted">Brand Redesign, Security, Caching, Fixes</small>
@@ -154,6 +154,57 @@
                                     <ul class="mb-0">
                                         <li><strong>Script Archiving:</strong> Moved over 20 loose ad-hoc diagnostic and testing scripts from the project root into a clean <code>archived_scripts/</code> directory.</li>
                                         <li><strong>Dead File Removal:</strong> Purged obsolete Express/Node legacy server files, orphaned CSS fragments, and deprecated Chart.js bundles.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Multi-Router Uplink Telemetry & Selected Device Filter -->
+                            <div class="card border-0 mb-4" style="background:#eff6ff; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#1d4ed8;"><i class="fas fa-server me-2"></i> Multi-Router Uplink Telemetry & Per-Device Filtering</h5>
+                                    <p>Investigated and resolved false "Offline" router uplink indicators in NOC Live Monitoring:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>Root Cause Diagnosis:</strong> The backend ping test was returning timeout on secondary hardware (Mikrotik B at <code>192.168.88.1</code>) because of a missing default internet route, while the frontend dashboard was not properly isolating ping data per the currently selected router filter.</li>
+                                        <li><strong>Dynamic Router Filtering:</strong> Updated <code>billing/views/api/network.py</code> and <code>live_monitoring/_scripts.html</code> so the uplink status card dynamically filters and displays metrics for the active router chosen in the dropdown.</li>
+                                        <li><strong>Resilient Multi-Packet Ping:</strong> Upgraded the uplink ping probe from a single packet to a 3-packet sample (<code>count: 3</code>) to eliminate false timeouts caused by initial ARP resolution or transient packet drops.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Real-Time Syncing Spinner & Visual Feedback -->
+                            <div class="card border-0 mb-4" style="background:#ecfdf5; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#047857;"><i class="fas fa-sync-alt me-2"></i> Live Monitoring Interactive Router Switcher UX</h5>
+                                    <p>Eliminated user uncertainty when toggling between Mikrotik routers:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>Syncing Indicator:</strong> Added an animated spinning loading state (<code>fa-spin fa-circle-notch</code>) adjacent to the router selector dropdown whenever staff switches active devices.</li>
+                                        <li><strong>Instant Feedback Loop:</strong> System metrics and KPI cards now provide immediate visual feedback while telemetry data refreshes, preventing confusion during polling intervals.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Dispatch Root Router & Concerns Tab -->
+                            <div class="card border-0 mb-4" style="background:#faf5ff; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#7e22ce;"><i class="fas fa-clipboard-list me-2"></i> Field Dispatch Root Routing & Concerns Tab Navigation</h5>
+                                    <p>Resolved navigation failure when accessing customer support tickets via URL queries:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>Root Router Implementation:</strong> Added <code>dispatch_index_view</code> to <code>dispatch/views.py</code> and registered root route <code>path('', views.dispatch_index_view, name='dispatch_index')</code> in <code>dispatch/urls.py</code>.</li>
+                                        <li><strong>Seamless Deep-Linking:</strong> Deep links such as <code>/dispatch/?tab=concerns</code> now seamlessly redirect or render the Client Concerns tab rather than throwing a 404 Not Found error.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- AI Rule Engine v2.0 & v3.0 Protocol Upgrades -->
+                            <div class="card border-0 mb-4" style="background:#fff1f2; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#be123c;"><i class="fas fa-shield-alt me-2"></i> AI Assistant Protocol Upgrades: Rules 0–20 & Smart Triage (v2.0 & v3.0)</h5>
+                                    <p>Institutionalized engineering protocols in <code>AGENTS.md</code> and <code>GEMINI.md</code> to slash token burn and guarantee sniper execution:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>Rules 11–15 (v2.0):</strong> Added URL-to-file fast map via filing index, docker-first 500 error capture, template include-chain verification, Redis key verification prior to logic rewrites, and the 2-attempt max no-repeat failure wall.</li>
+                                        <li><strong>Rules 16–20 (v3.0):</strong> Added mandatory <code>collectstatic</code> production sync guard, frontend-backend API response contract verification, multi-file batch commit protocol, time-bounded log inspection (<code>--since 2m</code>), and JS event delegation for dynamic DOM elements.</li>
+                                        <li><strong>Smart Triage Router:</strong> Converted <code>GEMINI.md</code> into an instant triage router table mapping symptom types directly to single-step diagnostic commands.</li>
+                                        <li><strong>Token Trap Archival:</strong> Safely archived the legacy 3MB context dump and outdated handoff documentation into <code>archived_scripts/</code>, eliminating catastrophic multi-hundred-thousand token ingestion risks.</li>
                                     </ul>
                                 </div>
                             </div>
