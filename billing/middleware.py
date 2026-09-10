@@ -66,20 +66,34 @@ class ActiveUserMiddleware:
                 now = timezone.now()
                 cache_key = f"seen_customer_{customer_id}"
                 last_seen = cache.get(cache_key)
-                if not last_seen or (isinstance(last_seen, timezone.datetime) and (now - last_seen).total_seconds() > 30):
+                if isinstance(last_seen, str):
+                    from django.utils.dateparse import parse_datetime
+                    parsed = parse_datetime(last_seen)
+                    if parsed:
+                        last_seen = parsed
+                    else:
+                        last_seen = None
+                if last_seen and getattr(last_seen, 'tzinfo', None) is None:
+                    last_seen = timezone.make_aware(last_seen)
+
+                if not last_seen or (now - last_seen).total_seconds() > 30:
                     cache.set(cache_key, now, 300)
+                    request.session['customer_last_seen'] = now.isoformat()
                     active_customers = cache.get("active_portal_customers") or {}
                     active_customers[str(customer_id)] = now.isoformat()
-                    # Clean expired (older than 5 minutes)
+                    # Clean expired (older than 5 minutes) or logged-out
                     from django.utils.dateparse import parse_datetime
                     cleaned = {}
-                    for cid_str, ts_str in active_customers.items():
+                    for cid_str, ts_str in list(active_customers.items()):
                         try:
-                            ts = parse_datetime(ts_str)
+                            # If individual seen key was deleted on logout or expired, exclude it
+                            if cache.get(f"seen_customer_{cid_str}") is None:
+                                continue
+                            ts = parse_datetime(ts_str) if isinstance(ts_str, str) else ts_str
                             if ts and getattr(ts, 'tzinfo', None) is None:
                                 ts = timezone.make_aware(ts)
                             if ts and (now - ts).total_seconds() < 300:
-                                cleaned[cid_str] = ts_str
+                                cleaned[str(cid_str)] = ts_str
                         except Exception:
                             pass
                     cache.set("active_portal_customers", cleaned, 600)

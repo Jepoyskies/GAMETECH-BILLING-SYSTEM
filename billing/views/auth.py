@@ -356,6 +356,16 @@ def unified_login_view(request):
 
             if customer:
                 request.session["customer_id"] = customer.id
+                request.session["customer_last_seen"] = timezone.now().isoformat()
+                try:
+                    from django.core.cache import cache
+                    now = timezone.now()
+                    cache.set(f"seen_customer_{customer.id}", now, 300)
+                    active = cache.get("active_portal_customers") or {}
+                    active[str(customer.id)] = now.isoformat()
+                    cache.set("active_portal_customers", active, 600)
+                except Exception:
+                    pass
                 next_url = request.POST.get("next") or request.GET.get("next")
                 return redirect(
                     next_url if next_url else "customer_portal:portal_dashboard"
@@ -367,6 +377,11 @@ def unified_login_view(request):
             messages.error(request, "Invalid username or password.")
 
     return render(request, "billing/login.html")
+
+
+@login_required
+def profile_view(request):
+    return render(request, "billing/profile.html")
 
 
 @login_required
@@ -402,18 +417,30 @@ def online_staff_api(request):
     # 2. Customer portal users
     active_customer_ids = set()
     active_customers_cache = cache.get("active_portal_customers") or {}
-    for cid_str, ts_str in active_customers_cache.items():
+    cleaned_active_customers = {}
+
+    for cid_str, ts_str in list(active_customers_cache.items()):
         try:
+            # Check individual seen key: if deleted on logout or expired, skip
+            last_seen = cache.get(f"seen_customer_{cid_str}")
+            if last_seen is None:
+                continue
+
             from django.utils.dateparse import parse_datetime
-            ts = parse_datetime(ts_str)
+            ts = parse_datetime(ts_str) if isinstance(ts_str, str) else ts_str
             if ts and getattr(ts, 'tzinfo', None) is None:
                 ts = timezone.make_aware(ts)
             if ts and (now - ts).total_seconds() < 300:
                 active_customer_ids.add(int(cid_str))
+                cleaned_active_customers[str(cid_str)] = ts_str
         except Exception:
             pass
 
-    # Fallback/compliment with unexpired database sessions for active portal customers
+    # Prune inactive/logged-out customers from cache
+    if len(cleaned_active_customers) != len(active_customers_cache):
+        cache.set("active_portal_customers", cleaned_active_customers, 600)
+
+    # Compliment with database sessions ONLY if actively verified via cache (not logged out)
     try:
         from django.contrib.sessions.models import Session
         unexpired_sessions = Session.objects.filter(expire_date__gte=now)[:50]
@@ -422,7 +449,10 @@ def online_staff_api(request):
                 s_data = s.get_decoded()
                 cid = s_data.get("customer_id")
                 if cid:
-                    active_customer_ids.add(int(cid))
+                    # Must verify that this customer has not logged out and is active within 300s!
+                    cust_seen = cache.get(f"seen_customer_{cid}")
+                    if cust_seen is not None:
+                        active_customer_ids.add(int(cid))
             except Exception:
                 pass
     except Exception:
@@ -454,5 +484,36 @@ def online_staff_api(request):
 
 
 def custom_logout_view(request):
+    customer_id = request.session.get("customer_id")
+    if customer_id:
+        try:
+            from django.core.cache import cache
+            cache.delete(f"seen_customer_{customer_id}")
+            active = cache.get("active_portal_customers") or {}
+            active.pop(str(customer_id), None)
+            active.pop(int(customer_id), None)
+            cache.set("active_portal_customers", active, 600)
+        except Exception:
+            pass
+        try:
+            from django.contrib.sessions.models import Session
+            for s in Session.objects.filter(expire_date__gte=timezone.now()):
+                try:
+                    s_data = s.get_decoded()
+                    if str(s_data.get("customer_id")) == str(customer_id):
+                        s.delete()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    if request.user.is_authenticated:
+        try:
+            from django.core.cache import cache
+            cache.delete(f"seen_user_{request.user.id}")
+        except Exception:
+            pass
+
     logout(request)
     return redirect("login")
+

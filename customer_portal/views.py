@@ -20,6 +20,7 @@ def portal_login(request):
         try:
             customer = Customer.objects.get(pppoe_username=pppoe_username, pppoe_password=pppoe_password)
             request.session['customer_id'] = customer.id
+            request.session['customer_last_seen'] = timezone.now().isoformat()
             try:
                 from django.core.cache import cache
                 now = timezone.now()
@@ -154,9 +155,20 @@ def portal_logout(request):
             from django.core.cache import cache
             cache.delete(f"seen_customer_{customer_id}")
             active = cache.get("active_portal_customers") or {}
-            if str(customer_id) in active:
-                del active[str(customer_id)]
-                cache.set("active_portal_customers", active, 600)
+            active.pop(str(customer_id), None)
+            active.pop(int(customer_id), None)
+            cache.set("active_portal_customers", active, 600)
+        except Exception:
+            pass
+        try:
+            from django.contrib.sessions.models import Session
+            for s in Session.objects.filter(expire_date__gte=timezone.now()):
+                try:
+                    s_data = s.get_decoded()
+                    if str(s_data.get("customer_id")) == str(customer_id):
+                        s.delete()
+                except Exception:
+                    pass
         except Exception:
             pass
     request.session.flush()
