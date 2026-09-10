@@ -23,7 +23,7 @@ def add_device(request):
         api_username = request.POST.get('api_username')
         api_password = request.POST.get('api_password')
         api_port = request.POST.get('api_port', 8728)
-        api_port_8700 = request.POST.get('api_port_8700', 8700)
+        api_port_8700 = request.POST.get('api_port_8700') or 8700
 
         MikrotikDevice.objects.create(
             device_name=device_name,
@@ -48,7 +48,7 @@ def edit_device(request, device_id):
         device.ip_address = request.POST.get('ip_address')
         device.api_username = request.POST.get('api_username')
         device.api_port = request.POST.get('api_port')
-        device.api_port_8700 = request.POST.get('api_port_8700')
+        device.api_port_8700 = request.POST.get('api_port_8700') or device.api_port_8700 or 8700
 
         # Only update password if they typed a new one!
         new_password = request.POST.get('api_password')
