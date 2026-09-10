@@ -1,12 +1,12 @@
-{% load static %}
 <!-- Base Partial: Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="{% static 'js/network_monitor.js' %}"></script>
+
 <script>
 function confirmAction(e, title, text, icon) {
     e.preventDefault();
-    const form = e.target;
+    const form = e.target.closest('form') || e.target;
     const isDark = document.documentElement.classList.contains('dark-mode');
     
     Swal.fire({
@@ -15,6 +15,7 @@ function confirmAction(e, title, text, icon) {
         icon: icon,
         showCancelButton: true,
         confirmButtonText: 'Yes, proceed',
+        cancelButtonText: 'Cancel',
         customClass: {
             popup: isDark ? `gt-modal-content gt-emotion-${icon}` : '',
             confirmButton: 'btn btn-primary rounded-pill px-4 shadow-sm',
@@ -24,7 +25,7 @@ function confirmAction(e, title, text, icon) {
         background: isDark ? 'rgba(13, 20, 40, 0.95)' : '#fff',
         color: isDark ? '#f8fafc' : '#1e293b'
     }).then((result) => {
-        if (result.isConfirmed) {
+        if (result.isConfirmed && form) {
             form.submit();
         }
     });
@@ -32,22 +33,38 @@ function confirmAction(e, title, text, icon) {
 }
 
 function sendSingleAction(type) {
+    const isDark = document.documentElement.classList.contains('dark-mode');
     const ids = [{{ customer.id }}];
     let payload = { customer_ids: ids };
     let endpoint = '';
+    let modalId = '';
     
     if (type === 'sms') {
         const msg = document.getElementById('singleSmsMessage').value;
-        if(!msg) return alert("Message cannot be empty.");
+        if (!msg.trim()) {
+            Swal.fire({ icon: 'warning', text: 'Message cannot be empty.' });
+            return;
+        }
         payload.message = msg;
         endpoint = '/customers/bulk-sms/';
+        modalId = 'singleSmsModal';
     } else {
         const sub = document.getElementById('singleEmailSubject').value || 'Important Notice';
         const msg = document.getElementById('singleEmailMessage').value;
-        if(!msg) return alert("Message cannot be empty.");
+        if (!msg.trim()) {
+            Swal.fire({ icon: 'warning', text: 'Message cannot be empty.' });
+            return;
+        }
         payload.subject = sub;
         payload.message = msg;
         endpoint = '/customers/bulk-email/';
+        modalId = 'singleEmailModal';
+    }
+
+    const modalEl = document.getElementById(modalId);
+    if (modalEl) {
+        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+        if (modalInstance) modalInstance.hide();
     }
 
     fetch(endpoint, {
@@ -60,30 +77,63 @@ function sendSingleAction(type) {
     })
     .then(r => r.json())
     .then(data => {
-        if(data.success) {
-            alert(`Successfully sent message!`);
-            location.reload();
+        if (data.success) {
+            Swal.fire({
+                title: 'Sent!',
+                text: 'Message successfully sent to customer.',
+                icon: 'success',
+                confirmButtonColor: '#10b981'
+            }).then(() => location.reload());
         } else {
-            alert("Error: " + (data.error || 'Failed to send'));
+            Swal.fire({
+                title: 'Failed',
+                text: data.error || 'Unable to send message.',
+                icon: 'error',
+                confirmButtonColor: '#ef4444'
+            });
         }
     })
     .catch(err => {
-        alert("Network error occurred.");
+        Swal.fire({
+            title: 'Network Error',
+            text: 'A network error occurred while sending the message.',
+            icon: 'error',
+            confirmButtonColor: '#ef4444'
+        });
     });
 }
 
 document.addEventListener("DOMContentLoaded", function() {
-    // 1. Initialize Bootstrap Tooltips
+    // 1. Initialize Bootstrap tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
+    tooltipTriggerList.map(function(el) {
+        return new bootstrap.Tooltip(el);
     });
 
-    const customerId = "{{ customer.id }}";
+    // 2. Leaflet Map Initialization
+    var lat = {{ customer.latitude|default:"null" }};
+    var lng = {{ customer.longitude|default:"null" }};
+    var mapEl = document.getElementById('map');
+    
+    if (lat !== null && lng !== null && mapEl) {
+        var map = L.map('map').setView([lat, lng], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
 
-    // 2. Initialize Chart.js
-    let trafficChart = null;
+        L.marker([lat, lng]).addTo(map)
+            .bindPopup('<b>{{ customer.full_name|escapejs }}</b>')
+            .openPopup();
+    } else if (mapEl) {
+        mapEl.innerHTML = '<div class="h-100 d-flex align-items-center justify-content-center text-muted">No coordinates provided for this customer.</div>';
+        mapEl.style.background = '#f8fafc';
+    }
+
+    // 3. Live Traffic Chart Initialization
+    const customerId = "{{ customer.id }}";
     const chartCanvas = document.getElementById('liveTrafficChart');
+    let trafficChart = null;
+
     if (chartCanvas) {
         const ctx = chartCanvas.getContext('2d');
         trafficChart = new Chart(ctx, {
@@ -139,14 +189,96 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // 3. Start Polling Mikrotik Status via NetworkMonitor
-    if (window.NetworkMonitor && customerId) {
-        window.NetworkMonitor.pollCustomerStatus(customerId, 5000, {
-            chart: trafficChart
-        });
+    // 4. Live Mikrotik Polling
+    function fetchStatus() {
+        fetch(`/customers/api/status/${customerId}/`)
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                const statusContainer = document.getElementById('mt-status-container');
+                if (statusContainer) {
+                    if (data.mt_status === 'Connected') {
+                        statusContainer.innerHTML = '<span class="text-success"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Connected</span>';
+                    } else {
+                        statusContainer.innerHTML = '<span class="text-danger"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>' + (data.mt_status || 'Error') + '</span>';
+                    }
+                }
+
+                const macEl = document.getElementById('mt-live-mac');
+                if (macEl) macEl.innerText = data.live_mac || 'N/A';
+
+                const uptimeContainer = document.getElementById('uptime-container');
+                const lastLoggedOutContainer = document.getElementById('last-logged-out-container');
+                const stabilityBadge = document.getElementById('live-stability-badge');
+
+                if (data.mt_status === 'Connected') {
+                    const uptimeEl = document.getElementById('mt-uptime');
+                    if (uptimeEl) uptimeEl.innerText = data.uptime || 'N/A';
+                    if (uptimeContainer) uptimeContainer.style.display = 'flex';
+                    if (lastLoggedOutContainer) lastLoggedOutContainer.style.display = 'none';
+                    
+                    if (data.stability && stabilityBadge) {
+                        stabilityBadge.innerText = data.stability;
+                        stabilityBadge.className = 'badge ms-2 bg-' + data.stability_color;
+                        stabilityBadge.style.display = 'inline-block';
+                    }
+                    
+                    if (data.rx_mbps !== undefined && data.tx_mbps !== undefined) {
+                        const dlVal = document.getElementById('live-dl-val');
+                        const ulVal = document.getElementById('live-ul-val');
+                        if (dlVal) dlVal.innerHTML = data.rx_mbps + ' <span style="font-size: 0.9rem; font-weight: 600;">Mbps</span>';
+                        if (ulVal) ulVal.innerHTML = data.tx_mbps + ' <span style="font-size: 0.9rem; font-weight: 600;">Mbps</span>';
+                        
+                        const now = new Date().toLocaleTimeString('en-US', { hour12: false, hour: "numeric", minute: "numeric", second: "numeric" });
+                        
+                        if (trafficChart) {
+                            trafficChart.data.labels.push(now);
+                            trafficChart.data.datasets[0].data.push(parseFloat(data.rx_mbps));
+                            trafficChart.data.datasets[1].data.push(parseFloat(data.tx_mbps));
+                            
+                            if (trafficChart.data.labels.length > 15) {
+                                trafficChart.data.labels.shift();
+                                trafficChart.data.datasets[0].data.shift();
+                                trafficChart.data.datasets[1].data.shift();
+                            }
+                            trafficChart.update('none');
+                        }
+                    }
+                } else {
+                    if (stabilityBadge) stabilityBadge.style.display = 'none';
+                    if (data.last_logged_out && data.last_logged_out !== 'N/A') {
+                        const lastOutEl = document.getElementById('mt-last-logged-out');
+                        if (lastOutEl) lastOutEl.innerText = data.last_logged_out;
+                        if (lastLoggedOutContainer) lastLoggedOutContainer.style.display = 'flex';
+                    } else if (lastLoggedOutContainer) {
+                        lastLoggedOutContainer.style.display = 'none';
+                    }
+                    if (uptimeContainer) uptimeContainer.style.display = 'none';
+                    
+                    const dlVal = document.getElementById('live-dl-val');
+                    const ulVal = document.getElementById('live-ul-val');
+                    if (dlVal) dlVal.innerHTML = '0 <span style="font-size: 0.9rem; font-weight: 600;">Mbps</span>';
+                    if (ulVal) ulVal.innerHTML = '0 <span style="font-size: 0.9rem; font-weight: 600;">Mbps</span>';
+                }
+            })
+            .catch(error => {
+                const statusContainer = document.getElementById('mt-status-container');
+                if (statusContainer) {
+                    statusContainer.innerHTML = '<span class="text-danger" title="' + error.message + '"><i class="fas fa-exclamation-triangle me-1" style="font-size:0.6rem;"></i>Error</span>';
+                }
+                const uptimeContainer = document.getElementById('uptime-container');
+                const lastLoggedOutContainer = document.getElementById('last-logged-out-container');
+                if (uptimeContainer) uptimeContainer.style.display = 'none';
+                if (lastLoggedOutContainer) lastLoggedOutContainer.style.display = 'none';
+            });
     }
 
-    // 4. Auto-resolve Addon Request
+    fetchStatus();
+    setInterval(fetchStatus, 5000);
+
+    // 5. Auto-resolve Addon Request via query parameter
     const urlParams = new URLSearchParams(window.location.search);
     const resolveAddonId = urlParams.get('resolve_addon');
     if (resolveAddonId) {
@@ -160,13 +292,17 @@ document.addEventListener("DOMContentLoaded", function() {
         })
         .then(res => res.json())
         .then(data => {
-            if(data.status === 'success') {
+            if (data.status === 'success') {
                 const editBtn = document.querySelector('a.btn-edit[href*="/edit/"]');
-                if(editBtn) {
+                if (editBtn) {
                     editBtn.classList.remove('btn-edit');
                     editBtn.classList.add('bg-danger', 'text-white', 'pulse-animation');
                     editBtn.innerHTML = '<i class="fas fa-exclamation-circle"></i> Complete Add-on Here';
-                    alert("Add-on Application processed!\nPlease click the 'Complete Add-on Here' button to update the customer's Cignal Play details.");
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Add-on Requested',
+                        text: "Add-on Application processed! Click 'Complete Add-on Here' to update Cignal Play details."
+                    });
                 }
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
