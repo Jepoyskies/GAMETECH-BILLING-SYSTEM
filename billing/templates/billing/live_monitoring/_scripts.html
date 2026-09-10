@@ -46,13 +46,16 @@
             title.innerText = 'All Network Alerts';
             html += '<tr><th class="ps-3">Name</th><th>Type</th><th>Status</th><th>Reason</th><th class="pe-3 text-end">Action</th></tr></thead><tbody>';
             currentNetworkAlerts.forEach(a => {
-                let btnColor = 'btn-danger';
+                let btnColor = a.type === 'ticket' ? 'btn-warning' : 'btn-danger';
+                let badgeClass = a.type === 'ticket' ? 'bg-warning text-dark' : 'bg-secondary';
+                let actionUrl = a.type === 'customer' ? '/customers/view/' + a.id + '/' : (a.type === 'ticket' ? '/dispatch/?tab=concerns' : '/network/health/resolve/' + a.type + '/' + a.id + '/');
+                let actionTitle = a.type === 'ticket' ? 'View Ticket' : 'Resolve';
                 html += `<tr>
                     <td class="ps-3"><span class="fw-bold">${a.name}</span></td>
-                    <td><span class="badge bg-secondary">${a.type.toUpperCase()}</span></td>
-                    <td><span class="fw-semibold text-danger">${a.status}</span></td>
+                    <td><span class="badge ${badgeClass}">${a.type.toUpperCase()}</span></td>
+                    <td><span class="fw-semibold ${a.type === 'ticket' ? 'text-warning' : 'text-danger'}">${a.status}</span></td>
                     <td class="text-muted small" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${a.reason || '-'}</td>
-                    <td class="pe-3 text-end"><a href="${a.type === 'customer' ? '/customers/view/' + a.id + '/' : '/network/health/resolve/' + a.type + '/' + a.id + '/'}" class="btn ${btnColor} rounded-circle d-inline-flex justify-content-center align-items-center" style="width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" title="Resolve"><i class="fas fa-eye"></i></a></td>
+                    <td class="pe-3 text-end"><a href="${actionUrl}" class="btn ${btnColor} rounded-circle d-inline-flex justify-content-center align-items-center" style="width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" title="${actionTitle}"><i class="fas fa-eye"></i></a></td>
                 </tr>`;
             });
         } else if (type === 'addons') {
@@ -191,14 +194,17 @@
                     }
                     let inner = '';
                     d.alerts.forEach(a => {
-                        let icon = a.type === 'device' ? 'fa-server' : (a.type === 'barangay' ? 'fa-map-marker-alt' : 'fa-user-times');
-                        let btnColor = 'btn-danger';
-                        let subClass = 'bg-danger-subtle';
-                        let textColor = 'text-danger';
-                        let pulseClass = a.type === 'customer' ? 'alert-pulse-danger' : '';
+                        let icon = a.type === 'device' ? 'fa-server' : (a.type === 'barangay' ? 'fa-map-marker-alt' : (a.type === 'ticket' ? 'fa-ticket-alt' : 'fa-user-times'));
+                        let btnColor = a.type === 'ticket' ? 'btn-warning' : 'btn-danger';
+                        let borderClass = a.type === 'ticket' ? 'border-warning' : 'border-danger';
+                        let subClass = a.type === 'ticket' ? 'bg-warning-subtle' : 'bg-danger-subtle';
+                        let textColor = a.type === 'ticket' ? 'text-warning' : 'text-danger';
+                        let pulseClass = (a.type === 'customer' || a.type === 'ticket') ? 'alert-pulse-danger' : '';
+                        let actionUrl = a.type === 'customer' ? '/customers/view/' + a.id + '/' : (a.type === 'ticket' ? '/dispatch/?tab=concerns' : '/network/health/resolve/' + a.type + '/' + a.id + '/');
+                        let actionTitle = a.type === 'ticket' ? 'View Ticket' : 'Resolve';
 
                         inner += `
-                <div class="d-flex justify-content-between align-items-center p-1 px-2 mb-1 border border-danger rounded ${subClass} ${pulseClass}">
+                <div class="d-flex justify-content-between align-items-center p-1 px-2 mb-1 border ${borderClass} rounded ${subClass} ${pulseClass}">
                     <div class="d-flex align-items-center">
                         <i class="fas ${icon} ${textColor} me-2 fs-6"></i>
                         <div>
@@ -207,7 +213,7 @@
                             ${a.reason ? `<p class="mb-0 text-muted small" style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.7rem;">${a.reason}</p>` : ''}
                         </div>
                     </div>
-                    <a href="${a.type === 'customer' ? '/customers/view/' + a.id + '/' : '/network/health/resolve/' + a.type + '/' + a.id + '/'}" class="btn ${btnColor} rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 22px; height: 22px; padding: 0; font-size: 0.65rem;" title="Resolve" data-bs-toggle="tooltip"><i class="fas fa-eye"></i></a>
+                    <a href="${actionUrl}" class="btn ${btnColor} rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 22px; height: 22px; padding: 0; font-size: 0.65rem;" title="${actionTitle}" data-bs-toggle="tooltip"><i class="fas fa-eye"></i></a>
                 </div>
                 `;
                     });

@@ -10,7 +10,7 @@
                         onclick="openViewAllModal('network')">0 New</span>
                 </div>
                 <div class="cell-content" id="network-alerts-list">
-                    {% if not active_device_alerts and not active_barangay_alerts and not active_customer_alerts %}
+                    {% if not active_device_alerts and not active_barangay_alerts and not active_customer_alerts and not active_ticket_alerts %}
                     <div class="text-muted small text-center mt-3">No active alerts <span class="status-dot"></span>
                     </div>
                     {% else %}
@@ -66,6 +66,24 @@
                         <a href="/customers/view/{{ alert.id }}/"
                             class="btn btn-danger rounded-circle d-flex justify-content-center align-items-center me-1"
                             style="width: 22px; height: 22px; padding: 0; font-size: 0.65rem;" title="Resolve"
+                            data-bs-toggle="tooltip"><i class="fas fa-eye"></i></a>
+                    </div>
+                    {% endfor %}
+
+                    {% for alert in active_ticket_alerts %}
+                    <div class="alert-item d-flex justify-content-between align-items-center mb-1 p-1 px-2 border border-warning rounded"
+                        style="background: rgba(245, 158, 11, 0.1);">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-ticket-alt text-warning me-2 fs-6"></i>
+                            <div>
+                                <h6 style="margin-bottom: 0px; font-size: 0.85rem;" class="fw-bold text-warning">{{ alert.client_name }} (Ticket)</h6>
+                                <p style="font-weight: 600; margin-bottom: 0; font-size: 0.75rem;">{{ alert.status_option.label|default:"Pending" }}</p>
+                                {% if alert.concern %}<p class="text-muted small mb-0" style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.7rem;">{{ alert.concern }}</p>{% endif %}
+                            </div>
+                        </div>
+                        <a href="/dispatch/?tab=concerns"
+                            class="btn btn-warning rounded-circle d-flex justify-content-center align-items-center me-1"
+                            style="width: 22px; height: 22px; padding: 0; font-size: 0.65rem;" title="View Ticket"
                             data-bs-toggle="tooltip"><i class="fas fa-eye"></i></a>
                     </div>
                     {% endfor %}

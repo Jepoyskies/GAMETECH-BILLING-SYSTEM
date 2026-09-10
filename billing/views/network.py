@@ -235,6 +235,7 @@ def resolve_network_health(request, scope, item_id):
 @login_required
 def live_monitoring_view(request):
     from billing.models import Barangay, Customer, AddOnRequest
+    from dispatch.models import DispatchRecord
 
     devices = MikrotikDevice.objects.all().order_by("device_name")
     barangays = Barangay.objects.all().order_by("name")
@@ -244,6 +245,13 @@ def live_monitoring_view(request):
     active_customer_alerts = Customer.objects.exclude(
         health_status__in=["Excellent", "Good", "Stable", "Strong"]
     ).filter(status="active")
+    active_ticket_alerts = (
+        DispatchRecord.objects.filter(source_tab="CLIENT_CONCERNS")
+        .exclude(status_option__label__icontains="Done")
+        .exclude(status_option__label__icontains="Resolved")
+        .exclude(status_option__label__icontains="Cancelled")
+        .order_by("-id")[:10]
+    )
     pending_addon_requests = AddOnRequest.objects.filter(status="Pending").order_by(
         "-requested_at"
     )
@@ -258,6 +266,7 @@ def live_monitoring_view(request):
             "active_device_alerts": active_device_alerts,
             "active_barangay_alerts": active_barangay_alerts,
             "active_customer_alerts": active_customer_alerts,
+            "active_ticket_alerts": active_ticket_alerts,
             "pending_addon_requests": pending_addon_requests,
         },
     )

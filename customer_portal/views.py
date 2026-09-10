@@ -483,6 +483,17 @@ def submit_ticket(request):
             csr=admin_user,
         )
         
+        # Create system notification for admins & staff
+        try:
+            Notification.objects.create(
+                title=f"New Ticket: {customer.full_name} ({issue_type})",
+                message=f"[{ticket_no}] {description or issue_type}",
+                notification_type='network',
+                link='/dispatch/?tab=concerns',
+            )
+        except Exception:
+            pass
+
         messages.success(request, f"Your ticket ({ticket_no}) has been submitted. Our technical dispatch team will review it shortly.")
         return redirect('customer_portal:portal_dashboard')
         

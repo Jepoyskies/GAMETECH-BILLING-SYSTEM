@@ -301,12 +301,21 @@ def api_customer_mikrotik_status(request, customer_id):
 def api_network_alerts(request):
     from billing.models import Barangay, Customer
     from network_manager.models import MikrotikDevice
+    from dispatch.models import DispatchRecord
 
     active_device_alerts = MikrotikDevice.objects.exclude(health_status="Excellent")
     active_barangay_alerts = Barangay.objects.exclude(health_status="Excellent")
     active_customer_alerts = Customer.objects.exclude(
         health_status__in=["Excellent", "Good", "Stable", "Strong"]
     ).filter(status="active")
+
+    active_tickets = (
+        DispatchRecord.objects.filter(source_tab="CLIENT_CONCERNS")
+        .exclude(status_option__label__icontains="Done")
+        .exclude(status_option__label__icontains="Resolved")
+        .exclude(status_option__label__icontains="Cancelled")
+        .order_by("-id")[:10]
+    )
 
     data = []
     for d in active_device_alerts:
@@ -337,6 +346,17 @@ def api_network_alerts(request):
                 "name": c.full_name + " (Customer)",
                 "status": c.health_status,
                 "reason": c.health_reason,
+            }
+        )
+    for t in active_tickets:
+        status_label = t.status_option.label if t.status_option else "Pending"
+        data.append(
+            {
+                "type": "ticket",
+                "id": t.id,
+                "name": f"{t.client_name} (Ticket {t.ticket_number or ''})".strip(),
+                "status": status_label,
+                "reason": t.concern,
             }
         )
 
