@@ -27,23 +27,27 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
    * **MANDATORY**: Use `grep_search` to find the exact function, symbol, or tag.
    * Read **ONLY** the localized slice (e.g. `StartLine: 40, EndLine: 90`, max 50–80 lines).
 
-4. **USE THE BLUEPRINT (Never Scan Models or Routes)**:
+4. **USE THE BLUEPRINTS (Never Scan Models or Routes)**:
    * Need database model fields, foreign keys, URL routes, background tasks, or Mikrotik contracts?
    * Inspect `gametech_architecture_map.txt` (~2,082 lines / ~8.5K tokens).
    * **NEVER** scan `billing/models.py` (2,000+ lines), `views/`, or multiple apps to figure out relationships.
 
-5. **CHECK THE ERROR RUNBOOK FIRST (`gametech_error_runbook.md`)**:
+5. **USE THE FILING & LOCATION DIRECTORY (`gametech_filing_index.md`)**:
+   * Need to know where a view, template, modal, API endpoint, or service belongs?
+   * Inspect `gametech_filing_index.md`. It maps every feature to its exact files and gives standardized step-by-step recipes for adding or fixing modals, APIs, signals, and background tasks.
+
+6. **CHECK THE ERROR RUNBOOK FIRST (`gametech_error_runbook.md`)**:
    * Before investigating any reported bug, UI defect, or freeze, **ALWAYS** check `gametech_error_runbook.md`.
    * If the symptom matches a known pattern (e.g. grey screen, white Select2 dropdown, stuck telemetry dots `...`, Mikrotik timeout), jump directly to the diagnosed target files and execute the verified 1-step fix.
 
-6. **SURGICAL IN-PLACE EDITS ONLY**:
+7. **SURGICAL IN-PLACE EDITS ONLY**:
    * **ALWAYS** use targeted replacement tools (`replace_file_content` / diffs) to edit ONLY the 2–15 lines with the bug.
    * **NEVER** rewrite an entire file or re-emit hundreds of unchanged lines.
 
-7. **THE 3-TOOL TURN LIMIT**:
+8. **THE 3-TOOL TURN LIMIT**:
    * If you cannot locate an issue after 2–3 pinpoint searches, **STOP IMMEDIATELY**. Do not crawl the repository. Ask the user for the specific file, template, or URL.
 
-8. **AUTOMATIC DEPLOYMENT & PRODUCTION SYNC (Zero Deployment Lag)**:
+9. **AUTOMATIC DEPLOYMENT & PRODUCTION SYNC (Zero Deployment Lag)**:
    * Once changes are made and verified locally:
      1. Stage modified files (`git add <files>`).
      2. Commit with conventional commit message (`feat(...)`, `fix(...)`).
@@ -51,8 +55,8 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
      4. Pull on production droplet: `ssh root@143.198.207.144 "cd /root/GAMETECH-BILLING-SYSTEM && git pull origin main"`.
      5. If Python code, templates, or settings were modified, restart the Gunicorn container: `ssh root@143.198.207.144 "docker restart gametech-billing-system_web_1"`.
 
-9. **CONTINUOUS RUNBOOK ENRICHMENT**:
-   * Whenever an AI solves a novel bug or architecture quirk not yet documented, it **MUST** append a new `ERR-XXX` entry to `gametech_error_runbook.md` before finishing the task.
+10. **CONTINUOUS RUNBOOK ENRICHMENT**:
+    * Whenever an AI solves a novel bug or architecture quirk not yet documented, it **MUST** append a new `ERR-XXX` entry to `gametech_error_runbook.md` before finishing the task.
 
 ---
 
