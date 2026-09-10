@@ -537,8 +537,20 @@
                 });
                 updateSummary();
                 applyFilter();
+                let spinner = document.getElementById('routerLoadingSpinner');
+                if (spinner) {
+                    spinner.classList.remove('d-inline-flex');
+                    spinner.classList.add('d-none');
+                }
             })
-            .catch(err => console.error("Fast fetch error", err))
+            .catch(err => {
+                console.error("Fast fetch error", err);
+                let spinner = document.getElementById('routerLoadingSpinner');
+                if (spinner) {
+                    spinner.classList.remove('d-inline-flex');
+                    spinner.classList.add('d-none');
+                }
+            })
             .finally(() => {
                 if (id === currentPollId) {
                     fastTimer = setTimeout(() => pollFastData(id), fastSpeed);
@@ -645,6 +657,25 @@
 
     document.getElementById('interval').addEventListener('change', startInterval);
     document.getElementById('routerFilter').addEventListener('change', () => {
+        let spinner = document.getElementById('routerLoadingSpinner');
+        if (spinner) {
+            spinner.classList.remove('d-none');
+            spinner.classList.add('d-inline-flex');
+        }
+
+        let statusText = document.getElementById('uplinkStatus');
+        let pingText = document.getElementById('uplinkPing');
+        let box = document.getElementById('kpi-uplink-box');
+        if (statusText) {
+            statusText.classList.add('syncing');
+            statusText.innerHTML = 'Syncing... <i class="fas fa-sync fa-spin" style="font-size: 18px;"></i>';
+        }
+        if (pingText) pingText.innerText = 'ping: checking...';
+        if (box) {
+            box.classList.remove('border-danger', 'border-warning', 'border-info', 'border-success');
+            box.style.setProperty('border-color', 'rgba(255,255,255,0.4)', 'important');
+        }
+
         chartLabels = Array(20).fill('');
         rxChartData = Array(20).fill(0);
         txChartData = Array(20).fill(0);
