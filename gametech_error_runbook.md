@@ -191,10 +191,26 @@
 
 ---
 
+### ERR-010: Server Error (500) on Customer Portal Dashboard (`TemplateSyntaxError: Invalid block tag 'static'`)
+* **Symptoms**:
+  * Navigating to `/portal/dashboard/` throws `Server Error (500)`.
+  * Traceback shows `django.template.exceptions.TemplateSyntaxError: Invalid block tag on line X: 'static'. Did you forget to register or load this tag?`.
+* **Root Causes**:
+  * Partial templates included via `{% include %}` (e.g. `customer_portal/portal_dashboard/_navbar.html`, `_hero.html`, `_scripts.html`) use `{% static %}` tags without having `{% load static %}` declared at the top of the partial file. Django does not implicitly pass registered template tag libraries to included partials when parsed individually.
+* **Exact Target Files**:
+  * `customer_portal/templates/customer_portal/portal_dashboard/_navbar.html`
+  * `customer_portal/templates/customer_portal/portal_dashboard/_hero.html`
+  * `customer_portal/templates/customer_portal/portal_dashboard/_scripts.html`
+* **1-Step Fix**:
+  * Add `{% load static %}` at line 1 of every partial template that references `{% static ... %}`.
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 Whenever a non-obvious bug or architecture defect is resolved:
 1. Assign a new `ERR-XXX` identifier.
 2. Fill in: **Symptoms**, **Root Causes**, **Exact Target Files**, and **1-Step Fix**.
 3. Keep entries short, actionable, and sniper-focused.
+
 
