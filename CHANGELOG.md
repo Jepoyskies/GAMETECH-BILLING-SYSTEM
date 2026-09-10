@@ -2,6 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-09-10]
+### Added
+- **Shared Network Telemetry Engine (`NetworkMonitor`)**: Extracted unified network polling into `static/js/network_monitor.js` with exponential backoff and SweetAlert2 notifications.
+- **Aider-Style Sniper System Guidelines**: Added `AGENTS.md` and `.agents/rules/sniper_aider_mode.md` to establish surgical token-conserving guidelines for all AI agents.
+- **Lean Architecture Blueprint**: Created `make_architecture_dump.py` generating `gametech_architecture_map.txt` (~2,082 lines / ~8.5K tokens) replacing the 1M-token monolithic dump.
+
+### Fixed
+- **Live Monitoring & Router Uplink Freeze**: Added missing Select2 jQuery assets to `live_monitoring/_scripts.html` and updated regex in `billing/views/api/network.py` to parse floating-point RTTs.
+- **Dashboard Caching 500 Error**: Fixed `UnboundLocalError` on `distinct_payers_this_month` and resolved timezone string parsing for cached metrics.
+- **Repository Clutter Cleanup**: Archived 20+ ad-hoc diagnostic scripts into `archived_scripts/` and removed dead legacy Node/Express and Chart.js files.
+
+## [2026-09-09]
+### Added
+- **Gametech Brand Identity & Light Mode**: Overhauled top navigation and sidebar to brand-aligned Light Mode with sleek bottom logout button and fixed active dropdown states.
+- **Customer Portal Expiration Countdown**: Added animated color-coded countdown widget (green/yellow/red) for payment due dates.
+- **Advance Payment Reset Security**: Added administrative password confirmation modal, red alert audit logging, and automated due date realignment.
+- **Customizable Receipt SMS Templates**: Made receipt templates fully customizable via Settings with smart placeholders.
+- **Live Monitoring Stability Heuristic**: Implemented connection stability scoring and status badges (Rock Solid, Stable, Flapping, Highly Unstable).
+- **Modular Dashboard Architecture**: Decomposed `dashboard.html` into modular partials (`_stats.html`, `_charts.html`, `_modals.html`, `_scripts.html`) with Phase 2 Redis caching.
+
+### Fixed
+- **Payment Engine Stability**: Fixed `reverse` NameError in `pay_customer_view`, missing `calculate_new_expiration_date` import, and removed non-existent `customer` field from `SmsLog.objects.create()`.
+- **Pre-Commit Suspension Evaluation**: Evaluated suspension status before saving payment to guarantee Mikrotik re-enable signals trigger immediately.
+- **Portal Auth Redirection**: Fixed expired portal session redirect to point to `/portal/login/` instead of staff login.
+- **Crash Recovery & Template Tag Fixes**: Fixed null byte file corruptions, injected missing `{% load static %}` across partials, and removed orphaned `{% endblock %}` tags.
+
+## [2026-09-08]
+### Added
+- **Admin Control Center Overhaul**: Redesigned Admin Panel into a comprehensive 4-section Owner Control Center (Staff & Access, Billing Config, Network, System Tools).
+- **Downdetector Full CRUD**: Dedicated Manage Downdetector Sites interface with inline Add, Edit, and Delete controls.
+- **Mikrotik-Aware Rebates Engine**: Dynamic `expires_at` calculations and automated Mikrotik profile/status restoration upon SLA rebate credit.
+- **Mikrotik-Aware Rollbacks & Transfers**: Reverting payments recalculates expiration dates and auto-suspends on the router if expired, wrapped in atomic database transactions.
+- **Multi-Tier Live Monitoring**: Expanded monitoring to Overall, Per-Router (with bandwidth counters via `/interface/monitor-traffic`), and Per-Customer views.
+- **Notification Toggles**: Added SMS and Email toggle switches to the payment confirmation modal.
+
 ## [2026-09-03]
 ### Added
 - **Dynamic Live Monitoring Graph**: Integrated a beautifully animated `Chart.js` live traffic graph into the individual Customer Profile, visualizing real-time bandwidth usage (Rx/Tx Mbps).

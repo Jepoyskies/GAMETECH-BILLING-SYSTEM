@@ -29,8 +29,20 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush" id="list-tab" role="tablist" style="border-radius: 0 0 16px 16px; overflow: hidden; max-height: 70vh; overflow-y: auto;">
-                        <a class="list-group-item list-group-item-action active py-3 fw-semibold border-0" id="list-sep8-list" data-bs-toggle="list" href="#list-sep8" role="tab" style="font-size: 0.9rem;">
-                            Sept 2–8, 2026 <br><small class="text-white-50">Admin Overhaul, Rebates, Rollbacks, Monitoring</small>
+                        <a class="list-group-item list-group-item-action active py-3 fw-semibold border-0" id="list-sep10-list" data-bs-toggle="list" href="#list-sep10" role="tab" style="font-size: 0.9rem;">
+                            September 10, 2026 <br><small class="text-white-50">Live Monitor Fix, Sniper Rules, Code Clean</small>
+                        </a>
+                        <a class="list-group-item list-group-item-action py-3 fw-semibold border-0" id="list-sep9-list" data-bs-toggle="list" href="#list-sep9" role="tab" style="font-size: 0.9rem;">
+                            September 9, 2026 <br><small class="text-muted">Brand Redesign, Security, Caching, Fixes</small>
+                        </a>
+                        <a class="list-group-item list-group-item-action py-3 fw-semibold border-0" id="list-sep8-list" data-bs-toggle="list" href="#list-sep8" role="tab" style="font-size: 0.9rem;">
+                            September 8, 2026 <br><small class="text-muted">Admin Control Center, Downdetector CRUD</small>
+                        </a>
+                        <a class="list-group-item list-group-item-action py-3 fw-semibold border-0" id="list-sep3-list" data-bs-toggle="list" href="#list-sep3" role="tab" style="font-size: 0.9rem;">
+                            September 3, 2026 <br><small class="text-muted">Live Traffic Chart, Downdetector NOC</small>
+                        </a>
+                        <a class="list-group-item list-group-item-action py-3 fw-semibold border-0" id="list-sep2-list" data-bs-toggle="list" href="#list-sep2" role="tab" style="font-size: 0.9rem;">
+                            September 2, 2026 <br><small class="text-muted">Dispatch App, Sync Auto-Fix, Security</small>
                         </a>
                         <a class="list-group-item list-group-item-action py-3 fw-semibold border-0" id="list-aug31-list" data-bs-toggle="list" href="#list-aug31" role="tab" style="font-size: 0.9rem;">
                             August 31, 2026 <br><small class="text-muted">Auto-Suspend Engine, Mikrotik Sync</small>
@@ -76,14 +88,185 @@
                 <div class="card-body p-4 p-lg-5">
                     <div class="tab-content" id="nav-tabContent">
                         
-                        <!-- SEPTEMBER 2–8 -->
-                        <div class="tab-pane fade show active" id="list-sep8" role="tabpanel" aria-labelledby="list-sep8-list">
+                        <!-- SEPTEMBER 10 -->
+                        <div class="tab-pane fade show active" id="list-sep10" role="tabpanel" aria-labelledby="list-sep10-list">
                             <h3 class="fw-bold mb-4 border-bottom pb-3" style="color: #1e3a8a;">
-                                September 2–8, 2026: Admin Overhaul, Live Monitoring, Financial Engine
+                                September 10, 2026: Live Monitoring Recovery, Network Engine Extraction & Aider Sniper Architecture
                                 <span class="badge bg-success ms-2 fs-6 align-middle" style="border-radius: 8px;">Latest Build</span>
                             </h3>
 
-                            <p class="lead text-muted mb-4">A massive multi-session sprint covering the Admin Control Center redesign, enhanced financial operations (Rebates, Rollbacks, Transfers), Live Monitoring per-router views, customer portal improvements, and payment notification controls.</p>
+                            <p class="lead text-muted mb-4">A critical operational day focused on diagnosing and restoring Live Monitoring router uplink telemetry, refactoring network telemetry into a reusable class, hardening dashboard caching against 500 errors, and establishing lean repository architecture guidelines.</p>
+
+                            <!-- Live Monitoring & Uplink Fix -->
+                            <div class="card border-0 mb-4" style="background:#f0f9ff; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#0284c7;"><i class="fas fa-satellite-dish me-2"></i> Live Monitoring & Router Uplink Telemetry Fix</h5>
+                                    <p>Live Monitoring and router ping latencies had stopped polling and failed to display uplink metrics. A deep investigation uncovered two root causes and applied permanent fixes:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>Missing Select2 Dependency:</strong> The router selection dropdown required jQuery Select2, which was absent from <code>live_monitoring/_scripts.html</code>. This threw a fatal unhandled JavaScript exception (<code>$().select2 is not a function</code>) that halted script execution before the live polling timer could even start. Added the required Select2 JS/CSS assets and safeguarded the initialization with a fallback check.</li>
+                                        <li><strong>Resilient Ping Parsing:</strong> In <code>billing/views/api/network.py</code>, ping RTT regex parsing assumed integer millisecond values, throwing ValueError exceptions when Mikrotik returned sub-millisecond or decimal response times (e.g. <code>12.4ms</code>). Upgraded regex and type-casting to gracefully parse floating-point RTTs.</li>
+                                        <li><strong>Immediate Polling Loop:</strong> Changed <code>startInterval()</code> to trigger a cycle immediately on page load rather than waiting for the initial 5-second interval delay, making uplink status appear instantly.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Shared Network Telemetry Class -->
+                            <div class="card border-0 mb-4" style="background:#f0fdf4; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#059669;"><i class="fas fa-network-wired me-2"></i> Shared Network Telemetry Architecture (NetworkMonitor)</h5>
+                                    <p>Extracted repetitive and scattered router polling routines into a clean, reusable standalone module:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>Module Creation:</strong> Created <code>static/js/network_monitor.js</code> providing a unified <code>NetworkMonitor</code> class to handle pinging, uptime tracking, signal strength polling, and error recovery across all pages.</li>
+                                        <li><strong>View Customer Script Overhaul:</strong> Repaired a truncated syntax error in <code>billing/templates/billing/view_customer/_scripts.html</code>, integrated modern <strong>SweetAlert2</strong> confirm modals for customer actions, and hooked into <code>NetworkMonitor</code> for continuous connection telemetry.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Dashboard Cache & Timezone Hardening -->
+                            <div class="card border-0 mb-4" style="background:#fefce8; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#d97706;"><i class="fas fa-bolt me-2"></i> Dashboard Caching & Timezone Hardening (500 Error Resolution)</h5>
+                                    <p>Diagnosed a recurring 500 Internal Server Error when staff navigated back to the dashboard or refreshed cached pages:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>UnboundLocalError Patch:</strong> In <code>billing/views/dashboard.py</code>, the <code>distinct_payers_this_month</code> aggregation was only computed inside the cache-miss branch. When cached metrics were retrieved, referencing the variable threw an <code>UnboundLocalError</code>. Corrected variable lifecycle and guaranteed clean cache deserialization.</li>
+                                        <li><strong>Timezone Deserialization:</strong> Fixed string-to-datetime parsing on cached expiration objects and activity logs in middleware, preventing crashes caused by naive vs aware datetime comparisons.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Aider Sniper Architecture & Rules -->
+                            <div class="card border-0 mb-4" style="background:#fdf4ff; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#7c3aed;"><i class="fas fa-crosshairs me-2"></i> Aider-Style Sniper System Architecture & Token Preservation</h5>
+                                    <p>Confronted massive token consumption caused by 1-million-token context dumps and monolithic scanning:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>Architecture Blueprint Generator:</strong> Created <code>make_architecture_dump.py</code> which parses the repository and compiles <code>gametech_architecture_map.txt</code> (~2,082 lines / ~8.5K tokens) containing every model, route, Celery task, and system contract — eliminating the need for monolithic 1M-token dumps.</li>
+                                        <li><strong>Permanent Sniper Rules:</strong> Created <code>.agents/rules/sniper_aider_mode.md</code> and root <code>AGENTS.md</code> instructing all AI coding agents (Antigravity/Gemini/Aider) across all team devices to operate with surgical precision: target specific files only, use line-bounded slices, and perform surgical replacements.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Repository Cleanup & Archiving -->
+                            <div class="card border-0 mb-4" style="background:#fff7ed; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#ea580c;"><i class="fas fa-broom me-2"></i> Repository Hygiene & Dead Code Purge</h5>
+                                    <p>Cleaned up repository clutter accumulated across multi-agent development sessions:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>Script Archiving:</strong> Moved over 20 loose ad-hoc diagnostic and testing scripts from the project root into a clean <code>archived_scripts/</code> directory.</li>
+                                        <li><strong>Dead File Removal:</strong> Purged obsolete Express/Node legacy server files, orphaned CSS fragments, and deprecated Chart.js bundles.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SEPTEMBER 9 -->
+                        <div class="tab-pane fade" id="list-sep9" role="tabpanel" aria-labelledby="list-sep9-list">
+                            <h3 class="fw-bold mb-4 border-bottom pb-3" style="color: #1e3a8a;">
+                                September 9, 2026: Brand UI Transformation, Security Upgrades, Caching Engine & Resilience
+                            </h3>
+
+                            <p class="lead text-muted mb-4">A marathon development day featuring an end-to-end visual overhaul to Gametech Brand Identity, critical security enhancements around payment resets, deep dashboard modularization, Phase 2 caching optimizations, and system stabilization following a major crash recovery.</p>
+
+                            <!-- Gametech Brand UI & Navigation -->
+                            <div class="card border-0 mb-4" style="background:#f0f9ff; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#0284c7;"><i class="fas fa-palette me-2"></i> Gametech Brand Identity & Modern Navigation Overhaul</h5>
+                                    <p>Executed a comprehensive visual transformation to align the entire system with Gametech's brand aesthetics:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>Light Mode Transformation:</strong> Restyled top navbar and navigation menus with clean white card backgrounds, refined Gametech Blue (<code>#0349cb</code>) headers, and crisp borders.</li>
+                                        <li><strong>Sidebar Ergonomics:</strong> Moved the Logout button to the bottom of the sidebar with a clear exit icon and confirmation alert; fixed active submenu item highlighting and aligned dropdown arrows.</li>
+                                        <li><strong>Sidepanel Dark Mode:</strong> Resolved dark mode styling conflicts on the collapsible sidepanel and fixed a bug where the collapsed sidebar overlapped footer elements.</li>
+                                        <li><strong>Cache Busting:</strong> Bumped CSS cache versions to <code>v2.2</code> across all templates to prevent production browsers from loading stale duplicate sidebar stylesheets.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Customer Portal Due Date Widget & Alerts -->
+                            <div class="card border-0 mb-4" style="background:#f0fdf4; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#059669;"><i class="fas fa-clock me-2"></i> Customer Portal Due Date Widget & Expiration Alerts</h5>
+                                    <p>Empowered both customers and billing agents with transparent, prominent expiration tracking:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>Portal Due Date Countdown:</strong> Added a vibrant countdown widget to the self-service customer portal that dynamically changes from emerald green to warning amber and alert red as the due date approaches.</li>
+                                        <li><strong>Portal Auth Redirection Fix:</strong> Fixed a critical redirect issue where customers with expired web sessions were being directed to the internal staff login page instead of the customer portal login.</li>
+                                        <li><strong>Expiring Soon / Overdue CRM Alerts:</strong> Added an "Expiring Soon / Overdue" widget directly on the main admin dashboard, and added discreet "Due Date" badges below connection status tags in the customer CRM table.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Advance Payment Reset Security & Customizable Receipts -->
+                            <div class="card border-0 mb-4" style="background:#fef2f2; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#b91c1c;"><i class="fas fa-shield-alt me-2"></i> Advance Payment Reset Security & Customizable Receipt Templates</h5>
+                                    <p>Hardened financial operations against unauthorized tampering and gave admins full messaging control:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>Password-Protected Reset:</strong> Added an administrative password verification modal before allowing an advance payment to be reset.</li>
+                                        <li><strong>Red Alert Audit Logging:</strong> Realigns customer expiration dates upon reset and automatically logs a high-priority red alert in system audit trails.</li>
+                                        <li><strong>Customizable Receipt SMS:</strong> Made receipt text templates fully customizable via the Settings page, allowing admins to dynamically inject <code>{customer_name}</code>, <code>{amount}</code>, and <code>{due_date}</code> placeholders.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Payment Engine Bug Fixes -->
+                            <div class="card border-0 mb-4" style="background:#fefce8; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#d97706;"><i class="fas fa-cash-register me-2"></i> Payment Engine Bugfixes & Suspension Evaluation</h5>
+                                    <p>Resolved several critical edge-case bugs in payment processing:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>Pre-Commit Suspension Check:</strong> Updated <code>pay_customer_view</code> to evaluate customer suspension status <em>before</em> committing payments to the database, ensuring Mikrotik routers reliably receive re-enable commands immediately.</li>
+                                        <li><strong>NameError & Import Patches:</strong> Fixed a <code>NameError: reverse is not defined</code> bug in payment redirects, and imported missing <code>calculate_new_expiration_date</code>.</li>
+                                        <li><strong>SmsLog Schema Alignment:</strong> Fixed a 500 error after payment by removing an invalid <code>customer</code> argument from the <code>SmsLog.objects.create()</code> call and stripped synchronous decorators from <code>send_semaphore_sms</code>.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Live Monitoring Stability Scoring -->
+                            <div class="card border-0 mb-4" style="background:#fdf4ff; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#7c3aed;"><i class="fas fa-heartbeat me-2"></i> Live Monitoring Connection Stability Scoring</h5>
+                                    <p>Added intelligent connection health evaluation to Live Monitoring:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>Uptime Heuristic Engine:</strong> Formulated an algorithm analyzing session uptime and reconnection frequency to score connection stability.</li>
+                                        <li><strong>Real-Time Badges:</strong> Customers are tagged with visual stability indicators (Rock Solid, Stable, Flapping, Highly Unstable) to help NOC technicians instantly spot intermittent fiber drops.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Modular Dashboard & Phase 2 Caching -->
+                            <div class="card border-0 mb-4" style="background:#f0fdf4; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#059669;"><i class="fas fa-tachometer-alt me-2"></i> Dashboard Modularization & Phase 2 Caching Optimization</h5>
+                                    <p>Significantly enhanced dashboard performance and code maintainability:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>Component Splitting:</strong> Refactored the monolithic <code>dashboard.html</code> into clean, dedicated partial templates: <code>_stats.html</code>, <code>_charts.html</code>, <code>_modals.html</code>, and <code>_scripts.html</code>.</li>
+                                        <li><strong>Orchestrator Pattern:</strong> Applied the Orchestrator pattern across billing and customer views to decouple business logic from presentation.</li>
+                                        <li><strong>Phase 2 Performance Caching:</strong> Implemented in-memory and Redis caching for high-load aggregate queries (total revenue, active customer counts, daily collections), dramatically reducing database load.</li>
+                                        <li><strong>UI Decluttering:</strong> Removed heavy, redundant Chart.js graphs and system health widgets from the dashboard to provide an instantaneous, ultra-fast initial page load.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Crash Recovery & Template Tag Fixes -->
+                            <div class="card border-0 mb-4" style="background:#fff7ed; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#ea580c;"><i class="fas fa-tools me-2"></i> Crash Recovery, Import Repair & Template Syntax Normalization</h5>
+                                    <p>Overcame severe repository null-byte corruptions following a system crash:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>Null-Byte & Import Repair:</strong> Audited and repaired corrupted Python files and circular relative import shadowing across <code>billing/views/</code>.</li>
+                                        <li><strong>Template Syntax Normalization:</strong> Injected missing <code>{% load static %}</code> tags across all template partials and removed orphaned <code>{% endblock %}</code> tags.</li>
+                                        <li><strong>Activity Log Filter Fix:</strong> Added <code>{% load log_filters %}</code> to <code>_activity_logs.html</code> to prevent 500 errors when viewing customer profiles.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SEPTEMBER 8 -->
+                        <div class="tab-pane fade" id="list-sep8" role="tabpanel" aria-labelledby="list-sep8-list">
+                            <h3 class="fw-bold mb-4 border-bottom pb-3" style="color: #1e3a8a;">
+                                September 8, 2026: Admin Control Center Overhaul, Downdetector CRUD & Financial Engine
+                            </h3>
+
+                            <p class="lead text-muted mb-4">A massive architecture sprint establishing the 4-section Owner Control Center, dedicated Downdetector CRUD management, Mikrotik-synchronized rebate and rollback engines, and multi-tier Live Monitoring.</p>
 
                             <!-- Admin Panel Overhaul -->
                             <div class="card border-0 mb-4" style="background:#f0f9ff; border-radius:12px;">
@@ -148,71 +331,149 @@
                             <!-- Live Monitoring -->
                             <div class="card border-0 mb-4" style="background:#f0f9ff; border-radius:12px;">
                                 <div class="card-body p-4">
-                                    <h5 class="fw-bold mb-3" style="color:#0284c7;"><i class="fas fa-satellite-dish me-2"></i> Live Monitoring — Per-Router &amp; Per-Customer Views</h5>
-                                    <p>The Live Monitoring page was enhanced from an overall system overview to a multi-level monitoring dashboard:</p>
+                                    <h5 class="fw-bold mb-3" style="color:#0284c7;"><i class="fas fa-satellite-dish me-2"></i> Live Monitoring — Multi-Tiered Architecture</h5>
+                                    <p>The Live Monitoring page was enhanced from a simple system summary into a multi-level monitoring dashboard:</p>
                                     <ul class="mb-0">
                                         <li><strong>Overall View:</strong> System-wide summary of all Mikrotik routers (online/offline), total active PPPoE sessions, bandwidth stats</li>
                                         <li><strong>Per-Router View:</strong> Click any router to see its individual metrics — connected users, upload/download speeds, uptime, active PPPoE sessions list</li>
-                                        <li><strong>Per-Customer View:</strong> Staff can see any individual customer's real-time status without leaving the monitoring page</li>
+                                        <li><strong>Per-Customer View:</strong> Staff can inspect any individual customer's real-time status without leaving the monitoring page</li>
                                         <li>Detection fixes: Router speed and upload/download now correctly pull from the <code>/interface/monitor-traffic</code> API endpoint</li>
                                         <li>Router online/offline detection fixed — uses connection timeout as the primary indicator</li>
                                     </ul>
                                 </div>
                             </div>
 
-                            <!-- Customer Portal Payment Due -->
-                            <div class="card border-0 mb-4" style="background:#f0fdf4; border-radius:12px;">
-                                <div class="card-body p-4">
-                                    <h5 class="fw-bold mb-3" style="color:#059669;"><i class="fas fa-calendar-check me-2"></i> Customer Portal — Payment Due Date Display</h5>
-                                    <p>The customer self-service portal was updated to prominently display <strong>when the next payment is due</strong>:</p>
-                                    <ul class="mb-0">
-                                        <li>Due date shown on the main portal dashboard in a highlighted card</li>
-                                        <li>The <strong>Payment Window</strong> (when customer clicks Pay) also shows the next due date before confirming</li>
-                                        <li>Countdown badge shows days remaining (e.g. "5 days left") with color changes: green → yellow → red as it approaches</li>
-                                    </ul>
-                                </div>
-                            </div>
-
-                            <!-- Payment SMS/Email Toggle -->
+                            <!-- Payment Confirmation SMS/Email Toggle -->
                             <div class="card border-0 mb-4" style="background:#fff7ed; border-radius:12px;">
                                 <div class="card-body p-4">
-                                    <h5 class="fw-bold mb-3" style="color:#ea580c;"><i class="fas fa-bell me-2"></i> Payment Confirmation — SMS &amp; Email Toggle</h5>
-                                    <p>Before confirming a payment, staff can now choose whether to send a notification to the customer:</p>
+                                    <h5 class="fw-bold mb-3" style="color:#ea580c;"><i class="fas fa-bell me-2"></i> Payment Confirmation — Notification Toggles</h5>
+                                    <p>Before confirming a payment, staff can choose whether to dispatch alerts to the customer:</p>
                                     <ul class="mb-0">
-                                        <li>Two toggle switches added to the payment form: <strong>Send SMS Notification</strong> and <strong>Send Email Notification</strong> — both checked by default</li>
-                                        <li>Unchecking either switch prevents that channel from firing</li>
-                                        <li>The backend <code>pay_customer_view</code> reads these POST values and conditionally calls the Semaphore SMS API or Django <code>send_mail()</code></li>
-                                        <li>SMS and Email logs are still created whether or not the message was sent, for audit purposes</li>
+                                        <li>Two toggle switches added to the payment modal: <strong>Send SMS Notification</strong> and <strong>Send Email Notification</strong> — checked by default</li>
+                                        <li>Unchecking either switch prevents that delivery channel from firing</li>
+                                        <li>The backend <code>pay_customer_view</code> reads these POST values and conditionally calls Semaphore SMS or Django <code>send_mail()</code></li>
+                                        <li>SMS and Email audit logs are still preserved regardless of dispatch choice</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SEPTEMBER 3 -->
+                        <div class="tab-pane fade" id="list-sep3" role="tabpanel" aria-labelledby="list-sep3-list">
+                            <h3 class="fw-bold mb-4 border-bottom pb-3" style="color: #1e3a8a;">
+                                September 3, 2026: Live Traffic Graph, Downdetector NOC & Message Templates
+                            </h3>
+
+                            <p class="lead text-muted mb-4">Phase 6 release bringing dynamic Chart.js bandwidth telemetry to customer profiles, the Downdetector Network Operations Center dashboard, automated SLA rebate alerts, and dynamic notification templates.</p>
+
+                            <!-- Live Bandwidth Graph -->
+                            <div class="card border-0 mb-4" style="background:#f0f9ff; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#0284c7;"><i class="fas fa-chart-area me-2"></i> Dynamic Real-Time Bandwidth Graph (Chart.js)</h5>
+                                    <p>Integrated real-time bandwidth telemetry directly into customer profiles:</p>
+                                    <ul class="mb-0">
+                                        <li>Integrated an animated <code>Chart.js</code> live traffic graph into the individual Customer Profile, visualizing real-time bandwidth consumption (Rx/Tx Mbps) directly from Mikrotik interface counters.</li>
+                                        <li>Smooth interval updates that plot download and upload speeds dynamically as customers use their connection.</li>
                                     </ul>
                                 </div>
                             </div>
 
-                            <!-- Analytics Fix -->
+                            <!-- Downdetector NOC -->
+                            <div class="card border-0 mb-4" style="background:#f0fdf4; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#059669;"><i class="fas fa-network-wired me-2"></i> Network Operations Center (NOC) Dashboard</h5>
+                                    <p>Built a centralized dashboard for tracking external gaming and web service health:</p>
+                                    <ul class="mb-0">
+                                        <li>Developed a dedicated NOC dashboard (<code>downdetector.html</code>) displaying global network uptime, latency, and service states across monitored endpoints.</li>
+                                        <li>Added a live "System Health" widget natively into the main admin dashboard for instant at-a-glance visibility.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Automated SLA Rebate Notifications -->
+                            <div class="card border-0 mb-4" style="background:#fefce8; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#d97706;"><i class="fas fa-envelope-open-text me-2"></i> Automated SLA Notifications & Message Templates</h5>
+                                    <p>Automated customer communications during service outages and rebate events:</p>
+                                    <ul class="mb-0">
+                                        <li>Bound SLA auto-rebates in Celery automated background workers to dispatch localized SMS and Email notifications to affected subscribers automatically.</li>
+                                        <li>Implemented an administrative management interface (<code>message_templates.html</code>) for modifying SMS and Email templates dynamically using smart tags like <code>{customer_name}</code>, <code>{amount}</code>, and <code>{due_date}</code>.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- SystemLog 500 Fix & Expiration Filters -->
                             <div class="card border-0 mb-4" style="background:#fdf4ff; border-radius:12px;">
                                 <div class="card-body p-4">
-                                    <h5 class="fw-bold mb-3" style="color:#7c3aed;"><i class="fas fa-chart-line me-2"></i> Analytics — Sidebar Link Fixed</h5>
-                                    <p>The <strong>Analytics</strong> sidebar nav item was missing its URL and showed as broken. It now correctly points to the <strong>Payment Logs / Reports</strong> page which contains sales, revenue, and financial analytics. A dedicated Analytics dashboard may be added in a future sprint.</p>
+                                    <h5 class="fw-bold mb-3" style="color:#7c3aed;"><i class="fas fa-bug me-2"></i> SystemLog Server Error Fix & Expiration Tracking</h5>
+                                    <p>Eliminated a critical application-wide 500 error and improved CRM filtering:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>SystemLog Fix:</strong> Resolved a severe data mapping bug where code referenced <code>changed_at</code> instead of the defined <code>created_at</code> field on the <code>SystemLog</code> model, which was causing widespread 500 server errors across the system.</li>
+                                        <li><strong>CRM Expiration Filters:</strong> Added intelligent status filter tabs (Active, Expiring, Expired, Inactive) to the Customer CRM list for fast querying.</li>
+                                        <li><strong>CI/CD Parity:</strong> Hardened the DigitalOcean live deployment workflow to forcefully resolve git conflicts and maintain exact parity with zero downtime.</li>
+                                    </ul>
                                 </div>
                             </div>
+                        </div>
 
-                            <!-- System Polish & Final Fixes -->
-                            <div class="card border-0 mb-4" style="background:#fef2f2; border-radius:12px;">
+                        <!-- SEPTEMBER 2 -->
+                        <div class="tab-pane fade" id="list-sep2" role="tabpanel" aria-labelledby="list-sep2-list">
+                            <h3 class="fw-bold mb-4 border-bottom pb-3" style="color: #1e3a8a;">
+                                September 2, 2026: Dispatch App, Sync Manager Auto-Fix & Security
+                            </h3>
+
+                            <p class="lead text-muted mb-4">Phase 5 release introducing the full Dispatch management application, the reimagined Sync Manager with 1-click Auto-Fix, suspicious rogue account detection, and Winbox dashboard password protection.</p>
+
+                            <!-- Dispatch Monitoring System -->
+                            <div class="card border-0 mb-4" style="background:#f0f9ff; border-radius:12px;">
                                 <div class="card-body p-4">
-                                    <h5 class="fw-bold mb-3" style="color:#b91c1c;"><i class="fas fa-hammer me-2"></i> System Audit & UI Polish</h5>
-                                    <p>A full system audit was conducted to fix all outstanding bugs and deploy highly requested UI enhancements to make the system flawless:</p>
+                                    <h5 class="fw-bold mb-3" style="color:#0284c7;"><i class="fas fa-truck me-2"></i> Dispatch Monitoring System Initialized (Phase 5)</h5>
+                                    <p>Bootstrapped the dedicated field operations and technician dispatch system:</p>
                                     <ul class="mb-0">
-                                        <li><strong>Customer Portal:</strong> A vibrant Payment Due Countdown widget was added to the portal dashboard, glowing green/yellow/red depending on the days remaining.</li>
-                                        <li><strong>Customer Portal:</strong> Fixed a critical redirect bug where customers whose sessions expired were being incorrectly redirected to the staff login instead of the portal login.</li>
-                                        <li><strong>Dashboard:</strong> Added a prominent "Expiring Soon / Overdue" table directly on the staff dashboard, highlighting exactly who needs to pay next.</li>
-                                        <li><strong>Dashboard:</strong> Fixed a critical Git merge conflict layout bug inside the main dashboard HTML.</li>
-                                        <li><strong>Customer List:</strong> Added a discrete "Due Date" badge underneath the connection status indicator inside the main CRM table.</li>
-                                        <li><strong>Payment Logic:</strong> Hardened the <code>pay_customer_view</code> to evaluate suspension state <i>before</i> committing payment, completely fixing a bug where Mikrotik routers wouldn't re-enable previously suspended users.</li>
-                                        <li><strong>Database:</strong> Successfully restored the complete set of standard Internet Plans (GTipid Fiber, GIMI Home Fiber, Business Plans) to the live database.</li>
-                                        <li><strong>Server Stability:</strong> Fixed a Server 500 Error when editing customers by adding the missing <code>get_categorized_plans</code> import.</li>
+                                        <li>Initialized the <code>dispatch</code> Django app complete with data models, views, templates, and primary sidebar navigation integration.</li>
+                                        <li>Implemented technician job completion workflows, add record modals, and technician assignment tracking.</li>
+                                        <li>Integrated Audit Logs and record management into the dispatch dashboard.</li>
                                     </ul>
                                 </div>
                             </div>
 
+                            <!-- Premium Sync Manager Overhaul -->
+                            <div class="card border-0 mb-4" style="background:#f0fdf4; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#059669;"><i class="fas fa-sync-alt me-2"></i> Premium Gametech Sync Manager & Auto-Fix</h5>
+                                    <p>Massive overhaul of the Mikrotik synchronizer with automated reconciliation:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>Auto-Fix Sync Button:</strong> Built an intelligent 1-click Auto-Fix engine that identifies mismatched PPPoE credentials and automatically pushes correct CRM data to the router.</li>
+                                        <li><strong>Reassurance Modals:</strong> Intercepted form submissions to replace abrupt browser confirms with Gametech confirmation modals with reassuring safety prompts.</li>
+                                        <li><strong>Dark Mode & Theme Polish:</strong> Corrected Sync Manager CSS gradient cards and contrast in dark mode.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Suspicious Rogue Account Tracking -->
+                            <div class="card border-0 mb-4" style="background:#fef2f2; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#b91c1c;"><i class="fas fa-user-secret me-2"></i> Suspicious Rogue Account Detection</h5>
+                                    <p>Automated network security safeguards against rogue Mikrotik secrets:</p>
+                                    <ul class="mb-0">
+                                        <li>Added dynamic red "Suspicious" badges to Active Users in the Sync Manager with contextual diagnostic reasons (unrecognized IP, unregistered PPPoE user, missing customer profile).</li>
+                                        <li>Built a dedicated review workflow allowing staff to quickly inspect or isolate rogue users.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Winbox Security & Comments -->
+                            <div class="card border-0 mb-4" style="background:#fefce8; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#d97706;"><i class="fas fa-key me-2"></i> Winbox Dashboard Password Protection & Signal Comments</h5>
+                                    <p>Strengthened hardware access controls and router comment integrity:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>Winbox Protection:</strong> Guarded the Winbox Dashboard with mandatory password authentication modals to prevent unauthorized hardware adjustments.</li>
+                                        <li><strong>Signal Comments:</strong> Unified Mikrotik comment formatting into Django signals to ensure phone numbers, barangays, and expiration timestamps remain intact on the router.</li>
+                                        <li><strong>Plan Organization:</strong> Structured internet plans into categorized tabs with rich speed and feature descriptions.</li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- AUGUST 31 -->
