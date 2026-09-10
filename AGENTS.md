@@ -125,6 +125,29 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
       * Verify the handler fires by adding a temporary `console.log()` check before writing complex logic.
     * Elements rendered after `$(document).ready()` will NOT have directly-bound handlers — delegation is mandatory.
 
+21. **THE CACHE SYNC MANDATE (Prevent Zombie Data)**:
+    * Whenever an AI edits a view that changes a user's state (Login, Logout, Disable Account, Suspend, Delete, Payment status change):
+      * **MUST** verify if there is a corresponding Redis cache key that needs to be explicitly invalidated (`cache.delete()` or removed from a dict-style cache).
+      * **NEVER** assume Django's default session handler will clear custom Redis metrics. Django sessions and custom cache keys are independent systems.
+    * Use the **Redis Cache Key Registry** below to identify affected keys instantly.
+
+22. **GIT ARCHEOLOGY BAN (Never Explore History to Understand Code)**:
+    * **FORBIDDEN**: Running `git log`, `git reflog`, `git diff`, `git show`, or `git blame` to understand how a feature works or to guess a bug's origin.
+    * **ALLOWED**: `git pull origin main` (mandatory first step), `git add`, `git commit`, `git push` (deployment), and `git status` (pre-commit check).
+    * **EXCEPTION**: Only use `git log -S` if the user explicitly asks to track down a regression from a known commit or date range.
+    * Rely entirely on the current state of the file as pinpointed by `gametech_filing_index.md` and `gametech_architecture_map.txt`.
+
+23. **REDIS CACHE KEY REGISTRY (Zero-Grep Cache Debugging)**:
+    * When debugging cache/stale-data issues, look up the key here first. **NEVER** grep the codebase for `cache.set` or `cache.get`.
+
+    | Cache Key Pattern | Purpose | TTL | Set By | Invalidated By |
+    |---|---|---|---|---|
+    | `active_portal_customers` | Dict of `{customer_id: timestamp}` for logged-in portal users | 600s (10min) | `customer_portal/views.py`, `billing/middleware.py`, `billing/views/auth.py` | `customer_portal/views.py` (portal_logout), `billing/middleware.py` (cleanup) |
+    | `seen_customer_{id}` | Last-activity timestamp for a specific portal customer | 300s (5min) | `customer_portal/views.py`, `billing/views/auth.py` | Expires naturally; removed from `active_portal_customers` dict when missing |
+    | `seen_user_{id}` | Last-activity timestamp for a staff/admin user | 86400s (30 days) | `billing/middleware.py` | Expires naturally |
+    | `live_monitoring_data` | Cached Mikrotik live monitoring API response | 30s | `billing/views/api/dashboard.py`, `billing/tasks.py` | Overwritten on each poll cycle |
+    | `dashboard_stats_{date}` | Cached dashboard statistics for a specific date | 300s (5min) | `billing/views/dashboard.py` | Expires naturally |
+
 ---
 
 ### 🧼 2. Codebase Cleanliness & Architecture Standards
@@ -147,18 +170,16 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
 
 ---
 
-### 💡 3. Fast-Prompting Guide for Team Members
+### 💡 3. The Prompt Translation Mandate (Burden on the AI)
 
-To get instantaneous fixes from any AI with minimal token burn, team members are encouraged to format prompts like this:
-```text
-Target: billing/templates/billing/live_monitoring/_hero.html
-Issue: Change the Search Customer button text to 'Find User'
-```
-```text
-Target: billing/views/customers.py (around def pay_customer_view)
-Issue: Ensure discount is deducted before applying transaction fee
-```
-```text
-Question: What models are associated with Mikrotik sync?
-Context: Check gametech_architecture_map.txt
-```
+The human team members will write **vague, plain-English prompts** (e.g., *"The online staff counter is stuck"*, *"I can't click the add-on button"*, *"The router is offline"*). 
+
+**The AI MUST NOT expect the user to reference documentation, files, or endpoints.**
+
+Instead, the AI MUST silently perform this internal translation step BEFORE taking any action:
+1. **Receive Human Prompt**: *"The staff counter is stuck"*
+2. **Consult Indexes**: The AI internally looks up "staff counter" in `GEMINI.md` (Triage Router) and `gametech_filing_index.md` (UI→API Map).
+3. **Map to Target**: The AI discovers this maps to `/api/online-staff/` and `billing/views/auth.py`.
+4. **Execute Sniper Fix**: The AI jumps directly to the target file.
+
+If the AI asks the user *"Which file is that in?"* or *"Can you point me to the endpoint?"*, **the AI has failed**. The indexes already contain all the answers.

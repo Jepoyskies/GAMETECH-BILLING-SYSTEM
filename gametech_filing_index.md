@@ -150,3 +150,31 @@
 | `static/css/theme/layout_and_darkmode.css` | 500+ lines | Massive CSS file | `grep_search` for specific selector or class name |
 | `billing/templates/billing/base/_topbar.html` | 300+ lines | Dense topbar with dropdowns | `grep_search` for the specific ID or section |
 | `billing/views/` (any file > 300 lines) | Varies | Monolith risk | `grep_search` for function name, read 50-line slice |
+
+---
+
+## 🔗 6. Dynamic UI → API Data Source Map
+
+> **Rule**: When a user reports a broken widget, stale counter, or "data not showing" in a specific UI element, look up the element here FIRST. Jump directly to the API endpoint — **NEVER** read the HTML template or JS file to trace the `fetch()` URL.
+
+| UI Element (Location) | JS Fetch Function | API Endpoint | Backend Handler |
+| :--- | :--- | :--- | :--- |
+| Online Staff Dropdown (`base/_topbar.html`) | `fetchOnlineStaff()` in `base/_scripts.html` | `/api/online-staff/` | `billing/views/auth.py → online_staff_api` |
+| Live Monitoring Hero Stats (`live_monitoring/_hero.html`) | `fetchLiveMonitoringData()` | `/api/live-monitoring/` | `billing/views/api/dashboard.py → live_monitoring_api` |
+| Customer Portal Active Sessions (topbar badge) | `fetchOnlineStaff()` (combined response) | `/api/online-staff/` | `billing/views/auth.py → online_staff_api` (portal_customers section) |
+| Dashboard Stats Cards | Page load (server-rendered) | N/A (context variable) | `billing/views/dashboard.py → dashboard_view` |
+| Router Uplink Status Dots | `fetchUplinkStatus()` | `/api/router-uplink-status/` | `billing/views/api/network.py` |
+
+---
+
+## 🗃️ 7. Redis Cache Key Quick Reference
+
+> **Rule**: For full cache key details (TTL, set-by, invalidation), see `AGENTS.md` Rule #23. This is a quick-lookup shortcut.
+
+| Cache Key | What It Tracks |
+| :--- | :--- |
+| `active_portal_customers` | Dict of logged-in customer portal users |
+| `seen_customer_{id}` | Last-activity timestamp for a portal customer |
+| `seen_user_{id}` | Last-activity timestamp for a staff/admin user |
+| `live_monitoring_data` | Cached Mikrotik live monitoring response |
+| `dashboard_stats_{date}` | Cached dashboard statistics for a date |

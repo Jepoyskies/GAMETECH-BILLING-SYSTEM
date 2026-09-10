@@ -24,6 +24,7 @@ This workspace strictly adheres to the protocols defined in:
 | **Static CSS/JS not updating in prod** | Was `collectstatic` run? Check browser cache (Ctrl+Shift+R) | Then check file path in template `{% static %}` tag |
 | **New page / feature request** | `gametech_filing_index.md` Recipes section | Follow orchestrator pattern for templates |
 | **Permission / 403 error** | Check `@login_required` and `user.is_staff` in the view | Then check URL routing order in `urls.py` |
+| **Zombie Data (Logged out but showing, deleted but visible, stale count)** | Check Redis: `ssh root@143.198.207.144 "docker exec gametech-billing-system_redis_1 redis-cli GET 'key_name'"` — use AGENTS.md Rule #23 Registry to find key name | Inspect the Logout/Delete/Disable view to see why it failed to `cache.delete()` or remove from dict |
 
 ---
 
@@ -38,6 +39,8 @@ This workspace strictly adheres to the protocols defined in:
 8. **No Repeat Failures**: Max 2 attempts per approach. If same fix fails twice, escalate to user.
 9. **Batch Deploys**: For multi-file tasks, make ALL edits → single commit → single push → single restart.
 10. **Verify API Contracts**: Before rewriting backend logic, `curl` the API to see actual response shape.
+11. **No Git Archeology**: Never run `git log`, `git reflog`, `git diff`, or `git blame` to understand features. See AGENTS.md Rule #22.
+12. **Cache Sync on State Changes**: Verify Redis invalidation when editing Login/Logout/Delete views. See AGENTS.md Rule #21.
 
 ---
 
@@ -62,9 +65,26 @@ ssh root@143.198.207.144 "docker exec gametech-billing-system_web_1 python manag
 # Check Redis cache keys
 ssh root@143.198.207.144 "docker exec gametech-billing-system_redis_1 redis-cli KEYS '*pattern*'"
 
+# Inspect a specific Redis cache value
+ssh root@143.198.207.144 "docker exec gametech-billing-system_redis_1 redis-cli GET 'active_portal_customers'"
+
 # Check div balance in a template
 python -c "content = open('path/to/template.html', 'r', encoding='utf-8').read(); import re; o = len(re.findall(r'<div\b', content)); c = len(re.findall(r'</div>', content)); print(f'opens: {o}, closes: {c}, diff: {o-c}')"
 
 # Verify API response shape (replace URL as needed)
 ssh root@143.198.207.144 "curl -s http://localhost:8000/api/endpoint/ | python3 -m json.tool | head -20"
 ```
+
+---
+
+## 🔗 Dynamic UI → API Data Source Map
+
+> **Rule**: When a user reports a broken widget, stale counter, or "data not showing" in a specific UI element, look up the element here FIRST. Jump directly to the API endpoint — **NEVER** read the HTML template or JS file to find the `fetch()` URL.
+
+| UI Element (Location) | JS Fetch Function | API Endpoint | Backend Handler |
+|---|---|---|---|
+| Online Staff Dropdown (`_topbar.html`) | `fetchOnlineStaff()` in `_scripts.html` | `/api/online-staff/` | `billing/views/auth.py → online_staff_api` |
+| Live Monitoring Hero Stats (`_hero.html`) | `fetchLiveMonitoringData()` | `/api/live-monitoring/` | `billing/views/api/dashboard.py → live_monitoring_api` |
+| Customer Portal Active Sessions (topbar badge) | `fetchOnlineStaff()` (combined) | `/api/online-staff/` | `billing/views/auth.py → online_staff_api` (portal_customers section) |
+| Dashboard Stats Cards | Page load (server-rendered) | N/A (context variable) | `billing/views/dashboard.py → dashboard_view` |
+| Router Uplink Status Dots | `fetchUplinkStatus()` | `/api/router-uplink-status/` | `billing/views/api/network.py` |
