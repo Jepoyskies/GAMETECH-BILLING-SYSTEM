@@ -29,11 +29,15 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
    * Inspect `gametech_architecture_map.txt` (~2,082 lines / ~8.5K tokens).
    * **NEVER** scan `billing/models.py` (2,000+ lines), `views/`, or multiple apps to figure out relationships.
 
-5. **SURGICAL IN-PLACE EDITS ONLY**:
+5. **CHECK THE ERROR RUNBOOK FIRST (`gametech_error_runbook.md`)**:
+   * Before investigating any reported bug, UI defect, or freeze, **ALWAYS** check `gametech_error_runbook.md`.
+   * If the symptom matches a known pattern (e.g. grey screen, white Select2 dropdown, stuck telemetry dots `...`, Mikrotik timeout), jump directly to the diagnosed target files and execute the verified 1-step fix.
+
+6. **SURGICAL IN-PLACE EDITS ONLY**:
    * **ALWAYS** use targeted replacement tools (`replace_file_content` / diffs) to edit ONLY the 2–15 lines with the bug.
    * **NEVER** rewrite an entire file or re-emit hundreds of unchanged lines.
 
-6. **THE 3-TOOL TURN LIMIT**:
+7. **THE 3-TOOL TURN LIMIT**:
    * If you cannot locate an issue after 2–3 pinpoint searches, **STOP IMMEDIATELY**. Do not crawl the repository. Ask the user for the specific file, template, or URL.
 
 ---

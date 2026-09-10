@@ -18,30 +18,28 @@ When an issue, bug, or 500 error is reported in this repository, **all AI assist
 
 ---
 
-## 🎯 The 4-Step Sniper Debugging Workflow
+## 🎯 The 5-Step Sniper Debugging Workflow
 
-### Step 1: Traceback First (Zero Code Scans)
+### Step 1: Check `gametech_error_runbook.md` (Zero Token Waste)
+* If the user reports a known symptom (e.g. grey screen on modal, unstyled white Select2 box, stuck telemetry dots `...`, Mikrotik ping failure), check `gametech_error_runbook.md` FIRST.
+* It directly maps the symptom to the exact 1–2 files and verified fix.
+
+### Step 2: Traceback First (If Not in Runbook)
 * Always inspect the server log first:
   ```bash
   ssh -o StrictHostKeyChecking=no root@143.198.207.144 "docker logs --tail 40 gametech-billing-system_web_1"
   ```
-  or run a direct Python test:
-  ```bash
-  python -c "..."
-  ```
-* The Python traceback tells you the **exact file** and the **exact line number**.
-* This eliminates 95% of exploratory reading.
+* The traceback pinpoints the **exact file** and the **exact line number**, eliminating 95% of exploratory token waste.
 
-### Step 2: Targeted 50-Line Slice
+### Step 3: Targeted 50-Line Slice
 * Use `grep_search` to pinpoint the line number if not already known from the log.
-* Call `view_file` specifying `StartLine: (line - 20)` and `EndLine: (line + 30)`.
-* Maximum slice size: 50–80 lines.
+* Call `view_file` specifying `StartLine: (line - 20)` and `EndLine: (line + 30)`. Max slice size: 50–80 lines.
 
-### Step 3: Consult `gametech_architecture_map.txt` for System Models
-* If you need to know foreign keys, model fields, background tasks, or URL routes, read `gametech_architecture_map.txt` (~2,082 lines / ~8.5K tokens).
-* Never scan monolithic model files like `billing/models.py`.
+### Step 4: Consult `gametech_architecture_map.txt` for System Models
+* If you need foreign keys, model fields, background tasks, or URL routes, read `gametech_architecture_map.txt`.
+* Never scan monolithic files like `billing/models.py`.
 
-### Step 4: Surgical In-Place Fix
+### Step 5: Surgical In-Place Fix
 * Use `replace_file_content` targeting only the lines that need changes.
 * Verify syntax immediately.
 * Do not leave temporary test files in the root folder.
