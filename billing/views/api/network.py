@@ -134,19 +134,12 @@ def api_router_uplink(request):
                 ping_res = (
                     api._get_api()
                     .get_resource("/")
-                    .call("ping", {"address": "8.8.8.8", "count": "1"})
+                    .call("ping", {"address": "8.8.8.8", "count": "2"})
                 )
                 if ping_res and len(ping_res) > 0:
-                    result = ping_res[0]
-                    loss = int(result.get("packet-loss", 100))
-                    if (
-                        loss == 100
-                        or result.get("status") == "no route to host"
-                        or result.get("status") == "timeout"
-                    ):
-                        uplink_status = "Offline"
-                        uplink_ping = "Timeout"
-                    else:
+                    successful = [p for p in ping_res if str(p.get("packet-loss", "100")) != "100" and "avg-rtt" in p]
+                    if successful:
+                        result = successful[-1]
                         avg_rtt_str = str(result.get("avg-rtt", "0ms"))
                         try:
                             clean_val = avg_rtt_str.replace("ms", "").strip()
@@ -156,6 +149,9 @@ def api_router_uplink(request):
                         except Exception:
                             uplink_ping = avg_rtt_str
                             uplink_status = "Online"
+                    else:
+                        uplink_status = "Offline"
+                        uplink_ping = "Timeout"
             except Exception as e:
                 uplink_status = "Offline"
                 uplink_ping = "Error"
@@ -164,6 +160,7 @@ def api_router_uplink(request):
                 {
                     "id": device.id,
                     "name": device.device_name,
+                    "ip": device.ip_address,
                     "uplink_status": uplink_status,
                     "uplink_ping": uplink_ping,
                 }
@@ -175,6 +172,7 @@ def api_router_uplink(request):
                 {
                     "id": device.id,
                     "name": device.device_name,
+                    "ip": device.ip_address,
                     "uplink_status": "Offline",
                     "uplink_ping": "Unreachable",
                 }

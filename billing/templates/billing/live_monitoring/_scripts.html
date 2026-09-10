@@ -560,7 +560,28 @@
                 if (statusText) statusText.classList.remove('syncing');
 
                 if (d.routers && d.routers.length > 0) {
-                    let r = d.routers[0];
+                    let selectedRouter = document.getElementById('routerFilter') ? document.getElementById('routerFilter').value : 'ALL';
+                    let r = null;
+
+                    if (selectedRouter === 'ALL') {
+                        let onlineRouters = d.routers.filter(x => x.uplink_status === 'Online');
+                        if (onlineRouters.length > 0) {
+                            r = {
+                                uplink_status: onlineRouters.length === d.routers.length ? 'Online' : 'Online (' + onlineRouters.length + '/' + d.routers.length + ')',
+                                uplink_ping: onlineRouters[0].uplink_ping,
+                                is_partial: onlineRouters.length < d.routers.length
+                            };
+                        } else {
+                            r = {
+                                uplink_status: 'Offline',
+                                uplink_ping: 'Timeout',
+                                is_partial: false
+                            };
+                        }
+                    } else {
+                        r = d.routers.find(x => x.ip === selectedRouter || x.name === selectedRouter || String(x.id) === selectedRouter) || d.routers[0];
+                    }
+
                     let box = document.getElementById('kpi-uplink-box');
                     let pingText = document.getElementById('uplinkPing');
                     if (statusText) statusText.innerText = r.uplink_status;
@@ -570,9 +591,9 @@
                         box.classList.remove('border-danger', 'border-warning', 'border-info', 'border-success');
                         box.style.setProperty('border-color', '', 'important');
 
-                        if (r.uplink_status === 'Offline') {
+                        if (r.uplink_status.startsWith('Offline')) {
                             box.classList.add('border-danger');
-                        } else if (r.uplink_status === 'Unstable') {
+                        } else if (r.uplink_status === 'Unstable' || r.is_partial) {
                             box.classList.add('border-warning');
                         } else {
                             box.classList.add('border-info');

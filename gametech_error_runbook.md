@@ -88,24 +88,17 @@
 
 ### ERR-004: Mikrotik Router Live Uplink / Ping Down
 * **Symptoms**:
-  * NOC dashboard displays `API Unreachable` or `Offline (Router Off)` for routers or PPPoE users.
+  * NOC dashboard displays `Offline`, `API Unreachable`, or `ping: Timeout` on the Router Uplink KPI card even when an active Mikrotik router is online.
 * **Root Causes**:
-  1. RouterOS API port `8728` is unreachable from the web container or droplet IP is blocked.
-  2. Router lost upstream gateway ping to `8.8.8.8`.
-  3. Credentials in `MikrotikDevice` model expired or incorrect.
+  1. **Index 0 Hardcode**: Frontend `_scripts.html` was hardcoded to `d.routers[0]`. When multiple routers exist (e.g. Mikrotik B offline, Mikrotik A online), the offline router shadowed the online router regardless of the `#routerFilter` selection.
+  2. **Single Packet Timeout**: `api_router_uplink` only sent `count: 1`. An initial ARP resolution or momentary drop immediately reported 100% loss/Timeout.
+  3. **Missing Default Route on Router**: Physical router missing `0.0.0.0/0` route in `/ip/route` results in `status: 'no route to host'`.
 * **Exact Target Files**:
-  * `network_manager/services.py` (`MikrotikAPI`)
-  * `billing/views/network.py` (`live_monitoring_view`)
-  * `billing/views/api/network.py` (`api_customer_mikrotik_status`)
+  * `billing/views/api/network.py` (`api_router_uplink`)
+  * `billing/templates/billing/live_monitoring/_scripts.html`
 * **1-Step Diagnosis & Fix**:
-  1. Test API connection in Python:
-     ```python
-     from network_manager.services import MikrotikAPI
-     from billing.models import MikrotikDevice
-     dev = MikrotikDevice.objects.first()
-     api = MikrotikAPI(dev)
-     print(api.ping("8.8.8.8"))
-     ```
+  1. In `api_router_uplink`, send `count: 2`, parse successful packets for `avg-rtt`, and include `"ip": device.ip_address`.
+  2. In `_scripts.html`, respect `document.getElementById('routerFilter').value`. If `"ALL"`, display active status if any router is online (`Online (1/2)`), or match specific selected router IP.
 
 ---
 
