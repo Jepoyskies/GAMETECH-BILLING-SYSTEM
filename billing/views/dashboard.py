@@ -383,24 +383,6 @@ def dashboard_view(request):
         {"plan_name": p["plan__name"] or "None", "cnt": p["cnt"]} for p in top_plans_qs
     ]
 
-    # Expiring Users (Next 3 days & recently expired)
-    three_days_ahead = now + timedelta(days=3)
-    expiring_qs = Customer.objects.filter(
-        expires_at__isnull=False, expires_at__lte=three_days_ahead
-    ).order_by("-expires_at")[:5]
-    expiring_users = []
-    for u in expiring_qs:
-        is_expired = u.expires_at < now
-        expiring_users.append(
-            {
-                "username": u.pppoe_username or u.full_name,
-                "plan_name": u.plan.name if u.plan else "N/A",
-                "expires_at": u.expires_at,
-                "is_expired": is_expired,
-                "expires_at_epoch": int(u.expires_at.timestamp()),
-            }
-        )
-
     context = {
         "growth_percent": growth_percent,
         "growth_icon": growth_icon,
@@ -416,7 +398,6 @@ def dashboard_view(request):
         "recent_admin_logins": recent_admin_logins,
         "top_clients": top_clients,
         "top_plans": top_plans,
-        "expiring_users": expiring_users,
         "months_js": json.dumps(months_js),
         "sales_by_month_js": json.dumps(sales_by_month_js),
         "days_js": json.dumps(days_js),
