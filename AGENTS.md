@@ -8,6 +8,9 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
 
 ### ⚡ THE ZERO-SCAN DEBUGGING LAW (Save Maximum Credits)
 
+0. **THE FRESHNESS LAW (Automatic Git Pull First)**:
+   * **MANDATORY FIRST STEP**: Before editing or diagnosing code on ANY task, the AI **MUST** run `git pull origin main`. Team members switch devices and work in parallel; coding on a stale branch causes merge conflicts, lost work, and duplicate debugging.
+
 1. **NO UNNECESSARY SCANNING (Hard Ban on Exploratory Crawling)**:
    * **FORBIDDEN**: Running directory scans (`list_dir`), file searches (`find_by_name`), or opening unrelated files "just to explore".
    * **FORBIDDEN**: Opening Python views/models when the user reports a frontend/template issue, and vice versa.
@@ -39,6 +42,17 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
 
 7. **THE 3-TOOL TURN LIMIT**:
    * If you cannot locate an issue after 2–3 pinpoint searches, **STOP IMMEDIATELY**. Do not crawl the repository. Ask the user for the specific file, template, or URL.
+
+8. **AUTOMATIC DEPLOYMENT & PRODUCTION SYNC (Zero Deployment Lag)**:
+   * Once changes are made and verified locally:
+     1. Stage modified files (`git add <files>`).
+     2. Commit with conventional commit message (`feat(...)`, `fix(...)`).
+     3. Push to `origin main`.
+     4. Pull on production droplet: `ssh root@143.198.207.144 "cd /root/GAMETECH-BILLING-SYSTEM && git pull origin main"`.
+     5. If Python code, templates, or settings were modified, restart the Gunicorn container: `ssh root@143.198.207.144 "docker restart gametech-billing-system_web_1"`.
+
+9. **CONTINUOUS RUNBOOK ENRICHMENT**:
+   * Whenever an AI solves a novel bug or architecture quirk not yet documented, it **MUST** append a new `ERR-XXX` entry to `gametech_error_runbook.md` before finishing the task.
 
 ---
 
