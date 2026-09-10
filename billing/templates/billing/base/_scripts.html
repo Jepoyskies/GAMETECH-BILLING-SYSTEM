@@ -399,6 +399,163 @@ document.addEventListener("DOMContentLoaded", function() {
     // Poll every 5 seconds for a truly live list
     setInterval(fetchOnlineStaff, 5000);
 
+    // ============================================================
+    // Notification Dropdown JS
+    // ============================================================
+    function fetchNotifications() {
+        const loading = document.getElementById('notifLoading');
+        const empty = document.getElementById('notifEmpty');
+        const list = document.getElementById('notifList');
+        const badge = document.getElementById('notifBadge');
+
+        fetch('/api/notifications/')
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Update unread badge on bell
+                    if (badge) {
+                        if (data.unread_count > 0) {
+                            badge.style.display = 'inline-block';
+                        } else {
+                            badge.style.display = 'none';
+                        }
+                    }
+
+                    if (loading) loading.classList.add('d-none');
+
+                    if (!data.notifications || data.notifications.length === 0) {
+                        if (empty) empty.classList.remove('d-none');
+                        const oldItems = list ? list.querySelectorAll('.notif-dropdown-item') : [];
+                        oldItems.forEach(el => el.remove());
+                    } else {
+                        if (empty) empty.classList.add('d-none');
+
+                        let html = '';
+                        data.notifications.forEach(n => {
+                            let icon = '<i class="fas fa-info-circle"></i>';
+                            let iconBg = 'rgba(37, 99, 235, 0.12)';
+                            let iconColor = '#2563eb';
+
+                            if (n.type === 'payment') {
+                                icon = '<i class="fas fa-check-circle"></i>';
+                                iconBg = 'rgba(22, 163, 74, 0.12)';
+                                iconColor = '#16a34a';
+                            } else if (n.type === 'network') {
+                                icon = '<i class="fas fa-network-wired"></i>';
+                                iconBg = 'rgba(220, 38, 38, 0.12)';
+                                iconColor = '#dc2626';
+                            } else if (n.type === 'cignal') {
+                                icon = '<i class="fas fa-satellite-dish"></i>';
+                                iconBg = 'rgba(124, 58, 237, 0.12)';
+                                iconColor = '#7c3aed';
+                            }
+
+                            const unreadDot = !n.is_read ? '<span class="position-absolute top-50 end-0 translate-middle-y me-3 p-1 bg-primary rounded-circle" style="width:7px;height:7px;"></span>' : '';
+                            const unreadClass = !n.is_read ? 'unread' : '';
+
+                            let timeAgo = '';
+                            try {
+                                const created = new Date(n.created_at);
+                                const diffMs = Date.now() - created.getTime();
+                                const diffMin = Math.floor(diffMs / 60000);
+                                if (diffMin < 1) timeAgo = 'Just now';
+                                else if (diffMin < 60) timeAgo = `${diffMin}m ago`;
+                                else {
+                                    const diffHr = Math.floor(diffMin / 60);
+                                    if (diffHr < 24) timeAgo = `${diffHr}h ago`;
+                                    else timeAgo = `${Math.floor(diffHr / 24)}d ago`;
+                                }
+                            } catch(e) {
+                                timeAgo = '';
+                            }
+
+                            const link = (n.link && n.link !== '#') ? n.link : 'javascript:void(0);';
+
+                            html += `
+                            <a href="${link}" onclick="markNotificationRead(${n.id}, event, '${link}')" class="notif-dropdown-item d-flex align-items-start gap-3 p-3 border-bottom text-decoration-none position-relative ${unreadClass}">
+                                <div class="flex-shrink-0 d-flex align-items-center justify-content-center rounded-circle" style="width:34px;height:34px;background:${iconBg};color:${iconColor};font-size:0.95rem;">
+                                    ${icon}
+                                </div>
+                                <div class="flex-grow-1 min-w-0 pe-2">
+                                    <div class="fw-semibold text-truncate notif-item-title" style="font-size:0.84rem;">${n.title}</div>
+                                    <div class="text-muted small text-truncate" style="font-size:0.75rem;">${n.message}</div>
+                                    <div class="text-muted small mt-1" style="font-size:0.68rem; opacity:0.75;">${timeAgo}</div>
+                                </div>
+                                ${unreadDot}
+                            </a>`;
+                        });
+
+                        if (list) {
+                            list.innerHTML = `
+                                <div class="text-center py-5 d-none" id="notifLoading">
+                                    <div class="spinner-border text-primary" role="status" style="width:1.5rem;height:1.5rem;"></div>
+                                    <p class="mt-2 text-muted small">Loading updates...</p>
+                                </div>
+                                <div class="text-center py-5 d-none" id="notifEmpty">
+                                    <div class="mb-3">
+                                        <div class="d-inline-flex justify-content-center align-items-center rounded-circle" style="width: 60px; height: 60px; background: rgba(53,51,205,0.1);">
+                                            <i class="fas fa-bell-slash fa-2x" style="color: #a0aec0;"></i>
+                                        </div>
+                                    </div>
+                                    <h6 class="text-secondary fw-semibold">All Caught Up!</h6>
+                                    <p class="text-muted small mb-0 px-4">You have no new notifications.</p>
+                                </div>
+                                ${html}
+                            `;
+                        }
+                    }
+                }
+            })
+            .catch(err => {
+                console.error("Error fetching notifications:", err);
+                if (loading) {
+                    loading.classList.remove('d-none');
+                    loading.innerHTML = '<p class="text-danger small my-4">Failed to load notifications</p>';
+                }
+            });
+    }
+
+    function markNotificationRead(id, event, link) {
+        const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+        fetch(`/api/notifications/mark-read/${id}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrf }
+        }).then(() => {
+            if (link && link !== 'javascript:void(0);' && link !== '#') {
+                window.location.href = link;
+            } else {
+                fetchNotifications();
+            }
+        }).catch(() => {
+            if (link && link !== 'javascript:void(0);' && link !== '#') {
+                window.location.href = link;
+            }
+        });
+    }
+
+    function markAllNotificationsRead(event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+        fetch('/api/notifications/mark-all-read/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrf }
+        }).then(() => {
+            fetchNotifications();
+        });
+    }
+
+    window.fetchNotifications = fetchNotifications;
+    window.markNotificationRead = markNotificationRead;
+    window.markAllNotificationsRead = markAllNotificationsRead;
+
+    // Fetch notifications on load & poll every 30s
+    setTimeout(fetchNotifications, 1000);
+    setInterval(fetchNotifications, 30000);
+    window.addEventListener('notificationsUpdated', fetchNotifications);
+
     // Idle timeout: automatically log out after 5 minutes of inactivity
     let idleTimeout;
     function resetIdleTimeout() {

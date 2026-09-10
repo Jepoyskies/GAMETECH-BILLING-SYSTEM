@@ -219,6 +219,20 @@
 
 ---
 
+### ERR-012: Topbar Notification Dropdown Stuck on "Loading updates..." Spinner Loop
+* **Symptoms**:
+  * Clicking the notification bell in the top navigation shows a permanent loading spinner with "Loading updates..." and never displays any notifications.
+* **Root Causes**:
+  * The topbar markup included the `#notifLoading` placeholder in `_topbar.html`, but lacked JavaScript in `_scripts.html` to fetch `/api/notifications/`, hide `#notifLoading`, and render the notification cards into `#notifList`.
+* **Exact Target Files**:
+  * `billing/templates/billing/base/_topbar.html`
+  * `billing/templates/billing/base/_scripts.html`
+  * `static/css/theme/components.css`
+* **1-Step Fix**:
+  * Implement `fetchNotifications()`, `markNotificationRead()`, and `markAllNotificationsRead()` in `_scripts.html` calling `/api/notifications/` with CSRF headers, and bind `onclick="fetchNotifications()"` on `#notificationDropdown` in `_topbar.html`.
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 Whenever a non-obvious bug or architecture defect is resolved:
