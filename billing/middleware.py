@@ -38,6 +38,22 @@ class ActiveUserMiddleware:
                     cache_key = f"seen_user_{request.user.id}"
                     last_seen = cache.get(cache_key)
                     now = timezone.now()
+                    
+                    # Safely parse if backend returned a string
+                    if isinstance(last_seen, str):
+                        from django.utils.dateparse import parse_datetime
+                        parsed = parse_datetime(last_seen)
+                        if parsed:
+                            last_seen = parsed
+                    
+                    # Make aware if naive
+                    if last_seen and getattr(last_seen, 'tzinfo', None) is None:
+                        last_seen = timezone.make_aware(last_seen)
+                        
+                    # In case parsing failed and it's still a string
+                    if isinstance(last_seen, str):
+                        last_seen = None
+                    
                     if not last_seen or (now - last_seen).total_seconds() > 60:
                         cache.set(cache_key, now, 60 * 60 * 24 * 30)  # 30 days
 

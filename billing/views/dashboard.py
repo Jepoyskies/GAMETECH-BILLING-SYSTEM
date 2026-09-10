@@ -313,10 +313,25 @@ def dashboard_view(request):
                 }
             )
             active_usernames.add(u.username)
+    # Ensure all datetimes are comparable (offset-aware)
+    for item in recent_admin_logins:
+        dt = item.get('login_time')
+        if isinstance(dt, str):
+            from django.utils.dateparse import parse_datetime
+            parsed = parse_datetime(dt)
+            if parsed:
+                dt = parsed
+        
+        if isinstance(dt, datetime) and getattr(dt, 'tzinfo', None) is None:
+            dt = timezone.make_aware(dt)
+            
+        item['login_time'] = dt
 
     # Sort by display_time descending and take top 5
     recent_admin_logins = sorted(
-        recent_admin_logins, key=lambda x: x["login_time"], reverse=True
+        recent_admin_logins, 
+        key=lambda x: x['login_time'] if isinstance(x['login_time'], datetime) else timezone.now(), 
+        reverse=True
     )[:5]
 
     # Top Paying Clients
