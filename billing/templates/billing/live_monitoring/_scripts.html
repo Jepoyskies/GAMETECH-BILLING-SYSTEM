@@ -632,28 +632,28 @@
         // Initialize Select2 for Customer Search safely
         function initCustomerSearchSelect() {
             if ($.fn.select2) {
-                $('#customerSearchSelect').select2({
-                    dropdownParent: $('#searchCustomerModal'),
-                    placeholder: "Search by Name...",
-                    allowClear: true,
-                    theme: 'bootstrap-5',
-                    width: '100%'
-                });
+                if (!$('#customerSearchSelect').hasClass('select2-hidden-accessible')) {
+                    $('#customerSearchSelect').select2({
+                        dropdownParent: $('#searchCustomerModal'),
+                        placeholder: "Search by Name or PPPoE...",
+                        allowClear: true,
+                        theme: 'bootstrap-5',
+                        width: '100%'
+                    });
+                }
             }
         }
         initCustomerSearchSelect();
 
         $('#searchCustomerModal').on('shown.bs.modal', function () {
             initCustomerSearchSelect();
-            if ($.fn.select2) {
-                $('#customerSearchSelect').select2('open');
-            }
         });
 
         let searchInterval = null;
         $('#customerSearchSelect').on('change', function() {
             const customerId = $(this).val();
             const detailsDiv = document.getElementById('searchCustomerDetails');
+            const placeholderDiv = document.getElementById('searchCustomerPlaceholder');
             
             if (searchInterval) {
                 clearInterval(searchInterval);
@@ -661,35 +661,70 @@
             }
             
             if (!customerId) {
-                detailsDiv.style.display = 'none';
+                if (detailsDiv) detailsDiv.style.display = 'none';
+                if (placeholderDiv) placeholderDiv.style.display = 'block';
                 return;
             }
             
-            detailsDiv.style.display = 'block';
-            document.getElementById('searchCustName').innerText = $(this).find("option:selected").text();
-            document.getElementById('searchCustLink').href = '/customers/view/' + customerId + '/';
+            if (detailsDiv) detailsDiv.style.display = 'block';
+            if (placeholderDiv) placeholderDiv.style.display = 'none';
+            
+            const selectedText = $(this).find("option:selected").text().trim();
+            const nameEl = document.getElementById('searchCustName');
+            if (nameEl) nameEl.innerText = selectedText;
+            
+            const linkEl = document.getElementById('searchCustLink');
+            if (linkEl) linkEl.href = '/customers/view/' + customerId + '/';
             
             function fetchCustomerLiveStatus() {
-                fetch('/api/customer/' + customerId + '/mikrotik-status/')
-                    .then(response => response.json())
+                const endpoint = '/customers/api/status/' + customerId + '/';
+                fetch(endpoint)
+                    .then(response => {
+                        if (!response.ok) {
+                            return fetch('/api/customer/' + customerId + '/mikrotik-status/').then(r => r.json());
+                        }
+                        return response.json();
+                    })
                     .then(data => {
-                        let statusColor = data.mt_status === 'Connected' ? 'text-success' : 'text-danger';
-                        document.getElementById('searchCustStatus').innerHTML = `<span class="${statusColor}">${data.mt_status}</span>`;
-                        document.getElementById('searchCustUptime').innerText = data.uptime !== 'N/A' ? data.uptime : (data.last_logged_out !== 'N/A' ? 'Offline since ' + data.last_logged_out : 'N/A');
-                        document.getElementById('searchCustMac').innerText = data.live_mac;
-                        
-                        if (data.stability) {
-                            document.getElementById('searchCustStability').innerHTML = `<span class="text-${data.stability_color}">${data.stability}</span>`;
-                        } else {
-                            document.getElementById('searchCustStability').innerText = 'N/A';
+                        const statusEl = document.getElementById('searchCustStatus');
+                        if (statusEl) {
+                            if (data.mt_status === 'Connected') {
+                                statusEl.innerHTML = `<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 small"><i class="fas fa-circle text-success me-1 fa-beat" style="font-size: 0.45rem;"></i> Connected</span>`;
+                            } else {
+                                statusEl.innerHTML = `<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1 small"><i class="fas fa-circle text-danger me-1" style="font-size: 0.45rem;"></i> Disconnected</span>`;
+                            }
                         }
                         
-                        if (data.rx_mbps !== undefined && data.tx_mbps !== undefined) {
-                            document.getElementById('searchCustDl').innerText = data.tx_mbps + ' Mbps';
-                            document.getElementById('searchCustUl').innerText = data.rx_mbps + ' Mbps';
-                        } else {
-                            document.getElementById('searchCustDl').innerText = '0.0 Mbps';
-                            document.getElementById('searchCustUl').innerText = '0.0 Mbps';
+                        const uptimeEl = document.getElementById('searchCustUptime');
+                        if (uptimeEl) {
+                            uptimeEl.innerText = (data.uptime && data.uptime !== 'N/A') ? data.uptime : ((data.last_logged_out && data.last_logged_out !== 'N/A') ? 'Offline since ' + data.last_logged_out : 'N/A');
+                        }
+                        
+                        const macEl = document.getElementById('searchCustMac');
+                        if (macEl) {
+                            macEl.innerText = data.live_mac || 'N/A';
+                        }
+                        
+                        const stabEl = document.getElementById('searchCustStability');
+                        if (stabEl) {
+                            if (data.stability) {
+                                const stabColor = data.stability_color || 'info';
+                                stabEl.innerHTML = `<span class="badge bg-${stabColor}-subtle text-${stabColor} border border-${stabColor}-subtle rounded-pill px-2 py-0.5 small">${data.stability}</span>`;
+                            } else {
+                                stabEl.innerText = 'N/A';
+                            }
+                        }
+                        
+                        const dlEl = document.getElementById('searchCustDl');
+                        const ulEl = document.getElementById('searchCustUl');
+                        if (dlEl && ulEl) {
+                            if (data.rx_mbps !== undefined && data.tx_mbps !== undefined) {
+                                dlEl.innerText = data.tx_mbps + ' Mbps';
+                                ulEl.innerText = data.rx_mbps + ' Mbps';
+                            } else {
+                                dlEl.innerText = '0.0 Mbps';
+                                ulEl.innerText = '0.0 Mbps';
+                            }
                         }
                     })
                     .catch(error => console.error('Error fetching status:', error));
