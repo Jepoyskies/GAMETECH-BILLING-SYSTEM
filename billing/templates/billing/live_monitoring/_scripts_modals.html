@@ -1,0 +1,221 @@
+<!-- Partial: Modal Handler Scripts (View All, Customer Live Chart, Apply Addon, Customer Search) -->
+<script>
+    function openViewAllModal(type) {
+        let title = document.getElementById('viewAllModalTitle');
+        let body = document.getElementById('viewAllModalBody');
+        let html = '<div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light">';
+
+        if (type === 'network') {
+            title.innerText = 'All Network Alerts';
+            html += '<tr><th class="ps-3">Name</th><th>Type</th><th>Status</th><th>Reason</th><th class="pe-3 text-end">Action</th></tr></thead><tbody>';
+            currentNetworkAlerts.forEach(a => {
+                let btnColor = a.type === 'ticket' ? 'btn-warning' : 'btn-danger';
+                let badgeClass = a.type === 'ticket' ? 'bg-warning text-dark' : 'bg-secondary';
+                let actionUrl = a.type === 'customer' ? '/customers/view/' + a.id + '/' : (a.type === 'ticket' ? '/dispatch/client-concerns/' : '/network/health/resolve/' + a.type + '/' + a.id + '/');
+                let actionTitle = a.type === 'ticket' ? 'View Ticket' : 'Resolve';
+                html += `<tr>
+                    <td class="ps-3"><span class="fw-bold">${a.name}</span></td>
+                    <td><span class="badge ${badgeClass}">${a.type.toUpperCase()}</span></td>
+                    <td><span class="fw-semibold ${a.type === 'ticket' ? 'text-warning' : 'text-danger'}">${a.status}</span></td>
+                    <td class="text-muted small" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${a.reason || '-'}</td>
+                    <td class="pe-3 text-end"><a href="${actionUrl}" class="btn ${btnColor} rounded-circle d-inline-flex justify-content-center align-items-center" style="width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" title="${actionTitle}"><i class="fas fa-eye"></i></a></td>
+                </tr>`;
+            });
+        } else if (type === 'addons') {
+            title.innerText = 'All Pending Add-on Requests';
+            html += '<tr><th class="ps-3">Customer</th><th>Add-on Type</th><th>Requested At</th><th class="pe-3 text-end">Action</th></tr></thead><tbody>';
+            currentAddonRequests.forEach(req => {
+                html += `<tr>
+                    <td class="ps-3"><span class="fw-bold">${req.customer_name}</span></td>
+                    <td><span class="badge bg-warning text-dark">${req.addon_type}</span></td>
+                    <td class="text-muted small">${req.requested_at}</td>
+                    <td class="pe-3 text-end"><a href="/customers/view/${req.customer_id}/" class="btn btn-warning rounded-circle d-inline-flex justify-content-center align-items-center" style="width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" title="Process"><i class="fas fa-eye"></i></a></td>
+                </tr>`;
+            });
+        } else if (type === 'offline') {
+            title.innerText = 'All Paid Offline Customers';
+            html += '<tr><th class="ps-3">Customer</th><th>Username</th><th>Down Since</th><th class="pe-3 text-end">Action</th></tr></thead><tbody>';
+            currentOfflineUsers.forEach(u => {
+                html += `<tr>
+                    <td class="ps-3"><span class="fw-bold">${u.full_name}</span></td>
+                    <td><span class="badge bg-primary">${u.username}</span></td>
+                    <td class="text-muted small">${u.last_logged_out}</td>
+                    <td class="pe-3 text-end"><a href="/customers/view/${u.id}/" class="btn btn-primary rounded-circle d-inline-flex justify-content-center align-items-center" style="width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" title="View"><i class="fas fa-eye"></i></a></td>
+                </tr>`;
+            });
+        } else if (type === 'hardware') {
+            title.innerText = 'Hardware Telemetry';
+            html += '<tr><th class="ps-3">Device Name</th><th>Status</th><th>CPU</th><th>RAM</th><th>Disk</th><th class="pe-3">Uptime</th></tr></thead><tbody>';
+            currentHardwareData.forEach(h => {
+                let badgeClass = h.status === 'Online' ? 'bg-success' : 'bg-danger';
+                html += `<tr>
+                    <td class="ps-3"><span class="fw-bold">${h.name}</span></td>
+                    <td><span class="badge ${badgeClass}">${h.status}</span></td>
+                    <td><span class="fw-semibold text-info">${h.cpu}</span></td>
+                    <td><span class="fw-semibold text-warning">${h.ram}</span></td>
+                    <td><span class="fw-semibold text-danger">${h.disk}</span></td>
+                    <td class="pe-3 text-muted small">${h.uptime}</td>
+                </tr>`;
+            });
+        }
+
+        if ((type === 'network' && currentNetworkAlerts.length === 0) ||
+            (type === 'addons' && currentAddonRequests.length === 0) ||
+            (type === 'offline' && currentOfflineUsers.length === 0) ||
+            (type === 'hardware' && currentHardwareData.length === 0)) {
+            html = '<div class="text-center text-muted p-5">No data to display. <i class="fas fa-check-circle text-success ms-1"></i></div>';
+        } else {
+            html += '</tbody></table></div>';
+        }
+
+        body.innerHTML = html;
+        $('#viewAllModal').modal('show');
+    }
+
+    function openCustomerLiveChart(username, displayName) {
+        modalCustomer = username;
+        let titleText = (displayName && displayName !== username) ? `${displayName} (${username})` : username;
+        document.getElementById('modalCustomerTitle').innerText = titleText;
+        
+        custRxData.fill(0);
+        custTxData.fill(0);
+        if (customerChartObj) customerChartObj.update();
+        document.getElementById('modalRxText').innerText = "0.0";
+        document.getElementById('modalTxText').innerText = "0.0";
+        
+        var myModal = new bootstrap.Modal(document.getElementById('customerLiveChartModal'));
+        myModal.show();
+    }
+
+    function openApplyAddonModal(requestId, customerId, customerName, addonType) {
+        if (addonType !== 'Cignal Play Add-on' && !addonType.toLowerCase().includes('cignal')) {
+            alert('This modal is only for Cignal Play Add-ons. Other add-ons must be handled manually.');
+            return;
+        }
+        document.getElementById('modalCustomerName').innerText = customerName;
+        document.getElementById('applyAddonForm').action = '/cignal-play/approve/' + requestId + '/';
+        var myModal = new bootstrap.Modal(document.getElementById('applyAddonModal'));
+        myModal.show();
+    }
+
+    function initCustomerSearchSelect() {
+        if ($.fn.select2) {
+            if (!$('#customerSearchSelect').hasClass('select2-hidden-accessible')) {
+                $('#customerSearchSelect').select2({
+                    dropdownParent: $('#searchCustomerModal'),
+                    placeholder: "Search by Name or PPPoE...",
+                    allowClear: true,
+                    theme: 'bootstrap-5',
+                    width: '100%'
+                });
+            }
+        }
+    }
+
+    $(document).ready(function () {
+        initCustomerSearchSelect();
+
+        $('#searchCustomerModal').on('shown.bs.modal', function () {
+            initCustomerSearchSelect();
+        });
+
+        let searchInterval = null;
+        $('#customerSearchSelect').on('change', function() {
+            const customerId = $(this).val();
+            const detailsDiv = document.getElementById('searchCustomerDetails');
+            const placeholderDiv = document.getElementById('searchCustomerPlaceholder');
+            
+            if (searchInterval) {
+                clearInterval(searchInterval);
+                searchInterval = null;
+            }
+            
+            if (!customerId) {
+                if (detailsDiv) detailsDiv.style.display = 'none';
+                if (placeholderDiv) placeholderDiv.style.display = 'block';
+                return;
+            }
+            
+            if (detailsDiv) detailsDiv.style.display = 'block';
+            if (placeholderDiv) placeholderDiv.style.display = 'none';
+            
+            const selectedText = $(this).find("option:selected").text().trim();
+            const nameEl = document.getElementById('searchCustName');
+            if (nameEl) nameEl.innerText = selectedText;
+            
+            const linkEl = document.getElementById('searchCustLink');
+            if (linkEl) linkEl.href = '/customers/view/' + customerId + '/';
+            
+            function fetchCustomerLiveStatus() {
+                if (document.hidden) return; // Tab-aware: skip when backgrounded
+                const endpoint = '/customers/api/status/' + customerId + '/';
+                fetch(endpoint)
+                    .then(response => {
+                        if (!response.ok) {
+                            return fetch('/api/customer/' + customerId + '/mikrotik-status/').then(r => r.json());
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        const statusEl = document.getElementById('searchCustStatus');
+                        if (statusEl) {
+                            if (data.mt_status === 'Connected') {
+                                statusEl.innerHTML = `<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 small"><i class="fas fa-circle text-success me-1 fa-beat" style="font-size: 0.45rem;"></i> Connected</span>`;
+                            } else {
+                                statusEl.innerHTML = `<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1 small"><i class="fas fa-circle text-danger me-1" style="font-size: 0.45rem;"></i> Disconnected</span>`;
+                            }
+                        }
+                        
+                        const uptimeEl = document.getElementById('searchCustUptime');
+                        if (uptimeEl) {
+                            uptimeEl.innerText = (data.uptime && data.uptime !== 'N/A') ? data.uptime : ((data.last_logged_out && data.last_logged_out !== 'N/A') ? 'Offline since ' + data.last_logged_out : 'N/A');
+                        }
+                        
+                        const macEl = document.getElementById('searchCustMac');
+                        if (macEl) {
+                            macEl.innerText = data.live_mac || 'N/A';
+                        }
+                        
+                        const stabEl = document.getElementById('searchCustStability');
+                        if (stabEl) {
+                            if (data.stability) {
+                                const stabColor = data.stability_color || 'info';
+                                stabEl.innerHTML = `<span class="badge bg-${stabColor}-subtle text-${stabColor} border border-${stabColor}-subtle rounded-pill px-2 py-0.5 small">${data.stability}</span>`;
+                            } else {
+                                stabEl.innerText = 'N/A';
+                            }
+                        }
+                        
+                        const dlEl = document.getElementById('searchCustDl');
+                        const ulEl = document.getElementById('searchCustUl');
+                        if (dlEl && ulEl) {
+                            if (data.rx_mbps !== undefined && data.tx_mbps !== undefined) {
+                                dlEl.innerText = data.tx_mbps + ' Mbps';
+                                ulEl.innerText = data.rx_mbps + ' Mbps';
+                            } else {
+                                dlEl.innerText = '0.0 Mbps';
+                                ulEl.innerText = '0.0 Mbps';
+                            }
+                        }
+                    })
+                    .catch(error => console.error('Error fetching status:', error));
+            }
+            
+            fetchCustomerLiveStatus();
+            searchInterval = setInterval(fetchCustomerLiveStatus, 5000);
+        });
+
+        // Clear interval when modal closes
+        $('#searchCustomerModal').on('hidden.bs.modal', function () {
+            if (searchInterval) {
+                clearInterval(searchInterval);
+                searchInterval = null;
+            }
+            $('#customerSearchSelect').val('').trigger('change');
+        });
+        
+        $('#customerLiveChartModal').on('hidden.bs.modal', function () {
+            modalCustomer = null;
+        });
+    });
+</script>

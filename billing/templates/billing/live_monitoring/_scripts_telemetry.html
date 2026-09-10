@@ -1,0 +1,281 @@
+<!-- Partial: Telemetry, KPI Cards & Charts Scripts -->
+<script>
+    function renderOfflineCustomers(offline_users) {
+        currentOfflineUsers = offline_users || [];
+        let tbody = document.getElementById('offlineUsersList');
+        let badge = document.getElementById('offline-badge');
+        if (!offline_users || offline_users.length === 0) {
+            if (badge) badge.style.display = 'none';
+            tbody.innerHTML = '<div class="text-muted small text-center mt-4">All Paid Customers are Online <i class="fas fa-check-circle text-success ms-1"></i></div>';
+            return;
+        }
+
+        if (badge) {
+            badge.style.display = 'inline-block';
+            badge.innerText = offline_users.length + ' Offline';
+        }
+
+        let html = '';
+        offline_users.forEach(u => {
+            html += `
+        <div class="d-flex justify-content-between align-items-center p-1 px-2 mb-1 border rounded bg-primary-subtle">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-user-slash text-primary me-2 fs-6"></i>
+                <div>
+                    <h6 class="mb-0 text-primary fw-bold" style="font-size: 0.85rem;">${u.full_name} <span class="badge bg-primary ms-1">${u.username}</span></h6>
+                    <p class="mb-0 text-primary-emphasis small" style="font-size: 0.7rem;"><i class="fas fa-clock me-1"></i>Down since: ${u.last_logged_out}</p>
+                </div>
+            </div>
+            <a href="/customers/view/${u.id}/" class="btn btn-primary rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 22px; height: 22px; padding: 0; font-size: 0.65rem;" title="View" data-bs-toggle="tooltip"><i class="fas fa-eye"></i></a>
+        </div>`;
+        });
+        tbody.innerHTML = html;
+    }
+
+    function loadAddonRequests() {
+        fetch("{% url 'live_addon_requests_api' %}")
+            .then(r => r.json())
+            .then(d => {
+                currentAddonRequests = d.data || [];
+                let list = document.getElementById('addon-requests-list');
+                let badge = document.getElementById('addon-badge');
+                if (d.data && d.data.length > 0) {
+                    badge.style.display = 'inline-block';
+                    badge.innerText = d.data.length + ' New';
+                    let html = '';
+                    d.data.forEach(req => {
+                        html += `
+                <div class="d-flex justify-content-between align-items-center p-1 px-2 mb-1 border rounded bg-warning-subtle">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-tv text-warning me-2 fs-6"></i>
+                        <div>
+                            <h6 class="mb-0 text-warning fw-bold" style="font-size: 0.85rem;">${req.addon_type}</h6>
+                            <p class="mb-0 fw-semibold text-body" style="font-size: 0.75rem;">${req.customer_name}</p>
+                            <p class="mb-0 text-warning-emphasis small" style="font-size: 0.7rem;"><i class="fas fa-clock me-1"></i>${req.requested_at}</p>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-1">
+                        <a href="/customers/view/${req.customer_id}/" class="btn btn-warning rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 22px; height: 22px; padding: 0; font-size: 0.65rem;" title="View Profile" data-bs-toggle="tooltip"><i class="fas fa-eye"></i></a>
+                        <button type="button" class="btn btn-success rounded-circle d-flex justify-content-center align-items-center" style="width: 22px; height: 22px; padding: 0; font-size: 0.65rem;" title="Apply Add-on" onclick="openApplyAddonModal(${req.id}, ${req.customer_id}, '${req.customer_name}', '${req.addon_type}')"><i class="fas fa-check"></i></button>
+                    </div>
+                </div>
+                `;
+                    });
+                    list.innerHTML = html;
+                } else {
+                    badge.style.display = 'none';
+                    list.innerHTML = '<div class="text-muted small text-center mt-3">No pending requests <i class="fas fa-check-circle text-success ms-1"></i></div>';
+                }
+            });
+    }
+
+    function loadNetworkAlerts() {
+        fetch("{% url 'api_network_alerts' %}")
+            .then(r => r.json())
+            .then(d => {
+                currentNetworkAlerts = d.alerts || [];
+                let list = document.getElementById('network-alerts-list');
+                let badge = document.getElementById('network-badge');
+                if (d.alerts && d.alerts.length > 0) {
+                    if (badge) {
+                        badge.style.display = 'inline-block';
+                        badge.innerText = d.alerts.length + ' New';
+                    }
+                    let inner = '';
+                    d.alerts.forEach(a => {
+                        let icon = a.type === 'device' ? 'fa-server' : (a.type === 'barangay' ? 'fa-map-marker-alt' : (a.type === 'ticket' ? 'fa-ticket-alt' : 'fa-user-times'));
+                        let btnColor = a.type === 'ticket' ? 'btn-warning' : 'btn-danger';
+                        let borderClass = a.type === 'ticket' ? 'border-warning' : 'border-danger';
+                        let subClass = a.type === 'ticket' ? 'bg-warning-subtle' : 'bg-danger-subtle';
+                        let textColor = a.type === 'ticket' ? 'text-warning' : 'text-danger';
+                        let pulseClass = (a.type === 'customer' || a.type === 'ticket') ? 'alert-pulse-danger' : '';
+                        let actionUrl = a.type === 'customer' ? '/customers/view/' + a.id + '/' : (a.type === 'ticket' ? '/dispatch/client-concerns/' : '/network/health/resolve/' + a.type + '/' + a.id + '/');
+                        let actionTitle = a.type === 'ticket' ? 'View Ticket' : 'Resolve';
+
+                        inner += `
+                <div class="d-flex justify-content-between align-items-center p-1 px-2 mb-1 border ${borderClass} rounded ${subClass} ${pulseClass}">
+                    <div class="d-flex align-items-center">
+                        <i class="fas ${icon} ${textColor} me-2 fs-6"></i>
+                        <div>
+                            <h6 class="mb-0 ${textColor} fw-bold" style="font-size: 0.85rem;">${a.name}</h6>
+                            <p class="mb-0 fw-semibold text-body" style="font-size: 0.75rem;">${a.status}</p>
+                            ${a.reason ? `<p class="mb-0 text-muted small" style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.7rem;">${a.reason}</p>` : ''}
+                        </div>
+                    </div>
+                    <a href="${actionUrl}" class="btn ${btnColor} rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 22px; height: 22px; padding: 0; font-size: 0.65rem;" title="${actionTitle}" data-bs-toggle="tooltip"><i class="fas fa-eye"></i></a>
+                </div>
+                `;
+                    });
+                    list.innerHTML = inner;
+                } else {
+                    if (badge) badge.style.display = 'none';
+                    list.innerHTML = '<div class="text-muted small text-center mt-3">No active alerts <i class="fas fa-check-circle text-success ms-1"></i></div>';
+                }
+            });
+    }
+
+    let bandwidthChart = null;
+    let chartLabels = Array(20).fill('');
+    let rxChartData = Array(20).fill(0);
+    let txChartData = Array(20).fill(0);
+
+    function initChart() {
+        const ctx = document.getElementById('bandwidthChart');
+        if (!ctx) return;
+        bandwidthChart = new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [
+                    {
+                        label: 'Download (Mbps)',
+                        data: rxChartData,
+                        borderColor: '#38bdf8',
+                        backgroundColor: 'rgba(56, 189, 248, 0.2)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0
+                    },
+                    {
+                        label: 'Upload (Mbps)',
+                        data: txChartData,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                },
+                scales: {
+                    x: { display: false },
+                    y: {
+                        display: true,
+                        position: 'right',
+                        ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 10 }, maxTicksLimit: 4 },
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        beginAtZero: true
+                    }
+                },
+                animation: { duration: 0 }
+            }
+        });
+    }
+
+    function initCustomerChart() {
+        const ctx = document.getElementById('customerSpecificChart');
+        if (!ctx) return;
+        customerChartObj = new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: Array(20).fill(''),
+                datasets: [
+                    {
+                        label: 'Download',
+                        data: custRxData,
+                        borderColor: '#38bdf8',
+                        backgroundColor: 'rgba(56, 189, 248, 0.2)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0
+                    },
+                    {
+                        label: 'Upload',
+                        data: custTxData,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                scales: { 
+                    x: { display: false }, 
+                    y: { 
+                        display: true, 
+                        ticks: { font: { size: 9 }, maxTicksLimit: 4 }, 
+                        grid: { color: 'rgba(0,0,0,0.05)' }, 
+                        beginAtZero: true 
+                    } 
+                },
+                animation: { duration: 0 }
+            }
+        });
+    }
+
+    function loadHardwareData() {
+        {% for device in devices %}
+        fetch("{% url 'device_hardware_api' device.id %}")
+            .then(r => r.json())
+            .then(d => {
+                let errorHtml = '';
+                if (d.status === 'error') {
+                    errorHtml = `<div class="alert alert-danger border-0 shadow-sm p-2 mb-2 small rounded-3"><i class="fas fa-exclamation-triangle me-1"></i> <strong>Connection Error:</strong> Could not connect to Mikrotik API. Please verify IP and credentials in the <a href="{% url 'device_list' %}" class="alert-link text-decoration-underline">Mikrotik Devices</a> tab.</div>`;
+                }
+
+                let cpu = d.cpu_load ? d.cpu_load + "%" : "-";
+                let ram = "-";
+                if (d.free_memory && d.total_memory) {
+                    let freeM = parseFloat(d.free_memory);
+                    let totM = parseFloat(d.total_memory);
+                    let used = totM - freeM;
+                    let pct = Math.round((used / totM) * 100);
+                    ram = pct + "%";
+                }
+                let sto = "-";
+                if (d.free_hdd_space && d.total_hdd_space) {
+                    let freeH = parseFloat(d.free_hdd_space);
+                    let totH = parseFloat(d.total_hdd_space);
+                    let usedH = totH - freeH;
+                    let pctH = Math.round((usedH / totH) * 100);
+                    sto = pctH + "%";
+                }
+                let upt = d.uptime || "-";
+                
+                let hwItem = {
+                    name: '{{ device.device_name }}',
+                    status: d.status === 'error' ? 'Error' : 'Online',
+                    cpu: cpu,
+                    ram: ram,
+                    disk: sto,
+                    uptime: upt
+                };
+                let idx = currentHardwareData.findIndex(x => x.name === hwItem.name);
+                if (idx > -1) { currentHardwareData[idx] = hwItem; }
+                else { currentHardwareData.push(hwItem); }
+
+                let existing = document.getElementById('hw-box-{{ device.id }}');
+                let html = `
+        <div id="hw-box-{{ device.id }}" class="mb-4">
+            <div class="text-muted small mb-2 fw-bold">{{ device.device_name }}</div>
+            ${errorHtml}
+            <div class="hw-grid row text-center g-2">
+                <div class="col-3"><div class="text-muted small text-uppercase">CPU</div><div class="fw-bold text-info">${cpu}</div></div>
+                <div class="col-3"><div class="text-muted small text-uppercase">RAM</div><div class="fw-bold text-warning">${ram}</div></div>
+                <div class="col-3"><div class="text-muted small text-uppercase">Disk</div><div class="fw-bold text-danger">${sto}</div></div>
+                <div class="col-3"><div class="text-muted small text-uppercase">Uptime</div><div class="fw-bold text-success">${upt}</div></div>
+            </div>
+        </div>
+        `;
+                if (existing) { existing.outerHTML = html; }
+                else { document.getElementById('hardwareList').insertAdjacentHTML('beforeend', html); }
+            });
+        {% endfor %}
+    }
+</script>
