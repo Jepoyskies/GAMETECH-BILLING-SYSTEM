@@ -56,6 +56,7 @@ def customer_force_suspend(request, username):
             success, msg = api.suspend_pppoe_user(username)
             if success:
                 customer.status = "suspended"
+                customer.expires_at = None
                 customer.save()
                 messages.success(
                     request, f"Customer {username} has been forcefully suspended."
@@ -177,17 +178,23 @@ def edit_customer_expiration(request, customer_id):
     customer = get_object_or_404(Customer, id=customer_id)
     if request.method == "POST":
         new_date_str = request.POST.get("expires_at")
-        if new_date_str:
+        old_date = (
+            customer.expires_at.strftime("%Y-%m-%d %H:%M:%S")
+            if customer.expires_at
+            else "None"
+        )
+        if new_date_str and new_date_str.strip():
             from django.utils.dateparse import parse_datetime
+            from django.utils import timezone
             from billing.models import SystemLog
 
             new_date = parse_datetime(new_date_str)
             if new_date:
-                old_date = (
-                    customer.expires_at.strftime("%Y-%m-%d %H:%M:%S")
-                    if customer.expires_at
-                    else "None"
-                )
+                if timezone.is_naive(new_date):
+                    new_date = timezone.make_aware(
+                        new_date, timezone.get_current_timezone()
+                    )
+                customer._preserve_expiration = True
                 customer.expires_at = new_date
                 customer.save()
                 SystemLog.objects.create(
@@ -204,6 +211,23 @@ def edit_customer_expiration(request, customer_id):
                 )
             else:
                 messages.error(request, "Invalid date format.")
+        else:
+            from billing.models import SystemLog
+
+            customer.expires_at = None
+            customer.save()
+            SystemLog.objects.create(
+                table_name="Customer",
+                record_id=str(customer.id),
+                action="UPDATE",
+                changed_by=request.user.username,
+                old_data=f"Expiration: {old_date}",
+                new_data="Expiration: None",
+            )
+            messages.success(
+                request,
+                f"Expiration date for {customer.full_name} has been cleared (set to None).",
+            )
     return redirect("view_customer", customer_id=customer.id)
 
 

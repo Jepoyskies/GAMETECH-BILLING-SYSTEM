@@ -158,8 +158,17 @@ def edit_customer(request, customer_id):
             customer.pppoe_password = get_random_string(8)
             check_change("PPPoE Password", "None", "*** (auto-generated)")
 
-        check_change("Status", customer.status, request.POST.get("status", "active"))
-        customer.status = request.POST.get("status", "active")
+        new_status = request.POST.get("status", "active")
+        check_change("Status", customer.status, new_status)
+        if new_status == "suspended":
+            if customer.expires_at:
+                check_change(
+                    "Expiration",
+                    customer.expires_at.strftime("%b %d, %Y %I:%M %p"),
+                    "None (Suspended)",
+                )
+            customer.expires_at = None
+        customer.status = new_status
 
         # Handle ForeignKeys — resolve to human-readable names for clear audit logs
         plan_id = request.POST.get("plan_id")

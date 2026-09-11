@@ -24,7 +24,11 @@
                     <li>
                         <span class="info-label">Expiration Date</span>
                         <span class="info-value">
-                            {{ customer.expires_at|date:"M d, Y h:i A"|default:"—" }}
+                            {% if customer.status == 'suspended' or not customer.expires_at %}
+                                <span class="text-muted">None</span>
+                            {% else %}
+                                {{ customer.expires_at|date:"M d, Y h:i A" }}
+                            {% endif %}
                             {% if request.user.role == 'Admin' %}
                             <button type="button" class="btn btn-sm btn-link p-0 ms-2 text-primary" data-bs-toggle="modal" data-bs-target="#editExpirationModal"><i class="fas fa-edit"></i></button>
                             {% endif %}

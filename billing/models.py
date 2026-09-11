@@ -210,6 +210,12 @@ class Customer(models.Model):
     def save(self, *args, **kwargs):
         if not self.portal_password:
             self.portal_password = generate_portal_password()
+        if self.status == "suspended" and not getattr(self, "_preserve_expiration", False):
+            self.expires_at = None
+            if "update_fields" in kwargs and kwargs["update_fields"] is not None:
+                fields = set(kwargs["update_fields"])
+                fields.add("expires_at")
+                kwargs["update_fields"] = list(fields)
         super().save(*args, **kwargs)
 
     def __str__(self):
