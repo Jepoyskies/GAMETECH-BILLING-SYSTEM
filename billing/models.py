@@ -339,6 +339,106 @@ class SystemLog(models.Model):
     def __str__(self):
         return f"{self.action} on {self.table_name} by {self.changed_by} at {self.changed_at}"
 
+    @property
+    def specific_action(self):
+        act_raw = (self.action or "").strip()
+        act_upper = act_raw.upper()
+
+        if "BALANCE_RESET" in act_upper or "RESET_BALANCE" in act_upper:
+            return "Balance Reset"
+        if "LOGIN" in act_upper:
+            return "User Login"
+        if "LOGOUT" in act_upper:
+            return "User Logout"
+        if "PASSWORD_CHANGE" in act_upper:
+            return "Password Change"
+        if "FORCE_SUSPEND" in act_upper:
+            return "Force Suspend"
+        if "FORCE_REACTIVATE" in act_upper:
+            return "Force Reactivate"
+        if "VERIFY" in act_upper:
+            return "Unverify Account" if "UNVERIFY" in act_upper else "Verify Account"
+
+        tbl = (self.table_name or "").lower()
+        if act_upper in ["ADD", "CREATE", "INSERT"]:
+            if "customer" in tbl:
+                return "New Customer"
+            elif "payment" in tbl:
+                return "New Payment"
+            elif "plan" in tbl:
+                return "New Plan"
+            elif "barangay" in tbl:
+                return "New Barangay"
+            elif "account" in tbl:
+                return "New Account Type"
+            elif "router" in tbl or "mikrotik" in tbl:
+                return "New Router"
+            return f"New {self.table_name}"
+
+        if act_upper in ["DELETE", "REMOVE"]:
+            if "customer" in tbl:
+                return "Delete Customer"
+            elif "payment" in tbl:
+                return "Void Payment"
+            elif "plan" in tbl:
+                return "Delete Plan"
+            return f"Delete {self.table_name}"
+
+        # If it's already a specific custom action (not a generic UPDATE), return title-cased
+        if act_upper not in ["UPDATE", "UPDATE (PROFILE)", "CHANGE", "EDIT"]:
+            return act_raw.replace("_", " ").title()
+
+        # For generic UPDATE actions, derive specific field(s) from old_data and new_data
+        old = (self.old_data or "").lower()
+        new = (self.new_data or "").lower()
+        comb = old + "\n" + new
+
+        categories = []
+        if any(k in comb for k in ["latitude", "longitude"]):
+            categories.append("Location")
+        if "agent" in comb:
+            categories.append("Agent")
+        if any(k in comb for k in ["address", "barangay"]):
+            categories.append("Address")
+        if "plan" in comb:
+            categories.append("Plan")
+        if "status" in comb:
+            categories.append("Status")
+        if "expiration" in comb:
+            categories.append("Expiration")
+        if "balance" in comb:
+            categories.append("Balance")
+        if any(k in comb for k in ["phone", "email"]):
+            categories.append("Contact")
+        if any(k in comb for k in ["password", "username", "pppoe"]):
+            categories.append("Credentials")
+        if any(k in comb for k in ["router", "mikrotik"]):
+            categories.append("Router")
+        if any(k in comb for k in ["account_type", "account type"]):
+            categories.append("Account Type")
+        if "cignal" in comb:
+            categories.append("Cignal Play")
+        if any(k in comb for k in ["health_status", "health reason", "health"]):
+            categories.append("Health Status")
+        if any(k in comb for k in ["verified", "is_verified"]):
+            categories.append("Verification")
+        if any(k in comb for k in ["full_name", "name:"]):
+            categories.append("Name")
+
+        cats = list(dict.fromkeys(categories))
+        if len(cats) == 1:
+            if cats[0] == "Balance":
+                return "Balance Override"
+            if cats[0] == "Verification":
+                return "Account Verified"
+            return f"Change {cats[0]}"
+        elif len(cats) == 2:
+            return f"Change {cats[0]} & {cats[1]}"
+        elif len(cats) > 2:
+            return "Profile Update"
+
+        return "Profile Update" if "customer" in tbl else f"Update {self.table_name}"
+
 
 class CustomerMacHistory(models.Model):
     customer = models.ForeignKey(

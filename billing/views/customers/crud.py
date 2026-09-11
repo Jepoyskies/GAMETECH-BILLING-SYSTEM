@@ -317,10 +317,19 @@ def edit_customer(request, customer_id):
         if old_data or new_data:
             from billing.models import SystemLog
 
+            log_action = "UPDATE"
+            if len(old_data) == 1:
+                field_name = old_data[0].split(":")[0].strip()
+                log_action = f"Change {field_name}"
+            elif len(old_data) == 2:
+                f1 = old_data[0].split(":")[0].strip()
+                f2 = old_data[1].split(":")[0].strip()
+                log_action = f"Change {f1} & {f2}"
+
             SystemLog.objects.create(
                 table_name="Customer",
                 record_id=str(customer.id),
-                action="UPDATE",
+                action=log_action,
                 changed_by=request.user.username,
                 target_name=customer.full_name,
                 old_data="\n".join(old_data),
@@ -366,7 +375,7 @@ def view_customer(request, customer_id):
             {
                 "type": "system",
                 "date": log.changed_at,
-                "title": f"Profile {log.action}",
+                "title": log.specific_action,
                 "details": log.new_data,
                 "user": log.changed_by,
                 "log_obj": log,  # pass raw object for format_log_details

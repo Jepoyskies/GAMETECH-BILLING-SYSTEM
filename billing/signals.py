@@ -210,10 +210,19 @@ def audit_customer_changes(sender, instance, created, **kwargs):
             else:
                 changed_by_user = "System/Admin"
 
+            log_action = "Profile Update"
+            if len(changes) == 1:
+                field_name = changes[0].split(":")[0].strip()
+                log_action = f"Change {field_name}"
+            elif len(changes) == 2:
+                f1 = changes[0].split(":")[0].strip()
+                f2 = changes[1].split(":")[0].strip()
+                log_action = f"Change {f1} & {f2}"
+
             SystemLog.objects.create(
                 table_name="Customer",
                 record_id=str(instance.id),
-                action="UPDATE (Profile)",
+                action=log_action,
                 changed_by=changed_by_user,
                 target_name=instance.full_name,
                 old_data="\n".join(changes),

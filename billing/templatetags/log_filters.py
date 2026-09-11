@@ -200,3 +200,22 @@ def get_initials(name):
     elif len(parts) == 1:
         return parts[0][:2].upper()
     return "U"
+
+
+@register.filter
+def specific_action(log):
+    if hasattr(log, "specific_action"):
+        return log.specific_action
+    return str(getattr(log, "action", log))
+
+
+@register.filter
+def action_pill_class(action_text):
+    text = str(action_text).upper()
+    if any(k in text for k in ["DELETE", "REMOVE", "SUSPEND", "RESET", "VOID", "UNVERIFY", "FAIL"]):
+        return "pill-expired"
+    elif any(k in text for k in ["ADD", "CREATE", "LOGIN", "NEW", "PAYMENT", "REACTIVATE", "VERIFY"]):
+        return "pill-active"
+    else:
+        return "pill-pending"
+
