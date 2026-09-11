@@ -146,13 +146,18 @@
             <div><span class="info-label">Date Generated:</span> {{ current_date|date:"M d, Y h:i A" }}</div>
         </div>
         <div class="info-row">
-            <div><span class="info-label">Username:</span> {{ customer.username|default:"-" }}</div>
-            {% if date_from and date_to %}
-            <div><span class="info-label">Period:</span> {{ date_from }} to {{ date_to }}</div>
-            {% endif %}
+            <div><span class="info-label">Account No:</span> <strong>#{{ customer.id }}</strong> ({{ customer.account_type.type_name|default:"Standard" }})</div>
+            <div><span class="info-label">Current Status:</span> <strong style="text-transform: uppercase;">{{ customer.status }}</strong></div>
+        </div>
+        <div class="info-row">
+            <div><span class="info-label">PPPoE Username:</span> <strong>{{ customer.pppoe_username|default:customer.username|default:"-" }}</strong></div>
+            <div><span class="info-label">Expiration Date:</span> {{ customer.expires_at|date:"M d, Y h:i A"|default:"None" }}</div>
         </div>
         <div class="info-row">
             <div><span class="info-label">Address:</span> {{ customer.address|default:"-" }}</div>
+            {% if date_from and date_to %}
+            <div><span class="info-label">Filtered Period:</span> {{ date_from }} to {{ date_to }}</div>
+            {% endif %}
         </div>
     </div>
 
@@ -160,8 +165,9 @@
         <thead>
             <tr>
                 <th>Date Paid</th>
-                <th>Plan / Item</th>
-                <th>Days</th>
+                <th>Plan / Description</th>
+                <th>Method &amp; Ref #</th>
+                <th>Days Paid</th>
                 <th>Amount</th>
                 <th>Processed By</th>
             </tr>
@@ -169,26 +175,39 @@
         <tbody>
             {% for p in payments %}
                 <tr>
-                    <td>{{ p.paid_at|date:"M d, Y" }}</td>
-                    <td>{{ p.plan_name|default:"-" }}</td>
-                    <td>{{ p.days_paid|default:"-" }}</td>
-                    <td>₱{{ p.amount }}</td>
-                    <td>{{ p.adjusted_by|default:"-" }}</td>
+                    <td>
+                        <strong style="color: #0f172a;">{{ p.paid_at|default:p.created_at|date:"M d, Y" }}</strong>
+                        <div style="font-size: 11px; color: #64748b;">{{ p.paid_at|default:p.created_at|date:"h:i A" }}</div>
+                    </td>
+                    <td>{{ p.plan_name|default:"Monthly Subscription" }}</td>
+                    <td>
+                        <span style="font-weight: 600; text-transform: capitalize;">{{ p.payment_method|default:"Cash" }}</span>
+                        {% if p.reference_no %}
+                        <div style="font-size: 11px; color: #64748b; font-family: monospace;">Ref: {{ p.reference_no }}</div>
+                        {% endif %}
+                    </td>
+                    <td>{{ p.days_paid|default:"—" }}</td>
+                    <td><strong style="color: #059669; font-size: 15px;">₱{{ p.amount|floatformat:2 }}</strong></td>
+                    <td>{{ p.adjusted_by|default:"System" }}</td>
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="5" style="text-align: center; color: #64748b; padding: 20px;">No payment records found for this period.</td>
+                    <td colspan="6" style="text-align: center; color: #64748b; padding: 25px;">No payment records found for this period.</td>
                 </tr>
             {% endfor %}
         </tbody>
     </table>
 
     <div class="total">
-        TOTAL PAID: ₱{{ total_paid|floatformat:2 }}
+        TOTAL AMOUNT PAID: ₱{{ total_paid|floatformat:2 }}
+    </div>
+
+    <div style="margin-top: 20px; padding: 12px 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 12px; color: #166534; line-height: 1.5;">
+        <strong>Customer Financial Proof:</strong> All payments listed above represent verified, immutable transactions recorded in the system. Resetting or adjusting wallet balances does not remove historical payment verifications.
     </div>
 
     <div class="footer">
-        This is a system-generated Statement of Account.
+        This is an official system-generated Statement of Account from GameTech UnliFiber.
     </div>
 
     <div class="no-print">
