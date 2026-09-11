@@ -165,6 +165,10 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
       * Clean oversized files **ONLY as they are naturally touched by ongoing user tasks**.
       * The modularization cost is paid **exactly once**. Every future AI task on that feature permanently saves **70–80% of tokens** by reading small, focused partials instead of monoliths.
 
+25. **THE DUAL ENCYCLOPEDIA & TOPBAR CHANGELOG LAW**:
+    * Whenever an AI updates the development encyclopedia (`billing/templates/billing/changelog.html`), it **MUST** simultaneously update the topbar rocket dropdown changelog in `billing/templates/billing/base/_topbar.html`.
+    * Keep the topbar summary concise with bullet cards (`gt-cl-card`) highlighting the main features of that day's build, and transfer the `<span class="badge bg-success">Latest Build</span>` badge to the newest date.
+
 ---
 
 ### 🧼 2. Codebase Cleanliness & Architecture Standards

@@ -42,6 +42,7 @@ This workspace strictly adheres to the protocols defined in:
 11. **No Git Archeology**: Never run `git log`, `git reflog`, `git diff`, or `git blame` to understand features. See AGENTS.md Rule #22.
 12. **Cache Sync on State Changes**: Verify Redis invalidation when editing Login/Logout/Delete views. See AGENTS.md Rule #21.
 13. **400-Line Circuit Breaker**: When touching a file > 400 lines, split into < 250 line partials before completing the task. See AGENTS.md Rule #24.
+14. **Dual Changelog Sync**: Whenever updating the Development Encyclopedia (`changelog.html`), ALWAYS simultaneously update the topbar rocket dropdown in `_topbar.html`. See AGENTS.md Rule #25.
 
 ---
 
