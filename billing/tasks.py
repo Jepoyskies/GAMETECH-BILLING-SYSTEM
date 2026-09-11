@@ -292,3 +292,25 @@ def check_service_status_task():
         logger.info("Downdetector service status check completed.")
     except Exception as e:
         logger.error(f"Error in Downdetector check task: {e}")
+
+
+@shared_task(name="billing.tasks.auto_cleanup_system_logs_task")
+def auto_cleanup_system_logs_task(retention_days=90):
+    """
+    Automated audit log retention.
+    Deletes audit logs older than retention_days (default 90 days)
+    to keep the database lean and performant.
+    """
+    logger.info(f"Starting audit log retention cleanup (retention: {retention_days} days)...")
+    try:
+        from billing.models import SystemLog
+        from django.utils import timezone
+        from datetime import timedelta
+
+        cutoff = timezone.now() - timedelta(days=retention_days)
+        deleted_count, _ = SystemLog.objects.filter(changed_at__lt=cutoff).delete()
+        logger.info(f"Audit log cleanup completed. Purged {deleted_count} logs older than {retention_days} days.")
+        return f"Purged {deleted_count} logs."
+    except Exception as e:
+        logger.error(f"Error during audit log retention cleanup: {e}")
+        return str(e)

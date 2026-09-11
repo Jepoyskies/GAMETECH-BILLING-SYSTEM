@@ -86,6 +86,7 @@ def send_semaphore_sms(phone, message):
 
 
 from .settings import *
+from .system_logs import *
 from .customers import *
 from .payments import *
 from .services import *

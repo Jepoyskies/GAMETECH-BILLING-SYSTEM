@@ -187,4 +187,8 @@ CELERY_BEAT_SCHEDULE = {
         "task": "billing.tasks.fetch_live_monitoring_data_task",
         "schedule": 10.0,  # Run every 10 seconds
     },
+    "auto-cleanup-logs-weekly": {
+        "task": "billing.tasks.auto_cleanup_system_logs_task",
+        "schedule": crontab(hour="3", minute="0", day_of_week="sunday"),  # Run weekly at 3:00 AM Sunday
+    },
 }
