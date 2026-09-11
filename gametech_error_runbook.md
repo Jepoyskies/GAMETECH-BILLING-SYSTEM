@@ -346,6 +346,25 @@
   * In `billing/templates/billing/cignal_dashboard.html`, remove `{% load humanize %}` and `|intcomma` filter usages.
   * Update reverse URL tag from `{% url 'add_on_requests' %}` to `{% url 'add_on_payments' %}`.
 
+### ERR-020: Active Customer Displayed as Red 'Active' with Ban Icon & 'Reconnect' Button in Customer Portal
+* **Symptoms**:
+  * An active subscriber with a valid expiration date logs into `/portal/dashboard/`.
+  * "Next Due Date" displays `<span class="text-danger fw-bold"><i class="fas fa-ban me-1"></i>Active</span>` (red with a ban icon) instead of their actual expiration date.
+  * The main payment button shows red `RECONNECT / PAY BILL NOW` instead of normal `PAY BILL NOW`.
+  * The payment modal says "Reconnect Account" with an account disconnected warning.
+* **Root Causes**:
+  * Django templates evaluate `in` as string substring search when checked against literal comma-separated strings: `{% if customer.status in 'suspended,expired,inactive' %}`.
+  * Because `'active'` is a substring of `'inactive'`, `'active' in 'suspended,expired,inactive'` evaluates to `True`!
+* **Exact Target Files**:
+  * `customer_portal/views.py` (`portal_dashboard`)
+  * `customer_portal/templates/customer_portal/portal_dashboard/_left_column.html`
+  * `customer_portal/templates/customer_portal/portal_dashboard/_right_column.html`
+  * `customer_portal/templates/customer_portal/portal_dashboard/_modals.html`
+  * `customer_portal/templates/customer_portal/portal_dashboard/_scripts.html`
+* **1-Step Fix**:
+  * In `customer_portal/views.py`, compute a strict boolean `is_account_suspended = customer.status in ['suspended', 'expired', 'inactive']` and pass it to context.
+  * In the portal templates and JS, replace all occurrences of `{% if customer.status in 'suspended,expired,inactive' %}` with `{% if is_account_suspended %}`.
+
 ---
 
 ## 📝 How to Add a New Error Entry
