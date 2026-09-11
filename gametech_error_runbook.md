@@ -298,6 +298,26 @@
 
 ---
 
+### ERR-017: Horizontal Scrollbar Appears Inside DataTables or Table Responsive Containers
+* **Symptoms**:
+  * A small horizontal scrollbar appears at the bottom of a table container even when the table fits perfectly on the screen.
+  * Attempting to scroll it moves the table only a few pixels left and right.
+* **Root Causes**:
+  * Bootstrap `.row` elements apply negative margins (`margin-left: -var(--bs-gutter-x); margin-right: -var(--bs-gutter-x);`). When nested inside a `.table-responsive` div without compensating padding, the row width exceeds 100%, forcing the container to overflow horizontally.
+  * DataTables `autoWidth: true` (default) calculates column widths aggressively, which can trigger native overflow.
+* **Exact Target Files**:
+  * `network_manager/templates/network_manager/<feature>/_styles.html`
+  * `network_manager/templates/network_manager/<feature>/_scripts.html`
+* **1-Step Fix**:
+  * In `_styles.html`, strip margins from nested rows and force bounds:
+    ```css
+    .table-responsive .row { margin-left: 0 !important; margin-right: 0 !important; width: 100% !important; }
+    .table-responsive { overflow-x: hidden !important; }
+    ```
+  * In `_scripts.html`, initialize DataTables with `autoWidth: false`.
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 Whenever a non-obvious bug or architecture defect is resolved:

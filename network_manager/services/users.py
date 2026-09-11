@@ -257,7 +257,7 @@ class MikrotikUsersMixin:
                 logger.error(f"Failed to enable user {name}: {e}")
                 return False, f"Mikrotik API Error: {str(e)}"
 
-        def delete_pppoe_user(self, name):
+        def delete_pppoe_user(self, name, kick_active=True):
             """
             Deletes a PPPoE user from the Mikrotik device.
             """
@@ -287,7 +287,8 @@ class MikrotikUsersMixin:
                 self.connection.disconnect()
                 
                 # Kick session if they are currently online
-                self.kick_active_user(name)
+                if kick_active:
+                    self.kick_active_user(name)
                 return True, "User deleted successfully."
             except Exception as e:
                 logger.error(f"Failed to delete user {name}: {e}")
