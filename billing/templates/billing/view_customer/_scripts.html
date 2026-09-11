@@ -311,5 +311,43 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         });
     }
+
+    // 6. Edit Advance Payment Modal - Auto-revert expiration to Month 1 on Reset
+    const inputWalletBalance = document.getElementById('inputWalletBalance');
+    const inputNewExpiration = document.getElementById('inputNewExpirationDate');
+    const btnResetBalance = document.getElementById('btnResetBalance');
+    const revertNotice = document.getElementById('revertNotice');
+    const revertedExpiryStr = "{{ reverted_expiration|date:'Y-m-d\\TH:i'|default:'' }}";
+    const revertedExpiryLabel = "{{ reverted_expiration|date:'M d, Y h:i A'|default:'' }}";
+
+    function triggerRevertToMonth1() {
+        if (inputWalletBalance) {
+            inputWalletBalance.value = '0.00';
+        }
+        if (inputNewExpiration && revertedExpiryStr) {
+            inputNewExpiration.value = revertedExpiryStr;
+            if (revertNotice) {
+                revertNotice.innerHTML = '<span class="text-success fw-semibold"><i class="fas fa-undo me-1"></i>Reverted to Month 1 base expiration (' + revertedExpiryLabel + ')</span>';
+            }
+        }
+    }
+
+    if (btnResetBalance) {
+        btnResetBalance.addEventListener('click', function (e) {
+            e.preventDefault();
+            triggerRevertToMonth1();
+        });
+    }
+
+    if (inputWalletBalance) {
+        inputWalletBalance.addEventListener('input', function () {
+            const val = parseFloat(this.value);
+            if (!isNaN(val) && val === 0) {
+                triggerRevertToMonth1();
+            } else if (revertNotice) {
+                revertNotice.innerHTML = 'Will default to their current expiration date. Modify if resetting advance payments.';
+            }
+        });
+    }
 });
 </script>

@@ -408,10 +408,15 @@ def view_customer(request, customer_id):
     # Sort all logs by date descending
     all_logs.sort(key=lambda x: x["date"], reverse=True)
 
+    from billing.utils import get_customer_base_expiration
+
+    reverted_expiration = get_customer_base_expiration(customer)
+
     context = {
         "customer": customer,
         "payments": payments,
         "all_logs": all_logs,
+        "reverted_expiration": reverted_expiration,
         "mt_status": mt_status,
         "uptime": uptime,
         "live_mac": live_mac,

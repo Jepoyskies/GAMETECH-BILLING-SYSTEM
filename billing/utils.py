@@ -124,3 +124,28 @@ def get_live_monitoring_data_sync():
             logger.error(f"Error connecting to Mikrotik {device.device_name}: {e}")
 
     return response_data
+
+
+def get_customer_base_expiration(customer):
+    """
+    Returns the base/Month 1 expiration date for a customer if all advance payments are reverted.
+    - For new or single-cycle accounts: earliest payment's expires_at (Month 1).
+    - For active recurring accounts: earliest payment covering the active cycle.
+    - Fallback: customer.expires_at.
+    """
+    payments = customer.payments.all().order_by("paid_at", "id")
+    if not payments.exists():
+        if customer.expires_at:
+            return customer.expires_at
+        from datetime import timedelta
+        return (customer.created_at or customer.id) + timedelta(days=30)
+
+    from django.utils import timezone
+    now = timezone.now()
+
+    active_payments = payments.filter(expires_at__gte=now)
+    if active_payments.exists():
+        return active_payments.first().expires_at
+
+    first_p = payments.first()
+    return first_p.expires_at if first_p.expires_at else customer.expires_at

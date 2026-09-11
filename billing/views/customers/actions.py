@@ -228,16 +228,30 @@ def edit_customer_balance(request, customer_id):
                 from decimal import Decimal
                 from billing.models import SystemLog, Notification
                 from django.utils.dateparse import parse_datetime
+                from django.utils import timezone
+                from billing.utils import get_customer_base_expiration
 
                 new_balance = Decimal(new_balance_str)
                 old_balance = customer.outstanding_balance
                 old_expiration = customer.expires_at
+                reverted_expiry = get_customer_base_expiration(customer)
 
-                # Parse and update expiration date
+                # Parse and update expiration date with timezone awareness
+                new_expiration = None
                 if new_expiration_str:
                     new_expiration = parse_datetime(new_expiration_str)
-                    if new_expiration:
-                        customer.expires_at = new_expiration
+                    if new_expiration and timezone.is_naive(new_expiration):
+                        new_expiration = timezone.make_aware(
+                            new_expiration, timezone.get_current_timezone()
+                        )
+
+                # If resetting balance to 0, automatically revert to Month 1 if not manually set to another custom date
+                if (new_balance == Decimal("0.00") or new_balance == 0):
+                    if not new_expiration or new_expiration == old_expiration:
+                        new_expiration = reverted_expiry
+
+                if new_expiration:
+                    customer.expires_at = new_expiration
 
                 customer.outstanding_balance = new_balance
                 customer.save()
@@ -245,6 +259,8 @@ def edit_customer_balance(request, customer_id):
                 # Check if it was a reset/decrease
                 is_reset = new_balance < old_balance or new_balance == Decimal("0.00")
                 action_name = "BALANCE_RESET" if is_reset else "UPDATE"
+                old_exp_str = old_expiration.strftime("%Y-%m-%d %H:%M") if old_expiration else "None"
+                new_exp_str = customer.expires_at.strftime("%Y-%m-%d %H:%M") if customer.expires_at else "None"
 
                 SystemLog.objects.create(
                     table_name="Customer",
@@ -252,11 +268,10 @@ def edit_customer_balance(request, customer_id):
                     action=action_name,
                     changed_by=request.user.username,
                     target_name=customer.full_name,
-                    old_data=f"Balance: ₱{old_balance} | Expires: {old_expiration.strftime('%Y-%m-%d') if old_expiration else 'None'}",
-                    new_data=f"Balance: ₱{new_balance} | Expires: {customer.expires_at.strftime('%Y-%m-%d') if customer.expires_at else 'None'}",
+                    old_data=f"Balance: ₱{old_balance} | Expires: {old_exp_str}",
+                    new_data=f"Balance: ₱{new_balance} | Expires: {new_exp_str}",
                 )
 
-                # Send global alert to all admins if balance was reset
                 if is_reset:
                     Notification.objects.create(
                         message=f"CRITICAL: {request.user.username} performed a balance override for {customer.full_name}. Balance changed from ₱{old_balance} to ₱{new_balance}.",
@@ -266,7 +281,7 @@ def edit_customer_balance(request, customer_id):
 
                 messages.success(
                     request,
-                    f"Advance payment for {customer.full_name} has been securely updated.",
+                    f"Advance payment for {customer.full_name} updated. Expiration set to {customer.expires_at.strftime('%b %d, %Y %I:%M %p')}.",
                 )
             except Exception as e:
                 import logging
