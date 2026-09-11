@@ -18,6 +18,7 @@
 | **ERR-007** | Server Error (500) on Changelog / Template Syntax Error | `billing/templates/billing/changelog.html` | Template Syntax |
 | **ERR-013** | Logged-out Customer Still Showing as Active in Topbar Live Monitoring Dropdown | `billing/views/auth.py`, `customer_portal/views.py`, `billing/middleware.py` | Session / Cache |
 | **ERR-015** | Accidental Horizontal Scrollbar / Clunky Windows Scrollbars in Topbar Notifications Dropdown | `_topbar.html`, `_scripts.html`, `components.css` | Frontend (CSS) |
+| **ERR-016** | Suspended Customer Retaining Stale Expiration Date in UI & Mikrotik Secret Comment | `billing/models.py`, `_info_cards.html`, `actions.py`, `crud.py` | Model / UI |
 
 ---
 
@@ -274,6 +275,26 @@
   * Add `overflow-x: hidden !important;` to `.gt-notif-body`, `#notifList`, and `#onlineStaffList`.
   * Declare `.min-w-0 { min-width: 0 !important; }` and inline `style="min-width: 0; overflow: hidden;"` on flex containers.
   * Add sleek 5px webkit and Firefox scrollbar rules (`scrollbar-width: thin;`, `height: 0px !important;`) with dark/light mode transparent tracks and rounded pill thumbs.
+
+---
+
+### ERR-016: Suspended Customer Retaining Stale Expiration Date in UI & Mikrotik Secret Comment
+* **Symptoms**:
+  * An account is set to "Suspended" (via edit form, force suspend, or auto-suspend), but the Expiration Date in the customer profile still displays a future date (e.g. `Apr 25, 2027 03:38 AM`).
+  * The physical Mikrotik router's PPP secret comment still contains `exp <Date>` rather than `exp None`.
+* **Root Causes**:
+  * Updating a customer's status to `suspended` in `crud.py` or `actions.py` updated `customer.status` without clearing `customer.expires_at = None`.
+  * The template `_info_cards.html` formatted `customer.expires_at` whenever not None, ignoring the suspended state.
+* **Exact Target Files**:
+  * `billing/models.py` (`Customer.save`)
+  * `billing/templates/billing/view_customer/_info_cards.html`
+  * `billing/templates/billing/view_customer/_modals.html` (`#editExpirationModal`)
+  * `billing/views/customers/crud.py` (`edit_customer`)
+  * `billing/views/customers/actions.py` (`customer_force_suspend`, `edit_customer_expiration`)
+* **1-Step Fix**:
+  * In `Customer.save()`, enforce `if self.status == 'suspended' and not getattr(self, '_preserve_expiration', False): self.expires_at = None`. Include `expires_at` in `update_fields` if present.
+  * In `_info_cards.html`, render `<span class="text-muted">None</span>` if `customer.status == 'suspended' or not customer.expires_at`.
+  * In `actions.py` (`edit_customer_expiration`), support clearing expiration to `None` when the date input is cleared/submitted empty.
 
 ---
 
