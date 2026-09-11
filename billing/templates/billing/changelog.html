@@ -29,8 +29,11 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush" id="list-tab" role="tablist" style="border-radius: 0 0 16px 16px; overflow: hidden; max-height: 70vh; overflow-y: auto;">
-                        <a class="list-group-item list-group-item-action active py-3 fw-semibold border-0" id="list-sep10-list" data-bs-toggle="list" href="#list-sep10" role="tab" style="font-size: 0.9rem;">
-                            September 10, 2026 <br><small class="text-white-50">Multi-Router Uplink, Dispatch Fix, AI Rule Engine v3.0</small>
+                        <a class="list-group-item list-group-item-action active py-3 fw-semibold border-0" id="list-sep11-list" data-bs-toggle="list" href="#list-sep11" role="tab" style="font-size: 0.9rem;">
+                            September 11, 2026 <br><small class="text-white-50">Cignal Play Dashboard, Zero-Downtime Router Swap, System Log Cap</small>
+                        </a>
+                        <a class="list-group-item list-group-item-action py-3 fw-semibold border-0" id="list-sep10-list" data-bs-toggle="list" href="#list-sep10" role="tab" style="font-size: 0.9rem;">
+                            September 10, 2026 <br><small class="text-muted">Multi-Router Uplink, Dispatch Fix, AI Rule Engine v3.0</small>
                         </a>
                         <a class="list-group-item list-group-item-action py-3 fw-semibold border-0" id="list-sep9-list" data-bs-toggle="list" href="#list-sep9" role="tab" style="font-size: 0.9rem;">
                             September 9, 2026 <br><small class="text-muted">Brand Redesign, Security, Caching, Fixes</small>
@@ -88,11 +91,74 @@
                 <div class="card-body p-4 p-lg-5">
                     <div class="tab-content" id="nav-tabContent">
                         
+                        <!-- SEPTEMBER 11 -->
+                        <div class="tab-pane fade show active" id="list-sep11" role="tabpanel" aria-labelledby="list-sep11-list">
+                            <h3 class="fw-bold mb-4 border-bottom pb-3" style="color: #1e3a8a;">
+                                September 11, 2026: Cignal Play & Box Command Center, Zero-Downtime Router Swap & High-Volume Log Pruning
+                                <span class="badge bg-success ms-2 fs-6 align-middle" style="border-radius: 8px;">Latest Build</span>
+                            </h3>
+
+                            <p class="lead text-muted mb-4">A landmark milestone achieving full completion of Gametech operational backlog: debuting the dedicated Cignal Play & Box Operations Dashboard, engineering zero-downtime PPPoE router migrations for seamless physical hardware swaps, instituting high-volume circular system audit log caps, and eliminating DataTables table overflow.</p>
+
+                            <!-- Cignal Play & Box Operations Dashboard -->
+                            <div class="card border-0 mb-4" style="background:#fef2f2; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#b91c1c;"><i class="fas fa-satellite-dish me-2"></i> Cignal Play & Box Operations Command Center</h5>
+                                    <p>Built a dedicated operational nerve center to monitor and govern Gametech's Cignal Play and Cignal Box TV streaming devices, mirroring full ISP subscriber lifecycle management without polluting the main dashboard:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>Isolated Modular Engine:</strong> Created <code>billing/views/cignal_dashboard.py</code> adhering strictly to the 400-Line Circuit Breaker Law (< 60 lines), keeping core dashboard logic lightning-fast and preventing view bloat.</li>
+                                        <li><strong>Hero KPI Analytics:</strong> Real-time glassmorphism KPI counters tracking Active Cignal Subscribers, Pending Add-On Applications, Month-to-Date Renewals/Payments, and Cignal System Notifications.</li>
+                                        <li><strong>Active Subscriber Ledger:</strong> Surfaces all subscribers possessing an assigned <code>cignalplay_no</code>, activation timestamps, and the managing staff member who authorized provisioning.</li>
+                                        <li><strong>Application Review Workflow:</strong> Direct-action queue filtering pending <code>AddOnRequest</code> records for immediate staff review and instant resolution.</li>
+                                        <li><strong>Renewal & Message Streams:</strong> Real-time feeds capturing monthly box payments from <code>CignalPlay</code> and transactional alerts from <code>Notification</code> filtered by <code>notification_type='cignal'</code>.</li>
+                                        <li><strong>Navigation Integration:</strong> Seamlessly injected into <code>_sidebar.html</code> directly below the primary Dashboard tab with active state highlighting and a distinct purple "NEW" badge.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Zero-Downtime Router Transfer Architecture -->
+                            <div class="card border-0 mb-4" style="background:#f0f9ff; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#0284c7;"><i class="fas fa-network-wired me-2"></i> Zero-Downtime Router Transfer & Hardware Replacement Architecture</h5>
+                                    <p>Solved the critical field maintenance challenge where migrating subscribers between Mikrotik routers for scheduled router swaps caused immediate subscriber disconnection before the hardware was physically replaced:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>The Problem:</strong> When updating a customer's router assignment or performing a Sync Manager move, Django's post-save signal executed "Orphan Cleanup" on the old router using <code>delete_pppoe_user()</code>. By default, secret deletion also forcefully kicked the subscriber's active session, abruptly severing their internet connection while the old router was still in service.</li>
+                                        <li><strong>Decoupled Session Lifecycles:</strong> Upgraded <code>network_manager/services/users.py</code> to accept a <code>kick_active=True/False</code> parameter. In <code>billing/signals.py</code>, orphan cleanup now runs with <code>kick_active=False</code>.</li>
+                                        <li><strong>Zero Service Interruption:</strong> The old PPPoE secret is removed (preventing future logins), but the established active PPPoE interface session remains fully connected and operational on Router A until field technicians physically swap the hardware, at which point the ONT authenticates smoothly onto Router B. Documented in <code>gametech_error_runbook.md</code> under <strong>ERR-018</strong>.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- System Audit Logs Cap & Auto-Pruning -->
+                            <div class="card border-0 mb-4" style="background:#f5f3ff; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#7c3aed;"><i class="fas fa-history me-2"></i> High-Volume System Audit Logs Dynamic Cap & Auto-Pruning</h5>
+                                    <p>Addressed potential database degradation on <code>/logs/</code> as transactional records accumulated towards thousands of entries:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>Dynamic Bounded Log Retention:</strong> Implemented automatic row pruning via background celery tasks (<code>auto_cleanup_system_logs_task</code>) enforcing a 500-entry sliding retention window to prevent runaway storage bloat and keep log queries snappy.</li>
+                                        <li><strong>UI Layout & Table Protection:</strong> Sanitized log formatting and metadata presentation in <code>billing/templates/billing/logs.html</code> for rapid operational scanning.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Sync Manager Table Overflow & Layout Polishing -->
+                            <div class="card border-0 mb-4" style="background:#fffbeb; border-radius:12px;">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3" style="color:#d97706;"><i class="fas fa-sliders-h me-2"></i> Sync Manager Table Overflow Elimination & Portal Guards</h5>
+                                    <p>Eliminated layout glitches across hardware sync and customer self-service portals:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>Table Responsive Horizontal Scrollbar Kill:</strong> Identified and resolved a persistent Bootstrap gutter defect on <code>/devices/devices/&lt;id&gt;/sync/</code> where nested negative row margins forced micro-overflow inside <code>.table-responsive</code> containers. Applied zeroed margins and bounded container styling (catalogued as <strong>ERR-017</strong>).</li>
+                                        <li><strong>Customer Portal Expiration Window Guard:</strong> Patched template conditionals in <code>customer_portal/templates/</code> to ensure suspended or expired subscribers never display an advance payment prompt after their account term has elapsed.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                        </div>
+
                         <!-- SEPTEMBER 10 -->
-                        <div class="tab-pane fade show active" id="list-sep10" role="tabpanel" aria-labelledby="list-sep10-list">
+                        <div class="tab-pane fade" id="list-sep10" role="tabpanel" aria-labelledby="list-sep10-list">
                             <h3 class="fw-bold mb-4 border-bottom pb-3" style="color: #1e3a8a;">
                                 September 10, 2026: Live Monitoring Recovery, Network Engine Extraction & Aider Sniper Architecture
-                                <span class="badge bg-success ms-2 fs-6 align-middle" style="border-radius: 8px;">Latest Build</span>
                             </h3>
 
                             <p class="lead text-muted mb-4">A critical operational day focused on diagnosing and restoring Live Monitoring router uplink telemetry, refactoring network telemetry into a reusable class, hardening dashboard caching against 500 errors, and establishing lean repository architecture guidelines.</p>
