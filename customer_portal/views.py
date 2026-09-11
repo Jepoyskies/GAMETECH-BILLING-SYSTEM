@@ -297,32 +297,43 @@ def portal_process_mock_payment(request):
                     was_suspended = locked_customer.status in ['suspended', 'inactive', 'expired']
                     
                     old_plan_id = str(locked_customer.plan_id)
+                    old_plan_name = locked_customer.plan.name if locked_customer.plan else "None"
                     is_upgrade = False
                     is_downgrade = False
+                    upgrade_fee = 0.0
                     if plan_id and old_plan_id != str(plan_id):
                         new_plan = SubscriptionPlan.objects.get(id=plan_id)
                         old_price = float(locked_customer.plan.price) if locked_customer.plan else 0.0
                         monthly_price = float(new_plan.price)
                         
+                        is_current_gimi = bool(locked_customer.plan and "GIMI" in locked_customer.plan.name)
+                        is_new_gimi = "GIMI" in new_plan.name
+
                         if monthly_price < old_price:
                             raise Exception("Plan downgrades cannot be processed online. Please contact Gametech support.")
                             
+                        # If upgrading to GIMI from non-GIMI plan, apply 500 PHP upgrade fee
+                        if is_new_gimi and not is_current_gimi:
+                            upgrade_fee = 500.0
+                            
                         locked_customer.plan = new_plan
-                        if monthly_price > old_price:
+                        if monthly_price > old_price or (is_new_gimi and not is_current_gimi):
                             is_upgrade = True
                         else:
-                            is_downgrade = True
+                            is_downgrade = False
                         
                     if locked_customer.expires_at and locked_customer.expires_at > timezone.now():
                         current_exp = locked_customer.expires_at
                     else:
                         current_exp = timezone.now()
                         
-                    new_expiry = calculate_new_expiration_date(current_exp, amount_float, monthly_price)
+                    # Calculate new expiration using amount available for subscription time
+                    amount_for_time = max(0.0, amount_float - upgrade_fee)
+                    new_expiry = calculate_new_expiration_date(current_exp, amount_for_time, monthly_price)
                     
                     # Update DB
                     locked_customer.expires_at = new_expiry
-                    locked_customer.outstanding_balance -= Decimal(amount)
+                    locked_customer.outstanding_balance -= Decimal(str(amount_for_time))
                     
                     if was_suspended:
                         locked_customer.status = 'active'
@@ -331,6 +342,10 @@ def portal_process_mock_payment(request):
                     
                     # Log Payment as Customer Portal
                     reference = f"PORTAL-{timezone.now().strftime('%Y%m%d%H%M%S')}"
+                    payment_reason = "Online Payment"
+                    if upgrade_fee > 0:
+                        payment_reason = f"Plan Upgrade to {locked_customer.plan.name} (includes ₱500 one-time upgrade fee)"
+
                     Payment.objects.create(
                         customer=locked_customer,
                         username=locked_customer.pppoe_username,
@@ -338,10 +353,22 @@ def portal_process_mock_payment(request):
                         amount=amount,
                         payment_method=payment_method,
                         reference_no=reference,
-                        reason="Online Payment",
+                        reason=payment_reason,
                         expires_at=new_expiry,
                         adjusted_by="Customer Portal"
                     )
+
+                    if upgrade_fee > 0:
+                        from billing.models import SystemLog
+                        SystemLog.objects.create(
+                            table_name="Customer",
+                            record_id=str(locked_customer.id),
+                            action="PLAN_UPGRADE",
+                            changed_by="Customer Portal",
+                            target_name=locked_customer.full_name,
+                            old_data=f"Plan: {old_plan_name}",
+                            new_data=f"Plan: {locked_customer.plan.name} | Upgrade Fee: ₱{upgrade_fee:.2f}",
+                        )
                     
                 # Mikrotik Activation
                 if customer.mikrotik_device:

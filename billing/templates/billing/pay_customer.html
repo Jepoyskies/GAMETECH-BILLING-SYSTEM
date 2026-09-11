@@ -56,6 +56,10 @@
                             <span class="detail-label">Monthly Price</span>
                             <span class="detail-value text-success" id="monthly-price-display"><strong>₱{{ customer.plan.price|default:0.00 }}</strong></span>
                         </li>
+                        <li id="gimi-upgrade-fee-row" style="display: none;">
+                            <span class="detail-label" style="color: #f59e0b;"><i class="fas fa-tag me-1"></i> Upgrade Fee</span>
+                            <span class="detail-value text-warning fw-bold">₱500.00 <small class="text-muted">(One-time)</small></span>
+                        </li>
                         {% if customer.outstanding_balance < 0 %}
                         <li>
                             <span class="detail-label">Advance Payment</span>
@@ -111,6 +115,15 @@
                             <label for="start_date" class="filter-label" style="color:#0284c7;"><i class="fas fa-calendar-alt me-1"></i> Calculate Expiry From (Base Date)</label>
                             <input type="datetime-local" id="start_date" name="start_date" class="form-control mb-1" required>
                             <div class="text-muted" style="font-size:0.75rem;"><i class="fas fa-info-circle me-1"></i>Change this if you are recording a payment received in the past.</div>
+                        </div>
+
+                        <!-- GIMI Upgrade Banner -->
+                        <div id="gimi-upgrade-banner" class="alert alert-warning py-2 px-3 mb-3 d-flex align-items-center gap-2" style="display: none; border-radius: 10px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); color: #f59e0b; font-size: 0.85rem;">
+                            <i class="fas fa-bolt fs-6 flex-shrink-0"></i>
+                            <div>
+                                <strong>One-Time GIMI Upgrade Fee: ₱500.00</strong><br>
+                                <span class="text-muted" style="font-size: 0.78rem;">Upgrading to GIMI Home Fiber provides higher speed at the same monthly rate. Includes ₱500 one-time upgrade fee.</span>
+                            </div>
                         </div>
                         
                         <!-- Quick Pay Buttons -->
@@ -254,7 +267,14 @@
 
           <!-- GIMI -->
           <div class="tab-pane fade" id="gimi-admin-plans" role="tabpanel">
-            <p class="text-center mb-4 px-3 text-muted">An upgraded home fiber experience built for streaming, gaming, remote work, and connected households. <strong>Available in selected areas only.</strong></p>
+            <p class="text-center mb-4 px-3 text-muted">
+              An upgraded home fiber experience built for streaming, gaming, remote work, and connected households. <strong>Available in selected areas only.</strong>
+              {% if "GIMI" not in customer.plan.name %}
+              <br><span class="badge bg-warning-subtle text-warning border border-warning-subtle mt-2" style="font-size: 0.8rem; padding: 6px 14px; border-radius: 20px;">
+                <i class="fas fa-bolt me-1"></i> Higher Speed at Same Monthly Price &bull; One-Time Upgrade Fee: ₱500.00
+              </span>
+              {% endif %}
+            </p>
             <div class="row g-4">
               {% for plan in plans %}{% if 'GIMI' in plan.name %}
                  {% include 'billing/partials/plan_card.html' %}
@@ -290,6 +310,8 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     let monthlyPrice = parseFloat("{{ customer.plan.price|default:0 }}");
+    const isCurrentPlanGimi = {% if customer.plan and "GIMI" in customer.plan.name %}true{% else %}false{% endif %};
+    let upgradeFee = 0;
     const currentExpiryStr = "{{ customer.expires_at|date:'c' }}";
     
     const hiddenPlanInput = document.getElementById('hidden_new_plan_id');
@@ -301,13 +323,33 @@ document.addEventListener('DOMContentLoaded', function() {
             const planId = this.getAttribute('data-id');
             const planPrice = this.getAttribute('data-price');
             const planName = this.getAttribute('data-name');
+            const isGimi = this.getAttribute('data-is-gimi') === 'true';
             
             // Update hidden input
             hiddenPlanInput.value = planId;
             monthlyPrice = parseFloat(planPrice) || 0;
+
+            // Check if GIMI upgrade fee applies
+            const upgradeBanner = document.getElementById('gimi-upgrade-banner');
+            const upgradeRow = document.getElementById('gimi-upgrade-fee-row');
+            if (isGimi && !isCurrentPlanGimi) {
+                upgradeFee = 500;
+                if (upgradeBanner) upgradeBanner.style.display = 'flex';
+                if (upgradeRow) upgradeRow.style.display = 'flex';
+            } else {
+                upgradeFee = 0;
+                if (upgradeBanner) upgradeBanner.style.display = 'none';
+                if (upgradeRow) upgradeRow.style.display = 'none';
+            }
             
             // Update UI elements
-            if (priceDisplay) priceDisplay.innerHTML = '<strong>₱' + monthlyPrice.toFixed(2) + '</strong>';
+            if (priceDisplay) {
+                let priceHtml = '<strong>₱' + monthlyPrice.toFixed(2) + '</strong>';
+                if (upgradeFee > 0) {
+                    priceHtml += ' <span class="badge bg-warning-subtle text-warning ms-1">+₱500 Fee</span>';
+                }
+                priceDisplay.innerHTML = priceHtml;
+            }
             if (planSelectBtn) planSelectBtn.innerHTML = planName + ' <i class="fas fa-chevron-down ms-2 fs-6"></i>';
             
             // Update active state in modal
@@ -359,10 +401,10 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.calc-price').forEach(el => {
             if (el.hasAttribute('data-mult')) {
                 let mult = parseInt(el.getAttribute('data-mult'));
-                el.textContent = (monthlyPrice * mult).toFixed(2);
+                el.textContent = ((monthlyPrice * mult) + upgradeFee).toFixed(2);
             } else if (el.hasAttribute('data-days')) {
                 let days = parseInt(el.getAttribute('data-days'));
-                el.textContent = ((monthlyPrice / 30) * days).toFixed(2);
+                el.textContent = (((monthlyPrice / 30) * days) + upgradeFee).toFixed(2);
             }
         });
     }
@@ -400,12 +442,13 @@ document.addEventListener('DOMContentLoaded', function() {
         let baseDate = new Date(startInput.value);
         if (isNaN(baseDate.getTime())) baseDate = new Date();
 
-        if (monthlyPrice <= 0 || paymentAmount <= 0) {
+        let amountForTime = Math.max(0, paymentAmount - upgradeFee);
+        if (monthlyPrice <= 0 || amountForTime <= 0) {
             return baseDate;
         }
         
-        let fullMonths = Math.floor(paymentAmount / monthlyPrice);
-        let remainder = paymentAmount % monthlyPrice;
+        let fullMonths = Math.floor(amountForTime / monthlyPrice);
+        let remainder = amountForTime % monthlyPrice;
         
         let previewDate = new Date(baseDate.getTime());
         for(let i=0; i<fullMonths; i++) {
@@ -430,7 +473,8 @@ document.addEventListener('DOMContentLoaded', function() {
         previewDateEl.textContent = newDate.toLocaleDateString('en-US', options);
         
         // Handle Reason block
-        if (amt > 0 && amt % monthlyPrice !== 0) {
+        let netTimeAmt = Math.max(0, amt - upgradeFee);
+        if (netTimeAmt > 0 && netTimeAmt % monthlyPrice !== 0) {
             reasonBlock.style.display = 'block';
             reasonInput.required = true;
         } else {

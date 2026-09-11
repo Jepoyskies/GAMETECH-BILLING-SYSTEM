@@ -180,6 +180,7 @@ def pay_customer_view(request, username):
                 # --- UPGRADE PLAN LOGIC ---
                 is_upgrade = False
                 is_downgrade = False
+                upgrade_fee = 0.0
                 old_plan_name = (
                     locked_customer.plan.name if locked_customer.plan else "None"
                 )
@@ -193,8 +194,16 @@ def pay_customer_view(request, username):
                             else 0.0
                         )
                         monthly_price = float(new_plan.price)
+                        
+                        is_current_gimi = bool(locked_customer.plan and "GIMI" in locked_customer.plan.name)
+                        is_new_gimi = "GIMI" in new_plan.name
+                        
+                        # If upgrading to GIMI from non-GIMI plan, apply 500 PHP upgrade fee
+                        if is_new_gimi and not is_current_gimi:
+                            upgrade_fee = 500.0
+
                         locked_customer.plan = new_plan
-                        if monthly_price > old_price:
+                        if monthly_price > old_price or (is_new_gimi and not is_current_gimi):
                             is_upgrade = True
                         else:
                             is_downgrade = True
@@ -202,7 +211,7 @@ def pay_customer_view(request, username):
                 # --------------------------
 
                 # --- Option B: Wallet/Advance Payment Logic ---
-                amount_for_time = amount_float
+                amount_for_time = max(0.0, amount_float - upgrade_fee)
 
                 # Calculate new expiration using ONLY the amount meant for time
                 new_expiry = calculate_new_expiration_date(
@@ -219,7 +228,7 @@ def pay_customer_view(request, username):
                 locked_customer.expires_at = new_expiry
 
                 # 2. Deduct from outstanding balance
-                locked_customer.outstanding_balance -= Decimal(amount)
+                locked_customer.outstanding_balance -= Decimal(str(amount_for_time))
 
                 # 3. Update Status if suspended
                 if was_suspended:
@@ -231,6 +240,11 @@ def pay_customer_view(request, username):
                 _was_suspended_for_mikrotik = was_suspended
 
                 # 4. Log the Payment
+                payment_reason = reason
+                if upgrade_fee > 0:
+                    note = f"Plan Upgrade to {locked_customer.plan.name} (includes ₱500 one-time upgrade fee)"
+                    payment_reason = f"{reason} | {note}" if reason else note
+
                 payment = Payment.objects.create(
                     customer=locked_customer,
                     username=locked_customer.pppoe_username,
@@ -240,11 +254,22 @@ def pay_customer_view(request, username):
                     amount=amount,
                     payment_method=payment_method,
                     reference_no=reference_no,
-                    reason=reason,
+                    reason=payment_reason,
                     expires_at=new_expiry,
                     adjusted_by=request.user.username,
                     paid_at=timezone.now(),
                 )
+
+                if upgrade_fee > 0:
+                    SystemLog.objects.create(
+                        table_name="Customer",
+                        record_id=str(locked_customer.id),
+                        action="PLAN_UPGRADE",
+                        changed_by=request.user.username,
+                        target_name=locked_customer.full_name,
+                        old_data=f"Plan: {old_plan_name}",
+                        new_data=f"Plan: {locked_customer.plan.name} | Upgrade Fee: ₱{upgrade_fee:.2f}",
+                    )
 
                 # Send Notification
                 Notification.objects.create(

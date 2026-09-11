@@ -25,6 +25,15 @@
                         </div>
                     </div>
 
+                    <!-- GIMI Upgrade Fee Alert -->
+                    <div id="gimi-upgrade-banner" class="alert alert-warning py-2 px-3 mb-3 d-flex align-items-center gap-2" style="display: none; border-radius: 10px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); color: #f59e0b; font-size: 0.85rem;">
+                        <i class="fas fa-bolt fs-6 flex-shrink-0"></i>
+                        <div>
+                            <strong>One-Time GIMI Upgrade Fee: ₱500.00</strong><br>
+                            <span style="color: var(--p-text-muted); font-size: 0.78rem;">Upgrading to GIMI Home Fiber provides higher speed at the same monthly rate. Includes ₱500 one-time upgrade charge.</span>
+                        </div>
+                    </div>
+
                     <div class="mb-3">
                         <label class="form-label">Payment Method</label>
                         <select class="form-select" id="paymentMethod" name="payment_method" required>
@@ -165,7 +174,14 @@
 
           <!-- GIMI -->
           <div class="tab-pane fade" id="gimi-plans" role="tabpanel">
-            <p class="text-center mb-4 px-3" style="color: var(--p-text-muted);">An upgraded home fiber experience built for streaming, gaming, remote work, and connected households. <strong>Available in selected areas only.</strong></p>
+            <p class="text-center mb-4 px-3" style="color: var(--p-text-muted);">
+              An upgraded home fiber experience built for streaming, gaming, remote work, and connected households. <strong>Available in selected areas only.</strong>
+              {% if "GIMI" not in customer.plan.name %}
+              <br><span class="badge mt-2" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 0.8rem; padding: 6px 14px; border-radius: 20px;">
+                <i class="fas fa-bolt me-1"></i> Higher Speed at Same Monthly Price &bull; One-Time Upgrade Fee: ₱500.00
+              </span>
+              {% endif %}
+            </p>
             <div class="row g-4">
               {% for p in plans %}{% if 'GIMI' in p.name %}{% if not customer.plan or p.price >= customer.plan.price %}
                  {% include 'customer_portal/partials/plan_card.html' %}

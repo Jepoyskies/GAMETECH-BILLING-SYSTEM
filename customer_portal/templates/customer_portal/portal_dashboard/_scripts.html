@@ -149,6 +149,8 @@ function handleUpgradeClick() {
    ============================================================ */
 document.addEventListener('DOMContentLoaded', function() {
     let monthlyPrice = parseFloat("{{ customer.plan.price|default:0 }}");
+    const isCurrentPlanGimi = {% if customer.plan and "GIMI" in customer.plan.name %}true{% else %}false{% endif %};
+    let upgradeFee = 0;
     const amountInput = document.getElementById('amountInput');
     const qBtns = document.querySelectorAll('.q-btn');
     const hiddenPlanInput = document.getElementById('hidden_new_plan_id');
@@ -157,8 +159,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function updatePrices() {
         const daily = monthlyPrice / 30;
         document.querySelectorAll('.calc-price').forEach(el => {
-            if (el.dataset.days)  el.textContent = (daily * parseInt(el.dataset.days)).toFixed(2);
-            if (el.dataset.mult)  el.textContent = (monthlyPrice * parseInt(el.dataset.mult)).toFixed(2);
+            if (el.dataset.days)  el.textContent = ((daily * parseInt(el.dataset.days)) + upgradeFee).toFixed(2);
+            if (el.dataset.mult)  el.textContent = ((monthlyPrice * parseInt(el.dataset.mult)) + upgradeFee).toFixed(2);
         });
     }
 
@@ -171,10 +173,11 @@ document.addEventListener('DOMContentLoaded', function() {
     function recalculateEstimatedExpiration() {
         if (!estimatedNextExpiration) return;
         const val = parseFloat(amountInput.value) || 0;
+        const effectiveVal = Math.max(0, val - upgradeFee);
         const dailyRate = monthlyPrice / 30;
         let daysToAdd = 0;
         if (dailyRate > 0) {
-            daysToAdd = Math.floor(val / dailyRate);
+            daysToAdd = Math.floor(effectiveVal / dailyRate);
         }
         
         let d = new Date(origDateStr);
@@ -213,11 +216,28 @@ document.addEventListener('DOMContentLoaded', function() {
             const planId = this.getAttribute('data-id');
             const planPrice = this.getAttribute('data-price');
             const planName = this.getAttribute('data-name');
+            const isGimi = this.getAttribute('data-is-gimi') === 'true';
             
             if (hiddenPlanInput) hiddenPlanInput.value = planId;
             monthlyPrice = parseFloat(planPrice) || 0;
+
+            // Check if GIMI one-time upgrade fee applies
+            const upgradeBanner = document.getElementById('gimi-upgrade-banner');
+            if (isGimi && !isCurrentPlanGimi) {
+                upgradeFee = 500;
+                if (upgradeBanner) upgradeBanner.style.display = 'flex';
+            } else {
+                upgradeFee = 0;
+                if (upgradeBanner) upgradeBanner.style.display = 'none';
+            }
             
-            if (planSelectBtnText) planSelectBtnText.innerHTML = planName + ' — ₱' + monthlyPrice.toFixed(2) + '/mo';
+            if (planSelectBtnText) {
+                let labelText = planName + ' — ₱' + monthlyPrice.toFixed(2) + '/mo';
+                if (upgradeFee > 0) {
+                    labelText += ' (+₱500 Upgrade Fee)';
+                }
+                planSelectBtnText.innerHTML = labelText;
+            }
             
             document.querySelectorAll('.plan-card').forEach(card => {
                 card.style.boxShadow = 'none';
