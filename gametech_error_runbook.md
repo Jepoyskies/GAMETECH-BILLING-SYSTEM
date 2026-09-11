@@ -365,6 +365,22 @@
   * In `customer_portal/views.py`, compute a strict boolean `is_account_suspended = customer.status in ['suspended', 'expired', 'inactive']` and pass it to context.
   * In the portal templates and JS, replace all occurrences of `{% if customer.status in 'suspended,expired,inactive' %}` with `{% if is_account_suspended %}`.
 
+### ERR-021: Server Error (500) on Cignal Dashboard When Pending Applications Exist (`VariableDoesNotExist: Failed lookup for key [username]`)
+* **Symptoms**:
+  * `/cignal-dashboard/` loads fine when there are zero pending Cignal applications.
+  * As soon as a subscriber submits a Cignal Play or Cignal Box request via the customer portal, visiting `/cignal-dashboard/` crashes with `Server Error (500)`.
+  * Traceback shows `django.template.base.VariableDoesNotExist: Failed lookup for key [username] in <Customer: ...>` or `AttributeError: 'Customer' object has no attribute 'username'`.
+* **Root Causes**:
+  * In `billing/templates/billing/cignal_dashboard.html`, the customer link inside the applications table rendered `{{ app.customer.full_name|default:app.customer.username }}`.
+  * In Django template filter expressions, arguments (like `app.customer.username`) are evaluated strictly without silent suppression.
+  * The `Customer` model in Gametech has `pppoe_username`, not `username`. Because `Customer` lacked a `username` attribute, Django failed to resolve the filter argument and raised `VariableDoesNotExist`.
+* **Exact Target Files**:
+  * `billing/models.py` (`Customer`)
+  * `billing/templates/billing/cignal_dashboard.html`
+* **1-Step Fix**:
+  * Add `@property def username(self): return self.pppoe_username` on `Customer` in `billing/models.py` to prevent lookup crashes across any template.
+  * In `cignal_dashboard.html`, use `{{ app.customer.full_name|default:app.customer.pppoe_username }}`.
+
 ---
 
 ## 📝 How to Add a New Error Entry
