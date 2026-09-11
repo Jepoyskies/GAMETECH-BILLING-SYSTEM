@@ -251,6 +251,10 @@ class Customer(models.Model):
         return reasons
 
     @property
+    def username(self):
+        return self.pppoe_username
+
+    @property
     def is_suspicious(self):
         return len(self.suspicious_reasons) > 0
 
