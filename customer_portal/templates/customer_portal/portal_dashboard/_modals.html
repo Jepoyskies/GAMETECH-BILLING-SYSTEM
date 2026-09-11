@@ -7,13 +7,26 @@
         <div class="modal-content modal-portal">
             <div class="modal-header">
                 <h5 class="modal-title fw-bold" id="payModalLabel">
+                    {% if customer.status in 'suspended,expired,inactive' %}
+                    <i class="fas fa-plug-circle-bolt me-2" style="color:#ef4444;"></i> Reconnect Account
+                    {% else %}
                     <i class="fas fa-wallet me-2" style="color:#facc15;"></i> Complete Payment
+                    {% endif %}
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:{% if current_theme == 'dark' %}invert(1){% else %}none{% endif %};"></button>
             </div>
             <form method="POST" action="{% url 'customer_portal:portal_process_mock_payment' %}" id="portalPaymentForm">
                 {% csrf_token %}
                 <div class="modal-body">
+                    {% if customer.status in 'suspended,expired,inactive' %}
+                    <div class="alert alert-danger py-2 px-3 mb-3 d-flex align-items-center gap-2" style="border-radius: 10px; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; font-size: 0.85rem;">
+                        <i class="fas fa-plug-circle-bolt fs-5 flex-shrink-0"></i>
+                        <div>
+                            <strong>Account Disconnected:</strong> Completing this payment will automatically restore and reactivate your internet service.
+                        </div>
+                    </div>
+                    {% endif %}
+
                     <div class="mb-3">
                         <label class="form-label">Service Plan</label>
                         <div>
@@ -72,7 +85,13 @@
                         <div class="text-start" style="flex: 1;">
                             <span style="font-size: 0.75rem; color: var(--p-text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em;">Current Due Date</span><br>
                             <span style="font-size: 1.05rem; font-weight: 600; color: var(--p-text);">
-                                {% if customer.expires_at %}{{ customer.expires_at|date:'M d, Y' }}{% else %}Not Set{% endif %}
+                                {% if customer.status in 'suspended,expired,inactive' %}
+                                    <span class="text-danger fw-bold"><i class="fas fa-ban me-1"></i>{{ customer.status|title }}</span>
+                                {% elif customer.expires_at %}
+                                    {{ customer.expires_at|date:'M d, Y' }}
+                                {% else %}
+                                    None
+                                {% endif %}
                             </span>
                         </div>
                         <div class="text-center" style="flex: 0 0 auto;">
@@ -89,7 +108,7 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal" style="border-radius:8px;">Cancel</button>
                     <button type="submit" class="btn px-4 fw-bold" style="border-radius:8px; background:linear-gradient(135deg,#facc15,#eab308); color:#0f172a; border:none;">
-                        <i class="fas fa-lock me-2"></i>Pay Securely
+                        <i class="fas fa-lock me-2"></i>{% if customer.status in 'suspended,expired,inactive' %}Pay & Reactivate Service{% else %}Pay Securely{% endif %}
                     </button>
                 </div>
             </form>

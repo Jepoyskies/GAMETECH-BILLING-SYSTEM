@@ -129,7 +129,15 @@
                 </li>
                 <li>
                     <span class="info-label"><i class="fas fa-calendar-alt me-2" style="color:#facc15;"></i>Next Due Date</span>
-                    <span class="info-value">{% if customer.expires_at %}{{ customer.expires_at|date:"M d, Y" }}{% else %}Not set{% endif %}</span>
+                    <span class="info-value">
+                        {% if customer.status in 'suspended,expired,inactive' %}
+                            <span class="text-danger fw-bold"><i class="fas fa-ban me-1"></i>{{ customer.status|title }}</span>
+                        {% elif customer.expires_at %}
+                            {{ customer.expires_at|date:"M d, Y" }}
+                        {% else %}
+                            Not set
+                        {% endif %}
+                    </span>
                 </li>
                 <li>
                     {% if customer.outstanding_balance < 0 %}

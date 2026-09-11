@@ -116,13 +116,23 @@ function submitAddonRequest() {
    PAYMENT MODAL LOGIC
    ============================================================ */
 function handlePaymentClick() {
+    const isSuspendedOrExpired = {% if customer.status in 'suspended,expired,inactive' or not customer.expires_at or days_until_expiry and days_until_expiry <= 0 %}true{% else %}false{% endif %};
     const balance = parseFloat("{{ customer.outstanding_balance|default:'0' }}");
     const dueDate = "{{ customer.expires_at|date:'M d, Y' }}";
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+    // If account is suspended, expired, or disconnected, never show Advance Payment popup!
+    // Directly open payment modal to let customer pay and reactivate.
+    if (isSuspendedOrExpired || !dueDate) {
+        new bootstrap.Modal(document.getElementById('mockPaymentModal')).show();
+        return;
+    }
+
+    // Only show Advance Payment prompt if account is strictly ACTIVE, has zero/credit balance, and has a future dueDate
     if (balance <= 0) {
         Swal.fire({
             title: 'Advance Payment?',
-            text: `You are paid up until ${dueDate}. A payment now will extend your subscription further. Proceed?`,
+            text: `You are currently paid up until ${dueDate}. A payment now will extend your subscription further. Proceed?`,
             icon: 'question',
             showCancelButton: true,
             background: isDark ? '#111827' : '#fff',
@@ -168,7 +178,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Setup Expiration Estimator
     const estimatedNextExpiration = document.getElementById('estimatedNextExpiration');
-    const origDateStr = "{% if customer.expires_at %}{{ customer.expires_at|date:'Y-m-d' }}{% else %}{% now 'Y-m-d' %}{% endif %}";
+    const origDateStr = "{% if customer.status == 'active' and customer.expires_at and days_until_expiry and days_until_expiry > 0 %}{{ customer.expires_at|date:'Y-m-d' }}{% else %}{% now 'Y-m-d' %}{% endif %}";
 
     function recalculateEstimatedExpiration() {
         if (!estimatedNextExpiration) return;
