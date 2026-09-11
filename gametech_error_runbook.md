@@ -333,10 +333,25 @@
 
 ---
 
+### ERR-019: Server Error (500) on Cignal Dashboard (`TemplateSyntaxError: 'humanize'` & `NoReverseMatch: 'add_on_requests'`)
+* **Symptoms**:
+  * Navigating to `/cignal-dashboard/` results in a `Server Error (500)`.
+  * Traceback shows `django.template.exceptions.TemplateSyntaxError: 'humanize' is not a registered tag library` or `NoReverseMatch: Reverse for 'add_on_requests' not found`.
+* **Root Causes**:
+  1. `django.contrib.humanize` is not listed in `INSTALLED_APPS`, causing `{% load humanize %}` and `|intcomma` filters to throw `TemplateSyntaxError`.
+  2. The URL name for Add-On requests is `add_on_payments`, but the template referenced non-existent `add_on_requests`.
+* **Exact Target Files**:
+  * `billing/templates/billing/cignal_dashboard.html`
+* **1-Step Fix**:
+  * In `billing/templates/billing/cignal_dashboard.html`, remove `{% load humanize %}` and `|intcomma` filter usages.
+  * Update reverse URL tag from `{% url 'add_on_requests' %}` to `{% url 'add_on_payments' %}`.
+
+---
+
 ## 📝 How to Add a New Error Entry
 
-Whenever a non-obvious bug or architecture defect is resolved:
 1. Assign a new `ERR-XXX` identifier.
 2. Fill in: **Symptoms**, **Root Causes**, **Exact Target Files**, and **1-Step Fix**.
 3. Keep entries short, actionable, and sniper-focused.
+
 
