@@ -116,7 +116,7 @@ function submitAddonRequest() {
    PAYMENT MODAL LOGIC
    ============================================================ */
 function handlePaymentClick() {
-    const isSuspendedOrExpired = {% if customer.status in 'suspended,expired,inactive' or not customer.expires_at or days_until_expiry and days_until_expiry <= 0 %}true{% else %}false{% endif %};
+    const isSuspendedOrExpired = {% if is_account_suspended or not customer.expires_at or days_until_expiry and days_until_expiry <= 0 %}true{% else %}false{% endif %};
     const balance = parseFloat("{{ customer.outstanding_balance|default:'0' }}");
     const dueDate = "{{ customer.expires_at|date:'M d, Y' }}";
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';

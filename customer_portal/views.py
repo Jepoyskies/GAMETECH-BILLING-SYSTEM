@@ -77,7 +77,8 @@ def portal_dashboard(request):
         effective_reason = customer.mikrotik_device.health_reason or "Network issue reported for your sector"
         is_network_issue = True
     
-    if customer.status in ['suspended', 'expired', 'inactive']:
+    is_account_suspended = customer.status in ['suspended', 'expired', 'inactive']
+    if is_account_suspended:
         effective_status = 'Disconnected'
         effective_reason = "Your account has been suspended due to an overdue balance. Please pay your bill to restore connection."
         is_network_issue = True
@@ -105,12 +106,12 @@ def portal_dashboard(request):
         'effective_status': effective_status,
         'effective_reason': effective_reason,
         'is_network_issue': is_network_issue,
+        'is_account_suspended': is_account_suspended,
         'is_expiring_soon': is_expiring_soon,
         'days_until_expiry': days_until_expiry,
         'payments': payments,
         'plans': plans,
         'issue_services': issue_services,
-        'days_until_expiry': days_until_expiry,
     }
     return render(request, 'customer_portal/portal_dashboard.html', context)
 
@@ -241,10 +242,12 @@ def portal_router_uplink_api(request):
                     uplink_status = 'Offline'
                     uplink_ping = 'Timeout'
                 else:
+                    import re
                     avg_rtt_str = result.get('avg-rtt', '0ms')
-                    rtt_ms = int(avg_rtt_str.replace('ms', ''))
-                    uplink_ping = f"{rtt_ms}ms"
-                    if rtt_ms > 150:
+                    match = re.search(r'([\d.]+)', str(avg_rtt_str))
+                    rtt_val = float(match.group(1)) if match else 0.0
+                    uplink_ping = f"{int(rtt_val)}ms"
+                    if rtt_val > 150:
                         uplink_status = 'Unstable'
                     else:
                         uplink_status = 'Online'
