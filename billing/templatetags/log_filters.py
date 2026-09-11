@@ -4,6 +4,85 @@ from django.utils.safestring import mark_safe
 register = template.Library()
 
 
+from django.core.cache import cache
+
+
+def _get_lookup_map(cache_key, model_path, id_field="id", name_field="name"):
+    mapping = cache.get(cache_key)
+    if mapping is None:
+        try:
+            from django.apps import apps
+
+            app_label, model_name = model_path.split(".")
+            model_cls = apps.get_model(app_label, model_name)
+            mapping = dict(model_cls.objects.values_list(id_field, name_field))
+            cache.set(cache_key, mapping, 60)
+        except Exception:
+            mapping = {}
+    return mapping
+
+
+def resolve_field_and_value(key, val):
+    clean_val = str(val).strip().replace("'", "").replace('"', "")
+    k_norm = key.strip()
+    k_lower = k_norm.lower().replace("_", " ")
+
+    if "plan" in k_lower:
+        label = "Plan"
+        if clean_val.isdigit():
+            plans = _get_lookup_map(
+                "cache_log_plans_map", "billing.SubscriptionPlan", "id", "name"
+            )
+            return label, plans.get(int(clean_val), clean_val)
+        return label, clean_val
+
+    if "account type" in k_lower:
+        label = "Account Type"
+        if clean_val.isdigit():
+            types = _get_lookup_map(
+                "cache_log_actypes_map", "billing.AccountType", "id", "type_name"
+            )
+            return label, types.get(int(clean_val), clean_val)
+        return label, clean_val
+
+    if "router" in k_lower or "device" in k_lower or "mikrotik" in k_lower:
+        label = "Router"
+        if clean_val.isdigit():
+            devices = _get_lookup_map(
+                "cache_log_devices_map",
+                "network_manager.MikrotikDevice",
+                "id",
+                "device_name",
+            )
+            return label, devices.get(int(clean_val), clean_val)
+        return label, clean_val
+
+    if "barangay" in k_lower:
+        label = "Barangay"
+        if clean_val.isdigit():
+            barangays = _get_lookup_map(
+                "cache_log_barangays_map", "billing.Barangay", "id", "name"
+            )
+            return label, barangays.get(int(clean_val), clean_val)
+        return label, clean_val
+
+    if "agent" in k_lower:
+        label = "Agent"
+        if clean_val.isdigit():
+            agents = _get_lookup_map(
+                "cache_log_agents_map", "billing.Agent", "id", "name"
+            )
+            return label, agents.get(int(clean_val), clean_val)
+        return label, clean_val
+
+    if k_norm.endswith(" ID"):
+        k_norm = k_norm[:-3].strip()
+    elif k_norm.endswith("_id"):
+        k_norm = k_norm[:-3].replace("_", " ").title().strip()
+
+    return k_norm, clean_val
+
+
 @register.filter
 def format_log_details(log):
     sentences = []
@@ -40,7 +119,8 @@ def format_log_details(log):
             html += f"<tr><td class='text-danger p-0 fw-medium'><i class='fas fa-exclamation-triangle me-2'></i> Deleted {method} Payment of ₱{amt} (Ref: {ref})</td></tr>"
         else:
             for k, v in parts.items():
-                html += f"<tr><td class='p-0 text-danger fw-semibold' style='width: 120px;'>{k}:</td><td class='p-0 text-danger'>{v}</td></tr>"
+                resolved_key, res_v = resolve_field_and_value(k, v)
+                html += f"<tr><td class='p-0 text-danger fw-semibold' style='width: 120px;'>{resolved_key}:</td><td class='p-0 text-danger'>{res_v}</td></tr>"
 
     # Action: ADD / UPDATE
     else:
@@ -55,10 +135,10 @@ def format_log_details(log):
                     sep = "→" if "→" in line else "->"
                     parts = line.split(":", 1)
                     if len(parts) == 2:
-                        key = parts[0].strip()
-                        old_val, new_val = parts[1].split(sep, 1)
-                        old_val = old_val.strip().replace("'", "")
-                        new_val = new_val.strip().replace("'", "")
+                        raw_key = parts[0].strip()
+                        raw_old, raw_new = parts[1].split(sep, 1)
+                        key, old_val = resolve_field_and_value(raw_key, raw_old)
+                        _, new_val = resolve_field_and_value(raw_key, raw_new)
                         html += f"<tr><td class='p-1 fw-semibold text-muted' style='width: 100px;'>{key}:</td><td class='p-1'><span class='text-muted text-decoration-line-through me-2'>{old_val}</span> <i class='fas fa-arrow-right text-muted mx-2' style='font-size: 0.7rem;'></i> <span class='text-success fw-medium'>{new_val}</span></td></tr>"
 
         # Case 2: Key-value Updates (no arrows)
@@ -77,9 +157,12 @@ def format_log_details(log):
             for key, new_val in new_dict.items():
                 old_val = old_dict.get(key)
                 if old_val and old_val != new_val:
-                    html += f"<tr><td class='p-1 fw-semibold text-muted' style='width: 100px;'>{key}:</td><td class='p-1'><span class='text-muted text-decoration-line-through me-2'>{old_val}</span> <i class='fas fa-arrow-right text-muted mx-2' style='font-size: 0.7rem;'></i> <span class='text-success fw-medium'>{new_val}</span></td></tr>"
+                    resolved_key, res_old = resolve_field_and_value(key, old_val)
+                    _, res_new = resolve_field_and_value(key, new_val)
+                    html += f"<tr><td class='p-1 fw-semibold text-muted' style='width: 100px;'>{resolved_key}:</td><td class='p-1'><span class='text-muted text-decoration-line-through me-2'>{res_old}</span> <i class='fas fa-arrow-right text-muted mx-2' style='font-size: 0.7rem;'></i> <span class='text-success fw-medium'>{res_new}</span></td></tr>"
                 elif not old_val:
-                    html += f"<tr><td class='p-1 fw-semibold text-muted' style='width: 100px;'>{key}:</td><td class='p-1'><span class='text-success fw-medium'>{new_val}</span></td></tr>"
+                    resolved_key, res_new = resolve_field_and_value(key, new_val)
+                    html += f"<tr><td class='p-1 fw-semibold text-muted' style='width: 100px;'>{resolved_key}:</td><td class='p-1'><span class='text-success fw-medium'>{res_new}</span></td></tr>"
 
         # Case 3: Addition
         elif action == "ADD" and new_data:
@@ -87,8 +170,8 @@ def format_log_details(log):
             for line in lines:
                 if ":" in line:
                     key, val = line.split(":", 1)
-                    val = val.strip().replace("'", "")
-                    html += f"<tr><td class='p-1 fw-semibold text-muted' style='width: 100px;'>{key.strip()}:</td><td class='p-1 text-success fw-medium'>{val}</td></tr>"
+                    resolved_key, res_val = resolve_field_and_value(key, val)
+                    html += f"<tr><td class='p-1 fw-semibold text-muted' style='width: 100px;'>{resolved_key}:</td><td class='p-1 text-success fw-medium'>{res_val}</td></tr>"
 
         # Fallback
         if "<tr>" not in html:

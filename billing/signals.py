@@ -20,16 +20,13 @@ def track_customer_changes(sender, instance, **kwargs):
                 "Phone": orig.phone,
                 "Status": orig.status,
                 "Plan": orig.plan.name if orig.plan else "None",
-                "Router": (
-                    orig.mikrotik_device.device_name if orig.mikrotik_device else "None"
-                ),
+                "Account Type": orig.account_type.type_name if orig.account_type else "None",
+                "Barangay": orig.barangay.name if orig.barangay else "None",
+                "Agent": orig.agent.name if orig.agent else "None",
+                "Router": orig.mikrotik_device.device_name if orig.mikrotik_device else "None",
                 "Username": orig.pppoe_username,
                 "Password": orig.pppoe_password,
-                "Expiration": (
-                    orig.expires_at.strftime("%Y-%m-%d %H:%M")
-                    if orig.expires_at
-                    else "None"
-                ),
+                "Expiration": orig.expires_at.strftime("%Y-%m-%d %H:%M") if orig.expires_at else "None",
             }
     else:
         instance._original_plan_id = None
@@ -185,18 +182,13 @@ def audit_customer_changes(sender, instance, created, **kwargs):
             "Phone": instance.phone,
             "Status": instance.status,
             "Plan": instance.plan.name if instance.plan else "None",
-            "Router": (
-                instance.mikrotik_device.device_name
-                if instance.mikrotik_device
-                else "None"
-            ),
+            "Account Type": instance.account_type.type_name if instance.account_type else "None",
+            "Barangay": instance.barangay.name if instance.barangay else "None",
+            "Agent": instance.agent.name if instance.agent else "None",
+            "Router": instance.mikrotik_device.device_name if instance.mikrotik_device else "None",
             "Username": instance.pppoe_username,
             "Password": instance.pppoe_password,
-            "Expiration": (
-                instance.expires_at.strftime("%Y-%m-%d %H:%M")
-                if instance.expires_at
-                else "None"
-            ),
+            "Expiration": instance.expires_at.strftime("%Y-%m-%d %H:%M") if instance.expires_at else "None",
         }
 
         for field, old_val in instance._original_state.items():
