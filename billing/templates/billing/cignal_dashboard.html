@@ -1,0 +1,209 @@
+{% extends "billing/base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Cignal Play & Box Dashboard | Gametech{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-3 px-md-4">
+
+  <!-- Page Hero -->
+  <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in"
+       style="background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #dc2626 100%);">
+    <div class="d-flex align-items-center">
+      <div class="hero-icon"><i class="fas fa-satellite-dish"></i></div>
+      <div>
+        <div class="hero-title">Cignal Play & Box Operations</div>
+        <div class="hero-sub">Monitor Cignal applications, customers, and active logs</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="row g-3 mb-4 animate-fade-in animate-delay-1">
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="kpi-card glass">
+            <div class="k-icon text-danger"><i class="fas fa-users"></i></div>
+            <div class="k-value">{{ active_cignal_customers|intcomma }}</div>
+            <div class="k-label">Active Cignal Customers</div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="kpi-card glass">
+            <div class="k-icon text-warning"><i class="fas fa-file-signature"></i></div>
+            <div class="k-value">{{ pending_applications_count|intcomma }}</div>
+            <div class="k-label">Pending Applications</div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="kpi-card glass">
+            <div class="k-icon text-success"><i class="fas fa-wallet"></i></div>
+            <div class="k-value">{{ new_cignal_this_month|intcomma }}</div>
+            <div class="k-label">Cignal Renewals This Month</div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="kpi-card glass">
+            <div class="k-icon text-info"><i class="fas fa-bell"></i></div>
+            <div class="k-value">{{ total_notifications|intcomma }}</div>
+            <div class="k-label">Total Cignal Notifications</div>
+        </div>
+    </div>
+  </div>
+
+  <div class="row g-3 animate-fade-in animate-delay-2">
+    <!-- Left Column: Pending Apps & Active Customers -->
+    <div class="col-12 col-xl-7">
+        
+        <!-- Pending Applications -->
+        <div class="dashboard-card mb-4" style="overflow:hidden;">
+            <div class="section-header section-header-danger">
+              <h6><i class="fas fa-hourglass-half sh-icon"></i> Pending Cignal Applications</h6>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-premium table-hover align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>Requested At</th>
+                    <th>Customer</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th class="text-end">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for app in applications %}
+                  <tr>
+                    <td><small class="text-muted">{{ app.requested_at|date:"M d, Y" }}</small></td>
+                    <td>
+                      <a href="{% url 'view_customer' app.customer.id %}" class="fw-bold text-decoration-none">
+                        {{ app.customer.full_name|default:app.customer.username }}
+                      </a>
+                    </td>
+                    <td><span class="badge bg-danger">{{ app.addon_type }}</span></td>
+                    <td><span class="badge bg-warning text-dark">{{ app.status }}</span></td>
+                    <td class="text-end">
+                      <a href="{% url 'add_on_requests' %}" class="btn btn-sm btn-outline-danger">Review</a>
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="5" class="text-center text-muted py-4">No pending applications at this time.</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+        </div>
+
+        <!-- Active Customers -->
+        <div class="dashboard-card" style="overflow:hidden;">
+            <div class="section-header section-header-danger">
+              <h6><i class="fas fa-users sh-icon"></i> Recent Active Cignal Customers</h6>
+              <a href="{% url 'cignal_play_list' %}" class="btn btn-sm btn-light">View All</a>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-premium table-hover align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>Customer</th>
+                    <th>Account No.</th>
+                    <th>Activation Date</th>
+                    <th>Adjusted By</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for customer in customers_list %}
+                  <tr>
+                    <td>
+                      <a href="{% url 'view_customer' customer.id %}" class="fw-bold text-decoration-none">
+                        {{ customer.full_name|default:customer.username }}
+                      </a>
+                    </td>
+                    <td><span class="font-monospace text-primary">{{ customer.cignalplay_no }}</span></td>
+                    <td><small class="text-muted">{{ customer.cignalplay_date|date:"M d, Y"|default:"N/A" }}</small></td>
+                    <td><small class="text-muted">{{ customer.cignalplay_adjustedby|default:"-" }}</small></td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="4" class="text-center text-muted py-4">No active Cignal customers found.</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Logs & Messages -->
+    <div class="col-12 col-xl-5">
+        
+        <!-- Recent Logs/Renewals -->
+        <div class="dashboard-card mb-4" style="overflow:hidden;">
+            <div class="section-header section-header-danger">
+              <h6><i class="fas fa-list sh-icon"></i> Recent Cignal Logs & Renewals</h6>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-premium table-hover align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Customer</th>
+                    <th>Plan/Log</th>
+                    <th>Processed By</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for log in cignal_payments %}
+                  <tr>
+                    <td><small class="text-muted">{{ log.created_at|date:"M d, Y" }}</small></td>
+                    <td>
+                      <a href="{% url 'user_cignal_logs' log.customer.id %}" class="fw-bold text-decoration-none" title="View customer logs">
+                        {{ log.customer.full_name|default:log.customer.username }}
+                      </a>
+                    </td>
+                    <td><span class="badge bg-secondary">{{ log.plan_name }}</span></td>
+                    <td><small class="text-muted">{{ log.adjusted_by|default:"-" }}</small></td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="4" class="text-center text-muted py-4">No recent Cignal logs found.</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+        </div>
+
+        <!-- Cignal Notifications -->
+        <div class="dashboard-card" style="overflow:hidden;">
+            <div class="section-header section-header-danger">
+              <h6><i class="fas fa-bell sh-icon"></i> Recent Cignal Messages/Alerts</h6>
+            </div>
+            <div class="list-group list-group-flush" style="background: var(--gt-cl-card);">
+                {% for notif in notifications %}
+                <div class="list-group-item" style="background: transparent; border-color: rgba(255,255,255,0.05); padding: 15px;">
+                    <div class="d-flex w-100 justify-content-between mb-1">
+                        <h6 class="mb-0 fw-bold"><i class="fas fa-info-circle text-info me-1"></i> {{ notif.title }}</h6>
+                        <small class="text-muted">{{ notif.id }}</small>
+                    </div>
+                    <p class="mb-0 text-muted small" style="white-space: pre-wrap;">{{ notif.message }}</p>
+                    {% if notif.link %}
+                    <div class="mt-2 text-end">
+                        <a href="{{ notif.link }}" class="btn btn-sm btn-outline-danger" style="font-size: 0.7rem; padding: 2px 8px;">View Details</a>
+                    </div>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <div class="list-group-item text-center text-muted py-4" style="background: transparent;">
+                    No recent notifications.
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

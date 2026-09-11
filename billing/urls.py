@@ -5,6 +5,7 @@ from . import views
 urlpatterns = [
     # Dashboard route
     path("", views.dashboard_view, name="dashboard"),
+    path("cignal-dashboard/", views.cignal_dashboard_view, name="cignal_dashboard"),
     # Customer routes
     path("customers/", views.customer_list, name="customer_list"),
     path("customers/bulk-sms/", views.bulk_sms_view, name="bulk_sms_view"),

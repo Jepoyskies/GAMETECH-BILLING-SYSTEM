@@ -318,6 +318,21 @@
 
 ---
 
+### ERR-018: Internet Drops Immediately When Transferring Customer to New Router in System
+* **Symptoms**:
+  * The admin changes a customer's `mikrotik_device` in the UI (or uses Sync Manager "Move").
+  * Even though the physical cables haven't been swapped yet, the customer's internet drops immediately.
+* **Root Causes**:
+  * The `post_save` signal performs an "Orphan Cleanup" on the old router using `api.delete_pppoe_user()`.
+  * By default, deleting a PPPoE secret also kicks the active session on the old router to enforce the deletion, which drops the physical connection.
+* **Exact Target Files**:
+  * `billing/signals.py` (`sync_customer_to_mikrotik`)
+  * `network_manager/services/users.py` (`delete_pppoe_user`)
+* **1-Step Fix**:
+  * In `billing/signals.py`, pass `kick_active=False` during the orphan cleanup: `old_api.delete_pppoe_user(instance.pppoe_username, kick_active=False)`. This removes the secret (preventing future logins) but leaves the current active session running until the hardware is swapped.
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 Whenever a non-obvious bug or architecture defect is resolved:

@@ -94,6 +94,8 @@
    - Live bandwidth/packet polling must be cached in Redis (`cache.get("live_monitoring_data")`) or executed in Celery tasks (`billing/tasks.py`) to prevent freezing Gunicorn sync workers.
 3. **Safe Disconnect/Reconnect**:
    - Use `api.get_active_pppoe_users()` and `api.remove_active_user(username)`.
+4. **Seamless Router Migrations (Zero-Drop)**:
+   - When deleting a secret from an old router to migrate to a new one, always pass `kick_active=False` to `api.delete_pppoe_user()`. This leaves the active session alive until the physical hardware is swapped.
 
 ---
 
