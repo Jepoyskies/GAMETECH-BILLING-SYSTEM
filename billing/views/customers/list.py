@@ -63,6 +63,36 @@ def customer_list(request):
         offline=Count("id", filter=Q(status__in=["suspended", "inactive", "pull out"]) | Q(expires_at__lte=now)),
     )
 
+    # MikroTik Live Connectivity for Paid but Offline metric
+    from django.core.cache import cache
+    from network_manager.services import MikrotikAPI
+
+    connected_usernames = cache.get("active_pppoe_usernames_set")
+    if connected_usernames is None:
+        connected_usernames = set()
+        for device in MikrotikDevice.objects.all():
+            try:
+                api = MikrotikAPI(device)
+                for au in api.get_active_pppoe_users():
+                    name = au.get("name")
+                    if name:
+                        connected_usernames.add(name)
+            except Exception:
+                pass
+        cache.set("active_pppoe_usernames_set", connected_usernames, 30)
+
+    # Calculate Paid but Offline subscribers (active billing status but disconnected from router)
+    active_paid_customers = Customer.objects.filter(
+        expires_at__gt=now,
+        status="active"
+    ).values("id", "pppoe_username")
+
+    paid_but_offline_ids = [
+        c["id"] for c in active_paid_customers
+        if not c["pppoe_username"] or c["pppoe_username"] not in connected_usernames
+    ]
+    stats["paid_but_offline"] = len(paid_but_offline_ids)
+
     customers = Customer.objects.select_related(
         "plan", "agent", "barangay", "mikrotik_device"
     ).all()
@@ -77,6 +107,8 @@ def customer_list(request):
         customers = customers.filter(
             expires_at__gt=now, expires_at__lte=seven_days_from_now, status="active"
         )
+    elif filter_type in ["paid_offline", "paid_but_offline"]:
+        customers = customers.filter(id__in=paid_but_offline_ids)
     elif filter_type == "expired":
         customers = customers.filter(expires_at__lte=now, expires_at__gt=seven_days_ago)
     elif filter_type == "inactive":

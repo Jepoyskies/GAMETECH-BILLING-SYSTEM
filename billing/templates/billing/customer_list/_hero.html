@@ -41,8 +41,8 @@
 
 <!-- Dynamic Top Stat Pills (Excitement Counters) -->
 <div class="row g-3 mb-4 animate-fade-in">
-    <div class="col-6 col-md-3">
-        <a href="?filter=all" class="gt-stat-pill gt-stat-pill-total h-100">
+    <div class="col-6 col-md-4 col-xl">
+        <a href="?filter=all" class="gt-stat-pill gt-stat-pill-total h-100 {% if filter_type == 'all' or not filter_type %}border-info shadow-sm{% endif %}">
             <div class="gt-stat-pill-icon"><i class="fa-solid fa-users"></i></div>
             <div>
                 <div class="gt-stat-pill-val">{{ stats.total|default:customers.count|default:"0" }}</div>
@@ -50,8 +50,8 @@
             </div>
         </a>
     </div>
-    <div class="col-6 col-md-3">
-        <a href="?filter=active" class="gt-stat-pill gt-stat-pill-active h-100">
+    <div class="col-6 col-md-4 col-xl">
+        <a href="?filter=active" class="gt-stat-pill gt-stat-pill-active h-100 {% if filter_type == 'active' %}border-success shadow-sm{% endif %}">
             <div class="gt-stat-pill-icon"><i class="fa-solid fa-circle text-success" style="font-size: 0.75rem; box-shadow: 0 0 8px rgba(34, 197, 94, 0.8); border-radius: 50%;"></i></div>
             <div>
                 <div class="gt-stat-pill-val text-success">{{ stats.active|default:"0" }}</div>
@@ -59,8 +59,8 @@
             </div>
         </a>
     </div>
-    <div class="col-6 col-md-3">
-        <a href="?filter=expiring" class="gt-stat-pill gt-stat-pill-expiring h-100">
+    <div class="col-6 col-md-4 col-xl">
+        <a href="?filter=expiring" class="gt-stat-pill gt-stat-pill-expiring h-100 {% if filter_type == 'expiring' %}border-warning shadow-sm{% endif %}">
             <div class="gt-stat-pill-icon"><i class="fa-solid fa-circle text-warning" style="font-size: 0.75rem; box-shadow: 0 0 8px rgba(245, 158, 11, 0.8); border-radius: 50%;"></i></div>
             <div>
                 <div class="gt-stat-pill-val text-warning">{{ stats.expiring|default:"0" }}</div>
@@ -68,8 +68,20 @@
             </div>
         </a>
     </div>
-    <div class="col-6 col-md-3">
-        <a href="?filter=inactive" class="gt-stat-pill gt-stat-pill-inactive h-100">
+    <div class="col-6 col-md-4 col-xl">
+        <a href="?filter=paid_offline" class="gt-stat-pill gt-stat-pill-paid-offline h-100 {% if filter_type == 'paid_offline' or filter_type == 'paid_but_offline' %}border-warning shadow-sm{% endif %}">
+            <div class="gt-stat-pill-icon"><i class="fa-solid fa-triangle-exclamation text-warning" style="font-size: 0.95rem;"></i></div>
+            <div>
+                <div class="d-flex align-items-center gap-1">
+                    <span class="gt-stat-pill-val text-warning">{{ stats.paid_but_offline|default:"0" }}</span>
+                    <span class="badge bg-warning text-dark px-1 py-0 ms-1" style="font-size: 0.58rem; font-weight: 700; border-radius: 4px;">Alert</span>
+                </div>
+                <div class="gt-stat-pill-lbl">Paid but Offline</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+        <a href="?filter=inactive" class="gt-stat-pill gt-stat-pill-inactive h-100 {% if filter_type == 'inactive' %}border-secondary shadow-sm{% endif %}">
             <div class="gt-stat-pill-icon"><i class="fa-solid fa-circle text-secondary" style="font-size: 0.75rem; box-shadow: 0 0 8px rgba(148, 163, 184, 0.8); border-radius: 50%;"></i></div>
             <div>
                 <div class="gt-stat-pill-val text-secondary">{{ stats.inactive|default:inactive_count|default:"0" }}</div>

@@ -436,6 +436,8 @@ def api_active_pppoe_usernames(request):
     from network_manager.services import MikrotikAPI
     from django.http import JsonResponse
 
+    from django.core.cache import cache
+
     devices = MikrotikDevice.objects.all()
     active_usernames = set()
     offline_routers = []
@@ -449,6 +451,8 @@ def api_active_pppoe_usernames(request):
                     active_usernames.add(au.get("name"))
         except Exception:
             offline_routers.append(device.id)
+
+    cache.set("active_pppoe_usernames_set", active_usernames, 30)
 
     return JsonResponse(
         {

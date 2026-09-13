@@ -152,6 +152,7 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
     | `seen_user_{id}` | Last-activity timestamp for a staff/admin user | 86400s (30 days) | `billing/middleware.py` | Expires naturally |
     | `live_monitoring_data` | Cached Mikrotik live monitoring API response | 30s | `billing/views/api/dashboard.py`, `billing/tasks.py` | Overwritten on each poll cycle |
     | `dashboard_stats_{date}` | Cached dashboard statistics for a specific date | 300s (5min) | `billing/views/dashboard.py` | Expires naturally |
+    | `active_pppoe_usernames_set` | Set of connected PPPoE usernames from Mikrotik routers | 30s | `billing/views/api/network.py`, `billing/views/customers/list.py` | Overwritten on each poll/request cycle |
 
 24. **THE 400-LINE CIRCUIT BREAKER LAW (Just-In-Time Operation Cleanup)**:
     * **THE TRIGGER**: Whenever an AI touches, edits, or diagnoses a bug in ANY file that exceeds **400 lines** (template, script, or view):
