@@ -18,6 +18,7 @@ from django.db.models import Count, Sum, Q, Max
 from django.core.paginator import Paginator
 import json
 from datetime import timedelta, datetime
+from decimal import Decimal, InvalidOperation
 from billing.models import (
     SystemAdmin,
     SubscriptionPlan,
@@ -392,17 +393,50 @@ def user_cignal_logs_view(request, customer_id):
 
 
 @login_required
+@transaction.atomic
 def apply_cignal_addon(request):
     if request.method == "POST":
         request_id = request.POST.get("request_id")
         customer_id = request.POST.get("customer_id")
-        cignalplay_no = request.POST.get("cignalplay_no")
-        cignalplay_date = request.POST.get("cignalplay_date")
+        cignalplay_no = request.POST.get("cignalplay_no", "").strip()
+        cignalplay_date_raw = request.POST.get("cignalplay_date")
+        expiration_date_raw = request.POST.get("expiration_date") or request.POST.get("new_expiration_date")
         addon_type = request.POST.get("addon_type")
+        account_name = (
+            request.POST.get("account_name", "").strip()
+            or request.POST.get("label", "").strip()
+        )
+        payment_method = request.POST.get("payment_method", "Cash").strip()
+        reference_no = request.POST.get("reference_no", "").strip()
+
+        # Parse initial payment amount
+        initial_amount_raw = request.POST.get("initial_amount") or request.POST.get("amount") or "0"
+        try:
+            initial_amount = Decimal(str(initial_amount_raw).replace(",", "").strip())
+        except (InvalidOperation, ValueError, TypeError):
+            initial_amount = Decimal("0.00")
 
         customer = get_object_or_404(Customer, id=customer_id)
 
-        # Resolve request
+        # Parse activation date
+        if cignalplay_date_raw:
+            try:
+                activation_date = datetime.fromisoformat(cignalplay_date_raw).date()
+            except (ValueError, TypeError):
+                activation_date = timezone.localtime().date()
+        else:
+            activation_date = timezone.localtime().date()
+
+        # Parse First Due Date / Expiration Date
+        if expiration_date_raw:
+            try:
+                expiration_date = datetime.fromisoformat(expiration_date_raw).date()
+            except (ValueError, TypeError):
+                expiration_date = activation_date + timedelta(days=30)
+        else:
+            expiration_date = activation_date + timedelta(days=30)
+
+        # Resolve pending request if provided
         if request_id:
             try:
                 addon_req = AddOnRequest.objects.get(id=request_id)
@@ -422,42 +456,70 @@ def apply_cignal_addon(request):
                 pending_req.status = "Resolved"
                 pending_req.save()
 
-        account_name = request.POST.get("account_name", "").strip() or request.POST.get("label", "").strip()
-
-        # Update customer profile
+        # Update customer profile summary fields
         is_box = "box" in (addon_type or "").lower()
         if is_box:
             customer.cignalbox_no = cignalplay_no
-            customer.cignalbox_date = cignalplay_date
+            customer.cignalbox_date = activation_date
             customer.cignalbox_adjustedby = request.user.username
         else:
             customer.cignalplay_no = cignalplay_no
-            customer.cignalplay_date = cignalplay_date
+            customer.cignalplay_date = activation_date
             customer.cignalplay_adjustedby = request.user.username
         customer.save()
 
-        # Log to CignalPlay table
-        CignalPlay.objects.create(
+        # Create CignalPlay subscription record (One-to-Many)
+        sub_name = account_name or f"{'Cignal Box' if is_box else 'Cignal Play'} - {cignalplay_no}"
+        subscription = CignalPlay.objects.create(
             customer=customer,
-            plan_name=addon_type or "Cignal Play Add-on",
+            plan_name=addon_type or ("Cignal Box Add-on" if is_box else "Cignal Play Add-on"),
             addon_type="Cignal Box" if is_box else "Cignal Play",
-            account_name=account_name or f"{'Cignal Box' if is_box else 'Cignal Play'} - {cignalplay_no}",
+            account_name=sub_name,
             account_number=cignalplay_no,
-            start_date=cignalplay_date,
+            start_date=activation_date,
+            expiration_date=expiration_date,
+            end_date=expiration_date,
+            amount_paid=initial_amount,
             adjusted_by=request.user.username,
         )
 
+        # Crucial: Automatically generate a Payment record for the Initial Payment Amount
+        if initial_amount > 0:
+            Payment.objects.create(
+                customer=customer,
+                username=customer.pppoe_username or customer.full_name,
+                plan_name=f"{subscription.addon_type} ({subscription.plan_name})",
+                amount=initial_amount,
+                payment_method=payment_method or "Cash",
+                reference_no=reference_no or f"ACT-{customer.id}-{subscription.id}",
+                reason=f"Cignal Activation: {subscription.account_name} ({subscription.account_number})",
+                expires_at=expiration_date or customer.expires_at,
+                paid_at=timezone.now(),
+                payment_date_received=timezone.now(),
+                adjusted_by=request.user.username,
+            )
+
+            AuditLog.objects.create(
+                customer=customer,
+                action_type="Cignal Activation Payment",
+                old_value="New Subscription",
+                new_value=f"Initial Payment: ₱{initial_amount:,.2f} | Due Date: {expiration_date.strftime('%Y-%m-%d')} | Acct: {cignalplay_no}",
+                adjusted_by=request.user.username,
+            )
+
         # Notification
+        pay_info = f" with initial payment ₱{initial_amount:,.2f}" if initial_amount > 0 else ""
         Notification.objects.create(
-            title="Cignal Add-on Applied",
-            message=f"{customer.full_name} applied for {addon_type or 'Cignal Play'} (Acct: {cignalplay_no}).",
+            title="Cignal Add-on Activated",
+            message=f"{customer.full_name} activated {subscription.addon_type} ({sub_name}){pay_info} by {request.user.username}. Due: {expiration_date.strftime('%b %d, %Y')}.",
             notification_type="cignal",
             link=f"/customer/{customer.id}/cignal-logs/",
         )
 
-        messages.success(
-            request, f"Add-on applied successfully for {customer.full_name}."
-        )
+        success_msg = f"Cignal {subscription.addon_type} activated successfully for {customer.full_name}!"
+        if initial_amount > 0:
+            success_msg += f" Initial payment of ₱{initial_amount:,.2f} recorded (Due: {expiration_date.strftime('%b %d, %Y')})."
+        messages.success(request, success_msg)
 
     return redirect(request.META.get("HTTP_REFERER", "cignal_dashboard"))
 

@@ -119,17 +119,9 @@
             <div class="info-card {% if pending_cignal_addon %}cignal-pending-card{% endif %}">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3 class="info-title mb-0"><i class="fas fa-tv"></i> Add-ons & Extra</h3>
-                    <div class="d-flex align-items-center gap-1">
-                        {% if pending_cignal_addon %}
-                        <a href="{% url 'cignal_dashboard' %}?highlight_customer={{ customer.id }}" class="btn btn-sm btn-outline-info" title="Manage in Cignal Dashboard"><i class="fas fa-satellite-dish me-1"></i> Hub</a>
-                        <button class="btn btn-sm btn-primary shadow-sm fw-bold cignal-pulse-btn" data-bs-toggle="modal" data-bs-target="#cignalModal"><i class="fas fa-bolt me-1"></i> Apply Add-on</button>
-                        {% else %}
-                        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#cignalModal"><i class="fas fa-plus me-1"></i> Add-on</button>
-                        {% endif %}
-                        <button class="btn btn-sm btn-success shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#cignalPaymentModal" title="Reload / Pay Cignal Subscription">
-                            <i class="fas fa-coins me-1"></i> Reload
-                        </button>
-                    </div>
+                    <a href="{% url 'cignal_dashboard' %}?highlight_customer={{ customer.id }}" class="btn btn-sm btn-outline-info rounded-pill px-3 shadow-sm fw-semibold" title="Manage all Cignal accounts & operations in Cignal Hub">
+                        <i class="fas fa-satellite-dish me-1"></i> Go to Cignal Hub
+                    </a>
                 </div>
 
                 {% if pending_cignal_addon %}
@@ -145,7 +137,9 @@
                             </small>
                         </div>
                     </div>
-                    <span class="badge bg-warning text-dark px-2 py-1" style="font-size: 0.72rem;">Action Needed</span>
+                    <a href="{% url 'cignal_dashboard' %}?highlight_customer={{ customer.id }}" class="btn btn-sm btn-warning text-dark py-0 px-2 fw-semibold" style="font-size: 0.74rem;">
+                        Go to Hub <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
                 </div>
                 {% endif %}
 
@@ -164,17 +158,18 @@
                                     </span>
                                     <strong class="text-light" style="font-size: 0.85rem;">{{ sub.account_name|default:sub.plan_name }}</strong>
                                 </div>
-                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2 py-0" style="font-size: 0.72rem;" onclick="openCignalPaymentModal({subscriptionId: '{{ sub.id }}', customerId: '{{ customer.id }}', customerName: '{{ customer.full_name|escapejs }}', pppoe: '{{ customer.pppoe_username|escapejs }}', expirationDate: '{% if sub.expiration_date %}{{ sub.expiration_date|date:'Y-m-d' }}{% elif sub.end_date %}{{ sub.end_date|date:'Y-m-d' }}{% endif %}'})">
-                                    <i class="fas fa-coins me-1"></i> Pay
-                                </button>
+                                <span class="badge {% if sub.is_active %}bg-success-subtle text-success border border-success-subtle{% else %}bg-secondary-subtle text-secondary border border-secondary-subtle{% endif %}" style="font-size: 0.72rem;">
+                                    {% if sub.is_active %}<i class="fas fa-check-circle me-1"></i>Active{% else %}<i class="fas fa-clock me-1"></i>Expired{% endif %}
+                                </span>
                             </div>
                             <div class="d-flex justify-content-between align-items-center mt-1 text-muted" style="font-size: 0.76rem;">
                                 <span>Acct: <strong class="font-monospace text-info">{{ sub.account_number|default:"—" }}</strong></span>
                                 <span>
+                                    Due Date: 
                                     {% if sub.expiration_date or sub.end_date %}
-                                    Exp: <span class="fw-bold text-light">{{ sub.expiration_date|default:sub.end_date|date:"M d, Y" }}</span>
+                                    <strong class="{% if sub.is_active %}text-light{% else %}text-danger{% endif %}">{{ sub.expiration_date|default:sub.end_date|date:"M d, Y" }}</strong>
                                     {% else %}
-                                    <span class="text-muted">No Expiry Set</span>
+                                    <span class="text-muted">No Due Date</span>
                                     {% endif %}
                                 </span>
                             </div>
