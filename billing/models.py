@@ -56,6 +56,33 @@ class SubscriptionPlan(models.Model):
         ordering = ["price"]
 
 
+class AddonPlan(models.Model):
+    ADDON_TYPE_CHOICES = (
+        ("Cignal Play", "Cignal Play"),
+        ("Cignal Box", "Cignal Box"),
+        ("Other", "Other"),
+    )
+
+    name = models.CharField(max_length=150)
+    addon_type = models.CharField(
+        max_length=50, choices=ADDON_TYPE_CHOICES, default="Cignal Play"
+    )
+    duration_days = models.IntegerField(default=30)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    description = models.TextField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.addon_type}) - ₱{self.price}"
+
+    class Meta:
+        ordering = ["price"]
+        verbose_name = "Add-on Plan"
+        verbose_name_plural = "Add-on Plans"
+
+
 class SystemAdmin(models.Model):
     ROLE_CHOICES = (
         ("Admin", "Admin"),

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import AccountType, Customer, Agent, Barangay, Payment, JobOrder
+from .models import AccountType, Customer, Agent, Barangay, Payment, JobOrder, AddonPlan
 
 
 # Helpers for RBAC
@@ -153,3 +153,11 @@ class BarangayAdmin(admin.ModelAdmin):
         if not request.user.is_superuser:
             return False
         return super().has_module_permission(request)
+
+
+@admin.register(AddonPlan)
+class AddonPlanAdmin(admin.ModelAdmin):
+    list_display = ("name", "addon_type", "duration_days", "price", "is_active", "created_at")
+    list_filter = ("addon_type", "is_active")
+    search_fields = ("name", "description")
+

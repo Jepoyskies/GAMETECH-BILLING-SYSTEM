@@ -35,7 +35,9 @@ from billing.models import (
     Notification,
     ImprovementRequest,
     MessageTemplate,
+    AddonPlan,
 )
+from billing.forms import AddonPlanForm
 import requests
 from network_manager.models import MikrotikDevice, NapBox
 from network_manager.services import MikrotikAPI
@@ -301,3 +303,115 @@ def update_message_template(request, template_id):
     template.save()
     messages.success(request, f"Template '{template.name}' updated successfully.")
     return redirect("message_templates")
+
+
+# ==========================================
+# AddonPlan Pricing Management (Admin Only)
+# ==========================================
+
+@login_required
+@role_required(["Admin"])
+def addon_plan_list(request):
+    user_role = getattr(request.user, "role", None)
+    if user_role != "Admin" and not request.user.is_staff and not request.user.is_superuser:
+        messages.error(request, "Access denied. Only Admins can access Add-on Pricing.")
+        return redirect("admin_panel")
+
+    plans = AddonPlan.objects.all().order_by("price")
+    form = AddonPlanForm()
+
+    context = {
+        "plans": plans,
+        "form": form,
+        "title": "Add-on Pricing Configuration",
+        "total_count": plans.count(),
+        "active_count": plans.filter(is_active=True).count(),
+        "cignal_play_count": plans.filter(addon_type="Cignal Play").count(),
+        "cignal_box_count": plans.filter(addon_type="Cignal Box").count(),
+    }
+    return render(request, "billing/addon_plans_list.html", context)
+
+
+@login_required
+@role_required(["Admin"])
+def create_addon_plan(request):
+    user_role = getattr(request.user, "role", None)
+    if user_role != "Admin" and not request.user.is_staff and not request.user.is_superuser:
+        messages.error(request, "Access denied. Only Admins can create Add-on Plans.")
+        return redirect("admin_panel")
+
+    if request.method == "POST":
+        form = AddonPlanForm(request.POST)
+        try:
+            if form.is_valid():
+                plan = form.save()
+                messages.success(request, f"Add-on Plan '{plan.name}' created successfully!")
+            else:
+                err_list = [f"{f}: {e[0]}" for f, e in form.errors.items()]
+                messages.error(request, f"Could not create plan: {'; '.join(err_list)}")
+        except Exception as e:
+            messages.error(request, f"Error saving Add-on Plan: {str(e)}")
+    return redirect("addon_plan_list")
+
+
+@login_required
+@role_required(["Admin"])
+def edit_addon_plan(request, pk):
+    user_role = getattr(request.user, "role", None)
+    if user_role != "Admin" and not request.user.is_staff and not request.user.is_superuser:
+        messages.error(request, "Access denied. Only Admins can edit Add-on Plans.")
+        return redirect("admin_panel")
+
+    plan = get_object_or_404(AddonPlan, pk=pk)
+    if request.method == "POST":
+        form = AddonPlanForm(request.POST, instance=plan)
+        try:
+            if form.is_valid():
+                updated = form.save()
+                messages.success(request, f"Add-on Plan '{updated.name}' updated successfully!")
+            else:
+                err_list = [f"{f}: {e[0]}" for f, e in form.errors.items()]
+                messages.error(request, f"Could not update plan: {'; '.join(err_list)}")
+        except Exception as e:
+            messages.error(request, f"Error updating Add-on Plan: {str(e)}")
+    return redirect("addon_plan_list")
+
+
+@login_required
+@role_required(["Admin"])
+def delete_addon_plan(request, pk):
+    user_role = getattr(request.user, "role", None)
+    if user_role != "Admin" and not request.user.is_staff and not request.user.is_superuser:
+        messages.error(request, "Access denied. Only Admins can delete Add-on Plans.")
+        return redirect("admin_panel")
+
+    plan = get_object_or_404(AddonPlan, pk=pk)
+    if request.method == "POST":
+        try:
+            name = plan.name
+            plan.delete()
+            messages.success(request, f"Add-on Plan '{name}' deleted successfully!")
+        except Exception as e:
+            messages.error(request, f"Error deleting Add-on Plan: {str(e)}")
+    return redirect("addon_plan_list")
+
+
+@login_required
+@role_required(["Admin"])
+def toggle_addon_plan(request, pk):
+    user_role = getattr(request.user, "role", None)
+    if user_role != "Admin" and not request.user.is_staff and not request.user.is_superuser:
+        messages.error(request, "Access denied. Only Admins can modify Add-on Plans.")
+        return redirect("admin_panel")
+
+    plan = get_object_or_404(AddonPlan, pk=pk)
+    if request.method == "POST":
+        try:
+            plan.is_active = not plan.is_active
+            plan.save()
+            status_label = "activated" if plan.is_active else "deactivated"
+            messages.success(request, f"Add-on Plan '{plan.name}' {status_label} successfully!")
+        except Exception as e:
+            messages.error(request, f"Error toggling Add-on Plan status: {str(e)}")
+    return redirect("addon_plan_list")
+
