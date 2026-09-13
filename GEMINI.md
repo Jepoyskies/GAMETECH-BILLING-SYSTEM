@@ -69,6 +69,13 @@ python -m py_compile path/to/file.py
 # Local PowerShell Python execution (Zero parsing errors via stdin pipe - Rule #33)
 'content = open("path/to/file.html", "r", encoding="utf-8").read(); print(len(content))' | python -
 
+# Multi-line PowerShell here-string Python execution
+@'
+import re
+content = open("path/to/file.html", "r", encoding="utf-8").read()
+print(len(content))
+'@ | python -
+
 # Remote Python Execution Protocol (PowerShell stdin pipe — zero syntax escaping errors)
 "<python_code_here>" | ssh root@143.198.207.144 "docker exec -i gametech-billing-system_web_1 python manage.py shell"
 

@@ -238,9 +238,17 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
 
 33. **THE POWERSHELL STDIN PIPE PROTOCOL (Zero Parsing Failures on Windows)**:
     * **CRITICAL CONTEXT**: When executing local Python one-liners on Windows PowerShell, PowerShell intercepts and mishandles quotation marks, semicolons, curly braces, and regex backslashes in `-c "..."` commands, causing cryptic `ParserError` or `UnexpectedToken` exceptions.
-    * **MANDATORY**: Local PowerShell commands that execute Python must either use single-quoted outer strings without inner quote conflicts or pipe the raw script directly into `python -` via stdin:
+    * **MANDATORY**: Local PowerShell commands that execute Python must either use single-quoted outer strings without inner quote conflicts or pipe the raw script directly into `python -` via stdin (using single-quotes or PowerShell here-strings `@' ... '@`):
       ```powershell
       'content = open("file.html", "r", encoding="utf-8").read(); print(len(content))' | python -
+      ```
+      Or for multi-line scripts:
+      ```powershell
+      @'
+      import re
+      content = open("file.html", "r", encoding="utf-8").read()
+      print(len(content))
+      '@ | python -
       ```
     * Guarantees 100% clean local Python execution without shell quote escaping failures.
 
