@@ -422,6 +422,8 @@ def apply_cignal_addon(request):
                 pending_req.status = "Resolved"
                 pending_req.save()
 
+        account_name = request.POST.get("account_name", "").strip() or request.POST.get("label", "").strip()
+
         # Update customer profile
         is_box = "box" in (addon_type or "").lower()
         if is_box:
@@ -438,6 +440,9 @@ def apply_cignal_addon(request):
         CignalPlay.objects.create(
             customer=customer,
             plan_name=addon_type or "Cignal Play Add-on",
+            addon_type="Cignal Box" if is_box else "Cignal Play",
+            account_name=account_name or f"{'Cignal Box' if is_box else 'Cignal Play'} - {cignalplay_no}",
+            account_number=cignalplay_no,
             start_date=cignalplay_date,
             adjusted_by=request.user.username,
         )

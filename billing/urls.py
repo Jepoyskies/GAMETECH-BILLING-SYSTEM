@@ -207,6 +207,7 @@ urlpatterns = [
     ),
     path("cignal-play/", views.cignal_play_list_view, name="cignal_play_list"),
     path("cignal-play/apply/", views.apply_cignal_addon, name="apply_cignal_addon"),
+    path("cignal-play/payment/", views.process_cignal_payment, name="process_cignal_payment"),
     path("add-ons/", views.add_on_payments_view, name="add_on_payments"),
     path(
         "cignal-play/approve/<int:request_id>/",

@@ -74,7 +74,14 @@
               <div class="fw-semibold" style="font-size:0.85rem;">{{ log.created_at|date:"M d, Y" }}</div>
               <div class="text-muted" style="font-size:0.75rem;">{{ log.created_at|date:"h:i A" }}</div>
             </td>
-            <td><span class="fw-bold" style="color:#2563eb;">{{ log.plan_name }}</span></td>
+            <td>
+              <span class="fw-bold" style="color:#2563eb;">{{ log.addon_type|default:log.plan_name }}</span>
+              {% if log.account_name %}
+                <div class="small text-muted" style="font-size:0.75rem;">{{ log.account_name }}{% if log.account_number %} &bull; <span class="font-monospace text-info">{{ log.account_number }}</span>{% endif %}</div>
+              {% elif log.account_number %}
+                <div class="small text-muted" style="font-size:0.75rem;">Acct: <span class="font-monospace text-info">{{ log.account_number }}</span></div>
+              {% endif %}
+            </td>
             <td>
               {% if log.start_date %}
                 <span class="pill pill-active"><span class="pill-dot"></span>{{ log.start_date|date:"M d, Y" }}</span>

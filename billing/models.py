@@ -528,8 +528,13 @@ class CignalPlay(models.Model):
         Customer, on_delete=models.CASCADE, related_name="cignal_plans"
     )
     plan_name = models.CharField(max_length=255)
+    addon_type = models.CharField(max_length=50, default="Cignal Play")
+    account_number = models.CharField(max_length=100, null=True, blank=True)
+    account_name = models.CharField(max_length=150, null=True, blank=True, help_text="e.g. Living Room TV")
+    amount_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     start_date = models.DateTimeField(null=True, blank=True)
     end_date = models.DateTimeField(null=True, blank=True)
+    expiration_date = models.DateTimeField(null=True, blank=True)
     adjusted_by = models.CharField(max_length=100, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -537,8 +542,24 @@ class CignalPlay(models.Model):
         db_table = "cignal_play"
         ordering = ["-created_at"]
 
+    @property
+    def label(self):
+        return self.account_name or self.plan_name or "Cignal Device"
+
+    @property
+    def cignal_account_number(self):
+        return self.account_number or ""
+
+    def save(self, *args, **kwargs):
+        if self.expiration_date and not self.end_date:
+            self.end_date = self.expiration_date
+        elif self.end_date and not self.expiration_date:
+            self.expiration_date = self.end_date
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.plan_name} for {self.customer.full_name}"
+        lbl = f" ({self.account_name})" if self.account_name else ""
+        return f"{self.addon_type or self.plan_name}{lbl} - {self.account_number or 'No Acct'} for {self.customer.full_name}"
 
 
 class AuditLog(models.Model):

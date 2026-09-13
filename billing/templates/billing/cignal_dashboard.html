@@ -142,9 +142,10 @@
                 <thead>
                   <tr>
                     <th>Customer</th>
-                    <th>Account No.</th>
+                    <th>Account No. / Device</th>
                     <th>Activation Date</th>
                     <th>Adjusted By</th>
+                    <th class="text-end">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -156,11 +157,27 @@
                       </a>
                     </td>
                     <td>
-                      {% if customer.cignalplay_no %}
-                        <div><span class="badge bg-info-subtle text-info me-1" style="font-size:0.65rem;">PLAY</span><span class="font-monospace fw-bold text-primary" style="letter-spacing:0.04em;">{{ customer.cignalplay_no }}</span></div>
-                      {% endif %}
-                      {% if customer.cignalbox_no %}
-                        <div class="{% if customer.cignalplay_no %}mt-1{% endif %}"><span class="badge bg-warning-subtle text-warning me-1" style="font-size:0.65rem;">BOX</span><span class="font-monospace fw-bold text-warning" style="letter-spacing:0.04em;">{{ customer.cignalbox_no }}</span></div>
+                      {% if customer.cignal_plans.all %}
+                        {% for plan in customer.cignal_plans.all %}
+                          <div class="mb-1">
+                            <span class="badge {% if 'Box' in plan.addon_type %}bg-warning-subtle text-warning{% else %}bg-info-subtle text-info{% endif %} me-1" style="font-size:0.65rem;">
+                              {{ plan.addon_type|default:"CIGNAL" }}
+                            </span>
+                            <span class="font-monospace fw-bold {% if 'Box' in plan.addon_type %}text-warning{% else %}text-primary{% endif %}" style="letter-spacing:0.03em;">
+                              {{ plan.account_number|default:"—" }}
+                            </span>
+                            {% if plan.account_name %}
+                              <small class="text-muted ms-1">({{ plan.account_name }})</small>
+                            {% endif %}
+                          </div>
+                        {% endfor %}
+                      {% else %}
+                        {% if customer.cignalplay_no %}
+                          <div><span class="badge bg-info-subtle text-info me-1" style="font-size:0.65rem;">PLAY</span><span class="font-monospace fw-bold text-primary" style="letter-spacing:0.04em;">{{ customer.cignalplay_no }}</span></div>
+                        {% endif %}
+                        {% if customer.cignalbox_no %}
+                          <div class="{% if customer.cignalplay_no %}mt-1{% endif %}"><span class="badge bg-warning-subtle text-warning me-1" style="font-size:0.65rem;">BOX</span><span class="font-monospace fw-bold text-warning" style="letter-spacing:0.04em;">{{ customer.cignalbox_no }}</span></div>
+                        {% endif %}
                       {% endif %}
                     </td>
                     <td>
@@ -175,10 +192,15 @@
                       {% endif %}
                     </td>
                     <td><small class="text-muted">{{ customer.cignalbox_adjustedby|default:customer.cignalplay_adjustedby|default:"-" }}</small></td>
+                    <td class="text-end">
+                      <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2 py-0" style="font-size: 0.75rem;" onclick="openCignalPaymentModal({customerId: '{{ customer.id }}', customerName: '{{ customer.full_name|escapejs }}', pppoe: '{{ customer.pppoe_username|escapejs }}', subscriptions: [{% for s in customer.cignal_plans.all %}{id: '{{ s.id }}', addon_type: '{{ s.addon_type|escapejs }}', account_name: '{{ s.account_name|escapejs }}', account_number: '{{ s.account_number|escapejs }}', expiration_date: '{% if s.expiration_date %}{{ s.expiration_date|date:'Y-m-d' }}{% elif s.end_date %}{{ s.end_date|date:'Y-m-d' }}{% endif %}'}{% if not forloop.last %},{% endif %}{% endfor %}]})">
+                        <i class="fas fa-coins me-1"></i> Reload
+                      </button>
+                    </td>
                   </tr>
                   {% empty %}
                   <tr>
-                    <td colspan="4">
+                    <td colspan="5">
                       <div class="cignal-empty-state">
                         <div class="cignal-empty-icon"><i class="fas fa-users text-muted"></i></div>
                         <div class="cignal-empty-title">No Active Cignal Subscribers</div>
@@ -281,6 +303,9 @@
 {% for app in applications %}
   {% include "billing/partials/_cignal_activation_modal.html" with modal_id="cignalAppModal_" modal_suffix=app.id target_customer=app.customer target_request=app from_dashboard=True %}
 {% endfor %}
+
+<!-- Flexible Cignal Payment & Expiration Reload Modal -->
+{% include "billing/partials/_cignal_payment_modal.html" %}
 
 {% if request.GET.highlight_customer %}
 <script>
