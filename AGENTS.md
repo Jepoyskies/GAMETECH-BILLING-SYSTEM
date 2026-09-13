@@ -205,7 +205,26 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
       "<python_script_string>" | ssh root@143.198.207.144 "docker exec -i gametech-billing-system_web_1 python manage.py shell"
       ```
     * Guarantees 100% clean remote execution without quote or parenthesis escaping errors.
-    * **Rule 29b (Headless RequestFactory Auth Guard)**: When using Django `RequestFactory` to test views protected by `@login_required` via headless Python scripts, always assign a mock user `req.user = User.objects.filter(is_staff=True).first()` to prevent `AttributeError: 'WSGIRequest' object has no attribute 'user'` crashes.
+    * **Rule 29b (Headless RequestFactory Auth Guard & HTML Response Protocol)**:
+      * When using Django `RequestFactory` to test views protected by `@login_required` via headless Python scripts, always assign a mock staff user `req.user = User.objects.filter(is_staff=True).first()` to prevent `AttributeError: 'WSGIRequest' object has no attribute 'user'` crashes.
+      * Note that standard Django views wrapped in decorators return `HttpResponse` (not `TemplateResponse`), so accessing `resp.context_data` will raise `AttributeError`.
+      * **MANDATORY VERIFICATION TEMPLATE**: Validate headless view rendering using `resp.content.decode('utf-8')`:
+        ```powershell
+        @'
+        from django.test import RequestFactory
+        from django.contrib.auth import get_user_model
+        from billing.views.subscriptions import subscription_plans_view
+
+        User = get_user_model()
+        rf = RequestFactory()
+        req = rf.get('/subscriptions/')
+        req.user = User.objects.filter(is_staff=True).first()
+        resp = subscription_plans_view(req)
+        html = resp.content.decode('utf-8')
+        print("STATUS:", resp.status_code)
+        print("ASSERTION:", "Expected String" in html)
+        '@ | ssh root@143.198.207.144 "docker exec -i gametech-billing-system_web_1 python manage.py shell"
+        ```
 
 30. **THE REUSABLE MODAL & PARTIAL VARIABLE GUARD LAW (Zero Orphan Variable Crashes)**:
     * **THE TRIGGER**: When creating or modifying partial templates (modals, cards, action popups) that can be included both on detail views (where `customer` exists in context) and index/dashboard views (where `customer` is absent):
@@ -222,21 +241,24 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
     * **MANDATORY**: Define a lightweight `@property def is_active(self)` directly on the Django model. Templates must simply check `{% if item.is_active %}`. Ensures single-source-of-truth status across Dashboard, Profile, and Customer Portal.
 
 32. **THE CONTAINER PORT & COMPOSE HEALING PROTOCOL**:
-    * **THE SYMPTOM**: After running `docker restart gametech-billing-system_web_1`, if `docker ps` returns an empty container list or Nginx returns `502 Bad Gateway`:
-    * **DO NOT** assume application code has crashed or start editing Python view logic.
-    * **MANDATORY FIRST STEP**: Run `docker-compose up -d` in `/root/GAMETECH-BILLING-SYSTEM`:
+    * **ROUTINE DEPLOYS VS. COMPOSE HEALING**:
+      * For routine code/template updates, **STRICTLY** use `docker restart gametech-billing-system_web_1`. It is fast, clean, and avoids invoking Docker Compose.
+      * **ONLY** invoke Docker Compose if container ports drop or Nginx returns `502 Bad Gateway` (e.g. `docker ps` lacks `0.0.0.0:8000->8000`).
+    * **DOCKER COMPOSE V2 SYNTAX STANDARD (No Hyphens)**:
+      * When Compose healing is required, **ALWAYS** use modern Compose V2 syntax: `docker compose up -d` (with a space).
+      * **FORBIDDEN**: Using legacy `docker-compose` (with hyphen, v1.29). Legacy Compose v1.29 crashes on modern Docker Engine v26+ with `KeyError: 'ContainerConfig'` when inspecting pruned container metadata, and freezes automated deployments with interactive prompts (`Continue with the new image? [yN]`).
+    * **MANDATORY HEALING COMMAND**:
       ```bash
-      ssh root@143.198.207.144 "cd /root/GAMETECH-BILLING-SYSTEM && docker-compose up -d"
+      ssh root@143.198.207.144 "cd /root/GAMETECH-BILLING-SYSTEM && docker compose up -d"
       ```
       This guarantees all dependent containers (Postgres, Redis, Celery, Web) and their port bindings (`0.0.0.0:8000->8000`) are fully re-established.
 
-32v2. **THE DOCKER GRACE & BRIDGE HEALING PROTOCOL (Transient Network Drop Guard)**:
-    * **THE SYMPTOM**: Running a bare `docker restart gametech-billing-system_web_1` occasionally causes transient Docker bridge network disconnections, dropped container bindings, or `502 Bad Gateway` if Gunicorn initializes before Docker's bridge interface settles.
-    * **MANDATORY DEPLOYMENT CHAIN**: When restarting the web container on production, ALWAYS chain a 2-second sleep followed by `docker-compose up -d --remove-orphans`:
+32v2. **THE ROUTINE DEPLOYMENT RESTART STANDARD (Fast & Safe)**:
+    * **STANDARD ROUTINE COMMAND**:
       ```bash
-      ssh root@143.198.207.144 "docker restart gametech-billing-system_web_1 && sleep 2 && cd /root/GAMETECH-BILLING-SYSTEM && docker-compose up -d --remove-orphans"
+      ssh root@143.198.207.144 "docker restart gametech-billing-system_web_1"
       ```
-    * Guarantees all inter-container bridge links (Postgres, Redis, Celery, Web) and port bindings (`0.0.0.0:8000->8000`) remain solid and reconnected with 0 transient dropouts, and suppresses interactive image recreation prompts (`Continue with the new image? [yN]`) from freezing unattended deployments.
+    * Never chain `docker compose up` to routine restarts unless port drops have been verified.
 
 33. **THE POWERSHELL STDIN PIPE PROTOCOL (Zero Parsing Failures on Windows)**:
     * **CRITICAL CONTEXT**: When executing local Python one-liners on Windows PowerShell, PowerShell intercepts and mishandles quotation marks, semicolons, curly braces, and regex backslashes in `-c "..."` commands, causing cryptic `ParserError` or `UnexpectedToken` exceptions.
@@ -252,12 +274,39 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
       print(len(content))
       '@ | python -
       ```
-    * Guarantees 100% clean local Python execution without shell quote escaping failures.
+      * Guarantees 100% clean local Python execution without shell quote escaping failures.
 
 34. **THE STAGED CHUNKING PROTOCOL (Monolith File Truncation Guard)**:
     * **THE PRINCIPLE**: When modifying or refactoring monolith files that exceed **1,000 lines** (e.g., `changelog.html`, `gametech_error_runbook.md`, legacy views):
     * **FORBIDDEN**: Attempting a single massive diff replacing hundreds of lines at once. Large single-block edits cause tool token truncation, context overflows, or regex mismatch failures.
     * **MANDATORY**: Chunk edits into 3–4 staged replacements of **150–250 lines** each. Run automated div parity validation (`<div\b` count == `</div>` count) after every single stage before proceeding to the next chunk.
+
+35. **THE STATUS VOCABULARY LAW (Hardware vs. Billing Disambiguation)**:
+    * **THE PRINCIPLE**: Never conflate hardware connectivity states with customer billing lifecycle states. They represent completely orthogonal domains:
+      * **Hardware Connectivity**: `Connected` (active PPPoE/DHCP session on MikroTik router) vs `Offline` (no active session).
+      * **Billing Lifecycle**: `Active` (paid up/valid date), `Expiring Soon` (near expiry), `Expired` (past due), `Suspended` (manually or auto-locked), `Inactive` (decommissioned/churned), `Pending` (not yet activated).
+      * **Outage (Critical Actionable State)**: `Active but Offline` (or `Paid but Offline`) — customers who are fully paid and active in billing, but disconnected/offline on the router. This represents a technical issue, fiber break, or outage requiring immediate technician dispatch.
+    * **FORBIDDEN**: Labeling active billing accounts as `"Disconnected (Inactive)"` or treating offline hardware as an inactive subscription. Always preserve the distinction across badges, APIs, and reports.
+
+36. **THE QUERYSET PRIORITY ORDERING LAW (Outage-First Triage)**:
+    * **THE PRINCIPLE**: In any administrative view listing customers or subscriptions (`/customers/`, `/subscriptions/`), subscribers requiring immediate intervention MUST appear at the top of the list by default.
+    * **MANDATORY**: Annotate querysets with a conditional `status_order` pushing critical actionable states (Outages / Active but Offline) to rank `0`:
+      ```python
+      from django.db.models import Case, When, Value, IntegerField
+
+      customers = customers.annotate(
+          status_order=Case(
+              When(status='active', is_connected=False, then=Value(0)),  # Outage: Active but Offline
+              When(status='active', is_connected=True, then=Value(1)),   # Normal: Active & Connected
+              When(status='expiring', then=Value(2)),
+              When(status='expired', then=Value(3)),
+              When(status='suspended', then=Value(4)),
+              default=Value(5),
+              output_field=IntegerField(),
+          )
+      ).order_by('status_order', '-created_at')
+      ```
+    * Guarantees that dispatchers and support staff instantly see subscribers experiencing outages without manual filtering.
 
 ---
 

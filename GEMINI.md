@@ -13,7 +13,7 @@ This workspace strictly adheres to the protocols defined in:
 | Request Type | Check FIRST | Then |
 |---|---|---|
 | **500 / Server Error** | `ssh root@143.198.207.144 "docker logs --since 2m gametech-billing-system_web_1 2>&1 \| tail -40"` | Traceback → file:line → 50-line read |
-| **502 Bad Gateway / Container stopped** | `ssh root@143.198.207.144 "cd /root/GAMETECH-BILLING-SYSTEM && docker-compose up -d"` | Ensures container & port 8000 are re-bound |
+| **502 Bad Gateway / Container stopped** | `ssh root@143.198.207.144 "cd /root/GAMETECH-BILLING-SYSTEM && docker compose up -d"` | Ensures container & port 8000 are re-bound (Compose V2) |
 | **UI broken / wrong layout** | `gametech_error_runbook.md` symptom index | Template partial → CSS selector |
 | **"Where is this page?" / URL paste** | `gametech_filing_index.md` URL column | Never grep urls.py or scan dirs |
 | **Data not showing / cache empty** | Redis keys: `ssh root@143.198.207.144 "docker exec gametech-billing-system_redis_1 redis-cli KEYS 'pattern*'"` | Then view logic |
@@ -50,10 +50,12 @@ This workspace strictly adheres to the protocols defined in:
 18. **PowerShell SSH Python Piping**: Always pipe Python script strings via stdin (`"<script>" | ssh ... "docker exec -i ... python manage.py shell"`). See AGENTS.md Rule #29.
 19. **Template Optional Variable Guard**: Reusable modals must guard context variables with `{% if %}` rather than `|default:unquoted_var`. See AGENTS.md Rule #30.
 20. **Model Status Property Standard**: Compute state on model (`@property def is_active`), not in templates. See AGENTS.md Rule #31.
-21. **Container Port & Compose Healing**: Run `docker-compose up -d` if restart drops port 8000 bindings. See AGENTS.md Rule #32.
-22. **Docker Grace Deployment Chain**: Chain `sleep 2 && cd /root/GAMETECH-BILLING-SYSTEM && docker-compose up -d --remove-orphans` when restarting web container on prod to prevent bridge drops. See AGENTS.md Rule #32v2.
+21. **Container Port & Compose Healing**: Run `docker compose up -d` (Compose V2) ONLY if restart drops port 8000 bindings (502 Bad Gateway). Never use legacy hyphenated `docker-compose`. See AGENTS.md Rule #32.
+22. **Routine Deploys vs. Compose Healing**: Routine code/template updates STRICTLY run `docker restart gametech-billing-system_web_1`. Reserve Compose V2 (`docker compose up -d`) exclusively for port drops. See AGENTS.md Rule #32v2.
 23. **PowerShell Stdin Pipe Protocol**: Local PowerShell Python one-liners must pipe raw script into `python -` via stdin to eliminate shell quote escaping errors. See AGENTS.md Rule #33.
 24. **Staged Chunking Protocol**: In monolith files (>1,000 lines), never attempt massive 300+ line diffs. Chunk into 150–250 lines and verify div parity after each stage. See AGENTS.md Rule #34.
+25. **The Status Vocabulary Law**: Never conflate hardware (`Connected`/`Offline`) and billing (`Active`, `Expired`, `Suspended`). Outages are `Active but Offline`. See AGENTS.md Rule #35.
+26. **Queryset Priority Ordering**: Views listing customers (`/customers/`, `/subscriptions/`) annotate `status_order` pushing critical actionable states (Outages, Active but Offline) to rank 0. See AGENTS.md Rule #36.
 
 ---
 
@@ -79,11 +81,27 @@ print(len(content))
 # Remote Python Execution Protocol (PowerShell stdin pipe — zero syntax escaping errors)
 "<python_code_here>" | ssh root@143.198.207.144 "docker exec -i gametech-billing-system_web_1 python manage.py shell"
 
-# Re-establish container network & port bindings (Compose Healing)
-ssh root@143.198.207.144 "cd /root/GAMETECH-BILLING-SYSTEM && docker-compose up -d"
+# Headless RequestFactory View Verification via Remote PowerShell Stdin Pipe (Rule #29b)
+@'
+from django.test import RequestFactory
+from django.contrib.auth import get_user_model
+from billing.views.subscriptions import subscription_plans_view
 
-# Restart production web container with Docker Grace (Chained bridge healing - Rule #32v2)
-ssh root@143.198.207.144 "docker restart gametech-billing-system_web_1 && sleep 2 && cd /root/GAMETECH-BILLING-SYSTEM && docker-compose up -d --remove-orphans"
+User = get_user_model()
+rf = RequestFactory()
+req = rf.get('/subscriptions/')
+req.user = User.objects.filter(is_staff=True).first()
+resp = subscription_plans_view(req)
+html = resp.content.decode('utf-8')
+print("STATUS:", resp.status_code)
+print("PAID BUT OFFLINE DETECTED:", "Paid but Offline" in html or "Active but Offline" in html)
+'@ | ssh root@143.198.207.144 "docker exec -i gametech-billing-system_web_1 python manage.py shell"
+
+# Re-establish container network & port bindings (Compose V2 Healing - only on 502/port drops)
+ssh root@143.198.207.144 "cd /root/GAMETECH-BILLING-SYSTEM && docker compose up -d"
+
+# Restart production web container (Routine deployments for Python/template updates)
+ssh root@143.198.207.144 "docker restart gametech-billing-system_web_1"
 
 # Check production logs — time-bounded (PREFERRED for recent 500s)
 ssh root@143.198.207.144 "docker logs --since 2m gametech-billing-system_web_1 2>&1 | tail -40"
