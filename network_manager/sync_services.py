@@ -73,10 +73,12 @@ class MikrotikAPI:
             
             # Format the output to strictly match requirements
             formatted_users = []
+            secret_usernames = set()
             for s in secrets:
                 name = s.get("name", "")
                 profile = s.get("profile", "")
                 comment = s.get("comment", "")
+                secret_usernames.add(name)
                 
                 is_active = name in active_usernames
                 
@@ -108,6 +110,20 @@ class MikrotikAPI:
                     "is_suspicious": is_suspicious,
                     "suspicious_reasons": ", ".join(suspicious_reasons)
                 })
+
+            # Detect active sessions running without a secret (e.g. transferred to another router without kick)
+            for au in active_users:
+                aname = au.get("name")
+                if aname and aname not in secret_usernames:
+                    formatted_users.append({
+                        "name": aname,
+                        "password": "",
+                        "profile": "(Active Session - No Secret)",
+                        "comment": f"Active IP: {au.get('address', 'N/A')} | Uptime: {au.get('uptime', 'N/A')}",
+                        "is_active": True,
+                        "is_suspicious": True,
+                        "suspicious_reasons": "Active session with no secret on this router (Transferred or Orphan)",
+                    })
                 
             return {"success": True, "data": formatted_users}
         except Exception as e:

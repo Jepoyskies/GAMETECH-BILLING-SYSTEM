@@ -74,19 +74,46 @@ def customer_kick_session(request, username):
     """Manually kicks the active PPPoE session without altering their billing status"""
     if request.method == "POST":
         customer = get_object_or_404(Customer, pppoe_username=username)
-        if customer.mikrotik_device:
-            from network_manager.services import MikrotikAPI
+        kicked = False
+        kicked_device_name = ""
+        from network_manager.models import MikrotikDevice
+        from network_manager.services import MikrotikAPI
 
+        if customer.mikrotik_device:
             api = MikrotikAPI(customer.mikrotik_device)
             success, msg = api.kick_active_user(username)
             if success:
+                kicked = True
+                kicked_device_name = customer.mikrotik_device.device_name
+
+        if not kicked:
+            # Check other routers (e.g. if user was transferred or active on old router)
+            exclude_id = customer.mikrotik_device_id if customer.mikrotik_device_id else -1
+            for other_dev in MikrotikDevice.objects.exclude(id=exclude_id):
+                try:
+                    oapi = MikrotikAPI(other_dev)
+                    osuccess, omsg = oapi.kick_active_user(username)
+                    if osuccess:
+                        kicked = True
+                        kicked_device_name = other_dev.device_name
+                        break
+                except Exception:
+                    pass
+
+        if kicked:
+            target_info = f" from {kicked_device_name}" if kicked_device_name else ""
+            if customer.mikrotik_device and kicked_device_name != customer.mikrotik_device.device_name:
+                messages.success(
+                    request,
+                    f"Active session for {username} was kicked{target_info}. Modem will now renegotiate onto {customer.mikrotik_device.device_name}."
+                )
+            else:
                 messages.success(
                     request, f"Active session for {username} was kicked successfully."
                 )
-            else:
-                messages.error(request, f"Failed to kick session for {username}: {msg}")
         else:
-            messages.error(request, "Customer has no Mikrotik device assigned.")
+            messages.error(request, f"No active session found for {username} across any online router.")
+
         return redirect("view_customer", customer_id=customer.id)
     return redirect("customer_list")
 
@@ -353,6 +380,7 @@ def bulk_transfer_router(request):
     if request.method == "POST":
         customer_ids = request.POST.getlist("customer_ids")
         target_device_id = request.POST.get("target_device_id")
+        kick_now = request.POST.get("kick_now") in ["1", "true", "True", "on"]
 
         if not customer_ids or not target_device_id:
             messages.error(request, "Please select customers and a target router.")
@@ -369,19 +397,24 @@ def bulk_transfer_router(request):
                 if str(customer.mikrotik_device_id) != str(target_device_id):
                     # Keep track of old device ID so the signal knows to delete the secret
                     customer._original_mikrotik_device_id = customer.mikrotik_device_id
+                    customer._kick_active_on_transfer = kick_now
 
                     customer.mikrotik_device = target_device
                     customer.save()  # Triggers post_save signal
                     transferred_count += 1
 
+            action_desc = " (active sessions kicked for immediate reconnection)" if kick_now else " (sessions preserved on old router until hardware swap)"
             messages.success(
                 request,
-                f"Successfully transferred {transferred_count} customers to {target_device.device_name}.",
+                f"Successfully transferred {transferred_count} customers to {target_device.device_name}{action_desc}.",
             )
         except Exception as e:
             messages.error(request, f"Error during transfer: {str(e)}")
 
-    return redirect("customer_list")
+        referrer = request.META.get("HTTP_REFERER")
+        if referrer:
+            return redirect(referrer)
+        return redirect("customer_list")
 
 
 @require_POST

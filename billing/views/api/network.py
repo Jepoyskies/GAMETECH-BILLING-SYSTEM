@@ -247,6 +247,77 @@ def api_customer_mikrotik_status(request, customer_id):
                         data["live_mac"] = secret.get("caller-id", "N/A")
                     break
 
+            # If disconnected on assigned router, check if they are active on another router (e.g. recent transfer)
+            if data["mt_status"] == "Disconnected":
+                from django.core.cache import cache
+                from network_manager.models import MikrotikDevice
+                live_data = cache.get("live_monitoring_data")
+                other_found = False
+                if live_data and "users" in live_data:
+                    for udata in live_data["users"]:
+                        if udata.get("user") == customer.pppoe_username:
+                            dev_ip = udata.get("device_ip")
+                            other_dev = MikrotikDevice.objects.filter(ip_address=dev_ip).first()
+                            if other_dev and other_dev.id != customer.mikrotik_device_id:
+                                data["mt_status"] = "Connected"
+                                data["is_different_router"] = True
+                                data["connected_router_name"] = other_dev.device_name
+                                data["connected_router_id"] = other_dev.id
+                                data["assigned_router_name"] = customer.mikrotik_device.device_name
+                                uptime_str = udata.get("uptime", "N/A")
+                                data["uptime"] = uptime_str
+                                data["rx_mbps"] = udata.get("rx_mbps", 0.0)
+                                data["tx_mbps"] = udata.get("tx_mbps", 0.0)
+                                if "w" in uptime_str:
+                                    data["stability"] = "Excellent"
+                                    data["stability_color"] = "success"
+                                elif "d" in uptime_str:
+                                    data["stability"] = "Good"
+                                    data["stability_color"] = "primary"
+                                elif "h" in uptime_str:
+                                    data["stability"] = "Fine"
+                                    data["stability_color"] = "info"
+                                else:
+                                    data["stability"] = "Unstable / Recent"
+                                    data["stability_color"] = "warning"
+                                other_found = True
+                                break
+
+                if not other_found:
+                    other_devices = MikrotikDevice.objects.exclude(id=customer.mikrotik_device_id)
+                    for odev in other_devices:
+                        try:
+                            oapi = MikrotikAPI(odev)
+                            oactive = oapi.get_active_pppoe_users()
+                            for oau in oactive:
+                                if oau.get("name") == customer.pppoe_username:
+                                    data["mt_status"] = "Connected"
+                                    data["is_different_router"] = True
+                                    data["connected_router_name"] = odev.device_name
+                                    data["connected_router_id"] = odev.id
+                                    data["assigned_router_name"] = customer.mikrotik_device.device_name
+                                    uptime_str = oau.get("uptime", "N/A")
+                                    data["uptime"] = uptime_str
+                                    data["live_mac"] = oau.get("caller-id", "N/A")
+                                    if "w" in uptime_str:
+                                        data["stability"] = "Excellent"
+                                        data["stability_color"] = "success"
+                                    elif "d" in uptime_str:
+                                        data["stability"] = "Good"
+                                        data["stability_color"] = "primary"
+                                    elif "h" in uptime_str:
+                                        data["stability"] = "Fine"
+                                        data["stability_color"] = "info"
+                                    else:
+                                        data["stability"] = "Unstable / Recent"
+                                        data["stability_color"] = "warning"
+                                    other_found = True
+                                    break
+                            if other_found:
+                                break
+                        except Exception:
+                            pass
+
             if getattr(api, "_connection_failed", False):
                 data["mt_status"] = "API Unreachable"
             else:

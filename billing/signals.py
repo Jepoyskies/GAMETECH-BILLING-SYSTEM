@@ -93,9 +93,9 @@ def sync_customer_to_mikrotik(sender, instance, created, **kwargs):
                 ).first()
                 if old_device:
                     old_api = MikrotikAPI(old_device)
-                    # This removes the secret but DO NOT kick the active session
-                    # so they remain connected until their router reconnects to the new OLT
-                    old_api.delete_pppoe_user(instance.pppoe_username, kick_active=False)
+                    # Check if immediate session kick was requested (default False preserves session until physical swap)
+                    kick_active = getattr(instance, "_kick_active_on_transfer", False)
+                    old_api.delete_pppoe_user(instance.pppoe_username, kick_active=kick_active)
             except Exception as e:
                 logger.warning(
                     f"Failed to cleanup orphaned PPPoE user {instance.pppoe_username} on old router: {e}"

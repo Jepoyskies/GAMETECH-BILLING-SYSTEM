@@ -377,9 +377,24 @@
 * **Exact Target Files**:
   * `billing/models.py` (`Customer`)
   * `billing/templates/billing/cignal_dashboard.html`
+### ERR-022: Customer Profile Shows Disconnected / Offline After Router Transfer While Still Active on Old Router
+* **Symptoms**:
+  * A customer is transferred from Router A to Router B in the system (via Sync Manager, Customer List, or Edit Profile).
+  * In the Customer Profile (`/customers/view/<id>/`), the status dot is red and says "Disconnected", even though the subscriber's modem is actively online on Router A.
+  * Clicking "Kick Session" in the profile fails with "No active session found".
+* **Root Causes**:
+  * `api_customer_mikrotik_status` in `billing/views/api/network.py` and `customer_kick_session` in `billing/views/customers/actions.py` queried ONLY `customer.mikrotik_device` (Router B).
+  * Because the secret was removed on Router A without kicking (`kick_active=False` from ERR-018), the session remained on Router A, invisible to Router B.
+* **Exact Target Files**:
+  * `billing/views/api/network.py` (`api_customer_mikrotik_status`)
+  * `billing/views/customers/actions.py` (`customer_kick_session`, `bulk_transfer_router`)
+  * `billing/signals.py` (`sync_customer_to_mikrotik`)
+  * `billing/templates/billing/view_customer/_scripts.html`
+  * `network_manager/sync_services.py` (`get_all_pppoe_users`)
 * **1-Step Fix**:
-  * Add `@property def username(self): return self.pppoe_username` on `Customer` in `billing/models.py` to prevent lookup crashes across any template.
-  * In `cignal_dashboard.html`, use `{{ app.customer.full_name|default:app.customer.pppoe_username }}`.
+  * In `billing/views/api/network.py`, if status is Disconnected on assigned router, check `live_monitoring_data` cache and other routers. If found active, report `mt_status: "Connected"`, `is_different_router: True`, and `connected_router_name`.
+  * In `customer_kick_session`, if session not on assigned router, search and kick on other routers.
+  * In `bulk_transfer_router` and transfer modals, provide a `kick_now` option (default checked) to immediately disconnect the old router session so the modem reconnects to the new router right away.
 
 ---
 

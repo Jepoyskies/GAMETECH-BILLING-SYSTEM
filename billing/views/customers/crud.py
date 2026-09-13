@@ -188,6 +188,8 @@ def edit_customer(request, customer_id):
 
         device_id = request.POST.get("device_id")
         if str(customer.mikrotik_device_id or "") != str(device_id or ""):
+            customer._original_mikrotik_device_id = customer.mikrotik_device_id
+            customer._kick_active_on_transfer = request.POST.get("kick_active_on_transfer", "1") in ["1", "true", "True", "on"]
             old_dev_name = (
                 customer.mikrotik_device.device_name
                 if customer.mikrotik_device

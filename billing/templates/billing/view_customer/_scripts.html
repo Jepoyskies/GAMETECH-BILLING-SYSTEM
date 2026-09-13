@@ -199,7 +199,11 @@ document.addEventListener("DOMContentLoaded", function() {
                 const statusContainer = document.getElementById('mt-status-container');
                 if (statusContainer) {
                     if (data.mt_status === 'Connected') {
-                        statusContainer.innerHTML = '<span class="text-success"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Connected</span>';
+                        if (data.is_different_router) {
+                            statusContainer.innerHTML = '<span class="text-success"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Connected</span> <span class="badge bg-warning text-dark ms-1" style="font-size:0.75rem;" title="Active on ' + (data.connected_router_name || 'Other Router') + ' (Assigned to ' + (data.assigned_router_name || 'New Router') + ')"><i class="fas fa-exchange-alt me-1"></i>On ' + (data.connected_router_name || 'Other Router') + '</span>';
+                        } else {
+                            statusContainer.innerHTML = '<span class="text-success"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Connected</span>';
+                        }
                     } else {
                         statusContainer.innerHTML = '<span class="text-danger"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>' + (data.mt_status || 'Error') + '</span>';
                     }
