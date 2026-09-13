@@ -228,6 +228,27 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
       ```
       This guarantees all dependent containers (Postgres, Redis, Celery, Web) and their port bindings (`0.0.0.0:8000->8000`) are fully re-established.
 
+32v2. **THE DOCKER GRACE & BRIDGE HEALING PROTOCOL (Transient Network Drop Guard)**:
+    * **THE SYMPTOM**: Running a bare `docker restart gametech-billing-system_web_1` occasionally causes transient Docker bridge network disconnections, dropped container bindings, or `502 Bad Gateway` if Gunicorn initializes before Docker's bridge interface settles.
+    * **MANDATORY DEPLOYMENT CHAIN**: When restarting the web container on production, ALWAYS chain a 2-second sleep followed by `docker-compose up -d`:
+      ```bash
+      ssh root@143.198.207.144 "docker restart gametech-billing-system_web_1 && sleep 2 && cd /root/GAMETECH-BILLING-SYSTEM && docker-compose up -d"
+      ```
+    * Guarantees all inter-container bridge links (Postgres, Redis, Celery, Web) and port bindings (`0.0.0.0:8000->8000`) remain solid and reconnected with 0 transient dropouts.
+
+33. **THE POWERSHELL STDIN PIPE PROTOCOL (Zero Parsing Failures on Windows)**:
+    * **CRITICAL CONTEXT**: When executing local Python one-liners on Windows PowerShell, PowerShell intercepts and mishandles quotation marks, semicolons, curly braces, and regex backslashes in `-c "..."` commands, causing cryptic `ParserError` or `UnexpectedToken` exceptions.
+    * **MANDATORY**: Local PowerShell commands that execute Python must either use single-quoted outer strings without inner quote conflicts or pipe the raw script directly into `python -` via stdin:
+      ```powershell
+      'content = open("file.html", "r", encoding="utf-8").read(); print(len(content))' | python -
+      ```
+    * Guarantees 100% clean local Python execution without shell quote escaping failures.
+
+34. **THE STAGED CHUNKING PROTOCOL (Monolith File Truncation Guard)**:
+    * **THE PRINCIPLE**: When modifying or refactoring monolith files that exceed **1,000 lines** (e.g., `changelog.html`, `gametech_error_runbook.md`, legacy views):
+    * **FORBIDDEN**: Attempting a single massive diff replacing hundreds of lines at once. Large single-block edits cause tool token truncation, context overflows, or regex mismatch failures.
+    * **MANDATORY**: Chunk edits into 3–4 staged replacements of **150–250 lines** each. Run automated div parity validation (`<div\b` count == `</div>` count) after every single stage before proceeding to the next chunk.
+
 ---
 
 ### 🧼 2. Codebase Cleanliness & Architecture Standards

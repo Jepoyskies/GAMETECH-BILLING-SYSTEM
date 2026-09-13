@@ -51,6 +51,9 @@ This workspace strictly adheres to the protocols defined in:
 19. **Template Optional Variable Guard**: Reusable modals must guard context variables with `{% if %}` rather than `|default:unquoted_var`. See AGENTS.md Rule #30.
 20. **Model Status Property Standard**: Compute state on model (`@property def is_active`), not in templates. See AGENTS.md Rule #31.
 21. **Container Port & Compose Healing**: Run `docker-compose up -d` if restart drops port 8000 bindings. See AGENTS.md Rule #32.
+22. **Docker Grace Deployment Chain**: Chain `sleep 2 && cd /root/GAMETECH-BILLING-SYSTEM && docker-compose up -d` when restarting web container on prod to prevent bridge drops. See AGENTS.md Rule #32v2.
+23. **PowerShell Stdin Pipe Protocol**: Local PowerShell Python one-liners must pipe raw script into `python -` via stdin to eliminate shell quote escaping errors. See AGENTS.md Rule #33.
+24. **Staged Chunking Protocol**: In monolith files (>1,000 lines), never attempt massive 300+ line diffs. Chunk into 150–250 lines and verify div parity after each stage. See AGENTS.md Rule #34.
 
 ---
 
@@ -63,11 +66,17 @@ git add -A; git commit -m "feat(...)"; git push origin main
 # Local Python syntax check (Zero dependencies, instant AST validation)
 python -m py_compile path/to/file.py
 
+# Local PowerShell Python execution (Zero parsing errors via stdin pipe - Rule #33)
+'content = open("path/to/file.html", "r", encoding="utf-8").read(); print(len(content))' | python -
+
 # Remote Python Execution Protocol (PowerShell stdin pipe — zero syntax escaping errors)
 "<python_code_here>" | ssh root@143.198.207.144 "docker exec -i gametech-billing-system_web_1 python manage.py shell"
 
 # Re-establish container network & port bindings (Compose Healing)
 ssh root@143.198.207.144 "cd /root/GAMETECH-BILLING-SYSTEM && docker-compose up -d"
+
+# Restart production web container with Docker Grace (Chained bridge healing - Rule #32v2)
+ssh root@143.198.207.144 "docker restart gametech-billing-system_web_1 && sleep 2 && cd /root/GAMETECH-BILLING-SYSTEM && docker-compose up -d"
 
 # Check production logs — time-bounded (PREFERRED for recent 500s)
 ssh root@143.198.207.144 "docker logs --since 2m gametech-billing-system_web_1 2>&1 | tail -40"
