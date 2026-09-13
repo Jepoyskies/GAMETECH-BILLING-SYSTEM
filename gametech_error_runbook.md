@@ -462,6 +462,26 @@
 
 ---
 
+### ERR-027: Form Select Dropdowns Rendering Light Mode / Illegible White Options in Dark Mode
+* **Symptoms**:
+  * In Customer Edit (`/customers/edit/<id>/`) and Customer Add (`/customers/add/`), `<select>` dropdowns (Account Type, Agent, Mikrotik Device, Subscription Plan, Barangay) render in browser light mode or display an unstyled white option list with invisible/washed-out white text.
+* **Root Causes**:
+  * Native `<select>` elements lack explicit `<option>` and `<optgroup>` dark mode background colors (`#1a1d2d`), causing OS/browser select popups to fallback to default white.
+  * Semi-transparent `rgba(15,23,42,0.5)` backgrounds on `.plan-form-control` trigger browser light popup behavior.
+  * TomSelect initialization uncaught exceptions on `<optgroup>` elements halted dropdown transformation across remaining form selects.
+* **Exact Target Files**:
+  * `billing/templates/billing/base/_styles.html`
+  * `static/css/theme/tokens_and_base.css`
+  * `static/css/theme/components.css`
+  * `billing/templates/billing/edit_customer.html`
+  * `billing/templates/billing/add_customer.html`
+* **1-Step Fix**:
+  * Define opaque `#1a1d2d` dark background and `#f8fafc` text for `.plan-form-control`, `select.plan-form-control option`, `select.plan-form-control optgroup`, and TomSelect `.ts-control` / `.ts-dropdown`.
+  * Style focus state with system primary blue (`border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25)`).
+  * Wrap TomSelect initialization in `try ... catch` and skip `sortField` on `<optgroup>` dropdowns.
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 1. Assign a new `ERR-XXX` identifier.

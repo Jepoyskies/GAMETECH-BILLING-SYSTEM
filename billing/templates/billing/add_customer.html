@@ -328,13 +328,18 @@
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         document.querySelectorAll('select.plan-form-control').forEach((el)=>{
-            new TomSelect(el,{
-                create: false,
-                sortField: {
-                    field: "text",
-                    direction: "asc"
+            try {
+                if (!el.tomselect) {
+                    const hasOptgroups = el.querySelectorAll('optgroup').length > 0;
+                    new TomSelect(el, {
+                        create: false,
+                        controlInput: null,
+                        sortField: hasOptgroups ? undefined : { field: "text", direction: "asc" }
+                    });
                 }
-            });
+            } catch(err) {
+                console.warn("TomSelect fallback on", el.name, err);
+            }
         });
     });
 </script>
