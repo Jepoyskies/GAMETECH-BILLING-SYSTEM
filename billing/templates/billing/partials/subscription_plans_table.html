@@ -1,75 +1,110 @@
-<!-- STATUS SUMMARY -->
-<div class="row g-3 mb-4">
-    <!-- Active -->
-    <div class="col-12 col-md-4 col-xl-2">
-        <div class="dashboard-card h-100 p-3 d-flex flex-column" onclick="const u=new URLSearchParams(window.location.search); u.set('status','active'); u.delete('connection'); window.location.search=u.toString();" style="border-bottom: 4px solid #10b981; transition: transform 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 15px rgba(16,185,129,0.2)';" onmouseout="this.style.transform='none'; this.style.boxShadow='var(--card-shadow)';">
+<!-- STATUS SUMMARY (5 Cards Max - NOC / Dispatch Focused) -->
+<div class="d-flex flex-wrap mb-4" style="gap: var(--gt-gap, 1rem);">
+    <!-- Card 1: Active Subscriptions (Total paid) -->
+    <div class="flex-fill" style="min-width: 180px; flex-basis: 0;">
+        <div class="dashboard-card h-100 p-3 d-flex flex-column {% if status_filter == 'active' and not connection_filter %}border-2 border-success shadow{% endif %}"
+             onclick="const u=new URLSearchParams(window.location.search); if(u.get('status')==='active'&&!u.get('connection')){u.delete('status');}else{u.set('status','active');u.delete('connection');} window.location.search=u.toString();"
+             style="border-bottom: 4px solid #10b981; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;"
+             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 15px rgba(16,185,129,0.2)';"
+             onmouseout="this.style.transform='none'; this.style.boxShadow='var(--card-shadow)';"
+             title="Filter Active / Paid Subscriptions">
             <div class="d-flex align-items-center mb-2">
                 <div style="background: rgba(16, 185, 129, 0.15); color: #10b981; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-right: 12px; box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);">
                     <i class="fas fa-check-circle"></i>
                 </div>
-                <div class="text-muted fw-bold" style="font-size: 0.85rem; text-transform: uppercase;">Active</div>
+                <div>
+                    <div class="text-muted fw-bold" style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;">Active Subscriptions</div>
+                    <div class="text-muted small" style="font-size: 0.7rem;">Total Paid</div>
+                </div>
             </div>
             <div class="mt-auto fs-3 fw-bolder" style="color: var(--text-primary);">{{ count_active }}</div>
         </div>
     </div>
-    <!-- Expiring Soon -->
-    <div class="col-12 col-md-4 col-xl-2">
-        <div class="dashboard-card h-100 p-3 d-flex flex-column" onclick="const u=new URLSearchParams(window.location.search); u.set('status','expiring'); u.delete('connection'); window.location.search=u.toString();" style="border-bottom: 4px solid #f59e0b; transition: transform 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 15px rgba(245,158,11,0.2)';" onmouseout="this.style.transform='none'; this.style.boxShadow='var(--card-shadow)';">
-            <div class="d-flex align-items-center mb-2">
-                <div style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-right: 12px; box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <div class="text-muted fw-bold" style="font-size: 0.85rem; text-transform: uppercase;">Expiring</div>
-            </div>
-            <div class="mt-auto fs-3 fw-bolder" style="color: var(--text-primary);">{{ count_expiring }}</div>
-        </div>
-    </div>
-    <!-- Expired -->
-    <div class="col-12 col-md-4 col-xl-2">
-        <div class="dashboard-card h-100 p-3 d-flex flex-column" onclick="const u=new URLSearchParams(window.location.search); u.set('status','expired'); u.delete('connection'); window.location.search=u.toString();" style="border-bottom: 4px solid #ef4444; transition: transform 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 15px rgba(239,68,68,0.2)';" onmouseout="this.style.transform='none'; this.style.boxShadow='var(--card-shadow)';">
-            <div class="d-flex align-items-center mb-2">
-                <div style="background: rgba(239, 68, 68, 0.15); color: #ef4444; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-right: 12px; box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);">
-                    <i class="fas fa-times-circle"></i>
-                </div>
-                <div class="text-muted fw-bold" style="font-size: 0.85rem; text-transform: uppercase;">Expired</div>
-            </div>
-            <div class="mt-auto fs-3 fw-bolder" style="color: var(--text-primary);">{{ count_expired }}</div>
-        </div>
-    </div>
-    <!-- Inactive -->
-    <div class="col-12 col-md-4 col-xl-2">
-        <div class="dashboard-card h-100 p-3 d-flex flex-column" onclick="const u=new URLSearchParams(window.location.search); u.set('status','inactive'); u.delete('connection'); window.location.search=u.toString();" style="border-bottom: 4px solid #64748b; transition: transform 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 15px rgba(100,116,139,0.2)';" onmouseout="this.style.transform='none'; this.style.boxShadow='var(--card-shadow)';">
-            <div class="d-flex align-items-center mb-2">
-                <div style="background: rgba(100, 116, 139, 0.15); color: #64748b; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-right: 12px;">
-                    <i class="fas fa-user-slash"></i>
-                </div>
-                <div class="text-muted fw-bold" style="font-size: 0.85rem; text-transform: uppercase;">Inactive</div>
-            </div>
-            <div class="mt-auto fs-3 fw-bolder" style="color: var(--text-primary);">{{ count_inactive }}</div>
-        </div>
-    </div>
-    <!-- Connected to Router -->
-    <div class="col-12 col-md-4 col-xl-2">
-        <div class="dashboard-card h-100 p-3 d-flex flex-column" onclick="const u=new URLSearchParams(window.location.search); u.set('connection','Connected'); u.delete('status'); window.location.search=u.toString();" style="border-bottom: 4px solid #3b82f6; transition: transform 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 15px rgba(59,130,246,0.2)';" onmouseout="this.style.transform='none'; this.style.boxShadow='var(--card-shadow)';">
+
+    <!-- Card 2: Online / Connected (Active AND Online) -->
+    <div class="flex-fill" style="min-width: 180px; flex-basis: 0;">
+        <div class="dashboard-card h-100 p-3 d-flex flex-column {% if status_filter == 'active_online' or status_filter == 'active' and connection_filter == 'Connected' %}border-2 border-primary shadow{% endif %}"
+             onclick="const u=new URLSearchParams(window.location.search); if(u.get('status')==='active_online'||(u.get('status')==='active'&&u.get('connection')==='Connected')){u.delete('status');u.delete('connection');}else{u.set('status','active_online');u.delete('connection');} window.location.search=u.toString();"
+             style="border-bottom: 4px solid #3b82f6; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;"
+             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 15px rgba(59,130,246,0.2)';"
+             onmouseout="this.style.transform='none'; this.style.boxShadow='var(--card-shadow)';"
+             title="Filter Active &amp; Online Subscriptions">
             <div class="d-flex align-items-center mb-2">
                 <div style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-right: 12px; box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);">
                     <i class="fas fa-link"></i>
                 </div>
-                <div class="text-muted fw-bold" style="font-size: 0.75rem; text-transform: uppercase;">Connected</div>
+                <div>
+                    <div class="text-muted fw-bold" style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;">Online / Connected</div>
+                    <div class="text-muted small" style="font-size: 0.7rem;">Active &amp; Online</div>
+                </div>
             </div>
-            <div class="mt-auto fs-3 fw-bolder" style="color: var(--text-primary);">{{ count_connected }}</div>
+            <div class="mt-auto fs-3 fw-bolder text-primary">{{ active_online_count }}</div>
         </div>
     </div>
-    <!-- Not Connected -->
-    <div class="col-12 col-md-4 col-xl-2">
-        <div class="dashboard-card h-100 p-3 d-flex flex-column" onclick="const u=new URLSearchParams(window.location.search); u.set('connection','Not Connected'); u.delete('status'); window.location.search=u.toString();" style="border-bottom: 4px solid #94a3b8; transition: transform 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 15px rgba(148,163,184,0.2)';" onmouseout="this.style.transform='none'; this.style.boxShadow='var(--card-shadow)';">
+
+    <!-- Card 3: Paid but Offline (Active but Offline - Yellow/Warning card with alert icon) -->
+    <div class="flex-fill" style="min-width: 180px; flex-basis: 0;">
+        <div class="dashboard-card h-100 p-3 d-flex flex-column {% if status_filter == 'paid_offline' or status_filter == 'active' and connection_filter == 'Not Connected' %}border-2 border-warning shadow{% endif %}"
+             onclick="const u=new URLSearchParams(window.location.search); if(u.get('status')==='paid_offline'||(u.get('status')==='active'&&u.get('connection')==='Not Connected')){u.delete('status');u.delete('connection');}else{u.set('status','paid_offline');u.delete('connection');} window.location.search=u.toString();"
+             style="border-bottom: 4px solid #f59e0b; background: rgba(245, 158, 11, 0.05); transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;"
+             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 15px rgba(245,158,11,0.25)';"
+             onmouseout="this.style.transform='none'; this.style.boxShadow='var(--card-shadow)';"
+             title="Requires Technician Attention! Active accounts disconnected from router">
             <div class="d-flex align-items-center mb-2">
-                <div style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-right: 12px;">
-                    <i class="fas fa-unlink"></i>
+                <div style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-right: 12px; box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);">
+                    <i class="fas fa-triangle-exclamation"></i>
                 </div>
-                <div class="text-muted fw-bold" style="font-size: 0.75rem; text-transform: uppercase;">Offline</div>
+                <div>
+                    <div class="text-warning fw-bold d-flex align-items-center gap-1" style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                        Paid but Offline
+                        <span class="badge bg-warning text-dark px-1 py-0 ms-1" style="font-size: 0.65rem;">Alert</span>
+                    </div>
+                    <div class="text-warning small opacity-75" style="font-size: 0.7rem;">Needs Tech Visit</div>
+                </div>
             </div>
-            <div class="mt-auto fs-3 fw-bolder" style="color: var(--text-primary);">{{ count_not_connected }}</div>
+            <div class="mt-auto fs-3 fw-bolder text-warning">{{ paid_but_offline_count }}</div>
+        </div>
+    </div>
+
+    <!-- Card 4: Expired / Unpaid (Total expired) -->
+    <div class="flex-fill" style="min-width: 180px; flex-basis: 0;">
+        <div class="dashboard-card h-100 p-3 d-flex flex-column {% if status_filter == 'expired' %}border-2 border-danger shadow{% endif %}"
+             onclick="const u=new URLSearchParams(window.location.search); if(u.get('status')==='expired'){u.delete('status');}else{u.set('status','expired');u.delete('connection');} window.location.search=u.toString();"
+             style="border-bottom: 4px solid #ef4444; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;"
+             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 15px rgba(239,68,68,0.2)';"
+             onmouseout="this.style.transform='none'; this.style.boxShadow='var(--card-shadow)';"
+             title="Filter Expired / Unpaid Subscriptions">
+            <div class="d-flex align-items-center mb-2">
+                <div style="background: rgba(239, 68, 68, 0.15); color: #ef4444; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-right: 12px; box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);">
+                    <i class="fas fa-times-circle"></i>
+                </div>
+                <div>
+                    <div class="text-muted fw-bold" style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;">Expired / Unpaid</div>
+                    <div class="text-muted small" style="font-size: 0.7rem;">Total Expired</div>
+                </div>
+            </div>
+            <div class="mt-auto fs-3 fw-bolder text-danger">{{ count_expired }}</div>
+        </div>
+    </div>
+
+    <!-- Card 5: Inactive / Suspended -->
+    <div class="flex-fill" style="min-width: 180px; flex-basis: 0;">
+        <div class="dashboard-card h-100 p-3 d-flex flex-column {% if status_filter == 'inactive' %}border-2 border-secondary shadow{% endif %}"
+             onclick="const u=new URLSearchParams(window.location.search); if(u.get('status')==='inactive'){u.delete('status');}else{u.set('status','inactive');u.delete('connection');} window.location.search=u.toString();"
+             style="border-bottom: 4px solid #64748b; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;"
+             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 15px rgba(100,116,139,0.2)';"
+             onmouseout="this.style.transform='none'; this.style.boxShadow='var(--card-shadow)';"
+             title="Filter Inactive / Suspended Subscriptions">
+            <div class="d-flex align-items-center mb-2">
+                <div style="background: rgba(100, 116, 139, 0.15); color: #64748b; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-right: 12px;">
+                    <i class="fas fa-user-slash"></i>
+                </div>
+                <div>
+                    <div class="text-muted fw-bold" style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;">Inactive / Suspended</div>
+                    <div class="text-muted small" style="font-size: 0.7rem;">Suspended / Long Expired</div>
+                </div>
+            </div>
+            <div class="mt-auto fs-3 fw-bolder text-secondary">{{ count_inactive }}</div>
         </div>
     </div>
 </div>

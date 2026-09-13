@@ -104,25 +104,13 @@ def subscription_plans_data_api(request):
     soon = now + timedelta(days=7)
     one_week_ago = now - timedelta(days=7)
 
-    # 4. Apply Filters (except connection, which requires live MT data)
+    # 4. Apply Global Search and Device Filters
     if search:
         customers = customers.filter(
             Q(pppoe_username__icontains=search)
             | Q(full_name__icontains=search)
             | Q(address__icontains=search)
         )
-
-    if status_filter == "active":
-        customers = customers.filter(expires_at__gt=soon)
-    elif status_filter == "expiring":
-        customers = customers.filter(expires_at__gt=now, expires_at__lte=soon)
-    elif status_filter == "expired":
-        customers = customers.filter(
-            Q(expires_at__isnull=True)
-            | Q(expires_at__lte=now, expires_at__gt=one_week_ago)
-        )
-    elif status_filter == "inactive":
-        customers = customers.filter(expires_at__lte=one_week_ago)
 
     if device_filter:
         customers = customers.filter(mikrotik_device__device_name=device_filter)
@@ -154,8 +142,80 @@ def subscription_plans_data_api(request):
         except Exception:
             pass
 
-    # Apply connection filter manually (since it requires live data)
-    customer_list = list(customers.order_by(sort_field))
+    # Evaluate all customers within search/device scope for top metrics
+    all_customers = list(customers.order_by(sort_field))
+
+    # Calculate NOC / Dispatch Summaries
+    count_active = 0           # Active Subscriptions (Total paid)
+    active_online_count = 0    # Online / Connected (Active AND Online)
+    paid_but_offline_count = 0 # Paid but Offline (Active but Offline)
+    count_expiring = 0
+    count_expired = 0          # Expired / Unpaid (Total expired)
+    count_inactive = 0         # Inactive / Suspended
+    count_connected = 0
+    count_not_connected = 0
+
+    for c in all_customers:
+        is_conn = c.pppoe_username in connected_usernames
+        if is_conn:
+            count_connected += 1
+        else:
+            count_not_connected += 1
+
+        if c.status in ["suspended", "inactive"]:
+            count_inactive += 1
+        elif not c.expires_at:
+            count_expired += 1
+        elif c.expires_at <= one_week_ago:
+            count_inactive += 1
+        elif c.expires_at <= now:
+            count_expired += 1
+        else:
+            # Active / Paid status (not expired)
+            count_active += 1
+            if c.expires_at <= soon:
+                count_expiring += 1
+            if is_conn:
+                active_online_count += 1
+            else:
+                paid_but_offline_count += 1
+
+    # Filter customer_list based on status_filter and connection_filter
+    customer_list = all_customers
+
+    if status_filter == "active":
+        customer_list = [
+            c for c in customer_list
+            if c.expires_at and c.expires_at > now and c.status not in ["suspended", "inactive"]
+        ]
+    elif status_filter == "active_online":
+        customer_list = [
+            c for c in customer_list
+            if c.expires_at and c.expires_at > now and c.status not in ["suspended", "inactive"]
+            and c.pppoe_username in connected_usernames
+        ]
+    elif status_filter in ["paid_offline", "paid_but_offline"]:
+        customer_list = [
+            c for c in customer_list
+            if c.expires_at and c.expires_at > now and c.status not in ["suspended", "inactive"]
+            and c.pppoe_username not in connected_usernames
+        ]
+    elif status_filter == "expiring":
+        customer_list = [
+            c for c in customer_list
+            if c.expires_at and now < c.expires_at <= soon and c.status not in ["suspended", "inactive"]
+        ]
+    elif status_filter == "expired":
+        customer_list = [
+            c for c in customer_list
+            if (not c.expires_at or (c.expires_at <= now and c.expires_at > one_week_ago))
+            and c.status not in ["suspended", "inactive"]
+        ]
+    elif status_filter == "inactive":
+        customer_list = [
+            c for c in customer_list
+            if c.status in ["suspended", "inactive"] or (c.expires_at and c.expires_at <= one_week_ago)
+        ]
 
     if connection_filter == "Connected":
         customer_list = [
@@ -165,33 +225,6 @@ def subscription_plans_data_api(request):
         customer_list = [
             c for c in customer_list if c.pppoe_username not in connected_usernames
         ]
-
-    # Calculate Summaries (based on filtered list)
-    count_active = 0
-    count_expiring = 0
-    count_expired = 0
-    count_inactive = 0
-    count_connected = 0
-    count_not_connected = 0
-
-    for c in customer_list:
-        # Connection
-        if c.pppoe_username in connected_usernames:
-            count_connected += 1
-        else:
-            count_not_connected += 1
-
-        # Status
-        if not c.expires_at:
-            count_expired += 1
-        elif c.expires_at <= one_week_ago:
-            count_inactive += 1
-        elif c.expires_at <= now:
-            count_expired += 1
-        elif c.expires_at <= soon:
-            count_expiring += 1
-        else:
-            count_active += 1
 
     # 6. Pagination
     per_page = int(request.GET.get("per_page", 35))
@@ -232,6 +265,8 @@ def subscription_plans_data_api(request):
         "order": order.upper(),
         "unique_devices": unique_devices,
         "count_active": count_active,
+        "active_online_count": active_online_count,
+        "paid_but_offline_count": paid_but_offline_count,
         "count_expiring": count_expiring,
         "count_expired": count_expired,
         "count_inactive": count_inactive,
