@@ -550,6 +550,14 @@ class CignalPlay(models.Model):
     def cignal_account_number(self):
         return self.account_number or ""
 
+    @property
+    def is_active(self):
+        exp = self.expiration_date or self.end_date
+        if not exp:
+            return False
+        from django.utils import timezone
+        return exp >= timezone.now()
+
     def save(self, *args, **kwargs):
         if self.expiration_date and not self.end_date:
             self.end_date = self.expiration_date

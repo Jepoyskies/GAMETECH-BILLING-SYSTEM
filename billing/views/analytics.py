@@ -1,7 +1,8 @@
+from decimal import Decimal
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from billing.decorators import role_required
-from billing.models import Customer, SubscriptionPlan
+from billing.models import Customer, SubscriptionPlan, Payment
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from datetime import timedelta
@@ -10,6 +11,8 @@ from datetime import timedelta
 @login_required
 @role_required(["Admin", "Superadmin"])
 def analytics_dashboard(request):
+    today = timezone.localtime().date()
+
     # Total Active Customers
     active_customers = Customer.objects.filter(status="active").count()
 
@@ -18,8 +21,24 @@ def analytics_dashboard(request):
         Customer.objects.filter(status="active", plan__isnull=False).aggregate(
             total_mrr=Sum("plan__price")
         )["total_mrr"]
-        or 0
+        or Decimal("0.00")
     )
+
+    # Monthly Revenue (MTD) Breakdown: Internet vs Cignal Add-on
+    month_payments = Payment.objects.filter(
+        created_at__year=today.year,
+        created_at__month=today.month,
+    )
+    total_revenue_mtd = (
+        month_payments.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+    )
+    cignal_revenue_mtd = (
+        month_payments.filter(
+            Q(reason__icontains="Cignal") | Q(plan_name__icontains="Cignal")
+        ).aggregate(total=Sum("amount"))["total"]
+        or Decimal("0.00")
+    )
+    internet_revenue_mtd = total_revenue_mtd - cignal_revenue_mtd
 
     # Churn Rate proxy - Users who were suspended or inactive
     churned_customers = Customer.objects.filter(
@@ -40,6 +59,9 @@ def analytics_dashboard(request):
     context = {
         "active_customers": active_customers,
         "mrr": mrr,
+        "total_revenue_mtd": total_revenue_mtd,
+        "internet_revenue_mtd": internet_revenue_mtd,
+        "cignal_revenue_mtd": cignal_revenue_mtd,
         "churned_customers": churned_customers,
         "recent_signups": recent_signups,
         "plan_distribution": plan_distribution,

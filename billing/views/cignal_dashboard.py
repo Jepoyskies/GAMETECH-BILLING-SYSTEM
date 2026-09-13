@@ -1,5 +1,5 @@
 from decimal import Decimal, InvalidOperation
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
@@ -37,6 +37,17 @@ def cignal_dashboard_view(request):
 
     total_notifications = Notification.objects.filter(notification_type='cignal').count()
 
+    # Expiring Soon Radar (Next 5 Days)
+    in_5_days = today + timedelta(days=5)
+    expiring_cignals = (
+        CignalPlay.objects.filter(
+            Q(expiration_date__date__gte=today, expiration_date__date__lte=in_5_days)
+            | Q(end_date__date__gte=today, end_date__date__lte=in_5_days)
+        )
+        .select_related("customer")
+        .order_by("expiration_date", "end_date")[:25]
+    )
+
     # Tables Data
     # 1. Customers List with Prefetched Subscriptions
     customers_list = active_customers.prefetch_related('cignal_plans').order_by('-created_at')[:25]
@@ -52,6 +63,7 @@ def cignal_dashboard_view(request):
         'pending_applications_count': pending_applications_count,
         'new_cignal_this_month': new_cignal_this_month,
         'total_notifications': total_notifications,
+        'expiring_cignals': expiring_cignals,
         'customers_list': customers_list,
         'applications': pending_applications,
         'cignal_payments': cignal_payments,

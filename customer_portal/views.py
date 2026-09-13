@@ -100,6 +100,9 @@ def portal_dashboard(request):
         delta = customer.expires_at - timezone.now()
         days_until_expiry = delta.days  # Can be negative if expired
 
+    # Customer Cignal Subscriptions (Multi-TV)
+    cignal_plans = customer.cignal_plans.all().order_by('-created_at')
+
     context = {
         'customer': customer,
         'plan': plan,
@@ -111,6 +114,7 @@ def portal_dashboard(request):
         'days_until_expiry': days_until_expiry,
         'payments': payments,
         'plans': plans,
+        'cignal_plans': cignal_plans,
         'issue_services': issue_services,
     }
     return render(request, 'customer_portal/portal_dashboard.html', context)

@@ -131,6 +131,69 @@
             </div>
         </div>
 
+        <!-- Expiring Soon Radar (Next 5 Days) -->
+        <div class="cignal-glass-card mb-4">
+            <div class="cignal-card-header d-flex justify-content-between align-items-center">
+              <h6><i class="fas fa-exclamation-triangle text-warning me-2"></i> Expiring Soon (Next 5 Days)</h6>
+              <span class="badge bg-warning text-dark rounded-pill px-2 py-1" style="font-size: 0.72rem; font-weight: 700;">
+                {{ expiring_cignals|length }} Due Soon
+              </span>
+            </div>
+            <div class="table-responsive">
+              <table class="cignal-table table table-hover align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>Customer</th>
+                    <th>Account Name / Device</th>
+                    <th>Expiration Date</th>
+                    <th class="text-end">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for item in expiring_cignals %}
+                  <tr>
+                    <td>
+                      <a href="{% url 'view_customer' item.customer.id %}" class="fw-bold text-decoration-none text-info">
+                        {{ item.customer.full_name|default:item.customer.pppoe_username }}
+                      </a>
+                    </td>
+                    <td>
+                      <span class="badge {% if 'Box' in item.addon_type %}bg-warning-subtle text-warning{% else %}bg-info-subtle text-info{% endif %} me-1" style="font-size:0.65rem;">
+                        {{ item.addon_type|default:"Cignal" }}
+                      </span>
+                      <strong class="text-light">{{ item.account_name|default:item.label }}</strong>
+                      {% if item.account_number %}
+                        <small class="text-muted d-block font-monospace" style="font-size:0.75rem;">{{ item.account_number }}</small>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1" style="font-size:0.75rem;">
+                        <i class="far fa-clock me-1"></i>
+                        {% if item.expiration_date %}{{ item.expiration_date|date:"M d, Y" }}{% elif item.end_date %}{{ item.end_date|date:"M d, Y" }}{% else %}N/A{% endif %}
+                      </span>
+                    </td>
+                    <td class="text-end">
+                      <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-2 py-0" style="font-size: 0.75rem;" onclick="openCignalPaymentModal({customerId: '{{ item.customer.id }}', customerName: '{{ item.customer.full_name|escapejs }}', pppoe: '{{ item.customer.pppoe_username|escapejs }}', subscriptionId: '{{ item.id }}', expirationDate: '{% if item.expiration_date %}{{ item.expiration_date|date:'Y-m-d' }}{% elif item.end_date %}{{ item.end_date|date:'Y-m-d' }}{% endif %}', subscriptions: [{id: '{{ item.id }}', addon_type: '{{ item.addon_type|escapejs }}', account_name: '{{ item.account_name|escapejs }}', account_number: '{{ item.account_number|escapejs }}', expiration_date: '{% if item.expiration_date %}{{ item.expiration_date|date:'Y-m-d' }}{% elif item.end_date %}{{ item.end_date|date:'Y-m-d' }}{% endif %}'}]})">
+                        <i class="fas fa-coins me-1"></i> Reload
+                      </button>
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="4">
+                      <div class="cignal-empty-state py-3">
+                        <div class="cignal-empty-icon mb-1"><i class="fas fa-shield-alt text-success" style="opacity: 0.85; font-size: 1.5rem;"></i></div>
+                        <div class="cignal-empty-title" style="font-size: 0.95rem;">No Subscriptions Expiring Soon</div>
+                        <div class="cignal-empty-sub" style="font-size: 0.8rem;">All active Cignal Play and Box accounts are in good standing for the next 5 days.</div>
+                      </div>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+        </div>
+
         <!-- Active Customers -->
         <div class="cignal-glass-card">
             <div class="cignal-card-header">
