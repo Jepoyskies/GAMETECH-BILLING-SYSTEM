@@ -48,7 +48,7 @@ def customer_list(request):
     from network_manager.models import MikrotikDevice
     from django.utils import timezone
     from datetime import timedelta
-    from django.db.models import Case, When, Value, IntegerField, Count, Q
+    from django.db.models import Case, When, Value, IntegerField, BooleanField, Count, Q
 
     now = timezone.now()
     seven_days_from_now = now + timedelta(days=7)
@@ -115,7 +115,13 @@ def customer_list(request):
         customers = customers.filter(expires_at__lte=seven_days_ago)
 
     customers = customers.annotate(
+        is_paid_offline=Case(
+            When(id__in=paid_but_offline_ids, then=Value(True)),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
         status_order=Case(
+            When(id__in=paid_but_offline_ids, then=Value(0)),  # Top Priority: Active accounts offline
             When(status="active", then=Value(1)),
             When(status="pending", then=Value(2)),
             When(status="suspended", then=Value(3)),
@@ -124,7 +130,7 @@ def customer_list(request):
             When(status="pull out", then=Value(6)),
             default=Value(7),
             output_field=IntegerField(),
-        )
+        ),
     ).order_by("status_order", "full_name")
 
     devices = MikrotikDevice.objects.all().order_by("device_name")
