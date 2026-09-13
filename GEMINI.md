@@ -13,6 +13,7 @@ This workspace strictly adheres to the protocols defined in:
 | Request Type | Check FIRST | Then |
 |---|---|---|
 | **500 / Server Error** | `ssh root@143.198.207.144 "docker logs --since 2m gametech-billing-system_web_1 2>&1 \| tail -40"` | Traceback → file:line → 50-line read |
+| **502 Bad Gateway / Container stopped** | `ssh root@143.198.207.144 "cd /root/GAMETECH-BILLING-SYSTEM && docker-compose up -d"` | Ensures container & port 8000 are re-bound |
 | **UI broken / wrong layout** | `gametech_error_runbook.md` symptom index | Template partial → CSS selector |
 | **"Where is this page?" / URL paste** | `gametech_filing_index.md` URL column | Never grep urls.py or scan dirs |
 | **Data not showing / cache empty** | Redis keys: `ssh root@143.198.207.144 "docker exec gametech-billing-system_redis_1 redis-cli KEYS 'pattern*'"` | Then view logic |
@@ -46,6 +47,10 @@ This workspace strictly adheres to the protocols defined in:
 15. **PowerShell Syntax Law**: Always chain local commands with `;` (never bash `&&`) on Windows PowerShell. See AGENTS.md Rule #26.
 16. **Local AST Syntax Compile**: Use `python -m py_compile <file>` for zero-dependency local syntax checks. Never run `python manage.py check` on host. See AGENTS.md Rule #27.
 17. **Canonical Models**: `Payment` (not `PaymentLog`), `CignalPlay` (not `CignalSubscription`), `AddonPlan` (not `Addon`). See AGENTS.md Rule #28.
+18. **PowerShell SSH Python Piping**: Always pipe Python script strings via stdin (`"<script>" | ssh ... "docker exec -i ... python manage.py shell"`). See AGENTS.md Rule #29.
+19. **Template Optional Variable Guard**: Reusable modals must guard context variables with `{% if %}` rather than `|default:unquoted_var`. See AGENTS.md Rule #30.
+20. **Model Status Property Standard**: Compute state on model (`@property def is_active`), not in templates. See AGENTS.md Rule #31.
+21. **Container Port & Compose Healing**: Run `docker-compose up -d` if restart drops port 8000 bindings. See AGENTS.md Rule #32.
 
 ---
 
@@ -57,6 +62,12 @@ git add -A; git commit -m "feat(...)"; git push origin main
 
 # Local Python syntax check (Zero dependencies, instant AST validation)
 python -m py_compile path/to/file.py
+
+# Remote Python Execution Protocol (PowerShell stdin pipe — zero syntax escaping errors)
+"<python_code_here>" | ssh root@143.198.207.144 "docker exec -i gametech-billing-system_web_1 python manage.py shell"
+
+# Re-establish container network & port bindings (Compose Healing)
+ssh root@143.198.207.144 "cd /root/GAMETECH-BILLING-SYSTEM && docker-compose up -d"
 
 # Check production logs — time-bounded (PREFERRED for recent 500s)
 ssh root@143.198.207.144 "docker logs --since 2m gametech-billing-system_web_1 2>&1 | tail -40"

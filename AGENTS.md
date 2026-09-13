@@ -197,6 +197,37 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
       * **System Entity Event Logs**: Model is `SystemLog` (DB table `billing_systemlog`).
     * **NEVER** guess or hallucinate model names. Check `gametech_filing_index.md` or `gametech_architecture_map.txt`.
 
+29. **THE POWERSHELL SSH PYTHON PIPING STANDARD (Zero Syntax Escaping Retries)**:
+    * **CRITICAL CONTEXT**: When executing multi-statement Python verification code remotely on the droplet container via SSH from a Windows PowerShell host, inline `python -c "import ...; ..."` fails because PowerShell intercepts semicolons, quotes, and parentheses.
+    * **MANDATORY**: ALWAYS pipe the Python script directly into `manage.py shell` via stdin:
+      ```powershell
+      "<python_script_string>" | ssh root@143.198.207.144 "docker exec -i gametech-billing-system_web_1 python manage.py shell"
+      ```
+    * Guarantees 100% clean remote execution without quote or parenthesis escaping errors.
+
+30. **THE REUSABLE MODAL & PARTIAL VARIABLE GUARD LAW (Zero Orphan Variable Crashes)**:
+    * **THE TRIGGER**: When creating or modifying partial templates (modals, cards, action popups) that can be included both on detail views (where `customer` exists in context) and index/dashboard views (where `customer` is absent):
+    * **FORBIDDEN**: Using unquoted variable names as filter arguments (e.g. `{{ target_customer.full_name|default:customer.full_name }}` or `{% with cust=target_customer|default:customer %}`). Django evaluates filter arguments dynamically; when `customer` is not in context, this throws `VariableDoesNotExist: Failed lookup for key [customer]`.
+    * **MANDATORY**: Use explicit conditional blocks:
+      ```html
+      {% if target_customer %}{{ target_customer.full_name }}{% elif customer %}{{ customer.full_name }}{% else %}Default{% endif %}
+      ```
+      or provide default values explicitly in the `{% include %}` call: `{% include "..." with customer=None %}`.
+
+31. **THE MODEL STATUS PROPERTY LAW (Compute State in Models, Not Templates)**:
+    * **THE PRINCIPLE**: When an entity's lifecycle state (Active, Expired, Suspended, Expiring Soon) depends on timestamps or multiple fields (e.g. `CignalPlay` comparing `expiration_date` vs `end_date` against `timezone.now()`):
+    * **FORBIDDEN**: Duplicating verbose timestamp math or custom filters across different templates.
+    * **MANDATORY**: Define a lightweight `@property def is_active(self)` directly on the Django model. Templates must simply check `{% if item.is_active %}`. Ensures single-source-of-truth status across Dashboard, Profile, and Customer Portal.
+
+32. **THE CONTAINER PORT & COMPOSE HEALING PROTOCOL**:
+    * **THE SYMPTOM**: After running `docker restart gametech-billing-system_web_1`, if `docker ps` returns an empty container list or Nginx returns `502 Bad Gateway`:
+    * **DO NOT** assume application code has crashed or start editing Python view logic.
+    * **MANDATORY FIRST STEP**: Run `docker-compose up -d` in `/root/GAMETECH-BILLING-SYSTEM`:
+      ```bash
+      ssh root@143.198.207.144 "cd /root/GAMETECH-BILLING-SYSTEM && docker-compose up -d"
+      ```
+      This guarantees all dependent containers (Postgres, Redis, Celery, Web) and their port bindings (`0.0.0.0:8000->8000`) are fully re-established.
+
 ---
 
 ### 🧼 2. Codebase Cleanliness & Architecture Standards
