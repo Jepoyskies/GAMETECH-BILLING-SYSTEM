@@ -482,6 +482,26 @@
 
 ---
 
+### ERR-028: Multi-Subscription Cignal Tracking & Manual Payment/Expiration Synchronization
+* **Symptoms**:
+  * Customers with multiple Cignal boxes or subscriptions (e.g. Living Room TV, Master Bedroom) could only store a single scalar account number in `Customer.cignalplay_no` / `cignalbox_no`.
+  * No standard modal existed to record partial installments or flexible manual reloads without automated Cignal API integration.
+* **Root Causes**:
+  * `CignalPlay` model lacked explicit `account_name`, `account_number`, `addon_type`, `amount_paid`, and `expiration_date` fields, relying on customer-level scalar strings.
+  * Payment submission lacked a unified atomic workflow to log `Payment` transactions alongside Cignal expiration increments.
+* **Exact Target Files**:
+  * `billing/models.py` (`CignalPlay`)
+  * `billing/migrations/0041_cignalplay_account_fields.py`
+  * `billing/views/cignal_dashboard.py` (`process_cignal_payment`)
+  * `billing/templates/billing/partials/_cignal_payment_modal.html`
+  * `billing/templates/billing/view_customer/_info_cards.html` & `_modals.html`
+  * `billing/templates/billing/cignal_dashboard.html`
+* **1-Step Fix**:
+  * Expand `CignalPlay` with `account_name`, `account_number`, `addon_type`, `amount_paid`, `expiration_date` (ForeignKey to Customer with property aliases and `save()` date sync).
+  * Create `_cignal_payment_modal.html` with target account `<select>`, vanilla JS quick-fill pills (₱149, ₱399, ₱250, ₱3000), expiration date picker with +30/+60 day steppers, and wrap `process_cignal_payment` in `transaction.atomic()` to simultaneously log `Payment`, audit log, and update Cignal validity.
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 1. Assign a new `ERR-XXX` identifier.
