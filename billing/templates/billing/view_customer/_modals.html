@@ -194,19 +194,38 @@
             {% endif %}
             <div class="mb-3">
                 <label class="form-label fw-bold">Add-on Type</label>
-                <select name="addon_type" class="form-select" required>
+                <select name="addon_type" id="modalAddonType" class="form-select" required onchange="updateCignalModalFields(this.value)">
                     <option value="Cignal Play Add-on" {% if not pending_cignal_addon or 'Play' in pending_cignal_addon.addon_type %}selected{% endif %}>Cignal Play</option>
                     <option value="Cignal Box Add-on" {% if pending_cignal_addon and 'Box' in pending_cignal_addon.addon_type %}selected{% endif %}>Cignal Box</option>
                 </select>
             </div>
             <div class="mb-3">
-                <label class="form-label fw-bold">Cignal Play/Box No. (Account Number)</label>
-                <input type="text" class="form-control" name="cignalplay_no" value="{{ customer.cignalplay_no|default:'' }}" placeholder="e.g. 1002345678" required autofocus>
+                <label class="form-label fw-bold" id="cignalAccountLabel">{% if pending_cignal_addon and 'Box' in pending_cignal_addon.addon_type %}Cignal Box No. (Serial / Account Number){% else %}Cignal Play No. (Account Number){% endif %}</label>
+                <input type="text" class="form-control" name="cignalplay_no" id="modalCignalNo" value="{% if pending_cignal_addon and 'Box' in pending_cignal_addon.addon_type %}{{ customer.cignalbox_no|default:'' }}{% else %}{{ customer.cignalplay_no|default:'' }}{% endif %}" placeholder="e.g. 1002345678" required autofocus>
             </div>
             <div class="mb-3">
                 <label class="form-label fw-bold">Activation Date</label>
-                <input type="date" class="form-control" name="cignalplay_date" value="{% if customer.cignalplay_date %}{{ customer.cignalplay_date|date:'Y-m-d' }}{% else %}{% now 'Y-m-d' %}{% endif %}" required>
+                <input type="date" class="form-control" name="cignalplay_date" id="modalCignalDate" value="{% if pending_cignal_addon and 'Box' in pending_cignal_addon.addon_type %}{% if customer.cignalbox_date %}{{ customer.cignalbox_date|date:'Y-m-d' }}{% else %}{% now 'Y-m-d' %}{% endif %}{% else %}{% if customer.cignalplay_date %}{{ customer.cignalplay_date|date:'Y-m-d' }}{% else %}{% now 'Y-m-d' %}{% endif %}{% endif %}" required>
             </div>
+            <script>
+            function updateCignalModalFields(val) {
+                var label = document.getElementById('cignalAccountLabel');
+                var input = document.getElementById('modalCignalNo');
+                var dateInput = document.getElementById('modalCignalDate');
+                if (!label || !input) return;
+                if (val.indexOf('Box') !== -1) {
+                    label.innerText = 'Cignal Box No. (Serial / Account Number)';
+                    input.placeholder = 'e.g. BOX-8892341';
+                    input.value = "{{ customer.cignalbox_no|default:'' }}";
+                    dateInput.value = "{% if customer.cignalbox_date %}{{ customer.cignalbox_date|date:'Y-m-d' }}{% else %}{% now 'Y-m-d' %}{% endif %}";
+                } else {
+                    label.innerText = 'Cignal Play No. (Account Number)';
+                    input.placeholder = 'e.g. 1002345678';
+                    input.value = "{{ customer.cignalplay_no|default:'' }}";
+                    dateInput.value = "{% if customer.cignalplay_date %}{{ customer.cignalplay_date|date:'Y-m-d' }}{% else %}{% now 'Y-m-d' %}{% endif %}";
+                }
+            }
+            </script>
         </div>
         <div class="modal-footer border-top-0 pt-0 gt-modal-footer d-flex justify-content-between align-items-center">
             <a href="{% url 'cignal_dashboard' %}?highlight_customer={{ customer.id }}" class="text-muted small text-decoration-none">

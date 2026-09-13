@@ -185,9 +185,11 @@ class Customer(models.Model):
     pppoe_password = models.CharField(max_length=255, null=True, blank=True)
     mac_address = models.CharField(max_length=100, null=True, blank=True)
 
-    # --- Cignal Play Integration ---
+    # --- Cignal Play & Box Integration ---
     cignalplay_no = models.CharField(max_length=100, null=True, blank=True)
     cignalplay_date = models.DateTimeField(null=True, blank=True)
+    cignalbox_no = models.CharField(max_length=100, null=True, blank=True)
+    cignalbox_date = models.DateTimeField(null=True, blank=True)
 
     # --- Security & Verification ---
     is_verified = models.BooleanField(default=False)
@@ -196,6 +198,7 @@ class Customer(models.Model):
     created_form_by = models.CharField(max_length=100, null=True, blank=True)
     adjusted_by_router = models.CharField(max_length=100, null=True, blank=True)
     cignalplay_adjustedby = models.CharField(max_length=100, null=True, blank=True)
+    cignalbox_adjustedby = models.CharField(max_length=100, null=True, blank=True)
     referral_received = models.CharField(
         max_length=50, null=True, blank=True, default="0"
     )

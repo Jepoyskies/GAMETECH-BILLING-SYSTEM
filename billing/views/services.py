@@ -241,8 +241,9 @@ def cignal_play_list_view(request):
     search = request.GET.get("search", "")
     status_filter = request.GET.get("status", "all")
 
-    customers = Customer.objects.exclude(cignalplay_no__isnull=True).exclude(
-        cignalplay_no__exact=""
+    customers = Customer.objects.filter(
+        (Q(cignalplay_no__isnull=False) & ~Q(cignalplay_no__exact=""))
+        | (Q(cignalbox_no__isnull=False) & ~Q(cignalbox_no__exact=""))
     )
 
     if search:
@@ -250,7 +251,9 @@ def cignal_play_list_view(request):
             Q(full_name__icontains=search)
             | Q(username__icontains=search)
             | Q(cignalplay_no__icontains=search)
+            | Q(cignalbox_no__icontains=search)
             | Q(cignalplay_adjustedby__icontains=search)
+            | Q(cignalbox_adjustedby__icontains=search)
         )
 
     customers = customers.order_by("-created_at")
@@ -420,9 +423,15 @@ def apply_cignal_addon(request):
                 pending_req.save()
 
         # Update customer profile
-        customer.cignalplay_no = cignalplay_no
-        customer.cignalplay_date = cignalplay_date
-        customer.cignalplay_adjustedby = request.user.username
+        is_box = "box" in (addon_type or "").lower()
+        if is_box:
+            customer.cignalbox_no = cignalplay_no
+            customer.cignalbox_date = cignalplay_date
+            customer.cignalbox_adjustedby = request.user.username
+        else:
+            customer.cignalplay_no = cignalplay_no
+            customer.cignalplay_date = cignalplay_date
+            customer.cignalplay_adjustedby = request.user.username
         customer.save()
 
         # Log to CignalPlay table
@@ -455,18 +464,27 @@ def approve_cignal_request(request, request_id):
     from billing.models import AddOnRequest
 
     addon_req = get_object_or_404(AddOnRequest, pk=request_id)
-    cignal_no = request.POST.get("cignal_play_no")
+    cignal_no = request.POST.get("cignal_play_no") or request.POST.get("cignal_no")
     cignal_date = request.POST.get("cignal_date")
     if not cignal_no or not cignal_date:
-        messages.error(request, "Cignal Play No and Date are required.")
+        messages.error(request, "Cignal Account No and Date are required.")
         return redirect(request.META.get("HTTP_REFERER", "cignal_dashboard"))
     customer = addon_req.customer
-    customer.cignalplay_no = cignal_no
-    try:
-        customer.cignalplay_date = timezone.datetime.fromisoformat(cignal_date).date()
-    except ValueError:
-        messages.error(request, "Invalid date format.")
-        return redirect(request.META.get("HTTP_REFERER", "cignal_dashboard"))
+    is_box = "box" in (addon_req.addon_type or "").lower()
+    if is_box:
+        customer.cignalbox_no = cignal_no
+        customer.cignalbox_adjustedby = request.user.username
+        try:
+            customer.cignalbox_date = timezone.datetime.fromisoformat(cignal_date).date()
+        except ValueError:
+            customer.cignalbox_date = timezone.now()
+    else:
+        customer.cignalplay_no = cignal_no
+        customer.cignalplay_adjustedby = request.user.username
+        try:
+            customer.cignalplay_date = timezone.datetime.fromisoformat(cignal_date).date()
+        except ValueError:
+            customer.cignalplay_date = timezone.now()
     customer.save()
     addon_req.status = "Resolved"
     addon_req.save()

@@ -88,6 +88,8 @@ def add_customer(request):
             longitude=longitude,
             cignalplay_no=request.POST.get("cignalplay_no"),
             cignalplay_date=request.POST.get("cignalplay_date") or None,
+            cignalbox_no=request.POST.get("cignalbox_no"),
+            cignalbox_date=request.POST.get("cignalbox_date") or None,
             created_form_by=request.user.username,
         )
 
@@ -289,7 +291,7 @@ def edit_customer(request, customer_id):
                 check_change("Longitude", customer.longitude, longitude)
                 customer.longitude = longitude
 
-        # Cignal Play Integration
+        # Cignal Play & Box Integration
         check_change(
             "Cignal Play No", customer.cignalplay_no, request.POST.get("cignalplay_no")
         )
@@ -303,6 +305,20 @@ def edit_customer(request, customer_id):
                 cignal_date,
             )
             customer.cignalplay_date = cignal_date
+
+        check_change(
+            "Cignal Box No", customer.cignalbox_no, request.POST.get("cignalbox_no")
+        )
+        customer.cignalbox_no = request.POST.get("cignalbox_no")
+
+        cignal_box_date = request.POST.get("cignalbox_date")
+        if cignal_box_date:
+            check_change(
+                "Cignal Box Date",
+                str(customer.cignalbox_date) if customer.cignalbox_date else None,
+                cignal_box_date,
+            )
+            customer.cignalbox_date = cignal_box_date
 
         check_change(
             "Health Status",

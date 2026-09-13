@@ -9,9 +9,10 @@ def cignal_dashboard_view(request):
     today = timezone.localtime().date()
     
     # KPIs
-    active_customers = Customer.objects.exclude(
-        cignalplay_no__isnull=True
-    ).exclude(cignalplay_no__exact="")
+    active_customers = Customer.objects.filter(
+        (Q(cignalplay_no__isnull=False) & ~Q(cignalplay_no__exact=""))
+        | (Q(cignalbox_no__isnull=False) & ~Q(cignalbox_no__exact=""))
+    )
     
     active_cignal_customers = active_customers.count()
     

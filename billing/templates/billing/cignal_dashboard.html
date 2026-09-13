@@ -155,9 +155,26 @@
                         {{ customer.full_name|default:customer.pppoe_username }}
                       </a>
                     </td>
-                    <td><span class="font-monospace fw-bold text-primary" style="letter-spacing:0.04em;">{{ customer.cignalplay_no }}</span></td>
-                    <td><small class="text-muted">{{ customer.cignalplay_date|date:"M d, Y"|default:"N/A" }}</small></td>
-                    <td><small class="text-muted">{{ customer.cignalplay_adjustedby|default:"-" }}</small></td>
+                    <td>
+                      {% if customer.cignalplay_no %}
+                        <div><span class="badge bg-info-subtle text-info me-1" style="font-size:0.65rem;">PLAY</span><span class="font-monospace fw-bold text-primary" style="letter-spacing:0.04em;">{{ customer.cignalplay_no }}</span></div>
+                      {% endif %}
+                      {% if customer.cignalbox_no %}
+                        <div class="{% if customer.cignalplay_no %}mt-1{% endif %}"><span class="badge bg-warning-subtle text-warning me-1" style="font-size:0.65rem;">BOX</span><span class="font-monospace fw-bold text-warning" style="letter-spacing:0.04em;">{{ customer.cignalbox_no }}</span></div>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if customer.cignalplay_no and customer.cignalplay_date %}
+                        <div><small class="text-muted">{{ customer.cignalplay_date|date:"M d, Y" }}</small></div>
+                      {% endif %}
+                      {% if customer.cignalbox_no and customer.cignalbox_date %}
+                        <div><small class="text-muted">{{ customer.cignalbox_date|date:"M d, Y" }}</small></div>
+                      {% endif %}
+                      {% if not customer.cignalplay_date and not customer.cignalbox_date %}
+                        <small class="text-muted">N/A</small>
+                      {% endif %}
+                    </td>
+                    <td><small class="text-muted">{{ customer.cignalbox_adjustedby|default:customer.cignalplay_adjustedby|default:"-" }}</small></td>
                   </tr>
                   {% empty %}
                   <tr>
