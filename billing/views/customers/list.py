@@ -48,17 +48,25 @@ def customer_list(request):
     from network_manager.models import MikrotikDevice
     from django.utils import timezone
     from datetime import timedelta
-    from django.db.models import Case, When, Value, IntegerField
+    from django.db.models import Case, When, Value, IntegerField, Count, Q
+
+    now = timezone.now()
+    seven_days_from_now = now + timedelta(days=7)
+    seven_days_ago = now - timedelta(days=7)
+
+    # Dynamic counts for Top Stat Pills
+    stats = Customer.objects.aggregate(
+        total=Count("id"),
+        active=Count("id", filter=Q(expires_at__gt=seven_days_from_now, status="active")),
+        expiring=Count("id", filter=Q(expires_at__gt=now, expires_at__lte=seven_days_from_now, status="active")),
+        offline=Count("id", filter=Q(status__in=["suspended", "inactive", "pull out"]) | Q(expires_at__lte=now)),
+    )
 
     customers = Customer.objects.select_related(
         "plan", "agent", "barangay", "mikrotik_device"
     ).all()
 
     filter_type = request.GET.get("filter", "all")
-
-    now = timezone.now()
-    seven_days_from_now = now + timedelta(days=7)
-    seven_days_ago = now - timedelta(days=7)
 
     if filter_type == "active":
         customers = customers.filter(
@@ -98,6 +106,7 @@ def customer_list(request):
             "devices": devices,
             "barangays": barangays,
             "filter_type": filter_type,
+            "stats": stats,
         },
     )
 

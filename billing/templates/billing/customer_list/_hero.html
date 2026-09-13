@@ -1,41 +1,80 @@
 <!-- Base Partial: Hero & Top Actions -->
-    <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4 animate-fade-in"
-         style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #60a5fa 100%);">
-        <div class="d-flex align-items-center">
-            <div class="hero-icon"><i class="fa-solid fa-users"></i></div>
-            <div>
-                <div class="hero-title">Customers List</div>
-                <div class="hero-sub">Manage and view all subscriber accounts</div>
-            </div>
-        </div>
-        <div class="d-flex flex-wrap gap-2 align-items-center">
-            {% if request.user.role != 'Agent' %}
-            <select id="routerFilter" class="form-select form-select-sm" style="background:rgba(255,255,255,0.15); border-color:rgba(255,255,255,0.3); color:white; border-radius:30px; font-weight:600;">
-                <option value="" style="color:#1e293b;">All Routers</option>
-                {% for device in devices %}
-                <option value="{{ device.device_name }}" style="color:#1e293b;">{{ device.device_name }}</option>
-                {% endfor %}
-            </select>
-            <select id="barangayFilter" class="form-select form-select-sm" style="background:rgba(255,255,255,0.15); border-color:rgba(255,255,255,0.3); color:white; border-radius:30px; font-weight:600;">
-                <option value="" style="color:#1e293b;">All Barangays</option>
-                {% for barangay in barangays %}
-                <option value="{{ barangay.name }}" style="color:#1e293b;">{{ barangay.name }}</option>
-                {% endfor %}
-            </select>
-            {% endif %}
-            {% if request.user.role in 'Admin,Agent,CSR' %}
-            <button type="button" id="btnBulkSms" class="btn-premium" style="background:#10b981; border:none; padding:6px 14px; font-size:0.8rem;" disabled data-bs-toggle="modal" data-bs-target="#bulkSmsModal">
-                <i class="fas fa-comment-sms"></i> SMS (<span id="selectedCount">0</span>)
-            </button>
-            <button type="button" id="btnBulkEmail" class="btn-premium" style="background:#f59e0b; border:none; padding:6px 14px; font-size:0.8rem;" disabled data-bs-toggle="modal" data-bs-target="#bulkEmailModal">
-                <i class="fas fa-envelope"></i> Email (<span id="selectedEmailCount">0</span>)
-            </button>
-            <button type="button" id="btnBulkTransfer" class="btn-premium" style="background:#0ea5e9; border:none; padding:6px 14px; font-size:0.8rem;" disabled data-bs-toggle="modal" data-bs-target="#bulkTransferModal">
-                <i class="fas fa-exchange-alt"></i> Transfer (<span id="selectedTransferCount">0</span>)
-            </button>
-            <a href="{% url 'add_customer' %}" class="btn-premium" style="background:rgba(255,255,255,0.25); color:white; border:1px solid rgba(255,255,255,0.4); padding:6px 14px; font-size:0.8rem;">
-                <i class="fa-solid fa-user-plus"></i> Add Customer
-            </a>
-            {% endif %}
+<div class="customer-hero-card d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4 animate-fade-in">
+    <div class="d-flex align-items-center gap-3">
+        <div class="customer-hero-icon"><i class="fa-solid fa-users"></i></div>
+        <div>
+            <div class="fs-4 fw-bold text-white tracking-tight">Customers Directory</div>
+            <div class="text-white-50 small">Manage and monitor all active and provisioned subscriber accounts</div>
         </div>
     </div>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        {% if request.user.role != 'Agent' %}
+        <select id="routerFilter" class="form-select form-select-sm" style="width: auto; min-width: 140px; background-color: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255, 255, 255, 0.15); color: #f8fafc; border-radius: 30px; font-weight: 600; padding-right: 2rem;">
+            <option value="" style="background: #0f172a; color: #f8fafc;">All Routers</option>
+            {% for device in devices %}
+            <option value="{{ device.device_name }}" style="background: #0f172a; color: #f8fafc;">{{ device.device_name }}</option>
+            {% endfor %}
+        </select>
+        <select id="barangayFilter" class="form-select form-select-sm" style="width: auto; min-width: 140px; background-color: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255, 255, 255, 0.15); color: #f8fafc; border-radius: 30px; font-weight: 600; padding-right: 2rem;">
+            <option value="" style="background: #0f172a; color: #f8fafc;">All Barangays</option>
+            {% for barangay in barangays %}
+            <option value="{{ barangay.name }}" style="background: #0f172a; color: #f8fafc;">{{ barangay.name }}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
+        {% if request.user.role in 'Admin,Agent,CSR' %}
+        <button type="button" id="btnBulkSms" class="btn btn-sm btn-success fw-semibold shadow-sm" style="border-radius: 30px; padding: 6px 14px; font-size: 0.8rem;" disabled data-bs-toggle="modal" data-bs-target="#bulkSmsModal">
+            <i class="fas fa-comment-sms me-1"></i> SMS (<span id="selectedCount">0</span>)
+        </button>
+        <button type="button" id="btnBulkEmail" class="btn btn-sm btn-warning fw-semibold shadow-sm text-dark" style="border-radius: 30px; padding: 6px 14px; font-size: 0.8rem;" disabled data-bs-toggle="modal" data-bs-target="#bulkEmailModal">
+            <i class="fas fa-envelope me-1"></i> Email (<span id="selectedEmailCount">0</span>)
+        </button>
+        <button type="button" id="btnBulkTransfer" class="btn btn-sm btn-info fw-semibold shadow-sm text-dark" style="border-radius: 30px; padding: 6px 14px; font-size: 0.8rem;" disabled data-bs-toggle="modal" data-bs-target="#bulkTransferModal">
+            <i class="fas fa-exchange-alt me-1"></i> Transfer (<span id="selectedTransferCount">0</span>)
+        </button>
+        <a href="{% url 'add_customer' %}" class="btn btn-sm btn-primary fw-semibold shadow-sm" style="border-radius: 30px; padding: 6px 14px; font-size: 0.8rem; background: #0284c7; border-color: #38bdf8;">
+            <i class="fa-solid fa-user-plus me-1"></i> Add Customer
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Dynamic Top Stat Pills (Excitement Counters) -->
+<div class="row g-3 mb-4 animate-fade-in">
+    <div class="col-6 col-md-3">
+        <a href="?filter=all" class="gt-stat-pill gt-stat-pill-total h-100">
+            <div class="gt-stat-pill-icon"><i class="fa-solid fa-users"></i></div>
+            <div>
+                <div class="gt-stat-pill-val">{{ stats.total|default:customers.count|default:"0" }}</div>
+                <div class="gt-stat-pill-lbl">Total Subscribers</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="?filter=active" class="gt-stat-pill gt-stat-pill-active h-100">
+            <div class="gt-stat-pill-icon"><i class="fa-solid fa-circle text-success" style="font-size: 0.75rem; box-shadow: 0 0 8px rgba(34, 197, 94, 0.8); border-radius: 50%;"></i></div>
+            <div>
+                <div class="gt-stat-pill-val text-success">{{ stats.active|default:"0" }}</div>
+                <div class="gt-stat-pill-lbl">Active &amp; Online</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="?filter=expiring" class="gt-stat-pill gt-stat-pill-expiring h-100">
+            <div class="gt-stat-pill-icon"><i class="fa-solid fa-circle text-warning" style="font-size: 0.75rem; box-shadow: 0 0 8px rgba(245, 158, 11, 0.8); border-radius: 50%;"></i></div>
+            <div>
+                <div class="gt-stat-pill-val text-warning">{{ stats.expiring|default:"0" }}</div>
+                <div class="gt-stat-pill-lbl">Due Soon (&le; 7d)</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="?filter=inactive" class="gt-stat-pill gt-stat-pill-offline h-100">
+            <div class="gt-stat-pill-icon"><i class="fa-solid fa-circle text-danger" style="font-size: 0.75rem; box-shadow: 0 0 8px rgba(239, 68, 68, 0.8); border-radius: 50%;"></i></div>
+            <div>
+                <div class="gt-stat-pill-val text-danger">{{ stats.offline|default:"0" }}</div>
+                <div class="gt-stat-pill-lbl">Offline / Suspended</div>
+            </div>
+        </a>
+    </div>
+</div>
