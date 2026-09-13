@@ -169,6 +169,34 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
     * Whenever an AI updates the development encyclopedia (`billing/templates/billing/changelog.html`), it **MUST** simultaneously update the topbar rocket dropdown changelog in `billing/templates/billing/base/_topbar.html`.
     * Keep the topbar summary concise with bullet cards (`gt-cl-card`) highlighting the main features of that day's build, and transfer the `<span class="badge bg-success">Latest Build</span>` badge to the newest date.
 
+26. **THE POWERSHELL SYNTAX LAW (Zero Syntax Retries on Windows)**:
+    * **MANDATORY**: The user's system runs Windows PowerShell. **NEVER** chain terminal commands with bash-style `&&` (which causes `ParserError: The token '&&' is not a valid statement separator`).
+    * **ALWAYS** chain commands with a semicolon `;`:
+      ```powershell
+      git add -A; git commit -m "feat(...)"; git push origin main
+      ```
+
+27. **LOCAL PYTHON AST SYNTAX COMPILATION PROTOCOL**:
+    * **CRITICAL CONTEXT**: The local Windows host system does NOT have the Django virtual environment activated (Django runs inside the Docker container on Linux).
+    * **FORBIDDEN**: Running `python manage.py check` or management commands directly on the host shell (causes `ModuleNotFoundError: No module named 'django'`).
+    * **MANDATORY**: For instantaneous local Python syntax checks with 0 dependencies, use Python's built-in AST compiler:
+      ```powershell
+      python -m py_compile path/to/file.py
+      ```
+    * For full Django system/migration checks, execute them directly inside the droplet container via SSH:
+      ```bash
+      ssh root@143.198.207.144 "docker exec gametech-billing-system_web_1 python manage.py check"
+      ```
+
+28. **CANONICAL MODEL & TABLE NOMENCLATURE MATRIX**:
+    * The database models in this system have precise names that differ from colloquial English. Always use the canonical model name:
+      * **Payments**: Model is `Payment` (DB table `billing_payment`), NOT `PaymentLog`.
+      * **Cignal Subscriptions**: Model is `CignalPlay` (DB table `cignal_play`), NOT `CignalSubscription`.
+      * **Add-on Pricing Tiers**: Model is `AddonPlan` (DB table `billing_addonplan`), NOT `Addon`.
+      * **General Audit Overrides**: Model is `AuditLog` (DB table `billing_auditlog`).
+      * **System Entity Event Logs**: Model is `SystemLog` (DB table `billing_systemlog`).
+    * **NEVER** guess or hallucinate model names. Check `gametech_filing_index.md` or `gametech_architecture_map.txt`.
+
 ---
 
 ### 🧼 2. Codebase Cleanliness & Architecture Standards

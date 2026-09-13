@@ -43,12 +43,21 @@ This workspace strictly adheres to the protocols defined in:
 12. **Cache Sync on State Changes**: Verify Redis invalidation when editing Login/Logout/Delete views. See AGENTS.md Rule #21.
 13. **400-Line Circuit Breaker**: When touching a file > 400 lines, split into < 250 line partials before completing the task. See AGENTS.md Rule #24.
 14. **Dual Changelog Sync**: Whenever updating the Development Encyclopedia (`changelog.html`), ALWAYS simultaneously update the topbar rocket dropdown in `_topbar.html`. See AGENTS.md Rule #25.
+15. **PowerShell Syntax Law**: Always chain local commands with `;` (never bash `&&`) on Windows PowerShell. See AGENTS.md Rule #26.
+16. **Local AST Syntax Compile**: Use `python -m py_compile <file>` for zero-dependency local syntax checks. Never run `python manage.py check` on host. See AGENTS.md Rule #27.
+17. **Canonical Models**: `Payment` (not `PaymentLog`), `CignalPlay` (not `CignalSubscription`), `AddonPlan` (not `Addon`). See AGENTS.md Rule #28.
 
 ---
 
 ## 🚨 Quick-Reference Commands (Copy-Paste Ready)
 
 ```bash
+# Windows PowerShell Git deploy chain (MANDATORY semicolon syntax)
+git add -A; git commit -m "feat(...)"; git push origin main
+
+# Local Python syntax check (Zero dependencies, instant AST validation)
+python -m py_compile path/to/file.py
+
 # Check production logs — time-bounded (PREFERRED for recent 500s)
 ssh root@143.198.207.144 "docker logs --since 2m gametech-billing-system_web_1 2>&1 | tail -40"
 
