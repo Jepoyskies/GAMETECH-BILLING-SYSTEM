@@ -398,6 +398,37 @@
 
 ---
 
+### ERR-023: OpenStreetMap Map Tiles Blocked with 403 Access Blocked (`osm.wiki/Blocked`)
+* **Symptoms**:
+  * In customer profiles (`/customers/view/<id>/`), customer edit/add, or Geo Map (`/geomap/`), map tiles fail to load.
+  * Map displays repeated 403 tile warning images stating: `Access blocked: App is not following the tile usage policy of OpenStreetMap's volunteer-run servers: osm.wiki/Blocked`.
+* **Root Causes**:
+  * OpenStreetMap (`tile.openstreetmap.org`) has enforced strict rate-limiting and User-Agent policies against direct web requests from web applications.
+* **Exact Target Files**:
+  * `billing/templates/billing/view_customer/_scripts.html`
+  * `billing/templates/billing/geomap.html`
+  * `billing/templates/billing/edit_customer.html`
+  * `billing/templates/billing/add_customer.html`
+  * `network_manager/templates/network_manager/nap_form.html`
+* **1-Step Fix**:
+  * Replace `tile.openstreetmap.org` with CartoDB Voyager (`https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png`) for light mode and Dark Matter (`https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png`) for dark mode with `subdomains: 'abcd'` and maxZoom: 20.
+
+---
+
+### ERR-024: False-Positive "Offline (Router Off)" on Isolated or Lab MikroTik Routers
+* **Symptoms**:
+  * In customer profiles (`/customers/view/<id>/`), a customer without an active PPPoE tunnel displays `● Offline (Router Off)` instead of `● Disconnected (Inactive)`, even though the MikroTik router is online and communicating via API.
+* **Root Causes**:
+  * `api_customer_mikrotik_status` in `billing/views/api/network.py` executed a RouterOS ping to `8.8.8.8` whenever a customer had no active session.
+  * On lab routers or isolated subnets lacking a direct WAN internet gateway, `ping 8.8.8.8` returns `status: "no route to host"`.
+  * The code treated `no route to host` identically to a lost uplink timeout, erroneously overriding the customer's status to `Offline (Router Off)`.
+* **Exact Target Files**:
+  * `billing/views/api/network.py` (`api_customer_mikrotik_status`)
+* **1-Step Fix**:
+  * Exclude `no route to host` from the router ping loss check so isolated routers without public internet routes are not diagnosed as offline, accurately leaving disconnected subscribers as `Disconnected (Inactive)`.
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 1. Assign a new `ERR-XXX` identifier.
