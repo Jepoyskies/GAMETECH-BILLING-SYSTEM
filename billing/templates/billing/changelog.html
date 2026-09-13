@@ -6,16 +6,27 @@
 <div class="container-fluid py-4" style="max-width: 1400px; margin: 0 auto; animation: fadeIn 0.4s ease-out;">
     
     <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div>
-            <h4 class="fw-bold mb-1" style="color: #1e3a8a;">The Complete Gametech Development Encyclopedia (Unabridged)</h4>
+            <h4 class="fw-bold mb-1" style="color: var(--gt-primary, #1e3a8a);">The Complete Gametech Development Encyclopedia (Unabridged)</h4>
             <p class="text-muted mb-0" style="font-size: 0.95rem;">
                 <i class="fas fa-book-open me-1"></i> Every single detail, every bug fix, every struggle, and every technical feature built into this system. Nothing is left behind.
             </p>
         </div>
-        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm">
-            <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
-        </a>
+        <div class="d-flex align-items-center gap-3">
+            <!-- Glassmorphic Dual-View Toggle Switch -->
+            <div class="gt-cl-mode-toggle gt-cl-mode-toggle-light shadow-sm" id="pageClModeToggle">
+                <button type="button" class="gt-cl-toggle-btn" data-mode="tech" onclick="setChangelogMode('tech');" title="Technical Developer View">
+                    🤓 Tech View
+                </button>
+                <button type="button" class="gt-cl-toggle-btn active" data-mode="staff" onclick="setChangelogMode('staff');" title="Simple Business & Staff View">
+                    🏢 Staff View
+                </button>
+            </div>
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm">
+                <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+            </a>
+        </div>
     </div>
 
     <!-- Main Layout -->
@@ -103,108 +114,213 @@
 
                             <p class="lead text-muted mb-4">A landmark day of full-stack modernization: refactoring Cignal Add-ons into a robust One-to-Many multi-device architecture with manual payment and expiration tracking, switching all mapping components to free OpenStreetMap Foundation tiles with adaptive dark inversion filters, fixing light-mode form controls across customer views, enforcing strict separation between day-to-day staff tools and owner administration, and streamlining customer ergonomics.</p>
 
-                            <!-- Cignal Expiring Radar, Portal Multi-TV Sync & Revenue Split -->
-                            <div class="card border-0 mb-4" style="background:#fefce8; border-radius:12px;">
-                                <div class="card-body p-4">
-                                    <h5 class="fw-bold mb-3" style="color:#a16207;"><i class="fas fa-satellite-dish me-2"></i> Cignal Expiring Radar, Customer Portal Multi-TV Sync &amp; Financial Revenue Split</h5>
-                                    <p>Upgraded the Cignal operations and financial reporting ecosystem across staff and customer surfaces:</p>
-                                    <ul class="mb-0">
-                                        <li><strong>Proactive "Expiring Soon" Radar:</strong> Added an active expiration radar on the Cignal Dashboard (<code>/cignal-dashboard/</code>) querying all <code>CignalPlay</code> devices expiring within the next 5 days. Displays customer name, device label, expiration countdown badge, and a one-click Reload button using <code>openCignalPaymentModal</code>.</li>
-                                        <li><strong>Customer Portal Multi-TV Sync:</strong> Enhanced the Customer Self-Service Portal dashboard (<code>/portal/dashboard/</code>) to dynamically render all active and expired Cignal boxes owned by the customer using <code>cignal_plans</code> with status badges and device add-on triggers.</li>
-                                        <li><strong>Financial Revenue Separation:</strong> Decomposed Monthly-To-Date (MTD) collections in Admin Analytics (<code>/analytics/</code>) into dedicated metric cards separating Core Internet Subscriptions from Cignal Add-on revenues.</li>
-                                    </ul>
-                                </div>
-                            </div>
+                            <div class="cl-dual-content">
+                                <!-- Tech View -->
+                                <div class="tech-content">
+                                    <!-- Cignal Expiring Radar, Portal Multi-TV Sync & Revenue Split -->
+                                    <div class="card border-0 mb-4" style="background:#fefce8; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#a16207;"><i class="fas fa-satellite-dish me-2"></i> Cignal Expiring Radar, Customer Portal Multi-TV Sync &amp; Financial Revenue Split</h5>
+                                            <p>Upgraded the Cignal operations and financial reporting ecosystem across staff and customer surfaces:</p>
+                                            <ul class="mb-0">
+                                                <li><strong>Proactive "Expiring Soon" Radar:</strong> Added an active expiration radar on the Cignal Dashboard (<code>/cignal-dashboard/</code>) querying all <code>CignalPlay</code> devices expiring within the next 5 days. Displays customer name, device label, expiration countdown badge, and a one-click Reload button using <code>openCignalPaymentModal</code>.</li>
+                                                <li><strong>Customer Portal Multi-TV Sync:</strong> Enhanced the Customer Self-Service Portal dashboard (<code>/portal/dashboard/</code>) to dynamically render all active and expired Cignal boxes owned by the customer using <code>cignal_plans</code> with status badges and device add-on triggers.</li>
+                                                <li><strong>Financial Revenue Separation:</strong> Decomposed Monthly-To-Date (MTD) collections in Admin Analytics (<code>/analytics/</code>) into dedicated metric cards separating Core Internet Subscriptions from Cignal Add-on revenues.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
 
-                            <!-- Multi-Subscription Cignal Architecture & Flexible Reload Engine -->
-                            <div class="card border-0 mb-4" style="background:#f0fdf4; border-radius:12px;">
-                                <div class="card-body p-4">
-                                    <h5 class="fw-bold mb-3" style="color:#15803d;"><i class="fas fa-coins me-2"></i> Multi-Subscription Cignal Architecture (One-to-Many) &amp; Flexible Payment Tracker (ERR-028)</h5>
-                                    <p>Engineered comprehensive multi-device Cignal subscription tracking and flexible input-based manual payment/expiration synchronization:</p>
-                                    <ul class="mb-0">
-                                        <li><strong>One-to-Many Database Architecture:</strong> Refactored the <code>CignalPlay</code> model (<code>ForeignKey(Customer, related_name="cignal_plans")</code>) to track multiple concurrent Cignal accounts or STB devices per customer. Added fields for <code>account_name</code> (friendly device label e.g., "Living Room TV", "Master Bedroom"), <code>account_number</code> (physical serial or account code), <code>addon_type</code> (Cignal Play vs Cignal Box), <code>amount_paid</code>, and <code>expiration_date</code> with automatic <code>end_date</code> synchronization in <code>save()</code>. Applied migration <code>0041_cignalplay_account_fields</code>.</li>
-                                        <li><strong>Flexible Payment &amp; Expiration Reload Modal:</strong> Created <code>billing/partials/_cignal_payment_modal.html</code> featuring target account selection, vanilla JS quick-fill presets (₱149 Play, ₱399 Premium, ₱250 Installment, ₱3,000 Cashout), and expiration date picker with +30/+60 day steppers.</li>
-                                        <li><strong>Atomic Backend Transactions:</strong> Wrapped <code>process_cignal_payment</code> in <code>transaction.atomic()</code> in <code>billing/views/cignal_dashboard.py</code> to simultaneously update Cignal expiration, accumulate amounts, create formal <code>Payment</code> transaction logs, and generate system notifications and audit records.</li>
-                                        <li><strong>Global Modal Opener:</strong> Added <code>window.openCignalPaymentModal(opts)</code> allowing one-click payment modal invocation directly from customer profile cards, active subscription tables, and the Cignal dashboard.</li>
-                                    </ul>
-                                </div>
-                            </div>
+                                    <!-- Multi-Subscription Cignal Architecture & Flexible Reload Engine -->
+                                    <div class="card border-0 mb-4" style="background:#f0fdf4; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#15803d;"><i class="fas fa-coins me-2"></i> Multi-Subscription Cignal Architecture (One-to-Many) &amp; Flexible Payment Tracker (ERR-028)</h5>
+                                            <p>Engineered comprehensive multi-device Cignal subscription tracking and flexible input-based manual payment/expiration synchronization:</p>
+                                            <ul class="mb-0">
+                                                <li><strong>One-to-Many Database Architecture:</strong> Refactored the <code>CignalPlay</code> model (<code>ForeignKey(Customer, related_name="cignal_plans")</code>) to track multiple concurrent Cignal accounts or STB devices per customer. Added fields for <code>account_name</code> (friendly device label e.g., "Living Room TV", "Master Bedroom"), <code>account_number</code> (physical serial or account code), <code>addon_type</code> (Cignal Play vs Cignal Box), <code>amount_paid</code>, and <code>expiration_date</code> with automatic <code>end_date</code> synchronization in <code>save()</code>. Applied migration <code>0041_cignalplay_account_fields</code>.</li>
+                                                <li><strong>Flexible Payment &amp; Expiration Reload Modal:</strong> Created <code>billing/partials/_cignal_payment_modal.html</code> featuring target account selection, vanilla JS quick-fill presets (₱149 Play, ₱399 Premium, ₱250 Installment, ₱3,000 Cashout), and expiration date picker with +30/+60 day steppers.</li>
+                                                <li><strong>Atomic Backend Transactions:</strong> Wrapped <code>process_cignal_payment</code> in <code>transaction.atomic()</code> in <code>billing/views/cignal_dashboard.py</code> to simultaneously update Cignal expiration, accumulate amounts, create formal <code>Payment</code> transaction logs, and generate system notifications and audit records.</li>
+                                                <li><strong>Global Modal Opener:</strong> Added <code>window.openCignalPaymentModal(opts)</code> allowing one-click payment modal invocation directly from customer profile cards, active subscription tables, and the Cignal dashboard.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
 
-                            <!-- Cignal Play Operations Pipeline -->
-                            <div class="card border-0 mb-4" style="background:#f0fdf4; border-radius:12px;">
-                                <div class="card-body p-4">
-                                    <h5 class="fw-bold mb-3" style="color:#15803d;"><i class="fas fa-satellite-dish me-2"></i> End-to-End Cignal Play Operations &amp; Activation Pipeline</h5>
-                                    <p>Integrated the customer-facing Cignal Play request flow directly into admin management views for instantaneous fulfillment:</p>
-                                    <ul class="mb-0">
-                                        <li><strong>Dynamic Add-on Pricing Engine:</strong> Introduced <code>AddonPlan</code> data model and dedicated management UI under the Admin Panel (<code>/addon-plans/</code>), enabling system owners to dynamically create, edit, toggle active status, and set pricing tiers for Cignal Play, Cignal Box, and custom value-added packages with strict role guards and glassmorphic aesthetics.</li>
-                                        <li><strong>Unified Shared Activation Modal (Orchestrator Pattern):</strong> Standardized the Cignal Play & Box activation modal across the entire system into a single shared partial (<code>billing/partials/_cignal_activation_modal.html</code>), eliminating code duplication and unifying design tokens, dynamic account number switching, subscriber summary banner, and activation date picker across both the Customer Profile and Cignal Dashboard.</li>
-                                        <li><strong>Glowing Request Alert in Customer Profile:</strong> When a subscriber requests Cignal Play, visiting <code>/customers/view/&lt;id&gt;/</code> activates a pulsing glowing blue neon border and animated radar dish banner over the "Add-ons & Extra" card, immediately alerting staff to pending applications.</li>
-                                        <li><strong>Pre-Filled Fulfillment Modal:</strong> Upgraded the profile's "Apply Add-on" modal to automatically ingest the pending request ID, populate the requested service tier, and mark the <code>AddOnRequest</code> as Resolved upon submission.</li>
-                                        <li><strong>Direct Activation in Cignal Dashboard:</strong> Added direct "Activate" modals inside <code>/cignal-dashboard/</code> with target row auto-scroll and highlight, enabling one-click fulfillment from both the subscriber profile and the Cignal hub.</li>
-                                        <li><strong>First-Class Cignal Box Tracking:</strong> Added explicit support for Cignal Box alongside Cignal Play across the Customer model (<code>cignalbox_no</code>, <code>cignalbox_date</code>), Add-ons & Extra profile card, subscriber portal, dynamic activation modal, and edit forms.</li>
-                                        <li><strong>Resilient URL Routing:</strong> Resolved reverse-match redirects on <code>approve_cignal_request</code>, ensuring safe fallback to the HTTP referrer or dashboard.</li>
-                                    </ul>
-                                </div>
-                            </div>
+                                    <!-- Cignal Play Operations Pipeline -->
+                                    <div class="card border-0 mb-4" style="background:#f0fdf4; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#15803d;"><i class="fas fa-satellite-dish me-2"></i> End-to-End Cignal Play Operations &amp; Activation Pipeline</h5>
+                                            <p>Integrated the customer-facing Cignal Play request flow directly into admin management views for instantaneous fulfillment:</p>
+                                            <ul class="mb-0">
+                                                <li><strong>Dynamic Add-on Pricing Engine:</strong> Introduced <code>AddonPlan</code> data model and dedicated management UI under the Admin Panel (<code>/addon-plans/</code>), enabling system owners to dynamically create, edit, toggle active status, and set pricing tiers for Cignal Play, Cignal Box, and custom value-added packages with strict role guards and glassmorphic aesthetics.</li>
+                                                <li><strong>Unified Shared Activation Modal (Orchestrator Pattern):</strong> Standardized the Cignal Play & Box activation modal across the entire system into a single shared partial (<code>billing/partials/_cignal_activation_modal.html</code>), eliminating code duplication and unifying design tokens, dynamic account number switching, subscriber summary banner, and activation date picker across both the Customer Profile and Cignal Dashboard.</li>
+                                                <li><strong>Glowing Request Alert in Customer Profile:</strong> When a subscriber requests Cignal Play, visiting <code>/customers/view/&lt;id&gt;/</code> activates a pulsing glowing blue neon border and animated radar dish banner over the "Add-ons & Extra" card, immediately alerting staff to pending applications.</li>
+                                                <li><strong>Pre-Filled Fulfillment Modal:</strong> Upgraded the profile's "Apply Add-on" modal to automatically ingest the pending request ID, populate the requested service tier, and mark the <code>AddOnRequest</code> as Resolved upon submission.</li>
+                                                <li><strong>Direct Activation in Cignal Dashboard:</strong> Added direct "Activate" modals inside <code>/cignal-dashboard/</code> with target row auto-scroll and highlight, enabling one-click fulfillment from both the subscriber profile and the Cignal hub.</li>
+                                                <li><strong>First-Class Cignal Box Tracking:</strong> Added explicit support for Cignal Box alongside Cignal Play across the Customer model (<code>cignalbox_no</code>, <code>cignalbox_date</code>), Add-ons & Extra profile card, subscriber portal, dynamic activation modal, and edit forms.</li>
+                                                <li><strong>Resilient URL Routing:</strong> Resolved reverse-match redirects on <code>approve_cignal_request</code>, ensuring safe fallback to the HTTP referrer or dashboard.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
 
-                            <!-- Cross-Router Live Session Detection -->
-                            <div class="card border-0 mb-4" style="background:#eff6ff; border-radius:12px;">
-                                <div class="card-body p-4">
-                                    <h5 class="fw-bold mb-3" style="color:#1d4ed8;"><i class="fas fa-network-wired me-2"></i> Cross-Router Live Session Detection & Eviction Engine (ERR-022)</h5>
-                                    <p>Eliminated false-negative "Offline / Disconnected" statuses during router-to-router subscriber transfers:</p>
-                                    <ul class="mb-0">
-                                        <li><strong>Multi-Router Session Discovery:</strong> <code>api_customer_mikrotik_status</code> now interrogates the system live monitoring cache and queries online routers if the subscriber is disconnected on their assigned router. If found active on a previous router, status displays as Connected with an informative origin router badge.</li>
-                                        <li><strong>System-Wide Session Kick:</strong> <code>customer_kick_session</code> and transfer routines now iterate all online routers to cleanly terminate stale PPPoE sessions across the fleet.</li>
-                                    </ul>
-                                </div>
-                            </div>
+                                    <!-- Cross-Router Live Session Detection -->
+                                    <div class="card border-0 mb-4" style="background:#eff6ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#1d4ed8;"><i class="fas fa-network-wired me-2"></i> Cross-Router Live Session Detection & Eviction Engine (ERR-022)</h5>
+                                            <p>Eliminated false-negative "Offline / Disconnected" statuses during router-to-router subscriber transfers:</p>
+                                            <ul class="mb-0">
+                                                <li><strong>Multi-Router Session Discovery:</strong> <code>api_customer_mikrotik_status</code> now interrogates the system live monitoring cache and queries online routers if the subscriber is disconnected on their assigned router. If found active on a previous router, status displays as Connected with an informative origin router badge.</li>
+                                                <li><strong>System-Wide Session Kick:</strong> <code>customer_kick_session</code> and transfer routines now iterate all online routers to cleanly terminate stale PPPoE sessions across the fleet.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
 
-                            <!-- Statement of Account Ergonomics -->
-                            <div class="card border-0 mb-4" style="background:#faf5ff; border-radius:12px;">
-                                <div class="card-body p-4">
-                                    <h5 class="fw-bold mb-3" style="color:#7e22ce;"><i class="fas fa-file-invoice-dollar me-2"></i> Customer View SOA Ergonomics</h5>
-                                    <p>Streamlined the subscriber header and card grid by removing cluttered standalone Statement of Account widgets and integrating a fast-action SOA item into the "More Actions" dropdown.</p>
-                                </div>
-                            </div>
+                                    <!-- Statement of Account Ergonomics -->
+                                    <div class="card border-0 mb-4" style="background:#faf5ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#7e22ce;"><i class="fas fa-file-invoice-dollar me-2"></i> Customer View SOA Ergonomics</h5>
+                                            <p>Streamlined the subscriber header and card grid by removing cluttered standalone Statement of Account widgets and integrating a fast-action SOA item into the "More Actions" dropdown.</p>
+                                        </div>
+                                    </div>
 
-                            <!-- Admin Panel & Settings Strict Reorganization -->
-                            <div class="card border-0 mb-4" style="background:#fffbeb; border-radius:12px;">
-                                <div class="card-body p-4">
-                                    <h5 class="fw-bold mb-3" style="color:#b45309;"><i class="fas fa-sitemap me-2"></i> Admin Panel &amp; Settings Strict Reorganization</h5>
-                                    <p>Enforced strict logical separation between day-to-day staff operational tools (<code>/settings/</code>) and owner-level configuration, analytics, and security audits (<code>/admin-panel/</code>):</p>
-                                    <ul class="mb-0">
-                                        <li><strong>Cleaned Staff Settings:</strong> Eliminated redundant cards from One Stop Shop (<code>settings.html</code>) including NAP Boxes, PON Calculator, Add-on Logs, Rebates Log, System Logs, DB Backup, and Packages, consolidating daily workflows into Customers, Subscriptions, Payment Portal, Add-on Payments, and Cignal Play.</li>
-                                        <li><strong>Dedicated Financials &amp; Reports Hub:</strong> Created a focused Financials &amp; Reports section inside the Admin Panel consolidating Reports &amp; Analytics (<code>analytics_dashboard</code>), Payment Logs, Rebate Logs, and Add-on Logs.</li>
-                                        <li><strong>Auto Suspend Relocated:</strong> Moved Auto Suspend directly into Admin Panel's Billing &amp; Pricing Configuration.</li>
-                                        <li><strong>Eliminated Empty Category Blocks:</strong> Preserved rigid grid alignment and removed orphan category headers for streamlined visual hierarchy.</li>
-                                    </ul>
-                                </div>
-                            </div>
+                                    <!-- Admin Panel & Settings Strict Reorganization -->
+                                    <div class="card border-0 mb-4" style="background:#fffbeb; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#b45309;"><i class="fas fa-sitemap me-2"></i> Admin Panel &amp; Settings Strict Reorganization</h5>
+                                            <p>Enforced strict logical separation between day-to-day staff operational tools (<code>/settings/</code>) and owner-level configuration, analytics, and security audits (<code>/admin-panel/</code>):</p>
+                                            <ul class="mb-0">
+                                                <li><strong>Cleaned Staff Settings:</strong> Eliminated redundant cards from One Stop Shop (<code>settings.html</code>) including NAP Boxes, PON Calculator, Add-on Logs, Rebates Log, System Logs, DB Backup, and Packages, consolidating daily workflows into Customers, Subscriptions, Payment Portal, Add-on Payments, and Cignal Play.</li>
+                                                <li><strong>Dedicated Financials &amp; Reports Hub:</strong> Created a focused Financials &amp; Reports section inside the Admin Panel consolidating Reports &amp; Analytics (<code>analytics_dashboard</code>), Payment Logs, Rebate Logs, and Add-on Logs.</li>
+                                                <li><strong>Auto Suspend Relocated:</strong> Moved Auto Suspend directly into Admin Panel's Billing &amp; Pricing Configuration.</li>
+                                                <li><strong>Eliminated Empty Category Blocks:</strong> Preserved rigid grid alignment and removed orphan category headers for streamlined visual hierarchy.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
 
-                            <!-- OpenStreetMap Engine & Dark Mode CSS Filter -->
-                            <div class="card border-0 mb-4" style="background:#f0f9ff; border-radius:12px;">
-                                <div class="card-body p-4">
-                                    <h5 class="fw-bold mb-3" style="color:#0369a1;"><i class="fas fa-map-marked-alt me-2"></i> OpenStreetMap Tile Engine &amp; Adaptive Dark-Mode Filter (ERR-026)</h5>
-                                    <p>Resolved third-party API key enforcement watermarks across all geolocation and network mapping components:</p>
-                                    <ul class="mb-0">
-                                        <li><strong>Clean OpenStreetMap Basemap:</strong> Replaced Carto basemaps displaying mandatory "API KEY REQUIRED" watermark tiles with OpenStreetMap Foundation raster tiles across Customer Edit, Customer Add, Customer Profile, Geo Map, and NAP Box forms.</li>
-                                        <li><strong>Hardware-Accelerated Dark Mode Filter:</strong> Engineered a global CSS inversion and contrast filter targeting <code>.leaflet-tile-pane</code> in dark mode, seamlessly adapting OSM daytime cartography into a midnight slate aesthetic (<code>#0f172a</code>) without affecting custom marker pins or popups.</li>
-                                        <li><strong>Zero External API Dependencies:</strong> Eliminated risks of third-party CDN watermarks, account expirations, or paid tier paywalls.</li>
-                                    </ul>
-                                </div>
-                            </div>
+                                    <!-- OpenStreetMap Engine & Dark Mode CSS Filter -->
+                                    <div class="card border-0 mb-4" style="background:#f0f9ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#0369a1;"><i class="fas fa-map-marked-alt me-2"></i> OpenStreetMap Tile Engine &amp; Adaptive Dark-Mode Filter (ERR-026)</h5>
+                                            <p>Resolved third-party API key enforcement watermarks across all geolocation and network mapping components:</p>
+                                            <ul class="mb-0">
+                                                <li><strong>Clean OpenStreetMap Basemap:</strong> Replaced Carto basemaps displaying mandatory "API KEY REQUIRED" watermark tiles with OpenStreetMap Foundation raster tiles across Customer Edit, Customer Add, Customer Profile, Geo Map, and NAP Box forms.</li>
+                                                <li><strong>Hardware-Accelerated Dark Mode Filter:</strong> Engineered a global CSS inversion and contrast filter targeting <code>.leaflet-tile-pane</code> in dark mode, seamlessly adapting OSM daytime cartography into a midnight slate aesthetic (<code>#0f172a</code>) without affecting custom marker pins or popups.</li>
+                                                <li><strong>Zero External API Dependencies:</strong> Eliminated risks of third-party CDN watermarks, account expirations, or paid tier paywalls.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
 
-                            <!-- Dark Mode Form Selects & Dropdown Engine -->
-                            <div class="card border-0 mb-4" style="background:#f8fafc; border-radius:12px;">
-                                <div class="card-body p-4">
-                                    <h5 class="fw-bold mb-3" style="color:#1e40af;"><i class="fas fa-list me-2"></i> Dark Mode Form Selects &amp; Dropdown Engine (ERR-027)</h5>
-                                    <p>Resolved browser default light-mode dropdown rendering and illegible white options across Customer Add/Edit forms:</p>
-                                    <ul class="mb-0">
-                                        <li><strong>Cohesive Dark Theme Inputs &amp; Dropdowns:</strong> Applied opaque <code>#1a1d2d</code> backgrounds and crisp white text (<code>#f8fafc</code>) across Account Type, Agent, Mikrotik Device, Subscription Plan, and Barangay dropdowns.</li>
-                                        <li><strong>Native Option &amp; Optgroup Visibility:</strong> Explicitly styled <code>select option</code> (dark <code>#1a1d2d</code>) and <code>select optgroup</code> (category headers <code>#151824</code> with cyan text) so OS select popups render with full contrast and high legibility.</li>
-                                        <li><strong>Primary Focus Feedback:</strong> Standardized focus outlines to brand primary blue (<code>#38bdf8</code>) with glowing box shadows, eliminating jarring white/blue browser outlines.</li>
-                                        <li><strong>Resilient TomSelect Integration:</strong> Added exception safeguards and optgroup detection for smooth TomSelect initialization and seamless native fallback.</li>
-                                    </ul>
+                                    <!-- Dark Mode Form Selects & Dropdown Engine -->
+                                    <div class="card border-0 mb-4" style="background:#f8fafc; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#1e40af;"><i class="fas fa-list me-2"></i> Dark Mode Form Selects &amp; Dropdown Engine (ERR-027)</h5>
+                                            <p>Resolved browser default light-mode dropdown rendering and illegible white options across Customer Add/Edit forms:</p>
+                                            <ul class="mb-0">
+                                                <li><strong>Cohesive Dark Theme Inputs &amp; Dropdowns:</strong> Applied opaque <code>#1a1d2d</code> backgrounds and crisp white text (<code>#f8fafc</code>) across Account Type, Agent, Mikrotik Device, Subscription Plan, and Barangay dropdowns.</li>
+                                                <li><strong>Native Option &amp; Optgroup Visibility:</strong> Explicitly styled <code>select option</code> (dark <code>#1a1d2d</code>) and <code>select optgroup</code> (category headers <code>#151824</code> with cyan text) so OS select popups render with full contrast and high legibility.</li>
+                                                <li><strong>Primary Focus Feedback:</strong> Standardized focus outlines to brand primary blue (<code>#38bdf8</code>) with glowing box shadows, eliminating jarring white/blue browser outlines.</li>
+                                                <li><strong>Resilient TomSelect Integration:</strong> Added exception safeguards and optgroup detection for smooth TomSelect initialization and seamless native fallback.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Staff View (Simplified Business Updates) -->
+                                <div class="staff-content">
+                                    <!-- Card 1: Multi-TV support -->
+                                    <div class="card border-0 mb-4" style="background:#f0fdf4; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#15803d;"><i class="fas fa-tv me-2"></i> 📺 Multiple TVs on a Single Customer Account</h5>
+                                            <p class="mb-2">Subscribers are no longer limited to just one TV box! You can now register multiple Cignal boxes or accounts under a single subscriber profile:</p>
+                                            <ul class="mb-0">
+                                                <li><strong>Friendly TV Nicknames:</strong> Label each TV intuitively (e.g., <em>"Living Room TV"</em>, <em>"Master Bedroom"</em>, <em>"Kids Room"</em>) so staff and customers know exactly which box is being renewed.</li>
+                                                <li><strong>Individual Box Tracking:</strong> Each box keeps its own serial number, expiration date, and payment history without interfering with the customer's main internet bill.</li>
+                                                <li><strong>1-Click TV Management:</strong> View and manage all installed boxes directly from the customer's profile or the Cignal Command Center.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <!-- Card 2: 5-Day Expiration Radar -->
+                                    <div class="card border-0 mb-4" style="background:#fefce8; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#a16207;"><i class="fas fa-clock me-2"></i> ⏰ 5-Day Expiration Warning Radar &amp; Instant Reload</h5>
+                                            <p class="mb-2">Never let customers get disconnected by surprise with our new proactive warning radar:</p>
+                                            <ul class="mb-0">
+                                                <li><strong>Proactive Alert List:</strong> A bright yellow warning table on the Cignal Dashboard highlights every customer whose TV subscription expires in the next 5 days.</li>
+                                                <li><strong>Quick 1-Click Reload:</strong> Click the yellow <em>"Reload"</em> button next to any expiring customer to open the reload window immediately with their account pre-selected.</li>
+                                                <li><strong>Flexible Amounts:</strong> Choose one-click presets like ₱149 (Play), ₱399 (Premium), ₱250 (Installment), or enter any custom payment amount with +30 or +60 day buttons.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <!-- Card 3: Separate Cignal Revenue in Financial Reports -->
+                                    <div class="card border-0 mb-4" style="background:#f0fdf4; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#15803d;"><i class="fas fa-chart-line me-2"></i> 💰 Clean Revenue Breakdown (Internet vs. Cignal)</h5>
+                                            <p class="mb-2">Financial reports in Admin Analytics now provide transparent accounting for business owners:</p>
+                                            <ul class="mb-0">
+                                                <li><strong>Clear Separation:</strong> Monthly collections are now separated into <em>"Core Internet Subscriptions"</em> and <em>"Cignal Add-on Collections"</em> cards.</li>
+                                                <li><strong>Accurate Business Metrics:</strong> Business owners can now measure exactly how much extra revenue TV add-ons generate each month.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <!-- Card 4: Dark Mode Dropdowns Fixed -->
+                                    <div class="card border-0 mb-4" style="background:#f8fafc; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#1e40af;"><i class="fas fa-moon me-2"></i> 🎨 Dark Mode Form Controls Fixed</h5>
+                                            <p class="mb-2">Polished the staff forms so working at night is comfortable on the eyes:</p>
+                                            <ul class="mb-0">
+                                                <li><strong>No More Blinding White Popups:</strong> Dropdowns on Customer Add/Edit screens (Barangay, Plan, Agent, Router) now stay sleek dark with clear white text.</li>
+                                                <li><strong>Highlighted Category Headers:</strong> Group names are styled in clear cyan so options are easy to spot at a glance.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <!-- Card 5: Free Clean OpenStreetMap Maps -->
+                                    <div class="card border-0 mb-4" style="background:#f0f9ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#0369a1;"><i class="fas fa-map me-2"></i> 🗺️ Clean, Free Maps with Zero Watermarks</h5>
+                                            <p class="mb-2">Upgraded all location pickers across customer forms and NAP fiber distribution boxes:</p>
+                                            <ul class="mb-0">
+                                                <li><strong>100% Free OpenStreetMap:</strong> Removed third-party map providers that showed ugly "API Key Required" watermarks.</li>
+                                                <li><strong>Automatic Night Cartography:</strong> When you switch to Dark Mode, maps automatically transition into a modern midnight slate theme.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <!-- Card 6: Settings vs Admin Clean Split -->
+                                    <div class="card border-0 mb-4" style="background:#fffbeb; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#b45309;"><i class="fas fa-door-open me-2"></i> 🏢 Simplified Navigation: Staff Tools vs. Owner Settings</h5>
+                                            <p class="mb-2">Cleaned up the navigation so staff only see what they need every day:</p>
+                                            <ul class="mb-0">
+                                                <li><strong>Staff Settings:</strong> Simplified down to everyday tools — Customer list, Subscriptions, Payments, and Cignal.</li>
+                                                <li><strong>Owner Admin Panel:</strong> Sensitive owner controls (Financial Reports, Audit Logs, Auto-Suspend rules, Database Backups) are moved into the secure Admin Panel.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <!-- Card 7: Glowing Cignal Application Alerts -->
+                                    <div class="card border-0 mb-4" style="background:#eff6ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#1d4ed8;"><i class="fas fa-bell me-2"></i> 🛎️ Glowing Profile Alerts for New Cignal Requests</h5>
+                                            <p class="mb-2">When a subscriber requests Cignal through their self-service portal:</p>
+                                            <ul class="mb-0">
+                                                <li><strong>Visual Pulse:</strong> Visiting their customer profile displays a glowing blue alert banner over their Add-ons card.</li>
+                                                <li><strong>Instant Fulfillment:</strong> Staff can click the alert to review and approve the request immediately with the customer's preferred TV package pre-filled.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <!-- Card 8: Cross-Router Session Stability -->
+                                    <div class="card border-0 mb-4" style="background:#eff6ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#1d4ed8;"><i class="fas fa-wifi me-2"></i> 📶 Accurate Online Status During Router Transfers</h5>
+                                            <p class="mb-2">Eliminated confusing "Offline" labels when migrating subscribers between routers:</p>
+                                            <ul class="mb-0">
+                                                <li><strong>Fleet-Wide Status Check:</strong> If a customer is moved to a new router, the system checks all connected routers. If the customer is still browsing on their old router, it shows them as <em>Connected</em> with a helpful note so staff know they are still online.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -217,56 +333,107 @@
 
                             <p class="lead text-muted mb-4">A landmark milestone achieving full completion of Gametech operational backlog: debuting the dedicated Cignal Play & Box Operations Dashboard, engineering zero-downtime PPPoE router migrations for seamless physical hardware swaps, instituting high-volume circular system audit log caps, and eliminating DataTables table overflow.</p>
 
-                            <!-- Cignal Play & Box Operations Dashboard -->
-                            <div class="card border-0 mb-4" style="background:#fef2f2; border-radius:12px;">
-                                <div class="card-body p-4">
-                                    <h5 class="fw-bold mb-3" style="color:#b91c1c;"><i class="fas fa-satellite-dish me-2"></i> Cignal Play & Box Operations Command Center</h5>
-                                    <p>Built a dedicated operational nerve center to monitor and govern Gametech's Cignal Play and Cignal Box TV streaming devices, mirroring full ISP subscriber lifecycle management without polluting the main dashboard:</p>
-                                    <ul class="mb-0">
-                                        <li><strong>Isolated Modular Engine:</strong> Created <code>billing/views/cignal_dashboard.py</code> adhering strictly to the 400-Line Circuit Breaker Law (< 60 lines), keeping core dashboard logic lightning-fast and preventing view bloat.</li>
-                                        <li><strong>Hero KPI Analytics:</strong> Real-time glassmorphism KPI counters tracking Active Cignal Subscribers, Pending Add-On Applications, Month-to-Date Renewals/Payments, and Cignal System Notifications.</li>
-                                        <li><strong>Active Subscriber Ledger:</strong> Surfaces all subscribers possessing an assigned <code>cignalplay_no</code>, activation timestamps, and the managing staff member who authorized provisioning.</li>
-                                        <li><strong>Application Review Workflow:</strong> Direct-action queue filtering pending <code>AddOnRequest</code> records for immediate staff review and instant resolution.</li>
-                                        <li><strong>Renewal & Message Streams:</strong> Real-time feeds capturing monthly box payments from <code>CignalPlay</code> and transactional alerts from <code>Notification</code> filtered by <code>notification_type='cignal'</code>.</li>
-                                        <li><strong>Navigation Integration:</strong> Seamlessly injected into <code>_sidebar.html</code> directly below the primary Dashboard tab with active state highlighting and a distinct purple "NEW" badge.</li>
-                                    </ul>
-                                </div>
-                            </div>
+                            <div class="cl-dual-content">
+                                <!-- Tech View -->
+                                <div class="tech-content">
+                                    <!-- Cignal Play & Box Operations Dashboard -->
+                                    <div class="card border-0 mb-4" style="background:#fef2f2; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#b91c1c;"><i class="fas fa-satellite-dish me-2"></i> Cignal Play & Box Operations Command Center</h5>
+                                            <p>Built a dedicated operational nerve center to monitor and govern Gametech's Cignal Play and Cignal Box TV streaming devices, mirroring full ISP subscriber lifecycle management without polluting the main dashboard:</p>
+                                            <ul class="mb-0">
+                                                <li><strong>Isolated Modular Engine:</strong> Created <code>billing/views/cignal_dashboard.py</code> adhering strictly to the 400-Line Circuit Breaker Law (< 60 lines), keeping core dashboard logic lightning-fast and preventing view bloat.</li>
+                                                <li><strong>Hero KPI Analytics:</strong> Real-time glassmorphism KPI counters tracking Active Cignal Subscribers, Pending Add-On Applications, Month-to-Date Renewals/Payments, and Cignal System Notifications.</li>
+                                                <li><strong>Active Subscriber Ledger:</strong> Surfaces all subscribers possessing an assigned <code>cignalplay_no</code>, activation timestamps, and the managing staff member who authorized provisioning.</li>
+                                                <li><strong>Application Review Workflow:</strong> Direct-action queue filtering pending <code>AddOnRequest</code> records for immediate staff review and instant resolution.</li>
+                                                <li><strong>Renewal & Message Streams:</strong> Real-time feeds capturing monthly box payments from <code>CignalPlay</code> and transactional alerts from <code>Notification</code> filtered by <code>notification_type='cignal'</code>.</li>
+                                                <li><strong>Navigation Integration:</strong> Seamlessly injected into <code>_sidebar.html</code> directly below the primary Dashboard tab with active state highlighting and a distinct purple "NEW" badge.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
 
-                            <!-- Zero-Downtime Router Transfer Architecture -->
-                            <div class="card border-0 mb-4" style="background:#f0f9ff; border-radius:12px;">
-                                <div class="card-body p-4">
-                                    <h5 class="fw-bold mb-3" style="color:#0284c7;"><i class="fas fa-network-wired me-2"></i> Zero-Downtime Router Transfer & Hardware Replacement Architecture</h5>
-                                    <p>Solved the critical field maintenance challenge where migrating subscribers between Mikrotik routers for scheduled router swaps caused immediate subscriber disconnection before the hardware was physically replaced:</p>
-                                    <ul class="mb-0">
-                                        <li><strong>The Problem:</strong> When updating a customer's router assignment or performing a Sync Manager move, Django's post-save signal executed "Orphan Cleanup" on the old router using <code>delete_pppoe_user()</code>. By default, secret deletion also forcefully kicked the subscriber's active session, abruptly severing their internet connection while the old router was still in service.</li>
-                                        <li><strong>Decoupled Session Lifecycles:</strong> Upgraded <code>network_manager/services/users.py</code> to accept a <code>kick_active=True/False</code> parameter. In <code>billing/signals.py</code>, orphan cleanup now runs with <code>kick_active=False</code>.</li>
-                                        <li><strong>Zero Service Interruption:</strong> The old PPPoE secret is removed (preventing future logins), but the established active PPPoE interface session remains fully connected and operational on Router A until field technicians physically swap the hardware, at which point the ONT authenticates smoothly onto Router B. Documented in <code>gametech_error_runbook.md</code> under <strong>ERR-018</strong>.</li>
-                                    </ul>
-                                </div>
-                            </div>
+                                    <!-- Zero-Downtime Router Transfer Architecture -->
+                                    <div class="card border-0 mb-4" style="background:#f0f9ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#0284c7;"><i class="fas fa-network-wired me-2"></i> Zero-Downtime Router Transfer & Hardware Replacement Architecture</h5>
+                                            <p>Solved the critical field maintenance challenge where migrating subscribers between Mikrotik routers for scheduled router swaps caused immediate subscriber disconnection before the hardware was physically replaced:</p>
+                                            <ul class="mb-0">
+                                                <li><strong>The Problem:</strong> When updating a customer's router assignment or performing a Sync Manager move, Django's post-save signal executed "Orphan Cleanup" on the old router using <code>delete_pppoe_user()</code>. By default, secret deletion also forcefully kicked the subscriber's active session, abruptly severing their internet connection while the old router was still in service.</li>
+                                                <li><strong>Decoupled Session Lifecycles:</strong> Upgraded <code>network_manager/services/users.py</code> to accept a <code>kick_active=True/False</code> parameter. In <code>billing/signals.py</code>, orphan cleanup now runs with <code>kick_active=False</code>.</li>
+                                                <li><strong>Zero Service Interruption:</strong> The old PPPoE secret is removed (preventing future logins), but the established active PPPoE interface session remains fully connected and operational on Router A until field technicians physically swap the hardware, at which point the ONT authenticates smoothly onto Router B. Documented in <code>gametech_error_runbook.md</code> under <strong>ERR-018</strong>.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
 
-                            <!-- System Audit Logs Cap & Auto-Pruning -->
-                            <div class="card border-0 mb-4" style="background:#f5f3ff; border-radius:12px;">
-                                <div class="card-body p-4">
-                                    <h5 class="fw-bold mb-3" style="color:#7c3aed;"><i class="fas fa-history me-2"></i> High-Volume System Audit Logs Dynamic Cap & Auto-Pruning</h5>
-                                    <p>Addressed potential database degradation on <code>/logs/</code> as transactional records accumulated towards thousands of entries:</p>
-                                    <ul class="mb-0">
-                                        <li><strong>Dynamic Bounded Log Retention:</strong> Implemented automatic row pruning via background celery tasks (<code>auto_cleanup_system_logs_task</code>) enforcing a 500-entry sliding retention window to prevent runaway storage bloat and keep log queries snappy.</li>
-                                        <li><strong>UI Layout & Table Protection:</strong> Sanitized log formatting and metadata presentation in <code>billing/templates/billing/logs.html</code> for rapid operational scanning.</li>
-                                    </ul>
-                                </div>
-                            </div>
+                                    <!-- System Audit Logs Cap & Auto-Pruning -->
+                                    <div class="card border-0 mb-4" style="background:#f5f3ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#7c3aed;"><i class="fas fa-history me-2"></i> High-Volume System Audit Logs Dynamic Cap & Auto-Pruning</h5>
+                                            <p>Addressed potential database degradation on <code>/logs/</code> as transactional records accumulated towards thousands of entries:</p>
+                                            <ul class="mb-0">
+                                                <li><strong>Dynamic Bounded Log Retention:</strong> Implemented automatic row pruning via background celery tasks (<code>auto_cleanup_system_logs_task</code>) enforcing a 500-entry sliding retention window to prevent runaway storage bloat and keep log queries snappy.</li>
+                                                <li><strong>UI Layout & Table Protection:</strong> Sanitized log formatting and metadata presentation in <code>billing/templates/billing/logs.html</code> for rapid operational scanning.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
 
-                            <!-- Sync Manager Table Overflow & Layout Polishing -->
-                            <div class="card border-0 mb-4" style="background:#fffbeb; border-radius:12px;">
-                                <div class="card-body p-4">
-                                    <h5 class="fw-bold mb-3" style="color:#d97706;"><i class="fas fa-sliders-h me-2"></i> Sync Manager Table Overflow Elimination & Portal Guards</h5>
-                                    <p>Eliminated layout glitches across hardware sync and customer self-service portals:</p>
-                                    <ul class="mb-0">
-                                        <li><strong>Table Responsive Horizontal Scrollbar Kill:</strong> Identified and resolved a persistent Bootstrap gutter defect on <code>/devices/devices/&lt;id&gt;/sync/</code> where nested negative row margins forced micro-overflow inside <code>.table-responsive</code> containers. Applied zeroed margins and bounded container styling (catalogued as <strong>ERR-017</strong>).</li>
-                                        <li><strong>Customer Portal Expiration Window Guard:</strong> Patched template conditionals in <code>customer_portal/templates/</code> to ensure suspended or expired subscribers never display an advance payment prompt after their account term has elapsed.</li>
-                                    </ul>
+                                    <!-- Sync Manager Table Overflow & Layout Polishing -->
+                                    <div class="card border-0 mb-4" style="background:#fffbeb; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#d97706;"><i class="fas fa-sliders-h me-2"></i> Sync Manager Table Overflow Elimination & Portal Guards</h5>
+                                            <p>Eliminated layout glitches across hardware sync and customer self-service portals:</p>
+                                            <ul class="mb-0">
+                                                <li><strong>Table Responsive Horizontal Scrollbar Kill:</strong> Identified and resolved a persistent Bootstrap gutter defect on <code>/devices/devices/&lt;id&gt;/sync/</code> where nested negative row margins forced micro-overflow inside <code>.table-responsive</code> containers. Applied zeroed margins and bounded container styling (catalogued as <strong>ERR-017</strong>).</li>
+                                                <li><strong>Customer Portal Expiration Window Guard:</strong> Patched template conditionals in <code>customer_portal/templates/</code> to ensure suspended or expired subscribers never display an advance payment prompt after their account term has elapsed.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Staff View (Simplified Business Updates) -->
+                                <div class="staff-content">
+                                    <div class="card border-0 mb-4" style="background:#fef2f2; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#b91c1c;"><i class="fas fa-satellite-dish me-2"></i> 📺 Dedicated Cignal Operations Command Center</h5>
+                                            <p class="mb-2">Launched a complete hub to manage all Cignal TV streaming boxes in one unified screen:</p>
+                                            <ul class="mb-0">
+                                                <li><strong>Real-Time Numbers:</strong> Track active TV subscribers, pending applications, and monthly renewal payments at a glance without cluttering the main internet dashboard.</li>
+                                                <li><strong>Quick Review Queue:</strong> Easily approve new TV box requests submitted by customers through their self-service portal.</li>
+                                                <li><strong>Direct Sidebar Access:</strong> Access the Cignal Dashboard right beneath the main Dashboard in the left navigation menu.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <div class="card border-0 mb-4" style="background:#f0f9ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#0284c7;"><i class="fas fa-exchange-alt me-2"></i> 🔄 Zero-Downtime Router Hardware Replacements</h5>
+                                            <p class="mb-2">Field hardware replacements no longer disconnect customer internet prematurely:</p>
+                                            <ul class="mb-0">
+                                                <li><strong>Seamless Migrations:</strong> When preparing to swap a physical router, moving subscriber accounts to the new router keeps their internet connection alive on the old hardware until technicians make the physical cutover.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <div class="card border-0 mb-4" style="background:#f5f3ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#7c3aed;"><i class="fas fa-broom me-2"></i> 🧹 Automatic System Cleanup for Faster Pages</h5>
+                                            <p class="mb-2">Background maintenance keeps system performance fast and snappy:</p>
+                                            <ul class="mb-0">
+                                                <li><strong>Automated Pruning:</strong> Automatically archives old event and audit logs, preventing database bloat and keeping audit history quick to load.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <div class="card border-0 mb-4" style="background:#fffbeb; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#d97706;"><i class="fas fa-mobile-alt me-2"></i> 📱 Portal &amp; Screen Improvements</h5>
+                                            <p class="mb-2">Polished the visual experience across all screen sizes:</p>
+                                            <ul class="mb-0">
+                                                <li><strong>Clean Tables:</strong> Fixed horizontal scrollbar bugs on device sync screens.</li>
+                                                <li><strong>Protected Expired Customer Accounts:</strong> Prevented confusing payment prompts on customer portal accounts after their term has ended.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1256,5 +1423,139 @@
     li {
         margin-bottom: 8px;
     }
+
+    /* Dual-View Mode Switch */
+    .gt-cl-mode-toggle {
+        display: inline-flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.16);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 24px;
+        padding: 3px;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        user-select: none;
+    }
+
+    .gt-cl-mode-toggle-light {
+        background: #f1f5f9;
+        border: 1px solid #cbd5e1;
+    }
+
+    .gt-cl-toggle-btn {
+        background: transparent;
+        border: none;
+        outline: none;
+        color: rgba(255, 255, 255, 0.85);
+        font-size: 0.76rem;
+        font-weight: 600;
+        padding: 5px 12px;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+    }
+
+    .gt-cl-mode-toggle-light .gt-cl-toggle-btn {
+        color: #4b5563;
+        font-size: 0.85rem;
+        padding: 6px 16px;
+    }
+
+    .gt-cl-toggle-btn:hover {
+        color: #ffffff;
+        background: rgba(255, 255, 255, 0.12);
+    }
+
+    .gt-cl-mode-toggle-light .gt-cl-toggle-btn:hover {
+        color: #1e3a8a;
+        background: rgba(30, 58, 138, 0.06);
+    }
+
+    .gt-cl-toggle-btn.active {
+        background: #ffffff;
+        color: #0349cb;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .gt-cl-mode-toggle-light .gt-cl-toggle-btn.active {
+        background: #1e3a8a;
+        color: #ffffff;
+        box-shadow: 0 4px 12px rgba(30, 58, 138, 0.25);
+    }
+
+    /* Dark Mode Overrides */
+    html.dark-mode .gt-cl-mode-toggle-light,
+    .dark-mode .gt-cl-mode-toggle-light {
+        background: rgba(255, 255, 255, 0.07);
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    html.dark-mode .gt-cl-mode-toggle-light .gt-cl-toggle-btn,
+    .dark-mode .gt-cl-mode-toggle-light .gt-cl-toggle-btn {
+        color: #94a3b8;
+    }
+
+    html.dark-mode .gt-cl-mode-toggle-light .gt-cl-toggle-btn:hover,
+    .dark-mode .gt-cl-mode-toggle-light .gt-cl-toggle-btn:hover {
+        color: #f8fafc;
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    html.dark-mode .gt-cl-mode-toggle-light .gt-cl-toggle-btn.active,
+    .dark-mode .gt-cl-mode-toggle-light .gt-cl-toggle-btn.active {
+        background: #0349cb;
+        color: #ffffff;
+        box-shadow: 0 2px 10px rgba(3, 73, 203, 0.5);
+    }
+
+    /* Dual Content Switching & Smooth Animations */
+    .cl-dual-content {
+        position: relative;
+    }
+
+    [data-cl-mode="staff"] .cl-dual-content > .tech-content {
+        display: none !important;
+    }
+
+    [data-cl-mode="staff"] .cl-dual-content > .staff-content {
+        display: block !important;
+        animation: clFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    [data-cl-mode="tech"] .cl-dual-content > .tech-content {
+        display: block !important;
+        animation: clFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    [data-cl-mode="tech"] .cl-dual-content > .staff-content {
+        display: none !important;
+    }
+
+    @keyframes clFadeIn {
+        0% {
+            opacity: 0;
+            transform: translateY(6px);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var savedMode = 'staff';
+    try {
+        savedMode = localStorage.getItem('changelog_mode') || 'staff';
+    } catch(e) {}
+    if (typeof window.setChangelogMode === 'function') {
+        window.setChangelogMode(savedMode);
+    }
+});
+</script>
 {% endblock %}
