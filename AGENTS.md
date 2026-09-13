@@ -204,6 +204,7 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
       "<python_script_string>" | ssh root@143.198.207.144 "docker exec -i gametech-billing-system_web_1 python manage.py shell"
       ```
     * Guarantees 100% clean remote execution without quote or parenthesis escaping errors.
+    * **Rule 29b (Headless RequestFactory Auth Guard)**: When using Django `RequestFactory` to test views protected by `@login_required` via headless Python scripts, always assign a mock user `req.user = User.objects.filter(is_staff=True).first()` to prevent `AttributeError: 'WSGIRequest' object has no attribute 'user'` crashes.
 
 30. **THE REUSABLE MODAL & PARTIAL VARIABLE GUARD LAW (Zero Orphan Variable Crashes)**:
     * **THE TRIGGER**: When creating or modifying partial templates (modals, cards, action popups) that can be included both on detail views (where `customer` exists in context) and index/dashboard views (where `customer` is absent):
@@ -230,11 +231,11 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
 
 32v2. **THE DOCKER GRACE & BRIDGE HEALING PROTOCOL (Transient Network Drop Guard)**:
     * **THE SYMPTOM**: Running a bare `docker restart gametech-billing-system_web_1` occasionally causes transient Docker bridge network disconnections, dropped container bindings, or `502 Bad Gateway` if Gunicorn initializes before Docker's bridge interface settles.
-    * **MANDATORY DEPLOYMENT CHAIN**: When restarting the web container on production, ALWAYS chain a 2-second sleep followed by `docker-compose up -d`:
+    * **MANDATORY DEPLOYMENT CHAIN**: When restarting the web container on production, ALWAYS chain a 2-second sleep followed by `docker-compose up -d --remove-orphans`:
       ```bash
-      ssh root@143.198.207.144 "docker restart gametech-billing-system_web_1 && sleep 2 && cd /root/GAMETECH-BILLING-SYSTEM && docker-compose up -d"
+      ssh root@143.198.207.144 "docker restart gametech-billing-system_web_1 && sleep 2 && cd /root/GAMETECH-BILLING-SYSTEM && docker-compose up -d --remove-orphans"
       ```
-    * Guarantees all inter-container bridge links (Postgres, Redis, Celery, Web) and port bindings (`0.0.0.0:8000->8000`) remain solid and reconnected with 0 transient dropouts.
+    * Guarantees all inter-container bridge links (Postgres, Redis, Celery, Web) and port bindings (`0.0.0.0:8000->8000`) remain solid and reconnected with 0 transient dropouts, and suppresses interactive image recreation prompts (`Continue with the new image? [yN]`) from freezing unattended deployments.
 
 33. **THE POWERSHELL STDIN PIPE PROTOCOL (Zero Parsing Failures on Windows)**:
     * **CRITICAL CONTEXT**: When executing local Python one-liners on Windows PowerShell, PowerShell intercepts and mishandles quotation marks, semicolons, curly braces, and regex backslashes in `-c "..."` commands, causing cryptic `ParserError` or `UnexpectedToken` exceptions.
