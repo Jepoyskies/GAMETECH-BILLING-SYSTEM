@@ -444,6 +444,24 @@
 
 ---
 
+### ERR-026: Third-Party Carto Basemap Watermark ("API KEY REQUIRED carto.com/basemaps/apikey")
+* **Symptoms**:
+  * In customer profiles (`/customers/view/<id>/`), customer edit/add (`/customers/edit/<id>/`, `/customers/add/`), Geo Map (`/geomap/`), or NAP box forms (`/network/naps/add/`), Leaflet maps render with giant diagonal watermark text: `"API KEY REQUIRED carto.com/basemaps/apikey"`.
+* **Root Causes**:
+  * Carto CDN deprecated open raster basemap endpoints (`cartocdn.com/dark_all/` and `cartocdn.com/rastertiles/voyager/`), enforcing mandatory registered API keys and rendering watermark overlays when accessed without authorization tokens.
+* **Exact Target Files**:
+  * `billing/templates/billing/edit_customer.html`
+  * `billing/templates/billing/add_customer.html`
+  * `billing/templates/billing/view_customer/_scripts.html`
+  * `billing/templates/billing/geomap.html`
+  * `network_manager/templates/network_manager/nap_form.html`
+  * `billing/templates/billing/base/_styles.html`
+* **1-Step Fix**:
+  * Switch `L.tileLayer` across all map templates to OpenStreetMap Foundation (`https://tile.openstreetmap.org/{z}/{x}/{y}.png`).
+  * Add a global hardware-accelerated CSS inversion filter in `billing/templates/billing/base/_styles.html` (`html.dark-mode .leaflet-tile-pane { filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7); }`) so standard OSM tiles cleanly adapt to dark slate mode without needing separate dark raster tile providers or API keys.
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 1. Assign a new `ERR-XXX` identifier.
