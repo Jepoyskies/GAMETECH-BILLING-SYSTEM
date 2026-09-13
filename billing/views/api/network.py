@@ -332,10 +332,9 @@ def api_customer_mikrotik_status(request, customer_id):
                         if ping_res and len(ping_res) > 0:
                             result = ping_res[0]
                             loss = int(result.get("packet-loss", 100))
-                            if loss == 100 or result.get("status") in [
-                                "no route to host",
-                                "timeout",
-                            ]:
+                            # Only treat as lost uplink if router had a route that timed out, not 'no route to host'
+                            status = result.get("status", "")
+                            if status != "no route to host" and (loss == 100 or status == "timeout"):
                                 data["mt_status"] = "Offline (Router Off)"
                     except Exception:
                         pass  # Ignore ping errors, just leave as Disconnected
