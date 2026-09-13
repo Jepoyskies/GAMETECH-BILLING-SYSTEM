@@ -168,78 +168,8 @@
   </div>
 </div>
 
-<!-- Cignal Play Modal -->
-<div class="modal fade" id="cignalModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content gt-modal-content">
-      <div class="modal-header border-bottom-0 pb-0">
-        <h5 class="modal-title fw-bold"><i class="fas fa-tv text-primary me-2"></i> Apply Cignal Add-on</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <form action="{% url 'apply_cignal_addon' %}" method="post">
-        {% csrf_token %}
-        <input type="hidden" name="customer_id" value="{{ customer.id }}">
-        {% if pending_cignal_addon %}
-        <input type="hidden" name="request_id" value="{{ pending_cignal_addon.id }}">
-        {% endif %}
-        <div class="modal-body py-3">
-            {% if pending_cignal_addon %}
-            <div class="alert alert-info d-flex align-items-center justify-content-between p-2 mb-3" style="border-radius:10px;">
-                <div>
-                    <strong class="d-block" style="font-size:0.85rem;"><i class="fas fa-info-circle me-1"></i> Fulfilling Request #{{ pending_cignal_addon.id }}</strong>
-                    <small class="text-muted">{{ pending_cignal_addon.addon_type }} &bull; {{ pending_cignal_addon.requested_at|date:"M d, Y" }}</small>
-                </div>
-                <a href="{% url 'cignal_dashboard' %}?highlight_customer={{ customer.id }}" class="btn btn-sm btn-outline-info" target="_blank" title="Manage in Cignal Dashboard"><i class="fas fa-external-link-alt"></i></a>
-            </div>
-            {% endif %}
-            <div class="mb-3">
-                <label class="form-label fw-bold">Add-on Type</label>
-                <select name="addon_type" id="modalAddonType" class="form-select" required onchange="updateCignalModalFields(this.value)">
-                    <option value="Cignal Play Add-on" {% if not pending_cignal_addon or 'Play' in pending_cignal_addon.addon_type %}selected{% endif %}>Cignal Play</option>
-                    <option value="Cignal Box Add-on" {% if pending_cignal_addon and 'Box' in pending_cignal_addon.addon_type %}selected{% endif %}>Cignal Box</option>
-                </select>
-            </div>
-            <div class="mb-3">
-                <label class="form-label fw-bold" id="cignalAccountLabel">{% if pending_cignal_addon and 'Box' in pending_cignal_addon.addon_type %}Cignal Box No. (Serial / Account Number){% else %}Cignal Play No. (Account Number){% endif %}</label>
-                <input type="text" class="form-control" name="cignalplay_no" id="modalCignalNo" value="{% if pending_cignal_addon and 'Box' in pending_cignal_addon.addon_type %}{{ customer.cignalbox_no|default:'' }}{% else %}{{ customer.cignalplay_no|default:'' }}{% endif %}" placeholder="e.g. 1002345678" required autofocus>
-            </div>
-            <div class="mb-3">
-                <label class="form-label fw-bold">Activation Date</label>
-                <input type="date" class="form-control" name="cignalplay_date" id="modalCignalDate" value="{% if pending_cignal_addon and 'Box' in pending_cignal_addon.addon_type %}{% if customer.cignalbox_date %}{{ customer.cignalbox_date|date:'Y-m-d' }}{% else %}{% now 'Y-m-d' %}{% endif %}{% else %}{% if customer.cignalplay_date %}{{ customer.cignalplay_date|date:'Y-m-d' }}{% else %}{% now 'Y-m-d' %}{% endif %}{% endif %}" required>
-            </div>
-            <script>
-            function updateCignalModalFields(val) {
-                var label = document.getElementById('cignalAccountLabel');
-                var input = document.getElementById('modalCignalNo');
-                var dateInput = document.getElementById('modalCignalDate');
-                if (!label || !input) return;
-                if (val.indexOf('Box') !== -1) {
-                    label.innerText = 'Cignal Box No. (Serial / Account Number)';
-                    input.placeholder = 'e.g. BOX-8892341';
-                    input.value = "{{ customer.cignalbox_no|default:'' }}";
-                    dateInput.value = "{% if customer.cignalbox_date %}{{ customer.cignalbox_date|date:'Y-m-d' }}{% else %}{% now 'Y-m-d' %}{% endif %}";
-                } else {
-                    label.innerText = 'Cignal Play No. (Account Number)';
-                    input.placeholder = 'e.g. 1002345678';
-                    input.value = "{{ customer.cignalplay_no|default:'' }}";
-                    dateInput.value = "{% if customer.cignalplay_date %}{{ customer.cignalplay_date|date:'Y-m-d' }}{% else %}{% now 'Y-m-d' %}{% endif %}";
-                }
-            }
-            </script>
-        </div>
-        <div class="modal-footer border-top-0 pt-0 gt-modal-footer d-flex justify-content-between align-items-center">
-            <a href="{% url 'cignal_dashboard' %}?highlight_customer={{ customer.id }}" class="text-muted small text-decoration-none">
-                <i class="fas fa-tv me-1"></i> Open Cignal Dashboard
-            </a>
-            <div>
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="border-radius:12px;">Cancel</button>
-                <button type="submit" class="btn btn-primary fw-bold shadow-sm" style="border-radius:12px;"><i class="fas fa-check-circle me-1"></i> Apply & Activate</button>
-            </div>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
+<!-- Unified Cignal Activation Modal -->
+{% include "billing/partials/_cignal_activation_modal.html" with target_customer=customer target_request=pending_cignal_addon %}
 
 <!-- Single SMS Modal -->
 <div class="modal fade" id="singleSmsModal" tabindex="-1" aria-hidden="true">

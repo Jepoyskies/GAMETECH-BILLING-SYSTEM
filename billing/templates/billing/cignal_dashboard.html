@@ -279,58 +279,7 @@
 
 <!-- Activation Modals for Pending Applications -->
 {% for app in applications %}
-<div class="modal fade" id="cignalAppModal_{{ app.id }}" tabindex="-1" aria-labelledby="cignalAppModalLabel_{{ app.id }}" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content gt-modal-content" style="border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);">
-      <div class="modal-header border-bottom-0 pb-0">
-        <h5 class="modal-title fw-bold" id="cignalAppModalLabel_{{ app.id }}">
-          <i class="fas fa-tv text-danger me-2"></i> Activate {{ app.addon_type }}
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <form action="{% url 'apply_cignal_addon' %}" method="post">
-        {% csrf_token %}
-        <input type="hidden" name="customer_id" value="{{ app.customer.id }}">
-        <input type="hidden" name="request_id" value="{{ app.id }}">
-        <input type="hidden" name="addon_type" value="{{ app.addon_type }}">
-        <div class="modal-body py-3">
-          <div class="p-3 mb-3 rounded" style="background: rgba(220, 38, 38, 0.08); border: 1px solid rgba(220, 38, 38, 0.2);">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-              <strong class="text-danger" style="font-size: 0.95rem;">{{ app.customer.full_name|default:app.customer.pppoe_username }}</strong>
-              <span class="badge bg-warning text-dark">{{ app.status }}</span>
-            </div>
-            <div class="small text-muted">
-              <span><i class="fas fa-user me-1"></i> PPPoE: {{ app.customer.pppoe_username }}</span> &bull; 
-              <span><i class="fas fa-clock me-1"></i> Requested: {{ app.requested_at|date:"M d, Y h:i A" }}</span>
-            </div>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label fw-bold">Cignal Play / Box Account Number</label>
-            <input type="text" class="form-control" name="cignalplay_no" placeholder="e.g. 1002345678" value="{{ app.customer.cignalplay_no|default:'' }}" required autofocus>
-            <div class="form-text text-muted">Enter the official Cignal Play or Cignal Box account number assigned to this subscriber.</div>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label fw-bold">Activation Date</label>
-            <input type="date" class="form-control" name="cignalplay_date" value="{% now 'Y-m-d' %}" required>
-          </div>
-        </div>
-        <div class="modal-footer border-top-0 pt-0 gt-modal-footer d-flex justify-content-between">
-          <a href="{% url 'view_customer' app.customer.id %}" class="btn btn-outline-secondary btn-sm" style="border-radius: 10px;">
-            <i class="fas fa-external-link-alt me-1"></i> View Profile
-          </a>
-          <div>
-            <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="border-radius: 10px;">Cancel</button>
-            <button type="submit" class="btn btn-danger fw-bold shadow-sm" style="border-radius: 10px;">
-              <i class="fas fa-check-circle me-1"></i> Confirm & Activate
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
+  {% include "billing/partials/_cignal_activation_modal.html" with modal_id="cignalAppModal_" modal_suffix=app.id target_customer=app.customer target_request=app from_dashboard=True %}
 {% endfor %}
 
 {% if request.GET.highlight_customer %}

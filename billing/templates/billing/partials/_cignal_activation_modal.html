@@ -1,0 +1,107 @@
+<!-- Unified Cignal Play & Box Activation Modal -->
+<div class="modal fade" id="{% if modal_suffix %}{{ modal_id|default:'cignalAppModal_' }}{{ modal_suffix }}{% else %}{{ modal_id|default:'cignalModal' }}{% endif %}" tabindex="-1" aria-labelledby="cignalModalLabel_{{ modal_suffix|default:'single' }}" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content gt-modal-content" style="border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1);">
+      <div class="modal-header border-bottom-0 pb-0">
+        <h5 class="modal-title fw-bold" id="cignalModalLabel_{{ modal_suffix|default:'single' }}">
+          <i class="fas fa-satellite-dish text-primary me-2"></i> Activate Cignal Add-on
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="{% url 'apply_cignal_addon' %}" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="customer_id" value="{{ target_customer.id }}">
+        {% if target_request %}
+        <input type="hidden" name="request_id" value="{{ target_request.id }}">
+        {% endif %}
+        <div class="modal-body py-3">
+          <!-- Subscriber Summary Banner -->
+          <div class="p-3 mb-3 rounded-3" style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25);">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <strong class="text-primary fw-bold" style="font-size: 0.96rem;">
+                <i class="fas fa-user-check me-1"></i> {{ target_customer.full_name|default:target_customer.pppoe_username }}
+              </strong>
+              {% if target_request %}
+                <span class="badge bg-warning text-dark">{{ target_request.status }}</span>
+              {% else %}
+                <span class="badge bg-info-subtle text-info">Subscriber</span>
+              {% endif %}
+            </div>
+            <div class="small text-muted d-flex flex-wrap gap-2 align-items-center">
+              <span><i class="fas fa-network-wired me-1"></i> PPPoE: <strong>{{ target_customer.pppoe_username|default:"None" }}</strong></span>
+              {% if target_request %}
+                &bull; <span><i class="fas fa-clock me-1"></i> Requested: {{ target_request.requested_at|date:"M d, Y h:i A" }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Add-on Type Selector -->
+          <div class="mb-3">
+            <label class="form-label fw-bold">Add-on Type</label>
+            <select name="addon_type" id="modalAddonType_{{ modal_suffix|default:'single' }}" class="form-select" required onchange="updateCignalModalFields_{{ modal_suffix|default:'single' }}(this.value)">
+              <option value="Cignal Play Add-on" {% if not target_request or 'Play' in target_request.addon_type %}selected{% endif %}>Cignal Play Add-on (Streaming App)</option>
+              <option value="Cignal Box Add-on" {% if target_request and 'Box' in target_request.addon_type %}selected{% endif %}>Cignal Box Add-on (Hardware STB)</option>
+            </select>
+          </div>
+
+          <!-- Account / Serial Number -->
+          <div class="mb-3">
+            <label class="form-label fw-bold" id="cignalAccountLabel_{{ modal_suffix|default:'single' }}">
+              {% if target_request and 'Box' in target_request.addon_type %}Cignal Box No. (Serial / Account Number){% else %}Cignal Play No. (Account Number){% endif %}
+            </label>
+            <input type="text" class="form-control" name="cignalplay_no" id="modalCignalNo_{{ modal_suffix|default:'single' }}" value="{% if target_request and 'Box' in target_request.addon_type %}{{ target_customer.cignalbox_no|default:'' }}{% else %}{{ target_customer.cignalplay_no|default:'' }}{% endif %}" placeholder="e.g. 1002345678" required autofocus>
+            <div class="form-text text-muted" id="cignalHint_{{ modal_suffix|default:'single' }}">
+              {% if target_request and 'Box' in target_request.addon_type %}Enter the physical Cignal Box serial number or hardware account code.{% else %}Enter the official Cignal Play subscriber account number.{% endif %}
+            </div>
+          </div>
+
+          <!-- Activation Date -->
+          <div class="mb-3">
+            <label class="form-label fw-bold">Activation Date</label>
+            <input type="date" class="form-control" name="cignalplay_date" id="modalCignalDate_{{ modal_suffix|default:'single' }}" value="{% if target_request and 'Box' in target_request.addon_type %}{% if target_customer.cignalbox_date %}{{ target_customer.cignalbox_date|date:'Y-m-d' }}{% else %}{% now 'Y-m-d' %}{% endif %}{% else %}{% if target_customer.cignalplay_date %}{{ target_customer.cignalplay_date|date:'Y-m-d' }}{% else %}{% now 'Y-m-d' %}{% endif %}{% endif %}" required>
+          </div>
+
+          <script>
+          function updateCignalModalFields_{{ modal_suffix|default:'single' }}(val) {
+              var label = document.getElementById('cignalAccountLabel_{{ modal_suffix|default:'single' }}');
+              var input = document.getElementById('modalCignalNo_{{ modal_suffix|default:'single' }}');
+              var hint = document.getElementById('cignalHint_{{ modal_suffix|default:'single' }}');
+              var dateInput = document.getElementById('modalCignalDate_{{ modal_suffix|default:'single' }}');
+              if (!label || !input) return;
+              if (val.indexOf('Box') !== -1) {
+                  label.innerText = 'Cignal Box No. (Serial / Account Number)';
+                  input.placeholder = 'e.g. BOX-8892341';
+                  input.value = "{{ target_customer.cignalbox_no|default:'' }}";
+                  if (hint) hint.innerText = 'Enter the physical Cignal Box serial number or hardware account code.';
+                  dateInput.value = "{% if target_customer.cignalbox_date %}{{ target_customer.cignalbox_date|date:'Y-m-d' }}{% else %}{% now 'Y-m-d' %}{% endif %}";
+              } else {
+                  label.innerText = 'Cignal Play No. (Account Number)';
+                  input.placeholder = 'e.g. 1002345678';
+                  input.value = "{{ target_customer.cignalplay_no|default:'' }}";
+                  if (hint) hint.innerText = 'Enter the official Cignal Play subscriber account number.';
+                  dateInput.value = "{% if target_customer.cignalplay_date %}{{ target_customer.cignalplay_date|date:'Y-m-d' }}{% else %}{% now 'Y-m-d' %}{% endif %}";
+              }
+          }
+          </script>
+        </div>
+        <div class="modal-footer border-top-0 pt-0 gt-modal-footer d-flex justify-content-between align-items-center">
+          {% if from_dashboard %}
+            <a href="{% url 'view_customer' target_customer.id %}" class="btn btn-outline-secondary btn-sm" style="border-radius: 10px;">
+              <i class="fas fa-external-link-alt me-1"></i> View Profile
+            </a>
+          {% else %}
+            <a href="{% url 'cignal_dashboard' %}?highlight_customer={{ target_customer.id }}" class="btn btn-outline-info btn-sm" style="border-radius: 10px;">
+              <i class="fas fa-satellite-dish me-1"></i> Cignal Dashboard
+            </a>
+          {% endif %}
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="border-radius: 10px;">Cancel</button>
+            <button type="submit" class="btn btn-primary fw-bold shadow-sm" style="border-radius: 10px;">
+              <i class="fas fa-check-circle me-1"></i> Confirm & Activate
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
