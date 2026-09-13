@@ -82,16 +82,20 @@
                         <span class="info-label">Portal Password <i class="fas fa-lock text-primary ms-1" title="Customer Portal Login Password"></i></span>
                         <span class="info-value font-monospace fw-bold text-primary">{{ customer.portal_password|default:"—" }}</span>
                     </li>
-                    <li>
+                    <li id="live-mt-status-row" class="{% if customer.status == 'active' and mt_status != 'Connected' and mt_status != 'Loading...' %}active-offline-row-highlight{% endif %}" style="transition: all 0.3s ease;">
                         <span class="info-label">
                             Live MT Status
-                            <i class="fas fa-question-circle text-muted ms-1" style="cursor:help;" data-bs-toggle="tooltip" data-bs-html="true" title="<div class='text-start p-1' style='font-size: 0.85rem; line-height: 1.4;'><div class='mb-2'><span class='text-success fw-bold me-1'>&bull;</span> <b>Connected:</b> Internet is active.</div><div class='mb-2'><span class='text-danger fw-bold me-1'>&bull;</span> <b>Disconnected (Inactive):</b> Home router is turned off or unplugged (No PPPoE session).</div><div class='mb-2'><span class='text-danger fw-bold me-1'>&bull;</span> <b>Offline (Router Off):</b> The main ISP router lost its internet connection.</div><div class='mb-2'><span class='text-warning fw-bold me-1'>&bull;</span> <b>Suspended:</b> Account is unpaid.</div><div><span class='text-secondary fw-bold me-1'>&bull;</span> <b>API Unreachable:</b> System cannot connect to the ISP Mikrotik router.</div></div>"></i>
+                            <i class="fas fa-question-circle text-muted ms-1" style="cursor:help;" data-bs-toggle="tooltip" data-bs-html="true" title="<div class='text-start p-1' style='font-size: 0.85rem; line-height: 1.4;'><div class='mb-2'><span class='text-success fw-bold me-1'>&bull;</span> <b>Connected:</b> Internet is active.</div><div class='mb-2'><span class='text-danger fw-bold me-1'>&bull;</span> <b>Active but Offline:</b> Account is active, but home router is unplugged or disconnected.</div><div class='mb-2'><span class='text-danger fw-bold me-1'>&bull;</span> <b>Offline (Router Off):</b> The main ISP router lost its internet connection.</div><div class='mb-2'><span class='text-warning fw-bold me-1'>&bull;</span> <b>Suspended:</b> Account is unpaid.</div><div><span class='text-secondary fw-bold me-1'>&bull;</span> <b>API Unreachable:</b> System cannot connect to the ISP Mikrotik router.</div></div>"></i>
                         </span>
                         <span class="info-value" id="mt-status-container">
                             {% if mt_status == 'Loading...' %}
                                 <span class="text-secondary"><i class="fas fa-spinner fa-spin me-1" style="font-size:0.6rem;"></i>Loading...</span>
                             {% elif mt_status == 'Connected' %}
                                 <span class="text-success"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Connected</span>
+                            {% elif customer.status == 'active' %}
+                                <span class="badge badge-active-offline d-inline-flex align-items-center gap-1">
+                                    <i class="fas fa-triangle-exclamation"></i> Active but Offline
+                                </span>
                             {% else %}
                                 <span class="text-danger"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>{{ mt_status|default:"Disconnected" }}</span>
                             {% endif %}

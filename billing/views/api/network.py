@@ -345,6 +345,7 @@ def api_customer_mikrotik_status(request, customer_id):
     # Add context to disconnected status if it wasn't caught by the ping check
     if data["mt_status"] == "Disconnected":
         if customer.status == "active":
+            data["is_active_offline"] = True
             if customer.barangay and customer.barangay.health_status == "Outage":
                 data["mt_status"] = "Area Outage (Barangay)"
             elif (
@@ -355,11 +356,13 @@ def api_customer_mikrotik_status(request, customer_id):
             elif customer.health_status == "Outage":
                 data["mt_status"] = "Service Outage"
             else:
-                data["mt_status"] = "Disconnected (Inactive)"
+                data["mt_status"] = "Active but Offline"
         elif customer.status == "suspended":
             data["mt_status"] = "Suspended"
         else:
             data["mt_status"] = f"Disconnected ({customer.get_status_display()})"
+    elif customer.status == "active" and data["mt_status"] != "Connected":
+        data["is_active_offline"] = True
 
     from django.http import JsonResponse
 
