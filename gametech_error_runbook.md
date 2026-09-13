@@ -520,6 +520,29 @@
 
 ---
 
+### ERR-030: 1970 Unix Epoch Downtime Display Bug & Billing vs. Hardware Status Ambiguity
+* **Symptoms**:
+  * On `/subscriptions/`, newly provisioned or inactive subscriber secrets displayed a bizarre downtime timestamp: `Down: jan/01/1970 00:00:00`.
+  * Staff confused financial account standing with physical connectivity because both `STATUS` and `ROUTER STATUS` used identical `.status-badge` pill styling.
+  * On `/customers/`, top stat pills blended network terminology ("Active & Online") into billing metrics, and lacked an explicit counter for accounts inactive past 7 days.
+* **Root Causes**:
+  * MikroTik RouterOS returns epoch zero (`jan/01/1970 00:00:00`) for the `last-logged-out` attribute on PPP secrets that have never established an active PPPoE session.
+  * Both table columns reused the same badge styles, creating visual competition between paid status and router links.
+  * Customer directory aggregations lacked `inactive` aggregation for accounts expired > 7 days or suspended/inactive.
+* **Exact Target Files**:
+  * `billing/views/customers/list.py`
+  * `billing/views/api/dashboard.py`
+  * `billing/templates/billing/customer_list/_hero.html`
+  * `billing/templates/billing/customer_list/_styles.html`
+  * `billing/templates/billing/partials/subscription_plans_table.html`
+* **1-Step Fix**:
+  * In `billing/views/api/dashboard.py`, sanitize `mt_downtime` to ignore strings containing `"1970"` or default zeroes.
+  * In `subscription_plans_table.html`, guard `UPTIME / DOWNTIME` with `{% elif not customer.mt_downtime or "1970" in customer.mt_downtime %}` and render a clean gray `<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle"><i class="fas fa-minus-circle me-1"></i> Never Connected</span>`.
+  * Visually separate statuses: Use solid badges for Billing Status (`bg-success`, `bg-warning`, `bg-danger`, `bg-secondary`) and outline badges for Router Status (`border border-success text-success`, `border border-danger text-danger`).
+  * In `billing/views/customers/list.py`, aggregate `inactive=Count("id", filter=Q(status__in=["suspended", "inactive", "pull out"]) | Q(expires_at__lte=seven_days_ago))` and update `_hero.html` pills to Total Subscribers, Active Accounts, Due Soon (≤ 7D), and Inactive (> 7D).
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 1. Assign a new `ERR-XXX` identifier.
