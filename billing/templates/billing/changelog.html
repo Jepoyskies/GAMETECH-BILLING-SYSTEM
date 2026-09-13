@@ -117,6 +117,19 @@
                             <div class="cl-dual-content">
                                 <!-- Tech View -->
                                 <div class="tech-content">
+                                    <!-- Billing vs Router Status Separation & 1970 Epoch Fix -->
+                                    <div class="card border-0 mb-4" style="background:#eff6ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#1d4ed8;"><i class="fas fa-layer-group me-2"></i> Billing vs. Hardware Status Separation &amp; 1970 Unix Epoch Downtime Bug Fix</h5>
+                                            <p>Resolved ambiguity between financial subscriber standing and physical router connectivity across customer directory and subscription monitoring views:</p>
+                                            <ul class="mb-0">
+                                                <li><strong>Strict Billing Logic for Customer Stat Pills:</strong> Standardized top stat pills in Customer Directory (<code>/customers/</code>) to strictly reflect subscriber account standing (Total Subscribers, Active Accounts, Due Soon &le; 7D, Inactive &gt; 7D). Removed ambiguous "&amp; Online" text from billing pills and added <code>inactive</code> count aggregation in <code>billing/views/customers/list.py</code>.</li>
+                                                <li><strong>Distinct Badge Styling for Status vs. Router Status:</strong> In the Subscriptions view (<code>/subscriptions/</code>), visually decoupled subscriber billing state (solid badges: Active, Expiring Soon, Expired, Inactive) from MikroTik hardware link state (outline badges: Connected, Not Connected) so staff can distinguish paid accounts from physical router sessions at a glance.</li>
+                                                <li><strong>1970 Unix Epoch Downtime Fix:</strong> Handled raw MikroTik epoch timestamps (<code>jan/01/1970 00:00:00</code>) on accounts that have never logged in. Replaced corrupt dates with a clean <code>Never Connected</code> badge in both backend sanitization and Django template guards.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
                                     <!-- Cignal Expiring Radar, Portal Multi-TV Sync & Revenue Split -->
                                     <div class="card border-0 mb-4" style="background:#fefce8; border-radius:12px;">
                                         <div class="card-body p-4">
@@ -225,6 +238,19 @@
 
                                 <!-- Staff View (Simplified Business Updates) -->
                                 <div class="staff-content">
+                                    <!-- Card 0: Billing vs Hardware Separation & 1970 Fix -->
+                                    <div class="card border-0 mb-4" style="background:#eff6ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#1d4ed8;"><i class="fas fa-layer-group me-2"></i> 🎨 Clear Billing vs. Router Statuses &amp; Connection Fix</h5>
+                                            <p class="mb-2">We eliminated confusion between paid account status and actual physical router connection:</p>
+                                            <ul class="mb-0">
+                                                <li><strong>Customer Stat Counters Clarified:</strong> The top pills on the Customers Directory now strictly track billing truth (Total Subscribers, Active Accounts, Due Soon, and Inactive over 7 days). Removed confusing "Online" labels from billing metrics.</li>
+                                                <li><strong>Solid vs. Outline Badges on Subscriptions:</strong> Account billing status (Active, Expiring Soon, Expired, Inactive) now appears as bold solid badges, while physical router connection (Connected vs Not Connected) appears in clear outline style so they never look identical.</li>
+                                                <li><strong>No More Weird "1970" Dates:</strong> Accounts that have never connected to the router now show a clean gray <em>"Never Connected"</em> badge instead of the confusing <em>"jan/01/1970 00:00:00"</em> computer glitch date.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
                                     <!-- Card 1: Multi-TV support -->
                                     <div class="card border-0 mb-4" style="background:#f0fdf4; border-radius:12px;">
                                         <div class="card-body p-4">

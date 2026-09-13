@@ -119,23 +119,23 @@
                     <td><input type="checkbox" class="customer-checkbox" value="{{ customer.id }}"></td>
                     <td>
                         {% if not customer.expires_at %}
-                            <span class="status-badge status-danger"><i class="fas fa-times-circle"></i> Expired</span>
+                            <span class="badge bg-danger text-white px-2 py-1 shadow-sm"><i class="fas fa-times-circle me-1"></i> Expired</span>
                         {% elif customer.expires_at <= one_week_ago %}
-                            <span class="status-badge status-secondary"><i class="fas fa-user-slash"></i> Inactive</span>
+                            <span class="badge bg-secondary text-white px-2 py-1 shadow-sm"><i class="fas fa-user-slash me-1"></i> Inactive</span>
                         {% elif customer.expires_at <= now %}
-                            <span class="status-badge status-danger"><i class="fas fa-times-circle"></i> Expired</span>
+                            <span class="badge bg-danger text-white px-2 py-1 shadow-sm"><i class="fas fa-times-circle me-1"></i> Expired</span>
                         {% elif customer.expires_at <= soon %}
-                            <span class="status-badge status-warning"><i class="fas fa-exclamation-triangle"></i> Expiring Soon</span>
+                            <span class="badge bg-warning text-dark px-2 py-1 shadow-sm"><i class="fas fa-exclamation-triangle me-1"></i> Expiring Soon</span>
                         {% else %}
-                            <span class="status-badge status-active"><i class="fas fa-check-circle"></i> Active</span>
+                            <span class="badge bg-success text-white px-2 py-1 shadow-sm"><i class="fas fa-check-circle me-1"></i> Active</span>
                         {% endif %}
                     </td>
                     <td>{{ customer.expires_at|date:"Y-m-d H:i"|default:"N/A" }}</td>
                     <td>
                         {% if customer.mt_connected %}
-                            <span class="status-badge status-active"><i class="fas fa-link"></i> Connected</span>
+                            <span class="badge bg-transparent border border-success text-success px-2 py-1"><i class="fas fa-link me-1"></i> Connected</span>
                         {% else %}
-                            <span class="status-badge status-danger"><i class="fas fa-unlink"></i> Not Connected</span>
+                            <span class="badge bg-transparent border border-danger text-danger px-2 py-1"><i class="fas fa-unlink me-1"></i> Not Connected</span>
                         {% endif %}
                     </td>
                     <td>
@@ -147,11 +147,11 @@
                     </td>
                     <td>
                         {% if customer.mt_connected %}
-                            <span class="badge bg-success">Uptime: {{ customer.mt_uptime }}</span>
-                        {% elif customer.mt_downtime %}
-                            <span class="badge bg-danger">Down: {{ customer.mt_downtime }}</span>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="fas fa-clock me-1"></i> Uptime: {{ customer.mt_uptime }}</span>
+                        {% elif not customer.mt_downtime or "1970" in customer.mt_downtime %}
+                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1"><i class="fas fa-minus-circle me-1"></i> Never Connected</span>
                         {% else %}
-                            <span class="badge bg-secondary">Unknown</span>
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1"><i class="fas fa-arrow-down me-1"></i> Down: {{ customer.mt_downtime }}</span>
                         {% endif %}
                     </td>
                     <td>

@@ -59,6 +59,7 @@ def customer_list(request):
         total=Count("id"),
         active=Count("id", filter=Q(expires_at__gt=seven_days_from_now, status="active")),
         expiring=Count("id", filter=Q(expires_at__gt=now, expires_at__lte=seven_days_from_now, status="active")),
+        inactive=Count("id", filter=Q(status__in=["suspended", "inactive", "pull out"]) | Q(expires_at__lte=seven_days_ago)),
         offline=Count("id", filter=Q(status__in=["suspended", "inactive", "pull out"]) | Q(expires_at__lte=now)),
     )
 
@@ -107,6 +108,7 @@ def customer_list(request):
             "barangays": barangays,
             "filter_type": filter_type,
             "stats": stats,
+            "inactive_count": stats.get("inactive", 0),
         },
     )
 

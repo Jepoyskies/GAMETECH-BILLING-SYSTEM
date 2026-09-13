@@ -210,10 +210,9 @@ def subscription_plans_data_api(request):
         # Calculate downtime if applicable
         c.mt_downtime = ""
         if not c.mt_connected and c.mt_last_logged_out:
-            # MicroTik formats dates like "dec/31/2025 23:59:59" or similar
-            # parsing is complex so we'll just display it as is or try to format
-            # In the original PHP they rely on strtotime, Python needs more robust parsing
-            c.mt_downtime = c.mt_last_logged_out
+            last_out = str(c.mt_last_logged_out).strip()
+            if "1970" not in last_out and last_out.lower() not in ["00:00:00", "n/a", "none", ""]:
+                c.mt_downtime = c.mt_last_logged_out
 
     # Unique devices for filter dropdown
     unique_devices = (
