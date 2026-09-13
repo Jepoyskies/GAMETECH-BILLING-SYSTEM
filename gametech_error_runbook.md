@@ -429,6 +429,21 @@
 
 ---
 
+### ERR-025: Dark Mode Overridden by body:not(.dark-mode) Selector Specificity Trap
+* **Symptoms**:
+  * On `/cignal-dashboard/`, toggling Dark Mode turns the topbar and sidebar dark, but cards and tables remain bright white, with light/washed-out text and unreadable table headers.
+* **Root Causes**:
+  * Gametech's theme toggle attaches `.dark-mode` to `document.documentElement` (`<html class="dark-mode">`), NOT `<body>`.
+  * Selectors written as `body:not(.dark-mode) .card` matched 100% of the time (even in dark mode) because `body` never carried the `.dark-mode` class, overriding dark mode styling.
+* **Exact Target Files**:
+  * `billing/templates/billing/cignal_dashboard/_styles.html`
+  * `billing/templates/billing/base.html`
+  * `billing/templates/billing/base/_scripts.html`
+* **1-Step Fix**:
+  * Remove `body:not(.dark-mode)` selectors and use standard base styles for light mode with `.dark-mode` overrides for dark mode. Ensure `base.html` and `_scripts.html` synchronize `.dark-mode` onto both `documentElement` and `document.body`.
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 1. Assign a new `ERR-XXX` identifier.
