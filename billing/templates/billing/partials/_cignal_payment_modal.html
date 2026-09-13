@@ -11,19 +11,19 @@
 
       <form action="{% url 'process_cignal_payment' %}" method="post" id="cignalPaymentForm">
         {% csrf_token %}
-        <input type="hidden" name="customer_id" id="cpmCustomerId" value="{{ target_customer.id|default:customer.id|default:'' }}">
+        <input type="hidden" name="customer_id" id="cpmCustomerId" value="{% if target_customer %}{{ target_customer.id }}{% elif customer %}{{ customer.id }}{% endif %}">
 
         <div class="modal-body py-3">
           <!-- Customer Banner -->
           <div class="p-3 mb-3 rounded-3" style="background: rgba(234, 179, 8, 0.08); border: 1px solid rgba(234, 179, 8, 0.25);">
             <div class="d-flex justify-content-between align-items-center mb-1">
               <strong class="text-warning fw-bold" style="font-size: 0.96rem;" id="cpmCustomerName">
-                <i class="fas fa-tv me-1"></i> {{ target_customer.full_name|default:customer.full_name|default:"Cignal Customer" }}
+                <i class="fas fa-tv me-1"></i> {% if target_customer %}{{ target_customer.full_name }}{% elif customer %}{{ customer.full_name }}{% else %}Cignal Customer{% endif %}
               </strong>
               <span class="badge bg-warning-subtle text-warning border border-warning-subtle" id="cpmCustomerBadge">Cignal Subscriber</span>
             </div>
             <div class="small text-muted d-flex flex-wrap gap-2 align-items-center">
-              <span><i class="fas fa-network-wired me-1"></i> PPPoE: <strong id="cpmCustomerPppoe">{{ target_customer.pppoe_username|default:customer.pppoe_username|default:"None" }}</strong></span>
+              <span><i class="fas fa-network-wired me-1"></i> PPPoE: <strong id="cpmCustomerPppoe">{% if target_customer %}{{ target_customer.pppoe_username }}{% elif customer %}{{ customer.pppoe_username }}{% else %}None{% endif %}</strong></span>
             </div>
           </div>
 
@@ -33,32 +33,55 @@
               <i class="fas fa-satellite-dish text-info me-1"></i> Target Cignal Subscription
             </label>
             <select name="subscription_id" id="cpmSubscriptionSelect" class="form-select" required onchange="cpmOnSubscriptionChange(this)">
-              {% with cust=target_customer|default:customer %}
-                {% if cust and cust.cignal_plans.all %}
-                  {% for sub in cust.cignal_plans.all %}
-                    <option value="{{ sub.id }}" 
-                            data-exp="{% if sub.expiration_date %}{{ sub.expiration_date|date:'Y-m-d' }}{% elif sub.end_date %}{{ sub.end_date|date:'Y-m-d' }}{% endif %}"
-                            data-acct="{{ sub.account_number|default:'' }}"
-                            data-name="{{ sub.account_name|default:'' }}"
-                            data-amount="{{ sub.amount_paid|default:0 }}">
-                      {{ sub.addon_type|default:"Cignal" }}: {{ sub.account_name|default:sub.plan_name }} ({{ sub.account_number|default:"No Acct #" }})
-                      {% if sub.expiration_date or sub.end_date %}
-                        — Exp: {{ sub.expiration_date|default:sub.end_date|date:"M d, Y" }}
-                      {% endif %}
-                    </option>
-                  {% endfor %}
-                {% else %}
-                  <option value="" data-exp="" data-acct="{{ cust.cignalplay_no|default:cust.cignalbox_no|default:'' }}">
-                    {% if cust.cignalplay_no %}
-                      Cignal Play ({{ cust.cignalplay_no }})
-                    {% elif cust.cignalbox_no %}
-                      Cignal Box ({{ cust.cignalbox_no }})
-                    {% else %}
-                      Default Cignal Account
+              {% if target_customer and target_customer.cignal_plans.all %}
+                {% for sub in target_customer.cignal_plans.all %}
+                  <option value="{{ sub.id }}" 
+                          data-exp="{% if sub.expiration_date %}{{ sub.expiration_date|date:'Y-m-d' }}{% elif sub.end_date %}{{ sub.end_date|date:'Y-m-d' }}{% endif %}"
+                          data-acct="{{ sub.account_number|default:'' }}"
+                          data-name="{{ sub.account_name|default:'' }}"
+                          data-amount="{{ sub.amount_paid|default:0 }}">
+                    {{ sub.addon_type|default:"Cignal" }}: {{ sub.account_name|default:sub.plan_name }} ({{ sub.account_number|default:"No Acct #" }})
+                    {% if sub.expiration_date or sub.end_date %}
+                      — Exp: {{ sub.expiration_date|default:sub.end_date|date:"M d, Y" }}
                     {% endif %}
                   </option>
-                {% endif %}
-              {% endwith %}
+                {% endfor %}
+              {% elif customer and customer.cignal_plans.all %}
+                {% for sub in customer.cignal_plans.all %}
+                  <option value="{{ sub.id }}" 
+                          data-exp="{% if sub.expiration_date %}{{ sub.expiration_date|date:'Y-m-d' }}{% elif sub.end_date %}{{ sub.end_date|date:'Y-m-d' }}{% endif %}"
+                          data-acct="{{ sub.account_number|default:'' }}"
+                          data-name="{{ sub.account_name|default:'' }}"
+                          data-amount="{{ sub.amount_paid|default:0 }}">
+                    {{ sub.addon_type|default:"Cignal" }}: {{ sub.account_name|default:sub.plan_name }} ({{ sub.account_number|default:"No Acct #" }})
+                    {% if sub.expiration_date or sub.end_date %}
+                      — Exp: {{ sub.expiration_date|default:sub.end_date|date:"M d, Y" }}
+                    {% endif %}
+                  </option>
+                {% endfor %}
+              {% elif target_customer %}
+                <option value="" data-exp="" data-acct="{{ target_customer.cignalplay_no|default:target_customer.cignalbox_no|default:'' }}">
+                  {% if target_customer.cignalplay_no %}
+                    Cignal Play ({{ target_customer.cignalplay_no }})
+                  {% elif target_customer.cignalbox_no %}
+                    Cignal Box ({{ target_customer.cignalbox_no }})
+                  {% else %}
+                    Default Cignal Account
+                  {% endif %}
+                </option>
+              {% elif customer %}
+                <option value="" data-exp="" data-acct="{{ customer.cignalplay_no|default:customer.cignalbox_no|default:'' }}">
+                  {% if customer.cignalplay_no %}
+                    Cignal Play ({{ customer.cignalplay_no }})
+                  {% elif customer.cignalbox_no %}
+                    Cignal Box ({{ customer.cignalbox_no }})
+                  {% else %}
+                    Default Cignal Account
+                  {% endif %}
+                </option>
+              {% else %}
+                <option value="">Default Cignal Subscription</option>
+              {% endif %}
             </select>
             <div class="form-text text-muted small" id="cpmAccountHint">Select which device or TV box subscription to reload.</div>
           </div>
