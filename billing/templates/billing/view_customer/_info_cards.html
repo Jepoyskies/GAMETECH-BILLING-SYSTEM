@@ -116,11 +116,36 @@
         <!-- Column 3: Add-ons & Extra -->
         <div class="col-lg-4">
             <!-- Add-ons & Extra -->
-            <div class="info-card">
+            <div class="info-card {% if pending_cignal_addon %}cignal-pending-card{% endif %}">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3 class="info-title mb-0"><i class="fas fa-tv"></i> Add-ons & Extra</h3>
-                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#cignalModal">Apply Add-on</button>
+                    <div class="d-flex align-items-center gap-1">
+                        {% if pending_cignal_addon %}
+                        <a href="{% url 'cignal_dashboard' %}?highlight_customer={{ customer.id }}" class="btn btn-sm btn-outline-info" title="Manage in Cignal Dashboard"><i class="fas fa-satellite-dish me-1"></i> Hub</a>
+                        <button class="btn btn-sm btn-primary shadow-sm fw-bold cignal-pulse-btn" data-bs-toggle="modal" data-bs-target="#cignalModal"><i class="fas fa-bolt me-1"></i> Apply Add-on</button>
+                        {% else %}
+                        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#cignalModal">Apply Add-on</button>
+                        {% endif %}
+                    </div>
                 </div>
+
+                {% if pending_cignal_addon %}
+                <div class="cignal-pending-banner mb-3 p-2 rounded d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="cignal-radar-pulse"><i class="fas fa-satellite-dish text-primary"></i></span>
+                        <div>
+                            <div class="fw-bold" style="font-size: 0.85rem; color: #0284c7;">
+                                Pending: {{ pending_cignal_addon.addon_type }}
+                            </div>
+                            <small class="text-muted" style="font-size: 0.72rem;">
+                                Requested on {{ pending_cignal_addon.requested_at|date:"M d, Y h:i A" }}
+                            </small>
+                        </div>
+                    </div>
+                    <span class="badge bg-warning text-dark px-2 py-1" style="font-size: 0.72rem;">Action Needed</span>
+                </div>
+                {% endif %}
+
                 <ul class="info-list">
                     <li>
                         <span class="info-label">Cignal Play No.</span>

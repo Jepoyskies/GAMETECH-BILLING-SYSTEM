@@ -407,6 +407,17 @@ def apply_cignal_addon(request):
                 addon_req.save()
             except AddOnRequest.DoesNotExist:
                 pass
+        else:
+            # Auto-resolve open pending Cignal request for this customer
+            pending_req = (
+                AddOnRequest.objects.filter(customer=customer, status="Pending")
+                .filter(Q(addon_type__icontains="Cignal") | Q(addon_type__icontains="Box"))
+                .order_by("-requested_at")
+                .first()
+            )
+            if pending_req:
+                pending_req.status = "Resolved"
+                pending_req.save()
 
         # Update customer profile
         customer.cignalplay_no = cignalplay_no
@@ -434,7 +445,7 @@ def apply_cignal_addon(request):
             request, f"Add-on applied successfully for {customer.full_name}."
         )
 
-    return redirect(request.META.get("HTTP_REFERER", "live_monitoring"))
+    return redirect(request.META.get("HTTP_REFERER", "cignal_dashboard"))
 
 
 @role_required(["Admin", "Editor", "Technician", "Agent"])
@@ -448,18 +459,18 @@ def approve_cignal_request(request, request_id):
     cignal_date = request.POST.get("cignal_date")
     if not cignal_no or not cignal_date:
         messages.error(request, "Cignal Play No and Date are required.")
-        return redirect("add_on_requests")
+        return redirect(request.META.get("HTTP_REFERER", "cignal_dashboard"))
     customer = addon_req.customer
     customer.cignalplay_no = cignal_no
     try:
         customer.cignalplay_date = timezone.datetime.fromisoformat(cignal_date).date()
     except ValueError:
         messages.error(request, "Invalid date format.")
-        return redirect("add_on_requests")
+        return redirect(request.META.get("HTTP_REFERER", "cignal_dashboard"))
     customer.save()
     addon_req.status = "Resolved"
     addon_req.save()
     messages.success(
         request, f"Cignal request for {customer.full_name} approved and applied."
     )
-    return redirect("add_on_requests")
+    return redirect(request.META.get("HTTP_REFERER", "cignal_dashboard"))

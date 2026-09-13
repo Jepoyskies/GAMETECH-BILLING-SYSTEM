@@ -432,11 +432,20 @@ def view_customer(request, customer_id):
 
     reverted_expiration = get_customer_base_expiration(customer)
 
+    # Check for pending Cignal / Add-on requests for prominent highlight
+    pending_cignal_addon = (
+        AddOnRequest.objects.filter(customer=customer, status="Pending")
+        .filter(Q(addon_type__icontains="Cignal") | Q(addon_type__icontains="Box"))
+        .order_by("-requested_at")
+        .first()
+    )
+
     context = {
         "customer": customer,
         "payments": payments,
         "all_logs": all_logs,
         "reverted_expiration": reverted_expiration,
+        "pending_cignal_addon": pending_cignal_addon,
         "mt_status": mt_status,
         "uptime": uptime,
         "live_mac": live_mac,
