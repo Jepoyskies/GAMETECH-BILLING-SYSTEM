@@ -502,10 +502,29 @@
 
 ---
 
+### ERR-029: Changelog Audience Duality & Topbar Dropdown Bloat
+* **Symptoms**:
+  * The development changelog and topbar rocket dropdown displayed dense architectural jargon (foreign keys, atomic transactions, AST compilation) that was unintelligible to business owners, CSRs, and field technicians.
+  * Inlining the entire multi-week release history inside `_topbar.html` caused severe template bloat (> 350 lines), violating the 400-Line Circuit Breaker law and risking div nesting imbalances.
+* **Root Causes**:
+  * Single-track technical release documentation without a presentation layer for non-technical operational summaries.
+  * Monolithic topbar template housing the full system release notes alongside header controls.
+* **Exact Target Files**:
+  * `billing/templates/billing/base/_topbar.html`
+  * `billing/templates/billing/base/_topbar_changelog.html` (extracted partial)
+  * `billing/templates/billing/changelog.html`
+* **1-Step Fix**:
+  * Extract the dropdown markup out of `_topbar.html` into `_topbar_changelog.html` and include it with `{% include "billing/base/_topbar_changelog.html" %}`.
+  * Implement glassmorphic pill switch (`.gt-cl-mode-toggle`) toggling `data-cl-mode="tech"` vs `data-cl-mode="staff"` on `<html>`, persisted across page loads via `localStorage.getItem('changelog_mode')`.
+  * Structure entries with `.cl-dual-content` containing `.tech-content` and `.staff-content`, ensuring legacy entries lacking staff translations remain visible in both modes.
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 1. Assign a new `ERR-XXX` identifier.
 2. Fill in: **Symptoms**, **Root Causes**, **Exact Target Files**, and **1-Step Fix**.
 3. Keep entries short, actionable, and sniper-focused.
+
 
 
