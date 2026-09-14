@@ -541,6 +541,21 @@
   * Visually separate statuses: Use solid badges for Billing Status (`bg-success`, `bg-warning`, `bg-danger`, `bg-secondary`) and outline badges for Router Status (`border border-success text-success`, `border border-danger text-danger`).
   * In `billing/views/customers/list.py`, aggregate `inactive=Count("id", filter=Q(status__in=["suspended", "inactive", "pull out"]) | Q(expires_at__lte=seven_days_ago))` and update `_hero.html` pills to Total Subscribers, Active Accounts, Due Soon (≤ 7D), and Inactive (> 7D).
 
+### ERR-031: Generic "Active but Offline" Overwrite on Customer View & Router Uplink Detection
+* **Symptoms**:
+  * On `/customers/view/<id>/`, subscriber Live MT Status badge persistently displayed generic `Active but Offline` even when the assigned MikroTik router lost internet uplink (`Offline (Router Off)`), when area/barangay outages occurred, or when secret/router issues were present.
+* **Root Causes**:
+  * In `billing/views/api/network.py` (`api_customer_mikrotik_status`), router uplink ping check explicitly bypassed `'no route to host'`, failing to detect offline routers when default gateways dropped.
+  * In `billing/templates/billing/view_customer/_scripts.html`, the frontend condition `if (data.is_active_offline || data.mt_status === 'Active but Offline')` hardcoded `statusContainer.innerHTML = '... Active but Offline'`, completely overwriting specific statuses like `Offline (Router Off)`, `Area Outage`, `API Unreachable`, etc.
+* **Exact Target Files**:
+  * `billing/views/api/network.py`
+  * `billing/templates/billing/view_customer/_scripts.html`
+  * `billing/templates/billing/view_customer/_info_cards.html`
+  * `billing/templates/billing/customer_list/_scripts.html`
+* **1-Step Fix**:
+  * In `billing/views/api/network.py`, evaluate router uplink ping with `successful = [p for p in ping_res if str(p.get("packet-loss", "100")) != "100" and "avg-rtt" in p]`; if not successful, set `data["mt_status"] = "Offline (Router Off)"`. Add explicit checks for `Secret Not Found on Router`, `Disabled on Router`, `No Router Assigned`, and `No PPPoE Configured`.
+  * In `_scripts.html`, dynamically render `data.mt_status || 'Active but Offline'` within the badge rather than hardcoding static text.
+
 ---
 
 ## 📝 How to Add a New Error Entry
