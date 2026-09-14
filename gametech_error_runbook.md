@@ -576,6 +576,24 @@
 
 ---
 
+### ERR-033: Active / Transferred Subscriber Falsely Labeled as 'Pending Install' & Guesswork in Connection Diagnostics
+* **Symptoms**:
+  * Active, paid accounts (with valid expiration dates) transferred to a new router or newly provisioned secrets displayed `⚙️ Pending Install` on `/customers/` instead of technical outage status.
+  * Staff/Admins had no specific insight into whether the offline state was caused by router uplink loss, API unreachability, or an active PPPoE session still held on the previous router.
+* **Root Causes**:
+  * `api_active_pppoe_usernames` flagged any secret with epoch zero `1970` `last-logged-out` as `never_connected_usernames`. Because a newly transferred subscriber hasn't established a session on the target router yet, their secret defaults to `1970`, causing `_scripts.html` to evaluate `isPendingInstall = true` despite `status == 'active'` and valid expiration.
+  * `list.py` excluded `never_connected_usernames` from `paid_but_offline_ids`, omitting active subscribers from the Paid but Offline top counter.
+* **Exact Target Files**:
+  * `billing/views/customers/list.py`
+  * `billing/views/api/network.py`
+  * `billing/templates/billing/customer_list/_scripts.html`
+* **1-Step Fix**:
+  * Restrict `is_pending_install` strictly to accounts with `status == 'pending'` or `expires_at is None`. An account with an active expiration date is NEVER pending installation.
+  * Populate `user_router_map` (`{username: {router_id, router_name}}`) in `/api/active-usernames/`. If a session is active on a different router than assigned in Gametech, render an amber `Active on <RouterName>` badge.
+  * In `_scripts.html`, detect router uplink offline (`Offline (Router Off)`), API failure (`Offline (Router API Down)`), and isolated client disconnections with actionable diagnostic modals via `showReason()`.
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 1. Assign a new `ERR-XXX` identifier.
