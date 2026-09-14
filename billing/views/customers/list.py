@@ -59,6 +59,7 @@ def customer_list(request):
         total=Count("id"),
         active=Count("id", filter=Q(expires_at__gt=seven_days_from_now, status="active")),
         expiring=Count("id", filter=Q(expires_at__gt=now, expires_at__lte=seven_days_from_now, status="active")),
+        expired=Count("id", filter=Q(expires_at__lte=now, expires_at__gt=seven_days_ago)),
         inactive=Count("id", filter=Q(status__in=["suspended", "inactive", "pull out"]) | Q(expires_at__lte=seven_days_ago)),
         offline=Count("id", filter=Q(status__in=["suspended", "inactive", "pull out"]) | Q(expires_at__lte=now)),
     )
@@ -115,7 +116,9 @@ def customer_list(request):
     elif filter_type == "expired":
         customers = customers.filter(expires_at__lte=now, expires_at__gt=seven_days_ago)
     elif filter_type == "inactive":
-        customers = customers.filter(expires_at__lte=seven_days_ago)
+        customers = customers.filter(
+            Q(status__in=["suspended", "inactive", "pull out"]) | Q(expires_at__lte=seven_days_ago)
+        )
 
     customers = customers.annotate(
         is_paid_offline=Case(
