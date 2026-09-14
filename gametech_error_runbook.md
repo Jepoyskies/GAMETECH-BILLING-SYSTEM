@@ -556,6 +556,24 @@
   * In `billing/views/api/network.py`, evaluate router uplink ping with `successful = [p for p in ping_res if str(p.get("packet-loss", "100")) != "100" and "avg-rtt" in p]`; if not successful, set `data["mt_status"] = "Offline (Router Off)"`. Add explicit checks for `Secret Not Found on Router`, `Disabled on Router`, `No Router Assigned`, and `No PPPoE Configured`.
   * In `_scripts.html`, dynamically render `data.mt_status || 'Active but Offline'` within the badge rather than hardcoding static text.
 
+### ERR-032: Customers Directory Badge Double-Stacking & False Outage on Uninstalled Subscribers
+* **Symptoms**:
+  * On `/customers/`, subscriber rows displayed two stacked status badges (e.g. `Active but Offline` in the billing column and another live badge beneath it).
+  * Brand new customers without active installations or router connections (e.g., Cardo Dalisay) were falsely flagged as `Active but Offline` NOC outages, turning their rows red (`.table-row-paid-offline`) and inflating the "Paid but Offline" top counter.
+* **Root Causes**:
+  * `_table.html` included a redundant server-rendered `{% if customer.is_paid_offline %} Active but Offline` badge inside the billing column while `_scripts.html` simultaneously injected a live network badge in `conn-status-indicator`.
+  * `_scripts.html` and `list.py` treated any subscriber who wasn't actively streaming PPPoE traffic as an outage if `status == 'active'`, ignoring whether they had never established their first physical connection (epoch zero `1970` downtime or null expiration).
+* **Exact Target Files**:
+  * `billing/views/customers/list.py`
+  * `billing/views/api/network.py`
+  * `billing/templates/billing/customer_list/_table.html`
+  * `billing/templates/billing/customer_list/_scripts.html`
+  * `billing/templates/billing/view_customer/_scripts.html`
+* **1-Step Fix**:
+  * In `_table.html`, strip the redundant `is_paid_offline` badge from the billing status column so only true billing states (Active, Expired, Pending) are rendered, while `conn-status-indicator` handles the single hardware state.
+  * In `api/network.py` (`api_active_pppoe_usernames` and `api_customer_mikrotik_status`) and `list.py`, identify uninstalled subscribers via `never_connected_usernames` (secrets with `1970` or empty last-logged-out), `status == 'pending'`, or null `expires_at`.
+  * Render a calm blue `⚙️ Pending Install` pill (`bg-info-subtle`) instead of the glowing red `.table-row-paid-offline` outage highlight, and exclude them from `stats["paid_but_offline"]`.
+
 ---
 
 ## 📝 How to Add a New Error Entry
