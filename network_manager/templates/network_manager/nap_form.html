@@ -82,11 +82,31 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var map = L.map('map').setView([defaultLat, defaultLng], defaultZoom);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    var darkLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
-        subdomains: 'abcd',
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-    }).addTo(map);
+        className: 'dark-tiles',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    });
+
+    var satelliteLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        subdomains: ['0', '1', '2', '3'],
+        attribution: '&copy; Google Maps'
+    });
+
+    var streetLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    });
+
+    darkLayer.addTo(map);
+
+    var baseMaps = {
+        "🌙 Dark": darkLayer,
+        "🛰️ Satellite": satelliteLayer,
+        "🗺️ Streets": streetLayer
+    };
+    L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
 
     var marker = L.marker([defaultLat, defaultLng], {draggable: true}).addTo(map);
     
