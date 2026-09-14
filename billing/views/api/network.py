@@ -192,6 +192,9 @@ def api_customer_mikrotik_status(request, customer_id):
         "last_logged_out": "N/A",
     }
 
+    secret_found = False
+    secret_disabled = False
+
     if customer.mikrotik_device and customer.pppoe_username:
         try:
             from network_manager.services import MikrotikAPI
@@ -242,6 +245,9 @@ def api_customer_mikrotik_status(request, customer_id):
             secrets = api.get_ppp_secrets()
             for secret in secrets:
                 if secret.get("name") == customer.pppoe_username:
+                    secret_found = True
+                    if secret.get("disabled") in ["true", True]:
+                        secret_disabled = True
                     data["last_logged_out"] = secret.get("last-logged-out", "N/A")
                     if data["mt_status"] == "Disconnected" and not customer.mac_address:
                         data["live_mac"] = secret.get("caller-id", "N/A")
@@ -327,14 +333,16 @@ def api_customer_mikrotik_status(request, customer_id):
                         ping_res = (
                             api._get_api()
                             .get_resource("/")
-                            .call("ping", {"address": "8.8.8.8", "count": "1"})
+                            .call("ping", {"address": "8.8.8.8", "count": "2"})
                         )
                         if ping_res and len(ping_res) > 0:
-                            result = ping_res[0]
-                            loss = int(result.get("packet-loss", 100))
-                            # Only treat as lost uplink if router had a route that timed out, not 'no route to host'
-                            status = result.get("status", "")
-                            if status != "no route to host" and (loss == 100 or status == "timeout"):
+                            successful = [
+                                p
+                                for p in ping_res
+                                if str(p.get("packet-loss", "100")) != "100"
+                                and "avg-rtt" in p
+                            ]
+                            if not successful:
                                 data["mt_status"] = "Offline (Router Off)"
                     except Exception:
                         pass  # Ignore ping errors, just leave as Disconnected
@@ -346,7 +354,15 @@ def api_customer_mikrotik_status(request, customer_id):
     if data["mt_status"] == "Disconnected":
         if customer.status == "active":
             data["is_active_offline"] = True
-            if customer.barangay and customer.barangay.health_status == "Outage":
+            if not customer.mikrotik_device:
+                data["mt_status"] = "No Router Assigned"
+            elif not customer.pppoe_username:
+                data["mt_status"] = "No PPPoE Configured"
+            elif not secret_found:
+                data["mt_status"] = "Secret Not Found on Router"
+            elif secret_disabled:
+                data["mt_status"] = "Disabled on Router"
+            elif customer.barangay and customer.barangay.health_status == "Outage":
                 data["mt_status"] = "Area Outage (Barangay)"
             elif (
                 customer.mikrotik_device
