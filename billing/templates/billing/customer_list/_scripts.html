@@ -195,6 +195,9 @@
         let brgyHealth = el.getAttribute('data-barangay-health');
         let brgyName = el.getAttribute('data-barangay-name');
         let routerUnreachable = el.getAttribute('data-router-unreachable') === 'true';
+        let routerApiDown = el.getAttribute('data-router-api-down') === 'true';
+        let diffRouter = el.getAttribute('data-different-router');
+        let pppoe = el.getAttribute('data-pppoe');
 
         let effectiveReason = reason;
         let effectiveHealth = health;
@@ -220,10 +223,18 @@
         }
 
         // Intelligent Diagnosis Logic
-        if (health === 'Excellent' || !health) {
-            if (routerUnreachable) {
+        if (diffRouter) {
+            effectiveHealth = 'Session on Different Router';
+            effectiveReason = `This subscriber's PPPoE session (<b>${pppoe}</b>) is currently active on <b>${diffRouter}</b>, but this account is assigned to <b>${routerName}</b>.<br><br><b>Remedy:</b> Disconnect the session on ${diffRouter} or verify physical port/VLAN routing to authenticate on ${routerName}.`;
+            canResolve = false;
+        } else if (health === 'Excellent' || !health) {
+            if (routerApiDown) {
+                effectiveHealth = 'Router API Down';
+                effectiveReason = `Cannot communicate with <b>${routerName}</b> over the MikroTik API. The router may be powered off or unreachable from the server.`;
+                canResolve = false;
+            } else if (routerUnreachable) {
                 effectiveHealth = 'Router Uplink Offline';
-                effectiveReason = `The main router (${routerName}) has lost its internet connection (Uplink Offline) or is completely unreachable from the server.`;
+                effectiveReason = `The assigned router (<b>${routerName}</b>) has lost its internet connection (Uplink Offline - 100% packet loss to 8.8.8.8) or is unreachable. Subscribers on this router cannot connect until uplink is restored.`;
                 canResolve = false; 
             } else if (routerHealth && routerHealth !== 'Excellent') {
                 effectiveHealth = `${routerHealth} (Router Issue)`;
@@ -238,8 +249,8 @@
                 resolveId = el.getAttribute('data-barangay-id');
                 canResolve = true;
             } else {
-                effectiveHealth = 'Isolated Offline';
-                effectiveReason = 'Customer router is unplugged, fiber cable is cut, or there is a localized power outage.';
+                effectiveHealth = 'Isolated Client Offline';
+                effectiveReason = `Router <b>${routerName}</b> is online with internet, but customer ONU/CPE (<b>${pppoe || 'No PPPoE'}</b>) is disconnected.<br><br>Possible causes: Customer Wi-Fi router powered off, optical fiber cable unplugged or cut, or ONU LOS red light.`;
                 canResolve = false; 
             }
         } else {
@@ -282,13 +293,13 @@
         ])
         .then(([activeData, uplinkData]) => {
             if (activeData.status === 'success') {
-                let active_users = new Set(activeData.active_usernames);
-                let never_connected = new Set(activeData.never_connected_usernames || []);
+                let active_users = new Set(activeData.active_usernames || []);
+                let user_router_map = activeData.user_router_map || {};
                 let offline_routers = new Set(activeData.offline_routers || []);
                 
                 // Map router uplink statuses
                 let router_uplinks = {};
-                if (uplinkData.routers) {
+                if (uplinkData && uplinkData.routers) {
                     uplinkData.routers.forEach(r => {
                         router_uplinks[r.id] = r.uplink_status;
                     });
@@ -302,15 +313,22 @@
                     let btnHtml = '<button class="btn btn-sm btn-light p-0 ms-1 rounded-circle shadow-sm border" onclick="showReason(this)" title="View Reason" style="width: 22px; height: 22px; line-height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fas fa-exclamation-circle text-danger" style="font-size: 0.8rem;"></i></button>';
                     let tr = el.closest('tr');
                     
-                    let isNeverConnected = !pppoe || never_connected.has(pppoe);
-                    let isPendingInstall = (status === 'pending') || (!expiresAt) || (isNeverConnected && !active_users.has(pppoe));
+                    // An account is ONLY pending install if marked as pending or never had an expiration date set
+                    let isPendingInstall = (status === 'pending') || (!expiresAt);
                     
                     if (status === 'suspended') {
                         if (tr) tr.classList.remove('table-row-paid-offline');
                         el.innerHTML = '<span class="badge bg-danger rounded-pill shadow-sm mt-1"><i class="fas fa-ban me-1"></i>Suspended</span>' + btnHtml;
                     } else if (active_users.has(pppoe)) {
                         if (tr) tr.classList.remove('table-row-paid-offline');
-                        el.innerHTML = '<span class="badge bg-success rounded-pill shadow-sm mt-1" style="background-color: #10b981 !important;"><i class="fas fa-check-circle me-1"></i>Connected</span>';
+                        let activeUserRouter = user_router_map[pppoe];
+                        if (activeUserRouter && !isNaN(routerId) && activeUserRouter.router_id !== routerId) {
+                            // Session active on a different router than assigned
+                            el.setAttribute('data-different-router', activeUserRouter.router_name);
+                            el.innerHTML = '<span class="badge rounded-pill shadow-sm mt-1 px-2 py-1 d-inline-flex align-items-center gap-1" style="background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.4); font-weight: 600; font-size: 0.72rem;" title="Connected to ' + activeUserRouter.router_name + ' instead of assigned router"><i class="fas fa-shuffle"></i>Active on ' + activeUserRouter.router_name + '</span>' + btnHtml;
+                        } else {
+                            el.innerHTML = '<span class="badge bg-success rounded-pill shadow-sm mt-1" style="background-color: #10b981 !important;"><i class="fas fa-check-circle me-1"></i>Connected</span>';
+                        }
                     } else if (isPendingInstall) {
                         if (tr) tr.classList.remove('table-row-paid-offline');
                         el.innerHTML = '<span class="badge rounded-pill shadow-sm mt-1 px-2 py-1 d-inline-flex align-items-center gap-1" style="background: rgba(14, 165, 233, 0.15); color: #0284c7; border: 1px solid rgba(14, 165, 233, 0.35); font-weight: 600; font-size: 0.72rem;"><i class="fas fa-gear"></i>Pending Install</span>';
@@ -319,18 +337,27 @@
                         el.innerHTML = '<span class="badge bg-secondary rounded-pill shadow-sm mt-1"><i class="fas fa-question-circle me-1"></i>No PPPoE</span>';
                     } else {
                         let isRouterOffline = false;
+                        let isApiDown = false;
                         if (!isNaN(routerId)) {
                             // Offline if API connection completely failed
-                            if (offline_routers.has(routerId)) isRouterOffline = true;
+                            if (offline_routers.has(routerId)) {
+                                isRouterOffline = true;
+                                isApiDown = true;
+                            }
                             // OR offline if router is connected but has no internet (uplink offline)
-                            if (router_uplinks[routerId] === 'Offline') isRouterOffline = true;
+                            if (router_uplinks[routerId] === 'Offline') {
+                                isRouterOffline = true;
+                            }
                         }
 
                         if (isRouterOffline) {
                             el.setAttribute('data-router-unreachable', 'true');
+                            if (isApiDown) {
+                                el.setAttribute('data-router-api-down', 'true');
+                            }
                         }
                         if (status === 'active') {
-                            let specificStatus = isRouterOffline ? 'Offline (Router Off)' : 'Active but Offline';
+                            let specificStatus = isApiDown ? 'Offline (Router API Down)' : (isRouterOffline ? 'Offline (Router Off)' : 'Active but Offline');
                             el.innerHTML = '<span class="badge rounded-pill shadow-sm mt-1 text-white fw-bold px-2 py-1 d-inline-flex align-items-center gap-1" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border: 1px solid #f87171; box-shadow: 0 0 10px rgba(239, 68, 68, 0.45); font-size: 0.72rem;"><i class="fas fa-triangle-exclamation text-white"></i>' + specificStatus + '</span>' + btnHtml;
                             if (tr) tr.classList.add('table-row-paid-offline');
                         } else {
