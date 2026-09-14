@@ -283,6 +283,7 @@
         .then(([activeData, uplinkData]) => {
             if (activeData.status === 'success') {
                 let active_users = new Set(activeData.active_usernames);
+                let never_connected = new Set(activeData.never_connected_usernames || []);
                 let offline_routers = new Set(activeData.offline_routers || []);
                 
                 // Map router uplink statuses
@@ -296,17 +297,26 @@
                 indicators.forEach(el => {
                     let pppoe = el.getAttribute('data-pppoe');
                     let status = el.getAttribute('data-status');
+                    let expiresAt = el.getAttribute('data-expires-at');
                     let routerId = parseInt(el.getAttribute('data-router-id'));
                     let btnHtml = '<button class="btn btn-sm btn-light p-0 ms-1 rounded-circle shadow-sm border" onclick="showReason(this)" title="View Reason" style="width: 22px; height: 22px; line-height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fas fa-exclamation-circle text-danger" style="font-size: 0.8rem;"></i></button>';
+                    let tr = el.closest('tr');
+                    
+                    let isNeverConnected = !pppoe || never_connected.has(pppoe);
+                    let isPendingInstall = (status === 'pending') || (!expiresAt) || (isNeverConnected && !active_users.has(pppoe));
                     
                     if (status === 'suspended') {
-                        el.innerHTML = '<span class="badge bg-danger rounded-pill shadow-sm mt-1"><i class="fas fa-ban me-1"></i>Suspended</span>' + btnHtml;
-                    } else if (!pppoe) {
-                        el.innerHTML = '<span class="badge bg-secondary rounded-pill shadow-sm mt-1"><i class="fas fa-question-circle me-1"></i>No PPPoE</span>';
-                    } else if (active_users.has(pppoe)) {
-                        el.innerHTML = '<span class="badge bg-success rounded-pill shadow-sm mt-1" style="background-color: #10b981 !important;"><i class="fas fa-check-circle me-1"></i>Connected</span>';
-                        let tr = el.closest('tr');
                         if (tr) tr.classList.remove('table-row-paid-offline');
+                        el.innerHTML = '<span class="badge bg-danger rounded-pill shadow-sm mt-1"><i class="fas fa-ban me-1"></i>Suspended</span>' + btnHtml;
+                    } else if (active_users.has(pppoe)) {
+                        if (tr) tr.classList.remove('table-row-paid-offline');
+                        el.innerHTML = '<span class="badge bg-success rounded-pill shadow-sm mt-1" style="background-color: #10b981 !important;"><i class="fas fa-check-circle me-1"></i>Connected</span>';
+                    } else if (isPendingInstall) {
+                        if (tr) tr.classList.remove('table-row-paid-offline');
+                        el.innerHTML = '<span class="badge rounded-pill shadow-sm mt-1 px-2 py-1 d-inline-flex align-items-center gap-1" style="background: rgba(14, 165, 233, 0.15); color: #0284c7; border: 1px solid rgba(14, 165, 233, 0.35); font-weight: 600; font-size: 0.72rem;"><i class="fas fa-gear"></i>Pending Install</span>';
+                    } else if (!pppoe) {
+                        if (tr) tr.classList.remove('table-row-paid-offline');
+                        el.innerHTML = '<span class="badge bg-secondary rounded-pill shadow-sm mt-1"><i class="fas fa-question-circle me-1"></i>No PPPoE</span>';
                     } else {
                         let isRouterOffline = false;
                         if (!isNaN(routerId)) {
@@ -322,9 +332,9 @@
                         if (status === 'active') {
                             let specificStatus = isRouterOffline ? 'Offline (Router Off)' : 'Active but Offline';
                             el.innerHTML = '<span class="badge rounded-pill shadow-sm mt-1 text-white fw-bold px-2 py-1 d-inline-flex align-items-center gap-1" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border: 1px solid #f87171; box-shadow: 0 0 10px rgba(239, 68, 68, 0.45); font-size: 0.72rem;"><i class="fas fa-triangle-exclamation text-white"></i>' + specificStatus + '</span>' + btnHtml;
-                            let tr = el.closest('tr');
                             if (tr) tr.classList.add('table-row-paid-offline');
                         } else {
+                            if (tr) tr.classList.remove('table-row-paid-offline');
                             el.innerHTML = '<span class="badge rounded-pill shadow-sm mt-1" style="background-color: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);"><i class="fas fa-wifi me-1" style="text-decoration: line-through;"></i>Offline</span>' + btnHtml;
                         }
                     }

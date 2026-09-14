@@ -350,9 +350,24 @@ def api_customer_mikrotik_status(request, customer_id):
         except Exception:
             data["mt_status"] = "API Unreachable"
 
+    # Check for brand new / pending installation customers
+    is_never_connected = (
+        "1970" in str(data.get("last_logged_out", ""))
+        or data.get("last_logged_out") in ["N/A", "", "jan/01/1970 00:00:00"]
+    )
+    is_pending_install = (
+        customer.status == "pending"
+        or customer.expires_at is None
+        or (is_never_connected and data["mt_status"] == "Disconnected")
+    )
+
     # Add context to disconnected status if it wasn't caught by the ping check
     if data["mt_status"] == "Disconnected":
-        if customer.status == "active":
+        if is_pending_install:
+            data["mt_status"] = "Pending Installation"
+            data["is_pending_install"] = True
+            data["is_active_offline"] = False
+        elif customer.status == "active":
             data["is_active_offline"] = True
             if not customer.mikrotik_device:
                 data["mt_status"] = "No Router Assigned"
@@ -378,7 +393,11 @@ def api_customer_mikrotik_status(request, customer_id):
         else:
             data["mt_status"] = f"Disconnected ({customer.get_status_display()})"
     elif customer.status == "active" and data["mt_status"] != "Connected":
-        data["is_active_offline"] = True
+        if is_pending_install:
+            data["is_pending_install"] = True
+            data["is_active_offline"] = False
+        else:
+            data["is_active_offline"] = True
 
     from django.http import JsonResponse
 
@@ -459,6 +478,7 @@ def api_active_pppoe_usernames(request):
 
     devices = MikrotikDevice.objects.all()
     active_usernames = set()
+    never_connected_usernames = set()
     offline_routers = []
 
     for device in devices:
@@ -468,15 +488,23 @@ def api_active_pppoe_usernames(request):
             for au in active_users:
                 if au.get("name"):
                     active_usernames.add(au.get("name"))
+            for s in api.get_ppp_secrets():
+                name = s.get("name")
+                llo = str(s.get("last-logged-out", "")).lower()
+                if name and ("1970" in llo or not llo or llo == "jan/01/1970 00:00:00"):
+                    if name not in active_usernames:
+                        never_connected_usernames.add(name)
         except Exception:
             offline_routers.append(device.id)
 
     cache.set("active_pppoe_usernames_set", active_usernames, 30)
+    cache.set("never_connected_pppoe_usernames_set", never_connected_usernames, 30)
 
     return JsonResponse(
         {
             "status": "success",
             "active_usernames": list(active_usernames),
+            "never_connected_usernames": list(never_connected_usernames),
             "offline_routers": offline_routers,
         }
     )

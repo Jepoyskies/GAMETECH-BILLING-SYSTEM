@@ -94,11 +94,7 @@
 
                         {# col 9 – Status badge (hidden on mobile) + connection indicator #}
                         <td>
-                            {% if customer.is_paid_offline %}
-                                <span class="badge bg-danger text-white border border-danger px-2 py-1 shadow-sm d-inline-flex align-items-center gap-1" style="font-weight: 700; box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);">
-                                    <i class="fas fa-triangle-exclamation"></i> Active but Offline
-                                </span>
-                            {% elif customer.status == 'active' %}
+                            {% if customer.status == 'active' %}
                                 <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Active</span>
                             {% elif customer.status == 'inactive' %}
                                 <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">Inactive</span>
@@ -125,6 +121,7 @@
                             <div class="mt-1 conn-status-indicator" style="font-size: 0.75rem;"
                                  data-pppoe="{{ customer.pppoe_username|default:'' }}"
                                  data-status="{{ customer.status|lower }}"
+                                 data-expires-at="{% if customer.expires_at %}{{ customer.expires_at|date:'Y-m-d' }}{% endif %}"
                                  data-is-paid-offline="{% if customer.is_paid_offline %}true{% else %}false{% endif %}"
                                  data-customer-id="{{ customer.id }}"
                                  data-health-status="{{ customer.health_status }}"

@@ -68,8 +68,10 @@ def customer_list(request):
     from network_manager.services import MikrotikAPI
 
     connected_usernames = cache.get("active_pppoe_usernames_set")
-    if connected_usernames is None:
+    never_connected_usernames = cache.get("never_connected_pppoe_usernames_set")
+    if connected_usernames is None or never_connected_usernames is None:
         connected_usernames = set()
+        never_connected_usernames = set()
         for device in MikrotikDevice.objects.all():
             try:
                 api = MikrotikAPI(device)
@@ -77,19 +79,31 @@ def customer_list(request):
                     name = au.get("name")
                     if name:
                         connected_usernames.add(name)
+                for s in api.get_ppp_secrets():
+                    name = s.get("name")
+                    llo = str(s.get("last-logged-out", "")).lower()
+                    if name and ("1970" in llo or not llo or llo == "jan/01/1970 00:00:00"):
+                        if name not in connected_usernames:
+                            never_connected_usernames.add(name)
             except Exception:
                 pass
         cache.set("active_pppoe_usernames_set", connected_usernames, 30)
+        cache.set("never_connected_pppoe_usernames_set", never_connected_usernames, 30)
 
-    # Calculate Paid but Offline subscribers (active billing status but disconnected from router)
-    active_paid_customers = Customer.objects.filter(
-        expires_at__gt=now,
-        status="active"
-    ).values("id", "pppoe_username")
+    # Calculate Paid but Offline subscribers (active billing status with active expiration, but disconnected from router)
+    # Brand new customers (never connected / expires_at is None / pending) are Pending Installation, NOT outages.
+    active_paid_customers = (
+        Customer.objects.filter(expires_at__gt=now, status="active")
+        .exclude(expires_at__isnull=True)
+        .values("id", "pppoe_username")
+    )
 
     paid_but_offline_ids = [
-        c["id"] for c in active_paid_customers
-        if not c["pppoe_username"] or c["pppoe_username"] not in connected_usernames
+        c["id"]
+        for c in active_paid_customers
+        if c["pppoe_username"]
+        and c["pppoe_username"] not in connected_usernames
+        and c["pppoe_username"] not in never_connected_usernames
     ]
     stats["paid_but_offline"] = len(paid_but_offline_ids)
 
