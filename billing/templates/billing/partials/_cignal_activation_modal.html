@@ -35,91 +35,137 @@
             </div>
           </div>
 
-          <!-- 1. Add-on Type Selector -->
-          <div class="mb-3">
-            <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">Add-on Type <span class="text-danger">*</span></label>
-            <select name="addon_type" id="modalAddonType_{{ modal_suffix|default:'single' }}" class="form-select" required onchange="updateCignalModalFields_{{ modal_suffix|default:'single' }}(this.value)">
-              <option value="Cignal Box Add-on" {% if target_request and 'Box' in target_request.addon_type %}selected{% elif not target_request %}selected{% endif %}>Cignal Box Add-on (Hardware STB)</option>
-              <option value="Cignal Play Add-on" {% if target_request and 'Play' in target_request.addon_type %}selected{% endif %}>Cignal Play Add-on (Streaming App)</option>
-            </select>
-          </div>
-
-          <!-- 2. Account / Serial Number -->
-          <div class="mb-3">
-            <label class="form-label fw-bold small text-uppercase" id="cignalAccountLabel_{{ modal_suffix|default:'single' }}" style="letter-spacing: 0.04em;">
-              {% if target_request and 'Play' in target_request.addon_type %}Cignal Play No. (Account Number){% else %}Cignal Box No. (Serial / Account Number){% endif %} <span class="text-danger">*</span>
-            </label>
-            <input type="text" class="form-control font-monospace fw-bold" name="cignalplay_no" id="modalCignalNo_{{ modal_suffix|default:'single' }}" value="{% if target_request and 'Play' in target_request.addon_type %}{% if target_customer %}{{ target_customer.cignalplay_no|default:'' }}{% elif customer %}{{ customer.cignalplay_no|default:'' }}{% endif %}{% else %}{% if target_customer %}{{ target_customer.cignalbox_no|default:'' }}{% elif customer %}{{ customer.cignalbox_no|default:'' }}{% endif %}{% endif %}" placeholder="e.g. BOX-8892341 or 1002345678" required autofocus>
-            <div class="form-text text-muted small" id="cignalHint_{{ modal_suffix|default:'single' }}">
-              {% if target_request and 'Play' in target_request.addon_type %}Enter the official Cignal Play subscriber account number.{% else %}Enter the physical Cignal Box serial number or hardware account code.{% endif %}
+          <!-- SECTION 1: Device Details -->
+          <div class="p-3 mb-3 border rounded-3 border-secondary border-opacity-25 bg-dark bg-opacity-25">
+            <div class="d-flex align-items-center gap-2 mb-3 pb-1 border-bottom border-secondary border-opacity-25">
+              <i class="fas fa-tv text-primary"></i>
+              <h6 class="text-uppercase small fw-bold mb-0 text-muted" style="letter-spacing: 0.05em;">Section 1: Device Details</h6>
             </div>
-          </div>
 
-          <!-- 3. Account Name / Label (Multiple Subscriptions) -->
-          <div class="mb-3">
-            <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">Device / Subscription Label <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" name="account_name" id="modalAccountName_{{ modal_suffix|default:'single' }}" placeholder="e.g. Living Room TV, Master Bedroom, 2nd Floor" value="{% if target_request and 'Box' in target_request.addon_type %}Living Room TV Box{% elif target_request %}Cignal Play TV{% else %}Living Room TV Box{% endif %}" required>
-            <div class="form-text text-muted small">A friendly label to distinguish multiple boxes or subscriptions for this customer.</div>
-          </div>
-
-          <!-- 4. Initial Payment Amount & Presets -->
-          <div class="mb-3">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-              <label class="form-label fw-bold small text-uppercase mb-0" style="letter-spacing: 0.04em;">
-                <i class="fas fa-coins text-warning me-1"></i> Initial Payment Amount (₱) <span class="text-danger">*</span>
-              </label>
-              <span class="small text-muted" style="font-size: 0.72rem;">Click preset to auto-fill</span>
-            </div>
-            <!-- Quick-Fill Pills -->
-            <div class="d-flex flex-wrap gap-2 mb-2 pt-1">
-              <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2 py-1 fw-semibold" style="font-size: 0.75rem;" onclick="setActivationPreset_{{ modal_suffix|default:'single' }}(149, 30)">
-                ₱149 <small class="opacity-75">Play</small>
-              </button>
-              <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1 fw-semibold" style="font-size: 0.75rem;" onclick="setActivationPreset_{{ modal_suffix|default:'single' }}(399, 30)">
-                ₱399 <small class="opacity-75">Premium</small>
-              </button>
-              <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-2 py-1 fw-semibold" style="font-size: 0.75rem;" onclick="setActivationPreset_{{ modal_suffix|default:'single' }}(250, 30)">
-                ₱250 <small class="opacity-75">Installment</small>
-              </button>
-              <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2 py-1 fw-semibold" style="font-size: 0.75rem;" onclick="setActivationPreset_{{ modal_suffix|default:'single' }}(3000, 365)">
-                ₱3,000 <small class="opacity-75">Cashout</small>
-              </button>
-            </div>
-            <div class="input-group">
-              <span class="input-group-text fw-bold">₱</span>
-              <input type="number" step="0.01" min="0" class="form-control fw-bold" name="initial_amount" id="modalInitialAmount_{{ modal_suffix|default:'single' }}" placeholder="0.00" value="{% if target_request and 'Play' in target_request.addon_type %}149.00{% else %}399.00{% endif %}" required>
-              <select name="payment_method" class="form-select" style="max-width: 140px;">
-                <option value="Cash" selected>Cash</option>
-                <option value="GCash">GCash</option>
-                <option value="Bank Transfer">Bank</option>
+            <!-- Add-on Type Selector -->
+            <div class="mb-3">
+              <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">Add-on Type <span class="text-danger">*</span></label>
+              <select name="addon_type" id="modalAddonType_{{ modal_suffix|default:'single' }}" class="form-select" required onchange="updateCignalModalFields_{{ modal_suffix|default:'single' }}(this.value)">
+                <option value="Cignal Box Add-on" {% if target_request and 'Box' in target_request.addon_type %}selected{% elif not target_request %}selected{% endif %}>Cignal Box Add-on (Hardware STB)</option>
+                <option value="Cignal Play Add-on" {% if target_request and 'Play' in target_request.addon_type %}selected{% endif %}>Cignal Play Add-on (Streaming App)</option>
               </select>
+            </div>
+
+            <!-- Account / Serial Number -->
+            <div class="mb-3">
+              <label class="form-label fw-bold small text-uppercase" id="cignalAccountLabel_{{ modal_suffix|default:'single' }}" style="letter-spacing: 0.04em;">
+                {% if target_request and 'Play' in target_request.addon_type %}Cignal Play No. (Account Number){% else %}Cignal Box No. (Serial / Account Number){% endif %} <span class="text-danger">*</span>
+              </label>
+              <input type="text" class="form-control font-monospace fw-bold" name="cignalplay_no" id="modalCignalNo_{{ modal_suffix|default:'single' }}" value="{% if target_request and 'Play' in target_request.addon_type %}{% if target_customer %}{{ target_customer.cignalplay_no|default:'' }}{% elif customer %}{{ customer.cignalplay_no|default:'' }}{% endif %}{% else %}{% if target_customer %}{{ target_customer.cignalbox_no|default:'' }}{% elif customer %}{{ customer.cignalbox_no|default:'' }}{% endif %}{% endif %}" placeholder="e.g. BOX-8892341 or 1002345678" required autofocus>
+              <div class="form-text text-muted small" id="cignalHint_{{ modal_suffix|default:'single' }}">
+                {% if target_request and 'Play' in target_request.addon_type %}Enter the official Cignal Play subscriber account number.{% else %}Enter the physical Cignal Box serial number or hardware account code.{% endif %}
+              </div>
+            </div>
+
+            <!-- Device / Subscription Label -->
+            <div class="mb-1">
+              <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">Device / Subscription Label <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="account_name" id="modalAccountName_{{ modal_suffix|default:'single' }}" placeholder="e.g. Living Room TV, Master Bedroom, 2nd Floor" value="{% if target_request and 'Box' in target_request.addon_type %}Living Room TV Box{% elif target_request %}Cignal Play TV{% else %}Living Room TV Box{% endif %}" required>
+              <div class="form-text text-muted small">A friendly label to distinguish multiple boxes or subscriptions for this customer.</div>
+            </div>
+          </div>
+
+          <!-- SECTION 2: Payment & Auditing -->
+          <div class="p-3 mb-3 border rounded-3 border-secondary border-opacity-25 bg-dark bg-opacity-25">
+            <div class="d-flex align-items-center gap-2 mb-3 pb-1 border-bottom border-secondary border-opacity-25">
+              <i class="fas fa-receipt text-warning"></i>
+              <h6 class="text-uppercase small fw-bold mb-0 text-muted" style="letter-spacing: 0.05em;">Section 2: Payment & Auditing</h6>
+            </div>
+
+            <!-- Initial Payment Amount & Presets -->
+            <div class="mb-3">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="form-label fw-bold small text-uppercase mb-0" style="letter-spacing: 0.04em;">
+                  <i class="fas fa-coins text-warning me-1"></i> Amount Paid (₱) <span class="text-danger">*</span>
+                </label>
+                <span class="small text-muted" style="font-size: 0.72rem;">Click preset to auto-fill</span>
+              </div>
+              <!-- Quick-Fill Pills -->
+              <div class="d-flex flex-wrap gap-2 mb-2 pt-1">
+                <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2 py-1 fw-semibold" style="font-size: 0.75rem;" onclick="setActivationPreset_{{ modal_suffix|default:'single' }}(149, 30)">
+                  ₱149 <small class="opacity-75">Play</small>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1 fw-semibold" style="font-size: 0.75rem;" onclick="setActivationPreset_{{ modal_suffix|default:'single' }}(399, 30)">
+                  ₱399 <small class="opacity-75">Premium</small>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-2 py-1 fw-semibold" style="font-size: 0.75rem;" onclick="setActivationPreset_{{ modal_suffix|default:'single' }}(250, 30)">
+                  ₱250 <small class="opacity-75">Installment</small>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2 py-1 fw-semibold" style="font-size: 0.75rem;" onclick="setActivationPreset_{{ modal_suffix|default:'single' }}(3000, 365)">
+                  ₱3,000 <small class="opacity-75">Cashout</small>
+                </button>
+              </div>
+              <div class="input-group">
+                <span class="input-group-text fw-bold">₱</span>
+                <input type="number" step="0.01" min="0" class="form-control fw-bold" name="initial_amount" id="modalInitialAmount_{{ modal_suffix|default:'single' }}" placeholder="0.00" value="{% if target_request and 'Play' in target_request.addon_type %}149.00{% else %}399.00{% endif %}" required>
+                <select name="payment_method" class="form-select" style="max-width: 140px;">
+                  <option value="Cash" selected>Cash</option>
+                  <option value="GCash">GCash</option>
+                  <option value="Bank Transfer">Bank</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- NEW Auditing Fields: Reference No. & Remarks / Notes -->
+            <div class="row g-2">
+              <div class="col-md-6 mb-2">
+                <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
+                  <i class="fas fa-barcode text-muted me-1"></i> Reference No.
+                </label>
+                <input type="text" class="form-control font-monospace" name="reference_no" id="modalRefNo_{{ modal_suffix|default:'single' }}" placeholder="e.g. GC-992381 or load ref">
+                <div class="form-text text-muted" style="font-size: 0.72rem;">GCash or 3rd-party load transaction #.</div>
+              </div>
+              <div class="col-md-6 mb-2">
+                <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
+                  <i class="fas fa-sticky-note text-muted me-1"></i> Remarks / Notes
+                </label>
+                <input type="text" class="form-control" name="notes" id="modalNotes_{{ modal_suffix|default:'single' }}" placeholder="e.g. Free promo load, box installed">
+                <div class="form-text text-muted" style="font-size: 0.72rem;">Optional audit note for this activation.</div>
+              </div>
             </div>
             <div class="form-text text-muted small">An official payment transaction will be recorded automatically upon activation.</div>
           </div>
 
-          <!-- 5. First Due Date / Expiration Date -->
-          <div class="mb-3">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-              <label class="form-label fw-bold small text-uppercase mb-0" style="letter-spacing: 0.04em;">
-                <i class="far fa-calendar-alt text-info me-1"></i> First Due Date / Expiration <span class="text-danger">*</span>
-              </label>
-              <div class="d-flex gap-2">
-                <button type="button" class="btn btn-link p-0 small text-decoration-none text-info" onclick="addActivationDays_{{ modal_suffix|default:'single' }}(30)" style="font-size: 0.78rem;">
-                  <i class="fas fa-plus-circle me-1"></i>+30 Days
-                </button>
-                <button type="button" class="btn btn-link p-0 small text-decoration-none text-success" onclick="addActivationDays_{{ modal_suffix|default:'single' }}(60)" style="font-size: 0.78rem;">
-                  <i class="fas fa-plus-circle me-1"></i>+60 Days
-                </button>
+          <!-- SECTION 3: Timeline -->
+          <div class="p-3 mb-2 border rounded-3 border-secondary border-opacity-25 bg-dark bg-opacity-25">
+            <div class="d-flex align-items-center gap-2 mb-3 pb-1 border-bottom border-secondary border-opacity-25">
+              <i class="far fa-calendar-alt text-info"></i>
+              <h6 class="text-uppercase small fw-bold mb-0 text-muted" style="letter-spacing: 0.05em;">Section 3: Timeline & Dates</h6>
+            </div>
+
+            <div class="row g-2">
+              <!-- Activation Date -->
+              <div class="col-md-6 mb-2">
+                <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">Activation Date <span class="text-danger">*</span></label>
+                <input type="date" class="form-control fw-semibold" name="cignalplay_date" id="modalCignalDate_{{ modal_suffix|default:'single' }}" value="{% now 'Y-m-d' %}" required>
+                <div class="form-text text-muted" style="font-size: 0.72rem;">Defaults to today's date.</div>
+              </div>
+
+              <!-- First Due Date / Expiration Date -->
+              <div class="col-md-6 mb-2">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <label class="form-label fw-bold small text-uppercase mb-0" style="letter-spacing: 0.04em;">
+                    First Due Date <span class="text-danger">*</span>
+                  </label>
+                  <div class="d-flex gap-1">
+                    <button type="button" class="btn btn-link p-0 small text-decoration-none text-info" onclick="addActivationDays_{{ modal_suffix|default:'single' }}(30)" style="font-size: 0.72rem;">
+                      +30d
+                    </button>
+                    <span class="text-muted" style="font-size: 0.72rem;">|</span>
+                    <button type="button" class="btn btn-link p-0 small text-decoration-none text-success" onclick="addActivationDays_{{ modal_suffix|default:'single' }}(60)" style="font-size: 0.72rem;">
+                      +60d
+                    </button>
+                  </div>
+                </div>
+                <input type="date" class="form-control fw-semibold" name="expiration_date" id="modalFirstDueDate_{{ modal_suffix|default:'single' }}" required>
+                <div class="form-text text-muted" style="font-size: 0.72rem;">Next renewal deadline (+30 days).</div>
               </div>
             </div>
-            <input type="date" class="form-control fw-semibold" name="expiration_date" id="modalFirstDueDate_{{ modal_suffix|default:'single' }}" required>
-            <div class="form-text text-muted small">Set when this TV box or subscription expires and becomes due for renewal.</div>
-          </div>
-
-          <!-- 6. Activation Date -->
-          <div class="mb-3">
-            <label class="form-label fw-bold small text-uppercase text-muted" style="letter-spacing: 0.04em;">Activation Date</label>
-            <input type="date" class="form-control form-control-sm" name="cignalplay_date" id="modalCignalDate_{{ modal_suffix|default:'single' }}" value="{% now 'Y-m-d' %}" required>
           </div>
 
           <script>
@@ -170,7 +216,7 @@
               dueInput.value = y + '-' + m + '-' + d;
           }
 
-          // Initialize default First Due Date (+30 days) on modal render
+          // Initialize default First Due Date (+30 days) and Activation Date on modal render
           (function() {
               var dueInput = document.getElementById('modalFirstDueDate_{{ modal_suffix|default:'single' }}');
               if (dueInput && !dueInput.value) {
@@ -180,6 +226,14 @@
                   var m = String(d.getMonth() + 1).padStart(2, '0');
                   var day = String(d.getDate()).padStart(2, '0');
                   dueInput.value = y + '-' + m + '-' + day;
+              }
+              var actDate = document.getElementById('modalCignalDate_{{ modal_suffix|default:'single' }}');
+              if (actDate && !actDate.value) {
+                  var today = new Date();
+                  var ty = today.getFullYear();
+                  var tm = String(today.getMonth() + 1).padStart(2, '0');
+                  var td = String(today.getDate()).padStart(2, '0');
+                  actDate.value = ty + '-' + tm + '-' + td;
               }
           })();
           </script>

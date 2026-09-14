@@ -408,6 +408,7 @@ def apply_cignal_addon(request):
         )
         payment_method = request.POST.get("payment_method", "Cash").strip()
         reference_no = request.POST.get("reference_no", "").strip()
+        notes = request.POST.get("notes", "").strip() or request.POST.get("remarks", "").strip()
 
         # Parse initial payment amount
         initial_amount_raw = request.POST.get("initial_amount") or request.POST.get("amount") or "0"
@@ -488,6 +489,11 @@ def apply_cignal_addon(request):
 
         # Crucial: Automatically generate a Payment record for the Initial Payment Amount
         if initial_amount > 0:
+            acct_desc = subscription.account_name or subscription.account_number or "Cignal Subscription"
+            reason_text = f"Cignal Activation: {acct_desc} ({subscription.account_number})"
+            if notes:
+                reason_text += f" | {notes}"
+
             Payment.objects.create(
                 customer=customer,
                 username=customer.pppoe_username or customer.full_name,
@@ -495,18 +501,19 @@ def apply_cignal_addon(request):
                 amount=initial_amount,
                 payment_method=payment_method or "Cash",
                 reference_no=reference_no or f"ACT-{customer.id}-{subscription.id}",
-                reason=f"Cignal Activation: {subscription.account_name} ({subscription.account_number})",
+                reason=reason_text,
                 expires_at=expiration_dt or customer.expires_at,
                 paid_at=timezone.now(),
                 payment_date_received=timezone.now(),
                 adjusted_by=request.user.username,
             )
 
+            audit_notes = f" | Notes: {notes}" if notes else ""
             AuditLog.objects.create(
                 customer=customer,
                 action_type="Cignal Activation Payment",
                 old_value="New Subscription",
-                new_value=f"Initial Payment: ₱{initial_amount:,.2f} | Due Date: {expiration_dt.strftime('%Y-%m-%d')} | Acct: {cignalplay_no}",
+                new_value=f"Initial Payment: ₱{initial_amount:,.2f} | Ref: {reference_no or 'N/A'}{audit_notes} | Due Date: {expiration_dt.strftime('%Y-%m-%d')} | Acct: {cignalplay_no}",
                 adjusted_by=request.user.username,
             )
 
