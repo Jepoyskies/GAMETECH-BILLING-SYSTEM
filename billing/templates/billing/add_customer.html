@@ -239,10 +239,11 @@
         
         var map = L.map('map').setView([defaultLat, defaultLng], 13);
         
-        var darkLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
+        var darkLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['0', '1', '2', '3'],
             className: 'dark-tiles',
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            attribution: '&copy; Google Maps'
         });
 
         var satelliteLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
@@ -251,12 +252,14 @@
             attribution: '&copy; Google Maps'
         });
 
-        var streetLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        var streetLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['0', '1', '2', '3'],
+            attribution: '&copy; Google Maps'
         });
 
-        darkLayer.addTo(map);
+        var isDark = document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode');
+        (isDark ? darkLayer : streetLayer).addTo(map);
 
         var baseMaps = {
             "🌙 Dark": darkLayer,

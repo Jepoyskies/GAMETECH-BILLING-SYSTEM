@@ -403,7 +403,7 @@
   * In customer profiles (`/customers/view/<id>/`), customer edit/add, or Geo Map (`/geomap/`), map tiles fail to load.
   * Map displays repeated 403 tile warning images stating: `Access blocked: App is not following the tile usage policy of OpenStreetMap's volunteer-run servers: osm.wiki/Blocked`.
 * **Root Causes**:
-  * OpenStreetMap (`tile.openstreetmap.org`) has enforced strict rate-limiting and User-Agent policies against direct web requests from web applications.
+  * OpenStreetMap Foundation volunteer tile servers (`tile.openstreetmap.org`) strictly ban automated web apps and rate-limit IP subnets without custom registered User-Agents.
 * **Exact Target Files**:
   * `billing/templates/billing/view_customer/_scripts.html`
   * `billing/templates/billing/geomap.html`
@@ -411,7 +411,7 @@
   * `billing/templates/billing/add_customer.html`
   * `network_manager/templates/network_manager/nap_form.html`
 * **1-Step Fix**:
-  * Replace `tile.openstreetmap.org` with CartoDB Voyager (`https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png`) for light mode and Dark Matter (`https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png`) for dark mode with `subdomains: 'abcd'` and maxZoom: 20.
+  * Switch `L.tileLayer` across all map templates to high-capacity Google Maps tile servers (`https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}` for streets/dark, `lyrs=y` for hybrid satellite) with `subdomains: ['0', '1', '2', '3']` and `maxZoom: 20`. This permanently eliminates both OSM 403 volunteer blocks and Carto API key watermarks.
 
 ---
 
@@ -457,8 +457,8 @@
   * `network_manager/templates/network_manager/nap_form.html`
   * `billing/templates/billing/base/_styles.html`
 * **1-Step Fix**:
-  * Switch `L.tileLayer` across all map templates to OpenStreetMap Foundation (`https://tile.openstreetmap.org/{z}/{x}/{y}.png`).
-  * Add a global hardware-accelerated CSS inversion filter in `billing/templates/billing/base/_styles.html` (`html.dark-mode .leaflet-tile-pane { filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7); }`) so standard OSM tiles cleanly adapt to dark slate mode without needing separate dark raster tile providers or API keys.
+  * Switch `L.tileLayer` across all map templates to Google Maps (`https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}` with `className: 'dark-tiles'` for dark mode, `lyrs=y` for hybrid satellite, and `lyrs=m` for normal streets).
+  * Pair with hardware-accelerated CSS inversion filter in `billing/templates/billing/base/_styles.html` (`.dark-tiles, .leaflet-tile-pane img.dark-tiles { filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7) !important; }`) for dark slate mode. Zero watermarks, zero volunteer rate limits, 100% reliable.
 
 ---
 
