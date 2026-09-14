@@ -510,11 +510,10 @@ def apply_cignal_addon(request):
 
             audit_notes = f" | Notes: {notes}" if notes else ""
             AuditLog.objects.create(
+                admin_user=request.user,
                 customer=customer,
                 action_type="Cignal Activation Payment",
-                old_value="New Subscription",
-                new_value=f"Initial Payment: ₱{initial_amount:,.2f} | Ref: {reference_no or 'N/A'}{audit_notes} | Due Date: {expiration_dt.strftime('%Y-%m-%d')} | Acct: {cignalplay_no}",
-                adjusted_by=request.user.username,
+                remarks=f"Initial Payment: ₱{initial_amount:,.2f} | Ref: {reference_no or 'N/A'}{audit_notes} | Due Date: {expiration_dt.strftime('%Y-%m-%d')} | Acct: {cignalplay_no}",
             )
 
         # Notification

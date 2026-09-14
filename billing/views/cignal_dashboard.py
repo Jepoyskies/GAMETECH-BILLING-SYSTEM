@@ -160,12 +160,12 @@ def process_cignal_payment(request):
         )
 
         # Audit Log
+        audit_notes = f" | Notes: {notes}" if notes else ""
         AuditLog.objects.create(
+            admin_user=request.user,
             customer=customer,
             action_type="Cignal Payment Reload",
-            old_value=str(subscription.end_date or "None"),
-            new_value=f"Amount: ₱{amount:,.2f} | Expiry: {new_expiration_date.strftime('%Y-%m-%d') if new_expiration_date else 'Unchanged'} | Acct: {subscription.account_number}",
-            adjusted_by=request.user.username,
+            remarks=f"Amount: ₱{amount:,.2f} | Ref: {reference_no or 'N/A'}{audit_notes} | Expiry: {new_expiration_date.strftime('%Y-%m-%d') if new_expiration_date else 'Unchanged'} | Acct: {subscription.account_number}",
         )
 
         # Notification
