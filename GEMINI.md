@@ -54,8 +54,10 @@ This workspace strictly adheres to the protocols defined in:
 22. **Routine Deploys vs. Compose Healing**: Routine code/template updates STRICTLY run `docker restart gametech-billing-system_web_1`. Reserve Compose V2 (`docker compose up -d`) exclusively for port drops. See AGENTS.md Rule #32v2.
 23. **PowerShell Stdin Pipe Protocol**: Local PowerShell Python one-liners must pipe raw script into `python -` via stdin to eliminate shell quote escaping errors. See AGENTS.md Rule #33.
 24. **Staged Chunking Protocol**: In monolith files (>1,000 lines), never attempt massive 300+ line diffs. Chunk into 150–250 lines and verify div parity after each stage. See AGENTS.md Rule #34.
-25. **The Status Vocabulary Law**: Never conflate hardware (`Connected`/`Offline`) and billing (`Active`, `Expired`, `Suspended`). Outages are `Active but Offline`. See AGENTS.md Rule #35.
+25. **The Tri-Domain Status Law**: Never conflate hardware (`Connected`/`Offline`), billing (`Active`, `Expired`, `Suspended`), or installation (`Installed`, `Pending Installation`). Outages are `Active but Offline`. Never guess installation from null `expires_at`. See AGENTS.md Rule #35.
 26. **Queryset Priority Ordering**: Views listing customers (`/customers/`, `/subscriptions/`) annotate `status_order` pushing critical actionable states (Outages, Active but Offline) to rank 0. See AGENTS.md Rule #36.
+27. **Subscriber Provisioning & Router Import Protocol**: Any customer creation point must explicitly declare `installation_status`. Router imports (MikroTik Sync & Bulk Import) MUST set `installation_status='installed'`. See AGENTS.md Rule #37.
+28. **Full-Stack Atomic Batching Standard**: Group full-stack tasks into 3 stages: Stage 1 (Backend & DB), Stage 2 (Frontend & Templates), Stage 3 (Deploy & Verify) to prevent token drain and turn latency. See AGENTS.md Rule #38.
 
 ---
 

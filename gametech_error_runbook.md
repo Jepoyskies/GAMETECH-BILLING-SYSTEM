@@ -588,7 +588,7 @@
   * `billing/views/api/network.py`
   * `billing/templates/billing/customer_list/_scripts.html`
 * **1-Step Fix**:
-  * Restrict `is_pending_install` strictly to accounts with `status == 'pending'` or `expires_at is None`. An account with an active expiration date is NEVER pending installation.
+  * ⚠️ **DEPRECATION NOTICE (Superceded by ERR-034)**: The previous fallback heuristic `is_pending_install = expires_at is None` is DEPRECATED as it falsely labeled existing unbilled or imported accounts as pending installation. Always use the explicit model field `customer.installation_status == 'pending'`.
   * Populate `user_router_map` (`{username: {router_id, router_name}}`) in `/api/active-usernames/`. If a session is active on a different router than assigned in Gametech, render an amber `Active on <RouterName>` badge.
   * In `_scripts.html`, detect router uplink offline (`Offline (Router Off)`), API failure (`Offline (Router API Down)`), and isolated client disconnections with actionable diagnostic modals via `showReason()`.
 

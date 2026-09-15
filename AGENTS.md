@@ -281,12 +281,15 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
     * **FORBIDDEN**: Attempting a single massive diff replacing hundreds of lines at once. Large single-block edits cause tool token truncation, context overflows, or regex mismatch failures.
     * **MANDATORY**: Chunk edits into 3–4 staged replacements of **150–250 lines** each. Run automated div parity validation (`<div\b` count == `</div>` count) after every single stage before proceeding to the next chunk.
 
-35. **THE STATUS VOCABULARY LAW (Hardware vs. Billing Disambiguation)**:
-    * **THE PRINCIPLE**: Never conflate hardware connectivity states with customer billing lifecycle states. They represent completely orthogonal domains:
-      * **Hardware Connectivity**: `Connected` (active PPPoE/DHCP session on MikroTik router) vs `Offline` (no active session).
-      * **Billing Lifecycle**: `Active` (paid up/valid date), `Expiring Soon` (near expiry), `Expired` (past due), `Suspended` (manually or auto-locked), `Inactive` (decommissioned/churned), `Pending` (not yet activated).
-      * **Outage (Critical Actionable State)**: `Active but Offline` (or `Paid but Offline`) — customers who are fully paid and active in billing, but disconnected/offline on the router. This represents a technical issue, fiber break, or outage requiring immediate technician dispatch.
-    * **FORBIDDEN**: Labeling active billing accounts as `"Disconnected (Inactive)"` or treating offline hardware as an inactive subscription. Always preserve the distinction across badges, APIs, and reports.
+35. **THE STATUS VOCABULARY LAW (Hardware vs. Billing vs. Installation Tri-Domain Disambiguation)**:
+    * **THE PRINCIPLE**: Never conflate hardware connectivity states, customer billing lifecycle states, or physical installation states. They represent three completely independent and orthogonal domains:
+      * **1. Hardware Connectivity**: `Connected` (active PPPoE/DHCP session on MikroTik router) vs `Offline` (no active session).
+      * **2. Billing Lifecycle**: `Active` (paid up/valid date), `Expiring Soon` (near expiry), `Expired` (past due), `Suspended` (manually or auto-locked), `Inactive` (decommissioned/churned).
+      * **3. Physical Installation State**: `Installed` (active physical line on-premises) vs `Pending Installation` (awaiting technician dispatch/setup).
+      * **Outage (Critical Actionable State)**: `Active but Offline` (or `Paid but Offline`) — customers who are fully installed and paid/active in billing, but disconnected/offline on the router. This represents a technical issue or fiber break requiring immediate technician dispatch.
+    * **FORBIDDEN**: 
+      * Inferring or guessing installation state from null expiration dates (`expires_at is None`) or billing status.
+      * Labeling active billing accounts as `"Disconnected (Inactive)"` or treating offline hardware as an inactive subscription. Always preserve the three distinct domains across models, badges, APIs, and reports.
 
 36. **THE QUERYSET PRIORITY ORDERING LAW (Outage-First Triage)**:
     * **THE PRINCIPLE**: In any administrative view listing customers or subscriptions (`/customers/`, `/subscriptions/`), subscribers requiring immediate intervention MUST appear at the top of the list by default.
@@ -307,6 +310,21 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
       ).order_by('status_order', '-created_at')
       ```
     * Guarantees that dispatchers and support staff instantly see subscribers experiencing outages without manual filtering.
+
+37. **THE SUBSCRIBER PROVISIONING & ROUTER IMPORT PROTOCOL**:
+    * **THE PRINCIPLE**: Any customer account created or imported into the system MUST explicitly declare its `installation_status`.
+    * **MANDATORY ROUTER IMPORT RULES**:
+      * **MikroTik Router Sync & Bulk Import** (`network_manager/views/devices.py`, `network_manager/views/sync.py`): MUST explicitly pass `installation_status='installed'` and `installed_at=timezone.now()` to `Customer.objects.create()`. Router secrets represent live physical lines and must NEVER be created as pending installation.
+      * **Manual Add Customer** (`billing/views/customers/crud.py`): MUST provide a clear setup selector (`Installed / Existing Subscriber` vs `For Installation / New Applicant`).
+      * **Agent Form**: Automatically defaults to `installation_status='pending'` awaiting dispatch.
+
+38. **THE FULL-STACK ATOMIC BATCHING STANDARD (Speed & Turn Optimization)**:
+    * **THE PRINCIPLE**: When implementing full-stack features touching Models, Migrations, Views, and Templates, avoid sequential 1-file micro-edits that deplete tokens and cause round-trip latency.
+    * **MANDATORY BATCHING WORKFLOW**: Group edits into **3 cohesive stages**:
+      * **Stage 1 (Backend & DB)**: Model changes + migration file + backend CRUD views in one batch.
+      * **Stage 2 (Frontend & Templates)**: Form inputs + modal partials + list/view templates in one batch.
+      * **Stage 3 (Deploy & Verify)**: Single commit + single git pull + migration run + container restart.
+    * Cuts tool turns by 75% while maintaining surgical precision.
 
 ---
 
