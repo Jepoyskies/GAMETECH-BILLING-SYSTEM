@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from billing.decorators import role_required
 from django.contrib import messages
 from django.http import JsonResponse
+from django.utils import timezone
 from network_manager.models import MikrotikDevice
 from network_manager.services import MikrotikAPI
 
@@ -270,6 +271,8 @@ def sync_bulk_action(request, device_id):
                         pppoe_password=ru.get('password', ''),
                         mikrotik_device=device,
                         status='inactive',
+                        installation_status='installed',
+                        installed_at=timezone.now(),
                         created_form_by='Bulk Import'
                     )
                     success_count += 1

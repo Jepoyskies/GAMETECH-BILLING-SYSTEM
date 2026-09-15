@@ -308,13 +308,14 @@
                 indicators.forEach(el => {
                     let pppoe = el.getAttribute('data-pppoe');
                     let status = el.getAttribute('data-status');
+                    let installationStatus = el.getAttribute('data-installation-status') || 'installed';
                     let expiresAt = el.getAttribute('data-expires-at');
                     let routerId = parseInt(el.getAttribute('data-router-id'));
                     let btnHtml = '<button class="btn btn-sm btn-light p-0 ms-1 rounded-circle shadow-sm border" onclick="showReason(this)" title="View Reason" style="width: 22px; height: 22px; line-height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fas fa-exclamation-circle text-danger" style="font-size: 0.8rem;"></i></button>';
                     let tr = el.closest('tr');
                     
-                    // An account is ONLY pending install if marked as pending or never had an expiration date set
-                    let isPendingInstall = (status === 'pending') || (!expiresAt);
+                    // An account is ONLY pending install if explicitly marked as pending installation or pending signup
+                    let isPendingInstall = (installationStatus === 'pending') || (status === 'pending' && !expiresAt);
                     
                     if (status === 'suspended') {
                         if (tr) tr.classList.remove('table-row-paid-offline');

@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from billing.decorators import role_required
 from django.contrib import messages
 from django.http import JsonResponse
+from django.utils import timezone
 from network_manager.models import MikrotikDevice
 from network_manager.services import MikrotikAPI
 
@@ -126,6 +127,8 @@ def sync_device_users(request, device_id):
                         mikrotik_device=device,
                         plan=plan,
                         status=status,
+                        installation_status='installed',
+                        installed_at=timezone.now(),
                         created_form_by='MikroTik Sync'
                     )
                     added += 1

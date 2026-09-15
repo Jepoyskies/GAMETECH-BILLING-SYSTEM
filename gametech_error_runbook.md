@@ -594,6 +594,34 @@
 
 ---
 
+### ERR-034: Existing / Imported Subscriber Falsely Flagged as 'Pending Install' Due to Null Expiration Date
+* **Symptoms**:
+  * Existing subscribers added manually without an immediate expiration date, or accounts imported from MikroTik routers, displayed a blue `⚙️ Pending Install` badge in the Customer Directory (`/customers/`) and Profile (`/customers/view/<id>/`).
+  * Staff had no setup type toggle when adding a customer to indicate whether the line was already installed on-site or awaiting technician dispatch.
+* **Root Causes**:
+  * Telemetry logic evaluated `is_pending_install = (status == 'pending') || (!expiresAt)`. Any account without an active expiration date was assumed to be an uninstalled subscriber awaiting technician setup.
+  * Router import routines (`device_sync_users_api`, `bulk_import`) did not set installation flags or timestamps on imported PPPoE accounts.
+* **Exact Target Files**:
+  * `billing/models.py`
+  * `billing/views/customers/crud.py`
+  * `billing/views/customers/actions.py`
+  * `billing/views/api/network.py`
+  * `network_manager/views/devices.py`
+  * `network_manager/views/sync.py`
+  * `billing/templates/billing/add_customer.html`
+  * `billing/templates/billing/edit_customer.html`
+  * `billing/templates/billing/view_customer/_header_actions.html`
+  * `billing/templates/billing/view_customer/_modals.html`
+  * `billing/templates/billing/customer_list/_scripts.html`
+* **1-Step Fix**:
+  * Add `installation_status` (`installed` vs `pending`) and `installed_at` on `Customer` (defaulting existing accounts to `installed`).
+  * Update `device_sync_users_api` and `bulk_import` to explicitly set `installation_status='installed'` and `installed_at=timezone.now()`.
+  * Redesign `add_customer.html` with an Account Setup Selector (Installed/Existing vs For Installation/New) with optional initial due date.
+  * In `api/network.py` and `_scripts.html`, check `customer.installation_status == 'pending'` instead of relying on null expiration dates.
+  * Provide a 1-click `mark_customer_installed` action button and modal on Customer View.
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 1. Assign a new `ERR-XXX` identifier.

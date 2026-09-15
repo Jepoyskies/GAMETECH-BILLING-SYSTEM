@@ -473,3 +473,53 @@ def unverify_customer(request, customer_id):
         messages.info(request, "Account is not verified.")
 
     return redirect("view_customer", customer_id=customer.id)
+
+
+@require_POST
+@role_required(["Admin", "Editor"])
+@login_required
+def mark_customer_installed(request, customer_id):
+    customer = get_object_or_404(Customer, id=customer_id)
+    installed_at_str = request.POST.get("installed_at")
+    expires_at_str = request.POST.get("expires_at")
+
+    if installed_at_str:
+        try:
+            installed_at = timezone.datetime.strptime(installed_at_str, "%Y-%m-%d")
+        except ValueError:
+            installed_at = timezone.now()
+    else:
+        installed_at = timezone.now()
+
+    customer.installation_status = "installed"
+    customer.installed_at = installed_at
+    if customer.status == "pending":
+        customer.status = "active"
+
+    if expires_at_str:
+        try:
+            customer.expires_at = timezone.datetime.strptime(expires_at_str, "%Y-%m-%d")
+        except ValueError:
+            pass
+    elif not customer.expires_at:
+        # Default first cycle: 30 days from installation date
+        customer.expires_at = installed_at + timedelta(days=30)
+
+    customer.save()
+
+    SystemLog.objects.create(
+        table_name="Customer",
+        record_id=str(customer.id),
+        action="INSTALLATION",
+        changed_by=request.user.username,
+        target_name=customer.full_name,
+        old_data="Installation Status: Pending",
+        new_data=f"Installation Status: Installed\nInstalled At: {customer.installed_at}\nExpires At: {customer.expires_at}\nStatus: {customer.status}",
+    )
+
+    messages.success(
+        request,
+        f"Customer {customer.full_name} has been marked as Installed! Account is now active.",
+    )
+    return redirect("view_customer", customer_id=customer.id)
+

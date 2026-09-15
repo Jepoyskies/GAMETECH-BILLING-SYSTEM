@@ -83,10 +83,11 @@ def customer_list(request):
         cache.set("active_pppoe_usernames_set", connected_usernames, 30)
 
     # Calculate Paid but Offline subscribers (active billing status with active expiration, but disconnected from router)
-    # Brand new accounts (pending install) have expires_at=None or status='pending' and are excluded.
+    # Brand new accounts (pending install) have installation_status='pending', expires_at=None, or status='pending' and are excluded.
     active_paid_customers = (
         Customer.objects.filter(expires_at__gt=now, status="active")
         .exclude(expires_at__isnull=True)
+        .exclude(installation_status="pending")
         .values("id", "pppoe_username")
     )
 
@@ -128,7 +129,8 @@ def customer_list(request):
         ),
         status_order=Case(
             When(id__in=paid_but_offline_ids, then=Value(0)),  # Top Priority: Active accounts offline
-            When(status="active", then=Value(1)),
+            When(status="active", installation_status="installed", then=Value(1)),
+            When(installation_status="pending", then=Value(2)),
             When(status="pending", then=Value(2)),
             When(status="suspended", then=Value(3)),
             When(status="expired", then=Value(4)),

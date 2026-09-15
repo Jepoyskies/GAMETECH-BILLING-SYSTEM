@@ -230,6 +230,22 @@ class Customer(models.Model):
         max_length=50, null=True, blank=True, default="0"
     )
     adjusted_by_referral = models.CharField(max_length=100, null=True, blank=True)
+    INSTALLATION_STATUS_CHOICES = (
+        ("installed", "Installed"),
+        ("pending", "Pending Installation"),
+    )
+    installation_status = models.CharField(
+        max_length=20,
+        choices=INSTALLATION_STATUS_CHOICES,
+        default="installed",
+        db_index=True,
+        help_text="Physical installation status of the subscriber line.",
+    )
+    installed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Timestamp when physical installation was completed.",
+    )
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     sms_sent_at = models.DateTimeField(null=True, blank=True)
     expires_at = models.DateTimeField(null=True, blank=True)

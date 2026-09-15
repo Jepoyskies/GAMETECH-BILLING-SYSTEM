@@ -109,6 +109,9 @@
                             {% else %}
                                 <span class="badge bg-secondary px-2 py-1">{{ customer.status|title }}</span>
                             {% endif %}
+                            {% if customer.installation_status == 'pending' %}
+                                <span class="badge rounded-pill bg-info-subtle text-info border border-info-subtle px-2 py-1 ms-1" style="font-size: 0.7rem;"><i class="fas fa-gear me-1"></i>For Install</span>
+                            {% endif %}
                             {% if customer.expires_at %}
                             <div class="mt-1" style="font-size:0.7rem; font-weight:600;">
                                 {% if customer.status == 'expired' or customer.status == 'suspended' %}
@@ -121,6 +124,7 @@
                             <div class="mt-1 conn-status-indicator" style="font-size: 0.75rem;"
                                  data-pppoe="{{ customer.pppoe_username|default:'' }}"
                                  data-status="{{ customer.status|lower }}"
+                                 data-installation-status="{{ customer.installation_status|default:'installed' }}"
                                  data-expires-at="{% if customer.expires_at %}{{ customer.expires_at|date:'Y-m-d' }}{% endif %}"
                                  data-is-paid-offline="{% if customer.is_paid_offline %}true{% else %}false{% endif %}"
                                  data-customer-id="{{ customer.id }}"

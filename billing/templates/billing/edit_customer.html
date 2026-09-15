@@ -131,15 +131,47 @@
                 </div>
             </div>
             
-            <div class="mb-4">
-                <label class="plan-form-label">Status <span class="req">*</span></label>
-                <select name="status" class="plan-form-control" required>
-                    <option value="active" {% if customer.status == 'active' %}selected{% endif %}>Active</option>
-                    <option value="inactive" {% if customer.status == 'inactive' %}selected{% endif %}>Inactive</option>
-                    <option value="pending" {% if customer.status == 'pending' %}selected{% endif %}>Pending</option>
-                    <option value="suspended" {% if customer.status == 'suspended' %}selected{% endif %}>Suspended</option>
-                    <option value="pull out" {% if customer.status == 'pull out' %}selected{% endif %}>Pull Out</option>
-                </select>
+            <div class="mb-4 p-3 rounded-3" style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2);">
+                <label class="plan-form-label fw-bold mb-2">
+                    <i class="fas fa-tools me-1 text-primary"></i> Installation & Setup Status <span class="req">*</span>
+                </label>
+                <div class="row g-3 mb-2">
+                    <div class="col-md-6">
+                        <label class="plan-form-label">Physical Installation Status</label>
+                        <select name="installation_status" class="plan-form-control" required>
+                            <option value="installed" {% if customer.installation_status == 'installed' %}selected{% endif %}>Installed (Active Line)</option>
+                            <option value="pending" {% if customer.installation_status == 'pending' %}selected{% endif %}>Pending Installation (For Setup)</option>
+                        </select>
+                        <div class="form-text small">Installed accounts will not show the Pending Install badge.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="plan-form-label">Installation Date</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-calendar-check i-icon text-success"></i>
+                            <input type="date" name="installed_at" class="plan-form-control" value="{% if customer.installed_at %}{{ customer.installed_at|date:'Y-m-d' }}{% endif %}">
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="plan-form-label">Expiration Date / Next Due Date</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-calendar-day i-icon text-primary"></i>
+                            <input type="date" name="expires_at" class="plan-form-control" value="{% if customer.expires_at %}{{ customer.expires_at|date:'Y-m-d' }}{% endif %}">
+                        </div>
+                        <div class="form-text small">Current billing cycle expiration. Leave blank for unbilled/new.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="plan-form-label">Billing Status <span class="req">*</span></label>
+                        <select name="status" class="plan-form-control" required>
+                            <option value="active" {% if customer.status == 'active' %}selected{% endif %}>Active</option>
+                            <option value="inactive" {% if customer.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                            <option value="pending" {% if customer.status == 'pending' %}selected{% endif %}>Pending</option>
+                            <option value="suspended" {% if customer.status == 'suspended' %}selected{% endif %}>Suspended</option>
+                            <option value="pull out" {% if customer.status == 'pull out' %}selected{% endif %}>Pull Out</option>
+                        </select>
+                    </div>
+                </div>
             </div>
 
             <div class="form-section-label mt-4"><i class="fas fa-tv me-1"></i> Cignal TV Integration (Play & Box)</div>

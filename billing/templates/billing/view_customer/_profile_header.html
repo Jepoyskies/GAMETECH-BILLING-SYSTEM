@@ -8,9 +8,20 @@
                     <i class="fas fa-map-marker-alt me-1"></i> {{ customer.barangay.name|default:"No Barangay" }}
                     {% if customer.pppoe_username %} &bull; <i class="fas fa-user me-1"></i>{{ customer.pppoe_username }}{% endif %}
                 </div>
-                <div class="status-badge {{ customer.status }}">
-                    <span style="width:7px; height:7px; border-radius:50%; background:currentColor; opacity:0.7; display:inline-block;"></span>
-                    {{ customer.get_status_display }}
+                <div class="d-flex align-items-center gap-2 flex-wrap mt-1">
+                    <div class="status-badge {{ customer.status }}">
+                        <span style="width:7px; height:7px; border-radius:50%; background:currentColor; opacity:0.7; display:inline-block;"></span>
+                        {{ customer.get_status_display }}
+                    </div>
+                    {% if customer.installation_status == 'pending' %}
+                        <span class="badge rounded-pill px-3 py-1 d-inline-flex align-items-center gap-1" style="background: rgba(14, 165, 233, 0.15); color: #0284c7; border: 1px solid rgba(14, 165, 233, 0.35); font-size: 0.8rem; font-weight: 600;">
+                            <i class="fas fa-gear fa-spin-pulse"></i> Pending Installation
+                        </span>
+                    {% else %}
+                        <span class="badge rounded-pill px-3 py-1 d-inline-flex align-items-center gap-1" style="background: rgba(16, 185, 129, 0.15); color: #059669; border: 1px solid rgba(16, 185, 129, 0.35); font-size: 0.8rem; font-weight: 600;" title="Installed on {% if customer.installed_at %}{{ customer.installed_at|date:'M d, Y' }}{% else %}Premises{% endif %}">
+                            <i class="fas fa-check-circle"></i> Installed Line
+                        </span>
+                    {% endif %}
                 </div>
             </div>
         </div>

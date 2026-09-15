@@ -67,6 +67,34 @@ def add_customer(request):
             latitude = request.POST.get("latitude") or None
             longitude = request.POST.get("longitude") or None
 
+        installation_status = request.POST.get("installation_status")
+        if not installation_status:
+            installation_status = "pending" if request.user.role == "Agent" else "installed"
+
+        installed_at_val = None
+        if installation_status == "installed":
+            installed_at_str = request.POST.get("installed_at")
+            if installed_at_str:
+                try:
+                    installed_at_val = timezone.datetime.strptime(installed_at_str, "%Y-%m-%d")
+                except ValueError:
+                    installed_at_val = timezone.now()
+            else:
+                installed_at_val = timezone.now()
+
+        expires_at_val = None
+        expires_at_str = request.POST.get("expires_at")
+        if expires_at_str:
+            try:
+                expires_at_val = timezone.datetime.strptime(expires_at_str, "%Y-%m-%d")
+            except ValueError:
+                expires_at_val = None
+
+        if installation_status == "pending":
+            cust_status = "pending"
+        else:
+            cust_status = "pending" if request.user.role == "Agent" else request.POST.get("status", "active")
+
         customer = Customer.objects.create(
             full_name=request.POST.get("full_name"),
             email=request.POST.get("email") or None,
@@ -74,11 +102,10 @@ def add_customer(request):
             address=request.POST.get("address"),
             pppoe_username=request.POST.get("pppoe_username") or None,
             pppoe_password=request.POST.get("pppoe_password") or get_random_string(8),
-            status=(
-                "pending"
-                if request.user.role == "Agent"
-                else request.POST.get("status", "active")
-            ),
+            status=cust_status,
+            installation_status=installation_status,
+            installed_at=installed_at_val,
+            expires_at=expires_at_val,
             plan_id=request.POST.get("plan_id"),
             mikrotik_device_id=request.POST.get("device_id") or None,
             agent_id=request.POST.get("agent_id"),
@@ -102,7 +129,7 @@ def add_customer(request):
             changed_by=request.user.username,
             target_name=customer.full_name,
             old_data="",
-            new_data=f"Name: {customer.full_name}\nPhone: {customer.phone}\nStatus: {customer.status}",
+            new_data=f"Name: {customer.full_name}\nPhone: {customer.phone}\nStatus: {customer.status}\nInstallation: {customer.installation_status}",
         )
         messages.success(request, "Customer added successfully!")
         return redirect("customer_list")
@@ -171,6 +198,36 @@ def edit_customer(request, customer_id):
                 )
             customer.expires_at = None
         customer.status = new_status
+
+        new_install_status = request.POST.get("installation_status")
+        if new_install_status:
+            check_change("Installation Status", customer.installation_status, new_install_status)
+            customer.installation_status = new_install_status
+
+        new_installed_at_str = request.POST.get("installed_at")
+        if new_installed_at_str:
+            try:
+                new_installed_at = timezone.datetime.strptime(new_installed_at_str, "%Y-%m-%d")
+                curr_installed_str = customer.installed_at.strftime("%Y-%m-%d") if customer.installed_at else ""
+                if curr_installed_str != new_installed_at_str:
+                    check_change("Installation Date", curr_installed_str or "None", new_installed_at_str)
+                    customer.installed_at = new_installed_at
+            except ValueError:
+                pass
+
+        new_expires_at_str = request.POST.get("expires_at")
+        if new_expires_at_str is not None and new_status != "suspended":
+            curr_expires_str = customer.expires_at.strftime("%Y-%m-%d") if customer.expires_at else ""
+            if new_expires_at_str and curr_expires_str != new_expires_at_str:
+                try:
+                    new_expires_dt = timezone.datetime.strptime(new_expires_at_str, "%Y-%m-%d")
+                    check_change("Expiration Date", curr_expires_str or "None", new_expires_at_str)
+                    customer.expires_at = new_expires_dt
+                except ValueError:
+                    pass
+            elif not new_expires_at_str and curr_expires_str:
+                check_change("Expiration Date", curr_expires_str, "None")
+                customer.expires_at = None
 
         # Handle ForeignKeys — resolve to human-readable names for clear audit logs
         plan_id = request.POST.get("plan_id")

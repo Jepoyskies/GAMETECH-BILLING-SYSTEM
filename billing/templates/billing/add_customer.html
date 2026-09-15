@@ -129,9 +129,54 @@
                 </div>
             </div>
             
-            <div class="mb-4">
-                <label class="plan-form-label">Status <span class="req">*</span></label>
-                <select name="status" class="plan-form-control" required>
+            <div class="mb-4 p-3 rounded-3" style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2);">
+                <label class="plan-form-label fw-bold mb-2">
+                    <i class="fas fa-tools me-1 text-primary"></i> Installation & Account Setup Type <span class="req">*</span>
+                </label>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="form-check p-3 border rounded-3 h-100 setup-type-card" id="card-type-installed" style="cursor: pointer; background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.4) !important;">
+                            <input class="form-check-input ms-0 me-2" type="radio" name="installation_status" id="install_status_installed" value="installed" {% if request.user.role != 'Agent' %}checked{% endif %}>
+                            <label class="form-check-label fw-bold d-block" for="install_status_installed" style="cursor: pointer;">
+                                <i class="fas fa-check-circle text-success me-1"></i> Installed / Existing Subscriber
+                                <div class="text-muted fw-normal small mt-1">Physical line is already installed on-site (or migrated/imported). Account is active immediately and will not be marked as Pending Install.</div>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check p-3 border rounded-3 h-100 setup-type-card" id="card-type-pending" style="cursor: pointer; {% if request.user.role == 'Agent' %}background: rgba(14, 165, 233, 0.08); border-color: rgba(14, 165, 233, 0.4) !important;{% endif %}">
+                            <input class="form-check-input ms-0 me-2" type="radio" name="installation_status" id="install_status_pending" value="pending" {% if request.user.role == 'Agent' %}checked{% endif %}>
+                            <label class="form-check-label fw-bold d-block" for="install_status_pending" style="cursor: pointer;">
+                                <i class="fas fa-gear text-info me-1"></i> For Installation (New Applicant)
+                                <div class="text-muted fw-normal small mt-1">Brand new customer awaiting technician dispatch and equipment setup. Will show with Pending Install badge until completed.</div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3 mt-2" id="installed-dates-row" style="{% if request.user.role == 'Agent' %}display:none;{% endif %}">
+                    <div class="col-md-6">
+                        <label class="plan-form-label">Installation Date</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-calendar-check i-icon text-success"></i>
+                            <input type="date" name="installed_at" id="input_installed_at" class="plan-form-control" value="{% now 'Y-m-d' %}">
+                        </div>
+                        <div class="form-text small">Date physical line was activated/installed.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="plan-form-label">First Due / Expiration Date (Optional)</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-calendar-day i-icon text-primary"></i>
+                            <input type="date" name="expires_at" id="input_expires_at" class="plan-form-control" placeholder="Leave empty for unbilled">
+                        </div>
+                        <div class="form-text small">Optional initial expiration date if already scheduled/billed.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-4" id="billing-status-group">
+                <label class="plan-form-label">Billing Status <span class="req">*</span></label>
+                <select name="status" id="customer_status_select" class="plan-form-control" required>
                     <option value="active" selected>Active</option>
                     <option value="inactive">Inactive</option>
                     <option value="pending">Pending</option>
@@ -365,6 +410,58 @@
                 console.warn("TomSelect fallback on", el.name, err);
             }
         });
+    });
+</script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const radInstalled = document.getElementById('install_status_installed');
+        const radPending = document.getElementById('install_status_pending');
+        const cardInstalled = document.getElementById('card-type-installed');
+        const cardPending = document.getElementById('card-type-pending');
+        const datesRow = document.getElementById('installed-dates-row');
+        const statusSelect = document.getElementById('customer_status_select');
+
+        function updateSetupUI() {
+            if (radInstalled && radInstalled.checked) {
+                cardInstalled.style.background = 'rgba(16, 185, 129, 0.08)';
+                cardInstalled.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                cardPending.style.background = '';
+                cardPending.style.borderColor = '';
+                if (datesRow) datesRow.style.display = 'flex';
+                if (statusSelect && statusSelect.value === 'pending') {
+                    statusSelect.value = 'active';
+                }
+            } else if (radPending && radPending.checked) {
+                cardPending.style.background = 'rgba(14, 165, 233, 0.08)';
+                cardPending.style.borderColor = 'rgba(14, 165, 233, 0.4)';
+                cardInstalled.style.background = '';
+                cardInstalled.style.borderColor = '';
+                if (datesRow) datesRow.style.display = 'none';
+                if (statusSelect) {
+                    statusSelect.value = 'pending';
+                }
+            }
+        }
+
+        if (cardInstalled) {
+            cardInstalled.addEventListener('click', function(e) {
+                if (e.target !== radInstalled) {
+                    radInstalled.checked = true;
+                }
+                updateSetupUI();
+            });
+        }
+        if (cardPending) {
+            cardPending.addEventListener('click', function(e) {
+                if (e.target !== radPending) {
+                    radPending.checked = true;
+                }
+                updateSetupUI();
+            });
+        }
+        if (radInstalled) radInstalled.addEventListener('change', updateSetupUI);
+        if (radPending) radPending.addEventListener('change', updateSetupUI);
+        updateSetupUI();
     });
 </script>
 {% endblock %}

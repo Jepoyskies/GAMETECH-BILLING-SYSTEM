@@ -351,8 +351,12 @@ def api_customer_mikrotik_status(request, customer_id):
             data["mt_status"] = "API Unreachable"
 
     # Check for brand new / pending installation customers
-    # An account is ONLY Pending Installation if status is pending or they have never had an expiration date set
-    is_pending_install = customer.status == "pending" or customer.expires_at is None
+    # An account is ONLY Pending Installation if installation_status is explicitly 'pending'
+    # or status is pending without an active expiration date
+    is_pending_install = (
+        getattr(customer, "installation_status", "installed") == "pending"
+        or (customer.status == "pending" and customer.expires_at is None)
+    )
 
     # Add context to disconnected status if it wasn't caught by the ping check
     if data["mt_status"] == "Disconnected":

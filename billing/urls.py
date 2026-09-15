@@ -28,6 +28,11 @@ urlpatterns = [
         "customers/view/<int:customer_id>/", views.view_customer, name="view_customer"
     ),
     path(
+        "customers/<int:customer_id>/mark-installed/",
+        views.mark_customer_installed,
+        name="mark_customer_installed",
+    ),
+    path(
         "customers/api/status/<int:customer_id>/",
         views.api_customer_mikrotik_status,
         name="api_customer_mikrotik_status",
