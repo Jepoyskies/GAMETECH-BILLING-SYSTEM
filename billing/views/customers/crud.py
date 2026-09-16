@@ -113,15 +113,14 @@ def add_customer(request):
             installation_status = "pending"
 
         installed_at_val = None
-        if installation_status == "installed":
-            installed_at_str = request.POST.get("installed_at")
-            if installed_at_str:
-                try:
-                    installed_at_val = timezone.datetime.strptime(installed_at_str, "%Y-%m-%d")
-                except ValueError:
-                    installed_at_val = timezone.now()
-            else:
+        installed_at_str = request.POST.get("installed_at")
+        if installed_at_str:
+            try:
+                installed_at_val = timezone.datetime.strptime(installed_at_str, "%Y-%m-%d")
+            except ValueError:
                 installed_at_val = timezone.now()
+        elif installation_status == "installed":
+            installed_at_val = timezone.now()
 
         expires_at_val = None
         expires_at_str = request.POST.get("expires_at")

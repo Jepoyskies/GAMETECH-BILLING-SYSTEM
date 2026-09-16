@@ -161,16 +161,14 @@
                     </div>
                 </div>
 
-                <div id="pending-install-helper" class="alert alert-info border-info text-info bg-transparent mt-3">🗓️ Installation and First Due dates will be assigned by the Dispatch Team during setup confirmation.</div>
-
-                <div class="row g-3 mt-2" id="installed-dates-row" style="display:none;">
+                <div class="row g-3 mt-2" id="installed-dates-row">
                     <div class="col-md-6" id="installed-date-col">
                         <label class="plan-form-label">Installation Date</label>
                         <div class="input-icon-wrapper">
                             <i class="fas fa-calendar-check i-icon text-success"></i>
                             <input type="date" name="installed_at" id="input_installed_at" class="plan-form-control" value="{% now 'Y-m-d' %}">
                         </div>
-                        <div class="form-text small">Date physical line was activated/installed.</div>
+                        <div class="form-text small">Scheduled date for physical setup / activation.</div>
                     </div>
                     <div class="col-md-6" id="installed-expiry-col">
                         <label class="plan-form-label">First Due / Expiration Date (Optional)</label>
@@ -178,8 +176,12 @@
                             <i class="fas fa-calendar-day i-icon text-primary"></i>
                             <input type="date" name="expires_at" id="input_expires_at" class="plan-form-control" placeholder="Leave empty for unbilled">
                         </div>
-                        <div class="form-text small">Optional initial expiration date if already scheduled/billed.</div>
+                        <div class="form-text small">Scheduled first due date for the subscriber's initial billing cycle.</div>
                     </div>
+                </div>
+
+                <div id="installed-existing-helper" class="alert alert-secondary border-secondary text-light bg-transparent mt-3" style="display:none; font-size: 0.85rem;">
+                    <i class="fas fa-info-circle me-1 text-info"></i> Dates are not required for existing/legacy subscribers.
                 </div>
             </div>
             {% endif %}
@@ -445,36 +447,46 @@
         const cardInstalled = document.getElementById('card-type-installed');
         const cardPending = document.getElementById('card-type-pending');
         const datesRow = document.getElementById('installed-dates-row');
-        const pendingHelper = document.getElementById('pending-install-helper');
+        const existingHelper = document.getElementById('installed-existing-helper');
         const statusSelect = document.getElementById('customer_status_select');
 
         function updateSetupUI() {
             const expCol = document.getElementById('installed-expiry-col');
             const expInput = document.getElementById('input_expires_at');
-            if (radInstalled && radInstalled.checked) {
-                cardInstalled.style.background = 'rgba(16, 185, 129, 0.08)';
-                cardInstalled.style.borderColor = 'rgba(16, 185, 129, 0.4)';
-                cardPending.style.background = '';
-                cardPending.style.borderColor = '';
-                if (datesRow) datesRow.style.display = 'flex';
-                if (pendingHelper) pendingHelper.style.display = 'none';
-                if (expCol) expCol.style.display = 'block';
-                if (statusSelect && statusSelect.value === 'pending') {
-                    statusSelect.value = 'active';
-                    if (statusSelect.tomselect) statusSelect.tomselect.setValue('active');
-                }
-            } else if (radPending && radPending.checked) {
+            const installInput = document.getElementById('input_installed_at');
+
+            if (radPending && radPending.checked) {
+                // "For Installation (New Applicant)" -> SHOW date fields so staff can schedule them
                 cardPending.style.background = 'rgba(14, 165, 233, 0.08)';
                 cardPending.style.borderColor = 'rgba(14, 165, 233, 0.4)';
                 cardInstalled.style.background = '';
                 cardInstalled.style.borderColor = '';
-                if (datesRow) datesRow.style.display = 'none';
-                if (pendingHelper) pendingHelper.style.display = 'block';
-                if (expCol) expCol.style.display = 'none';
-                if (expInput) expInput.value = '';
+                if (datesRow) datesRow.style.display = 'flex';
+                if (existingHelper) existingHelper.style.display = 'none';
+                if (expCol) expCol.style.display = 'block';
                 if (statusSelect) {
                     statusSelect.value = 'pending';
                     if (statusSelect.tomselect) statusSelect.tomselect.setValue('pending');
+                }
+            } else if (radInstalled && radInstalled.checked) {
+                // "Installed / Existing Subscriber" -> HIDE date fields because historical dates do not matter
+                cardInstalled.style.background = 'rgba(16, 185, 129, 0.08)';
+                cardInstalled.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                cardPending.style.background = '';
+                cardPending.style.borderColor = '';
+                if (datesRow) datesRow.style.display = 'none';
+                if (existingHelper) existingHelper.style.display = 'block';
+                if (expCol) expCol.style.display = 'none';
+                if (expInput) {
+                    expInput.value = '';
+                    expInput.removeAttribute('required');
+                }
+                if (installInput) {
+                    installInput.removeAttribute('required');
+                }
+                if (statusSelect && statusSelect.value === 'pending') {
+                    statusSelect.value = 'active';
+                    if (statusSelect.tomselect) statusSelect.tomselect.setValue('active');
                 }
             }
         }
