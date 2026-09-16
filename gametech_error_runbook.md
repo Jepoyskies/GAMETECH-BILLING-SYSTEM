@@ -689,6 +689,29 @@
   * In `cignal_dashboard.py`, format flash message as `f"Cignal details for {customer.full_name}{label} updated successfully."` and render alerts with `#ecfdf5` background, `#059669` text, checkmark icon, and dismiss button.
   * In `dispatch/signals.py`, auto-complete open installation tickets when a customer's `installation_status` changes to `'installed'`, and register a `post_save` on `JobTicket` to promote `customer.installation_status = 'installed'` and `customer.status = 'active'` whenever an installation ticket is marked `COMPLETED`.
 
+### ERR-039: Cignal Date vs Time Expiry Blindspot, Ghost Active Subscribers, and Archive Purge Control
+* **Symptoms**:
+  * Setting Cignal subscription expiration date to today with an exact time (e.g., 2:00 PM) failed to expire when that time passed; changing the date to yesterday immediately marked it expired.
+  * Clearing or cancelling Cignal subscriptions still showed them in the "Active Customers" KPI count (e.g. 2 active customers despite 0 subscriptions).
+  * Removed subscriptions vanished completely instead of moving to an archive bar for administrative review.
+  * An unwanted vertical scrollbar appeared in the right-column "Messages & Alerts" card.
+* **Root Causes**:
+  * `CignalPlay.is_active` stripped the time component (`exp = exp.date()`) and compared `exp >= timezone.localdate()`, treating any expiration today as valid for the entire 24-hour calendar day regardless of the hour/minute set.
+  * `cignal_dashboard_view` matched customers with non-empty legacy strings `cignalplay_no` on the `Customer` record even if `cignal_plans` count was 0, and `cancel_cignal_subscription` hard-deleted records without clearing customer legacy fields.
+  * `_recent_messages.html` had a fixed inline `max-height: 400px; overflow-y: auto; scrollbar-width: thin;`.
+* **Exact Target Files**:
+  * `billing/models.py` (`CignalPlay.is_active`, `is_cancelled`, `cancelled_at`, `cancelled_by`)
+  * `billing/migrations/0045_cignalplay_cancellation_fields.py`
+  * `billing/views/cignal_dashboard.py` (`cignal_dashboard_view`, `edit_cignal_subscription`, `cancel_cignal_subscription`, `restore_cignal_subscription`, `purge_cignal_subscription`)
+  * `billing/templates/billing/cignal_dashboard/_active_subscriptions.html`
+  * `billing/templates/billing/cignal_dashboard/_recent_messages.html`
+  * `billing/templates/billing/partials/_cignal_edit_modal.html`
+* **1-Step Fix**:
+  * In `CignalPlay.is_active`, compare timezone-aware `datetime >= timezone.now()`, expiring subscriptions instantaneously when their exact target time elapses.
+  * Filter active customers strictly by `cignal_plans__is_cancelled=False`, and provide segmented status tabs: **Active Subscriptions**, **Ongoing Installments (₱250/mo)**, **Fully Paid**, and **Cancelled / Archive Bar**.
+  * Update cancellation to soft-delete (`is_cancelled=True`, `cancelled_at=now()`, `cancelled_by=user.username`), clear legacy fields on customer if no plans remain, and restrict permanent archive purging strictly to staff/admins (`user.is_staff`).
+  * Remove `max-height` and `overflow-y` on `_recent_messages.html` and upgrade `_cignal_edit_modal.html` to `type="datetime-local"`.
+
 ---
 
 ## 📝 How to Add a New Error Entry
@@ -696,6 +719,7 @@
 1. Assign a new `ERR-XXX` identifier.
 2. Fill in: **Symptoms**, **Root Causes**, **Exact Target Files**, and **1-Step Fix**.
 3. Keep entries short, actionable, and sniper-focused.
+
 
 
 
