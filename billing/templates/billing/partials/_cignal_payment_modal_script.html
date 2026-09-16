@@ -1,0 +1,308 @@
+<script>
+// Cignal Reload Modal Controller
+(function() {
+  function getTodayIso() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function formatDisplayDate(isoStr) {
+    if (!isoStr) return 'None';
+    var parts = isoStr.split('-');
+    if (parts.length !== 3) return isoStr;
+    var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    if (isNaN(d.getTime())) return isoStr;
+    var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[d.getMonth()] + ' ' + String(d.getDate()).padStart(2, '0') + ', ' + d.getFullYear();
+  }
+
+  function calculateTargetDate(baseIso, addDays) {
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var base = new Date(today);
+
+    if (baseIso) {
+      var parts = baseIso.split('-');
+      if (parts.length === 3) {
+        var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        d.setHours(0, 0, 0, 0);
+        if (!isNaN(d.getTime()) && d >= today) {
+          base = d; // Active rollover: roll forward from current expiration
+        }
+      }
+    }
+    base.setDate(base.getDate() + (addDays || 30));
+    return base.getFullYear() + '-' + String(base.getMonth() + 1).padStart(2, '0') + '-' + String(base.getDate()).padStart(2, '0');
+  }
+
+  window.cpmGetSelectedOption = function() {
+    var sel = document.getElementById('cpmSubscriptionSelect');
+    if (!sel || sel.selectedIndex < 0) return null;
+    return sel.options[sel.selectedIndex];
+  };
+
+  window.cpmUpdateStatusDisplay = function(opt) {
+    if (!opt) return;
+    var exp = opt.getAttribute('data-exp') || '';
+    var hw = opt.getAttribute('data-hw') || 'none';
+    var inst = parseInt(opt.getAttribute('data-inst'), 10) || 0;
+    var load = opt.getAttribute('data-load') || '149';
+
+    // 1. Current Expiration Status Badge
+    var expBadge = document.getElementById('cpmCurrentExpBadge');
+    if (expBadge) {
+      if (exp) {
+        var todayIso = getTodayIso();
+        if (exp >= todayIso) {
+          expBadge.className = 'badge bg-success-subtle text-success border border-success-subtle';
+          expBadge.innerHTML = '<i class="fas fa-check-circle me-1"></i> Active (Due ' + formatDisplayDate(exp) + ')';
+        } else {
+          expBadge.className = 'badge bg-danger-subtle text-danger border border-danger-subtle';
+          expBadge.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> Expired on ' + formatDisplayDate(exp);
+        }
+      } else {
+        expBadge.className = 'badge bg-secondary-subtle text-secondary border border-secondary-subtle';
+        expBadge.innerHTML = '<i class="far fa-calendar-times me-1"></i> No Due Date Set';
+      }
+    }
+
+    // 2. Load Plan
+    var planBadge = document.getElementById('cpmPlanBadge');
+    if (planBadge) {
+      planBadge.innerText = (load === '399') ? '62 Channels (₱399/mo)' : '42 Channels (₱149/mo)';
+    }
+
+    // 3. Hardware Status & Progress Bar
+    var hwBadge = document.getElementById('cpmHardwareBadge');
+    var bar = document.getElementById('cpmInstallmentProgressBar');
+    var fill = document.getElementById('cpmInstallmentProgressFill');
+    if (hwBadge) {
+      if (hw === 'installment') {
+        if (inst < 12) {
+          hwBadge.className = 'badge bg-warning-subtle text-warning border border-warning-subtle';
+          hwBadge.innerHTML = '<i class="fas fa-clock me-1"></i> Box Installment: Month ' + inst + '/12 (₱250 due)';
+          if (bar && fill) {
+            bar.style.display = 'flex';
+            fill.style.width = Math.min(100, Math.round((inst / 12) * 100)) + '%';
+          }
+        } else {
+          hwBadge.className = 'badge bg-success-subtle text-success border border-success-subtle';
+          hwBadge.innerHTML = '<i class="fas fa-check-circle me-1"></i> Box Fully Owned (12/12)';
+          if (bar) bar.style.display = 'none';
+        }
+      } else if (hw === 'cashout') {
+        hwBadge.className = 'badge bg-success-subtle text-success border border-success-subtle';
+        hwBadge.innerHTML = '<i class="fas fa-shield-alt me-1"></i> Hardware: Cashout Paid (₱3k)';
+        if (bar) bar.style.display = 'none';
+      } else {
+        hwBadge.className = 'badge bg-info-subtle text-info border border-info-subtle';
+        hwBadge.innerHTML = '<i class="fas fa-mobile-alt me-1"></i> App Streaming Only';
+        if (bar) bar.style.display = 'none';
+      }
+    }
+
+    // 4. Hardware Presets Visibility
+    var hwGroup = document.getElementById('cpmHardwarePresetsGroup');
+    var hwNote = document.getElementById('cpmHardwareNote');
+    if (hwGroup && hwNote) {
+      if (hw === 'installment' && inst < 12) {
+        hwGroup.style.display = 'flex';
+        hwNote.style.display = 'none';
+      } else {
+        hwGroup.style.display = 'none';
+        hwNote.style.display = 'block';
+        if (hw === 'cashout' || inst >= 12) {
+          hwNote.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i> <em>Hardware is fully owned. Only TV service load renewal is needed.</em>';
+        } else {
+          hwNote.innerHTML = '<i class="fas fa-mobile-alt text-info me-1"></i> <em>App-only account. Only TV service load renewal is needed.</em>';
+        }
+      }
+    }
+  };
+
+  window.cpmSetPreset = function(amount, days, btn, paymentType) {
+    var amtInput = document.getElementById('cpmAmountInput');
+    if (amtInput) {
+      amtInput.value = amount;
+      amtInput.dispatchEvent(new Event('input'));
+    }
+
+    var typeInput = document.getElementById('cpmPaymentTypeInput');
+    if (typeInput) {
+      typeInput.value = paymentType || 'load_only';
+    }
+
+    document.querySelectorAll('.gt-cpm-btn').forEach(function(b) {
+      b.classList.remove('active', 'border-2', 'shadow-sm');
+    });
+    if (btn) {
+      btn.classList.add('active', 'border-2', 'shadow-sm');
+    }
+
+    var opt = cpmGetSelectedOption();
+    var curExp = opt ? (opt.getAttribute('data-exp') || '') : '';
+    var inst = opt ? (parseInt(opt.getAttribute('data-inst'), 10) || 0) : 0;
+    var dateInput = document.getElementById('cpmExpirationDate');
+    var preview = document.getElementById('cpmExtensionPreview');
+
+    if (paymentType === 'box_installment') {
+      if (preview) {
+        preview.style.display = 'block';
+        preview.className = 'p-2 rounded small mb-3 border border-secondary text-light';
+        preview.style.background = 'rgba(255, 255, 255, 0.04)';
+        preview.innerHTML = '<i class="fas fa-microchip text-warning me-1"></i> <strong>Hardware Installment Only (₱250):</strong> Advances box payment to Month ' + (inst + 1) + '/12. TV load due date remains <strong>' + (curExp ? formatDisplayDate(curExp) : 'Unchanged') + '</strong>.';
+      }
+      if (dateInput && curExp) {
+        dateInput.value = curExp;
+      }
+    } else if (paymentType === 'box_cashout') {
+      if (preview) {
+        preview.style.display = 'block';
+        preview.className = 'p-2 rounded small mb-3 border border-success-subtle text-success';
+        preview.style.background = 'rgba(16, 185, 129, 0.08)';
+        preview.innerHTML = '<i class="fas fa-shield-alt me-1"></i> <strong>Full Box Cashout (₱3,000):</strong> Marks set-top box as fully owned (12/12). TV load expiration remains <strong>' + (curExp ? formatDisplayDate(curExp) : 'Unchanged') + '</strong>.';
+      }
+      if (dateInput && curExp) {
+        dateInput.value = curExp;
+      }
+    } else if (paymentType === 'box_and_load') {
+      var nextExp = calculateTargetDate(curExp, days || 30);
+      if (dateInput) dateInput.value = nextExp;
+      if (preview) {
+        preview.style.display = 'block';
+        preview.className = 'p-2 rounded small mb-3 border border-warning-subtle text-warning';
+        preview.style.background = 'rgba(234, 179, 8, 0.08)';
+        preview.innerHTML = '<i class="fas fa-layer-group me-1"></i> <strong>Combo (₱399):</strong> ₱250 Box (Month ' + (inst + 1) + '/12) + ₱149 TV Load. Due date rolls forward: ' + (curExp ? formatDisplayDate(curExp) + ' ➔ ' : '') + '<strong>' + formatDisplayDate(nextExp) + '</strong> (+30 Days).';
+      }
+    } else {
+      var nextExpLoad = calculateTargetDate(curExp, days || 30);
+      if (dateInput) dateInput.value = nextExpLoad;
+      if (preview) {
+        preview.style.display = 'block';
+        preview.className = 'p-2 rounded small mb-3 border border-success-subtle text-success';
+        preview.style.background = 'rgba(16, 185, 129, 0.08)';
+        preview.innerHTML = '<i class="fas fa-sync-alt me-1"></i> <strong>TV Load Renewal:</strong> Rollover from ' + (curExp ? formatDisplayDate(curExp) : 'today') + ' ➔ <strong>' + formatDisplayDate(nextExpLoad) + '</strong> (+' + (days || 30) + ' Days).';
+      }
+    }
+  };
+
+  window.cpmAddDays = function(days) {
+    var dateInput = document.getElementById('cpmExpirationDate');
+    if (!dateInput) return;
+    var baseDate = dateInput.value ? new Date(dateInput.value) : new Date();
+    if (isNaN(baseDate.getTime())) baseDate = new Date();
+    baseDate.setDate(baseDate.getDate() + days);
+    var y = baseDate.getFullYear();
+    var m = String(baseDate.getMonth() + 1).padStart(2, '0');
+    var d = String(baseDate.getDate()).padStart(2, '0');
+    dateInput.value = y + '-' + m + '-' + d;
+
+    var preview = document.getElementById('cpmExtensionPreview');
+    if (preview) {
+      preview.style.display = 'block';
+      preview.className = 'p-2 rounded small mb-3 border border-info-subtle text-info';
+      preview.style.background = 'rgba(6, 182, 212, 0.08)';
+      preview.innerHTML = '<i class="fas fa-calendar-plus me-1"></i> Adjusted Due Date: <strong>' + formatDisplayDate(dateInput.value) + '</strong>';
+    }
+  };
+
+  window.cpmResetToCurrent = function() {
+    var opt = cpmGetSelectedOption();
+    var curExp = opt ? (opt.getAttribute('data-exp') || '') : '';
+    var dateInput = document.getElementById('cpmExpirationDate');
+    if (dateInput) {
+      dateInput.value = curExp || getTodayIso();
+    }
+    var preview = document.getElementById('cpmExtensionPreview');
+    if (preview) {
+      preview.style.display = 'none';
+    }
+  };
+
+  window.cpmOnSubscriptionChange = function(sel) {
+    if (!sel || !sel.options[sel.selectedIndex]) return;
+    var opt = sel.options[sel.selectedIndex];
+    cpmUpdateStatusDisplay(opt);
+
+    var hw = opt.getAttribute('data-hw') || 'none';
+    var inst = parseInt(opt.getAttribute('data-inst'), 10) || 0;
+    var load = opt.getAttribute('data-load') || '149';
+
+    // Auto-select recommended preset
+    if (hw === 'installment' && inst < 12) {
+      var comboBtn = document.getElementById('cpmBtnCombo');
+      cpmSetPreset(399, 30, comboBtn, 'box_and_load');
+    } else if (load === '399') {
+      var load399Btn = document.getElementById('cpmBtnLoad399');
+      cpmSetPreset(399, 30, load399Btn, 'load_only');
+    } else {
+      var load149Btn = document.getElementById('cpmBtnLoad149');
+      cpmSetPreset(149, 30, load149Btn, 'load_only');
+    }
+  };
+
+  window.openCignalPaymentModal = function(opts) {
+    opts = opts || {};
+    var modalEl = document.getElementById('cignalPaymentModal');
+    if (!modalEl) return;
+
+    if (opts.customerId) {
+      var custInput = document.getElementById('cpmCustomerId');
+      if (custInput) custInput.value = opts.customerId;
+    }
+    if (opts.customerName) {
+      var nameEl = document.getElementById('cpmCustomerName');
+      if (nameEl) nameEl.innerHTML = '<i class="fas fa-tv me-1"></i> ' + opts.customerName;
+    }
+    if (opts.pppoe) {
+      var pppoeEl = document.getElementById('cpmCustomerPppoe');
+      if (pppoeEl) pppoeEl.innerText = opts.pppoe;
+    }
+
+    var sel = document.getElementById('cpmSubscriptionSelect');
+    if (sel && opts.subscriptions && opts.subscriptions.length > 0) {
+      sel.innerHTML = '';
+      opts.subscriptions.forEach(function(s) {
+        var o = document.createElement('option');
+        o.value = s.id;
+        var nums = [];
+        if (s.cignal_play_no) nums.push('Play: ' + s.cignal_play_no);
+        if (s.cignal_box_no) nums.push('Box: ' + s.cignal_box_no);
+        var numStr = nums.length > 0 ? nums.join(' | ') : 'No Acct #';
+        o.innerText = (s.account_name || 'Cignal Subscription') + ' (' + numStr + ')' + (s.expiration_date ? ' — Exp: ' + formatDisplayDate(s.expiration_date) : '');
+        o.setAttribute('data-exp', s.expiration_date || '');
+        o.setAttribute('data-hw', s.hardware_payment_type || 'none');
+        o.setAttribute('data-inst', s.installments_paid || 0);
+        o.setAttribute('data-load', s.monthly_load_plan || '149');
+        if (opts.subscriptionId && String(opts.subscriptionId) === String(s.id)) {
+          o.selected = true;
+        }
+        sel.appendChild(o);
+      });
+      cpmOnSubscriptionChange(sel);
+    } else if (sel && opts.subscriptionId) {
+      for (var i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === String(opts.subscriptionId)) {
+          sel.selectedIndex = i;
+          break;
+        }
+      }
+      cpmOnSubscriptionChange(sel);
+    } else if (sel) {
+      cpmOnSubscriptionChange(sel);
+    }
+
+    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+      var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+      modal.show();
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', function() {
+    var sel = document.getElementById('cpmSubscriptionSelect');
+    if (sel) {
+      cpmOnSubscriptionChange(sel);
+    }
+  });
+})();
+</script>

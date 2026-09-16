@@ -146,7 +146,7 @@ def process_cignal_payment(request):
                 base_dt = timezone.now()
             new_expiration_date = (base_dt + timedelta(days=30)).replace(hour=23, minute=59, second=59)
 
-        if new_expiration_date:
+        if new_expiration_date and payment_type not in ("box_only", "box_installment"):
             subscription.expiration_date = new_expiration_date
             subscription.end_date = new_expiration_date
 
@@ -188,7 +188,7 @@ def process_cignal_payment(request):
             payment_method=payment_method,
             reference_no=reference_no,
             reason=reason_text,
-            expires_at=new_expiration_date or customer.expires_at,
+            expires_at=subscription.expiration_date or customer.expires_at,
             paid_at=timezone.now(),
             payment_date_received=timezone.now(),
             adjusted_by=request.user.username,

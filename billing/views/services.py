@@ -353,7 +353,7 @@ def cignalplay_form_view(request, customer_id):
         return redirect("user_cignal_logs", customer_id=customer.id)
 
     context = {"customer": customer}
-    return render(request, "billing/cignalplay_form.html", {"form": form})
+    return render(request, "billing/cignalplay_form.html", context)
 
 
 def get_categorized_plans():

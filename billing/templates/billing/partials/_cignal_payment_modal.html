@@ -1,4 +1,4 @@
-<!-- Flexible Cignal Payment & Expiration Reload Modal -->
+<!-- Streamlined Cignal Payment & Due Date Reload Modal -->
 <div class="modal fade" id="cignalPaymentModal" tabindex="-1" aria-labelledby="cignalPaymentModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content gt-modal-content" style="border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);">
@@ -12,6 +12,7 @@
       <form action="{% url 'process_cignal_payment' %}" method="post" id="cignalPaymentForm">
         {% csrf_token %}
         <input type="hidden" name="customer_id" id="cpmCustomerId" value="{% if target_customer %}{{ target_customer.id }}{% elif customer %}{{ customer.id }}{% endif %}">
+        <input type="hidden" name="payment_type" id="cpmPaymentTypeInput" value="load_only">
 
         <div class="modal-body py-3">
           <!-- Customer Banner -->
@@ -44,9 +45,6 @@
                           data-inst="{{ sub.installments_paid|default:0 }}"
                           data-load="{{ sub.monthly_load_plan|default:'149' }}">
                     {{ sub.account_name|default:"Cignal Subscription" }} ({% if sub.cignal_play_no %}Play: {{ sub.cignal_play_no }}{% endif %}{% if sub.cignal_play_no and sub.cignal_box_no %} | {% endif %}{% if sub.cignal_box_no %}Box: {{ sub.cignal_box_no }}{% endif %}{% if not sub.cignal_play_no and not sub.cignal_box_no %}No Acct #{% endif %})
-                    {% if sub.expiration_date or sub.end_date %}
-                      — Exp: {{ sub.expiration_date|default:sub.end_date|date:"M d, Y" }}
-                    {% endif %}
                   </option>
                 {% endfor %}
               {% elif customer and customer.cignal_plans.all %}
@@ -60,66 +58,76 @@
                           data-inst="{{ sub.installments_paid|default:0 }}"
                           data-load="{{ sub.monthly_load_plan|default:'149' }}">
                     {{ sub.account_name|default:"Cignal Subscription" }} ({% if sub.cignal_play_no %}Play: {{ sub.cignal_play_no }}{% endif %}{% if sub.cignal_play_no and sub.cignal_box_no %} | {% endif %}{% if sub.cignal_box_no %}Box: {{ sub.cignal_box_no }}{% endif %}{% if not sub.cignal_play_no and not sub.cignal_box_no %}No Acct #{% endif %})
-                    {% if sub.expiration_date or sub.end_date %}
-                      — Exp: {{ sub.expiration_date|default:sub.end_date|date:"M d, Y" }}
-                    {% endif %}
                   </option>
                 {% endfor %}
               {% elif target_customer %}
-                <option value="" data-exp="" data-hw="none" data-inst="0" data-load="149" data-acct="{% if target_customer.cignalplay_no %}Play: {{ target_customer.cignalplay_no }}{% endif %}{% if target_customer.cignalbox_no %} Box: {{ target_customer.cignalbox_no }}{% endif %}">
+                <option value="" data-exp="" data-hw="none" data-inst="0" data-load="149">
                   Cignal Subscription ({% if target_customer.cignalplay_no %}Play: {{ target_customer.cignalplay_no }}{% endif %}{% if target_customer.cignalplay_no and target_customer.cignalbox_no %} | {% endif %}{% if target_customer.cignalbox_no %}Box: {{ target_customer.cignalbox_no }}{% endif %}{% if not target_customer.cignalplay_no and not target_customer.cignalbox_no %}Default{% endif %})
                 </option>
               {% elif customer %}
-                <option value="" data-exp="" data-hw="none" data-inst="0" data-load="149" data-acct="{% if customer.cignalplay_no %}Play: {{ customer.cignalplay_no }}{% endif %}{% if customer.cignalbox_no %} Box: {{ customer.cignalbox_no }}{% endif %}">
+                <option value="" data-exp="" data-hw="none" data-inst="0" data-load="149">
                   Cignal Subscription ({% if customer.cignalplay_no %}Play: {{ customer.cignalplay_no }}{% endif %}{% if customer.cignalplay_no and customer.cignalbox_no %} | {% endif %}{% if customer.cignalbox_no %}Box: {{ customer.cignalbox_no }}{% endif %}{% if not customer.cignalplay_no and not customer.cignalbox_no %}Default{% endif %})
                 </option>
               {% else %}
                 <option value="" data-hw="none" data-inst="0" data-load="149">Default Cignal Subscription</option>
               {% endif %}
             </select>
-            <div class="form-text text-muted small" id="cpmAccountHint">Select which device or TV box subscription to reload.</div>
           </div>
 
-          <!-- Hardware Status Card -->
-          <div id="cpmHardwareStatusContainer" class="p-3 mb-3 rounded-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1);">
-            <div class="d-flex justify-content-between align-items-center">
-              <span class="small text-muted fw-bold text-uppercase" style="letter-spacing: 0.04em;"><i class="fas fa-microchip me-1"></i> Hardware Setup</span>
+          <!-- Current Subscription Status Card -->
+          <div class="p-3 mb-3 rounded-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1);">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="small text-muted fw-bold text-uppercase" style="letter-spacing: 0.04em;">
+                <i class="far fa-calendar-check text-info me-1"></i> Current Status
+              </span>
+              <span id="cpmCurrentExpBadge" class="badge bg-secondary">Checking due date...</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2 small">
+              <span class="text-muted"><i class="fas fa-broadcast-tower me-1"></i> Active Plan:</span>
+              <strong class="text-light" id="cpmPlanBadge">42 Channels (₱149/mo)</strong>
+            </div>
+            <div class="d-flex justify-content-between align-items-center small">
+              <span class="text-muted"><i class="fas fa-microchip me-1"></i> Hardware:</span>
               <span id="cpmHardwareBadge" class="badge bg-secondary">No Box / App Only</span>
             </div>
             <div id="cpmInstallmentProgressBar" class="progress mt-2" style="height: 6px; display: none; background: rgba(255, 255, 255, 0.1);">
-              <div id="cpmInstallmentProgressFill" class="progress-bar bg-warning" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="12"></div>
+              <div id="cpmInstallmentProgressFill" class="progress-bar bg-warning" role="progressbar" style="width: 0%;"></div>
             </div>
           </div>
 
-          <input type="hidden" name="payment_type" id="cpmPaymentTypeInput" value="load_only">
-
-          <!-- Quick-Fill Preset Buttons -->
+          <!-- Quick-Fill Presets (Organized & Context-Aware) -->
           <div class="mb-3">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-              <label class="form-label fw-bold small text-muted text-uppercase mb-0" style="letter-spacing: 0.04em;">
-                <i class="fas fa-bolt text-warning me-1"></i> Quick-Fill Presets
-              </label>
-              <span class="small text-muted" id="cpmPresetHint" style="font-size: 0.75rem;">Click to auto-populate</span>
+            <label class="form-label fw-bold small text-muted text-uppercase mb-1" style="letter-spacing: 0.04em;">
+              <i class="fas fa-bolt text-warning me-1"></i> 1. Select Payment Option
+            </label>
+            
+            <!-- TV Service Renewal Presets -->
+            <div class="d-flex flex-wrap gap-2 mb-2">
+              <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-3 py-1 gt-cpm-btn" id="cpmBtnLoad149" onclick="cpmSetPreset(149, 30, this, 'load_only')">
+                <span class="fw-bold">₱149</span> <small class="opacity-75 ms-1">Load (42 Ch / +30 Days)</small>
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 gt-cpm-btn" id="cpmBtnLoad399" onclick="cpmSetPreset(399, 30, this, 'load_only')">
+                <span class="fw-bold">₱399</span> <small class="opacity-75 ms-1">Load (62 Ch / +30 Days)</small>
+              </button>
             </div>
-            <div class="d-flex flex-wrap gap-2 pt-1">
-              <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-3 py-1 gt-quick-btn" onclick="cpmSetAmount(149, 30, this, 'load_only')">
-                <span class="fw-bold">₱149</span> <small class="opacity-75 ms-1">Load Only (42 Ch)</small>
-              </button>
-              <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 gt-quick-btn" onclick="cpmSetAmount(399, 30, this, 'load_only')">
-                <span class="fw-bold">₱399</span> <small class="opacity-75 ms-1">Load Only (62 Ch)</small>
-              </button>
-              <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-1 gt-quick-btn" id="cpmBtnBoxAndLoad" onclick="cpmSetAmount(399, 30, this, 'box_and_load')">
+
+            <!-- Hardware & Combos (Shown if Customer has Hardware Installment) -->
+            <div class="d-flex flex-wrap gap-2" id="cpmHardwarePresetsGroup" style="display: none;">
+              <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-1 gt-cpm-btn" id="cpmBtnCombo" onclick="cpmSetPreset(399, 30, this, 'box_and_load')">
                 <span class="fw-bold">₱399</span> <small class="opacity-75 ms-1">Box + Load (250+149)</small>
               </button>
-              <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 gt-quick-btn" onclick="cpmSetAmount(250, 30, this, 'box_installment')">
-                <span class="fw-bold">₱250</span> <small class="opacity-75 ms-1">Box Installment</small>
+              <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 gt-cpm-btn" id="cpmBtnBoxInstallment" onclick="cpmSetPreset(250, 0, this, 'box_installment')">
+                <span class="fw-bold">₱250</span> <small class="opacity-75 ms-1">Box Installment Only</small>
               </button>
-              <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 gt-quick-btn" onclick="cpmSetAmount(3000, 365, this, 'box_cashout')">
-                <span class="fw-bold">₱3,000</span> <small class="opacity-75 ms-1">Cashout</small>
+              <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 gt-cpm-btn" id="cpmBtnCashout" onclick="cpmSetPreset(3000, 0, this, 'box_cashout')">
+                <span class="fw-bold">₱3,000</span> <small class="opacity-75 ms-1">Full Cashout</small>
               </button>
             </div>
-            <div id="cpmPaymentBreakdownHint" class="small text-muted mt-1 fst-italic" style="font-size: 0.76rem; display: none;"></div>
+            <div id="cpmHardwareNote" class="small text-muted mt-1" style="display: none;"></div>
           </div>
+
+          <!-- Live Rollover / Extension Preview Banner -->
+          <div id="cpmExtensionPreview" style="display: none;"></div>
 
           <!-- Amount Input -->
           <div class="mb-3">
@@ -132,7 +140,7 @@
             </div>
           </div>
 
-          <!-- Expiration Date Picker -->
+          <!-- New Expiration Date Picker -->
           <div class="mb-3">
             <div class="d-flex justify-content-between align-items-center mb-1">
               <label class="form-label fw-bold small text-uppercase mb-0" style="letter-spacing: 0.04em;">
@@ -145,10 +153,15 @@
                 <button type="button" class="btn btn-link p-0 small text-decoration-none text-success" onclick="cpmAddDays(60)" style="font-size: 0.78rem;">
                   <i class="fas fa-plus-circle me-1"></i>+60 Days
                 </button>
+                <button type="button" class="btn btn-link p-0 small text-decoration-none text-muted" onclick="cpmResetToCurrent()" style="font-size: 0.78rem;">
+                  <i class="fas fa-undo me-1"></i>Reset
+                </button>
               </div>
             </div>
             <input type="date" name="new_expiration_date" id="cpmExpirationDate" class="form-control" required>
-            <div class="form-text text-muted small">Cignal TV service load extends subscription due date. (Independent third-party TV service — no router activation needed).</div>
+            <div class="form-text text-muted small">
+              Independent TV service. Pure billing and due date tracking (zero MikroTik interaction).
+            </div>
           </div>
 
           <!-- Payment Method & Reference -->
@@ -187,234 +200,4 @@
   </div>
 </div>
 
-<script>
-function cpmSetAmount(amount, days, btn, paymentType) {
-    var amtInput = document.getElementById('cpmAmountInput');
-    if (amtInput) {
-        amtInput.value = amount;
-        amtInput.dispatchEvent(new Event('input'));
-    }
-
-    var typeInput = document.getElementById('cpmPaymentTypeInput');
-    if (typeInput) {
-        typeInput.value = paymentType || 'load_only';
-    }
-
-    var hintEl = document.getElementById('cpmPaymentBreakdownHint');
-    if (hintEl) {
-        if (paymentType === 'box_and_load') {
-            hintEl.style.display = 'block';
-            hintEl.innerHTML = '<i class="fas fa-info-circle text-warning me-1"></i> Breakdown: <strong>₱250</strong> Box Installment + <strong>₱149</strong> Service Load = <strong>₱399 Total</strong>';
-        } else if (paymentType === 'box_installment') {
-            hintEl.style.display = 'block';
-            hintEl.innerHTML = '<i class="fas fa-info-circle text-secondary me-1"></i> Breakdown: <strong>₱250</strong> Box Installment only (Hardware)';
-        } else if (paymentType === 'box_cashout') {
-            hintEl.style.display = 'block';
-            hintEl.innerHTML = '<i class="fas fa-info-circle text-success me-1"></i> Breakdown: <strong>₱3,000</strong> Full Cashout (Hardware Ownership)';
-        } else {
-            hintEl.style.display = 'none';
-            hintEl.innerHTML = '';
-        }
-    }
-
-    // Highlight active preset button
-    document.querySelectorAll('.gt-quick-btn').forEach(function(b) {
-        b.classList.remove('active', 'shadow');
-    });
-    if (btn) {
-        btn.classList.add('active', 'shadow');
-    }
-
-    // Auto-calculate new expiration date (+days from current expiry if active, or from today if expired)
-    var dateInput = document.getElementById('cpmExpirationDate');
-    if (dateInput && days && paymentType !== 'box_installment') {
-        var opt = null;
-        var sel = document.getElementById('cpmSubscriptionSelect');
-        if (sel && sel.options[sel.selectedIndex]) {
-            opt = sel.options[sel.selectedIndex];
-        }
-        var curExpStr = opt ? opt.getAttribute('data-exp') : '';
-        var baseDate = new Date();
-        if (curExpStr) {
-            var parts = curExpStr.split('-');
-            if (parts.length === 3) {
-                var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-                if (!isNaN(d.getTime()) && d >= new Date()) {
-                    baseDate = d;
-                }
-            }
-        }
-        baseDate.setDate(baseDate.getDate() + days);
-        var y = baseDate.getFullYear();
-        var m = String(baseDate.getMonth() + 1).padStart(2, '0');
-        var day = String(baseDate.getDate()).padStart(2, '0');
-        dateInput.value = y + '-' + m + '-' + day;
-    }
-}
-
-function cpmAddDays(days) {
-    var dateInput = document.getElementById('cpmExpirationDate');
-    if (!dateInput) return;
-
-    var baseDate = new Date();
-    if (dateInput.value) {
-        var parts = dateInput.value.split('-');
-        if (parts.length === 3) {
-            var existing = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-            if (!isNaN(existing.getTime()) && existing >= new Date()) {
-                baseDate = existing;
-            }
-        }
-    }
-
-    baseDate.setDate(baseDate.getDate() + days);
-    var y = baseDate.getFullYear();
-    var m = String(baseDate.getMonth() + 1).padStart(2, '0');
-    var d = String(baseDate.getDate()).padStart(2, '0');
-    dateInput.value = y + '-' + m + '-' + d;
-}
-
-function cpmUpdateHardwareDisplay(hw, inst) {
-    hw = hw || 'none';
-    inst = parseInt(inst, 10) || 0;
-
-    var badge = document.getElementById('cpmHardwareBadge');
-    var bar = document.getElementById('cpmInstallmentProgressBar');
-    var fill = document.getElementById('cpmInstallmentProgressFill');
-
-    if (!badge) return;
-
-    if (hw === 'installment') {
-        if (inst < 12) {
-            badge.className = 'badge bg-warning text-dark border border-warning';
-            badge.innerHTML = '<i class="fas fa-clock me-1"></i> Box Installment: Month ' + inst + '/12 (₱250 due)';
-            if (bar && fill) {
-                bar.style.display = 'flex';
-                var pct = Math.min(100, Math.round((inst / 12) * 100));
-                fill.style.width = pct + '%';
-                fill.className = 'progress-bar bg-warning';
-            }
-        } else {
-            badge.className = 'badge bg-success border border-success';
-            badge.innerHTML = '<i class="fas fa-check-circle me-1"></i> Hardware: Fully Paid (12/12 Months)';
-            if (bar && fill) {
-                bar.style.display = 'flex';
-                fill.style.width = '100%';
-                fill.className = 'progress-bar bg-success';
-            }
-        }
-    } else if (hw === 'cashout') {
-        badge.className = 'badge bg-success border border-success';
-        badge.innerHTML = '<i class="fas fa-shield-alt me-1"></i> Hardware: Cashout Paid (₱3,000)';
-        if (bar) bar.style.display = 'none';
-    } else {
-        badge.className = 'badge bg-info-subtle text-info border border-info-subtle';
-        badge.innerHTML = '<i class="fas fa-mobile-alt me-1"></i> App Only / No Box';
-        if (bar) bar.style.display = 'none';
-    }
-}
-
-function cpmOnSubscriptionChange(sel) {
-    if (!sel || !sel.options[sel.selectedIndex]) return;
-    var opt = sel.options[sel.selectedIndex];
-    var exp = opt.getAttribute('data-exp');
-    var hw = opt.getAttribute('data-hw') || 'none';
-    var inst = opt.getAttribute('data-inst') || 0;
-    var dateInput = document.getElementById('cpmExpirationDate');
-    if (dateInput && exp) {
-        dateInput.value = exp;
-    }
-    cpmUpdateHardwareDisplay(hw, inst);
-}
-
-// Global modal opener function for table rows or external buttons
-window.openCignalPaymentModal = function(opts) {
-    opts = opts || {};
-    var modalEl = document.getElementById('cignalPaymentModal');
-    if (!modalEl) return;
-
-    if (opts.customerId) {
-        var custInput = document.getElementById('cpmCustomerId');
-        if (custInput) custInput.value = opts.customerId;
-    }
-    if (opts.customerName) {
-        var nameEl = document.getElementById('cpmCustomerName');
-        if (nameEl) nameEl.innerHTML = '<i class="fas fa-tv me-1"></i> ' + opts.customerName;
-    }
-    if (opts.pppoe) {
-        var pppoeEl = document.getElementById('cpmCustomerPppoe');
-        if (pppoeEl) pppoeEl.innerText = opts.pppoe;
-    }
-    if (opts.amount) {
-        var amtInput = document.getElementById('cpmAmountInput');
-        if (amtInput) amtInput.value = opts.amount;
-    }
-    if (opts.expirationDate) {
-        var expInput = document.getElementById('cpmExpirationDate');
-        if (expInput) expInput.value = opts.expirationDate;
-    } else {
-        cpmAddDays(30);
-    }
-
-    // Reset breakdown hint
-    var hintEl = document.getElementById('cpmPaymentBreakdownHint');
-    if (hintEl) {
-        hintEl.style.display = 'none';
-        hintEl.innerHTML = '';
-    }
-
-    // If subscriptions list provided, dynamically populate
-    var sel = document.getElementById('cpmSubscriptionSelect');
-    if (sel && opts.subscriptions && opts.subscriptions.length > 0) {
-        sel.innerHTML = '';
-        opts.subscriptions.forEach(function(s) {
-            var o = document.createElement('option');
-            o.value = s.id;
-            var accts = [];
-            if (s.cignal_play_no) accts.push('Play: ' + s.cignal_play_no);
-            if (s.cignal_box_no) accts.push('Box: ' + s.cignal_box_no);
-            var numStr = accts.length > 0 ? accts.join(' | ') : (s.account_number || 'No Acct #');
-            o.innerText = (s.account_name || 'Cignal Subscription') + ' (' + numStr + ')' + (s.expiration_date ? ' — Exp: ' + s.expiration_date : '');
-            o.setAttribute('data-exp', s.expiration_date || '');
-            o.setAttribute('data-hw', s.hardware_payment_type || 'none');
-            o.setAttribute('data-inst', s.installments_paid || 0);
-            o.setAttribute('data-load', s.monthly_load_plan || '149');
-            if (opts.subscriptionId && String(opts.subscriptionId) === String(s.id)) {
-                o.selected = true;
-            }
-            sel.appendChild(o);
-        });
-        cpmOnSubscriptionChange(sel);
-    } else if (sel && opts.subscriptionId) {
-        for (var i = 0; i < sel.options.length; i++) {
-            if (sel.options[i].value === String(opts.subscriptionId)) {
-                sel.selectedIndex = i;
-                cpmOnSubscriptionChange(sel);
-                break;
-            }
-        }
-    } else if (sel) {
-        cpmOnSubscriptionChange(sel);
-    }
-
-    if (opts.hardware_payment_type || opts.hardwarePaymentType) {
-        cpmUpdateHardwareDisplay(opts.hardware_payment_type || opts.hardwarePaymentType, opts.installments_paid || opts.installmentsPaid || 0);
-    }
-
-    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-        var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-        modal.show();
-    }
-};
-
-document.addEventListener('DOMContentLoaded', function() {
-    var sel = document.getElementById('cpmSubscriptionSelect');
-    if (sel) {
-        cpmOnSubscriptionChange(sel);
-    }
-    var dateInput = document.getElementById('cpmExpirationDate');
-    if (dateInput && !dateInput.value) {
-        cpmAddDays(30);
-    }
-});
-</script>
+{% include "billing/partials/_cignal_payment_modal_script.html" %}
