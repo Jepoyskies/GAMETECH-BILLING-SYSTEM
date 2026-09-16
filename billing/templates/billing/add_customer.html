@@ -8,6 +8,11 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 {% endif %}
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<style>
+    .ts-dropdown {
+        z-index: 9999 !important;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -402,19 +407,34 @@
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
+        // Upgrade dropdowns to smart search with TomSelect
         document.querySelectorAll('select.plan-form-control').forEach((el)=>{
             try {
                 if (!el.tomselect) {
                     const hasOptgroups = el.querySelectorAll('optgroup').length > 0;
+                    const isStatus = el.name === 'status' || el.id === 'customer_status_select';
                     new TomSelect(el, {
                         create: false,
-                        controlInput: null,
-                        sortField: hasOptgroups ? undefined : { field: "text", direction: "asc" }
+                        sortField: (hasOptgroups || isStatus) ? undefined : { field: "text", direction: "asc" }
                     });
                 }
             } catch(err) {
                 console.warn("TomSelect fallback on", el.name, err);
             }
+        });
+
+        // Auto-capitalize text inputs (Full Address, Full Name, Barangay) to Title Case on blur
+        function toTitleCase(str) {
+            if (!str) return '';
+            return str.toLowerCase().replace(/\b\w/g, s => s.toUpperCase());
+        }
+
+        document.querySelectorAll('input[name="address"], input[name="full_name"], input[name="barangay_name"]').forEach(input => {
+            input.addEventListener('blur', function() {
+                if (this.value) {
+                    this.value = toTitleCase(this.value.trim());
+                }
+            });
         });
     });
 </script>
@@ -441,6 +461,7 @@
                 if (expCol) expCol.style.display = 'block';
                 if (statusSelect && statusSelect.value === 'pending') {
                     statusSelect.value = 'active';
+                    if (statusSelect.tomselect) statusSelect.tomselect.setValue('active');
                 }
             } else if (radPending && radPending.checked) {
                 cardPending.style.background = 'rgba(14, 165, 233, 0.08)';
@@ -453,6 +474,7 @@
                 if (expInput) expInput.value = '';
                 if (statusSelect) {
                     statusSelect.value = 'pending';
+                    if (statusSelect.tomselect) statusSelect.tomselect.setValue('pending');
                 }
             }
         }
