@@ -426,7 +426,8 @@ def dispatch_monitoring_view(request):
         form = DispatchRecordForm(initial={'date': timezone.now().date()})
     
     records = DispatchRecord.objects.all().order_by('-date')
-    return render(request, 'dispatch/dispatch_monitoring.html', {'records': records, 'form': form})
+    job_tickets = JobTicket.objects.all().select_related('customer', 'team').prefetch_related('technicians').order_by('-created_at')
+    return render(request, 'dispatch/dispatch_monitoring.html', {'records': records, 'job_tickets': job_tickets, 'form': form})
 
 
 def _handle_monitoring_view(request, tab_type, template_name):
@@ -447,7 +448,13 @@ def _handle_monitoring_view(request, tab_type, template_name):
         form = MonitoringRecordForm(initial={'tab_type': tab_type, 'date': timezone.now().date()})
     
     records = MonitoringRecord.objects.filter(tab_type=tab_type).order_by('-date')
-    return render(request, template_name, {'records': records, 'form': form})
+    job_tickets = JobTicket.objects.filter(source_tab=tab_type).select_related('customer', 'team').prefetch_related('technicians').order_by('-created_at')
+    return render(request, template_name, {
+        'records': records,
+        'job_tickets': job_tickets,
+        'form': form,
+        'tab_type': tab_type
+    })
 
 
 @login_required
@@ -478,6 +485,16 @@ def complete_job_view(request, record_id):
             if done_option:
                 record.status_option = done_option
                 record.save()
+                
+            # Smart CRM promotion hook
+            if record.customer and record.tab_type == 'INTERNET_INSTALL':
+                cust = record.customer
+                cust.installation_status = 'installed'
+                cust.status = 'active'
+                if job_detail.ont_modem_sn and not cust.mac_address:
+                    cust.mac_address = job_detail.ont_modem_sn
+                cust.save(update_fields=['installation_status', 'status', 'mac_address'])
+                
             log_audit('UPDATE', 'JobDetail', job_detail.id, request.user, summary=f"Completed Job for {record.client_name}")
             messages.success(request, 'Job details saved and marked as Done.')
             if record.tab_type == 'INTERNET_INSTALL':
