@@ -630,3 +630,32 @@ def submit_ticket(request):
         
     return render(request, 'customer_portal/submit_ticket.html', {'customer': customer})
 
+
+def portal_speedtest(request):
+    """
+    Renders the Speedtest page in the Customer Portal for subscribers to test their internet speed.
+    """
+    customer_id = request.session.get('customer_id')
+    if not customer_id:
+        return redirect('customer_portal:portal_login')
+        
+    try:
+        customer = Customer.objects.select_related('plan').get(id=customer_id)
+    except Customer.DoesNotExist:
+        request.session.flush()
+        return redirect('customer_portal:portal_login')
+
+    client_ip = request.META.get('HTTP_X_FORWARDED_FOR')
+    if client_ip:
+        client_ip = client_ip.split(',')[0].strip()
+    else:
+        client_ip = request.META.get('REMOTE_ADDR', '')
+
+    context = {
+        'customer': customer,
+        'client_ip': client_ip,
+        'page_title': 'Internet Speed Test',
+    }
+    return render(request, 'customer_portal/speedtest.html', context)
+
+

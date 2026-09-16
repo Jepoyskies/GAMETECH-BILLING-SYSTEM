@@ -14,5 +14,6 @@ urlpatterns = [
     path('api/router-uplink/', views.portal_router_uplink_api, name='portal_router_uplink_api'),
     path('api/apply-addon/', views.portal_apply_addon, name='portal_apply_addon'),
     path('submit-ticket/', views.submit_ticket, name='submit_ticket'),
+    path('speedtest/', views.portal_speedtest, name='portal_speedtest'),
     path('logout/', views.portal_logout, name='portal_logout'),
 ]
