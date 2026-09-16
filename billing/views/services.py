@@ -530,7 +530,7 @@ def apply_cignal_addon(request):
             client_name=customer.full_name,
             address=customer.address or '',
             barangay=customer.barangay.name if customer.barangay else '',
-            contact_number=customer.contact_number or '',
+            contact_number=customer.phone or '',
             account_no=customer.pppoe_username or '',
             plan_package=f"{hw_info} | Load: ₱{monthly_load_plan}/mo",
             concern=f"Cignal Play Activation\n{acct_nos_str}",
