@@ -316,7 +316,7 @@ class Customer(models.Model):
         now = timezone.now()
         start_date = self.installed_at or self.created_at or now
         days_active = (now - start_date).days
-        payments_count = self.payments.count()
+        payments_count = self.payments.count() if self.pk else 0
 
         if self.is_walkin_or_direct:
             # Walk-in / Direct: unlocked after first payment or after first month (>= 30 days)
