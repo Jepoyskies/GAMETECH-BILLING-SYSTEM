@@ -398,10 +398,16 @@ def apply_cignal_addon(request):
     if request.method == "POST":
         request_id = request.POST.get("request_id")
         customer_id = request.POST.get("customer_id")
-        cignalplay_no = request.POST.get("cignalplay_no", "").strip()
+        cignal_play_no = (
+            request.POST.get("cignal_play_no", "").strip()
+            or request.POST.get("cignalplay_no", "").strip()
+        )
+        cignal_box_no = (
+            request.POST.get("cignal_box_no", "").strip()
+            or request.POST.get("cignalbox_no", "").strip()
+        )
         cignalplay_date_raw = request.POST.get("cignalplay_date")
         expiration_date_raw = request.POST.get("expiration_date") or request.POST.get("new_expiration_date")
-        addon_type = request.POST.get("addon_type")
         account_name = (
             request.POST.get("account_name", "").strip()
             or request.POST.get("label", "").strip()
@@ -409,6 +415,11 @@ def apply_cignal_addon(request):
         payment_method = request.POST.get("payment_method", "Cash").strip()
         reference_no = request.POST.get("reference_no", "").strip()
         notes = request.POST.get("notes", "").strip() or request.POST.get("remarks", "").strip()
+
+        # Validate at least one account number is present
+        if not cignal_play_no and not cignal_box_no:
+            messages.error(request, "Please provide at least one Cignal account number (Play No. or Box No.).")
+            return redirect(request.META.get("HTTP_REFERER", "cignal_dashboard"))
 
         # Parse initial payment amount
         initial_amount_raw = request.POST.get("initial_amount") or request.POST.get("amount") or "0"
@@ -461,25 +472,32 @@ def apply_cignal_addon(request):
                 pending_req.save()
 
         # Update customer profile summary fields
-        is_box = "box" in (addon_type or "").lower()
-        if is_box:
-            customer.cignalbox_no = cignalplay_no
-            customer.cignalbox_date = activation_dt
-            customer.cignalbox_adjustedby = request.user.username
-        else:
-            customer.cignalplay_no = cignalplay_no
+        if cignal_play_no:
+            customer.cignalplay_no = cignal_play_no
             customer.cignalplay_date = activation_dt
             customer.cignalplay_adjustedby = request.user.username
+        if cignal_box_no:
+            customer.cignalbox_no = cignal_box_no
+            customer.cignalbox_date = activation_dt
+            customer.cignalbox_adjustedby = request.user.username
         customer.save()
 
-        # Create CignalPlay subscription record (One-to-Many)
-        sub_name = account_name or f"{'Cignal Box' if is_box else 'Cignal Play'} - {cignalplay_no}"
+        # Format account numbers summary
+        account_nos = []
+        if cignal_play_no:
+            account_nos.append(f"Play: {cignal_play_no}")
+        if cignal_box_no:
+            account_nos.append(f"Box: {cignal_box_no}")
+        acct_summary = " | ".join(account_nos)
+        sub_name = account_name or f"Cignal - {acct_summary}"
+
+        # Create CignalPlay subscription record (Unified)
         subscription = CignalPlay.objects.create(
             customer=customer,
-            plan_name=addon_type or ("Cignal Box Add-on" if is_box else "Cignal Play Add-on"),
-            addon_type="Cignal Box" if is_box else "Cignal Play",
+            plan_name="Cignal Subscription",
             account_name=sub_name,
-            account_number=cignalplay_no,
+            cignal_play_no=cignal_play_no,
+            cignal_box_no=cignal_box_no,
             start_date=activation_dt,
             expiration_date=expiration_dt,
             end_date=expiration_dt,
@@ -489,15 +507,15 @@ def apply_cignal_addon(request):
 
         # Crucial: Automatically generate a Payment record for the Initial Payment Amount
         if initial_amount > 0:
-            acct_desc = subscription.account_name or subscription.account_number or "Cignal Subscription"
-            reason_text = f"Cignal Activation: {acct_desc} ({subscription.account_number})"
+            acct_desc = subscription.account_name or acct_summary
+            reason_text = f"Cignal Activation: {acct_desc}"
             if notes:
                 reason_text += f" | {notes}"
 
             Payment.objects.create(
                 customer=customer,
                 username=customer.pppoe_username or customer.full_name,
-                plan_name=f"{subscription.addon_type} ({subscription.plan_name})",
+                plan_name="Cignal Subscription",
                 amount=initial_amount,
                 payment_method=payment_method or "Cash",
                 reference_no=reference_no or f"ACT-{customer.id}-{subscription.id}",
@@ -513,19 +531,19 @@ def apply_cignal_addon(request):
                 admin_user=request.user,
                 customer=customer,
                 action_type="Cignal Activation Payment",
-                remarks=f"Initial Payment: ₱{initial_amount:,.2f} | Ref: {reference_no or 'N/A'}{audit_notes} | Due Date: {expiration_dt.strftime('%Y-%m-%d')} | Acct: {cignalplay_no}",
+                remarks=f"Initial Payment: ₱{initial_amount:,.2f} | Ref: {reference_no or 'N/A'}{audit_notes} | Due Date: {expiration_dt.strftime('%Y-%m-%d')} | Accounts: {acct_summary}",
             )
 
         # Notification
         pay_info = f" with initial payment ₱{initial_amount:,.2f}" if initial_amount > 0 else ""
         Notification.objects.create(
-            title="Cignal Add-on Activated",
-            message=f"{customer.full_name} activated {subscription.addon_type} ({sub_name}){pay_info} by {request.user.username}. Due: {expiration_dt.strftime('%b %d, %Y')}.",
+            title="Cignal Subscription Activated",
+            message=f"{customer.full_name} activated Cignal Subscription ({sub_name}){pay_info} by {request.user.username}. Due: {expiration_dt.strftime('%b %d, %Y')}.",
             notification_type="cignal",
             link=f"/customer/{customer.id}/cignal-logs/",
         )
 
-        success_msg = f"Cignal {subscription.addon_type} activated successfully for {customer.full_name}!"
+        success_msg = f"Cignal Subscription activated successfully for {customer.full_name} ({acct_summary})!"
         if initial_amount > 0:
             success_msg += f" Initial payment of ₱{initial_amount:,.2f} recorded (Due: {expiration_dt.strftime('%b %d, %Y')})."
         messages.success(request, success_msg)

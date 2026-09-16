@@ -105,14 +105,18 @@ def process_cignal_payment(request):
             customer = get_object_or_404(Customer, pk=customer_id)
             subscription = CignalPlay.objects.select_for_update().filter(customer=customer).first()
             if not subscription:
-                acct_num = customer.cignalplay_no or customer.cignalbox_no or "CIGNAL-001"
-                is_box = bool(customer.cignalbox_no)
+                acct_parts = []
+                if customer.cignalplay_no:
+                    acct_parts.append(f"Play: {customer.cignalplay_no}")
+                if customer.cignalbox_no:
+                    acct_parts.append(f"Box: {customer.cignalbox_no}")
+                acct_str = " | ".join(acct_parts) if acct_parts else "CIGNAL-001"
                 subscription = CignalPlay.objects.create(
                     customer=customer,
-                    plan_name="Cignal Box" if is_box else "Cignal Play",
-                    addon_type="Cignal Box" if is_box else "Cignal Play",
-                    account_name=f"{'Cignal Box' if is_box else 'Cignal Play'} - {acct_num}",
-                    account_number=acct_num,
+                    plan_name="Cignal Subscription",
+                    account_name=f"Cignal - {acct_str}",
+                    cignal_play_no=customer.cignalplay_no or "",
+                    cignal_box_no=customer.cignalbox_no or "",
                     adjusted_by=request.user.username,
                 )
         else:
@@ -148,7 +152,7 @@ def process_cignal_payment(request):
         Payment.objects.create(
             customer=customer,
             username=customer.pppoe_username or customer.full_name,
-            plan_name=f"{subscription.addon_type or 'Cignal'} ({subscription.plan_name})",
+            plan_name="Cignal Subscription",
             amount=amount,
             payment_method=payment_method,
             reference_no=reference_no,

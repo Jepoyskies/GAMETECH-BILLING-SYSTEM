@@ -8,7 +8,7 @@
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form action="{% url 'apply_cignal_addon' %}" method="post">
+      <form action="{% url 'apply_cignal_addon' %}" method="post" onsubmit="return validateCignalSubmission_{{ modal_suffix|default:'single' }}(this);">
         {% csrf_token %}
         <input type="hidden" name="customer_id" value="{% if target_customer %}{{ target_customer.id }}{% elif customer %}{{ customer.id }}{% endif %}">
         {% if target_request %}
@@ -35,37 +35,38 @@
             </div>
           </div>
 
-          <!-- SECTION 1: Device Details -->
+          <!-- SECTION 1: Device / Account Details -->
           <div class="p-3 mb-3 border rounded-3 border-secondary border-opacity-25 bg-dark bg-opacity-25">
             <div class="d-flex align-items-center gap-2 mb-3 pb-1 border-bottom border-secondary border-opacity-25">
-              <i class="fas fa-tv text-primary"></i>
-              <h6 class="text-uppercase small fw-bold mb-0 text-muted" style="letter-spacing: 0.05em;">Section 1: Device Details</h6>
+              <i class="fas fa-satellite-dish text-primary"></i>
+              <h6 class="text-uppercase small fw-bold mb-0 text-muted" style="letter-spacing: 0.05em;">Section 1: Subscription Accounts</h6>
             </div>
 
-            <!-- Add-on Type Selector -->
-            <div class="mb-3">
-              <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">Add-on Type <span class="text-danger">*</span></label>
-              <select name="addon_type" id="modalAddonType_{{ modal_suffix|default:'single' }}" class="form-select" required onchange="updateCignalModalFields_{{ modal_suffix|default:'single' }}(this.value)">
-                <option value="Cignal Box Add-on" {% if target_request and 'Box' in target_request.addon_type %}selected{% elif not target_request %}selected{% endif %}>Cignal Box Add-on (Hardware STB)</option>
-                <option value="Cignal Play Add-on" {% if target_request and 'Play' in target_request.addon_type %}selected{% endif %}>Cignal Play Add-on (Streaming App)</option>
-              </select>
-            </div>
-
-            <!-- Account / Serial Number -->
-            <div class="mb-3">
-              <label class="form-label fw-bold small text-uppercase" id="cignalAccountLabel_{{ modal_suffix|default:'single' }}" style="letter-spacing: 0.04em;">
-                {% if target_request and 'Play' in target_request.addon_type %}Cignal Play No. (Account Number){% else %}Cignal Box No. (Serial / Account Number){% endif %} <span class="text-danger">*</span>
-              </label>
-              <input type="text" class="form-control font-monospace fw-bold" name="cignalplay_no" id="modalCignalNo_{{ modal_suffix|default:'single' }}" value="{% if target_request and 'Play' in target_request.addon_type %}{% if target_customer %}{{ target_customer.cignalplay_no|default:'' }}{% elif customer %}{{ customer.cignalplay_no|default:'' }}{% endif %}{% else %}{% if target_customer %}{{ target_customer.cignalbox_no|default:'' }}{% elif customer %}{{ customer.cignalbox_no|default:'' }}{% endif %}{% endif %}" placeholder="e.g. BOX-8892341 or 1002345678" required autofocus>
-              <div class="form-text text-muted small" id="cignalHint_{{ modal_suffix|default:'single' }}">
-                {% if target_request and 'Play' in target_request.addon_type %}Enter the official Cignal Play subscriber account number.{% else %}Enter the physical Cignal Box serial number or hardware account code.{% endif %}
+            <!-- Two Inputs: Cignal Play No & Cignal Box No -->
+            <div class="row g-2 mb-2">
+              <div class="col-md-6">
+                <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
+                  <i class="fas fa-play-circle text-info me-1"></i> Cignal Play No.
+                </label>
+                <input type="text" class="form-control font-monospace fw-bold" name="cignal_play_no" id="modalCignalPlayNo_{{ modal_suffix|default:'single' }}" value="{% if target_customer %}{{ target_customer.cignalplay_no|default:'' }}{% elif customer %}{{ customer.cignalplay_no|default:'' }}{% endif %}" placeholder="e.g. 1002345678">
+                <div class="form-text text-muted small">Website / Mobile App account.</div>
               </div>
+              <div class="col-md-6">
+                <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
+                  <i class="fas fa-tv text-warning me-1"></i> Cignal Box No.
+                </label>
+                <input type="text" class="form-control font-monospace fw-bold" name="cignal_box_no" id="modalCignalBoxNo_{{ modal_suffix|default:'single' }}" value="{% if target_customer %}{{ target_customer.cignalbox_no|default:'' }}{% elif customer %}{{ customer.cignalbox_no|default:'' }}{% endif %}" placeholder="e.g. BOX-8892341">
+                <div class="form-text text-muted small">Physical STB serial / code.</div>
+              </div>
+            </div>
+            <div class="text-muted small mb-3 fst-italic" style="font-size: 0.76rem;">
+              <i class="fas fa-info-circle text-info me-1"></i> Both can belong to this same subscription. Provide at least one.
             </div>
 
             <!-- Device / Subscription Label -->
             <div class="mb-1">
-              <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">Device / Subscription Label <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" name="account_name" id="modalAccountName_{{ modal_suffix|default:'single' }}" placeholder="e.g. Living Room TV, Master Bedroom, 2nd Floor" value="{% if target_request and 'Box' in target_request.addon_type %}Living Room TV Box{% elif target_request %}Cignal Play TV{% else %}Living Room TV Box{% endif %}" required>
+              <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">Subscription / Device Label <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="account_name" id="modalAccountName_{{ modal_suffix|default:'single' }}" placeholder="e.g. Living Room TV, Master Bedroom, 2nd Floor" value="{% if target_customer %}{{ target_customer.full_name }} Cignal{% elif customer %}{{ customer.full_name }} Cignal{% else %}Cignal Subscription{% endif %}" required>
               <div class="form-text text-muted small">A friendly label to distinguish multiple boxes or subscriptions for this customer.</div>
             </div>
           </div>
@@ -102,7 +103,7 @@
               </div>
               <div class="input-group">
                 <span class="input-group-text fw-bold">₱</span>
-                <input type="number" step="0.01" min="0" class="form-control fw-bold" name="initial_amount" id="modalInitialAmount_{{ modal_suffix|default:'single' }}" placeholder="0.00" value="{% if target_request and 'Play' in target_request.addon_type %}149.00{% else %}399.00{% endif %}" required>
+                <input type="number" step="0.01" min="0" class="form-control fw-bold" name="initial_amount" id="modalInitialAmount_{{ modal_suffix|default:'single' }}" placeholder="0.00" value="399.00" required>
                 <select name="payment_method" class="form-select" style="max-width: 140px;">
                   <option value="Cash" selected>Cash</option>
                   <option value="GCash">GCash</option>
@@ -117,15 +118,13 @@
                 <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
                   <i class="fas fa-barcode text-muted me-1"></i> Reference No.
                 </label>
-                <input type="text" class="form-control font-monospace" name="reference_no" id="modalRefNo_{{ modal_suffix|default:'single' }}" placeholder="e.g. GC-992381 or load ref">
-                <div class="form-text text-muted" style="font-size: 0.72rem;">GCash or 3rd-party load transaction #.</div>
+                <input type="text" class="form-control" name="reference_no" id="modalReferenceNo_{{ modal_suffix|default:'single' }}" placeholder="e.g. OR-889123 / GCash Ref">
               </div>
               <div class="col-md-6 mb-2">
                 <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
-                  <i class="fas fa-sticky-note text-muted me-1"></i> Remarks / Notes
+                  <i class="fas fa-comment-alt text-muted me-1"></i> Remarks / Notes
                 </label>
-                <input type="text" class="form-control" name="notes" id="modalNotes_{{ modal_suffix|default:'single' }}" placeholder="e.g. Free promo load, box installed">
-                <div class="form-text text-muted" style="font-size: 0.72rem;">Optional audit note for this activation.</div>
+                <input type="text" class="form-control" name="notes" id="modalNotes_{{ modal_suffix|default:'single' }}" placeholder="e.g. Initial hardware cashout / reload">
               </div>
             </div>
             <div class="form-text text-muted small">An official payment transaction will be recorded automatically upon activation.</div>
@@ -138,12 +137,14 @@
               <h6 class="text-uppercase small fw-bold mb-0 text-muted" style="letter-spacing: 0.05em;">Section 3: Timeline & Dates</h6>
             </div>
 
+            <!-- Dates Row: Activation Date & First Due Date -->
             <div class="row g-2">
-              <!-- Activation Date -->
               <div class="col-md-6 mb-2">
-                <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">Activation Date <span class="text-danger">*</span></label>
-                <input type="date" class="form-control fw-semibold" name="cignalplay_date" id="modalCignalDate_{{ modal_suffix|default:'single' }}" value="{% now 'Y-m-d' %}" required>
-                <div class="form-text text-muted" style="font-size: 0.72rem;">Defaults to today's date.</div>
+                <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
+                  Activation Date <span class="text-danger">*</span>
+                </label>
+                <input type="date" class="form-control fw-semibold" name="cignalplay_date" id="modalCignalDate_{{ modal_suffix|default:'single' }}" required>
+                <div class="form-text text-muted" style="font-size: 0.72rem;">Official start date of this subscription.</div>
               </div>
 
               <!-- First Due Date / Expiration Date -->
@@ -169,26 +170,17 @@
           </div>
 
           <script>
-          function updateCignalModalFields_{{ modal_suffix|default:'single' }}(val) {
-              var label = document.getElementById('cignalAccountLabel_{{ modal_suffix|default:'single' }}');
-              var input = document.getElementById('modalCignalNo_{{ modal_suffix|default:'single' }}');
-              var hint = document.getElementById('cignalHint_{{ modal_suffix|default:'single' }}');
-              var nameInput = document.getElementById('modalAccountName_{{ modal_suffix|default:'single' }}');
-              var amtInput = document.getElementById('modalInitialAmount_{{ modal_suffix|default:'single' }}');
-              if (!label || !input) return;
-              if (val.indexOf('Box') !== -1) {
-                  label.innerText = 'Cignal Box No. (Serial / Account Number) *';
-                  input.placeholder = 'e.g. BOX-8892341';
-                  if (hint) hint.innerText = 'Enter the physical Cignal Box serial number or hardware account code.';
-                  if (nameInput && (!nameInput.value || nameInput.value === 'Cignal Play TV')) nameInput.value = 'Living Room TV Box';
-                  if (amtInput && (!amtInput.value || amtInput.value === '149.00')) amtInput.value = '399.00';
-              } else {
-                  label.innerText = 'Cignal Play No. (Account Number) *';
-                  input.placeholder = 'e.g. 1002345678';
-                  if (hint) hint.innerText = 'Enter the official Cignal Play subscriber account number.';
-                  if (nameInput && (!nameInput.value || nameInput.value === 'Living Room TV Box')) nameInput.value = 'Cignal Play TV';
-                  if (amtInput && (!amtInput.value || amtInput.value === '399.00')) amtInput.value = '149.00';
+          function validateCignalSubmission_{{ modal_suffix|default:'single' }}(form) {
+              var play = form.querySelector('[name="cignal_play_no"]');
+              var box = form.querySelector('[name="cignal_box_no"]');
+              var playVal = play ? play.value.trim() : '';
+              var boxVal = box ? box.value.trim() : '';
+              if (!playVal && !boxVal) {
+                  alert('Please enter at least one account number: Cignal Play No. (Website/App) or Cignal Box No. (Physical Box).');
+                  if (play) play.focus();
+                  return false;
               }
+              return true;
           }
 
           function setActivationPreset_{{ modal_suffix|default:'single' }}(amount, days) {

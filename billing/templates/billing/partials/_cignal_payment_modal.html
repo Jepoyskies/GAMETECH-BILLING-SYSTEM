@@ -37,10 +37,10 @@
                 {% for sub in target_customer.cignal_plans.all %}
                   <option value="{{ sub.id }}" 
                           data-exp="{% if sub.expiration_date %}{{ sub.expiration_date|date:'Y-m-d' }}{% elif sub.end_date %}{{ sub.end_date|date:'Y-m-d' }}{% endif %}"
-                          data-acct="{{ sub.account_number|default:'' }}"
+                          data-acct="{% if sub.cignal_play_no %}Play: {{ sub.cignal_play_no }}{% endif %}{% if sub.cignal_box_no %} Box: {{ sub.cignal_box_no }}{% endif %}"
                           data-name="{{ sub.account_name|default:'' }}"
                           data-amount="{{ sub.amount_paid|default:0 }}">
-                    {{ sub.addon_type|default:"Cignal" }}: {{ sub.account_name|default:sub.plan_name }} ({{ sub.account_number|default:"No Acct #" }})
+                    {{ sub.account_name|default:"Cignal Subscription" }} ({% if sub.cignal_play_no %}Play: {{ sub.cignal_play_no }}{% endif %}{% if sub.cignal_play_no and sub.cignal_box_no %} | {% endif %}{% if sub.cignal_box_no %}Box: {{ sub.cignal_box_no }}{% endif %}{% if not sub.cignal_play_no and not sub.cignal_box_no %}No Acct #{% endif %})
                     {% if sub.expiration_date or sub.end_date %}
                       — Exp: {{ sub.expiration_date|default:sub.end_date|date:"M d, Y" }}
                     {% endif %}
@@ -50,34 +50,22 @@
                 {% for sub in customer.cignal_plans.all %}
                   <option value="{{ sub.id }}" 
                           data-exp="{% if sub.expiration_date %}{{ sub.expiration_date|date:'Y-m-d' }}{% elif sub.end_date %}{{ sub.end_date|date:'Y-m-d' }}{% endif %}"
-                          data-acct="{{ sub.account_number|default:'' }}"
+                          data-acct="{% if sub.cignal_play_no %}Play: {{ sub.cignal_play_no }}{% endif %}{% if sub.cignal_box_no %} Box: {{ sub.cignal_box_no }}{% endif %}"
                           data-name="{{ sub.account_name|default:'' }}"
                           data-amount="{{ sub.amount_paid|default:0 }}">
-                    {{ sub.addon_type|default:"Cignal" }}: {{ sub.account_name|default:sub.plan_name }} ({{ sub.account_number|default:"No Acct #" }})
+                    {{ sub.account_name|default:"Cignal Subscription" }} ({% if sub.cignal_play_no %}Play: {{ sub.cignal_play_no }}{% endif %}{% if sub.cignal_play_no and sub.cignal_box_no %} | {% endif %}{% if sub.cignal_box_no %}Box: {{ sub.cignal_box_no }}{% endif %}{% if not sub.cignal_play_no and not sub.cignal_box_no %}No Acct #{% endif %})
                     {% if sub.expiration_date or sub.end_date %}
                       — Exp: {{ sub.expiration_date|default:sub.end_date|date:"M d, Y" }}
                     {% endif %}
                   </option>
                 {% endfor %}
               {% elif target_customer %}
-                <option value="" data-exp="" data-acct="{{ target_customer.cignalplay_no|default:target_customer.cignalbox_no|default:'' }}">
-                  {% if target_customer.cignalplay_no %}
-                    Cignal Play ({{ target_customer.cignalplay_no }})
-                  {% elif target_customer.cignalbox_no %}
-                    Cignal Box ({{ target_customer.cignalbox_no }})
-                  {% else %}
-                    Default Cignal Account
-                  {% endif %}
+                <option value="" data-exp="" data-acct="{% if target_customer.cignalplay_no %}Play: {{ target_customer.cignalplay_no }}{% endif %}{% if target_customer.cignalbox_no %} Box: {{ target_customer.cignalbox_no }}{% endif %}">
+                  Cignal Subscription ({% if target_customer.cignalplay_no %}Play: {{ target_customer.cignalplay_no }}{% endif %}{% if target_customer.cignalplay_no and target_customer.cignalbox_no %} | {% endif %}{% if target_customer.cignalbox_no %}Box: {{ target_customer.cignalbox_no }}{% endif %}{% if not target_customer.cignalplay_no and not target_customer.cignalbox_no %}Default{% endif %})
                 </option>
               {% elif customer %}
-                <option value="" data-exp="" data-acct="{{ customer.cignalplay_no|default:customer.cignalbox_no|default:'' }}">
-                  {% if customer.cignalplay_no %}
-                    Cignal Play ({{ customer.cignalplay_no }})
-                  {% elif customer.cignalbox_no %}
-                    Cignal Box ({{ customer.cignalbox_no }})
-                  {% else %}
-                    Default Cignal Account
-                  {% endif %}
+                <option value="" data-exp="" data-acct="{% if customer.cignalplay_no %}Play: {{ customer.cignalplay_no }}{% endif %}{% if customer.cignalbox_no %} Box: {{ customer.cignalbox_no }}{% endif %}">
+                  Cignal Subscription ({% if customer.cignalplay_no %}Play: {{ customer.cignalplay_no }}{% endif %}{% if customer.cignalplay_no and customer.cignalbox_no %} | {% endif %}{% if customer.cignalbox_no %}Box: {{ customer.cignalbox_no }}{% endif %}{% if not customer.cignalplay_no and not customer.cignalbox_no %}Default{% endif %})
                 </option>
               {% else %}
                 <option value="">Default Cignal Subscription</option>
@@ -267,7 +255,11 @@ window.openCignalPaymentModal = function(opts) {
         opts.subscriptions.forEach(function(s) {
             var o = document.createElement('option');
             o.value = s.id;
-            o.innerText = (s.addon_type || 'Cignal') + ': ' + (s.account_name || s.plan_name || 'Account') + ' (' + (s.account_number || 'N/A') + ')' + (s.expiration_date ? ' — Exp: ' + s.expiration_date : '');
+            var accts = [];
+            if (s.cignal_play_no) accts.push('Play: ' + s.cignal_play_no);
+            if (s.cignal_box_no) accts.push('Box: ' + s.cignal_box_no);
+            var numStr = accts.length > 0 ? accts.join(' | ') : (s.account_number || 'No Acct #');
+            o.innerText = (s.account_name || 'Cignal Subscription') + ' (' + numStr + ')' + (s.expiration_date ? ' — Exp: ' + s.expiration_date : '');
             o.setAttribute('data-exp', s.expiration_date || '');
             if (opts.subscriptionId && String(opts.subscriptionId) === String(s.id)) {
                 o.selected = true;

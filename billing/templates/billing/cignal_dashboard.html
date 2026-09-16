@@ -88,7 +88,7 @@
                   <tr>
                     <th>Requested At</th>
                     <th>Customer</th>
-                    <th>Type</th>
+                    <th>Application</th>
                     <th>Status</th>
                     <th class="text-end">Action</th>
                   </tr>
@@ -144,7 +144,8 @@
                 <thead>
                   <tr>
                     <th>Customer</th>
-                    <th>Account Name / Device</th>
+                    <th>Account Name</th>
+                    <th>Play & Box Numbers</th>
                     <th>Expiration Date</th>
                     <th class="text-end">Action</th>
                   </tr>
@@ -158,13 +159,20 @@
                       </a>
                     </td>
                     <td>
-                      <span class="badge {% if 'Box' in item.addon_type %}bg-warning-subtle text-warning{% else %}bg-info-subtle text-info{% endif %} me-1" style="font-size:0.65rem;">
-                        {{ item.addon_type|default:"Cignal" }}
-                      </span>
-                      <strong class="text-light">{{ item.account_name|default:item.label }}</strong>
-                      {% if item.account_number %}
-                        <small class="text-muted d-block font-monospace" style="font-size:0.75rem;">{{ item.account_number }}</small>
-                      {% endif %}
+                      <strong class="text-light">{{ item.account_name|default:"Cignal Subscription" }}</strong>
+                    </td>
+                    <td>
+                      <div>
+                        {% if item.cignal_play_no %}
+                          <div><span class="badge bg-info-subtle text-info me-1" style="font-size:0.65rem;">PLAY</span><span class="font-monospace fw-bold text-info" style="font-size:0.75rem;">{{ item.cignal_play_no }}</span></div>
+                        {% endif %}
+                        {% if item.cignal_box_no %}
+                          <div class="{% if item.cignal_play_no %}mt-1{% endif %}"><span class="badge bg-warning-subtle text-warning me-1" style="font-size:0.65rem;">BOX</span><span class="font-monospace fw-bold text-warning" style="font-size:0.75rem;">{{ item.cignal_box_no }}</span></div>
+                        {% endif %}
+                        {% if not item.cignal_play_no and not item.cignal_box_no %}
+                          <small class="text-muted">—</small>
+                        {% endif %}
+                      </div>
                     </td>
                     <td>
                       <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1" style="font-size:0.75rem;">
@@ -173,14 +181,14 @@
                       </span>
                     </td>
                     <td class="text-end">
-                      <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-2 py-0" style="font-size: 0.75rem;" onclick="openCignalPaymentModal({customerId: '{{ item.customer.id }}', customerName: '{{ item.customer.full_name|escapejs }}', pppoe: '{{ item.customer.pppoe_username|escapejs }}', subscriptionId: '{{ item.id }}', expirationDate: '{% if item.expiration_date %}{{ item.expiration_date|date:'Y-m-d' }}{% elif item.end_date %}{{ item.end_date|date:'Y-m-d' }}{% endif %}', subscriptions: [{id: '{{ item.id }}', addon_type: '{{ item.addon_type|escapejs }}', account_name: '{{ item.account_name|escapejs }}', account_number: '{{ item.account_number|escapejs }}', expiration_date: '{% if item.expiration_date %}{{ item.expiration_date|date:'Y-m-d' }}{% elif item.end_date %}{{ item.end_date|date:'Y-m-d' }}{% endif %}'}]})">
+                      <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-2 py-0" style="font-size: 0.75rem;" onclick="openCignalPaymentModal({customerId: '{{ item.customer.id }}', customerName: '{{ item.customer.full_name|escapejs }}', pppoe: '{{ item.customer.pppoe_username|escapejs }}', subscriptionId: '{{ item.id }}', expirationDate: '{% if item.expiration_date %}{{ item.expiration_date|date:'Y-m-d' }}{% elif item.end_date %}{{ item.end_date|date:'Y-m-d' }}{% endif %}', subscriptions: [{id: '{{ item.id }}', cignal_play_no: '{{ item.cignal_play_no|escapejs }}', cignal_box_no: '{{ item.cignal_box_no|escapejs }}', account_name: '{{ item.account_name|escapejs }}', expiration_date: '{% if item.expiration_date %}{{ item.expiration_date|date:'Y-m-d' }}{% elif item.end_date %}{{ item.end_date|date:'Y-m-d' }}{% endif %}'}]})">
                         <i class="fas fa-coins me-1"></i> Reload
                       </button>
                     </td>
                   </tr>
                   {% empty %}
                   <tr>
-                    <td colspan="4">
+                    <td colspan="5">
                       <div class="cignal-empty-state py-3">
                         <div class="cignal-empty-icon mb-1"><i class="fas fa-shield-alt text-success" style="opacity: 0.85; font-size: 1.5rem;"></i></div>
                         <div class="cignal-empty-title" style="font-size: 0.95rem;">No Subscriptions Expiring Soon</div>
@@ -205,7 +213,7 @@
                 <thead>
                   <tr>
                     <th>Customer</th>
-                    <th>Account No. / Device</th>
+                    <th>Subscription / Accounts</th>
                     <th>Activation Date</th>
                     <th>Adjusted By</th>
                     <th class="text-end">Action</th>
@@ -223,24 +231,40 @@
                       {% if customer.cignal_plans.all %}
                         {% for plan in customer.cignal_plans.all %}
                           <div class="mb-1">
-                            <span class="badge {% if 'Box' in plan.addon_type %}bg-warning-subtle text-warning{% else %}bg-info-subtle text-info{% endif %} me-1" style="font-size:0.65rem;">
-                              {{ plan.addon_type|default:"CIGNAL" }}
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle me-1" style="font-size:0.65rem;">
+                              <i class="fas fa-satellite-dish me-1"></i>CIGNAL
                             </span>
-                            <span class="font-monospace fw-bold {% if 'Box' in plan.addon_type %}text-warning{% else %}text-primary{% endif %}" style="letter-spacing:0.03em;">
-                              {{ plan.account_number|default:"—" }}
-                            </span>
-                            {% if plan.account_name %}
-                              <small class="text-muted ms-1">({{ plan.account_name }})</small>
-                            {% endif %}
+                            <span class="text-light fw-bold small">{{ plan.account_name|default:"Cignal Subscription" }}</span>
+                            <div class="small mt-1">
+                              {% if plan.cignal_play_no %}
+                                <span class="badge bg-info-subtle text-info me-1" style="font-size:0.62rem;">PLAY</span>
+                                <span class="font-monospace text-info fw-bold">{{ plan.cignal_play_no }}</span>
+                              {% endif %}
+                              {% if plan.cignal_play_no and plan.cignal_box_no %}<span class="text-muted mx-1">|</span>{% endif %}
+                              {% if plan.cignal_box_no %}
+                                <span class="badge bg-warning-subtle text-warning me-1" style="font-size:0.62rem;">BOX</span>
+                                <span class="font-monospace text-warning fw-bold">{{ plan.cignal_box_no }}</span>
+                              {% endif %}
+                              {% if not plan.cignal_play_no and not plan.cignal_box_no %}
+                                <span class="text-muted">—</span>
+                              {% endif %}
+                            </div>
                           </div>
                         {% endfor %}
                       {% else %}
-                        {% if customer.cignalplay_no %}
-                          <div><span class="badge bg-info-subtle text-info me-1" style="font-size:0.65rem;">PLAY</span><span class="font-monospace fw-bold text-primary" style="letter-spacing:0.04em;">{{ customer.cignalplay_no }}</span></div>
-                        {% endif %}
-                        {% if customer.cignalbox_no %}
-                          <div class="{% if customer.cignalplay_no %}mt-1{% endif %}"><span class="badge bg-warning-subtle text-warning me-1" style="font-size:0.65rem;">BOX</span><span class="font-monospace fw-bold text-warning" style="letter-spacing:0.04em;">{{ customer.cignalbox_no }}</span></div>
-                        {% endif %}
+                        <div>
+                          {% if customer.cignalplay_no %}
+                            <span class="badge bg-info-subtle text-info me-1" style="font-size:0.65rem;">PLAY</span>
+                            <span class="font-monospace fw-bold text-info me-2">{{ customer.cignalplay_no }}</span>
+                          {% endif %}
+                          {% if customer.cignalbox_no %}
+                            <span class="badge bg-warning-subtle text-warning me-1" style="font-size:0.65rem;">BOX</span>
+                            <span class="font-monospace fw-bold text-warning">{{ customer.cignalbox_no }}</span>
+                          {% endif %}
+                          {% if not customer.cignalplay_no and not customer.cignalbox_no %}
+                            <span class="text-muted">—</span>
+                          {% endif %}
+                        </div>
                       {% endif %}
                     </td>
                     <td>
@@ -256,7 +280,7 @@
                     </td>
                     <td><small class="text-muted">{{ customer.cignalbox_adjustedby|default:customer.cignalplay_adjustedby|default:"-" }}</small></td>
                     <td class="text-end">
-                      <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2 py-0" style="font-size: 0.75rem;" onclick="openCignalPaymentModal({customerId: '{{ customer.id }}', customerName: '{{ customer.full_name|escapejs }}', pppoe: '{{ customer.pppoe_username|escapejs }}', subscriptions: [{% for s in customer.cignal_plans.all %}{id: '{{ s.id }}', addon_type: '{{ s.addon_type|escapejs }}', account_name: '{{ s.account_name|escapejs }}', account_number: '{{ s.account_number|escapejs }}', expiration_date: '{% if s.expiration_date %}{{ s.expiration_date|date:'Y-m-d' }}{% elif s.end_date %}{{ s.end_date|date:'Y-m-d' }}{% endif %}'}{% if not forloop.last %},{% endif %}{% endfor %}]})">
+                      <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2 py-0" style="font-size: 0.75rem;" onclick="openCignalPaymentModal({customerId: '{{ customer.id }}', customerName: '{{ customer.full_name|escapejs }}', pppoe: '{{ customer.pppoe_username|escapejs }}', subscriptions: [{% for s in customer.cignal_plans.all %}{id: '{{ s.id }}', cignal_play_no: '{{ s.cignal_play_no|escapejs }}', cignal_box_no: '{{ s.cignal_box_no|escapejs }}', account_name: '{{ s.account_name|escapejs }}', expiration_date: '{% if s.expiration_date %}{{ s.expiration_date|date:'Y-m-d' }}{% elif s.end_date %}{{ s.end_date|date:'Y-m-d' }}{% endif %}'}{% if not forloop.last %},{% endif %}{% endfor %}]})">
                         <i class="fas fa-coins me-1"></i> Reload
                       </button>
                     </td>

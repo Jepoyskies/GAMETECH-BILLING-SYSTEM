@@ -544,8 +544,8 @@ class CignalPlay(models.Model):
         Customer, on_delete=models.CASCADE, related_name="cignal_plans"
     )
     plan_name = models.CharField(max_length=255)
-    addon_type = models.CharField(max_length=50, default="Cignal Play")
-    account_number = models.CharField(max_length=100, null=True, blank=True)
+    cignal_play_no = models.CharField(max_length=100, null=True, blank=True)
+    cignal_box_no = models.CharField(max_length=100, null=True, blank=True)
     account_name = models.CharField(max_length=150, null=True, blank=True, help_text="e.g. Living Room TV")
     amount_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     start_date = models.DateTimeField(null=True, blank=True)
@@ -560,11 +560,19 @@ class CignalPlay(models.Model):
 
     @property
     def label(self):
-        return self.account_name or self.plan_name or "Cignal Device"
+        return self.account_name or self.plan_name or "Cignal Subscription"
+
+    @property
+    def addon_type(self):
+        return "Cignal Subscription"
+
+    @property
+    def account_number(self):
+        return self.cignal_play_no or self.cignal_box_no or ""
 
     @property
     def cignal_account_number(self):
-        return self.account_number or ""
+        return self.cignal_play_no or self.cignal_box_no or ""
 
     @property
     def is_active(self):
@@ -583,7 +591,13 @@ class CignalPlay(models.Model):
 
     def __str__(self):
         lbl = f" ({self.account_name})" if self.account_name else ""
-        return f"{self.addon_type or self.plan_name}{lbl} - {self.account_number or 'No Acct'} for {self.customer.full_name}"
+        nums = []
+        if self.cignal_play_no:
+            nums.append(f"Play: {self.cignal_play_no}")
+        if self.cignal_box_no:
+            nums.append(f"Box: {self.cignal_box_no}")
+        num_str = " | ".join(nums) if nums else "No Numbers"
+        return f"{self.plan_name}{lbl} - {num_str} for {self.customer.full_name}"
 
 
 class AuditLog(models.Model):
