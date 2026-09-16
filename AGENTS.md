@@ -326,6 +326,14 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
       * **Stage 3 (Deploy & Verify)**: Single commit + single git pull + migration run + container restart.
     * Cuts tool turns by 75% while maintaining surgical precision.
 
+39. **THE REAL-WORLD BUSINESS & ACCOUNTING REALITY CHECK (The "No Blind Execution" Law)**:
+    * **THE MANDATE**: Senior developers often describe features from high-level abstract theory without knowing day-to-day ISP counter operations, cash collection, or field dispatch realities.
+    * **MANDATORY PRE-EXECUTION AUDIT**: Before executing ANY prompt that changes workflows, schemas, or accounting:
+      1. **Cash & Ledger Integrity**: Any monetary transaction (Cignal installments, monthly load, upgrades, installation fees) MUST create a verified `Payment` receipt row and update customer balances. NEVER allow floating counters (e.g. `installments_paid`) without financial transaction tracking.
+      2. **Front-Desk Counter Workflow**: NEVER hide or remove fields required for on-the-spot applicant scheduling (e.g. installation dates, first due date, barangay).
+      3. **Bidirectional Sync**: When bridging two systems (e.g. CRM Customer Profile ↔ Dispatch Job Tickets), sync MUST work in both directions so actions in one interface never leave ghost or orphaned records in the other.
+      4. **Speak Up First**: If a prompt contains backwards logic, creates redundant ghost models, or contradicts physical ISP operations, the AI **MUST alert the user immediately**, explain the operational conflict in plain English, and propose the real-world aligned solution before proceeding.
+
 ---
 
 ### 🧼 2. Codebase Cleanliness & Architecture Standards
