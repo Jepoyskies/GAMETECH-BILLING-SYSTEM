@@ -129,7 +129,9 @@
                 </div>
             </div>
             
-            <div class="mb-4 p-3 rounded-3" style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2);">
+            {% if not form.instance.pk or form.instance.status == 'pending' %}
+            {% if not customer.pk or customer.installation_status == 'pending' or customer.status == 'pending' %}
+            <div class="mb-4 p-3 rounded-3" id="installation-setup-block" style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2);">
                 <label class="plan-form-label fw-bold mb-2">
                     <i class="fas fa-tools me-1 text-primary"></i> Installation & Account Setup Type <span class="req">*</span>
                 </label>
@@ -139,7 +141,7 @@
                             <input class="form-check-input ms-0 me-2" type="radio" name="installation_status" id="install_status_installed" value="installed" {% if request.user.role != 'Agent' %}checked{% endif %}>
                             <label class="form-check-label fw-bold d-block" for="install_status_installed" style="cursor: pointer;">
                                 <i class="fas fa-check-circle text-success me-1"></i> Installed / Existing Subscriber
-                                <div class="text-muted fw-normal small mt-1">Physical line is already installed on-site (or migrated/imported). Account is active immediately and will not be marked as Pending Install.</div>
+                                <div class="text-muted fw-normal small mt-1">Manual Override: Use this option when importing legacy customers from an old system, or recreating a accidentally deleted record. Account becomes instantly active.</div>
                             </label>
                         </div>
                     </div>
@@ -148,14 +150,14 @@
                             <input class="form-check-input ms-0 me-2" type="radio" name="installation_status" id="install_status_pending" value="pending" {% if request.user.role == 'Agent' %}checked{% endif %}>
                             <label class="form-check-label fw-bold d-block" for="install_status_pending" style="cursor: pointer;">
                                 <i class="fas fa-gear text-info me-1"></i> For Installation (New Applicant)
-                                <div class="text-muted fw-normal small mt-1">Brand new customer awaiting technician dispatch and equipment setup. Will show with Pending Install badge until completed.</div>
+                                <div class="text-muted fw-normal small mt-1">Standard Flow: Brand new customer. Will be marked as 'Pending Install' until a technician confirms setup and logs the initial payment.</div>
                             </label>
                         </div>
                     </div>
                 </div>
 
                 <div class="row g-3 mt-2" id="installed-dates-row" style="{% if request.user.role == 'Agent' %}display:none;{% endif %}">
-                    <div class="col-md-6">
+                    <div class="col-md-6" id="installed-date-col">
                         <label class="plan-form-label">Installation Date</label>
                         <div class="input-icon-wrapper">
                             <i class="fas fa-calendar-check i-icon text-success"></i>
@@ -163,7 +165,7 @@
                         </div>
                         <div class="form-text small">Date physical line was activated/installed.</div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-6" id="installed-expiry-col">
                         <label class="plan-form-label">First Due / Expiration Date (Optional)</label>
                         <div class="input-icon-wrapper">
                             <i class="fas fa-calendar-day i-icon text-primary"></i>
@@ -173,6 +175,8 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
+            {% endif %}
 
             <div class="mb-4" id="billing-status-group">
                 <label class="plan-form-label">Billing Status <span class="req">*</span></label>
@@ -422,12 +426,15 @@
         const statusSelect = document.getElementById('customer_status_select');
 
         function updateSetupUI() {
+            const expCol = document.getElementById('installed-expiry-col');
+            const expInput = document.getElementById('input_expires_at');
             if (radInstalled && radInstalled.checked) {
                 cardInstalled.style.background = 'rgba(16, 185, 129, 0.08)';
                 cardInstalled.style.borderColor = 'rgba(16, 185, 129, 0.4)';
                 cardPending.style.background = '';
                 cardPending.style.borderColor = '';
                 if (datesRow) datesRow.style.display = 'flex';
+                if (expCol) expCol.style.display = 'block';
                 if (statusSelect && statusSelect.value === 'pending') {
                     statusSelect.value = 'active';
                 }
@@ -437,6 +444,8 @@
                 cardInstalled.style.background = '';
                 cardInstalled.style.borderColor = '';
                 if (datesRow) datesRow.style.display = 'none';
+                if (expCol) expCol.style.display = 'none';
+                if (expInput) expInput.value = '';
                 if (statusSelect) {
                     statusSelect.value = 'pending';
                 }

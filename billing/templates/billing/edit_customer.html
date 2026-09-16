@@ -131,6 +131,7 @@
                 </div>
             </div>
             
+            {% if customer.installation_status == 'pending' or customer.status == 'pending' %}
             <div class="mb-4 p-3 rounded-3" style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2);">
                 <label class="plan-form-label fw-bold mb-2">
                     <i class="fas fa-tools me-1 text-primary"></i> Installation & Setup Status <span class="req">*</span>
@@ -152,6 +153,15 @@
                         </div>
                     </div>
                 </div>
+            </div>
+            {% else %}
+            <input type="hidden" name="installation_status" value="{{ customer.installation_status|default:'installed' }}">
+            {% if customer.installed_at %}
+            <input type="hidden" name="installed_at" value="{{ customer.installed_at|date:'Y-m-d' }}">
+            {% endif %}
+            {% endif %}
+
+            <div class="mb-4 p-3 rounded-3" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08);">
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="plan-form-label">Expiration Date / Next Due Date</label>

@@ -50,6 +50,47 @@ def add_customer(request):
     if request.method == "POST":
         from django.utils.crypto import get_random_string
 
+        email = (request.POST.get("email") or "").strip()
+        phone = (request.POST.get("phone") or "").strip()
+        pppoe_username = (request.POST.get("pppoe_username") or "").strip()
+
+        # Duplicate checks
+        if phone and Customer.objects.filter(phone=phone).exists():
+            messages.error(request, "A customer with this phone number already exists.")
+            context = {
+                "categorized_plans": get_categorized_plans(),
+                "devices": MikrotikDevice.objects.all(),
+                "agents": Agent.objects.all(),
+                "barangays": Barangay.objects.all(),
+                "account_types": AccountType.objects.all(),
+                "prefill_username": pppoe_username,
+            }
+            return render(request, "billing/add_customer.html", context)
+
+        if email and Customer.objects.filter(email__iexact=email).exists():
+            messages.error(request, "A customer with this email address already exists.")
+            context = {
+                "categorized_plans": get_categorized_plans(),
+                "devices": MikrotikDevice.objects.all(),
+                "agents": Agent.objects.all(),
+                "barangays": Barangay.objects.all(),
+                "account_types": AccountType.objects.all(),
+                "prefill_username": pppoe_username,
+            }
+            return render(request, "billing/add_customer.html", context)
+
+        if pppoe_username and Customer.objects.filter(pppoe_username__iexact=pppoe_username).exists():
+            messages.error(request, "A customer with this PPPoE username already exists.")
+            context = {
+                "categorized_plans": get_categorized_plans(),
+                "devices": MikrotikDevice.objects.all(),
+                "agents": Agent.objects.all(),
+                "barangays": Barangay.objects.all(),
+                "account_types": AccountType.objects.all(),
+                "prefill_username": pppoe_username,
+            }
+            return render(request, "billing/add_customer.html", context)
+
         if request.user.role == "Agent":
             barangay_name = request.POST.get("barangay_name")
             if barangay_name:
@@ -149,6 +190,47 @@ def add_customer(request):
 def edit_customer(request, customer_id):
     customer = get_object_or_404(Customer, id=customer_id)
     if request.method == "POST":
+        email = (request.POST.get("email") or "").strip()
+        phone = (request.POST.get("phone") or "").strip()
+        pppoe_username = (request.POST.get("pppoe_username") or "").strip()
+
+        # Duplicate checks (excluding self)
+        if phone and Customer.objects.filter(phone=phone).exclude(pk=customer.pk).exists():
+            messages.error(request, "A customer with this phone number already exists.")
+            context = {
+                "customer": customer,
+                "categorized_plans": get_categorized_plans(),
+                "devices": MikrotikDevice.objects.all(),
+                "agents": Agent.objects.all(),
+                "barangays": Barangay.objects.all(),
+                "account_types": AccountType.objects.all(),
+            }
+            return render(request, "billing/edit_customer.html", context)
+
+        if email and Customer.objects.filter(email__iexact=email).exclude(pk=customer.pk).exists():
+            messages.error(request, "A customer with this email address already exists.")
+            context = {
+                "customer": customer,
+                "categorized_plans": get_categorized_plans(),
+                "devices": MikrotikDevice.objects.all(),
+                "agents": Agent.objects.all(),
+                "barangays": Barangay.objects.all(),
+                "account_types": AccountType.objects.all(),
+            }
+            return render(request, "billing/edit_customer.html", context)
+
+        if pppoe_username and Customer.objects.filter(pppoe_username__iexact=pppoe_username).exclude(pk=customer.pk).exists():
+            messages.error(request, "A customer with this PPPoE username already exists.")
+            context = {
+                "customer": customer,
+                "categorized_plans": get_categorized_plans(),
+                "devices": MikrotikDevice.objects.all(),
+                "agents": Agent.objects.all(),
+                "barangays": Barangay.objects.all(),
+                "account_types": AccountType.objects.all(),
+            }
+            return render(request, "billing/edit_customer.html", context)
+
         old_data = []
         new_data = []
 
