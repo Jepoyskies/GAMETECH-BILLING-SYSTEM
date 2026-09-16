@@ -583,6 +583,120 @@ def view_customer(request, customer_id):
             }
         )
 
+    # 5. Tickets & Repairs History (JobTicket & legacy DispatchRecord)
+    from dispatch.models import JobTicket, DispatchRecord
+    raw_tickets = customer.job_tickets.prefetch_related('technicians', 'team').order_by('-created_at')
+    raw_dispatches = customer.dispatches.prefetch_related('teams').order_by('-date')
+
+    ticket_history = []
+    seen_ticket_nums = set()
+
+    for t in raw_tickets:
+        t_num = t.ticket_number or f"TICK-{t.id}"
+        seen_ticket_nums.add(t_num)
+        tech_list = [tech.name for tech in t.technicians.all()]
+        is_repair = (t.ticket_type == 'REPAIR' or t.source_tab == 'CLIENT_CONCERNS')
+        ticket_history.append({
+            "id": t.id,
+            "ticket_number": t_num,
+            "ticket_type": t.ticket_type,
+            "type_display": t.get_ticket_type_display(),
+            "status": t.status,
+            "status_display": t.get_status_display(),
+            "created_at": t.created_at,
+            "concern": t.concern or '',
+            "alternate_contact": t.alternate_contact or '',
+            "facebook_account": t.facebook_account or '',
+            "technicians": tech_list,
+            "team_name": t.team.name if t.team else '',
+            "actions_taken": t.actions_taken or '',
+            "technician_remarks": t.technician_remarks or '',
+            "nap_reading": t.nap_reading or '',
+            "house_reading": t.house_reading or '',
+            "signal_level": t.signal_level or '',
+            "ont_modem_sn": t.ont_modem_sn or '',
+            "duration": t.duration,
+            "done_at": t.done_at,
+            "is_repair": is_repair,
+            "is_modern": True,
+        })
+
+    for d in raw_dispatches:
+        d_num = d.ticket_number or f"DISP-{d.id}"
+        if d_num in seen_ticket_nums:
+            continue
+        tech_list = [tech.name for tech in d.teams.all()]
+        is_repair = (d.source_tab == 'CLIENT_CONCERNS')
+        created_dt = timezone.datetime.combine(d.date, timezone.datetime.min.time(), tzinfo=timezone.get_current_timezone()) if d.date else d.created_at
+        ticket_history.append({
+            "id": d.id,
+            "ticket_number": d_num,
+            "ticket_type": 'REPAIR' if is_repair else 'INSTALLATION',
+            "type_display": 'Repair / Client Concern' if is_repair else 'Installation',
+            "status": 'COMPLETED' if d.done_at else 'PENDING',
+            "status_display": 'Completed' if d.done_at else 'Pending',
+            "created_at": created_dt,
+            "concern": d.concern or '',
+            "alternate_contact": d.alternate_contact or '',
+            "facebook_account": d.facebook_account or '',
+            "technicians": tech_list,
+            "team_name": '',
+            "actions_taken": d.actions_taken or '',
+            "technician_remarks": d.remarks or '',
+            "nap_reading": '',
+            "house_reading": '',
+            "signal_level": '',
+            "ont_modem_sn": '',
+            "duration": d.duration,
+            "done_at": d.done_at,
+            "is_repair": is_repair,
+            "is_modern": False,
+        })
+
+    # Sort ticket history by created_at descending
+    ticket_history.sort(key=lambda x: x["created_at"] or timezone.now(), reverse=True)
+
+    # Calculate Repair Quality & Repeat Repair Audit Metrics
+    repair_items = [t for t in ticket_history if t["is_repair"]]
+    repair_count = len(repair_items)
+
+    repeat_repair_alerts = []
+    chronological_repairs = sorted(repair_items, key=lambda x: x["created_at"] or timezone.now())
+    for i in range(1, len(chronological_repairs)):
+        prev_rep = chronological_repairs[i - 1]
+        curr_rep = chronological_repairs[i]
+        if prev_rep["created_at"] and curr_rep["created_at"]:
+            gap_days = (curr_rep["created_at"].date() - prev_rep["created_at"].date()).days
+            if gap_days <= 30:
+                prev_techs = ", ".join(prev_rep["technicians"]) or "Unassigned"
+                curr_techs = ", ".join(curr_rep["technicians"]) or "Unassigned"
+                repeat_repair_alerts.append({
+                    "prev_ticket": prev_rep["ticket_number"],
+                    "curr_ticket": curr_rep["ticket_number"],
+                    "gap_days": gap_days,
+                    "prev_date": prev_rep["created_at"],
+                    "curr_date": curr_rep["created_at"],
+                    "prev_techs": prev_techs,
+                    "curr_techs": curr_techs,
+                    "prev_concern": prev_rep["concern"],
+                    "curr_concern": curr_rep["concern"],
+                    "prev_actions": prev_rep["actions_taken"],
+                })
+
+    has_repeat_repairs = len(repeat_repair_alerts) > 0 or repair_count >= 2
+
+    # Include tickets into all_logs
+    for t in ticket_history:
+        tech_str = ", ".join(t["technicians"]) or t["team_name"] or "Tech Dispatch"
+        all_logs.append({
+            "type": "ticket",
+            "date": t["created_at"],
+            "title": f"Ticket: {t['ticket_number']}",
+            "details": f"{t['type_display']} — Status: {t['status_display']} | Concern: {t['concern'] or 'None'} | Tech: {tech_str}",
+            "user": tech_str,
+            "log_obj": None,
+        })
+
     # Sort all logs by date descending
     all_logs.sort(key=lambda x: x["date"], reverse=True)
 
@@ -603,6 +717,11 @@ def view_customer(request, customer_id):
         "plans": SubscriptionPlan.objects.all().order_by("price"),
         "payments": payments,
         "all_logs": all_logs,
+        "ticket_history": ticket_history,
+        "repair_count": repair_count,
+        "total_tickets_count": len(ticket_history),
+        "repeat_repair_alerts": repeat_repair_alerts,
+        "has_repeat_repairs": has_repeat_repairs,
         "reverted_expiration": reverted_expiration,
         "pending_cignal_addon": pending_cignal_addon,
         "mt_status": mt_status,

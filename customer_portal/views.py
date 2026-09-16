@@ -106,6 +106,11 @@ def portal_dashboard(request):
     # Customer Cignal Subscriptions (Multi-TV)
     cignal_plans = customer.cignal_plans.all().order_by('-created_at')
 
+    # Tickets & Repair Status
+    customer_tickets = customer.job_tickets.all().order_by('-created_at')
+    open_tickets_count = customer_tickets.filter(status__in=['PENDING', 'ASSIGNED', 'IN_PROGRESS']).count()
+    recent_ticket = customer_tickets.first()
+
     context = {
         'customer': customer,
         'plan': plan,
@@ -119,6 +124,9 @@ def portal_dashboard(request):
         'plans': plans,
         'cignal_plans': cignal_plans,
         'issue_services': issue_services,
+        'open_tickets_count': open_tickets_count,
+        'recent_ticket': recent_ticket,
+        'total_tickets_count': customer_tickets.count(),
     }
     return render(request, 'customer_portal/portal_dashboard.html', context)
 
@@ -628,7 +636,11 @@ def submit_ticket(request):
         messages.success(request, f"Your ticket ({ticket_no}) has been submitted. Our technical dispatch team will review it shortly.")
         return redirect('customer_portal:portal_dashboard')
         
-    return render(request, 'customer_portal/submit_ticket.html', {'customer': customer})
+    recent_tickets = customer.job_tickets.prefetch_related('technicians').order_by('-created_at')[:5]
+    return render(request, 'customer_portal/submit_ticket.html', {
+        'customer': customer,
+        'recent_tickets': recent_tickets,
+    })
 
 
 def portal_speedtest(request):
@@ -657,5 +669,99 @@ def portal_speedtest(request):
         'page_title': 'Internet Speed Test',
     }
     return render(request, 'customer_portal/speedtest.html', context)
+
+
+def portal_ticket_history(request):
+    """
+    Renders the Ticket & Repair History page for the logged-in portal customer.
+    Shows active, in-progress, and past service tickets, technician dispatches, and resolution notes.
+    """
+    customer_id = request.session.get('customer_id')
+    if not customer_id:
+        return redirect('customer_portal:portal_login')
+        
+    try:
+        customer = Customer.objects.select_related('plan').get(id=customer_id)
+    except Customer.DoesNotExist:
+        request.session.flush()
+        return redirect('customer_portal:portal_login')
+
+    raw_tickets = customer.job_tickets.prefetch_related('technicians', 'team').order_by('-created_at')
+    raw_dispatches = customer.dispatches.prefetch_related('teams').order_by('-date')
+
+    ticket_history = []
+    seen_ticket_nums = set()
+
+    for t in raw_tickets:
+        t_num = t.ticket_number or f"TICK-{t.id}"
+        seen_ticket_nums.add(t_num)
+        tech_list = [tech.name for tech in t.technicians.all()]
+        ticket_history.append({
+            "id": t.id,
+            "ticket_number": t_num,
+            "ticket_type": t.ticket_type,
+            "type_display": t.get_ticket_type_display(),
+            "status": t.status,
+            "status_display": t.get_status_display(),
+            "created_at": t.created_at,
+            "concern": t.concern or '',
+            "alternate_contact": t.alternate_contact or '',
+            "facebook_account": t.facebook_account or '',
+            "technicians": tech_list,
+            "team_name": t.team.name if t.team else '',
+            "actions_taken": t.actions_taken or '',
+            "technician_remarks": t.technician_remarks or '',
+            "nap_reading": t.nap_reading or '',
+            "house_reading": t.house_reading or '',
+            "signal_level": t.signal_level or '',
+            "ont_modem_sn": t.ont_modem_sn or '',
+            "duration": t.duration,
+            "done_at": t.done_at,
+        })
+
+    for d in raw_dispatches:
+        d_num = d.ticket_number or f"DISP-{d.id}"
+        if d_num in seen_ticket_nums:
+            continue
+        tech_list = [tech.name for tech in d.teams.all()]
+        is_repair = (d.source_tab == 'CLIENT_CONCERNS')
+        created_dt = timezone.datetime.combine(d.date, timezone.datetime.min.time(), tzinfo=timezone.get_current_timezone()) if d.date else d.created_at
+        ticket_history.append({
+            "id": d.id,
+            "ticket_number": d_num,
+            "ticket_type": 'REPAIR' if is_repair else 'INSTALLATION',
+            "type_display": 'Repair / Client Concern' if is_repair else 'Installation',
+            "status": 'COMPLETED' if d.done_at else 'PENDING',
+            "status_display": 'Completed' if d.done_at else 'Pending',
+            "created_at": created_dt,
+            "concern": d.concern or '',
+            "alternate_contact": d.alternate_contact or '',
+            "facebook_account": d.facebook_account or '',
+            "technicians": tech_list,
+            "team_name": '',
+            "actions_taken": d.actions_taken or '',
+            "technician_remarks": d.remarks or '',
+            "nap_reading": '',
+            "house_reading": '',
+            "signal_level": '',
+            "ont_modem_sn": '',
+            "duration": d.duration,
+            "done_at": d.done_at,
+        })
+
+    ticket_history.sort(key=lambda x: x["created_at"] or timezone.now(), reverse=True)
+
+    open_count = sum(1 for t in ticket_history if t['status'] in ['PENDING', 'ASSIGNED', 'IN_PROGRESS'])
+    completed_count = sum(1 for t in ticket_history if t['status'] == 'COMPLETED')
+
+    context = {
+        'customer': customer,
+        'ticket_history': ticket_history,
+        'open_count': open_count,
+        'completed_count': completed_count,
+        'total_count': len(ticket_history),
+        'page_title': 'My Support & Repair Tickets',
+    }
+    return render(request, 'customer_portal/ticket_history.html', context)
 
 
