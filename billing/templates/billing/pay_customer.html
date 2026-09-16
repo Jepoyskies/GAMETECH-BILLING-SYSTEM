@@ -444,11 +444,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
         let amountForTime = Math.max(0, paymentAmount - upgradeFee);
         if (monthlyPrice <= 0 || amountForTime <= 0) {
-            return baseDate;
+            return { previewDate: baseDate, advanceAmount: 0 };
         }
         
-        let fullMonths = Math.floor(amountForTime / monthlyPrice);
-        let remainder = amountForTime % monthlyPrice;
+        let usedForTime = amountForTime;
+        let advanceAmount = 0;
+        if (amountForTime > monthlyPrice) {
+            usedForTime = monthlyPrice;
+            advanceAmount = amountForTime - monthlyPrice;
+        }
+
+        let fullMonths = Math.floor(usedForTime / monthlyPrice);
+        let remainder = usedForTime % monthlyPrice;
         
         let previewDate = new Date(baseDate.getTime());
         for(let i=0; i<fullMonths; i++) {
@@ -461,20 +468,24 @@ document.addEventListener('DOMContentLoaded', function() {
             previewDate = new Date(previewDate.getTime() + (daysGranted * 24 * 60 * 60 * 1000));
         }
         
-        return previewDate;
+        return { previewDate: previewDate, advanceAmount: advanceAmount };
     }
 
     function updatePreview() {
         let amt = parseFloat(amountInput.value) || 0;
-        let newDate = calculateExpiryPreview(amt);
+        let res = calculateExpiryPreview(amt);
         
         // Format nicely: e.g. "Oct 15, 2024, 10:30 AM"
         const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-        previewDateEl.textContent = newDate.toLocaleDateString('en-US', options);
+        let text = res.previewDate.toLocaleDateString('en-US', options);
+        if (res.advanceAmount > 0) {
+            text += ` (+ ₱${res.advanceAmount.toFixed(2)} Advance Payment)`;
+        }
+        previewDateEl.textContent = text;
         
         // Handle Reason block
         let netTimeAmt = Math.max(0, amt - upgradeFee);
-        if (netTimeAmt > 0 && netTimeAmt % monthlyPrice !== 0) {
+        if (netTimeAmt > 0 && netTimeAmt < monthlyPrice) {
             reasonBlock.style.display = 'block';
             reasonInput.required = true;
         } else {

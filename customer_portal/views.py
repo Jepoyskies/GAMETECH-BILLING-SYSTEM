@@ -344,14 +344,31 @@ def portal_process_mock_payment(request):
                     else:
                         current_exp = timezone.now()
                         
-                    # Calculate new expiration using amount available for subscription time
+                    # --- Advance Payment / Wallet Logic ---
                     amount_for_time = max(0.0, amount_float - upgrade_fee)
-                    new_expiry = calculate_new_expiration_date(current_exp, amount_for_time, monthly_price)
+
+                    # 1. Deduct any outstanding debt (> 0) first
+                    if locked_customer.outstanding_balance > 0:
+                        debt_paid = min(Decimal(str(amount_for_time)), locked_customer.outstanding_balance)
+                        locked_customer.outstanding_balance -= debt_paid
+                        amount_for_time = max(0.0, amount_for_time - float(debt_paid))
+
+                    # 2. Allocate payment: 1 month is consumed to activate/renew current cycle.
+                    # Any excess amount beyond 1 month goes into the Advance Payment wallet (credit).
+                    if monthly_price > 0 and amount_for_time > monthly_price:
+                        used_for_time = monthly_price
+                        advance_excess = amount_for_time - monthly_price
+                        locked_customer.outstanding_balance -= Decimal(str(advance_excess))
+                    else:
+                        used_for_time = amount_for_time
+
+                    # 3. Calculate new expiration using ONLY what is consumed for current cycle
+                    new_expiry = calculate_new_expiration_date(current_exp, used_for_time, monthly_price)
                     
-                    # Update DB
+                    # 4. Update Customer Expiry
                     locked_customer.expires_at = new_expiry
-                    locked_customer.outstanding_balance -= Decimal(str(amount_for_time))
                     
+                    # 5. Update Status if suspended
                     if was_suspended:
                         locked_customer.status = 'active'
                         

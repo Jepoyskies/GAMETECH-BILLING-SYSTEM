@@ -186,14 +186,22 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!estimatedNextExpiration) return;
         const val = parseFloat(amountInput.value) || 0;
         const effectiveVal = Math.max(0, val - upgradeFee);
+        
+        let d = new Date(origDateStr);
+        if (isNaN(d.getTime())) { d = new Date(); }
+
+        if (monthlyPrice > 0 && effectiveVal > monthlyPrice) {
+            d.setDate(d.getDate() + 30);
+            const advance = effectiveVal - monthlyPrice;
+            estimatedNextExpiration.textContent = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ` (+ ₱${advance.toFixed(2)} Advance Payment)`;
+            return;
+        }
+
         const dailyRate = monthlyPrice / 30;
         let daysToAdd = 0;
         if (dailyRate > 0) {
             daysToAdd = Math.floor(effectiveVal / dailyRate);
         }
-        
-        let d = new Date(origDateStr);
-        if (isNaN(d.getTime())) { d = new Date(); }
         d.setDate(d.getDate() + daysToAdd);
         
         estimatedNextExpiration.textContent = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
