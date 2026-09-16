@@ -622,6 +622,23 @@
 
 ---
 
+### ERR-035: Incomplete Installation Activation Workflow (Missing Plan, Upfront Payment, & Auto First Due Date)
+* **Symptoms**:
+  * Clicking "Mark as Installed" on a pending subscriber only prompted for installation date and manual expiration, requiring staff to navigate separately to `/pay/` to record upfront installation payments or manually calculate the next billing cycle.
+* **Root Causes**:
+  * `mark_customer_installed` view and modal previously only updated `installed_at` and `expires_at` without accepting plan tier adjustments, upfront payment amounts, or executing automated prorated/full-month billing math.
+* **Exact Target Files**:
+  * `billing/views/customers/actions.py`
+  * `billing/views/customers/crud.py`
+  * `billing/templates/billing/view_customer/_modals.html`
+  * `billing/templates/billing/view_customer/_modal_mark_installed.html`
+* **1-Step Fix**:
+  * Pass `plans` in `view_customer` context.
+  * Modularize the installation confirmation modal into `_modal_mark_installed.html` with Plan selection, Upfront Payment collection (amount, method, ref #), and client-side real-time auto-calculation of First Due date.
+  * Update `mark_customer_installed` backend view to update `customer.plan`, create a verified `Payment` record when upfront payment is collected, and push synchronized secrets to MikroTik.
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 1. Assign a new `ERR-XXX` identifier.

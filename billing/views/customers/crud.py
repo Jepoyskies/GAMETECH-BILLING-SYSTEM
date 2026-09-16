@@ -515,6 +515,7 @@ def view_customer(request, customer_id):
 
     context = {
         "customer": customer,
+        "plans": SubscriptionPlan.objects.all().order_by("price"),
         "payments": payments,
         "all_logs": all_logs,
         "reverted_expiration": reverted_expiration,
