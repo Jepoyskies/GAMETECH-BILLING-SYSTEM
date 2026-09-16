@@ -1,0 +1,146 @@
+        // --- Bulk SMS & Email & Transfer Logic ---
+        function updateSelectedCount() {
+            var selectedCount = table.$('.customer-checkbox:checked').length;
+            $('#selectedCount').text(selectedCount);
+            $('#modalSelectedCount').text(selectedCount);
+            $('#btnBulkSms').prop('disabled', selectedCount === 0);
+            
+            $('#selectedEmailCount').text(selectedCount);
+            $('#modalSelectedEmailCount').text(selectedCount);
+            $('#btnBulkEmail').prop('disabled', selectedCount === 0);
+            
+            var totalCount = table.$('.customer-checkbox').length;
+            $('#selectAllCheckbox').prop('checked', selectedCount > 0 && selectedCount === totalCount);
+            
+            // Add Transfer Logic
+            $('#selectedTransferCount').text(selectedCount);
+            $('#transferCountDisplay').text(selectedCount);
+            $('#btnBulkTransfer').prop('disabled', selectedCount === 0);
+            $('#transferCustomerInputs').empty();
+            table.$('.customer-checkbox:checked').each(function() {
+                $('#transferCustomerInputs').append(`<input type="hidden" name="customer_ids" value="${$(this).val()}">`);
+            });
+        }
+
+        $('#selectAllCheckbox').on('change', function() {
+            var isChecked = $(this).prop('checked');
+            // Only select the rows that are currently visible/filtered by the user's search
+            table.$('.customer-checkbox', {"filter":"applied"}).prop('checked', isChecked);
+            updateSelectedCount();
+        });
+
+        $('#customerTable tbody').on('change', '.customer-checkbox', function() {
+            updateSelectedCount();
+        });
+
+        table.on('draw', function() {
+            updateSelectedCount(); // re-eval when page/filter changes
+        });
+
+        $('#btnSendBulkSms').on('click', function() {
+            var selectedIds = [];
+            // We use table.$ to query all pages of the datatable, not just the visible page.
+            table.$('.customer-checkbox:checked').each(function() {
+                selectedIds.push($(this).val());
+            });
+            var message = $('#bulkSmsMessage').val();
+            
+            if (!message.trim()) {
+                Swal.fire('Error', 'Please enter a message.', 'error');
+                return;
+            }
+            
+            $(this).html('<i class="fas fa-spinner fa-spin me-2"></i> Sending...').prop('disabled', true);
+            
+            $.ajax({
+                url: '{% url "bulk_sms_view" %}',
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    customer_ids: selectedIds,
+                    message: message
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        $('#bulkSmsModal').modal('hide');
+                        $('#bulkSmsMessage').val('');
+                        table.$('.customer-checkbox').prop('checked', false);
+                        $('#selectAllCheckbox').prop('checked', false);
+                        updateSelectedCount();
+                        
+                        Swal.fire({
+                            title: 'Success!',
+                            text: 'Successfully sent ' + response.sent_count + ' SMS messages.',
+                            icon: 'success',
+                            confirmButtonColor: '#10b981'
+                        });
+                    } else {
+                        Swal.fire('Error', response.error || 'Unknown error occurred.', 'error');
+                    }
+                },
+                error: function(err) {
+                    Swal.fire('Error', 'A network error occurred.', 'error');
+                },
+                complete: function() {
+                    $('#btnSendBulkSms').html('Send Now <i class="fas fa-paper-plane ms-2"></i>').prop('disabled', false);
+                }
+            });
+        });
+
+        $('#btnSendBulkEmail').on('click', function() {
+            var selectedIds = [];
+            table.$('.customer-checkbox:checked').each(function() {
+                selectedIds.push($(this).val());
+            });
+            var subject = $('#bulkEmailSubject').val();
+            var message = $('#bulkEmailMessage').val();
+            
+            if (!subject.trim() || !message.trim()) {
+                Swal.fire('Error', 'Please enter a subject and a message.', 'error');
+                return;
+            }
+            
+            $(this).html('<i class="fas fa-spinner fa-spin me-2"></i> Sending...').prop('disabled', true);
+            
+            $.ajax({
+                url: '{% url "bulk_email_view" %}',
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    customer_ids: selectedIds,
+                    subject: subject,
+                    message: message
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        $('#bulkEmailModal').modal('hide');
+                        $('#bulkEmailSubject').val('');
+                        $('#bulkEmailMessage').val('');
+                        table.$('.customer-checkbox').prop('checked', false);
+                        $('#selectAllCheckbox').prop('checked', false);
+                        updateSelectedCount();
+                        
+                        Swal.fire({
+                            title: 'Success!',
+                            text: 'Successfully sent ' + response.sent_count + ' Email messages.',
+                            icon: 'success',
+                            confirmButtonColor: '#10b981'
+                        });
+                    } else {
+                        Swal.fire('Error', response.error || 'Unknown error occurred.', 'error');
+                    }
+                },
+                error: function(err) {
+                    Swal.fire('Error', 'A network error occurred.', 'error');
+                },
+                complete: function() {
+                    $('#btnSendBulkEmail').html('Send Now <i class="fas fa-paper-plane ms-2"></i>').prop('disabled', false);
+                }
+            });
+        });

@@ -3,10 +3,45 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
 <style>
-    #customerTable th,
-    #customerTable td {
-        padding: 0.6rem !important;
-        font-size: 0.95rem;
+    #customerTable thead th {
+        padding: 0.7rem 0.85rem !important;
+        font-size: 0.74rem !important;
+        font-weight: 700 !important;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #94a3b8 !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    #customerTable tbody td {
+        padding: 0.65rem 0.85rem !important;
+        font-size: 0.83rem !important;
+        color: #cbd5e1 !important;
+        vertical-align: middle !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    }
+
+    #customerTable tbody td b,
+    #customerTable tbody td strong {
+        font-size: 0.86rem !important;
+        font-weight: 600 !important;
+        color: #f8fafc !important;
+    }
+
+    .cust-status-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        justify-content: center;
+    }
+
+    .cust-base-badge {
+        font-size: 0.72rem !important;
+        padding: 0.22rem 0.55rem !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.02em;
     }
 
     /* Subtle row hover effect */
@@ -234,8 +269,16 @@
             margin-bottom: 10px;
             box-shadow: 0 1px 4px rgba(0,0,0,0.06);
         }
-        #customerTable tbody tr.table-warning { border-color: #fde68a; background: #fffbeb; }
-        #customerTable tbody tr.table-secondary { border-color: #e2e8f0; background: #f8fafc; }
+        #customerTable tbody tr.table-warning,
+        #customerTable tbody tr.table-row-expired {
+            border-color: rgba(244, 63, 94, 0.3) !important;
+            background: rgba(244, 63, 94, 0.06) !important;
+        }
+        #customerTable tbody tr.table-secondary,
+        #customerTable tbody tr.table-row-inactive {
+            border-color: rgba(148, 163, 184, 0.2) !important;
+            background: rgba(148, 163, 184, 0.04) !important;
+        }
 
         /* ── All <td> reset ── */
         #customerTable tbody tr td {
@@ -307,39 +350,85 @@
     }
 
     /* ============================================================
-       HIGHLIGHTED ROW FOR ACTIVE BUT OFFLINE CUSTOMERS
+       HIGHLIGHTED ROW STATES (DARK-MODE FIRST & ACCENT BORDERS)
     ============================================================ */
     .table-row-paid-offline {
         background-color: rgba(239, 68, 68, 0.08) !important;
-        box-shadow: inset 4px 0 0 #ef4444 !important;
+        box-shadow: inset 3px 0 0 #ef4444 !important;
     }
     .table-row-paid-offline td:first-child {
-        border-left: 4px solid #ef4444 !important;
+        border-left: 3px solid #ef4444 !important;
     }
     .table-row-paid-offline:hover {
         background-color: rgba(239, 68, 68, 0.14) !important;
     }
-    html.dark-mode .table-row-paid-offline,
-    body.dark-mode .table-row-paid-offline {
-        background-color: rgba(239, 68, 68, 0.12) !important;
-    }
 
-    /* ============================================================
-       HIGHLIGHTED ROW FOR PENDING INSTALLATION CUSTOMERS
-    ============================================================ */
     .table-row-pending-install {
-        background-color: rgba(13, 202, 240, 0.08) !important;
-        box-shadow: inset 4px 0 0 #0dcaf0 !important;
+        background-color: rgba(14, 165, 233, 0.06) !important;
+        box-shadow: inset 3px 0 0 #0ea5e9 !important;
     }
     .table-row-pending-install td:first-child {
-        border-left: 4px solid #0dcaf0 !important;
+        border-left: 3px solid #0ea5e9 !important;
     }
     .table-row-pending-install:hover {
-        background-color: rgba(13, 202, 240, 0.14) !important;
+        background-color: rgba(14, 165, 233, 0.12) !important;
     }
-    html.dark-mode .table-row-pending-install,
-    body.dark-mode .table-row-pending-install {
-        background-color: rgba(13, 202, 240, 0.12) !important;
+
+    .table-row-expired {
+        background-color: rgba(244, 63, 94, 0.06) !important;
+        box-shadow: inset 3px 0 0 #f43f5e !important;
+    }
+    .table-row-expired td:first-child {
+        border-left: 3px solid #f43f5e !important;
+    }
+    .table-row-expired:hover {
+        background-color: rgba(244, 63, 94, 0.12) !important;
+    }
+
+    .table-row-suspended {
+        background-color: rgba(99, 102, 241, 0.06) !important;
+        box-shadow: inset 3px 0 0 #6366f1 !important;
+    }
+    .table-row-suspended td:first-child {
+        border-left: 3px solid #6366f1 !important;
+    }
+    .table-row-suspended:hover {
+        background-color: rgba(99, 102, 241, 0.12) !important;
+    }
+
+    .table-row-inactive {
+        background-color: rgba(148, 163, 184, 0.03) !important;
+        opacity: 0.75;
+    }
+    .table-row-inactive:hover {
+        background-color: rgba(148, 163, 184, 0.07) !important;
+        opacity: 0.95;
+    }
+
+    /* HARD NEUTRALIZATION: Kill any Bootstrap table-warning bright yellow in Dark Mode */
+    #customerTable tbody tr.table-warning,
+    #customerTable tbody tr.table-warning > *,
+    #customerTable tbody tr.table-warning td,
+    .dark-mode #customerTable tbody tr.table-warning,
+    .dark-mode #customerTable tbody tr.table-warning > *,
+    .dark-mode #customerTable tbody tr.table-warning td {
+        background-color: rgba(245, 158, 11, 0.08) !important;
+        color: #cbd5e1 !important;
+        border-color: rgba(255, 255, 255, 0.06) !important;
+    }
+    #customerTable tbody tr.table-warning td b,
+    #customerTable tbody tr.table-warning td strong {
+        color: #f8fafc !important;
+    }
+    #customerTable tbody tr.table-secondary,
+    #customerTable tbody tr.table-secondary > *,
+    #customerTable tbody tr.table-secondary td,
+    .dark-mode #customerTable tbody tr.table-secondary,
+    .dark-mode #customerTable tbody tr.table-secondary > *,
+    .dark-mode #customerTable tbody tr.table-secondary td {
+        background-color: rgba(148, 163, 184, 0.04) !important;
+        color: #94a3b8 !important;
+        border-color: rgba(255, 255, 255, 0.06) !important;
     }
 </style>
 
