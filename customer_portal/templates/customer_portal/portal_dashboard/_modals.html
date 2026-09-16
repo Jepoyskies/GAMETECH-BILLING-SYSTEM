@@ -57,17 +57,31 @@
                         </select>
                     </div>
 
+                    {% if not customer.can_pay_staggered %}
+                    <div class="alert alert-info py-2 px-3 mb-3 d-flex align-items-center gap-2" style="border-radius: 10px; font-size: 0.82rem; background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.25); color: #38bdf8;">
+                        <i class="fas fa-circle-info fs-5 flex-shrink-0"></i>
+                        <div>
+                            <strong>Full Monthly Billing:</strong> {{ customer.staggered_restriction_reason }}
+                        </div>
+                    </div>
+                    {% endif %}
+
                     <div class="mb-3">
                         <label class="form-label">Payment Period</label>
                         <div class="quick-grid">
+                            {% if customer.can_pay_staggered %}
                             <div class="q-btn" data-days="3"><span class="q-months">3 Days</span><span class="q-price">₱<span class="calc-price" data-days="3">0.00</span></span></div>
                             <div class="q-btn" data-days="15"><span class="q-months">15 Days</span><span class="q-price">₱<span class="calc-price" data-days="15">0.00</span></span></div>
+                            {% else %}
+                            <div class="q-btn disabled opacity-50 pe-none" title="{{ customer.staggered_restriction_reason }}" style="cursor: not-allowed;"><span class="q-months"><i class="fas fa-lock me-1"></i>3 Days</span><span class="q-price">Locked</span></div>
+                            <div class="q-btn disabled opacity-50 pe-none" title="{{ customer.staggered_restriction_reason }}" style="cursor: not-allowed;"><span class="q-months"><i class="fas fa-lock me-1"></i>15 Days</span><span class="q-price">Locked</span></div>
+                            {% endif %}
                             <div class="q-btn active" data-months="1"><span class="q-months">1 Month</span><span class="q-price">₱<span class="calc-price" data-mult="1">0.00</span></span></div>
                             <div class="q-btn" data-months="2"><span class="q-months">2 Months</span><span class="q-price">₱<span class="calc-price" data-mult="2">0.00</span></span></div>
                             <div class="q-btn" data-months="3"><span class="q-months">3 Months</span><span class="q-price">₱<span class="calc-price" data-mult="3">0.00</span></span></div>
                             <div class="q-btn" data-months="6"><span class="q-months">6 Months</span><span class="q-price">₱<span class="calc-price" data-mult="6">0.00</span></span></div>
                             <div class="q-btn" data-months="12"><span class="q-months">1 Year</span><span class="q-price">₱<span class="calc-price" data-mult="12">0.00</span></span></div>
-                            <div class="q-btn" data-months="custom" id="btn-custom"><span class="q-months">Custom</span><span class="q-price">Enter Amount</span></div>
+                            <div class="q-btn" data-months="custom" id="btn-custom"><span class="q-months">Custom</span><span class="q-price">{% if customer.can_pay_staggered %}Enter Amount{% else %}&ge; 1 Month{% endif %}</span></div>
                         </div>
                     </div>
 
@@ -76,7 +90,8 @@
                         <div class="input-group">
                             <span class="input-group-text fw-bold">₱</span>
                             <input type="number" class="form-control" id="amountInput" name="amount"
-                                   value="{{ customer.plan.price|default:'' }}" required step="0.01">
+                                   value="{{ customer.plan.price|default:'' }}" required step="0.01"
+                                   {% if not customer.can_pay_staggered and customer.plan %}min="{{ customer.plan.price }}"{% endif %}>
                         </div>
                     </div>
 

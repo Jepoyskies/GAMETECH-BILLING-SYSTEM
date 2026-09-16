@@ -304,6 +304,41 @@ class Customer(models.Model):
     def is_suspicious(self):
         return len(self.suspicious_reasons) > 0
 
+    @property
+    def is_walkin_or_direct(self):
+        if not self.agent:
+            return True
+        agent_name = (self.agent.name or "").lower()
+        return "walk-in" in agent_name or "direct" in agent_name
+
+    @property
+    def can_pay_staggered(self):
+        now = timezone.now()
+        start_date = self.installed_at or self.created_at or now
+        days_active = (now - start_date).days
+        payments_count = self.payments.count()
+
+        if self.is_walkin_or_direct:
+            # Walk-in / Direct: unlocked after first payment or after first month (>= 30 days)
+            return payments_count >= 1 or days_active >= 30
+        else:
+            # Has an Agent: only unlocked after 3 months (>= 90 days) or after 3 payments
+            return payments_count >= 3 or days_active >= 90
+
+    @property
+    def staggered_restriction_reason(self):
+        if self.can_pay_staggered:
+            return None
+        if self.is_walkin_or_direct:
+            return "Please complete your initial full monthly payment to unlock staggered payments."
+        else:
+            now = timezone.now()
+            start_date = self.installed_at or self.created_at or now
+            days_active = (now - start_date).days
+            days_left = max(1, 90 - days_active)
+            months_left = max(1, (days_left + 29) // 30)
+            return f"Staggered payments unlock after your first 3 months of service (~{months_left} mo remaining)."
+
     def generate_mikrotik_comment(self):
         latest_payment = self.payments.order_by("-created_at").first()
 

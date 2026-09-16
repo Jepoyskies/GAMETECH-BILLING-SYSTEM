@@ -298,6 +298,16 @@ def portal_process_mock_payment(request):
                 customer = Customer.objects.get(id=customer_id)
                 monthly_price = float(customer.plan.price) if customer.plan else 0.0
                 
+                # Check staggered payment eligibility
+                if not customer.can_pay_staggered:
+                    if monthly_price > 0 and amount_float < monthly_price:
+                        messages.error(
+                            request,
+                            customer.staggered_restriction_reason
+                            or f"Minimum payment allowed is 1 Month (₱{monthly_price:.2f}). Staggered payments are not yet available for this account."
+                        )
+                        return redirect('customer_portal:portal_dashboard')
+
                 with transaction.atomic():
                     # Lock for update
                     locked_customer = Customer.objects.select_for_update().get(pk=customer.pk)

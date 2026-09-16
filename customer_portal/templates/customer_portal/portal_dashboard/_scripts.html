@@ -160,6 +160,8 @@ function handleUpgradeClick() {
 document.addEventListener('DOMContentLoaded', function() {
     let monthlyPrice = parseFloat("{{ customer.plan.price|default:0 }}");
     const isCurrentPlanGimi = {% if customer.plan and "GIMI" in customer.plan.name %}true{% else %}false{% endif %};
+    const canPayStaggered = {% if customer.can_pay_staggered %}true{% else %}false{% endif %};
+    const staggeredReason = "{{ customer.staggered_restriction_reason|default:''|escapejs }}";
     let upgradeFee = 0;
     const amountInput = document.getElementById('amountInput');
     const qBtns = document.querySelectorAll('.q-btn');
@@ -202,10 +204,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     qBtns.forEach(btn => {
         btn.addEventListener('click', function() {
+            if (this.classList.contains('disabled')) return;
             qBtns.forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             if (this.id === 'btn-custom') { 
-                amountInput.value = ''; 
+                amountInput.value = canPayStaggered ? '' : monthlyPrice.toFixed(2); 
                 amountInput.focus(); 
                 recalculateEstimatedExpiration();
                 return; 
@@ -217,6 +220,29 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // Form submit validation guard for staggered payment restriction
+    const paymentForm = document.getElementById('portalPaymentForm');
+    if (paymentForm) {
+        paymentForm.addEventListener('submit', function(e) {
+            const val = parseFloat(amountInput.value) || 0;
+            if (!canPayStaggered && monthlyPrice > 0 && val < monthlyPrice) {
+                e.preventDefault();
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                Swal.fire({
+                    title: 'Full Monthly Payment Required',
+                    text: staggeredReason || `Minimum payment allowed is 1 Month (₱${monthlyPrice.toFixed(2)}). Staggered payments are not yet available for this account.`,
+                    icon: 'warning',
+                    background: isDark ? '#111827' : '#fff',
+                    color: isDark ? '#e2e8f0' : '#0f172a',
+                    confirmButtonColor: '#facc15',
+                });
+                amountInput.value = monthlyPrice.toFixed(2);
+                recalculateEstimatedExpiration();
+                return false;
+            }
+        });
+    }
 
     // Run once on load for the default selected grid button (1 Month)
     recalculateEstimatedExpiration();
@@ -348,3 +374,4 @@ setInterval(fetchRouterUplink, 20000);
                     });
             });
         }
+    </script>
