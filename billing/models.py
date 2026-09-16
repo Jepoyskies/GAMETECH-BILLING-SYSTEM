@@ -634,6 +634,14 @@ class CignalPlay(models.Model):
         return 0
 
     @property
+    def hardware_paid_formatted(self):
+        return f"{self.hardware_paid_amount:,}"
+
+    @property
+    def hardware_remaining_formatted(self):
+        return f"{self.hardware_remaining_amount:,}"
+
+    @property
     def is_installment_completed(self):
         return self.hardware_payment_type == 'installment' and (self.installments_paid or 0) >= 12
 
