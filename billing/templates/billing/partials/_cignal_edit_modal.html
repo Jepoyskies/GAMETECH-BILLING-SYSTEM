@@ -1,0 +1,104 @@
+<!-- Edit Cignal Subscription Modal -->
+<div class="modal fade" id="cignalEditModal" tabindex="-1" aria-labelledby="cignalEditModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content gt-modal-content" style="border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);">
+      <div class="modal-header border-bottom-0 pb-0">
+        <h5 class="modal-title fw-bold" id="cignalEditModalLabel">
+          <i class="fas fa-pencil-alt text-info me-2"></i> Edit Cignal Subscription
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <form action="" method="post" id="cignalEditForm">
+        {% csrf_token %}
+        <input type="hidden" name="subscription_id" id="cemSubscriptionId" value="">
+
+        <div class="modal-body py-3">
+          <!-- Subscription Target Banner -->
+          <div class="p-3 mb-3 rounded-3" style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25);">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <strong class="text-info fw-bold" style="font-size: 0.96rem;" id="cemCustomerName">
+                <i class="fas fa-satellite-dish me-1"></i> {% if target_customer %}{{ target_customer.full_name }}{% elif customer %}{{ customer.full_name }}{% else %}Cignal Subscriber{% endif %}
+              </strong>
+              <span class="badge bg-info-subtle text-info border border-info-subtle" id="cemSubBadge">Edit Details</span>
+            </div>
+            <div class="small text-muted">
+              Update account numbers or friendly device label for this Cignal subscription.
+            </div>
+          </div>
+
+          <!-- Subscription / Device Label -->
+          <div class="mb-3">
+            <label for="cemAccountName" class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
+              <i class="fas fa-tag text-info me-1"></i> Device / Subscription Label
+            </label>
+            <input type="text" name="account_name" id="cemAccountName" class="form-control" 
+                   placeholder="e.g., Living Room STB, Master Bedroom TV" style="border-radius: 8px;">
+            <div class="form-text small">Helps staff distinguish between multiple TVs or devices for this customer.</div>
+          </div>
+
+          <!-- Cignal Play App Number -->
+          <div class="mb-3">
+            <label for="cemPlayNo" class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
+              <i class="fas fa-mobile-screen-button text-primary me-1"></i> Cignal Play No.
+            </label>
+            <div class="input-group">
+              <span class="input-group-text bg-dark-subtle border-secondary-subtle font-monospace fw-bold" style="font-size:0.75rem;">PLAY</span>
+              <input type="text" name="cignal_play_no" id="cemPlayNo" class="form-control font-monospace" 
+                     placeholder="e.g. 1000123456" style="letter-spacing: 0.05em;">
+            </div>
+            <div class="form-text small">Streaming app account number for mobile/smart TV login.</div>
+          </div>
+
+          <!-- Cignal Physical Box Number -->
+          <div class="mb-3">
+            <label for="cemBoxNo" class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
+              <i class="fas fa-tv text-warning me-1"></i> Cignal Box No.
+            </label>
+            <div class="input-group">
+              <span class="input-group-text bg-dark-subtle border-secondary-subtle font-monospace fw-bold" style="font-size:0.75rem;">BOX</span>
+              <input type="text" name="cignal_box_no" id="cemBoxNo" class="form-control font-monospace" 
+                     placeholder="e.g. CCA1234567" style="letter-spacing: 0.05em;">
+            </div>
+            <div class="form-text small">Physical set-top box serial/smart card number.</div>
+          </div>
+        </div>
+
+        <div class="modal-footer border-top-0 pt-0">
+          <button type="button" class="btn btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary gt-btn rounded-pill px-4 fw-bold">
+            <i class="fas fa-save me-1"></i> Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function openCignalEditModal(data) {
+  if (!data) return;
+  const form = document.getElementById('cignalEditForm');
+  if (form && data.id) {
+    form.action = '/cignal-play/edit/' + data.id + '/';
+  }
+  const idInput = document.getElementById('cemSubscriptionId');
+  if (idInput) idInput.value = data.id || '';
+  const labelInput = document.getElementById('cemAccountName');
+  if (labelInput) labelInput.value = data.label || '';
+  const playInput = document.getElementById('cemPlayNo');
+  if (playInput) playInput.value = data.playNo || '';
+  const boxInput = document.getElementById('cemBoxNo');
+  if (boxInput) boxInput.value = data.boxNo || '';
+  const nameEl = document.getElementById('cemCustomerName');
+  if (nameEl && data.customerName) {
+    nameEl.innerHTML = '<i class="fas fa-satellite-dish me-1"></i> ' + data.customerName;
+  }
+
+  const modalEl = document.getElementById('cignalEditModal');
+  if (modalEl) {
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+  }
+}
+</script>

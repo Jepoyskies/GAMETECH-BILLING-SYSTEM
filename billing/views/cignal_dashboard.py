@@ -195,3 +195,58 @@ def process_cignal_payment(request):
     )
     return redirect(request.META.get("HTTP_REFERER", "cignal_dashboard"))
 
+
+@login_required
+@require_POST
+def edit_cignal_subscription(request, sub_id):
+    """
+    Update Cignal subscription details: label/account_name, cignal_play_no, and cignal_box_no.
+    """
+    subscription = get_object_or_404(CignalPlay, pk=sub_id)
+    customer = subscription.customer
+
+    account_name = request.POST.get("account_name", "").strip()
+    cignal_play_no = request.POST.get("cignal_play_no", "").strip()
+    cignal_box_no = request.POST.get("cignal_box_no", "").strip()
+
+    if account_name:
+        subscription.account_name = account_name
+    subscription.cignal_play_no = cignal_play_no
+    subscription.cignal_box_no = cignal_box_no
+    subscription.adjusted_by = request.user.username
+    subscription.save()
+
+    # Synchronize customer-level convenience fields if applicable
+    if customer:
+        updated_cust = False
+        if cignal_play_no and customer.cignalplay_no != cignal_play_no:
+            customer.cignalplay_no = cignal_play_no
+            updated_cust = True
+        if cignal_box_no and customer.cignalbox_no != cignal_box_no:
+            customer.cignalbox_no = cignal_box_no
+            updated_cust = True
+        if updated_cust:
+            customer.save(update_fields=["cignalplay_no", "cignalbox_no"])
+
+    # AuditLog
+    AuditLog.objects.create(
+        admin_user=request.user,
+        customer=customer,
+        action_type="Edit Cignal Subscription",
+        remarks=f"Updated Cignal #{subscription.id}: Label='{subscription.account_name}', Play='{cignal_play_no}', Box='{cignal_box_no}'",
+    )
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", ""):
+        return JsonResponse({
+            "status": "success",
+            "message": "Cignal subscription updated successfully.",
+            "subscription_id": subscription.id,
+            "account_name": subscription.account_name,
+            "cignal_play_no": subscription.cignal_play_no,
+            "cignal_box_no": subscription.cignal_box_no,
+        })
+
+    messages.success(request, f"Cignal subscription '{subscription.account_name}' updated successfully.")
+    return redirect(request.META.get("HTTP_REFERER", "cignal_dashboard"))
+
+

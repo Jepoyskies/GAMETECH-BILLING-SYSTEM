@@ -1,0 +1,42 @@
+<!-- Recent Cignal Logs/Renewals Card -->
+<div class="cignal-glass-card mb-4">
+    <div class="cignal-card-header">
+      <h6><i class="fas fa-list header-icon-danger"></i> Recent Logs & Renewals</h6>
+    </div>
+    <div class="table-responsive">
+      <table class="cignal-table table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Customer</th>
+            <th>Plan/Log</th>
+            <th>By</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in cignal_payments %}
+          <tr>
+            <td><small class="text-muted">{{ log.created_at|date:"M d, Y" }}</small></td>
+            <td>
+              <a href="{% url 'user_cignal_logs' log.customer.id %}" class="fw-bold text-decoration-none text-info" title="View customer logs">
+                {{ log.customer.full_name|default:log.customer.pppoe_username }}
+              </a>
+            </td>
+            <td><span class="cignal-badge-neutral">{{ log.plan_name }}</span></td>
+            <td><small class="text-muted">{{ log.adjusted_by|default:"-" }}</small></td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4">
+              <div class="cignal-empty-state py-3">
+                <div class="cignal-empty-icon mb-1"><i class="fas fa-history text-muted" style="font-size: 1.5rem;"></i></div>
+                <div class="cignal-empty-title" style="font-size: 0.95rem;">No Recent Cignal Logs</div>
+                <div class="cignal-empty-sub" style="font-size: 0.8rem;">Monthly renewal logs and add-on payments will appear here.</div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+</div>
