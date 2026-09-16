@@ -62,6 +62,40 @@
             </div>
             <div class="form-text small">Physical set-top box serial/smart card number.</div>
           </div>
+
+          <!-- Hardware Setup & Monthly Load -->
+          <div class="row g-2 mb-3">
+            <div class="col-sm-6">
+              <label for="cemHardwareType" class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
+                <i class="fas fa-microchip text-warning me-1"></i> Hardware Setup
+              </label>
+              <select name="hardware_payment_type" id="cemHardwareType" class="form-select" onchange="cemToggleInstallmentInput(this.value)">
+                <option value="none">No Box / App Only</option>
+                <option value="installment">12-Mo Installment (₱250/mo)</option>
+                <option value="cashout">Cashout (₱3,000)</option>
+              </select>
+            </div>
+            <div class="col-sm-6">
+              <label for="cemMonthlyLoad" class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
+                <i class="fas fa-broadcast-tower text-success me-1"></i> Load Plan
+              </label>
+              <select name="monthly_load_plan" id="cemMonthlyLoad" class="form-select">
+                <option value="149">42 Channels (₱149/mo)</option>
+                <option value="399">62 Channels (₱399/mo)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Installments Paid (Shown if Installment) -->
+          <div class="mb-3" id="cemInstallmentGroup" style="display: none;">
+            <label for="cemInstallmentsPaid" class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
+              <i class="fas fa-clock text-info me-1"></i> Installments Paid (Months 0-12)
+            </label>
+            <div class="input-group">
+              <input type="number" min="0" max="12" name="installments_paid" id="cemInstallmentsPaid" class="form-control" value="0">
+              <span class="input-group-text bg-dark-subtle border-secondary-subtle">/ 12 Months</span>
+            </div>
+          </div>
         </div>
 
         <div class="modal-footer border-top-0 pt-0">
@@ -76,6 +110,13 @@
 </div>
 
 <script>
+function cemToggleInstallmentInput(val) {
+  const grp = document.getElementById('cemInstallmentGroup');
+  if (grp) {
+    grp.style.display = (val === 'installment') ? 'block' : 'none';
+  }
+}
+
 function openCignalEditModal(data) {
   if (!data) return;
   const form = document.getElementById('cignalEditForm');
@@ -93,6 +134,22 @@ function openCignalEditModal(data) {
   const nameEl = document.getElementById('cemCustomerName');
   if (nameEl && data.customerName) {
     nameEl.innerHTML = '<i class="fas fa-satellite-dish me-1"></i> ' + data.customerName;
+  }
+
+  const hwSelect = document.getElementById('cemHardwareType');
+  if (hwSelect) {
+    hwSelect.value = data.hardwarePaymentType || 'none';
+    cemToggleInstallmentInput(hwSelect.value);
+  }
+
+  const instInput = document.getElementById('cemInstallmentsPaid');
+  if (instInput) {
+    instInput.value = data.installmentsPaid !== undefined ? data.installmentsPaid : 0;
+  }
+
+  const loadSelect = document.getElementById('cemMonthlyLoad');
+  if (loadSelect) {
+    loadSelect.value = data.monthlyLoadPlan || '149';
   }
 
   const modalEl = document.getElementById('cignalEditModal');

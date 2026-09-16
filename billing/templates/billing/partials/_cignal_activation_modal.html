@@ -78,33 +78,44 @@
               <h6 class="text-uppercase small fw-bold mb-0 text-muted" style="letter-spacing: 0.05em;">Section 2: Payment & Auditing</h6>
             </div>
 
-            <!-- Initial Payment Amount & Presets -->
-            <div class="mb-3">
-              <div class="d-flex justify-content-between align-items-center mb-1">
-                <label class="form-label fw-bold small text-uppercase mb-0" style="letter-spacing: 0.04em;">
-                  <i class="fas fa-coins text-warning me-1"></i> Amount Paid (₱) <span class="text-danger">*</span>
+            <!-- Hardware & Load Plan Split Selection -->
+            <div class="row g-2 mb-3">
+              <div class="col-md-6">
+                <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
+                  <i class="fas fa-box text-warning me-1"></i> Hardware Setup <span class="text-danger">*</span>
                 </label>
-                <span class="small text-muted" style="font-size: 0.72rem;">Click preset to auto-fill</span>
+                <select name="hardware_payment_type" id="modalHardwareType_{{ modal_suffix|default:'single' }}" class="form-select fw-semibold" onchange="calculateActivationTotal_{{ modal_suffix|default:'single' }}()">
+                  <option value="installment" data-cost="250" selected>12-Mo Installment (₱250/mo)</option>
+                  <option value="cashout" data-cost="3000">Cashout (₱3,000)</option>
+                  <option value="none" data-cost="0">No Box / App Only (₱0)</option>
+                </select>
+                <div class="form-text text-muted small">Box acquisition model.</div>
               </div>
-              <!-- Quick-Fill Pills -->
-              <div class="d-flex flex-wrap gap-2 mb-2 pt-1">
-                <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2 py-1 fw-semibold" style="font-size: 0.75rem;" onclick="setActivationPreset_{{ modal_suffix|default:'single' }}(149, 30)">
-                  ₱149 <small class="opacity-75">Play</small>
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1 fw-semibold" style="font-size: 0.75rem;" onclick="setActivationPreset_{{ modal_suffix|default:'single' }}(399, 30)">
-                  ₱399 <small class="opacity-75">Premium</small>
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-2 py-1 fw-semibold" style="font-size: 0.75rem;" onclick="setActivationPreset_{{ modal_suffix|default:'single' }}(250, 30)">
-                  ₱250 <small class="opacity-75">Installment</small>
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2 py-1 fw-semibold" style="font-size: 0.75rem;" onclick="setActivationPreset_{{ modal_suffix|default:'single' }}(3000, 365)">
-                  ₱3,000 <small class="opacity-75">Cashout</small>
-                </button>
+
+              <div class="col-md-6">
+                <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
+                  <i class="fas fa-satellite-dish text-info me-1"></i> Initial Load Plan <span class="text-danger">*</span>
+                </label>
+                <select name="monthly_load_plan" id="modalLoadPlan_{{ modal_suffix|default:'single' }}" class="form-select fw-semibold" onchange="calculateActivationTotal_{{ modal_suffix|default:'single' }}()">
+                  <option value="149" data-cost="149" selected>42 Channels (₱149)</option>
+                  <option value="399" data-cost="399">62 Channels (₱399)</option>
+                </select>
+                <div class="form-text text-muted small">First month subscription channels.</div>
               </div>
-              <div class="input-group">
-                <span class="input-group-text fw-bold">₱</span>
-                <input type="number" step="0.01" min="0" class="form-control fw-bold" name="initial_amount" id="modalInitialAmount_{{ modal_suffix|default:'single' }}" placeholder="0.00" value="399.00" required>
-                <select name="payment_method" class="form-select" style="max-width: 140px;">
+            </div>
+
+            <!-- Total Due Today Display -->
+            <div class="p-3 mb-3 rounded-3 d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.25);">
+              <div>
+                <span class="small text-uppercase fw-bold text-success" style="letter-spacing: 0.05em;">
+                  <i class="fas fa-calculator me-1"></i> Total Due Today:
+                </span>
+                <div class="small text-muted" id="modalCalcBreakdown_{{ modal_suffix|default:'single' }}">₱250 (Installment) + ₱149 (Load)</div>
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                <span class="fs-4 fw-bold text-success font-monospace" id="modalTotalDueDisplay_{{ modal_suffix|default:'single' }}">₱399.00</span>
+                <input type="hidden" name="initial_amount" id="modalInitialAmount_{{ modal_suffix|default:'single' }}" value="399.00">
+                <select name="payment_method" class="form-select form-select-sm" style="max-width: 130px;">
                   <option value="Cash" selected>Cash</option>
                   <option value="GCash">GCash</option>
                   <option value="Bank Transfer">Bank</option>
@@ -183,10 +194,28 @@
               return true;
           }
 
-          function setActivationPreset_{{ modal_suffix|default:'single' }}(amount, days) {
-              var amtInput = document.getElementById('modalInitialAmount_{{ modal_suffix|default:'single' }}');
-              if (amtInput) amtInput.value = Number(amount).toFixed(2);
-              addActivationDays_{{ modal_suffix|default:'single' }}(days, true);
+          function calculateActivationTotal_{{ modal_suffix|default:'single' }}() {
+              var hwSelect = document.getElementById('modalHardwareType_{{ modal_suffix|default:'single' }}');
+              var loadSelect = document.getElementById('modalLoadPlan_{{ modal_suffix|default:'single' }}');
+              var totalEl = document.getElementById('modalTotalDueDisplay_{{ modal_suffix|default:'single' }}');
+              var amountInput = document.getElementById('modalInitialAmount_{{ modal_suffix|default:'single' }}');
+              var breakdownEl = document.getElementById('modalCalcBreakdown_{{ modal_suffix|default:'single' }}');
+
+              if (!hwSelect || !loadSelect) return;
+              var hwOpt = hwSelect.options[hwSelect.selectedIndex];
+              var loadOpt = loadSelect.options[loadSelect.selectedIndex];
+
+              var hwCost = parseFloat(hwOpt ? hwOpt.getAttribute('data-cost') || 0 : 0);
+              var loadCost = parseFloat(loadOpt ? loadOpt.getAttribute('data-cost') || 0 : 0);
+              var total = hwCost + loadCost;
+
+              if (totalEl) totalEl.textContent = '₱' + total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+              if (amountInput) amountInput.value = total.toFixed(2);
+              if (breakdownEl && hwOpt && loadOpt) {
+                  var hwLabel = hwOpt.value === 'cashout' ? '₱3,000 (Cashout)' : (hwOpt.value === 'installment' ? '₱250 (Installment)' : '₱0 (No Box)');
+                  var loadLabel = '₱' + loadCost + ' (' + loadOpt.value + ' Plan)';
+                  breakdownEl.textContent = hwLabel + ' + ' + loadLabel;
+              }
           }
 
           function addActivationDays_{{ modal_suffix|default:'single' }}(days, fromToday) {

@@ -552,6 +552,26 @@ class CignalPlay(models.Model):
     end_date = models.DateTimeField(null=True, blank=True)
     expiration_date = models.DateTimeField(null=True, blank=True)
     adjusted_by = models.CharField(max_length=100, null=True, blank=True)
+    hardware_payment_type = models.CharField(
+        max_length=30,
+        choices=[
+            ("cashout", "Cashout ₱3k"),
+            ("installment", "Installment ₱250/mo"),
+            ("none", "App Only / No Box"),
+        ],
+        default="none",
+    )
+    installments_paid = models.IntegerField(default=0)
+    monthly_load_plan = models.CharField(
+        max_length=20,
+        choices=[
+            ("149", "42 Channels (₱149)"),
+            ("399", "62 Channels (₱399)"),
+        ],
+        default="149",
+        blank=True,
+        null=True,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

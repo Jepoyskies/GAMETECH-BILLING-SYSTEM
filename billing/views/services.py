@@ -491,6 +491,16 @@ def apply_cignal_addon(request):
         acct_summary = " | ".join(account_nos)
         sub_name = account_name or f"Cignal - {acct_summary}"
 
+        # Parse hardware & load plan selections
+        hardware_payment_type = request.POST.get("hardware_payment_type", "none").strip()
+        monthly_load_plan = request.POST.get("monthly_load_plan", "149").strip()
+        if hardware_payment_type == "cashout":
+            installments_paid = 12
+        elif hardware_payment_type == "installment":
+            installments_paid = 1
+        else:
+            installments_paid = 0
+
         # Create CignalPlay subscription record (Unified)
         subscription = CignalPlay.objects.create(
             customer=customer,
@@ -502,13 +512,17 @@ def apply_cignal_addon(request):
             expiration_date=expiration_dt,
             end_date=expiration_dt,
             amount_paid=initial_amount,
+            hardware_payment_type=hardware_payment_type,
+            installments_paid=installments_paid,
+            monthly_load_plan=monthly_load_plan,
             adjusted_by=request.user.username,
         )
 
         # Crucial: Automatically generate a Payment record for the Initial Payment Amount
         if initial_amount > 0:
             acct_desc = subscription.account_name or acct_summary
-            reason_text = f"Cignal Activation: {acct_desc}"
+            hw_desc = f"Hardware: {hardware_payment_type.title()}" if hardware_payment_type != "none" else "App Only"
+            reason_text = f"Cignal Activation: {acct_desc} ({hw_desc} + {monthly_load_plan} Load)"
             if notes:
                 reason_text += f" | {notes}"
 
@@ -531,7 +545,7 @@ def apply_cignal_addon(request):
                 admin_user=request.user,
                 customer=customer,
                 action_type="Cignal Activation Payment",
-                remarks=f"Initial Payment: ₱{initial_amount:,.2f} | Ref: {reference_no or 'N/A'}{audit_notes} | Due Date: {expiration_dt.strftime('%Y-%m-%d')} | Accounts: {acct_summary}",
+                remarks=f"Initial Payment: ₱{initial_amount:,.2f} | {hw_desc} ({installments_paid}/12 paid) | Load Plan: ₱{monthly_load_plan} | Ref: {reference_no or 'N/A'}{audit_notes} | Due Date: {expiration_dt.strftime('%Y-%m-%d')} | Accounts: {acct_summary}",
             )
 
         # Notification
