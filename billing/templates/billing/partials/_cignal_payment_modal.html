@@ -148,7 +148,7 @@
               </div>
             </div>
             <input type="date" name="new_expiration_date" id="cpmExpirationDate" class="form-control" required>
-            <div class="form-text text-muted small">Updated expiration date will automatically synchronize across customer records and Mikrotik profiles.</div>
+            <div class="form-text text-muted small">Cignal TV service load extends subscription due date. (Independent third-party TV service — no router activation needed).</div>
           </div>
 
           <!-- Payment Method & Reference -->
@@ -225,10 +225,30 @@ function cpmSetAmount(amount, days, btn, paymentType) {
         btn.classList.add('active', 'shadow');
     }
 
-    // If expiration date is empty, set default +days from today or existing expiry
+    // Auto-calculate new expiration date (+days from current expiry if active, or from today if expired)
     var dateInput = document.getElementById('cpmExpirationDate');
-    if (dateInput && !dateInput.value && days) {
-        cpmAddDays(days);
+    if (dateInput && days && paymentType !== 'box_installment') {
+        var opt = null;
+        var sel = document.getElementById('cpmSubscriptionSelect');
+        if (sel && sel.options[sel.selectedIndex]) {
+            opt = sel.options[sel.selectedIndex];
+        }
+        var curExpStr = opt ? opt.getAttribute('data-exp') : '';
+        var baseDate = new Date();
+        if (curExpStr) {
+            var parts = curExpStr.split('-');
+            if (parts.length === 3) {
+                var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                if (!isNaN(d.getTime()) && d >= new Date()) {
+                    baseDate = d;
+                }
+            }
+        }
+        baseDate.setDate(baseDate.getDate() + days);
+        var y = baseDate.getFullYear();
+        var m = String(baseDate.getMonth() + 1).padStart(2, '0');
+        var day = String(baseDate.getDate()).padStart(2, '0');
+        dateInput.value = y + '-' + m + '-' + day;
     }
 }
 

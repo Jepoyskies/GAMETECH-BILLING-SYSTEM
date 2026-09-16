@@ -128,12 +128,23 @@ def process_cignal_payment(request):
             try:
                 if len(new_expiration_date_raw) == 10:
                     dt = datetime.strptime(new_expiration_date_raw, "%Y-%m-%d")
+                    dt = dt.replace(hour=23, minute=59, second=59)
                     new_expiration_date = timezone.make_aware(dt) if timezone.is_naive(dt) else dt
                 else:
                     dt = datetime.fromisoformat(new_expiration_date_raw)
                     new_expiration_date = timezone.make_aware(dt) if timezone.is_naive(dt) else dt
             except Exception:
                 pass
+
+        # ISP-style automatic date advancement if not manually specified:
+        # Load payments advance by 30 days from current expiry (if active) or from today (if expired)
+        if not new_expiration_date and payment_type not in ("box_only", "box_installment"):
+            curr_exp = subscription.expiration_date or subscription.end_date
+            if curr_exp and curr_exp > timezone.now():
+                base_dt = curr_exp
+            else:
+                base_dt = timezone.now()
+            new_expiration_date = (base_dt + timedelta(days=30)).replace(hour=23, minute=59, second=59)
 
         if new_expiration_date:
             subscription.expiration_date = new_expiration_date
@@ -276,6 +287,22 @@ def edit_cignal_subscription(request, sub_id=None):
     if monthly_load_plan in ("149", "399"):
         subscription.monthly_load_plan = monthly_load_plan
 
+    # Expiration / Due Date handling
+    expiration_date_raw = request.POST.get("expiration_date", "").strip()
+    if expiration_date_raw:
+        try:
+            exp_dt = datetime.strptime(expiration_date_raw, "%Y-%m-%d")
+            exp_dt = exp_dt.replace(hour=23, minute=59, second=59)
+            if timezone.is_naive(exp_dt):
+                exp_dt = timezone.make_aware(exp_dt)
+            subscription.expiration_date = exp_dt
+            subscription.end_date = exp_dt
+        except ValueError:
+            pass
+    elif "expiration_date" in request.POST and not expiration_date_raw:
+        subscription.expiration_date = None
+        subscription.end_date = None
+
     subscription.adjusted_by = request.user.username
     subscription.save()
 
@@ -292,11 +319,12 @@ def edit_cignal_subscription(request, sub_id=None):
             customer.save(update_fields=["cignalplay_no", "cignalbox_no"])
 
     # AuditLog
+    exp_str = subscription.expiration_date.strftime('%Y-%m-%d') if subscription.expiration_date else 'None'
     AuditLog.objects.create(
         admin_user=request.user,
         customer=customer,
         action_type="Edit Cignal Subscription",
-        remarks=f"Updated Cignal #{subscription.id}: Label='{subscription.account_name}', Play='{cignal_play_no}', Box='{cignal_box_no}', HW='{subscription.hardware_payment_type}' ({subscription.installments_paid}/12), Load='₱{subscription.monthly_load_plan}'",
+        remarks=f"Updated Cignal #{subscription.id}: Label='{subscription.account_name}', Play='{cignal_play_no}', Box='{cignal_box_no}', HW='{subscription.hardware_payment_type}' ({subscription.installments_paid}/12), Load='₱{subscription.monthly_load_plan}', Expiry='{exp_str}'",
     )
 
     if request.headers.get("X-Requested-With") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", ""):
@@ -310,6 +338,7 @@ def edit_cignal_subscription(request, sub_id=None):
             "hardware_payment_type": subscription.hardware_payment_type,
             "installments_paid": subscription.installments_paid,
             "monthly_load_plan": subscription.monthly_load_plan,
+            "expiration_date": subscription.expiration_date.strftime("%Y-%m-%d") if subscription.expiration_date else "",
         })
 
     messages.success(request, f"Cignal subscription '{subscription.account_name}' updated successfully.")
