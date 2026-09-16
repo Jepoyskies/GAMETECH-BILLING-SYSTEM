@@ -57,7 +57,18 @@
                         {% for record in records %}
                         <tr>
                             <td>{{ record.date|date:"M d, Y" }}</td>
-                            <td class="fw-bold">{{ record.client_name }}</td>
+                            <td>
+                                <div class="fw-bold">{{ record.client_name }}</div>
+                                {% if record.contact_number %}
+                                <div class="small"><a href="tel:{{ record.contact_number }}" class="text-info text-decoration-none"><i class="fas fa-phone-alt me-1"></i> {{ record.contact_number }}</a></div>
+                                {% endif %}
+                                {% if record.alternate_contact %}
+                                <div class="small"><a href="tel:{{ record.alternate_contact }}" class="text-warning text-decoration-none" title="On-Site Alternate Contact"><i class="fas fa-phone-square-alt me-1"></i> Alt: {{ record.alternate_contact }}</a></div>
+                                {% endif %}
+                                {% if record.facebook_account %}
+                                <div class="small"><a href="{% if 'facebook.com' in record.facebook_account or 'http' in record.facebook_account %}{{ record.facebook_account }}{% else %}https://facebook.com/search/top?q={{ record.facebook_account|urlencode }}{% endif %}" target="_blank" class="text-primary text-decoration-none" title="Facebook / Messenger Link"><i class="fab fa-facebook-messenger me-1"></i> {{ record.facebook_account }}</a></div>
+                                {% endif %}
+                            </td>
                             <td class="text-muted">{{ record.address|truncatechars:30 }}</td>
                             <td>{{ record.concern|truncatechars:30 }}</td>
                             <td>

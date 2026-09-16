@@ -62,6 +62,8 @@ class DispatchRecord(models.Model):
     client_name = models.CharField(max_length=255)
     address = models.TextField()
     contact_number = models.CharField(max_length=50)
+    alternate_contact = models.CharField(max_length=150, null=True, blank=True)
+    facebook_account = models.CharField(max_length=255, null=True, blank=True)
     concern = models.TextField()
     sales_agent = models.CharField(max_length=100, null=True, blank=True)
     
@@ -108,6 +110,8 @@ class MonitoringRecord(models.Model):
     client_name = models.CharField(max_length=255)
     address = models.TextField()
     contact_number = models.CharField(max_length=50)
+    alternate_contact = models.CharField(max_length=150, null=True, blank=True)
+    facebook_account = models.CharField(max_length=255, null=True, blank=True)
     concern = models.TextField()
     sales_agent = models.CharField(max_length=100, null=True, blank=True)
     
@@ -234,6 +238,8 @@ class JobTicket(models.Model):
     address = models.TextField(blank=True, null=True)
     barangay = models.CharField(max_length=100, blank=True, null=True)
     contact_number = models.CharField(max_length=50, blank=True, null=True)
+    alternate_contact = models.CharField(max_length=150, null=True, blank=True)
+    facebook_account = models.CharField(max_length=255, null=True, blank=True)
     account_no = models.CharField(max_length=100, blank=True, null=True)
     sales_agent = models.CharField(max_length=100, blank=True, null=True)
     plan_package = models.CharField(max_length=100, blank=True, null=True)

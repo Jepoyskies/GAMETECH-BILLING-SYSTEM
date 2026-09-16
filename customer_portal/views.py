@@ -7,6 +7,9 @@ from decimal import Decimal
 from datetime import timedelta
 from django.utils import timezone
 from django.db import transaction
+import logging
+
+logger = logging.getLogger(__name__)
 
 def portal_login(request):
     # If already logged in, redirect to dashboard
@@ -512,8 +515,10 @@ def submit_ticket(request):
     if request.method == 'POST':
         issue_type = request.POST.get('issue_type') or 'General Concern'
         description = request.POST.get('description') or ''
+        alternate_phone = request.POST.get('alternate_phone', '').strip()
+        facebook_account = request.POST.get('facebook_account', '').strip()
         
-        from dispatch.models import DispatchRecord, MonitoringRecord, ConfigOption
+        from dispatch.models import DispatchRecord, MonitoringRecord, ConfigOption, JobTicket
         from django.contrib.auth.models import User
 
         admin_user = User.objects.filter(is_superuser=True).first() or User.objects.first()
@@ -529,12 +534,25 @@ def submit_ticket(request):
         
         ticket_no = f"TKT-{timezone.now().strftime('%y%m%d%H%M%S')}"
 
+        extra_contacts = []
+        if alternate_phone:
+            extra_contacts.append(f"Alt Phone: {alternate_phone}")
+        if facebook_account:
+            extra_contacts.append(f"FB: {facebook_account}")
+        extra_contact_str = " | ".join(extra_contacts)
+
+        full_concern = f"[{issue_type}] {description}"
+        if extra_contact_str:
+            full_concern += f" [On-Site Contact: {extra_contact_str}]"
+
         dispatch_record = DispatchRecord.objects.create(
             date=timezone.now().date(),
             client_name=customer.full_name,
             address=customer.address or "Not provided",
             contact_number=customer.phone or "Not provided",
-            concern=f"[{issue_type}] {description}",
+            alternate_contact=alternate_phone or None,
+            facebook_account=facebook_account or None,
+            concern=full_concern,
             source_tab='CLIENT_CONCERNS',
             ticket_number=ticket_no,
             status_option=status_opt,
@@ -548,19 +566,59 @@ def submit_ticket(request):
             client_name=customer.full_name,
             address=customer.address or "Not provided",
             contact_number=customer.phone or "Not provided",
-            concern=f"[{issue_type}] {description}",
+            alternate_contact=alternate_phone or None,
+            facebook_account=facebook_account or None,
+            concern=full_concern,
             ticket_number=ticket_no,
             status_option=mon_status_opt,
             dispatch=dispatch_record,
             customer=customer,
             csr=admin_user,
         )
+
+        # Synchronize JobTicket for immediate visibility in Dispatch Cockpit (/dispatch/)
+        try:
+            barangay_name = customer.barangay.name if customer.barangay else ''
+            agent_name = customer.agent.name if customer.agent else ''
+            plan_name = customer.plan.name if customer.plan else ''
+            lat = float(customer.latitude) if customer.latitude else None
+            lng = float(customer.longitude) if customer.longitude else None
+
+            JobTicket.objects.create(
+                ticket_number=ticket_no,
+                ticket_type='REPAIR',
+                status='PENDING',
+                priority='NORMAL',
+                source_tab='CLIENT_CONCERNS',
+                customer=customer,
+                mikrotik_device=customer.mikrotik_device,
+                client_name=customer.full_name,
+                address=customer.address or '',
+                barangay=barangay_name,
+                contact_number=customer.phone or '',
+                alternate_contact=alternate_phone or None,
+                facebook_account=facebook_account or None,
+                account_no=customer.pppoe_username or '',
+                sales_agent=agent_name,
+                plan_package=plan_name,
+                concern=full_concern,
+                chat_type='Customer Portal',
+                special_instruction=f"On-Site Contact: {extra_contact_str}" if extra_contact_str else '',
+                latitude=lat,
+                longitude=lng,
+                created_by=admin_user,
+            )
+        except Exception as e:
+            logger.error(f"Error creating JobTicket from portal submit_ticket: {e}")
         
         # Create system notification for admins & staff
         try:
+            notif_msg = f"[{ticket_no}] {description or issue_type}"
+            if extra_contact_str:
+                notif_msg += f" ({extra_contact_str})"
             Notification.objects.create(
                 title=f"New Ticket: {customer.full_name} ({issue_type})",
-                message=f"[{ticket_no}] {description or issue_type}",
+                message=notif_msg,
                 notification_type='network',
                 link='/dispatch/client-concerns/',
             )
@@ -571,3 +629,4 @@ def submit_ticket(request):
         return redirect('customer_portal:portal_dashboard')
         
     return render(request, 'customer_portal/submit_ticket.html', {'customer': customer})
+
