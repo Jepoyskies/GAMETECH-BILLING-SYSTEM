@@ -137,26 +137,28 @@
                 </label>
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <div class="form-check p-3 border rounded-3 h-100 setup-type-card" id="card-type-installed" style="cursor: pointer; background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.4) !important;">
-                            <input class="form-check-input ms-0 me-2" type="radio" name="installation_status" id="install_status_installed" value="installed" {% if request.user.role != 'Agent' %}checked{% endif %}>
-                            <label class="form-check-label fw-bold d-block" for="install_status_installed" style="cursor: pointer;">
-                                <i class="fas fa-check-circle text-success me-1"></i> Installed / Existing Subscriber
-                                <div class="text-muted fw-normal small mt-1">Manual Override: Use this option when importing legacy customers from an old system, or recreating a accidentally deleted record. Account becomes instantly active.</div>
-                            </label>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-check p-3 border rounded-3 h-100 setup-type-card" id="card-type-pending" style="cursor: pointer; {% if request.user.role == 'Agent' %}background: rgba(14, 165, 233, 0.08); border-color: rgba(14, 165, 233, 0.4) !important;{% endif %}">
-                            <input class="form-check-input ms-0 me-2" type="radio" name="installation_status" id="install_status_pending" value="pending" {% if request.user.role == 'Agent' %}checked{% endif %}>
+                        <div class="form-check p-3 border rounded-3 h-100 setup-type-card" id="card-type-pending" style="cursor: pointer; background: rgba(14, 165, 233, 0.08); border-color: rgba(14, 165, 233, 0.4) !important;">
+                            <input class="form-check-input ms-0 me-2" type="radio" name="installation_status" id="install_status_pending" value="pending" checked>
                             <label class="form-check-label fw-bold d-block" for="install_status_pending" style="cursor: pointer;">
                                 <i class="fas fa-gear text-info me-1"></i> For Installation (New Applicant)
                                 <div class="text-muted fw-normal small mt-1">Standard Flow: Brand new customer. Will be marked as 'Pending Install' until a technician confirms setup and logs the initial payment.</div>
                             </label>
                         </div>
                     </div>
+                    <div class="col-md-6">
+                        <div class="form-check p-3 border rounded-3 h-100 setup-type-card" id="card-type-installed" style="cursor: pointer;">
+                            <input class="form-check-input ms-0 me-2" type="radio" name="installation_status" id="install_status_installed" value="installed">
+                            <label class="form-check-label fw-bold d-block" for="install_status_installed" style="cursor: pointer;">
+                                <i class="fas fa-check-circle text-success me-1"></i> Installed / Existing Subscriber
+                                <div class="text-muted fw-normal small mt-1">Manual Override: Use this option when importing legacy customers from an old system, or recreating a accidentally deleted record. Account becomes instantly active.</div>
+                            </label>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="row g-3 mt-2" id="installed-dates-row" style="{% if request.user.role == 'Agent' %}display:none;{% endif %}">
+                <div id="pending-install-helper" class="alert alert-info border-info text-info bg-transparent mt-3">🗓️ Installation and First Due dates will be assigned by the Dispatch Team during setup confirmation.</div>
+
+                <div class="row g-3 mt-2" id="installed-dates-row" style="display:none;">
                     <div class="col-md-6" id="installed-date-col">
                         <label class="plan-form-label">Installation Date</label>
                         <div class="input-icon-wrapper">
@@ -423,6 +425,7 @@
         const cardInstalled = document.getElementById('card-type-installed');
         const cardPending = document.getElementById('card-type-pending');
         const datesRow = document.getElementById('installed-dates-row');
+        const pendingHelper = document.getElementById('pending-install-helper');
         const statusSelect = document.getElementById('customer_status_select');
 
         function updateSetupUI() {
@@ -434,6 +437,7 @@
                 cardPending.style.background = '';
                 cardPending.style.borderColor = '';
                 if (datesRow) datesRow.style.display = 'flex';
+                if (pendingHelper) pendingHelper.style.display = 'none';
                 if (expCol) expCol.style.display = 'block';
                 if (statusSelect && statusSelect.value === 'pending') {
                     statusSelect.value = 'active';
@@ -444,6 +448,7 @@
                 cardInstalled.style.background = '';
                 cardInstalled.style.borderColor = '';
                 if (datesRow) datesRow.style.display = 'none';
+                if (pendingHelper) pendingHelper.style.display = 'block';
                 if (expCol) expCol.style.display = 'none';
                 if (expInput) expInput.value = '';
                 if (statusSelect) {

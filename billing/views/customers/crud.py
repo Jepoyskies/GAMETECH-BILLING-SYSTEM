@@ -110,7 +110,7 @@ def add_customer(request):
 
         installation_status = request.POST.get("installation_status")
         if not installation_status:
-            installation_status = "pending" if request.user.role == "Agent" else "installed"
+            installation_status = "pending"
 
         installed_at_val = None
         if installation_status == "installed":

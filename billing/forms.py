@@ -109,6 +109,14 @@ class CustomerForm(forms.ModelForm):
             "cignalbox_no",
         ]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.instance or not self.instance.pk:
+            if "installation_status" in self.fields:
+                self.fields["installation_status"].initial = "pending"
+            if "status" in self.fields:
+                self.fields["status"].initial = "pending"
+
     def clean_email(self):
         email = self.cleaned_data.get("email")
         if email:
