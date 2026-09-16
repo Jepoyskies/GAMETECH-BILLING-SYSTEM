@@ -117,6 +117,8 @@ def add_customer(request):
         if installed_at_str:
             try:
                 installed_at_val = timezone.datetime.strptime(installed_at_str, "%Y-%m-%d")
+                if timezone.is_naive(installed_at_val):
+                    installed_at_val = timezone.make_aware(installed_at_val)
             except ValueError:
                 installed_at_val = timezone.now()
         elif installation_status == "installed":
@@ -289,6 +291,8 @@ def edit_customer(request, customer_id):
         if new_installed_at_str:
             try:
                 new_installed_at = timezone.datetime.strptime(new_installed_at_str, "%Y-%m-%d")
+                if timezone.is_naive(new_installed_at):
+                    new_installed_at = timezone.make_aware(new_installed_at)
                 curr_installed_str = customer.installed_at.strftime("%Y-%m-%d") if customer.installed_at else ""
                 if curr_installed_str != new_installed_at_str:
                     check_change("Installation Date", curr_installed_str or "None", new_installed_at_str)

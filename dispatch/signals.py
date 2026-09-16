@@ -22,6 +22,11 @@ def auto_create_dispatch_ticket_on_pending_install(sender, instance, created, **
     if not is_pending:
         return
 
+    # Extract scheduled installation date from customer's installed_at
+    sched_date = None
+    if instance.installed_at:
+        sched_date = instance.installed_at.date() if hasattr(instance.installed_at, 'date') else instance.installed_at
+
     # Idempotency check: Do not create duplicate open installation tickets for the same customer
     existing_ticket = JobTicket.objects.filter(
         customer=instance,
@@ -49,6 +54,9 @@ def auto_create_dispatch_ticket_on_pending_install(sender, instance, created, **
             updated = True
         if instance.longitude and existing_ticket.longitude != float(instance.longitude):
             existing_ticket.longitude = float(instance.longitude)
+            updated = True
+        if sched_date and existing_ticket.scheduled_date != sched_date:
+            existing_ticket.scheduled_date = sched_date
             updated = True
         if updated:
             existing_ticket.save()
@@ -83,6 +91,7 @@ def auto_create_dispatch_ticket_on_pending_install(sender, instance, created, **
         chat_type='Walk-In / CRM Application',
         latitude=lat,
         longitude=lng,
+        scheduled_date=sched_date,
     )
     logger.info(
         f"[DISPATCH] Auto-created JobTicket {new_ticket.ticket_number} for customer {instance.full_name} (ID: {instance.id})"
