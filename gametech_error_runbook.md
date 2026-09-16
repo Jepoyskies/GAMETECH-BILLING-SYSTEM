@@ -19,6 +19,7 @@
 | **ERR-013** | Logged-out Customer Still Showing as Active in Topbar Live Monitoring Dropdown | `billing/views/auth.py`, `customer_portal/views.py`, `billing/middleware.py` | Session / Cache |
 | **ERR-015** | Accidental Horizontal Scrollbar / Clunky Windows Scrollbars in Topbar Notifications Dropdown | `_topbar.html`, `_scripts.html`, `components.css` | Frontend (CSS) |
 | **ERR-016** | Suspended Customer Retaining Stale Expiration Date in UI & Mikrotik Secret Comment | `billing/models.py`, `_info_cards.html`, `actions.py`, `crud.py` | Model / UI |
+| **ERR-037** | Cignal Reload Modal pre-fills old expiration date, confusing presets with duplicate ₱399 | `billing/templates/billing/partials/_cignal_payment_modal.html`, `_cignal_payment_modal_script.html`, `cignal_dashboard.py` | Billing / UI |
 
 ---
 
@@ -654,6 +655,25 @@
 * **1-Step Fix**:
   * Connect `post_save` signal on `Customer` to automatically generate a `JobTicket` (type `INSTALLATION`, status `PENDING`) with customer GPS coords, plan, address, and assigned MikroTik router.
   * When technicians submit technical completion specs (NAP port, cable length, optical power dBm, ONT serial) in `api_complete_job`, automatically transition the linked customer to `installed` and `active`.
+
+### ERR-037: Cignal Reload Modal Stale Expiration Pre-Fill, Duplicate ₱399 Presets, & Router Confusion
+* **Symptoms**:
+  * Opening the Cignal Reload modal (`_cignal_payment_modal.html`) populated "New Expiration Date" with the subscriber's *current* expiration date instead of an extended date. Submitting without manual date entry left the subscription's expiration date unchanged.
+  * Staff was confused by two duplicate ₱399 preset buttons (`₱399 Load Only` vs `₱399 Box + Load`), and hardware installment buttons were visible for app-only customers.
+  * Modal helper text incorrectly claimed expiration dates synchronize across MikroTik profiles.
+* **Root Causes**:
+  * `cpmOnSubscriptionChange` script read `data-exp` and directly assigned `dateInput.value = exp`, pre-filling the old date without adding +30 days.
+  * Presets were hardcoded in a static list regardless of subscriber hardware setup (`hardware_payment_type`).
+  * Backend `process_cignal_payment` allowed box installment payments to overwrite the TV load expiration date.
+* **Exact Target Files**:
+  * `billing/templates/billing/partials/_cignal_payment_modal.html`
+  * `billing/templates/billing/partials/_cignal_payment_modal_script.html`
+  * `billing/views/cignal_dashboard.py` (`process_cignal_payment`)
+* **1-Step Fix**:
+  * Add a dedicated Current Subscription Status card to `_cignal_payment_modal.html` displaying current due date, plan, and hardware setup.
+  * Calculate ISP-standard rollover: `New Due Date = Current Expiration + 30 Days` (if active) or `Today + 30 Days` (if expired).
+  * Dynamically show/hide hardware presets based on `data-hw` and `data-inst` (< 12 months), and display live extension preview banner.
+  * Guard `process_cignal_payment` so `box_installment` payments advance installment counters without altering TV load expiration.
 
 ---
 
