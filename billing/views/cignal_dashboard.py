@@ -58,6 +58,10 @@ def cignal_dashboard_view(request):
     # 3. Notifications/Messages
     notifications = Notification.objects.filter(notification_type='cignal').order_by('-id')[:10]
 
+    # 4. All Customers for Enrollment Selector
+    all_customers = Customer.objects.all().order_by('full_name', 'pppoe_username')
+    default_cignal_due_date = (today + timedelta(days=30)).strftime("%Y-%m-%d")
+
     context = {
         'active_cignal_customers': active_cignal_customers,
         'pending_applications_count': pending_applications_count,
@@ -68,6 +72,8 @@ def cignal_dashboard_view(request):
         'applications': pending_applications,
         'cignal_payments': cignal_payments,
         'notifications': notifications,
+        'all_customers': all_customers,
+        'default_cignal_due_date': default_cignal_due_date,
     }
     
     return render(request, "billing/cignal_dashboard.html", context)
