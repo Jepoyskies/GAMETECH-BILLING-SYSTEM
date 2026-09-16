@@ -20,6 +20,7 @@
 | **ERR-015** | Accidental Horizontal Scrollbar / Clunky Windows Scrollbars in Topbar Notifications Dropdown | `_topbar.html`, `_scripts.html`, `components.css` | Frontend (CSS) |
 | **ERR-016** | Suspended Customer Retaining Stale Expiration Date in UI & Mikrotik Secret Comment | `billing/models.py`, `_info_cards.html`, `actions.py`, `crud.py` | Model / UI |
 | **ERR-037** | Cignal Reload Modal pre-fills old expiration date, confusing presets with duplicate ₱399 | `billing/templates/billing/partials/_cignal_payment_modal.html`, `_cignal_payment_modal_script.html`, `cignal_dashboard.py` | Billing / UI |
+| **ERR-040** | Blinding Yellow Row for Expired Customers, Unreadable Text, and Stacked Status Column Bloat | `customer_list/_styles.html`, `_table.html`, `_scripts.html`, `_hero.html` | Frontend (CSS/UI) |
 
 ---
 
@@ -710,7 +711,26 @@
   * In `CignalPlay.is_active`, compare timezone-aware `datetime >= timezone.now()`, expiring subscriptions instantaneously when their exact target time elapses.
   * Filter active customers strictly by `cignal_plans__is_cancelled=False`, and provide segmented status tabs: **Active Subscriptions**, **Ongoing Installments (₱250/mo)**, **Fully Paid**, and **Cancelled / Archive Bar**.
   * Update cancellation to soft-delete (`is_cancelled=True`, `cancelled_at=now()`, `cancelled_by=user.username`), clear legacy fields on customer if no plans remain, and restrict permanent archive purging strictly to staff/admins (`user.is_staff`).
-  * Remove `max-height` and `overflow-y` on `_recent_messages.html` and upgrade `_cignal_edit_modal.html` to `type="datetime-local"`.
+### ERR-040: Blinding Yellow Row for Expired Customers, Unreadable Text, and Stacked Status Column Bloat
+* **Symptoms**:
+  * In `/customers/` (Customers Directory), rows for expired customers render as a blinding pastel yellow bar (`#fffbeb`) across the dark mode table.
+  * Cell text (`juan delacruz`, email, phone, plan) is light-colored, resulting in near-zero contrast and making customer information unreadable.
+  * Status column contains 3 to 4 vertically-stacked contradictory badges (e.g. green `Active` + yellow `Due Oct 11` + red glowing `Active but Offline` + white button `!`; or pink `Expired` + red `Expired Sep 15` + orange `Offline` + button `!`), ballooning row height to 90–120px.
+  * In `_hero.html`, "Paid but Offline" stat card has an uneven "Alert" tag squished next to the counter number.
+* **Root Causes**:
+  * `_table.html` applied Bootstrap's `.table-warning` to `<tr>` when `status == 'expired'`. Bootstrap forces `--bs-table-bg: #fff3cd`, and `_styles.html` hardcoded `#fffbeb`.
+  * `updateConnectionStatuses` in `_scripts.html` appended redundant `Active but Offline` or `Offline` badges and a large `22px` circle button below the static Django badge without hiding or replacing the primary billing badge.
+* **Exact Target Files**:
+  * `billing/templates/billing/customer_list/_table.html`
+  * `billing/templates/billing/customer_list/_styles.html`
+  * `billing/templates/billing/customer_list/_scripts.html`
+  * `billing/templates/billing/customer_list/_scripts_bulk.html`
+  * `billing/templates/billing/customer_list/_hero.html`
+* **1-Step Fix**:
+  * In `_table.html`, replace `.table-warning` with custom `.table-row-expired` (`rgba(244, 63, 94, 0.06)` with `3px solid #f43f5e` left accent border).
+  * In `_styles.html`, hard-neutralize Bootstrap `.table-warning` and `.table-secondary` in dark mode to guarantee no bright yellow background ever renders, normalize table headers (`0.74rem`) and cells (`0.83rem`), and style `.cust-status-wrap`.
+  * In `_scripts.html`, when `updateConnectionStatuses()` detects `Active but Offline`, hide the static `.cust-base-badge` and render a single high-priority pill with an inline diagnostic button (`17px`); for non-active subscribers (`expired`, `inactive`), suppress redundant `Offline` pills.
+  * In `_hero.html`, remove the squished "Alert" badge so all 6 stat cards maintain identical, balanced typography.
 
 ---
 
