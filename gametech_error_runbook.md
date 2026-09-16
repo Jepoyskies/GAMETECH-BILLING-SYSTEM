@@ -639,6 +639,24 @@
 
 ---
 
+### ERR-036: Dispatch System CRM Hook & Field Completion Decoupling
+* **Symptoms**:
+  * New customer applicants registered as "Pending Installation" were invisible to field dispatchers unless manually copied into external dispatch sheets or legacy monitoring databases.
+  * Completing physical fiber installation in the field did not automatically update subscriber CRM records to active/installed status.
+* **Root Causes**:
+  * Legacy dispatch system operated on a standalone Node.js/Prisma database without foreign key linkage to `billing.Customer` or `network_manager.MikrotikDevice`.
+  * Absence of a `post_save` CRM listener to orchestrate automated ticket generation upon applicant onboarding.
+* **Exact Target Files**:
+  * `dispatch/models.py` (`JobTicket` model with `customer` & `mikrotik_device` FKs)
+  * `dispatch/signals.py` (`auto_create_dispatch_ticket_on_pending_install`)
+  * `dispatch/views.py` (`api_complete_job` auto-promoting `installation_status='installed'` and `status='active'`)
+  * `dispatch/templates/dispatch/dashboard.html` (Orchestrator pattern console with CartoDB Dark Matter map)
+* **1-Step Fix**:
+  * Connect `post_save` signal on `Customer` to automatically generate a `JobTicket` (type `INSTALLATION`, status `PENDING`) with customer GPS coords, plan, address, and assigned MikroTik router.
+  * When technicians submit technical completion specs (NAP port, cable length, optical power dBm, ONT serial) in `api_complete_job`, automatically transition the linked customer to `installed` and `active`.
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 1. Assign a new `ERR-XXX` identifier.
