@@ -5,7 +5,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("billing", "0043_cignal_subscription_unification"),
+        ("billing", "0044_cignalplay_hardware_payment_type_and_more"),
     ]
 
     operations = [
