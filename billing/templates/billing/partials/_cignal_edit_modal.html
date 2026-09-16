@@ -12,18 +12,19 @@
       <form action="" method="post" id="cignalEditForm">
         {% csrf_token %}
         <input type="hidden" name="subscription_id" id="cemSubscriptionId" value="">
+        <input type="hidden" name="customer_id" id="cemCustomerId" value="">
 
         <div class="modal-body py-3">
           <!-- Subscription Target Banner -->
-          <div class="p-3 mb-3 rounded-3" style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25);">
+          <div class="p-3 mb-3 rounded-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1);">
             <div class="d-flex justify-content-between align-items-center mb-1">
-              <strong class="text-info fw-bold" style="font-size: 0.96rem;" id="cemCustomerName">
-                <i class="fas fa-satellite-dish me-1"></i> {% if target_customer %}{{ target_customer.full_name }}{% elif customer %}{{ customer.full_name }}{% else %}Cignal Subscriber{% endif %}
+              <strong class="text-light fw-bold" style="font-size: 0.96rem;" id="cemCustomerName">
+                <i class="fas fa-satellite-dish me-1 text-muted"></i> {% if target_customer %}{{ target_customer.full_name }}{% elif customer %}{{ customer.full_name }}{% else %}Cignal Subscriber{% endif %}
               </strong>
-              <span class="badge bg-info-subtle text-info border border-info-subtle" id="cemSubBadge">Edit Details</span>
+              <span class="badge border border-secondary text-light" id="cemSubBadge">Edit Details</span>
             </div>
             <div class="small text-muted">
-              Update account numbers or friendly device label for this Cignal subscription.
+              Update account numbers, hardware setup, or friendly device label for this Cignal subscription.
             </div>
           </div>
 
@@ -120,11 +121,17 @@ function cemToggleInstallmentInput(val) {
 function openCignalEditModal(data) {
   if (!data) return;
   const form = document.getElementById('cignalEditForm');
-  if (form && data.id) {
-    form.action = '/cignal-play/edit/' + data.id + '/';
+  if (form) {
+    if (data.id) {
+      form.action = '/cignal-play/edit/' + data.id + '/';
+    } else {
+      form.action = '/cignal-play/edit/';
+    }
   }
   const idInput = document.getElementById('cemSubscriptionId');
   if (idInput) idInput.value = data.id || '';
+  const custInput = document.getElementById('cemCustomerId');
+  if (custInput) custInput.value = data.customerId || '';
   const labelInput = document.getElementById('cemAccountName');
   if (labelInput) labelInput.value = data.label || '';
   const playInput = document.getElementById('cemPlayNo');

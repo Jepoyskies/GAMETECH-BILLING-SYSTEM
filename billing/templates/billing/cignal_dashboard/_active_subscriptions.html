@@ -24,63 +24,73 @@
               </a>
             </td>
             <td>
+              <div class="d-flex flex-column gap-1">
               {% if customer.cignal_plans.all %}
                 {% for plan in customer.cignal_plans.all %}
-                  <div class="mb-1 d-flex align-items-center justify-content-between flex-wrap gap-1">
-                    <div>
-                      <span class="badge bg-primary-subtle text-primary border border-primary-subtle me-1" style="font-size:0.65rem;">
-                        <i class="fas fa-satellite-dish me-1"></i>CIGNAL
-                      </span>
+                  <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
                       <span class="text-light fw-bold small">{{ plan.account_name|default:"Cignal Subscription" }}</span>
-                      <div class="small mt-1">
-                        {% if plan.cignal_play_no %}
-                          <span class="badge bg-info-subtle text-info me-1" style="font-size:0.62rem;">PLAY</span>
-                          <span class="font-monospace text-info fw-bold">{{ plan.cignal_play_no }}</span>
-                        {% endif %}
-                        {% if plan.cignal_play_no and plan.cignal_box_no %}<span class="text-muted mx-1">|</span>{% endif %}
-                        {% if plan.cignal_box_no %}
-                          <span class="badge bg-warning-subtle text-warning me-1" style="font-size:0.62rem;">BOX</span>
-                          <span class="font-monospace text-warning fw-bold">{{ plan.cignal_box_no }}</span>
-                        {% endif %}
-                        {% if not plan.cignal_play_no and not plan.cignal_box_no %}
-                          <span class="text-muted">—</span>
-                        {% endif %}
-                        {% if plan.hardware_payment_type == 'installment' %}
-                          <span class="badge bg-warning text-dark ms-1" style="font-size:0.62rem;" title="Box Installment">
-                            <i class="fas fa-clock me-1"></i>Box: {{ plan.installments_paid|default:0 }}/12
-                          </span>
-                        {% elif plan.hardware_payment_type == 'cashout' %}
-                          <span class="badge bg-success-subtle text-success border border-success-subtle ms-1" style="font-size:0.62rem;" title="Hardware Cashout Paid">
-                            <i class="fas fa-check me-1"></i>Cashout
-                          </span>
-                        {% endif %}
-                        {% if plan.monthly_load_plan %}
-                          <span class="badge bg-secondary-subtle text-light border border-secondary-subtle ms-1" style="font-size:0.62rem;" title="Load Plan">
-                            ₱{{ plan.monthly_load_plan }}
-                          </span>
-                        {% endif %}
-                      </div>
+                      {% if plan.hardware_payment_type == 'installment' %}
+                        <span class="badge border border-secondary text-light" style="font-size:0.65rem;" title="Box Installment">
+                          <i class="fas fa-clock me-1 text-muted"></i>Box: {{ plan.installments_paid|default:0 }}/12
+                        </span>
+                      {% elif plan.hardware_payment_type == 'cashout' %}
+                        <span class="badge border border-secondary text-light" style="font-size:0.65rem;" title="Hardware Cashout Paid">
+                          <i class="fas fa-check me-1 text-muted"></i>Cashout
+                        </span>
+                      {% endif %}
+                      {% if plan.monthly_load_plan %}
+                        <span class="badge border border-secondary text-light" style="font-size:0.65rem;" title="Load Plan">
+                          ₱{{ plan.monthly_load_plan }}/mo
+                        </span>
+                      {% endif %}
                     </div>
-                    <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2 py-0 gt-btn" style="font-size:0.7rem;" title="Edit {{ plan.account_name|default:'Subscription' }}" onclick="openCignalEditModal({id: '{{ plan.id }}', label: '{{ plan.account_name|escapejs }}', playNo: '{{ plan.cignal_play_no|escapejs }}', boxNo: '{{ plan.cignal_box_no|escapejs }}', customerName: '{{ customer.full_name|escapejs }}', hardwarePaymentType: '{{ plan.hardware_payment_type|default:"none" }}', installmentsPaid: '{{ plan.installments_paid|default:0 }}', monthlyLoadPlan: '{{ plan.monthly_load_plan|default:"149" }}'})">
-                      <i class="fas fa-pencil-alt me-1"></i>Edit
-                    </button>
+                    <div class="d-flex flex-wrap align-items-center gap-2 small">
+                      {% if plan.cignal_play_no %}
+                        <span class="d-inline-flex align-items-center gap-1">
+                          <span class="badge border border-secondary text-light" style="font-size:0.65rem;">Play</span>
+                          <span class="font-monospace text-light fw-semibold">{{ plan.cignal_play_no }}</span>
+                        </span>
+                      {% endif %}
+                      {% if plan.cignal_play_no and plan.cignal_box_no %}<span class="text-muted mx-1">|</span>{% endif %}
+                      {% if plan.cignal_box_no %}
+                        <span class="d-inline-flex align-items-center gap-1">
+                          <span class="badge border border-secondary text-light" style="font-size:0.65rem;">Box</span>
+                          <span class="font-monospace text-light fw-semibold">{{ plan.cignal_box_no }}</span>
+                        </span>
+                      {% endif %}
+                      {% if not plan.cignal_play_no and not plan.cignal_box_no %}
+                        <span class="text-muted">—</span>
+                      {% endif %}
+                    </div>
                   </div>
                 {% endfor %}
               {% else %}
                 <div>
-                  {% if customer.cignalplay_no %}
-                    <span class="badge bg-info-subtle text-info me-1" style="font-size:0.65rem;">PLAY</span>
-                    <span class="font-monospace fw-bold text-info me-2">{{ customer.cignalplay_no }}</span>
-                  {% endif %}
-                  {% if customer.cignalbox_no %}
-                    <span class="badge bg-warning-subtle text-warning me-1" style="font-size:0.65rem;">BOX</span>
-                    <span class="font-monospace fw-bold text-warning">{{ customer.cignalbox_no }}</span>
-                  {% endif %}
-                  {% if not customer.cignalplay_no and not customer.cignalbox_no %}
-                    <span class="text-muted">—</span>
-                  {% endif %}
+                  <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="text-light fw-bold small">Cignal Subscription</span>
+                  </div>
+                  <div class="d-flex flex-wrap align-items-center gap-2 small">
+                    {% if customer.cignalplay_no %}
+                      <span class="d-inline-flex align-items-center gap-1">
+                        <span class="badge border border-secondary text-light" style="font-size:0.65rem;">Play</span>
+                        <span class="font-monospace text-light fw-semibold">{{ customer.cignalplay_no }}</span>
+                      </span>
+                    {% endif %}
+                    {% if customer.cignalplay_no and customer.cignalbox_no %}<span class="text-muted mx-1">|</span>{% endif %}
+                    {% if customer.cignalbox_no %}
+                      <span class="d-inline-flex align-items-center gap-1">
+                        <span class="badge border border-secondary text-light" style="font-size:0.65rem;">Box</span>
+                        <span class="font-monospace text-light fw-semibold">{{ customer.cignalbox_no }}</span>
+                      </span>
+                    {% endif %}
+                    {% if not customer.cignalplay_no and not customer.cignalbox_no %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  </div>
                 </div>
               {% endif %}
+              </div>
             </td>
             <td>
               {% if customer.cignalplay_no and customer.cignalplay_date %}
@@ -95,13 +105,11 @@
             </td>
             <td><small class="text-muted">{{ customer.cignalbox_adjustedby|default:customer.cignalplay_adjustedby|default:"-" }}</small></td>
             <td class="text-end">
-              <div class="d-flex justify-content-end align-items-center gap-1">
-                {% if customer.cignal_plans.first %}
-                <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2 py-0 gt-btn" style="font-size: 0.75rem;" title="Edit Subscription Details" onclick="openCignalEditModal({id: '{{ customer.cignal_plans.first.id }}', label: '{{ customer.cignal_plans.first.account_name|escapejs }}', playNo: '{{ customer.cignal_plans.first.cignal_play_no|escapejs }}', boxNo: '{{ customer.cignal_plans.first.cignal_box_no|escapejs }}', customerName: '{{ customer.full_name|escapejs }}', hardwarePaymentType: '{{ customer.cignal_plans.first.hardware_payment_type|default:"none" }}', installmentsPaid: '{{ customer.cignal_plans.first.installments_paid|default:0 }}', monthlyLoadPlan: '{{ customer.cignal_plans.first.monthly_load_plan|default:"149" }}'})">
+              <div class="d-flex gap-2 justify-content-end align-items-center">
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 gt-btn text-light" style="font-size: 0.75rem;" title="Edit Subscription Details" onclick="openCignalEditModal({id: '{% if customer.cignal_plans.first %}{{ customer.cignal_plans.first.id }}{% endif %}', customerId: '{{ customer.id }}', label: '{% if customer.cignal_plans.first %}{{ customer.cignal_plans.first.account_name|escapejs }}{% else %}Cignal Subscription{% endif %}', playNo: '{% if customer.cignal_plans.first %}{{ customer.cignal_plans.first.cignal_play_no|escapejs }}{% else %}{{ customer.cignalplay_no|default:''|escapejs }}{% endif %}', boxNo: '{% if customer.cignal_plans.first %}{{ customer.cignal_plans.first.cignal_box_no|escapejs }}{% else %}{{ customer.cignalbox_no|default:''|escapejs }}{% endif %}', customerName: '{{ customer.full_name|escapejs }}', hardwarePaymentType: '{% if customer.cignal_plans.first %}{{ customer.cignal_plans.first.hardware_payment_type|default:'none' }}{% else %}none{% endif %}', installmentsPaid: '{% if customer.cignal_plans.first %}{{ customer.cignal_plans.first.installments_paid|default:0 }}{% else %}0{% endif %}', monthlyLoadPlan: '{% if customer.cignal_plans.first %}{{ customer.cignal_plans.first.monthly_load_plan|default:'149' }}{% else %}149{% endif %}'})">
                   <i class="fas fa-pencil-alt me-1"></i> Edit
                 </button>
-                {% endif %}
-                <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2 py-0 gt-btn" style="font-size: 0.75rem;" onclick="openCignalPaymentModal({customerId: '{{ customer.id }}', customerName: '{{ customer.full_name|escapejs }}', pppoe: '{{ customer.pppoe_username|escapejs }}', subscriptions: [{% for s in customer.cignal_plans.all %}{id: '{{ s.id }}', cignal_play_no: '{{ s.cignal_play_no|escapejs }}', cignal_box_no: '{{ s.cignal_box_no|escapejs }}', account_name: '{{ s.account_name|escapejs }}', expiration_date: '{% if s.expiration_date %}{{ s.expiration_date|date:'Y-m-d' }}{% elif s.end_date %}{{ s.end_date|date:'Y-m-d' }}{% endif %}', hardware_payment_type: '{{ s.hardware_payment_type|default:"none" }}', installments_paid: '{{ s.installments_paid|default:0 }}', monthly_load_plan: '{{ s.monthly_load_plan|default:"149" }}'}{% if not forloop.last %},{% endif %}{% endfor %}]})">
+                <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 gt-btn" style="font-size: 0.75rem;" onclick="openCignalPaymentModal({customerId: '{{ customer.id }}', customerName: '{{ customer.full_name|escapejs }}', pppoe: '{{ customer.pppoe_username|escapejs }}', subscriptions: [{% for s in customer.cignal_plans.all %}{id: '{{ s.id }}', cignal_play_no: '{{ s.cignal_play_no|escapejs }}', cignal_box_no: '{{ s.cignal_box_no|escapejs }}', account_name: '{{ s.account_name|escapejs }}', expiration_date: '{% if s.expiration_date %}{{ s.expiration_date|date:'Y-m-d' }}{% elif s.end_date %}{{ s.end_date|date:'Y-m-d' }}{% endif %}', hardware_payment_type: '{{ s.hardware_payment_type|default:'none' }}', installments_paid: '{{ s.installments_paid|default:0 }}', monthly_load_plan: '{{ s.monthly_load_plan|default:'149' }}'}{% if not forloop.last %},{% endif %}{% endfor %}]})">
                   <i class="fas fa-coins me-1"></i> Reload
                 </button>
               </div>

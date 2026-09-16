@@ -221,12 +221,37 @@ def process_cignal_payment(request):
 
 @login_required
 @require_POST
-def edit_cignal_subscription(request, sub_id):
+def edit_cignal_subscription(request, sub_id=None):
     """
     Update Cignal subscription details: label/account_name, cignal_play_no, cignal_box_no, hardware, and plan.
+    Supports sub_id=None or 0 via customer_id fallback for customers without pre-existing CignalPlay records.
     """
-    subscription = get_object_or_404(CignalPlay, pk=sub_id)
-    customer = subscription.customer
+    subscription = None
+    if sub_id and int(sub_id) > 0:
+        subscription = get_object_or_404(CignalPlay, pk=sub_id)
+        customer = subscription.customer
+    else:
+        customer_id = request.POST.get("customer_id")
+        if not customer_id:
+            messages.error(request, "A valid subscription or customer identifier is required.")
+            return redirect(request.META.get("HTTP_REFERER", "cignal_dashboard"))
+        customer = get_object_or_404(Customer, pk=customer_id)
+        subscription = CignalPlay.objects.filter(customer=customer).first()
+        if not subscription:
+            acct_parts = []
+            if customer.cignalplay_no:
+                acct_parts.append(f"Play: {customer.cignalplay_no}")
+            if customer.cignalbox_no:
+                acct_parts.append(f"Box: {customer.cignalbox_no}")
+            acct_str = " | ".join(acct_parts) if acct_parts else "CIGNAL-001"
+            subscription = CignalPlay.objects.create(
+                customer=customer,
+                plan_name="Cignal Subscription",
+                account_name=f"Cignal - {acct_str}",
+                cignal_play_no=customer.cignalplay_no or "",
+                cignal_box_no=customer.cignalbox_no or "",
+                adjusted_by=request.user.username,
+            )
 
     account_name = request.POST.get("account_name", "").strip()
     cignal_play_no = request.POST.get("cignal_play_no", "").strip()
