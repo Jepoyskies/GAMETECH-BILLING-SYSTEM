@@ -88,7 +88,7 @@
           <div class="mb-3">
             <div class="d-flex justify-content-between align-items-center mb-1">
               <label for="cemExpirationDate" class="form-label fw-bold small text-uppercase mb-0" style="letter-spacing: 0.04em;">
-                <i class="far fa-calendar-alt text-success me-1"></i> Expiration / Due Date
+                <i class="far fa-calendar-alt text-success me-1"></i> Expiration Date & Exact Time
               </label>
               <div class="d-flex gap-2">
                 <button type="button" class="btn btn-link p-0 small text-decoration-none text-info" onclick="cemSetDays(30)" style="font-size: 0.76rem;">
@@ -99,7 +99,7 @@
                 </button>
               </div>
             </div>
-            <input type="date" name="expiration_date" id="cemExpirationDate" class="form-control" style="border-radius: 8px;">
+            <input type="datetime-local" name="expiration_date" id="cemExpirationDate" class="form-control" style="border-radius: 8px;">
           </div>
         </div>
 
@@ -127,19 +127,18 @@ function cemSetDays(days) {
   if (!expInput) return;
   let base = new Date();
   if (expInput.value) {
-    const parts = expInput.value.split('-');
-    if (parts.length === 3) {
-      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-      if (!isNaN(d.getTime()) && d >= new Date()) {
-        base = d;
-      }
+    const d = new Date(expInput.value);
+    if (!isNaN(d.getTime()) && d >= new Date()) {
+      base = d;
     }
   }
   base.setDate(base.getDate() + days);
   const y = base.getFullYear();
   const m = String(base.getMonth() + 1).padStart(2, '0');
   const d = String(base.getDate()).padStart(2, '0');
-  expInput.value = y + '-' + m + '-' + d;
+  const hh = String(base.getHours()).padStart(2, '0');
+  const mm = String(base.getMinutes()).padStart(2, '0');
+  expInput.value = y + '-' + m + '-' + d + 'T' + hh + ':' + mm;
 }
 
 function openCignalEditModal(data) {
@@ -169,7 +168,11 @@ function openCignalEditModal(data) {
 
   const expInput = document.getElementById('cemExpirationDate');
   if (expInput) {
-    expInput.value = data.expirationDate || '';
+    let expVal = data.expirationDate || '';
+    if (expVal && expVal.length === 10) {
+      expVal += 'T23:59';
+    }
+    expInput.value = expVal;
   }
 
   const hwSelect = document.getElementById('cemHardwareType');

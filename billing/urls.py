@@ -216,6 +216,9 @@ urlpatterns = [
     path("cignal-play/edit/<int:sub_id>/", views.edit_cignal_subscription, name="edit_cignal_subscription"),
     path("cignal-play/edit/", views.edit_cignal_subscription, name="edit_cignal_subscription_fallback"),
     path("cignal-play/cancel/<int:sub_id>/", views.cancel_cignal_subscription, name="cancel_cignal_subscription"),
+    path("cignal-play/restore/<int:sub_id>/", views.restore_cignal_subscription, name="restore_cignal_subscription"),
+    path("cignal-play/purge/<int:sub_id>/", views.purge_cignal_subscription, name="purge_cignal_subscription"),
+    path("cignal-play/purge-all/", views.purge_all_cancelled_cignal_subscriptions, name="purge_all_cancelled_cignal_subscriptions"),
     path("add-ons/", views.add_on_payments_view, name="add_on_payments"),
     path(
         "cignal-play/approve/<int:request_id>/",

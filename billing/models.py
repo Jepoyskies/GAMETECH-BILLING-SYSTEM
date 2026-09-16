@@ -573,6 +573,9 @@ class CignalPlay(models.Model):
         null=True,
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    is_cancelled = models.BooleanField(default=False, db_index=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    cancelled_by = models.CharField(max_length=100, null=True, blank=True)
 
     class Meta:
         db_table = "cignal_play"
@@ -596,11 +599,34 @@ class CignalPlay(models.Model):
 
     @property
     def is_active(self):
+        if self.is_cancelled:
+            return False
         exp = self.expiration_date or self.end_date
         if not exp:
             return False
         from django.utils import timezone
-        return exp >= timezone.now()
+        now = timezone.now()
+        # Normalise: exp may be a datetime or date
+        if hasattr(exp, 'hour'):
+            if timezone.is_naive(exp):
+                exp = timezone.make_aware(exp, timezone.get_current_timezone())
+            return exp >= now
+        from datetime import date
+        if isinstance(exp, date):
+            return exp >= timezone.localdate()
+        return False
+
+    @property
+    def is_hardware_fully_paid(self):
+        if self.hardware_payment_type == 'cashout':
+            return True
+        if self.hardware_payment_type == 'installment':
+            return (self.installments_paid or 0) >= 12
+        return True
+
+    @property
+    def is_installment_ongoing(self):
+        return self.hardware_payment_type == 'installment' and (self.installments_paid or 0) < 12
 
     @property
     def hardware_total_amount(self):
