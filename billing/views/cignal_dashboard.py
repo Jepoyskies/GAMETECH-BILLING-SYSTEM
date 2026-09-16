@@ -353,3 +353,42 @@ def edit_cignal_subscription(request, sub_id=None):
     return redirect(request.META.get("HTTP_REFERER", "cignal_dashboard"))
 
 
+@login_required
+@require_POST
+def cancel_cignal_subscription(request, sub_id):
+    """Cancel (pull-out) a Cignal subscription. Cancels related dispatch ticket too."""
+    from dispatch.models import JobTicket
+
+    subscription = get_object_or_404(CignalPlay, id=sub_id)
+    customer = subscription.customer
+
+    sub_label = subscription.account_name or f"Cignal #{subscription.id}"
+
+    # Cancel any open dispatch ticket linked to this customer for Cignal
+    JobTicket.objects.filter(
+        customer=customer,
+        ticket_type='CIGNAL',
+        status__in=['PENDING', 'ASSIGNED'],
+    ).update(status='CANCELLED')
+
+    AuditLog.objects.create(
+        admin_user=request.user,
+        customer=customer,
+        action_type="Cignal Cancellation",
+        remarks=f"Cancelled Cignal subscription '{sub_label}' (ID #{subscription.id}) | Play No: {subscription.cignal_play_no or 'N/A'} | Box No: {subscription.cignal_box_no or 'N/A'} | by {request.user.username}",
+    )
+
+    Notification.objects.create(
+        title="Cignal Subscription Cancelled",
+        message=f"{customer.full_name}'s Cignal subscription '{sub_label}' was cancelled by {request.user.username}.",
+        notification_type="cignal",
+        link=f"/customer/{customer.id}/cignal-logs/",
+    )
+
+    subscription.delete()
+
+    messages.success(request, f"Cignal subscription '{sub_label}' for {customer.full_name} has been cancelled.")
+    return redirect(request.META.get("HTTP_REFERER", "cignal_dashboard"))
+
+
+

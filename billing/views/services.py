@@ -38,6 +38,7 @@ from billing.models import (
 )
 import requests
 from network_manager.models import MikrotikDevice, NapBox
+from dispatch.models import JobTicket
 from network_manager.services import MikrotikAPI
 from django.db import transaction
 import calendar
@@ -471,16 +472,8 @@ def apply_cignal_addon(request):
                 pending_req.status = "Resolved"
                 pending_req.save()
 
-        # Update customer profile summary fields
-        if cignal_play_no:
-            customer.cignalplay_no = cignal_play_no
-            customer.cignalplay_date = activation_dt
-            customer.cignalplay_adjustedby = request.user.username
-        if cignal_box_no:
-            customer.cignalbox_no = cignal_box_no
-            customer.cignalbox_date = activation_dt
-            customer.cignalbox_adjustedby = request.user.username
-        customer.save()
+        # Legacy Customer cignal fields are intentionally no longer written here.
+        # CignalPlay record is the single source of truth.
 
         # Format account numbers summary
         account_nos = []
@@ -516,6 +509,33 @@ def apply_cignal_addon(request):
             installments_paid=installments_paid,
             monthly_load_plan=monthly_load_plan,
             adjusted_by=request.user.username,
+        )
+
+        # --- Dispatch Bridge: Auto-create a Cignal JobTicket ---
+        acct_nos_str = " | ".join(filter(None, [
+            f"Play No: {cignal_play_no}" if cignal_play_no else None,
+            f"Box No: {cignal_box_no}" if cignal_box_no else None,
+        ]))
+        hw_info = {
+            'cashout': 'Hardware: Cashout ₱3,000',
+            'installment': 'Hardware: Installment ₱250/mo',
+            'none': 'App Only (No Box)',
+        }.get(hardware_payment_type, 'App Only')
+        JobTicket.objects.create(
+            ticket_type='CIGNAL',
+            source_tab='CIGNAL_PLAY',
+            status='PENDING',
+            priority='NORMAL',
+            customer=customer,
+            client_name=customer.full_name,
+            address=customer.address or '',
+            barangay=customer.barangay.name if customer.barangay else '',
+            contact_number=customer.contact_number or '',
+            account_no=customer.pppoe_username or '',
+            plan_package=f"{hw_info} | Load: ₱{monthly_load_plan}/mo",
+            concern=f"Cignal Play Activation\n{acct_nos_str}",
+            remarks=notes or '',
+            created_by=request.user,
         )
 
         # Crucial: Automatically generate a Payment record for the Initial Payment Amount
@@ -578,25 +598,11 @@ def approve_cignal_request(request, request_id):
         messages.error(request, "Cignal Account No and Date are required.")
         return redirect(request.META.get("HTTP_REFERER", "cignal_dashboard"))
     customer = addon_req.customer
-    is_box = "box" in (addon_req.addon_type or "").lower()
-    if is_box:
-        customer.cignalbox_no = cignal_no
-        customer.cignalbox_adjustedby = request.user.username
-        try:
-            customer.cignalbox_date = timezone.datetime.fromisoformat(cignal_date).date()
-        except ValueError:
-            customer.cignalbox_date = timezone.now()
-    else:
-        customer.cignalplay_no = cignal_no
-        customer.cignalplay_adjustedby = request.user.username
-        try:
-            customer.cignalplay_date = timezone.datetime.fromisoformat(cignal_date).date()
-        except ValueError:
-            customer.cignalplay_date = timezone.now()
-    customer.save()
+    # Legacy Customer cignal fields are no longer written here — CignalPlay is source of truth.
     addon_req.status = "Resolved"
     addon_req.save()
     messages.success(
         request, f"Cignal request for {customer.full_name} approved and applied."
     )
     return redirect(request.META.get("HTTP_REFERER", "cignal_dashboard"))
+

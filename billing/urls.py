@@ -215,6 +215,7 @@ urlpatterns = [
     path("cignal-play/payment/", views.process_cignal_payment, name="process_cignal_payment"),
     path("cignal-play/edit/<int:sub_id>/", views.edit_cignal_subscription, name="edit_cignal_subscription"),
     path("cignal-play/edit/", views.edit_cignal_subscription, name="edit_cignal_subscription_fallback"),
+    path("cignal-play/cancel/<int:sub_id>/", views.cancel_cignal_subscription, name="cancel_cignal_subscription"),
     path("add-ons/", views.add_on_payments_view, name="add_on_payments"),
     path(
         "cignal-play/approve/<int:request_id>/",
