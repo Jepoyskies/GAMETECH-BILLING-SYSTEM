@@ -1,0 +1,527 @@
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        let dispatchMap = null;
+        let markersLayer = null;
+        let mapPointsData = [];
+
+        try {
+            const rawJson = '{{ map_points_json|escapejs }}';
+            if (rawJson) {
+                mapPointsData = JSON.parse(rawJson);
+            }
+        } catch (e) {
+            console.error('Error parsing map points:', e);
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+
+        // ─────────────────────────────────────────────
+        // 1. LEAFLET MAP & CARTODB DARK MATTER TILES
+        // ─────────────────────────────────────────────
+        function initDispatchMap() {
+            if (dispatchMap) return;
+            const mapContainer = document.getElementById('dispatch-map');
+            if (!mapContainer) return;
+
+            // Cagayan de Oro center
+            const defaultCenter = [8.4822, 124.6472];
+            dispatchMap = L.map('dispatch-map', {
+                center: defaultCenter,
+                zoom: 13,
+                zoomControl: true
+            });
+
+            // STRICT CartoDB Dark Matter tiles
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(dispatchMap);
+
+            markersLayer = L.featureGroup().addTo(dispatchMap);
+            renderMapPins(mapPointsData);
+
+            // Invalidate size on tab switch
+            const mapTabBtn = document.querySelector('button[data-bs-target="#tab-map"]');
+            if (mapTabBtn) {
+                mapTabBtn.addEventListener('shown.bs.tab', function() {
+                    setTimeout(() => {
+                        dispatchMap.invalidateSize();
+                        if (markersLayer.getLayers().length > 0) {
+                            dispatchMap.fitBounds(markersLayer.getBounds().pad(0.15));
+                        }
+                    }, 200);
+                });
+            }
+        }
+
+        function getMarkerColor(status) {
+            switch(status) {
+                case 'PENDING': return '#06b6d4'; // Cyan
+                case 'ASSIGNED': return '#f59e0b'; // Amber
+                case 'IN_PROGRESS': return '#3b82f6'; // Blue
+                case 'COMPLETED': return '#10b981'; // Green
+                default: return '#94a3b8'; // Slate
+            }
+        }
+
+        function renderMapPins(points) {
+            if (!markersLayer) return;
+            markersLayer.clearLayers();
+
+            let count = 0;
+            points.forEach(pt => {
+                if (!pt.lat || !pt.lng) return;
+                count++;
+
+                const color = getMarkerColor(pt.status);
+                const marker = L.circleMarker([pt.lat, pt.lng], {
+                    radius: 8,
+                    fillColor: color,
+                    color: '#ffffff',
+                    weight: 1.5,
+                    opacity: 0.9,
+                    fillOpacity: 0.85
+                });
+
+                const popupHtml = `
+                    <div style="min-width: 220px; font-family: inherit;">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="badge" style="background-color: ${color}; font-size: 10px;">${pt.status}</span>
+                            <span class="text-muted" style="font-size: 11px;">${pt.ticket_number}</span>
+                        </div>
+                        <strong style="color: #fff; font-size: 14px;">${pt.client_name}</strong>
+                        <div style="color: #94a3b8; font-size: 12px; margin-top: 3px;">
+                            <i class="fas fa-map-marker-alt text-danger me-1"></i> ${pt.address || pt.barangay || 'Address unavailable'}
+                        </div>
+                        ${pt.contact_number ? `<div style="font-size: 12px; margin-top: 3px;"><a href="tel:${pt.contact_number}" class="text-info text-decoration-none"><i class="fas fa-phone-alt me-1"></i> ${pt.contact_number}</a></div>` : ''}
+                        <div style="color: #38bdf8; font-size: 11px; margin-top: 4px;">
+                            <strong>Team:</strong> ${pt.assigned_team} | <strong>Plan:</strong> ${pt.plan_package || 'N/A'}
+                        </div>
+                        <div class="d-flex gap-1 mt-3 pt-2" style="border-top: 1px solid rgba(255,255,255,0.1);">
+                            <button class="btn btn-xs btn-primary w-100 btn-open-assign" data-id="${pt.id}" data-ticket="${pt.ticket_number}" data-name="${pt.client_name}">
+                                <i class="fas fa-truck me-1"></i> Assign
+                            </button>
+                            ${pt.status !== 'COMPLETED' ? `
+                            <button class="btn btn-xs btn-success w-100 btn-open-complete" data-id="${pt.id}" data-ticket="${pt.ticket_number}" data-name="${pt.client_name}">
+                                <i class="fas fa-check me-1"></i> Done
+                            </button>` : ''}
+                        </div>
+                    </div>
+                `;
+
+                marker.bindPopup(popupHtml);
+                markersLayer.addLayer(marker);
+            });
+
+            const countEl = document.getElementById('map-pin-count');
+            if (countEl) countEl.innerText = `${count} pins rendered`;
+        }
+
+        initDispatchMap();
+
+        // ─────────────────────────────────────────────
+        // 2. SEARCH & FILTER TRIGGERS
+        // ─────────────────────────────────────────────
+        function applyFilters() {
+            const q = document.getElementById('ticket-search-input').value;
+            const status = document.getElementById('status-filter-select').value;
+            const type = document.getElementById('type-filter-select').value;
+            const url = new URL(window.location.href);
+            url.searchParams.set('q', q);
+            url.searchParams.set('status', status);
+            url.searchParams.set('type', type);
+            window.location.href = url.toString();
+        }
+
+        const searchInput = document.getElementById('ticket-search-input');
+        if (searchInput) {
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') applyFilters();
+            });
+        }
+
+        const statusSelect = document.getElementById('status-filter-select');
+        if (statusSelect) statusSelect.addEventListener('change', applyFilters);
+
+        const typeSelect = document.getElementById('type-filter-select');
+        if (typeSelect) typeSelect.addEventListener('change', applyFilters);
+
+        const resetBtn = document.getElementById('btn-reset-filters');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', function() {
+                window.location.href = window.location.pathname;
+            });
+        }
+
+        // Recenter Map
+        const recenterBtn = document.getElementById('btn-recenter-map');
+        if (recenterBtn && dispatchMap) {
+            recenterBtn.addEventListener('click', function() {
+                if (markersLayer && markersLayer.getLayers().length > 0) {
+                    dispatchMap.fitBounds(markersLayer.getBounds().pad(0.15));
+                } else {
+                    dispatchMap.setView([8.4822, 124.6472], 13);
+                }
+            });
+        }
+
+        // Refresh Map Pins
+        const refreshMapBtn = document.getElementById('btn-refresh-map-data');
+        if (refreshMapBtn) {
+            refreshMapBtn.addEventListener('click', function() {
+                fetch('/dispatch/api/tickets/?status=ALL')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success && data.tickets) {
+                            const pts = data.tickets.map(t => ({
+                                id: t.id,
+                                ticket_number: t.ticket_number,
+                                client_name: t.client_name,
+                                address: t.address,
+                                barangay: t.barangay,
+                                contact_number: t.contact_number,
+                                status: t.status,
+                                lat: t.latitude,
+                                lng: t.longitude,
+                                assigned_team: t.team_name || 'Unassigned',
+                                plan_package: t.plan_package
+                            }));
+                            renderMapPins(pts);
+                        }
+                    });
+            });
+        }
+
+        // Zoom from ticket row to map
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.btn-zoom-map');
+            if (btn && dispatchMap) {
+                const lat = parseFloat(btn.dataset.lat);
+                const lng = parseFloat(btn.dataset.lng);
+                if (lat && lng) {
+                    const mapTabEl = document.querySelector('button[data-bs-target="#tab-map"]');
+                    if (mapTabEl) {
+                        const tab = new bootstrap.Tab(mapTabEl);
+                        tab.show();
+                    }
+                    setTimeout(() => {
+                        dispatchMap.setView([lat, lng], 16);
+                        markersLayer.eachLayer(layer => {
+                            if (layer.getLatLng && Math.abs(layer.getLatLng().lat - lat) < 0.0001 && Math.abs(layer.getLatLng().lng - lng) < 0.0001) {
+                                layer.openPopup();
+                            }
+                        });
+                    }, 300);
+                }
+            }
+        });
+
+        // ─────────────────────────────────────────────
+        // 3. EVENT DELEGATION FOR MODALS & ACTIONS (Rule 20)
+        // ─────────────────────────────────────────────
+        
+        // Open Assign Modal
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.btn-open-assign');
+            if (btn) {
+                const ticketId = btn.dataset.id;
+                const ticketNum = btn.dataset.ticket;
+                const clientName = btn.dataset.name;
+
+                document.getElementById('assign-ticket-id').value = ticketId;
+                document.getElementById('assign-ticket-number').innerText = ticketNum;
+                document.getElementById('assign-client-name').innerText = clientName;
+
+                // Preload existing details
+                fetch(`/dispatch/api/tickets/${ticketId}/`)
+                    .then(r => r.json())
+                    .then(res => {
+                        if (res.success && res.ticket) {
+                            const t = res.ticket;
+                            if (t.team_id) document.getElementById('assign-team-id').value = t.team_id;
+                            if (t.scheduled_date) document.getElementById('assign-scheduled-date').value = t.scheduled_date;
+                            if (t.scheduled_time) document.getElementById('assign-scheduled-time').value = t.scheduled_time;
+                            if (t.remarks) document.getElementById('assign-remarks').value = t.remarks;
+
+                            // Check tech boxes
+                            document.querySelectorAll('.assign-tech-checkbox').forEach(chk => {
+                                chk.checked = t.technician_ids && t.technician_ids.includes(parseInt(chk.value));
+                            });
+                        }
+                    });
+
+                const modal = new bootstrap.Modal(document.getElementById('modal-assign-ticket'));
+                modal.show();
+            }
+        });
+
+        // Submit Assign Form
+        const formAssign = document.getElementById('form-assign-ticket');
+        if (formAssign) {
+            formAssign.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const ticketId = document.getElementById('assign-ticket-id').value;
+                const teamId = document.getElementById('assign-team-id').value;
+                const techIds = Array.from(document.querySelectorAll('.assign-tech-checkbox:checked')).map(c => parseInt(c.value));
+                const schedDate = document.getElementById('assign-scheduled-date').value;
+                const schedTime = document.getElementById('assign-scheduled-time').value;
+                const remarks = document.getElementById('assign-remarks').value;
+                const startNow = document.getElementById('assign-start-now').checked;
+
+                fetch(`/dispatch/api/tickets/${ticketId}/assign/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({
+                        team_id: teamId || null,
+                        technician_ids: techIds,
+                        scheduled_date: schedDate || null,
+                        scheduled_time: schedTime,
+                        remarks: remarks,
+                        start_now: startNow
+                    })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        const modalEl = document.getElementById('modal-assign-ticket');
+                        bootstrap.Modal.getInstance(modalEl).hide();
+                        window.location.reload();
+                    } else {
+                        alert('Error assigning ticket: ' + (data.error || 'Unknown error'));
+                    }
+                });
+            });
+        }
+
+        // Open Complete Job Modal
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.btn-open-complete');
+            if (btn) {
+                const ticketId = btn.dataset.id;
+                const ticketNum = btn.dataset.ticket;
+                const clientName = btn.dataset.name;
+
+                document.getElementById('complete-ticket-id').value = ticketId;
+                document.getElementById('complete-ticket-number').innerText = ticketNum;
+                document.getElementById('complete-client-name').innerText = clientName;
+
+                // Fetch existing details
+                fetch(`/dispatch/api/tickets/${ticketId}/`)
+                    .then(r => r.json())
+                    .then(res => {
+                        if (res.success && res.ticket) {
+                            const t = res.ticket;
+                            document.getElementById('comp-nap-port').value = t.nap_port || '';
+                            document.getElementById('comp-pole-number').value = t.pole_number || '';
+                            document.getElementById('comp-cable-length').value = t.cable_length || '';
+                            document.getElementById('comp-nap-reading').value = t.nap_reading || '';
+                            document.getElementById('comp-house-reading').value = t.house_reading || '';
+                            document.getElementById('comp-facility').value = t.facility || '';
+                            document.getElementById('comp-ont-sn').value = t.ont_modem_sn || '';
+                            document.getElementById('comp-acknowledged').value = t.acknowledged_by || '';
+                            document.getElementById('comp-remarks').value = t.technician_remarks || '';
+                        }
+                    });
+
+                const modal = new bootstrap.Modal(document.getElementById('modal-complete-job'));
+                modal.show();
+            }
+        });
+
+        // Submit Complete Form
+        const formComplete = document.getElementById('form-complete-job');
+        if (formComplete) {
+            formComplete.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const ticketId = document.getElementById('complete-ticket-id').value;
+
+                const payload = {
+                    nap_port: document.getElementById('comp-nap-port').value,
+                    pole_number: document.getElementById('comp-pole-number').value,
+                    cable_length: document.getElementById('comp-cable-length').value,
+                    nap_reading: document.getElementById('comp-nap-reading').value,
+                    house_reading: document.getElementById('comp-house-reading').value,
+                    facility: document.getElementById('comp-facility').value,
+                    ont_modem_sn: document.getElementById('comp-ont-sn').value,
+                    acknowledged_by: document.getElementById('comp-acknowledged').value,
+                    technician_remarks: document.getElementById('comp-remarks').value
+                };
+
+                fetch(`/dispatch/api/tickets/${ticketId}/complete/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify(payload)
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        const modalEl = document.getElementById('modal-complete-job');
+                        bootstrap.Modal.getInstance(modalEl).hide();
+                        window.location.reload();
+                    } else {
+                        alert('Error completing ticket: ' + (data.error || 'Unknown error'));
+                    }
+                });
+            });
+        }
+
+        // Open Set Location Modal
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.btn-set-location');
+            if (btn) {
+                const ticketId = btn.dataset.id;
+                const clientName = btn.dataset.name;
+
+                document.getElementById('loc-ticket-id').value = ticketId;
+                document.getElementById('loc-client-name').innerText = clientName;
+
+                fetch(`/dispatch/api/tickets/${ticketId}/`)
+                    .then(r => r.json())
+                    .then(res => {
+                        if (res.success && res.ticket) {
+                            document.getElementById('loc-latitude').value = res.ticket.latitude || '';
+                            document.getElementById('loc-longitude').value = res.ticket.longitude || '';
+                        }
+                    });
+
+                const modal = new bootstrap.Modal(document.getElementById('modal-set-location'));
+                modal.show();
+            }
+        });
+
+        // Use Device GPS
+        const btnGeo = document.getElementById('btn-device-geolocation');
+        if (btnGeo) {
+            btnGeo.addEventListener('click', function() {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(function(pos) {
+                        document.getElementById('loc-latitude').value = pos.coords.latitude.toFixed(6);
+                        document.getElementById('loc-longitude').value = pos.coords.longitude.toFixed(6);
+                    }, function(err) {
+                        alert('Could not retrieve device location: ' + err.message);
+                    });
+                } else {
+                    alert('Geolocation is not supported by your browser.');
+                }
+            });
+        }
+
+        // Submit Location Form
+        const formLocation = document.getElementById('form-set-location');
+        if (formLocation) {
+            formLocation.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const ticketId = document.getElementById('loc-ticket-id').value;
+                const lat = document.getElementById('loc-latitude').value;
+                const lng = document.getElementById('loc-longitude').value;
+
+                fetch(`/dispatch/api/tickets/${ticketId}/location/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({ latitude: lat, longitude: lng })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        const modalEl = document.getElementById('modal-set-location');
+                        bootstrap.Modal.getInstance(modalEl).hide();
+                        window.location.reload();
+                    } else {
+                        alert('Error updating coordinates: ' + (data.error || 'Unknown error'));
+                    }
+                });
+            });
+        }
+
+        // Submit Create Ticket Form
+        const formCreate = document.getElementById('form-create-ticket');
+        if (formCreate) {
+            formCreate.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const payload = {
+                    client_name: document.getElementById('create-client-name').value,
+                    contact_number: document.getElementById('create-contact-number').value,
+                    address: document.getElementById('create-address').value,
+                    barangay: document.getElementById('create-barangay').value,
+                    ticket_type: document.getElementById('create-ticket-type').value,
+                    priority: document.getElementById('create-priority').value,
+                    plan_package: document.getElementById('create-plan-package').value,
+                    mikrotik_device_id: document.getElementById('create-mikrotik-device').value,
+                    latitude: document.getElementById('create-latitude').value,
+                    longitude: document.getElementById('create-longitude').value,
+                    concern: document.getElementById('create-concern').value,
+                };
+
+                fetch('/dispatch/api/tickets/create/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify(payload)
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        const modalEl = document.getElementById('modal-create-ticket');
+                        bootstrap.Modal.getInstance(modalEl).hide();
+                        window.location.reload();
+                    } else {
+                        alert('Error creating ticket: ' + (data.error || 'Unknown error'));
+                    }
+                });
+            });
+        }
+
+        // Quick Status Change from Dropdown
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.btn-quick-status');
+            if (btn) {
+                e.preventDefault();
+                const ticketId = btn.dataset.id;
+                const newStatus = btn.dataset.status;
+
+                fetch(`/dispatch/api/tickets/${ticketId}/status/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        alert('Error updating status: ' + (data.error || 'Unknown error'));
+                    }
+                });
+            }
+        });
+    });
+</script>

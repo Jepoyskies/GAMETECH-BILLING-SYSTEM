@@ -1,0 +1,294 @@
+<!-- Assign / Schedule Ticket Modal -->
+<div class="modal fade" id="modal-assign-ticket" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border-secondary text-white shadow-lg">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold"><i class="fas fa-truck text-warning me-2"></i> Assign & Schedule Ticket</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="form-assign-ticket">
+                <div class="modal-body">
+                    <input type="hidden" id="assign-ticket-id" value="">
+                    <div class="p-3 mb-3 rounded-3 bg-black border border-secondary">
+                        <div class="text-xs text-muted text-uppercase">Target Ticket</div>
+                        <div class="fw-bold text-cyan" id="assign-ticket-number">TICK-XXXX</div>
+                        <div class="text-sm text-white" id="assign-client-name">Client Name</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-sm fw-bold">Field Team</label>
+                        <select class="form-select bg-dark border-secondary text-white" id="assign-team-id">
+                            <option value="">-- Select Team --</option>
+                            {% for team in teams %}
+                            <option value="{{ team.id }}">{{ team.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-sm fw-bold">Assigned Technicians</label>
+                        <div class="p-2 border border-secondary rounded bg-dark" style="max-height: 140px; overflow-y: auto;">
+                            {% for tech in technicians %}
+                            <div class="form-check">
+                                <input class="form-check-input assign-tech-checkbox" type="checkbox" value="{{ tech.id }}" id="tech-chk-{{ tech.id }}">
+                                <label class="form-check-label text-sm text-light" for="tech-chk-{{ tech.id }}">
+                                    {{ tech.name }} {% if tech.team %}<span class="text-xs text-muted">({{ tech.team.name }})</span>{% endif %}
+                                </label>
+                            </div>
+                            {% empty %}
+                            <div class="text-xs text-muted">No technicians available.</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-sm fw-bold">Scheduled Date</label>
+                            <input type="date" class="form-control bg-dark border-secondary text-white" id="assign-scheduled-date">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-sm fw-bold">Time Window</label>
+                            <select class="form-select bg-dark border-secondary text-white" id="assign-scheduled-time">
+                                <option value="Morning (8:00 AM - 12:00 PM)">Morning (8AM - 12PM)</option>
+                                <option value="Afternoon (1:00 PM - 5:00 PM)">Afternoon (1PM - 5PM)</option>
+                                <option value="Urgent / ASAP">Urgent / ASAP</option>
+                                <option value="Specific Appointment">Specific Appointment</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-sm fw-bold">Special Dispatch Instructions</label>
+                        <textarea class="form-control bg-dark border-secondary text-white" id="assign-remarks" rows="2" placeholder="e.g. Bring 150m fiber drop wire, customer home after 2 PM"></textarea>
+                    </div>
+
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="assign-start-now">
+                        <label class="form-check-label text-sm fw-bold text-info" for="assign-start-now">
+                            Deploy immediately (Set status to In Progress / On-Site)
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> Save Assignment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Complete Job Order Modal -->
+<div class="modal fade" id="modal-complete-job" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark border-secondary text-white shadow-lg">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold text-success"><i class="fas fa-check-circle me-2"></i> Technical Job Completion</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="form-complete-job">
+                <div class="modal-body">
+                    <input type="hidden" id="complete-ticket-id" value="">
+                    
+                    <div class="alert alert-info border-info bg-dark text-cyan text-sm mb-3">
+                        <i class="fas fa-info-circle me-2"></i> Submitting hardware completion for an <strong>Installation Ticket</strong> will automatically transition the CRM customer account to <strong>Installed / Active</strong>.
+                    </div>
+
+                    <div class="p-3 mb-3 rounded-3 bg-black border border-secondary d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs text-muted text-uppercase">Ticket</div>
+                            <div class="fw-bold text-cyan" id="complete-ticket-number">TICK-XXXX</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-muted text-uppercase">Subscriber</div>
+                            <div class="fw-bold text-white" id="complete-client-name">Client Name</div>
+                        </div>
+                    </div>
+
+                    <!-- Hardware & Reading Fields -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label text-xs fw-bold text-uppercase text-muted">NAP Port</label>
+                            <input type="text" class="form-control bg-dark border-secondary text-white" id="comp-nap-port" placeholder="e.g. Port 4 / Box 12">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-xs fw-bold text-uppercase text-muted">Pole Number</label>
+                            <input type="text" class="form-control bg-dark border-secondary text-white" id="comp-pole-number" placeholder="e.g. P-108">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-xs fw-bold text-uppercase text-muted">Cable Length</label>
+                            <input type="text" class="form-control bg-dark border-secondary text-white" id="comp-cable-length" placeholder="e.g. 140 meters">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label text-xs fw-bold text-uppercase text-muted">Optical Reading (NAP dBm)</label>
+                            <input type="text" class="form-control bg-dark border-secondary text-white" id="comp-nap-reading" placeholder="e.g. -18.5 dBm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-xs fw-bold text-uppercase text-muted">House Reading (ONT dBm)</label>
+                            <input type="text" class="form-control bg-dark border-secondary text-white" id="comp-house-reading" placeholder="e.g. -19.0 dBm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-xs fw-bold text-uppercase text-muted">Facility / Splitter</label>
+                            <input type="text" class="form-control bg-dark border-secondary text-white" id="comp-facility" placeholder="e.g. 1:8 PLC Splitter">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-xs fw-bold text-uppercase text-muted">ONT / Modem Serial Number</label>
+                            <input type="text" class="form-control bg-dark border-secondary text-white font-monospace" id="comp-ont-sn" placeholder="e.g. ZTEGC1234567">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-xs fw-bold text-uppercase text-muted">Customer Acknowledged By</label>
+                            <input type="text" class="form-control bg-dark border-secondary text-white" id="comp-acknowledged" placeholder="e.g. Maria Santos (Subscriber)">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-xs fw-bold text-uppercase text-muted">Technician Resolution Remarks</label>
+                        <textarea class="form-control bg-dark border-secondary text-white" id="comp-remarks" rows="2" placeholder="e.g. Line successfully spliced, modem activated and speed tested at 50 Mbps."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success"><i class="fas fa-check-circle me-1"></i> Save & Complete Ticket</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- GPS Location Picker Modal -->
+<div class="modal fade" id="modal-set-location" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border-secondary text-white shadow-lg">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold text-info"><i class="fas fa-map-marker-alt me-2"></i> Update GPS Coordinates</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="form-set-location">
+                <div class="modal-body">
+                    <input type="hidden" id="loc-ticket-id" value="">
+                    <p class="text-sm text-muted mb-3">Enter the exact field coordinates for <strong class="text-white" id="loc-client-name"></strong>:</p>
+                    
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-xs fw-bold text-muted">Latitude</label>
+                            <input type="number" step="any" class="form-control bg-dark border-secondary text-white font-monospace" id="loc-latitude" required placeholder="8.4822">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-xs fw-bold text-muted">Longitude</label>
+                            <input type="number" step="any" class="form-control bg-dark border-secondary text-white font-monospace" id="loc-longitude" required placeholder="124.6472">
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <button type="button" class="btn btn-xs btn-outline-info" id="btn-device-geolocation">
+                            <i class="fas fa-crosshairs me-1"></i> Use Device GPS
+                        </button>
+                        <span class="text-xs text-muted">e.g. Cagayan de Oro City</span>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> Save Coordinates</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Fast New Ticket Creation Modal -->
+<div class="modal fade" id="modal-create-ticket" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark border-secondary text-white shadow-lg">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold text-white"><i class="fas fa-plus-circle text-primary me-2"></i> Create Dispatch Job Ticket</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="form-create-ticket">
+                <div class="modal-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-sm fw-bold">Client / Subscriber Name *</label>
+                            <input type="text" class="form-control bg-dark border-secondary text-white" id="create-client-name" required placeholder="Full Name">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-sm fw-bold">Contact Phone *</label>
+                            <input type="text" class="form-control bg-dark border-secondary text-white" id="create-contact-number" required placeholder="0917XXXXXXX">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label text-sm fw-bold">Address / Street *</label>
+                            <input type="text" class="form-control bg-dark border-secondary text-white" id="create-address" required placeholder="House #, Street, Zone">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-sm fw-bold">Barangay</label>
+                            <input type="text" class="form-control bg-dark border-secondary text-white" id="create-barangay" placeholder="e.g. Carmen">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label text-sm fw-bold">Ticket Type</label>
+                            <select class="form-select bg-dark border-secondary text-white" id="create-ticket-type">
+                                <option value="INSTALLATION">New Installation</option>
+                                <option value="REPAIR">Repair / Concern</option>
+                                <option value="CIGNAL">Cignal Play / Box</option>
+                                <option value="MIGRATION">Plan Migration</option>
+                                <option value="RELOCATION">Relocation</option>
+                                <option value="PULL_OUT">Pull Out</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-sm fw-bold">Priority</label>
+                            <select class="form-select bg-dark border-secondary text-white" id="create-priority">
+                                <option value="NORMAL" selected>Normal</option>
+                                <option value="HIGH">High</option>
+                                <option value="URGENT">Urgent (Outage / SLA)</option>
+                                <option value="LOW">Low</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-sm fw-bold">Plan Package</label>
+                            <input type="text" class="form-control bg-dark border-secondary text-white" id="create-plan-package" placeholder="e.g. Fiber Unli 1499">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-sm fw-bold">MikroTik Router</label>
+                            <select class="form-select bg-dark border-secondary text-white" id="create-mikrotik-device">
+                                <option value="">-- None / Unassigned --</option>
+                                {% for dev in mikrotik_devices %}
+                                <option value="{{ dev.id }}">{{ dev.device_name }} ({{ dev.ip_address }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-sm fw-bold">Latitude</label>
+                            <input type="number" step="any" class="form-control bg-dark border-secondary text-white font-monospace" id="create-latitude" placeholder="8.4822">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-sm fw-bold">Longitude</label>
+                            <input type="number" step="any" class="form-control bg-dark border-secondary text-white font-monospace" id="create-longitude" placeholder="124.6472">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-sm fw-bold">Concern / Job Description</label>
+                        <textarea class="form-control bg-dark border-secondary text-white" id="create-concern" rows="2" placeholder="Describe the installation requirements or reported technical concern..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-plus-circle me-1"></i> Create Ticket</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
