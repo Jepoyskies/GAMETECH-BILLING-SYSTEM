@@ -341,7 +341,9 @@ def edit_cignal_subscription(request, sub_id=None):
             "expiration_date": subscription.expiration_date.strftime("%Y-%m-%d") if subscription.expiration_date else "",
         })
 
-    messages.success(request, f"Cignal subscription '{subscription.account_name}' updated successfully.")
+    cust_name = customer.full_name if customer else "Customer"
+    label_text = f" ({subscription.account_name})" if subscription.account_name and subscription.account_name.strip() not in ("Cignal Subscription", "Cignal Account") else ""
+    messages.success(request, f"Cignal details for {cust_name}{label_text} updated successfully.")
     return redirect(request.META.get("HTTP_REFERER", "cignal_dashboard"))
 
 

@@ -1,6 +1,7 @@
 import logging
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
 from billing.models import Customer
 from .models import JobTicket
 
@@ -10,16 +11,36 @@ logger = logging.getLogger(__name__)
 @receiver(post_save, sender=Customer)
 def auto_create_dispatch_ticket_on_pending_install(sender, instance, created, **kwargs):
     """
-    Smart CRM Hook:
-    If a Customer is created or updated and their status or installation_status is 'pending'
-    (New Applicant), automatically generate a JobTicket with type 'New Installation' in the Dispatch queue.
+    Smart CRM Hook (Direction 1: CRM -> Dispatch):
+    - If a Customer's status or installation_status is 'pending', automatically generate
+      or update an open JobTicket ('INSTALLATION') in the Dispatch queue.
+    - If a Customer's installation_status is 'installed', automatically complete any open
+      installation tickets for this customer.
     """
     if kwargs.get('raw'):
         return
 
     is_pending = (instance.status == 'pending' or instance.installation_status == 'pending')
 
+    # If customer is marked installed, auto-complete any remaining open installation tickets
     if not is_pending:
+        if instance.installation_status == 'installed':
+            open_tickets = JobTicket.objects.filter(
+                customer=instance,
+                ticket_type='INSTALLATION',
+                status__in=['PENDING', 'ASSIGNED', 'IN_PROGRESS']
+            )
+            for t in open_tickets:
+                t.status = 'COMPLETED'
+                t.done_at = instance.installed_at or timezone.now()
+                t.time_accomplish = t.done_at
+                completed_note = f"Line marked installed & activated via CRM on {t.done_at.strftime('%Y-%m-%d %H:%M')}"
+                if t.actions_taken:
+                    t.actions_taken += f" | {completed_note}"
+                else:
+                    t.actions_taken = completed_note
+                t.save()
+                logger.info(f"[DISPATCH] Auto-completed JobTicket {t.ticket_number} for installed customer {instance.full_name}")
         return
 
     # Extract scheduled installation date from customer's installed_at
@@ -96,3 +117,42 @@ def auto_create_dispatch_ticket_on_pending_install(sender, instance, created, **
     logger.info(
         f"[DISPATCH] Auto-created JobTicket {new_ticket.ticket_number} for customer {instance.full_name} (ID: {instance.id})"
     )
+
+
+@receiver(post_save, sender=JobTicket)
+def sync_ticket_completion_to_customer(sender, instance, created, **kwargs):
+    """
+    Smart CRM Hook (Direction 2: Dispatch -> CRM):
+    When a JobTicket with ticket_type='INSTALLATION' is marked 'COMPLETED',
+    automatically transition the linked customer's installation_status to 'installed',
+    set installed_at, promote status to 'active', and record modem MAC/SN if available.
+    """
+    if kwargs.get('raw'):
+        return
+
+    if instance.ticket_type == 'INSTALLATION' and instance.status == 'COMPLETED' and instance.customer:
+        customer = instance.customer
+        fields_to_update = []
+
+        if customer.installation_status != 'installed':
+            customer.installation_status = 'installed'
+            fields_to_update.append('installation_status')
+
+        if not customer.installed_at:
+            customer.installed_at = instance.done_at or timezone.now()
+            fields_to_update.append('installed_at')
+
+        if customer.status == 'pending':
+            customer.status = 'active'
+            fields_to_update.append('status')
+
+        if instance.ont_modem_sn and not customer.mac_address:
+            customer.mac_address = instance.ont_modem_sn
+            fields_to_update.append('mac_address')
+
+        if fields_to_update:
+            customer.save(update_fields=fields_to_update)
+            logger.info(
+                f"[DISPATCH] Promoted Customer {customer.full_name} (ID: {customer.id}) to installed & active from completed ticket {instance.ticket_number}"
+            )
+

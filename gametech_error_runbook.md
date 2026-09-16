@@ -673,7 +673,21 @@
   * Add a dedicated Current Subscription Status card to `_cignal_payment_modal.html` displaying current due date, plan, and hardware setup.
   * Calculate ISP-standard rollover: `New Due Date = Current Expiration + 30 Days` (if active) or `Today + 30 Days` (if expired).
   * Dynamically show/hide hardware presets based on `data-hw` and `data-inst` (< 12 months), and display live extension preview banner.
-  * Guard `process_cignal_payment` so `box_installment` payments advance installment counters without altering TV load expiration.
+### ERR-038: Redundant Cignal Subscription Confirmation Flash Message & One-Way Dispatch Desync
+* **Symptoms**:
+  * Staff saving or updating Cignal subscription details was greeted by an awkward, confusing red/pink flash message: `Cignal subscription 'Cignal Subscription' updated successfully.`
+  * Marking a subscriber as installed in CRM left their open installation `JobTicket` orphaned in `PENDING` in the dispatch module.
+  * Completing an installation ticket via generic status change (`api_update_status`) failed to activate the customer in CRM.
+* **Root Causes**:
+  * `edit_cignal_subscription` formatted messages using `f"Cignal subscription '{subscription.account_name}' updated successfully."`. When `account_name` fell back to default `"Cignal Subscription"`, the wording was duplicated. Unstyled alerts inherited red/pinkish styling, making success messages look like errors.
+  * `dispatch/signals.py` only listened for pending install states without auto-completing tickets when `installation_status == 'installed'`, and lacked a `post_save` listener on `JobTicket` to handle 2-way completion sync.
+* **Exact Target Files**:
+  * `billing/views/cignal_dashboard.py` (`edit_cignal_subscription`)
+  * `billing/templates/billing/cignal_dashboard.html` (styled emerald green flash messages block)
+  * `dispatch/signals.py` (`auto_create_dispatch_ticket_on_pending_install` & `sync_ticket_completion_to_customer`)
+* **1-Step Fix**:
+  * In `cignal_dashboard.py`, format flash message as `f"Cignal details for {customer.full_name}{label} updated successfully."` and render alerts with `#ecfdf5` background, `#059669` text, checkmark icon, and dismiss button.
+  * In `dispatch/signals.py`, auto-complete open installation tickets when a customer's `installation_status` changes to `'installed'`, and register a `post_save` on `JobTicket` to promote `customer.installation_status = 'installed'` and `customer.status = 'active'` whenever an installation ticket is marked `COMPLETED`.
 
 ---
 
@@ -682,6 +696,7 @@
 1. Assign a new `ERR-XXX` identifier.
 2. Fill in: **Symptoms**, **Root Causes**, **Exact Target Files**, and **1-Step Fix**.
 3. Keep entries short, actionable, and sniper-focused.
+
 
 
 
