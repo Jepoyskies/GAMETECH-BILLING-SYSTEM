@@ -596,6 +596,21 @@ def mark_customer_installed(request, customer_id):
         new_data="\n".join(new_data_lines),
     )
 
+    # 2-Way Sync: Close any open dispatch JobTicket for this customer
+    try:
+        from dispatch.models import JobTicket
+        JobTicket.objects.filter(
+            customer=customer,
+            ticket_type="INSTALLATION",
+            status__in=["PENDING", "ASSIGNED", "IN_PROGRESS"],
+        ).update(
+            status="COMPLETED",
+            done_at=timezone.now(),
+            time_accomplish=timezone.now(),
+        )
+    except Exception:
+        pass
+
     success_msg = f"Customer {customer.full_name} has been marked as Installed! Account is now active."
     if amount > 0:
         success_msg += f" Initial payment of ₱{amount:,.2f} recorded."
