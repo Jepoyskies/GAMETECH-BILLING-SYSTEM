@@ -19,96 +19,173 @@
           {% for customer in customers_list %}
           <tr>
             <td>
-              <a href="{% url 'view_customer' customer.id %}" class="fw-bold text-decoration-none text-info">
+              <a href="{% url 'view_customer' customer.id %}" class="fw-bold text-decoration-none text-info d-block">
                 {{ customer.full_name|default:customer.pppoe_username }}
               </a>
+              {% if customer.full_name and customer.pppoe_username %}
+                <small class="text-muted font-monospace" style="font-size:0.75rem;"><i class="fas fa-user-circle me-1"></i>{{ customer.pppoe_username }}</small>
+              {% endif %}
             </td>
             <td>
-              <div class="d-flex flex-column gap-1">
+              <div class="d-flex flex-column gap-2">
               {% if customer.cignal_plans.all %}
                 {% for plan in customer.cignal_plans.all %}
-                  <div>
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                      <span class="text-light fw-bold small">{{ plan.account_name|default:"Cignal Subscription" }}</span>
-                      {% if plan.hardware_payment_type == 'installment' %}
-                        <span class="badge border border-secondary text-light" style="font-size:0.65rem;" title="Box Installment">
-                          <i class="fas fa-clock me-1 text-muted"></i>Box: {{ plan.installments_paid|default:0 }}/12
+                  <div class="p-2 rounded border border-secondary border-opacity-25" style="background: rgba(255, 255, 255, 0.02); min-width: 340px;">
+                    <!-- Line 1: Subscription Label + Load Plan Applied + Expiration -->
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                      <div class="d-flex align-items-center gap-2">
+                        <span class="text-light fw-bold" style="font-size: 0.85rem;">
+                          <i class="fas fa-tv text-danger me-1"></i>{{ plan.account_name|default:"Cignal Subscription" }}
                         </span>
-                      {% elif plan.hardware_payment_type == 'cashout' %}
-                        <span class="badge border border-secondary text-light" style="font-size:0.65rem;" title="Hardware Cashout Paid">
-                          <i class="fas fa-check me-1 text-muted"></i>Cashout
-                        </span>
-                      {% endif %}
-                      {% if plan.monthly_load_plan %}
-                        <span class="badge border border-secondary text-light" style="font-size:0.65rem;" title="Load Plan">
-                          ₱{{ plan.monthly_load_plan }}/mo
-                        </span>
-                      {% endif %}
-                      {% if plan.expiration_date or plan.end_date %}
-                        <span class="badge {% if plan.is_active %}bg-success-subtle text-success border border-success-subtle{% else %}bg-danger-subtle text-danger border border-danger-subtle{% endif %}" style="font-size:0.65rem;" title="Due Date">
-                          <i class="far fa-clock me-1"></i>Due: {{ plan.expiration_date|default:plan.end_date|date:"M d, Y" }}
-                        </span>
-                      {% endif %}
+                        {% if plan.monthly_load_plan == '149' %}
+                          <span class="badge rounded-pill bg-primary bg-opacity-25 text-info border border-info border-opacity-25 py-1 px-2" style="font-size: 0.68rem;" title="Applied Load Plan">
+                            <i class="fas fa-satellite-dish me-1"></i>42 Ch (₱149/mo)
+                          </span>
+                        {% elif plan.monthly_load_plan == '399' %}
+                          <span class="badge rounded-pill bg-primary bg-opacity-25 text-info border border-info border-opacity-25 py-1 px-2" style="font-size: 0.68rem;" title="Applied Load Plan">
+                            <i class="fas fa-satellite-dish me-1"></i>62 Ch (₱399/mo)
+                          </span>
+                        {% elif plan.monthly_load_plan %}
+                          <span class="badge rounded-pill bg-primary bg-opacity-25 text-info border border-info border-opacity-25 py-1 px-2" style="font-size: 0.68rem;" title="Applied Load Plan">
+                            <i class="fas fa-satellite-dish me-1"></i>₱{{ plan.monthly_load_plan }}/mo
+                          </span>
+                        {% else %}
+                          <span class="badge rounded-pill bg-secondary bg-opacity-25 text-muted border border-secondary border-opacity-25 py-1 px-2" style="font-size: 0.68rem;">
+                            No Load Set
+                          </span>
+                        {% endif %}
+                      </div>
+
+                      <div>
+                        {% if plan.expiration_date or plan.end_date %}
+                          {% if plan.is_active %}
+                            <span class="badge rounded-pill bg-success bg-opacity-20 text-success border border-success border-opacity-25 py-1 px-2" style="font-size: 0.68rem;" title="Due Date">
+                              <i class="far fa-calendar-check me-1"></i>Due: {{ plan.expiration_date|default:plan.end_date|date:"M d, Y" }}
+                            </span>
+                          {% else %}
+                            <span class="badge rounded-pill bg-danger bg-opacity-20 text-danger border border-danger border-opacity-25 py-1 px-2" style="font-size: 0.68rem;" title="Expired">
+                              <i class="fas fa-exclamation-triangle me-1"></i>Expired: {{ plan.expiration_date|default:plan.end_date|date:"M d, Y" }}
+                            </span>
+                          {% endif %}
+                        {% else %}
+                          <span class="badge rounded-pill bg-secondary bg-opacity-20 text-muted border border-secondary border-opacity-25 py-1 px-2" style="font-size: 0.68rem;">
+                            <i class="far fa-clock me-1"></i>No Due Date
+                          </span>
+                        {% endif %}
+                      </div>
                     </div>
-                    <div class="d-flex flex-wrap align-items-center gap-2 small">
-                      {% if plan.cignal_play_no %}
-                        <span class="d-inline-flex align-items-center gap-1">
-                          <span class="badge border border-secondary text-light" style="font-size:0.65rem;">Play</span>
-                          <span class="font-monospace text-light fw-semibold">{{ plan.cignal_play_no }}</span>
-                        </span>
-                      {% endif %}
-                      {% if plan.cignal_play_no and plan.cignal_box_no %}<span class="text-muted mx-1">|</span>{% endif %}
-                      {% if plan.cignal_box_no %}
-                        <span class="d-inline-flex align-items-center gap-1">
-                          <span class="badge border border-secondary text-light" style="font-size:0.65rem;">Box</span>
-                          <span class="font-monospace text-light fw-semibold">{{ plan.cignal_box_no }}</span>
-                        </span>
-                      {% endif %}
-                      {% if not plan.cignal_play_no and not plan.cignal_box_no %}
-                        <span class="text-muted">—</span>
+
+                    <!-- Line 2: Cignal No & Box No -->
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                      <div class="d-inline-flex align-items-center gap-1 bg-dark bg-opacity-50 px-2 py-0.5 rounded border border-secondary border-opacity-25">
+                        <span class="text-secondary text-uppercase fw-semibold" style="font-size: 0.65rem;">Cignal No:</span>
+                        {% if plan.cignal_play_no %}
+                          <code class="text-light fw-bold font-monospace" style="font-size: 0.78rem;">{{ plan.cignal_play_no }}</code>
+                        {% else %}
+                          <span class="text-muted fst-italic" style="font-size: 0.72rem;">None</span>
+                        {% endif %}
+                      </div>
+
+                      <div class="d-inline-flex align-items-center gap-1 bg-dark bg-opacity-50 px-2 py-0.5 rounded border border-secondary border-opacity-25">
+                        <span class="text-secondary text-uppercase fw-semibold" style="font-size: 0.65rem;">Box No:</span>
+                        {% if plan.cignal_box_no %}
+                          <code class="text-light fw-bold font-monospace" style="font-size: 0.78rem;">{{ plan.cignal_box_no }}</code>
+                        {% else %}
+                          <span class="text-muted fst-italic" style="font-size: 0.72rem;">None</span>
+                        {% endif %}
+                      </div>
+                    </div>
+
+                    <!-- Line 3: Hardware & Installment Financial Status -->
+                    <div>
+                      {% if plan.hardware_payment_type == 'installment' %}
+                        <div class="p-1.5 px-2 rounded border border-warning border-opacity-25 bg-warning bg-opacity-10" style="font-size: 0.72rem;">
+                          <div class="d-flex flex-wrap align-items-center justify-content-between gap-1">
+                            <div class="d-flex align-items-center gap-1 text-warning fw-semibold">
+                              <i class="fas fa-boxes-packing"></i>
+                              <span>Installment (₱250/mo):</span>
+                              <span class="badge bg-warning text-dark fw-bold px-1.5 py-0.5" style="font-size: 0.68rem;">{{ plan.installments_paid|default:0 }}/12 Mos</span>
+                            </div>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                              <span class="text-secondary">Total: <strong class="text-light">₱3,000</strong></span>
+                              <span class="text-muted">•</span>
+                              <span class="text-secondary">Paid: <strong class="text-success">₱{{ plan.hardware_paid_amount }}</strong></span>
+                              <span class="text-muted">•</span>
+                              <span class="text-secondary">Remaining: <strong class="{% if plan.hardware_remaining_amount > 0 %}text-warning{% else %}text-success{% endif %}">₱{{ plan.hardware_remaining_amount }}</strong> {% if plan.hardware_remaining_amount > 0 %}<span class="text-muted" style="font-size: 0.68rem;">({{ plan.hardware_remaining_months }} mo left)</span>{% else %}<span class="badge bg-success text-white py-0 px-1" style="font-size: 0.62rem;">Fully Paid</span>{% endif %}</span>
+                            </div>
+                          </div>
+                        </div>
+                      {% elif plan.hardware_payment_type == 'cashout' %}
+                        <div class="d-flex flex-wrap align-items-center justify-content-between p-1.5 px-2 rounded border border-success border-opacity-25 bg-success bg-opacity-10 text-success" style="font-size: 0.72rem;">
+                          <div class="d-flex align-items-center gap-1 fw-semibold">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Fully Paid (₱3,000 Cashout)</span>
+                          </div>
+                          <div class="d-flex align-items-center gap-2">
+                            <span class="text-secondary">Total: <strong class="text-light">₱3,000</strong></span>
+                            <span class="text-muted">•</span>
+                            <span class="text-secondary">Paid: <strong class="text-success">₱3,000</strong></span>
+                            <span class="text-muted">•</span>
+                            <span class="text-secondary">Remaining: <strong class="text-success">₱0.00</strong></span>
+                          </div>
+                        </div>
+                      {% elif plan.hardware_payment_type == 'none' %}
+                        <div class="d-inline-flex align-items-center gap-1 text-muted px-1" style="font-size: 0.72rem;">
+                          <i class="fas fa-mobile-alt me-1 text-secondary"></i> App Only (No Box Hardware)
+                        </div>
+                      {% else %}
+                        <div class="d-inline-flex align-items-center gap-1 text-muted px-1" style="font-size: 0.72rem;">
+                          <i class="fas fa-info-circle me-1"></i> Standard Setup
+                        </div>
                       {% endif %}
                     </div>
                   </div>
                 {% endfor %}
               {% else %}
-                <div>
-                  <div class="d-flex align-items-center gap-2 mb-1">
-                    <span class="text-light fw-bold small">Cignal Subscription</span>
+                <!-- Legacy customer fallback -->
+                <div class="p-2 rounded border border-secondary border-opacity-25" style="background: rgba(255, 255, 255, 0.02); min-width: 340px;">
+                  <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                    <span class="text-light fw-bold" style="font-size: 0.85rem;">
+                      <i class="fas fa-tv text-danger me-1"></i>Cignal Subscription
+                    </span>
+                    <span class="badge rounded-pill bg-secondary bg-opacity-25 text-muted border border-secondary border-opacity-25 py-1 px-2" style="font-size: 0.68rem;">
+                      Legacy Account
+                    </span>
                   </div>
-                  <div class="d-flex flex-wrap align-items-center gap-2 small">
-                    {% if customer.cignalplay_no %}
-                      <span class="d-inline-flex align-items-center gap-1">
-                        <span class="badge border border-secondary text-light" style="font-size:0.65rem;">Play</span>
-                        <span class="font-monospace text-light fw-semibold">{{ customer.cignalplay_no }}</span>
-                      </span>
-                    {% endif %}
-                    {% if customer.cignalplay_no and customer.cignalbox_no %}<span class="text-muted mx-1">|</span>{% endif %}
-                    {% if customer.cignalbox_no %}
-                      <span class="d-inline-flex align-items-center gap-1">
-                        <span class="badge border border-secondary text-light" style="font-size:0.65rem;">Box</span>
-                        <span class="font-monospace text-light fw-semibold">{{ customer.cignalbox_no }}</span>
-                      </span>
-                    {% endif %}
-                    {% if not customer.cignalplay_no and not customer.cignalbox_no %}
-                      <span class="text-muted">—</span>
-                    {% endif %}
+                  <div class="d-flex flex-wrap align-items-center gap-2">
+                    <div class="d-inline-flex align-items-center gap-1 bg-dark bg-opacity-50 px-2 py-0.5 rounded border border-secondary border-opacity-25">
+                      <span class="text-secondary text-uppercase fw-semibold" style="font-size: 0.65rem;">Cignal No:</span>
+                      {% if customer.cignalplay_no %}
+                        <code class="text-light fw-bold font-monospace" style="font-size: 0.78rem;">{{ customer.cignalplay_no }}</code>
+                      {% else %}
+                        <span class="text-muted fst-italic" style="font-size: 0.72rem;">None</span>
+                      {% endif %}
+                    </div>
+                    <div class="d-inline-flex align-items-center gap-1 bg-dark bg-opacity-50 px-2 py-0.5 rounded border border-secondary border-opacity-25">
+                      <span class="text-secondary text-uppercase fw-semibold" style="font-size: 0.65rem;">Box No:</span>
+                      {% if customer.cignalbox_no %}
+                        <code class="text-light fw-bold font-monospace" style="font-size: 0.78rem;">{{ customer.cignalbox_no }}</code>
+                      {% else %}
+                        <span class="text-muted fst-italic" style="font-size: 0.72rem;">None</span>
+                      {% endif %}
+                    </div>
                   </div>
                 </div>
               {% endif %}
               </div>
             </td>
             <td>
-              {% if customer.cignalplay_no and customer.cignalplay_date %}
-                <div><small class="text-muted">{{ customer.cignalplay_date|date:"M d, Y" }}</small></div>
-              {% endif %}
-              {% if customer.cignalbox_no and customer.cignalbox_date %}
-                <div><small class="text-muted">{{ customer.cignalbox_date|date:"M d, Y" }}</small></div>
-              {% endif %}
-              {% if not customer.cignalplay_date and not customer.cignalbox_date %}
+              {% if customer.cignal_plans.first.created_at %}
+                <div><small class="text-light">{{ customer.cignal_plans.first.created_at|date:"M d, Y" }}</small></div>
+              {% elif customer.cignalplay_date %}
+                <div><small class="text-light">{{ customer.cignalplay_date|date:"M d, Y" }}</small></div>
+              {% elif customer.cignalbox_date %}
+                <div><small class="text-light">{{ customer.cignalbox_date|date:"M d, Y" }}</small></div>
+              {% else %}
                 <small class="text-muted">N/A</small>
               {% endif %}
             </td>
-            <td><small class="text-muted">{{ customer.cignalbox_adjustedby|default:customer.cignalplay_adjustedby|default:"-" }}</small></td>
+            <td><small class="text-muted">{{ customer.cignal_plans.first.adjusted_by|default:customer.cignalbox_adjustedby|default:customer.cignalplay_adjustedby|default:"-" }}</small></td>
             <td class="text-end">
               <div class="d-flex gap-2 justify-content-end align-items-center">
                 <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 gt-btn text-light" style="font-size: 0.75rem;" title="Edit Subscription Details" onclick="openCignalEditModal({id: '{% if customer.cignal_plans.first %}{{ customer.cignal_plans.first.id }}{% endif %}', customerId: '{{ customer.id }}', label: '{% if customer.cignal_plans.first %}{{ customer.cignal_plans.first.account_name|escapejs }}{% else %}Cignal Subscription{% endif %}', playNo: '{% if customer.cignal_plans.first %}{{ customer.cignal_plans.first.cignal_play_no|escapejs }}{% else %}{{ customer.cignalplay_no|default:''|escapejs }}{% endif %}', boxNo: '{% if customer.cignal_plans.first %}{{ customer.cignal_plans.first.cignal_box_no|escapejs }}{% else %}{{ customer.cignalbox_no|default:''|escapejs }}{% endif %}', customerName: '{{ customer.full_name|escapejs }}', hardwarePaymentType: '{% if customer.cignal_plans.first %}{{ customer.cignal_plans.first.hardware_payment_type|default:'none' }}{% else %}none{% endif %}', installmentsPaid: '{% if customer.cignal_plans.first %}{{ customer.cignal_plans.first.installments_paid|default:0 }}{% else %}0{% endif %}', monthlyLoadPlan: '{% if customer.cignal_plans.first %}{{ customer.cignal_plans.first.monthly_load_plan|default:'149' }}{% else %}149{% endif %}', expirationDate: '{% if customer.cignal_plans.first.expiration_date %}{{ customer.cignal_plans.first.expiration_date|date:'Y-m-d' }}{% elif customer.cignal_plans.first.end_date %}{{ customer.cignal_plans.first.end_date|date:'Y-m-d' }}{% endif %}'})">

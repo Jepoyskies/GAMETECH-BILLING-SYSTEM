@@ -602,6 +602,51 @@ class CignalPlay(models.Model):
         from django.utils import timezone
         return exp >= timezone.now()
 
+    @property
+    def hardware_total_amount(self):
+        if self.hardware_payment_type in ('cashout', 'installment'):
+            return 3000
+        return 0
+
+    @property
+    def hardware_paid_amount(self):
+        if self.hardware_payment_type == 'cashout':
+            return 3000
+        elif self.hardware_payment_type == 'installment':
+            months = min(max(self.installments_paid or 0, 0), 12)
+            return months * 250
+        return 0
+
+    @property
+    def hardware_remaining_amount(self):
+        if self.hardware_payment_type == 'cashout':
+            return 0
+        elif self.hardware_payment_type == 'installment':
+            paid = self.hardware_paid_amount
+            return max(3000 - paid, 0)
+        return 0
+
+    @property
+    def hardware_remaining_months(self):
+        if self.hardware_payment_type == 'installment':
+            months = min(max(self.installments_paid or 0, 0), 12)
+            return max(12 - months, 0)
+        return 0
+
+    @property
+    def is_installment_completed(self):
+        return self.hardware_payment_type == 'installment' and (self.installments_paid or 0) >= 12
+
+    @property
+    def load_plan_display(self):
+        if self.monthly_load_plan == '149':
+            return "42 Channels (₱149/mo)"
+        elif self.monthly_load_plan == '399':
+            return "62 Channels (₱399/mo)"
+        elif self.monthly_load_plan:
+            return f"₱{self.monthly_load_plan}/mo"
+        return "No Load Set"
+
     def save(self, *args, **kwargs):
         if self.expiration_date and not self.end_date:
             self.end_date = self.expiration_date
