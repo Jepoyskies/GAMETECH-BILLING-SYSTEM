@@ -288,8 +288,12 @@ def pay_customer_view(request, username):
                     "{customer_name}": customer.full_name,
                     "{paid_amount}": str(amount),
                     "{new_expiration}": (
-                        new_expiry.strftime("%Y-%m-%d %H:%M") if new_expiry else ""
+                        new_expiry.strftime("%B %d, %Y") if new_expiry else ""
                     ),
+                    "{plan_name}": customer.plan.name if customer.plan else "",
+                    "{payment_method}": payment_method or "",
+                    "{processed_by}": request.user.get_full_name() or request.user.username,
+                    "{pppoe_username}": customer.pppoe_username or "",
                 }
 
                 if send_sms and customer.phone:
@@ -378,6 +382,10 @@ def pay_customer_view(request, username):
                     "{new_expiration}": (
                         new_expiry.strftime("%B %d, %Y") if new_expiry else ""
                     ),
+                    "{plan_name}": customer.plan.name if customer.plan else "",
+                    "{payment_method}": payment_method or "",
+                    "{processed_by}": request.user.get_full_name() or request.user.username,
+                    "{pppoe_username}": customer.pppoe_username or "",
                 }
                 for k, v in context_replacements.items():
                     messenger_msg = messenger_msg.replace(k, str(v))

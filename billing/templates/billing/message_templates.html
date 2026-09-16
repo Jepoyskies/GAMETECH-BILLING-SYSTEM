@@ -1,104 +1,456 @@
 {% extends "billing/base.html" %}
 {% load static %}
 
-{% block title %}Message Templates | Gametech{% endblock %}
+{% block title %}Message Templates &amp; Quick Receipts | Gametech{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4 px-3 px-md-4">
+    <!-- Breadcrumb / Back -->
     <div class="row mb-3">
-        <div class="col-12">
-            <a href="{% url 'settings' %}" class="btn btn-secondary rounded-pill px-4"><i class="fas fa-arrow-left"></i> Back to Settings</a>
+        <div class="col-12 d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <a href="{% url 'settings' %}" class="btn btn-sm btn-secondary rounded-pill px-3">
+                <i class="fas fa-arrow-left me-1"></i> Back to Settings
+            </a>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill" style="font-size: 0.8rem;">
+                <i class="fas fa-info-circle me-1"></i> Non-Tech Friendly Editor &bull; Instant Live Preview
+            </span>
         </div>
     </div>
 
     <!-- Page Hero -->
     <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4 animate-fade-in"
-         style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 25px;">
-        <div class="d-flex align-items-center position-relative z-1">
-            <div class="hero-icon" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-envelope-open-text text-white"></i></div>
+         style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 22px 26px;">
+        <div class="d-flex align-items-center position-relative z-1 gap-3">
+            <div class="hero-icon" style="background: rgba(14, 165, 233, 0.15); border: 1px solid rgba(14, 165, 233, 0.3); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-comment-dots text-info fs-4"></i>
+            </div>
             <div>
-                <div class="hero-title text-white" style="font-weight: 800;">Message Templates</div>
-                <div class="hero-sub text-white-50" style="font-weight: 500;">Manage automated SMS and Email content</div>
+                <div class="hero-title text-white fs-4" style="font-weight: 800; letter-spacing: -0.02em;">Message Templates &amp; Quick-Copy Receipts</div>
+                <div class="hero-sub text-white-50" style="font-size: 0.88rem; font-weight: 500;">
+                    Customize automated SMS, Email, and Receipt notes. Click any tag to insert subscriber details automatically.
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="row">
-        <!-- Sidebar Helpers -->
-        <div class="col-lg-4 mb-4">
-            <div class="dashboard-card h-100">
-                <div class="card-header">
-                    <i class="fas fa-info-circle text-info"></i> How it works
+    <!-- Quick Explainer Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="p-3 h-100 rounded-3 border" style="background: rgba(15, 23, 42, 0.6); border-color: rgba(255, 255, 255, 0.08) !important;">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="badge rounded-pill bg-warning text-dark fw-bold px-2 py-1" style="font-size: 0.72rem;">1-Click Copy</span>
+                    <strong class="text-white" style="font-size: 0.88rem;">Receipt Text Template</strong>
                 </div>
-                <div class="card-body">
-                    <p class="text-muted small mb-3">
-                        These templates are used automatically by the system when you check "Send SMS" or "Send Email" during payment confirmation.
-                    </p>
-                    <h6 class="fw-bold mb-2">Supported Placeholders:</h6>
-                    <ul class="list-group list-group-flush mb-0 small text-muted">
-                        <li class="list-group-item bg-transparent px-0"><code>{customer_name}</code> - Full name of the customer</li>
-                        <li class="list-group-item bg-transparent px-0"><code>{paid_amount}</code> - Amount paid</li>
-                        <li class="list-group-item bg-transparent px-0"><code>{new_expiration}</code> - The new expiration date</li>
-                    </ul>
-                </div>
+                <p class="text-muted small mb-0" style="font-size: 0.8rem; line-height: 1.4;">
+                    Shown on the <strong>Payment Successful</strong> screen. Staff clicks <strong>"Copy Text"</strong> to send receipt notes directly to customers on Messenger or Viber.
+                </p>
             </div>
         </div>
-
-        <!-- Templates Editor -->
-        <div class="col-lg-8 mb-4">
-            <div class="dashboard-card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span><i class="fas fa-edit text-primary"></i> Edit Templates</span>
+        <div class="col-md-4">
+            <div class="p-3 h-100 rounded-3 border" style="background: rgba(15, 23, 42, 0.6); border-color: rgba(255, 255, 255, 0.08) !important;">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="badge rounded-pill bg-primary px-2 py-1" style="font-size: 0.72rem;">Automatic</span>
+                    <strong class="text-white" style="font-size: 0.88rem;">SMS Confirmation</strong>
                 </div>
-                <div class="card-body">
-                    <!-- Nav Tabs -->
-                    <ul class="nav nav-tabs mb-4" id="templateTabs" role="tablist">
-                        {% for t in templates %}
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link {% if forloop.first %}active{% endif %}" 
-                                        id="tab-{{ t.id }}" 
-                                        data-bs-toggle="tab" 
-                                        data-bs-target="#pane-{{ t.id }}" 
-                                        type="button" role="tab">
-                                    {% if t.type == 'SMS' %}<i class="fas fa-sms text-primary"></i>{% elif t.type == 'TEXT' %}<i class="fas fa-file-alt text-warning"></i>{% else %}<i class="fas fa-envelope text-info"></i>{% endif %}
-                                    {{ t.name }}
-                                </button>
-                            </li>
-                        {% endfor %}
-                    </ul>
+                <p class="text-muted small mb-0" style="font-size: 0.8rem; line-height: 1.4;">
+                    Sent automatically via Semaphore SMS to the subscriber's phone when <strong>"Send SMS"</strong> is checked during payment.
+                </p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="p-3 h-100 rounded-3 border" style="background: rgba(15, 23, 42, 0.6); border-color: rgba(255, 255, 255, 0.08) !important;">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="badge rounded-pill bg-info text-dark px-2 py-1" style="font-size: 0.72rem;">Automatic</span>
+                    <strong class="text-white" style="font-size: 0.88rem;">Email Confirmation</strong>
+                </div>
+                <p class="text-muted small mb-0" style="font-size: 0.8rem; line-height: 1.4;">
+                    Sent automatically with customized subject line to the subscriber's inbox when <strong>"Send Email"</strong> is selected.
+                </p>
+            </div>
+        </div>
+    </div>
 
-                    <!-- Tab Panes -->
-                    <div class="tab-content" id="templateTabsContent">
-                        {% for t in templates %}
-                            <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="pane-{{ t.id }}" role="tabpanel">
-                                <form method="POST" action="{% url 'update_message_template' t.id %}">
-                                    {% csrf_token %}
-                                    
+    <!-- Main Editor Card -->
+    <div class="dashboard-card border-0 shadow-sm" style="border-radius: 14px; overflow: hidden; background: #0b1329;">
+        <!-- Nav Tabs -->
+        <div class="card-header bg-transparent border-bottom border-secondary border-opacity-25 pt-3 px-4 pb-0">
+            <ul class="nav nav-tabs border-bottom-0 gap-2" id="templateTabs" role="tablist">
+                {% for t in templates %}
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link {% if forloop.first %}active{% endif %} rounded-top-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2" 
+                                id="tab-{{ t.id }}" 
+                                data-bs-toggle="tab" 
+                                data-bs-target="#pane-{{ t.id }}" 
+                                type="button" role="tab"
+                                style="font-size: 0.88rem;">
+                            {% if t.type == 'TEXT' %}
+                                <i class="fas fa-receipt text-warning"></i>
+                                <span>{{ t.name }}</span>
+                                <span class="badge bg-warning text-dark ms-1" style="font-size: 0.65rem;">Payment Screen</span>
+                            {% elif t.type == 'SMS' %}
+                                <i class="fas fa-sms text-primary"></i>
+                                <span>{{ t.name }}</span>
+                                <span class="badge bg-primary ms-1" style="font-size: 0.65rem;">Phone</span>
+                            {% else %}
+                                <i class="fas fa-envelope text-info"></i>
+                                <span>{{ t.name }}</span>
+                                <span class="badge bg-info text-dark ms-1" style="font-size: 0.65rem;">Email</span>
+                            {% endif %}
+                        </button>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="card-body p-4">
+            <div class="tab-content" id="templateTabsContent">
+                {% for t in templates %}
+                    <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="pane-{{ t.id }}" role="tabpanel">
+                        <form method="POST" action="{% url 'update_message_template' t.id %}" id="form-{{ t.id }}">
+                            {% csrf_token %}
+
+                            <div class="row g-4">
+                                <!-- LEFT: The Editor -->
+                                <div class="col-lg-6">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <label class="form-label fw-bold text-white mb-0" style="font-size: 0.92rem;">
+                                            <i class="fas fa-pen-to-square text-primary me-1"></i> Edit Message
+                                        </label>
+                                        <span class="text-muted" style="font-size: 0.76rem;">
+                                            Type directly or click tags below
+                                        </span>
+                                    </div>
+
                                     {% if t.type == 'EMAIL' %}
-                                    <div class="form-group mb-3">
-                                        <label class="form-label fw-bold">Subject Line</label>
-                                        <input type="text" name="subject" class="form-control" value="{{ t.subject|default:'' }}" required>
+                                    <div class="mb-3">
+                                        <label class="form-label text-white-50 small fw-bold mb-1">Email Subject Line</label>
+                                        <input type="text" name="subject" id="subject-{{ t.id }}" 
+                                               class="form-control text-white bg-dark border-secondary border-opacity-50" 
+                                               value="{{ t.subject|default:'' }}" 
+                                               oninput="updatePreview('{{ t.id }}', '{{ t.type }}')"
+                                               placeholder="e.g. Gametech Unli Fiber: Payment Received - {customer_name}" required>
                                     </div>
                                     {% endif %}
-                                    
-                                    <div class="form-group mb-3">
-                                        <label class="form-label fw-bold">Message Body</label>
-                                        <textarea name="body" class="form-control" rows="8" required>{{ t.body }}</textarea>
+
+                                    <!-- Clickable Smart Tags Toolbar -->
+                                    <div class="p-3 rounded-3 mb-3" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.08);">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <span class="text-white-50 fw-semibold" style="font-size: 0.78rem;">
+                                                <i class="fas fa-wand-magic-sparkles text-warning me-1"></i> Click to Insert Customer Details:
+                                            </span>
+                                            <span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.68rem;">1-Click Auto-Paste</span>
+                                        </div>
+                                        <div class="d-flex flex-wrap gap-1">
+                                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2 py-1 gt-tag-btn" 
+                                                    onclick="insertTag('{{ t.id }}', '{customer_name}')" title="Subscriber's Full Name">
+                                                <i class="fas fa-plus me-1"></i>Customer Name
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2 py-1 gt-tag-btn" 
+                                                    onclick="insertTag('{{ t.id }}', '{paid_amount}')" title="Amount Paid (e.g. 1000.00)">
+                                                <i class="fas fa-plus me-1"></i>Amount Paid
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1 gt-tag-btn" 
+                                                    onclick="insertTag('{{ t.id }}', '{new_expiration}')" title="Formatted Expiration Date">
+                                                <i class="fas fa-plus me-1"></i>Expiry Date
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-2 py-1 gt-tag-btn" 
+                                                    onclick="insertTag('{{ t.id }}', '{plan_name}')" title="Internet Plan Name">
+                                                <i class="fas fa-plus me-1"></i>Internet Plan
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-light rounded-pill px-2 py-1 gt-tag-btn" 
+                                                    onclick="insertTag('{{ t.id }}', '{payment_method}')" title="Payment Method (e.g. GCash, Cash)">
+                                                <i class="fas fa-plus me-1"></i>Payment Method
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 gt-tag-btn" 
+                                                    onclick="insertTag('{{ t.id }}', '{processed_by}')" title="Staff Name who processed payment">
+                                                <i class="fas fa-plus me-1"></i>Processed By
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 gt-tag-btn" 
+                                                    onclick="insertTag('{{ t.id }}', '{pppoe_username}')" title="Subscriber PPPoE Username">
+                                                <i class="fas fa-plus me-1"></i>Username
+                                            </button>
+                                        </div>
                                     </div>
-                                    
-                                    <div class="d-flex justify-content-end">
-                                        <button type="submit" class="btn btn-primary rounded-pill px-4">
-                                            <i class="fas fa-save me-1"></i> Save Changes
+
+                                    <!-- Textarea -->
+                                    <div class="mb-2">
+                                        <textarea name="body" id="body-{{ t.id }}" 
+                                                  class="form-control text-white bg-dark border-secondary border-opacity-50 font-monospace" 
+                                                  rows="8" 
+                                                  style="font-size: 0.9rem; line-height: 1.5; resize: vertical;"
+                                                  oninput="updatePreview('{{ t.id }}', '{{ t.type }}')"
+                                                  required>{{ t.body }}</textarea>
+                                    </div>
+
+                                    <!-- Character counter & Actions -->
+                                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pt-1 mb-3">
+                                        <div id="counter-{{ t.id }}" class="text-muted" style="font-size: 0.78rem;">
+                                            0 characters
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" 
+                                                onclick="resetToDefault('{{ t.id }}', '{{ t.type }}')">
+                                            <i class="fas fa-rotate-left me-1"></i> Reset to Recommended Default
                                         </button>
                                     </div>
-                                </form>
+
+                                    <div class="d-flex justify-content-end">
+                                        <button type="submit" class="btn btn-success rounded-pill px-4 py-2 fw-bold d-flex align-items-center gap-2 shadow-sm">
+                                            <i class="fas fa-check-circle fs-5"></i>
+                                            <span>Save Changes</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- RIGHT: Live Customer Preview -->
+                                <div class="col-lg-6">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <label class="form-label fw-bold text-white mb-0" style="font-size: 0.92rem;">
+                                            <i class="fas fa-eye text-info me-1"></i> Live Customer Preview
+                                        </label>
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2 py-1" style="font-size: 0.7rem;">
+                                            Real-Time Simulation
+                                        </span>
+                                    </div>
+
+                                    <!-- The Simulation Box -->
+                                    {% if t.type == 'TEXT' %}
+                                        <!-- Receipt Style Simulation (Matches Payment Success screen) -->
+                                        <div class="p-3 rounded-3 mb-2" style="background: #111c38; border: 1px solid rgba(14, 165, 233, 0.3); box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                                            <div class="d-flex justify-content-between align-items-center pb-2 mb-2 border-bottom border-secondary border-opacity-25">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge bg-success rounded-circle p-1"><i class="fas fa-check text-white" style="font-size: 0.65rem;"></i></span>
+                                                    <span class="fw-bold text-info" style="font-size: 0.85rem;">
+                                                        <i class="fas fa-file-lines me-1"></i> Text Template (On Receipt Screen)
+                                                    </span>
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2 py-0 fw-bold" 
+                                                        id="btn-copy-preview-{{ t.id }}" 
+                                                        onclick="copyPreviewText('{{ t.id }}')" 
+                                                        style="font-size: 0.72rem;">
+                                                    <i class="fas fa-copy me-1"></i> Copy Sample
+                                                </button>
+                                            </div>
+                                            <div class="p-3 rounded-2 text-white-50" 
+                                                 id="preview-{{ t.id }}" 
+                                                 style="background: rgba(15, 23, 42, 0.9); font-size: 0.88rem; line-height: 1.55; white-space: pre-wrap; word-break: break-word; min-height: 120px; border: 1px solid rgba(255,255,255,0.06); color: #e2e8f0 !important;"></div>
+                                            <div class="mt-2 text-muted" style="font-size: 0.74rem;">
+                                                <i class="fas fa-info-circle text-info me-1"></i> When staff processes a payment, this text is generated instantly on the screen ready to copy into chat with 1 click.
+                                            </div>
+                                        </div>
+                                    {% elif t.type == 'SMS' %}
+                                        <!-- Phone SMS Bubble Simulation -->
+                                        <div class="p-3 rounded-3 mb-2" style="background: #0f172a; border: 1px solid rgba(59, 130, 246, 0.3); box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                                            <div class="d-flex justify-content-between align-items-center pb-2 mb-2 border-bottom border-secondary border-opacity-25">
+                                                <span class="fw-bold text-primary" style="font-size: 0.85rem;">
+                                                    <i class="fas fa-mobile-screen-button me-1"></i> SMS Message Bubble
+                                                </span>
+                                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-0 fw-bold" 
+                                                        id="btn-copy-preview-{{ t.id }}" 
+                                                        onclick="copyPreviewText('{{ t.id }}')" 
+                                                        style="font-size: 0.72rem;">
+                                                    <i class="fas fa-copy me-1"></i> Copy Sample
+                                                </button>
+                                            </div>
+                                            <div class="p-3 rounded-3" style="background: #1e293b; border-left: 3px solid #3b82f6; max-width: 90%; margin-left: auto;">
+                                                <div id="preview-{{ t.id }}" style="font-size: 0.88rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word; min-height: 80px; color: #f1f5f9;"></div>
+                                                <div class="d-flex justify-content-end align-items-center gap-1 mt-2 text-white-50" style="font-size: 0.7rem;">
+                                                    <span>Just now</span>
+                                                    <i class="fas fa-check-double text-primary"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        <!-- Email Inbox Simulation -->
+                                        <div class="p-3 rounded-3 mb-2" style="background: #0f172a; border: 1px solid rgba(14, 165, 233, 0.3); box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                                            <div class="d-flex justify-content-between align-items-center pb-2 mb-2 border-bottom border-secondary border-opacity-25">
+                                                <span class="fw-bold text-info" style="font-size: 0.85rem;">
+                                                    <i class="fas fa-envelope-open-text me-1"></i> Email Inbox View
+                                                </span>
+                                                <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2 py-0 fw-bold" 
+                                                        id="btn-copy-preview-{{ t.id }}" 
+                                                        onclick="copyPreviewText('{{ t.id }}')" 
+                                                        style="font-size: 0.72rem;">
+                                                    <i class="fas fa-copy me-1"></i> Copy Sample
+                                                </button>
+                                            </div>
+                                            <div class="p-3 rounded-2" style="background: #1e293b; border: 1px solid rgba(255,255,255,0.06);">
+                                                <div class="text-white-50 pb-2 mb-2 border-bottom border-secondary border-opacity-25" style="font-size: 0.78rem;">
+                                                    <div><strong>From:</strong> Gametech Unli Fiber &lt;billing@gametech.ph&gt;</div>
+                                                    <div><strong>To:</strong> juan.delacruz@example.com</div>
+                                                    <div class="text-white mt-1"><strong>Subject:</strong> <span id="preview-subj-{{ t.id }}" class="text-info fw-bold"></span></div>
+                                                </div>
+                                                <div id="preview-{{ t.id }}" style="font-size: 0.88rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word; min-height: 100px; color: #f1f5f9;"></div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+
+                                    <!-- Sample Data Legend -->
+                                    <div class="p-2 rounded-2 border border-secondary border-opacity-25 mt-3" style="background: rgba(15, 23, 42, 0.5); font-size: 0.75rem;">
+                                        <div class="fw-bold text-white-50 mb-1"><i class="fas fa-database text-warning me-1"></i> Simulated Preview Values:</div>
+                                        <div class="d-flex flex-wrap gap-2 text-white-50">
+                                            <span><strong>Name:</strong> Juan Dela Cruz</span>
+                                            <span>&bull;</span>
+                                            <span><strong>Amount:</strong> ₱1,000.00</span>
+                                            <span>&bull;</span>
+                                            <span><strong>Expiry:</strong> October 16, 2026</span>
+                                            <span>&bull;</span>
+                                            <span><strong>Plan:</strong> GTipid Fiber 1000</span>
+                                            <span>&bull;</span>
+                                            <span><strong>Method:</strong> GCash</span>
+                                            <span>&bull;</span>
+                                            <span><strong>Staff:</strong> Jep</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        {% endfor %}
+                        </form>
                     </div>
-                    
-                </div>
+                {% endfor %}
             </div>
         </div>
     </div>
 </div>
+
+<style>
+.gt-tag-btn {
+    font-size: 0.76rem;
+    font-weight: 500;
+    transition: all 0.15s ease-in-out;
+}
+.gt-tag-btn:hover {
+    transform: translateY(-1px);
+}
+.nav-tabs .nav-link {
+    color: #94a3b8;
+    background: transparent;
+    border: 1px solid transparent;
+}
+.nav-tabs .nav-link:hover {
+    color: #f8fafc;
+    border-color: rgba(255,255,255,0.1);
+}
+.nav-tabs .nav-link.active {
+    color: #ffffff !important;
+    background: #111c38 !important;
+    border-color: rgba(255,255,255,0.15) rgba(255,255,255,0.15) #111c38 !important;
+}
+</style>
+
+<script>
+// Recommended defaults if staff wants to reset
+const RECOMMENDED_DEFAULTS = {
+    'TEXT': "Thank you {customer_name}! Your payment of P{paid_amount} has been received. Your internet connection is now active until {new_expiration}.",
+    'SMS': "Thank you {customer_name}! Your payment of P{paid_amount} via {payment_method} has been received. Your internet connection is active until {new_expiration}.",
+    'EMAIL': {
+        'subject': "Gametech Unli Fiber: Payment Received - {customer_name}",
+        'body': "Dear {customer_name},\n\nWe have successfully received your payment of P{paid_amount} for your {plan_name} plan. Your internet subscription is now active until {new_expiration}.\n\nThank you for choosing Gametech Unli Fiber!"
+    }
+};
+
+const SAMPLE_DATA = {
+    '{customer_name}': 'Juan Dela Cruz',
+    '{paid_amount}': '1000.00',
+    '{new_expiration}': 'October 16, 2026',
+    '{plan_name}': 'GTipid Fiber 1000',
+    '{payment_method}': 'GCash',
+    '{processed_by}': 'Jep',
+    '{pppoe_username}': 'delacruz_juan'
+};
+
+function insertTag(templateId, tag) {
+    const textarea = document.getElementById('body-' + templateId);
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+
+    textarea.value = text.substring(0, start) + tag + text.substring(end);
+    textarea.selectionStart = textarea.selectionEnd = start + tag.length;
+    textarea.focus();
+
+    // Trigger update
+    textarea.dispatchEvent(new Event('input'));
+}
+
+function updatePreview(templateId, type) {
+    const textarea = document.getElementById('body-' + templateId);
+    const preview = document.getElementById('preview-' + templateId);
+    const counter = document.getElementById('counter-' + templateId);
+    if (!textarea || !preview) return;
+
+    let text = textarea.value || '';
+
+    // Update Counter
+    if (counter) {
+        const chars = text.length;
+        if (type === 'SMS') {
+            const smsSegments = Math.max(1, Math.ceil(chars / 160));
+            counter.innerHTML = `<span class="badge ${chars > 160 ? 'bg-warning text-dark' : 'bg-secondary'}">${chars} chars</span> &bull; ~${smsSegments} SMS segment${smsSegments > 1 ? 's' : ''}`;
+        } else {
+            counter.innerHTML = `${chars} characters`;
+        }
+    }
+
+    // Substitute placeholders with simulated sample data
+    let rendered = text;
+    for (const [placeholder, val] of Object.entries(SAMPLE_DATA)) {
+        rendered = rendered.split(placeholder).join(val);
+    }
+    preview.textContent = rendered;
+
+    // Handle Email Subject line if present
+    if (type === 'EMAIL') {
+        const subjInput = document.getElementById('subject-' + templateId);
+        const subjPreview = document.getElementById('preview-subj-' + templateId);
+        if (subjInput && subjPreview) {
+            let subjRendered = subjInput.value || '';
+            for (const [placeholder, val] of Object.entries(SAMPLE_DATA)) {
+                subjRendered = subjRendered.split(placeholder).join(val);
+            }
+            subjPreview.textContent = subjRendered;
+        }
+    }
+}
+
+function resetToDefault(templateId, type) {
+    if (!confirm("Are you sure you want to reset this message to the recommended company default? Any unsaved edits will be replaced.")) {
+        return;
+    }
+
+    const textarea = document.getElementById('body-' + templateId);
+    if (!textarea) return;
+
+    if (type === 'EMAIL') {
+        const subjInput = document.getElementById('subject-' + templateId);
+        if (subjInput) subjInput.value = RECOMMENDED_DEFAULTS.EMAIL.subject;
+        textarea.value = RECOMMENDED_DEFAULTS.EMAIL.body;
+    } else {
+        textarea.value = RECOMMENDED_DEFAULTS[type] || RECOMMENDED_DEFAULTS.TEXT;
+    }
+
+    updatePreview(templateId, type);
+}
+
+function copyPreviewText(templateId) {
+    const preview = document.getElementById('preview-' + templateId);
+    const btn = document.getElementById('btn-copy-preview-' + templateId);
+    if (!preview) return;
+
+    navigator.clipboard.writeText(preview.textContent).then(() => {
+        if (btn) {
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check text-success me-1"></i> Copied!';
+            setTimeout(() => { btn.innerHTML = orig; }, 2000);
+        }
+    });
+}
+
+// Initialize all previews on page load
+document.addEventListener('DOMContentLoaded', () => {
+    {% for t in templates %}
+        updatePreview('{{ t.id }}', '{{ t.type }}');
+    {% endfor %}
+});
+</script>
 {% endblock %}
