@@ -318,10 +318,16 @@
                     let isPendingInstall = (installationStatus === 'pending') || (status === 'pending' && !expiresAt);
                     
                     if (status === 'suspended') {
-                        if (tr) tr.classList.remove('table-row-paid-offline');
+                        if (tr) {
+                            tr.classList.remove('table-row-paid-offline');
+                            tr.classList.remove('table-row-pending-install');
+                        }
                         el.innerHTML = '<span class="badge bg-danger rounded-pill shadow-sm mt-1"><i class="fas fa-ban me-1"></i>Suspended</span>' + btnHtml;
                     } else if (active_users.has(pppoe)) {
-                        if (tr) tr.classList.remove('table-row-paid-offline');
+                        if (tr) {
+                            tr.classList.remove('table-row-paid-offline');
+                            tr.classList.remove('table-row-pending-install');
+                        }
                         let activeUserRouter = user_router_map[pppoe];
                         if (activeUserRouter && !isNaN(routerId) && activeUserRouter.router_id !== routerId) {
                             // Session active on a different router than assigned
@@ -331,10 +337,16 @@
                             el.innerHTML = '<span class="badge bg-success rounded-pill shadow-sm mt-1" style="background-color: #10b981 !important;"><i class="fas fa-check-circle me-1"></i>Connected</span>';
                         }
                     } else if (isPendingInstall) {
-                        if (tr) tr.classList.remove('table-row-paid-offline');
-                        el.innerHTML = '<span class="badge rounded-pill shadow-sm mt-1 px-2 py-1 d-inline-flex align-items-center gap-1" style="background: rgba(14, 165, 233, 0.15); color: #0284c7; border: 1px solid rgba(14, 165, 233, 0.35); font-weight: 600; font-size: 0.72rem;"><i class="fas fa-gear"></i>Pending Install</span>';
+                        if (tr) {
+                            tr.classList.remove('table-row-paid-offline');
+                            tr.classList.add('table-row-pending-install');
+                        }
+                        el.innerHTML = '';
                     } else if (!pppoe) {
-                        if (tr) tr.classList.remove('table-row-paid-offline');
+                        if (tr) {
+                            tr.classList.remove('table-row-paid-offline');
+                            tr.classList.remove('table-row-pending-install');
+                        }
                         el.innerHTML = '<span class="badge bg-secondary rounded-pill shadow-sm mt-1"><i class="fas fa-question-circle me-1"></i>No PPPoE</span>';
                     } else {
                         let isRouterOffline = false;
@@ -360,9 +372,15 @@
                         if (status === 'active') {
                             let specificStatus = isApiDown ? 'Offline (Router API Down)' : (isRouterOffline ? 'Offline (Router Off)' : 'Active but Offline');
                             el.innerHTML = '<span class="badge rounded-pill shadow-sm mt-1 text-white fw-bold px-2 py-1 d-inline-flex align-items-center gap-1" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border: 1px solid #f87171; box-shadow: 0 0 10px rgba(239, 68, 68, 0.45); font-size: 0.72rem;"><i class="fas fa-triangle-exclamation text-white"></i>' + specificStatus + '</span>' + btnHtml;
-                            if (tr) tr.classList.add('table-row-paid-offline');
+                            if (tr) {
+                                tr.classList.remove('table-row-pending-install');
+                                tr.classList.add('table-row-paid-offline');
+                            }
                         } else {
-                            if (tr) tr.classList.remove('table-row-paid-offline');
+                            if (tr) {
+                                tr.classList.remove('table-row-paid-offline');
+                                tr.classList.remove('table-row-pending-install');
+                            }
                             el.innerHTML = '<span class="badge rounded-pill shadow-sm mt-1" style="background-color: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);"><i class="fas fa-wifi me-1" style="text-decoration: line-through;"></i>Offline</span>' + btnHtml;
                         }
                     }
