@@ -34,11 +34,15 @@ def log_audit(action, entity_type, entity_id, actor, summary=None, before=None, 
 
 @login_required
 def dispatch_index_view(request):
+    if hasattr(request.user, "agent_profile") and not request.user.is_staff:
+        return redirect('agent_dashboard')
     return redirect('dispatch_dashboard')
 
 
 @login_required
 def dashboard_view(request):
+    if hasattr(request.user, "agent_profile") and not request.user.is_staff:
+        return redirect('agent_dashboard')
     today = timezone.now().date()
     
     # Pipeline KPI statistics

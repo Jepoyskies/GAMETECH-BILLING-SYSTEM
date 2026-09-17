@@ -16,6 +16,8 @@ class BillingConfig(AppConfig):
         def get_user_role(self):
             if self.is_superuser:
                 return "Admin"
+            if hasattr(self, "agent_profile") and not self.is_staff:
+                return "Agent"
             try:
                 from billing.models import SystemAdmin
 
