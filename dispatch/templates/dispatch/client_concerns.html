@@ -38,27 +38,33 @@
 
     {% include "dispatch/_tab_ticket_table.html" %}
 
-    <div class="card p-0 overflow-hidden">
+    <div class="card bg-dark border-secondary text-white mb-4 shadow-sm overflow-hidden">
+        <div class="card-header bg-transparent border-secondary py-3 d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold text-white">
+                <i class="fas fa-history text-primary me-2"></i> Legacy Client Concerns ({{ records.count }})
+            </h6>
+            <span class="badge bg-secondary-soft text-secondary">Historical Data</span>
+        </div>
         <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 datatable" style="width: 100%;">
-                    <thead class="bg-light">
-                        <tr>
-                            <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Date</th>
-                            <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Client Name</th>
-                            <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Address</th>
-                            <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Concern</th>
-                            <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Teams</th>
-                            <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Status</th>
-                            <th class="text-muted fw-bold text-uppercase text-end" style="font-size: 0.8rem;">Actions</th>
+            <div class="table-responsive p-3">
+                <table class="table table-dark table-hover align-middle mb-0 datatable" style="width: 100%; background: transparent;">
+                    <thead>
+                        <tr class="text-muted text-uppercase text-xs border-secondary">
+                            <th>Date</th>
+                            <th>Client Name</th>
+                            <th>Address</th>
+                            <th>Concern</th>
+                            <th>Teams</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for record in records %}
-                        <tr>
-                            <td>{{ record.date|date:"M d, Y" }}</td>
+                        <tr class="border-secondary">
+                            <td class="text-xs text-muted">{{ record.date|date:"M d, Y" }}</td>
                             <td>
-                                <div class="fw-bold">{{ record.client_name }}</div>
+                                <div class="fw-bold text-white">{{ record.client_name }}</div>
                                 {% if record.contact_number %}
                                 <div class="small"><a href="tel:{{ record.contact_number }}" class="text-info text-decoration-none"><i class="fas fa-phone-alt me-1"></i> {{ record.contact_number }}</a></div>
                                 {% endif %}
@@ -69,13 +75,13 @@
                                 <div class="small"><a href="{% if 'facebook.com' in record.facebook_account or 'http' in record.facebook_account %}{{ record.facebook_account }}{% else %}https://facebook.com/search/top?q={{ record.facebook_account|urlencode }}{% endif %}" target="_blank" class="text-primary text-decoration-none" title="Facebook / Messenger Link"><i class="fab fa-facebook-messenger me-1"></i> {{ record.facebook_account }}</a></div>
                                 {% endif %}
                             </td>
-                            <td class="text-muted">{{ record.address|truncatechars:30 }}</td>
-                            <td>{{ record.concern|truncatechars:30 }}</td>
+                            <td class="text-xs text-muted">{{ record.address|truncatechars:30 }}</td>
+                            <td class="text-xs">{{ record.concern|truncatechars:30 }}</td>
                             <td>
                                 {% for team in record.teams.all %}
-                                    <span class="badge bg-info text-dark">{{ team.name }}</span>
+                                    <span class="badge bg-info text-dark text-xs"><i class="fas fa-users me-1"></i> {{ team.name }}</span>
                                 {% empty %}
-                                    <span class="text-muted small">Unassigned</span>
+                                    <span class="text-muted fst-italic text-xs">Unassigned</span>
                                 {% endfor %}
                             </td>
                             <td>
@@ -86,8 +92,8 @@
                                 {% endif %}
                             </td>
                             <td class="text-end">
-                                <button class="btn btn-sm btn-light text-primary" title="Edit"><i class="fas fa-edit"></i></button>
-                                <a href="{% url 'complete_job' record.id %}" class="btn btn-sm btn-light text-success" title="Mark as Done"><i class="fas fa-check-circle"></i></a>
+                                <button class="btn btn-xs btn-outline-primary" title="Edit"><i class="fas fa-edit"></i></button>
+                                <a href="{% url 'complete_job' record.id %}" class="btn btn-xs btn-outline-success" title="Mark as Done"><i class="fas fa-check-circle"></i> Done</a>
                             </td>
                         </tr>
                         {% endfor %}
