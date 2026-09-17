@@ -45,9 +45,14 @@
             {% if request.user.role != 'Agent' %}
             <!-- Cignal Play -->
             <li>
-                <a href="{% url 'cignal_dashboard' %}" class="menu-link {% if request.resolver_match.url_name == 'cignal_dashboard' %}active{% endif %}">
+                <a href="#cignalSubmenu" data-bs-toggle="collapse" aria-expanded="{% if 'cignal-dashboard' in request.path %}true{% else %}false{% endif %}" class="menu-link dropdown-toggle {% if 'cignal-dashboard' in request.path %}active{% endif %}">
                     <span class="icon"><i class="fas fa-tv"></i></span> <span>Cignal Play</span>
                 </a>
+                <ul class="collapse list-unstyled {% if 'cignal-dashboard' in request.path %}show{% endif %}" id="cignalSubmenu" data-bs-parent="#sidebarNav">
+                    <li><a href="{% url 'cignal_dashboard' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'cignal_dashboard' %}active{% endif %}"><span>Dashboard</span></a></li>
+                    <li><a href="{% url 'cignal_applications' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'cignal_applications' %}active{% endif %}"><span>Applications</span></a></li>
+                    <li><a href="{% url 'cignal_logs' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'cignal_logs' %}active{% endif %}"><span>Activity Logs</span></a></li>
+                </ul>
             </li>
             {% endif %}
 
@@ -61,12 +66,7 @@
                     <li><a href="{% url 'dispatch_dashboard' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'dispatch_dashboard' %}active{% endif %}"><span>Dashboard</span></a></li>
                     <li><a href="{% url 'dispatch_monitoring' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'dispatch_monitoring' %}active{% endif %}"><span>Master Log</span></a></li>
                     <li><a href="{% url 'internet_install' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'internet_install' %}active{% endif %}"><span>Internet Install</span></a></li>
-                    <li><a href="{% url 'cignal_install' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'cignal_install' %}active{% endif %}"><span>Cignal Play</span></a></li>
                     <li><a href="{% url 'client_concerns' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'client_concerns' %}active{% endif %}"><span>Client Concerns</span></a></li>
-                    
-                    <div class="p-2 text-white opacity-50 mt-2" style="font-size:0.7rem; text-transform: uppercase; margin-left: 20px;">Directory</div>
-                    <li><a href="{% url 'customer_list' %}" class="menu-link sub-menu-link"><span>Customer</span></a></li>
-                    
                     <div class="p-2 text-white opacity-50 mt-2" style="font-size:0.7rem; text-transform: uppercase; margin-left: 20px;">System</div>
                     <li><a href="{% url 'dispatch_management' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'dispatch_management' %}active{% endif %}"><span>Management</span></a></li>
                     <li><a href="{% url 'audit_log' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'audit_log' %}active{% endif %}"><span>Audit Log</span></a></li>
