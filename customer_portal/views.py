@@ -111,6 +111,16 @@ def portal_dashboard(request):
     open_tickets_count = customer_tickets.filter(status__in=['PENDING', 'ASSIGNED', 'IN_PROGRESS']).count()
     recent_ticket = customer_tickets.first()
 
+    import re
+    # Parse speeds (e.g. "50 Mbps" -> 50.0)
+    speed_down_val = 0.0
+    speed_up_val = 0.0
+    if plan:
+        sd_match = re.search(r'([\d.]+)', plan.speed_down or "")
+        su_match = re.search(r'([\d.]+)', plan.speed_up or "")
+        if sd_match: speed_down_val = float(sd_match.group(1))
+        if su_match: speed_up_val = float(su_match.group(1))
+
     context = {
         'customer': customer,
         'plan': plan,
@@ -127,6 +137,8 @@ def portal_dashboard(request):
         'open_tickets_count': open_tickets_count,
         'recent_ticket': recent_ticket,
         'total_tickets_count': customer_tickets.count(),
+        'speed_down_val': speed_down_val,
+        'speed_up_val': speed_up_val,
     }
     return render(request, 'customer_portal/portal_dashboard.html', context)
 
