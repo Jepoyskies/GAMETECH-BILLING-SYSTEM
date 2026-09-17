@@ -115,7 +115,7 @@ urlpatterns = [
         "api/downdetector/", views.api_downdetector_data, name="api_downdetector_data"
     ),
     path(
-        "admin/downdetector/manage/",
+        "downdetector/manage/",
         views.manage_monitored_services_view,
         name="manage_monitored_services",
     ),
