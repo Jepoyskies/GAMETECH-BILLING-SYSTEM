@@ -38,6 +38,8 @@ def dispatch_verification(request):
             account_no=customer.pppoe_username,
             plan_package=plan.name,
             mikrotik_device=mikrotik,
+            sales_agent=customer.agent,
+            is_test_data=getattr(customer, 'is_test_data', False),
             ticket_type='INSTALLATION',
             status='PENDING',
             source_tab='INTERNET_INSTALL',

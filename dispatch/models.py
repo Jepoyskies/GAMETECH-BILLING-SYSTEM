@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-from billing.models import Customer
+from billing.models import Customer, Agent
 from django.utils import timezone
 
 class Team(models.Model):
@@ -66,7 +66,8 @@ class DispatchRecord(models.Model):
     alternate_contact = models.CharField(max_length=150, null=True, blank=True)
     facebook_account = models.CharField(max_length=255, null=True, blank=True)
     concern = models.TextField()
-    sales_agent = models.CharField(max_length=100, null=True, blank=True)
+    sales_agent = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True, blank=True, related_name='dispatch_records')
+    is_test_data = models.BooleanField(default=False, help_text="Flags test dispatch records")
     
     chat_type_option = models.ForeignKey(ConfigOption, on_delete=models.RESTRICT, related_name='dispatch_chat_types', null=True, blank=True)
     type_option = models.ForeignKey(ConfigOption, on_delete=models.RESTRICT, related_name='dispatch_types', null=True, blank=True)
@@ -114,7 +115,8 @@ class MonitoringRecord(models.Model):
     alternate_contact = models.CharField(max_length=150, null=True, blank=True)
     facebook_account = models.CharField(max_length=255, null=True, blank=True)
     concern = models.TextField()
-    sales_agent = models.CharField(max_length=100, null=True, blank=True)
+    sales_agent = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True, blank=True, related_name='monitoring_records')
+    is_test_data = models.BooleanField(default=False, help_text="Flags test monitoring records")
     
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
@@ -243,7 +245,8 @@ class JobTicket(models.Model):
     alternate_contact = models.CharField(max_length=150, null=True, blank=True)
     facebook_account = models.CharField(max_length=255, null=True, blank=True)
     account_no = models.CharField(max_length=100, blank=True, null=True)
-    sales_agent = models.CharField(max_length=100, blank=True, null=True)
+    sales_agent = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True, blank=True, related_name='job_tickets')
+    is_test_data = models.BooleanField(default=False, help_text="Flags test job tickets")
     plan_package = models.CharField(max_length=100, blank=True, null=True)
 
     # Job / Concern Details
