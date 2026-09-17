@@ -17,6 +17,7 @@ class Technician(models.Model):
     target_per_day = models.IntegerField(default=0)
     target_per_month = models.IntegerField(default=0)
     team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True, blank=True, related_name='members')
+    is_available = models.BooleanField(default=True, help_text="Checked if the technician is on duty and available for assignment")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -208,7 +209,8 @@ class JobTicket(models.Model):
         ('PENDING', 'Pending Dispatch'),
         ('ASSIGNED', 'Assigned / Scheduled'),
         ('IN_PROGRESS', 'In Progress / On Site'),
-        ('COMPLETED', 'Completed'),
+        ('COMPLETED', 'Completed (Awaiting QA)'),
+        ('QA_PASSED', 'QA Passed (Awaiting Approval)'),
         ('CANCELLED', 'Cancelled'),
     )
     PRIORITY_CHOICES = (
@@ -303,3 +305,18 @@ class JobTicket(models.Model):
 
     def __str__(self):
         return f"{self.ticket_number} - {self.client_name} ({self.get_status_display()})"
+
+
+class JobTicketHistory(models.Model):
+    job_ticket = models.ForeignKey(JobTicket, on_delete=models.CASCADE, related_name='history_logs')
+    actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    from_status = models.CharField(max_length=20, null=True, blank=True)
+    to_status = models.CharField(max_length=20)
+    note = models.TextField(blank=True, null=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"{self.job_ticket.ticket_number} transitioned to {self.to_status} at {self.timestamp}"

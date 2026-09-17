@@ -31,21 +31,32 @@ class Agent(models.Model):
     @property
     def claimable_commission(self):
         """
-        Agents get P500 per customer, but it only unlocks if:
-        1. The customer has >= 2 payments (installation + 1st month).
-        2. The agent has >= 5 qualifying customers.
+        Total claimable commission from CommissionTransactions.
         """
-        qualifying_customers = 0
-        for customer in self.customer_set.all():
-            if customer.payments.count() >= 2:
-                qualifying_customers += 1
-        
-        if qualifying_customers >= 5:
-            return qualifying_customers * 500
-        return 0
+        from django.db.models import Sum
+        total = self.commissiontransaction_set.filter(status='CLAIMABLE').aggregate(total=Sum('amount'))['total']
+        return total or 0
 
     def __str__(self):
         return self.name
+
+
+class CommissionTransaction(models.Model):
+    STATUS_CHOICES = (
+        ('PENDING', 'Pending'),
+        ('CLAIMABLE', 'Claimable'),
+        ('PAID', 'Paid'),
+        ('REVERSED', 'Reversed'),
+    )
+    agent = models.ForeignKey(Agent, on_delete=models.CASCADE)
+    customer = models.ForeignKey("Customer", on_delete=models.SET_NULL, null=True, blank=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    created_at = models.DateTimeField(auto_now_add=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.agent.name} - {self.amount} ({self.status})"
 
 
 class SubscriptionPlan(models.Model):
@@ -177,7 +188,7 @@ class Customer(models.Model):
     # --- THE SUPERPOWER: Foreign Keys tying the system together ---
     plan = models.ForeignKey("SubscriptionPlan", on_delete=models.SET_NULL, null=True)
     agent = models.ForeignKey("Agent", on_delete=models.SET_NULL, null=True)
-    agent_lock_until = models.DateTimeField(null=True, blank=True, help_text="Until this date, the customer cannot use staggered payments.")
+    agent_lock_until = models.DateTimeField(null=True, blank=True, help_text="Calculated 60 days from Stage 5 Admin Approval. Until this date, the customer cannot use staggered payments.")
     barangay = models.ForeignKey("Barangay", on_delete=models.SET_NULL, null=True)
     account_type = models.ForeignKey(
         "AccountType", on_delete=models.SET_NULL, null=True
