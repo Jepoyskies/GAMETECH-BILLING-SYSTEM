@@ -156,38 +156,23 @@
     <div class="card-header">
         <i class="fas fa-users text-primary"></i> Subscriptions List
     </div>
-    <div class="table-responsive">
-        <table class="table table-premium table-hover align-middle mb-0" style="width:100%">
+    <div class="table-responsive" style="overflow-x: auto; overflow-y: hidden;">
+        <table class="table table-premium table-hover align-middle mb-0" style="width:100%; white-space: nowrap;">
             <thead>
                 <tr>
                     <th style="width: 40px;"><input type="checkbox" id="selectAll"></th>
-                    <th>Status</th>
-                    <th>
-                        <a href="?search={{ search }}&status={{ status_filter }}&device={{ device_filter }}&connection={{ connection_filter }}&per_page={{ per_page }}&sort=expires_at&order={% if sort == 'expires_at' and order == 'ASC' %}desc{% else %}asc{% endif %}" class="text-decoration-none" style="color: inherit;">
-                            Expires At {% if sort == 'expires_at' %}<i class="fas fa-sort-{{ order|lower }}"></i>{% endif %}
-                        </a>
-                    </th>
-                    <th>Router Status</th>
-                    <th>Account Type</th>
-                    <th>Uptime / Downtime</th>
-                    <th>Profile</th>
-                    <th>Actions</th>
-                    <th>
-                        <a href="?search={{ search }}&status={{ status_filter }}&device={{ device_filter }}&connection={{ connection_filter }}&per_page={{ per_page }}&sort=username&order={% if sort == 'username' and order == 'ASC' %}desc{% else %}asc{% endif %}" class="text-decoration-none" style="color: inherit;">
-                            Username {% if sort == 'username' %}<i class="fas fa-sort-{{ order|lower }}"></i>{% endif %}
-                        </a>
-                    </th>
                     <th>
                         <a href="?search={{ search }}&status={{ status_filter }}&device={{ device_filter }}&connection={{ connection_filter }}&per_page={{ per_page }}&sort=full_name&order={% if sort == 'full_name' and order == 'ASC' %}desc{% else %}asc{% endif %}" class="text-decoration-none" style="color: inherit;">
-                            Full Name {% if sort == 'full_name' %}<i class="fas fa-sort-{{ order|lower }}"></i>{% endif %}
+                            Client Info {% if sort == 'full_name' %}<i class="fas fa-sort-{{ order|lower }}"></i>{% endif %}
                         </a>
                     </th>
-                    <th>MT Device</th>
                     <th>
-                        <a href="?search={{ search }}&status={{ status_filter }}&device={{ device_filter }}&connection={{ connection_filter }}&per_page={{ per_page }}&sort=plan_name&order={% if sort == 'plan_name' and order == 'ASC' %}desc{% else %}asc{% endif %}" class="text-decoration-none" style="color: inherit;">
-                            Plan Name {% if sort == 'plan_name' %}<i class="fas fa-sort-{{ order|lower }}"></i>{% endif %}
+                        <a href="?search={{ search }}&status={{ status_filter }}&device={{ device_filter }}&connection={{ connection_filter }}&per_page={{ per_page }}&sort=expires_at&order={% if sort == 'expires_at' and order == 'ASC' %}desc{% else %}asc{% endif %}" class="text-decoration-none" style="color: inherit;">
+                            Billing Status {% if sort == 'expires_at' %}<i class="fas fa-sort-{{ order|lower }}"></i>{% endif %}
                         </a>
                     </th>
+                    <th>Network Status</th>
+                    <th class="text-end">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -195,51 +180,59 @@
                 <tr>
                     <td><input type="checkbox" class="customer-checkbox" value="{{ customer.id }}"></td>
                     <td>
-                        {% if not customer.expires_at %}
-                            <span class="badge bg-danger text-white px-2 py-1 shadow-sm"><i class="fas fa-times-circle me-1"></i> Expired</span>
-                        {% elif customer.expires_at <= one_week_ago %}
-                            <span class="badge bg-secondary text-white px-2 py-1 shadow-sm"><i class="fas fa-user-slash me-1"></i> Inactive</span>
-                        {% elif customer.expires_at <= now %}
-                            <span class="badge bg-danger text-white px-2 py-1 shadow-sm"><i class="fas fa-times-circle me-1"></i> Expired</span>
-                        {% elif customer.expires_at <= soon %}
-                            <span class="badge bg-warning text-dark px-2 py-1 shadow-sm"><i class="fas fa-exclamation-triangle me-1"></i> Expiring Soon</span>
-                        {% else %}
-                            <span class="badge bg-success text-white px-2 py-1 shadow-sm"><i class="fas fa-check-circle me-1"></i> Active</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ customer.expires_at|date:"Y-m-d H:i"|default:"N/A" }}</td>
-                    <td>
-                        {% if customer.mt_connected %}
-                            <span class="badge bg-transparent border border-success text-success px-2 py-1"><i class="fas fa-link me-1"></i> Connected</span>
-                        {% else %}
-                            <span class="badge bg-transparent border border-danger text-danger px-2 py-1"><i class="fas fa-unlink me-1"></i> Not Connected</span>
-                        {% endif %}
-                    </td>
-                    <td>
+                        <div class="fw-bold text-white">{{ customer.full_name }}</div>
+                        <div class="text-muted small"><i class="fas fa-user-circle me-1"></i> {{ customer.pppoe_username|default:"-" }}</div>
                         {% if customer.account_type %}
-                            <span class="badge bg-primary">{{ customer.account_type.type_name }}</span>
-                        {% else %}
-                            <span class="badge bg-secondary">N/A</span>
+                            <span class="badge bg-primary text-xs mt-1">{{ customer.account_type.type_name }}</span>
                         {% endif %}
                     </td>
                     <td>
-                        {% if customer.mt_connected %}
-                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="fas fa-clock me-1"></i> Uptime: {{ customer.mt_uptime }}</span>
-                        {% elif not customer.mt_downtime or "1970" in customer.mt_downtime %}
-                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1"><i class="fas fa-minus-circle me-1"></i> Never Connected</span>
-                        {% else %}
-                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1"><i class="fas fa-arrow-down me-1"></i> Down: {{ customer.mt_downtime }}</span>
-                        {% endif %}
+                        <div class="mb-1">
+                            {% if not customer.expires_at %}
+                                <span class="badge bg-danger text-white px-2 py-1 shadow-sm"><i class="fas fa-times-circle me-1"></i> Expired</span>
+                            {% elif customer.expires_at <= one_week_ago %}
+                                <span class="badge bg-secondary text-white px-2 py-1 shadow-sm"><i class="fas fa-user-slash me-1"></i> Inactive</span>
+                            {% elif customer.expires_at <= now %}
+                                <span class="badge bg-danger text-white px-2 py-1 shadow-sm"><i class="fas fa-times-circle me-1"></i> Expired</span>
+                            {% elif customer.expires_at <= soon %}
+                                <span class="badge bg-warning text-dark px-2 py-1 shadow-sm"><i class="fas fa-exclamation-triangle me-1"></i> Expiring Soon</span>
+                            {% else %}
+                                <span class="badge bg-success text-white px-2 py-1 shadow-sm"><i class="fas fa-check-circle me-1"></i> Active</span>
+                            {% endif %}
+                        </div>
+                        <div class="text-muted small"><i class="fas fa-calendar-alt me-1"></i> {{ customer.expires_at|date:"Y-m-d H:i"|default:"N/A" }}</div>
+                        <div class="text-info small mt-1"><i class="fas fa-box me-1"></i> {{ customer.service_plan.plan_name|default:"N/A" }}</div>
                     </td>
                     <td>
-                        {% if customer.mt_profile %}
-                            <span class="badge bg-info text-dark">{{ customer.mt_profile }}</span>
-                        {% else %}
-                            <span class="badge bg-secondary">N/A</span>
-                        {% endif %}
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            {% if customer.mikrotik_device %}
+                                <span class="badge bg-warning text-dark">{{ customer.mikrotik_device.device_name }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No Device</span>
+                            {% endif %}
+                            
+                            {% if customer.mt_connected %}
+                                <span class="badge bg-transparent border border-success text-success px-2 py-1"><i class="fas fa-link me-1"></i> Connected</span>
+                            {% else %}
+                                <span class="badge bg-transparent border border-danger text-danger px-2 py-1"><i class="fas fa-unlink me-1"></i> Offline</span>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            {% if customer.mt_connected %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="fas fa-clock me-1"></i> {{ customer.mt_uptime }}</span>
+                            {% elif not customer.mt_downtime or "1970" in customer.mt_downtime %}
+                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1"><i class="fas fa-minus-circle me-1"></i> Never Connected</span>
+                            {% else %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1"><i class="fas fa-arrow-down me-1"></i> Down: {{ customer.mt_downtime }}</span>
+                            {% endif %}
+                            
+                            {% if customer.mt_profile %}
+                                <span class="badge bg-info text-dark">{{ customer.mt_profile }}</span>
+                            {% endif %}
+                        </div>
                     </td>
-                    <td>
-                        <div class="d-flex align-items-center gap-1">
+                    <td class="text-end">
+                        <div class="d-flex align-items-center justify-content-end gap-1">
                             <a href="{% url 'pay_customer' customer.pppoe_username %}?next={% url 'subscription_plans' %}{% if request.GET %}?{{ request.GET.urlencode|urlencode }}{% endif %}" class="btn btn-sm btn-success fw-bold px-3 py-1 shadow-sm" style="border-radius: 6px; font-size: 0.8rem;" title="Pay"><i class="fas fa-credit-card me-1"></i> Pay</a>
                             
                             <div class="dropdown">
@@ -258,20 +251,10 @@
                             </div>
                         </div>
                     </td>
-                    <td class="fw-bold">{{ customer.pppoe_username|default:"-" }}</td>
-                    <td>{{ customer.full_name }}</td>
-                    <td>
-                        {% if customer.mikrotik_device %}
-                            <span class="badge bg-warning text-dark">{{ customer.mikrotik_device.device_name }}</span>
-                        {% else %}
-                            <span class="badge bg-secondary">None</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ customer.service_plan.plan_name|default:"N/A" }}</td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="11" class="text-center py-4 text-muted">No results found.</td>
+                    <td colspan="5" class="text-center py-4 text-muted">No results found.</td>
                 </tr>
                 {% endfor %}
             </tbody>
