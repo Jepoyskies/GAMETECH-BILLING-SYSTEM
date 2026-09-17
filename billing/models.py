@@ -27,6 +27,9 @@ class Agent(models.Model):
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=50, blank=True, null=True)
     password_hash = models.CharField(max_length=255, blank=True, null=True)
+    is_test_data = models.BooleanField(
+        default=False, help_text="Flags test agents to safely ignore without hard-deleting"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     @property
