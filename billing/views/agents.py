@@ -73,4 +73,9 @@ def agent_add_prospect(request):
         messages.success(request, f"Prospect {full_name} added successfully! Staff will verify the application.")
         return redirect('agent_dashboard')
         
-    return redirect('agent_dashboard')
+    context = {
+        'agent': agent,
+        'barangays': Barangay.objects.all(),
+        'current_tab': 'agents',
+    }
+    return render(request, 'billing/agent_add_prospect.html', context)

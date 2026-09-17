@@ -12,56 +12,31 @@
                 <h4 class="mb-1 fw-bold text-white"><i class="fas fa-handshake me-2 text-primary"></i> Agent Portal</h4>
                 <p class="mb-0 text-muted small">Welcome, {{ agent.name }}! Track your referrals and commission wallet here.</p>
             </div>
-            <div class="text-end">
+            <div class="text-end" style="min-width: 200px;">
                 <div class="small text-muted mb-1 text-uppercase fw-bold" style="letter-spacing: 1px;">Claimable Commission</div>
-                <h3 class="mb-0 text-success fw-bold">₱{{ claimable_commission|floatformat:2 }}</h3>
-                <small class="text-muted" style="font-size: 0.75rem;">(Unlocks after 5 qualifying customers)</small>
+                <h3 class="mb-2 text-success fw-bold">₱{{ claimable_commission|floatformat:2 }}</h3>
+                
+                <!-- Commission Tracker -->
+                {% with qualified=prospects.count %} {# Normally we would filter by qualified #}
+                <div class="d-flex justify-content-between small text-muted mb-1">
+                    <span>Progress to ₱2,500</span>
+                    <span class="fw-bold text-white">0 / 5</span>
+                </div>
+                <div class="progress bg-dark border border-secondary" style="height: 8px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="5"></div>
+                </div>
+                {% endwith %}
             </div>
         </div>
     </div>
 
     <div class="row">
-        <!-- Add Prospect Form -->
-        <div class="col-lg-4 mb-4">
-            <div class="gt-cl-card h-100">
-                <div class="card-header border-bottom border-secondary p-3">
-                    <h6 class="mb-0 text-white fw-bold"><i class="fas fa-user-plus me-2 text-info"></i> Add Prospect Client</h6>
-                </div>
-                <div class="card-body p-3">
-                    <form action="{% url 'agent_add_prospect' %}" method="POST">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">Full Name</label>
-                            <input type="text" name="full_name" class="form-control bg-dark text-white border-secondary" required placeholder="e.g. John Doe">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">Contact Number</label>
-                            <input type="text" name="phone" class="form-control bg-dark text-white border-secondary" required placeholder="09123456789">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">Address</label>
-                            <textarea name="address" class="form-control bg-dark text-white border-secondary" rows="2" placeholder="Specific house address..."></textarea>
-                        </div>
-                        <div class="mb-4">
-                            <label class="form-label text-muted small fw-bold">Barangay</label>
-                            <select name="barangay" class="form-select bg-dark text-white border-secondary" required>
-                                <option value="" selected disabled>Select Barangay</option>
-                                {% for brgy in barangays %}
-                                    <option value="{{ brgy.id }}">{{ brgy.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100 fw-bold"><i class="fas fa-paper-plane me-2"></i> Submit Prospect</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
         <!-- Prospect Tracking Table -->
-        <div class="col-lg-8 mb-4">
+        <div class="col-12 mb-4">
             <div class="gt-cl-card h-100">
                 <div class="card-header border-bottom border-secondary p-3 d-flex justify-content-between align-items-center">
                     <h6 class="mb-0 text-white fw-bold"><i class="fas fa-list me-2 text-warning"></i> My Prospects</h6>
+                    <a href="{% url 'agent_add_prospect' %}" class="btn btn-sm btn-primary fw-bold"><i class="fas fa-plus me-1"></i> Add Prospect</a>
                 </div>
                 <div class="card-body p-0 table-responsive">
                     <table class="table table-dark table-hover mb-0 align-middle">
