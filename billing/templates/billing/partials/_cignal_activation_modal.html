@@ -59,14 +59,14 @@
               </div>
               <div class="col-md-6">
                 <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
-                  <i class="fas fa-tv text-warning me-1"></i> Cignal Box No.
+                  <i class="fas fa-tv text-warning me-1"></i> Cignal Box No. <span class="text-muted fw-normal text-capitalize" style="font-size:0.72rem; letter-spacing:0;">(Optional)</span>
                 </label>
-                <input type="text" class="form-control font-monospace fw-bold" name="cignal_box_no" id="modalCignalBoxNo_{{ modal_suffix|default:'single' }}" value="{% if target_customer %}{{ target_customer.cignalbox_no|default:'' }}{% elif customer %}{{ customer.cignalbox_no|default:'' }}{% endif %}" placeholder="e.g. BOX-8892341">
-                <div class="form-text text-muted small">Physical STB serial / code.</div>
+                <input type="text" class="form-control font-monospace fw-bold" name="cignal_box_no" id="modalCignalBoxNo_{{ modal_suffix|default:'single' }}" value="{% if target_customer %}{{ target_customer.cignalbox_no|default:'' }}{% elif customer %}{{ customer.cignalbox_no|default:'' }}{% endif %}" placeholder="e.g. BOX-8892341 (Optional)">
+                <div class="form-text text-muted small">Physical STB serial / code (leave blank if App only).</div>
               </div>
             </div>
             <div class="text-muted small mb-3 fst-italic" style="font-size: 0.76rem;">
-              <i class="fas fa-info-circle text-info me-1"></i> Both can belong to this same subscription. Provide at least one.
+              <i class="fas fa-info-circle text-info me-1"></i> Both can belong to this same subscription. Provide at least one (Box is optional if customer only uses the App).
             </div>
 
             <!-- Device / Subscription Label -->
@@ -91,9 +91,9 @@
                   <i class="fas fa-box text-warning me-1"></i> Hardware Setup <span class="text-danger">*</span>
                 </label>
                 <select name="hardware_payment_type" id="modalHardwareType_{{ modal_suffix|default:'single' }}" class="form-select fw-semibold" onchange="calculateActivationTotal_{{ modal_suffix|default:'single' }}()">
-                  <option value="installment" data-cost="250" selected>12-Mo Installment (₱250/mo)</option>
+                  <option value="none" data-cost="0" {% if target_request and 'box' not in target_request.addon_type|lower %}selected{% endif %}>No Box / App Only (₱0)</option>
+                  <option value="installment" data-cost="250" {% if not target_request or 'box' in target_request.addon_type|lower %}selected{% endif %}>12-Mo Installment (₱250/mo)</option>
                   <option value="cashout" data-cost="3000">Cashout (₱3,000)</option>
-                  <option value="none" data-cost="0">No Box / App Only (₱0)</option>
                 </select>
                 <div class="form-text text-muted small">Box acquisition model.</div>
               </div>
@@ -158,10 +158,10 @@
             <div class="row g-2">
               <div class="col-md-6 mb-2">
                 <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
-                  Activation Date <span class="text-danger">*</span>
+                  <i class="far fa-calendar-alt text-info me-1"></i> Date Applied <span class="text-danger">*</span>
                 </label>
-                <input type="date" class="form-control fw-semibold" name="cignalplay_date" id="modalCignalDate_{{ modal_suffix|default:'single' }}" required>
-                <div class="form-text text-muted" style="font-size: 0.72rem;">Official start date of this subscription.</div>
+                <input type="date" class="form-control fw-semibold" name="cignalplay_date" id="modalCignalDate_{{ modal_suffix|default:'single' }}" value="{% if target_request %}{{ target_request.requested_at|date:'Y-m-d' }}{% elif target_customer and target_customer.cignalplay_date %}{{ target_customer.cignalplay_date|date:'Y-m-d' }}{% elif customer and customer.cignalplay_date %}{{ customer.cignalplay_date|date:'Y-m-d' }}{% endif %}" required>
+                <div class="form-text text-muted" style="font-size: 0.72rem;">Date when the customer first applied.</div>
               </div>
 
               <!-- First Due Date / Expiration Date -->
@@ -261,6 +261,9 @@
                   var tm = String(today.getMonth() + 1).padStart(2, '0');
                   var td = String(today.getDate()).padStart(2, '0');
                   actDate.value = ty + '-' + tm + '-' + td;
+              }
+              if (typeof calculateActivationTotal_{{ modal_suffix|default:'single' }} === 'function') {
+                  calculateActivationTotal_{{ modal_suffix|default:'single' }}();
               }
           })();
           </script>
