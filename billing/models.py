@@ -28,6 +28,22 @@ class Agent(models.Model):
     password_hash = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    @property
+    def claimable_commission(self):
+        """
+        Agents get P500 per customer, but it only unlocks if:
+        1. The customer has >= 2 payments (installation + 1st month).
+        2. The agent has >= 5 qualifying customers.
+        """
+        qualifying_customers = 0
+        for customer in self.customer_set.all():
+            if customer.payments.count() >= 2:
+                qualifying_customers += 1
+        
+        if qualifying_customers >= 5:
+            return qualifying_customers * 500
+        return 0
+
     def __str__(self):
         return self.name
 
@@ -161,6 +177,7 @@ class Customer(models.Model):
     # --- THE SUPERPOWER: Foreign Keys tying the system together ---
     plan = models.ForeignKey("SubscriptionPlan", on_delete=models.SET_NULL, null=True)
     agent = models.ForeignKey("Agent", on_delete=models.SET_NULL, null=True)
+    agent_lock_until = models.DateTimeField(null=True, blank=True, help_text="Until this date, the customer cannot use staggered payments.")
     barangay = models.ForeignKey("Barangay", on_delete=models.SET_NULL, null=True)
     account_type = models.ForeignKey(
         "AccountType", on_delete=models.SET_NULL, null=True
