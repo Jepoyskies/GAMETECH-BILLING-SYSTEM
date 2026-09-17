@@ -112,8 +112,9 @@ def view_agent(request, agent_id):
                 username = re.sub(r"[^a-zA-Z0-9_]", "", agent.name.lower().replace(" ", "_"))
 
         if not temp_password:
-            messages.error(request, "A temporary password is required to set up portal login.")
-            return redirect("view_agent", agent_id=agent.id)
+            import secrets
+            chars = "abcdefghjkmnpqrstuvwxyz23456789"
+            temp_password = "Gt-" + "".join(secrets.choice(chars) for _ in range(6)) + "!"
 
         if len(temp_password) < 6:
             messages.error(request, "Password must be at least 6 characters long.")
@@ -160,7 +161,7 @@ def view_agent(request, agent_id):
         agent.save()
 
         try:
-            AuditLog.objects.create(
+            SystemLog.objects.create(
                 user=request.user.username if request.user.is_authenticated else "Staff",
                 action=f"Configured Portal Login for Agent '{agent.name}' (Username: {username})",
                 ip_address=request.META.get("REMOTE_ADDR", ""),
