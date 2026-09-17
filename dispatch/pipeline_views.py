@@ -4,23 +4,39 @@ from django.contrib import messages
 from django.utils import timezone
 from billing.models import Customer, SubscriptionPlan
 from network_manager.models import MikrotikDevice
-from dispatch.models import JobTicket, Team, Technician
+from dispatch.models import JobTicket, Team, Technician, JobTicketHistory
 
 @login_required
 def dispatch_verification(request):
     """
     Step 1: Staff sees pending Agent prospects, assigns PPPoE, Date/Time,
-    and generates a Job Order (Ticket).
+    verifies the 6 policy guarantees, and generates a Job Order (Ticket).
     """
     if request.method == "POST":
         customer_id = request.POST.get("customer_id")
-        pppoe_username = request.POST.get("pppoe_username")
+        pppoe_username = request.POST.get("pppoe_username", "").strip()
         plan_id = request.POST.get("plan_id")
         mikrotik_id = request.POST.get("mikrotik_id")
+        scheduled_date = request.POST.get("scheduled_date")
+        scheduled_time = request.POST.get("scheduled_time", "").strip()
         
         customer = get_object_or_404(Customer, id=customer_id)
         plan = get_object_or_404(SubscriptionPlan, id=plan_id)
         mikrotik = get_object_or_404(MikrotikDevice, id=mikrotik_id)
+        
+        # Validate 6 core customer policy guarantees
+        core_checks = [
+            ('chk_free_install', 'Free Installation'),
+            ('chk_plan_confirmed', 'Plan & Speed Confirmation'),
+            ('chk_no_lockin', 'No Lock-in Period'),
+            ('chk_staggered', 'Staggered Payments'),
+            ('chk_repair_sameday', 'Repair Within the Day'),
+            ('chk_rebates_24hr', 'Rebates 24hrs')
+        ]
+        missing = [label for key, label in core_checks if not request.POST.get(key)]
+        if missing:
+            messages.error(request, f"Please confirm all 6 policy guarantees before dispatching. Missing: {', '.join(missing)}.")
+            return redirect('dispatch_verification')
         
         # Update Customer
         customer.pppoe_username = pppoe_username
@@ -40,22 +56,37 @@ def dispatch_verification(request):
             mikrotik_device=mikrotik,
             sales_agent=customer.agent,
             is_test_data=getattr(customer, 'is_test_data', False),
+            scheduled_date=scheduled_date if scheduled_date else None,
+            scheduled_time=scheduled_time if scheduled_time else None,
             ticket_type='INSTALLATION',
             status='PENDING',
             source_tab='INTERNET_INSTALL',
+            remarks=f"Verified 6 Policy Guarantees. Scheduled: {scheduled_date or 'TBD'} ({scheduled_time or 'Anytime'}).",
             created_by=request.user
         )
+        
+        # Log History transition
+        JobTicketHistory.objects.create(
+            job_ticket=ticket,
+            actor=request.user,
+            from_status="PROSPECT",
+            to_status="PENDING",
+            note=f"Stage 1 Verification completed by {request.user.get_full_name() or request.user.username}. Confirmed: Free Install, Plan {plan.name}, No Lock-in, Staggered Payments, Same-day Repair, 24hr Rebates. Scheduled: {scheduled_date or 'TBD'} ({scheduled_time or 'Anytime'}). PPPoE: {pppoe_username}."
+        )
+        
         messages.success(request, f"Verified prospect {customer.full_name} and generated Job Ticket {ticket.ticket_number}.")
         return redirect('dispatch_assignment')
         
     prospects = Customer.objects.filter(status='pending', is_verified=False)
     plans = SubscriptionPlan.objects.all()
     mikrotiks = MikrotikDevice.objects.all()
+    today = timezone.now().date().strftime("%Y-%m-%d")
     
     return render(request, "dispatch/pipeline/1_verification.html", {
         "prospects": prospects,
         "plans": plans,
-        "mikrotiks": mikrotiks
+        "mikrotiks": mikrotiks,
+        "today": today
     })
 
 @login_required
