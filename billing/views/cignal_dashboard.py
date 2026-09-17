@@ -564,7 +564,7 @@ def cignal_applications_view(request):
     pending_applications = AddOnRequest.objects.filter(
         Q(addon_type__icontains="Cignal") | Q(addon_type__icontains="Box"),
         status="Pending",
-    ).order_by("-request_date")
+    ).order_by("-requested_at")
     
     context = {
         "page_title": "Cignal Play Applications",

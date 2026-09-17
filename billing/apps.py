@@ -23,4 +23,28 @@ class BillingConfig(AppConfig):
             except Exception:
                 return "Viewer"
 
+        def get_role_perms(self):
+            class AllPerms:
+                can_access_billing = True
+                can_access_network_ops = True
+                can_access_cignal_play = True
+                can_access_dispatch = True
+                can_access_administration = True
+
+            if self.is_superuser or self.role == "Admin":
+                return AllPerms()
+
+            try:
+                from billing.models import StaffRole
+                return StaffRole.objects.get(name=self.role)
+            except Exception:
+                class DefaultPerms:
+                    can_access_billing = False
+                    can_access_network_ops = False
+                    can_access_cignal_play = False
+                    can_access_dispatch = False
+                    can_access_administration = False
+                return DefaultPerms()
+
         User.add_to_class("role", property(get_user_role))
+        User.add_to_class("role_perms", property(get_role_perms))

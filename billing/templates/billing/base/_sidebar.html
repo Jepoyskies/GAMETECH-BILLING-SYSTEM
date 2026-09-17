@@ -7,7 +7,7 @@
     </div>
     <nav>
         <ul id="sidebarNav" class="list-unstyled">
-            {% if request.user.role != 'Agent' %}
+            {% if request.user.role_perms.can_access_billing %}
             <li><a href="{% url 'dashboard' %}" class="menu-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"><span class="icon"><i class="fas fa-chart-pie"></i></span> <span>Dashboard</span></a></li>
             <!-- Billing & CRM -->
             <li>
@@ -24,7 +24,7 @@
             </li>
             {% endif %}
 
-            {% if request.user.role in 'Admin,Technician,CSR' %}
+            {% if request.user.role_perms.can_access_network_ops %}
             <!-- Network Operations -->
             <li>
                 <a href="#networkSubmenu" data-bs-toggle="collapse" aria-expanded="{% if request.resolver_match.url_name == 'live_monitoring' or request.resolver_match.url_name == 'downdetector' or 'device' in request.resolver_match.url_name or request.resolver_match.url_name == 'mikrotik_active_users' or request.resolver_match.url_name == 'geomap' or request.resolver_match.url_name == 'speedtest_view' %}true{% else %}false{% endif %}" class="menu-link dropdown-toggle {% if request.resolver_match.url_name == 'live_monitoring' or request.resolver_match.url_name == 'downdetector' or 'device' in request.resolver_match.url_name or request.resolver_match.url_name == 'mikrotik_active_users' or request.resolver_match.url_name == 'geomap' or request.resolver_match.url_name == 'speedtest_view' %}active{% endif %}">
@@ -42,21 +42,7 @@
             </li>
             {% endif %}
 
-            {% if request.user.role != 'Agent' %}
-            <!-- Cignal Play -->
-            <li>
-                <a href="#cignalSubmenu" data-bs-toggle="collapse" aria-expanded="{% if 'cignal-dashboard' in request.path %}true{% else %}false{% endif %}" class="menu-link dropdown-toggle {% if 'cignal-dashboard' in request.path %}active{% endif %}">
-                    <span class="icon"><i class="fas fa-tv"></i></span> <span>Cignal Play</span>
-                </a>
-                <ul class="collapse list-unstyled {% if 'cignal-dashboard' in request.path %}show{% endif %}" id="cignalSubmenu" data-bs-parent="#sidebarNav">
-                    <li><a href="{% url 'cignal_dashboard' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'cignal_dashboard' %}active{% endif %}"><span>Dashboard</span></a></li>
-                    <li><a href="{% url 'cignal_applications' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'cignal_applications' %}active{% endif %}"><span>Applications</span></a></li>
-                    <li><a href="{% url 'cignal_logs' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'cignal_logs' %}active{% endif %}"><span>Activity Logs</span></a></li>
-                </ul>
-            </li>
-            {% endif %}
-
-            {% if request.user.role in 'Admin,Technician,CSR' %}
+            {% if request.user.role_perms.can_access_dispatch %}
             <!-- Dispatch System -->
             <li>
                 <a href="#dispatchSubmenu" data-bs-toggle="collapse" aria-expanded="{% if 'dispatch' in request.path or 'internet-install' in request.path or 'cignal-install' in request.path or 'client-concerns' in request.path %}true{% else %}false{% endif %}" class="menu-link dropdown-toggle {% if 'dispatch' in request.path or 'internet-install' in request.path or 'cignal-install' in request.path or 'client-concerns' in request.path %}active{% endif %}">
@@ -73,8 +59,22 @@
                 </ul>
             </li>
             {% endif %}
+
+            {% if request.user.role_perms.can_access_cignal_play %}
+            <!-- Cignal Play -->
+            <li>
+                <a href="#cignalSubmenu" data-bs-toggle="collapse" aria-expanded="{% if 'cignal-dashboard' in request.path %}true{% else %}false{% endif %}" class="menu-link dropdown-toggle {% if 'cignal-dashboard' in request.path %}active{% endif %}">
+                    <span class="icon"><i class="fas fa-tv"></i></span> <span>Cignal Play</span>
+                </a>
+                <ul class="collapse list-unstyled {% if 'cignal-dashboard' in request.path %}show{% endif %}" id="cignalSubmenu" data-bs-parent="#sidebarNav">
+                    <li><a href="{% url 'cignal_dashboard' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'cignal_dashboard' %}active{% endif %}"><span>Dashboard</span></a></li>
+                    <li><a href="{% url 'cignal_applications' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'cignal_applications' %}active{% endif %}"><span>Applications</span></a></li>
+                    <li><a href="{% url 'cignal_logs' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'cignal_logs' %}active{% endif %}"><span>Activity Logs</span></a></li>
+                </ul>
+            </li>
+            {% endif %}
             
-            {% if request.user.role == 'Admin' %}
+            {% if request.user.role_perms.can_access_administration %}
             <!-- Administration -->
             <li>
                 <a href="#adminSubmenu" data-bs-toggle="collapse" aria-expanded="{% if 'agent' in request.path or request.resolver_match.url_name == 'system_logs' or request.resolver_match.url_name == 'settings' or request.resolver_match.url_name == 'admin_panel' or request.resolver_match.url_name == 'improvement_requests_list' %}true{% else %}false{% endif %}" class="menu-link dropdown-toggle {% if 'agent' in request.path or request.resolver_match.url_name == 'system_logs' or request.resolver_match.url_name == 'settings' or request.resolver_match.url_name == 'admin_panel' or request.resolver_match.url_name == 'improvement_requests_list' %}active{% endif %}">

@@ -6,19 +6,19 @@
 {% block extra_css %}
 <!-- DataTables CSS -->
 <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css"/>
+{% include "dispatch/_styles.html" %}
 <style>
     .table-container {
-        background-color: white;
         border-radius: 12px;
-        padding: 20px;
+        padding: 0;
         box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     }
     table.dataTable {
         border-collapse: collapse !important;
     }
     table.dataTable thead th {
-        border-bottom: 2px solid #e3e6f0;
-        color: #4e73df;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        color: #94a3b8;
     }
 </style>
 {% endblock %}
@@ -26,45 +26,47 @@
 {% block content %}
 <main class="content px-4 py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0 fw-bold text-gray-800">
+        <h1 class="h3 mb-0 fw-bold text-white">
             <i class="fas fa-history me-2 text-primary"></i>Audit Log
         </h1>
     </div>
 
-    <div class="table-container">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle w-100" id="auditTable">
-                <thead>
-                    <tr>
-                        <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Date & Time</th>
-                        <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Action</th>
-                        <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Entity</th>
-                        <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Actor</th>
-                        <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Summary</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for log in logs %}
-                    <tr>
-                        <td>{{ log.created_at|date:"M d, Y h:i A" }}</td>
-                        <td>
-                            {% if log.action == 'CREATE' %}
-                                <span class="badge bg-success">CREATE</span>
-                            {% elif log.action == 'UPDATE' %}
-                                <span class="badge bg-primary">UPDATE</span>
-                            {% elif log.action == 'DELETE' %}
-                                <span class="badge bg-danger">DELETE</span>
-                            {% else %}
-                                <span class="badge bg-secondary">{{ log.action }}</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ log.entity_type }} #{{ log.entity_id }}</td>
-                        <td class="fw-bold">{{ log.actor.username|default:"System" }}</td>
-                        <td class="text-muted">{{ log.summary }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <div class="card bg-dark border-secondary text-white shadow-sm overflow-hidden table-container">
+        <div class="card-body p-0">
+            <div class="table-responsive p-3">
+                <table class="table table-dark table-hover align-middle mb-0 w-100" id="auditTable" style="background: transparent;">
+                    <thead>
+                        <tr class="text-muted text-uppercase text-xs border-secondary">
+                            <th>Date & Time</th>
+                            <th>Action</th>
+                            <th>Entity</th>
+                            <th>Actor</th>
+                            <th>Summary</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr class="border-secondary">
+                            <td class="text-xs text-muted">{{ log.created_at|date:"M d, Y h:i A" }}</td>
+                            <td>
+                                {% if log.action == 'CREATE' %}
+                                    <span class="badge bg-success text-xs">CREATE</span>
+                                {% elif log.action == 'UPDATE' %}
+                                    <span class="badge bg-primary text-xs">UPDATE</span>
+                                {% elif log.action == 'DELETE' %}
+                                    <span class="badge bg-danger text-xs">DELETE</span>
+                                {% else %}
+                                    <span class="badge bg-secondary text-xs">{{ log.action }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-xs">{{ log.entity_type }} #{{ log.entity_id }}</td>
+                            <td class="fw-bold text-white">{{ log.actor.username|default:"System" }}</td>
+                            <td class="text-xs text-muted">{{ log.summary }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </main>
