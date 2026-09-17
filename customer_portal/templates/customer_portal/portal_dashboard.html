@@ -262,7 +262,7 @@
             <div class="relative z-10 flex justify-between items-start gap-2 sm:gap-4 w-full">
                 <div class="flex-1 border-l-4 border-[#fbae1a] pl-3">
                     <h1 class="text-white font-bold text-lg sm:text-xl leading-tight">
-                        Good Morning,<br>
+                        <span id="dynamic-greeting">Good Morning</span>,<br>
                         <span class="text-[#fbae1a]">{{ customer.full_name|default:"Valued Customer" }} !</span>
                     </h1>
                     <p class="text-white/80 text-[10px] sm:text-xs mt-1.5 leading-relaxed pr-2">
@@ -551,6 +551,22 @@ class="{% if is_network_issue %}text-red-600{% elif effective_status == 'Moderat
     <!-- Portal JS (addon modal, payment modal, ping, speed rings) -->
     {% include 'customer_portal/portal_dashboard/_scripts.html' %}
 
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const hour = new Date().getHours();
+            const greetingElement = document.getElementById('dynamic-greeting');
+            
+            if (greetingElement) {
+                if (hour >= 0 && hour < 12) {
+                    greetingElement.innerText = "Good Morning";
+                } else if (hour >= 12 && hour < 18) {
+                    greetingElement.innerText = "Good Afternoon";
+                } else {
+                    greetingElement.innerText = "Good Evening";
+                }
+            }
+        });
+    </script>
 </body>
 
 </html>
