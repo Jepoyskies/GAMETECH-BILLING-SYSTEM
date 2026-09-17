@@ -22,6 +22,40 @@
         font-weight: 600;
         letter-spacing: 0.5px;
     }
+    
+    /* Dark Mode Overrides for DataTables */
+    .dataTables_wrapper .dataTables_length, 
+    .dataTables_wrapper .dataTables_filter, 
+    .dataTables_wrapper .dataTables_info, 
+    .dataTables_wrapper .dataTables_processing, 
+    .dataTables_wrapper .dataTables_paginate {
+        color: #94a3b8 !important;
+        margin-bottom: 1rem;
+    }
+    .dataTables_wrapper .dataTables_filter input {
+        background-color: rgba(15, 23, 42, 0.5) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        color: white !important;
+    }
+    .dataTables_wrapper .dataTables_length select {
+        background-color: rgba(15, 23, 42, 0.5) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        color: white !important;
+    }
+    .page-item.disabled .page-link {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        border-color: rgba(255, 255, 255, 0.05) !important;
+        color: #64748b !important;
+    }
+    .page-item .page-link {
+        background-color: rgba(30, 41, 59, 0.5) !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        color: #f8fafc !important;
+    }
+    .page-item.active .page-link {
+        background-color: #0d6efd !important;
+        border-color: #0d6efd !important;
+    }
 </style>
 {% endblock %}
 
@@ -44,35 +78,41 @@
 
     {% include "dispatch/_tab_ticket_table.html" %}
 
-    <div class="card p-0 overflow-hidden">
+    <div class="card bg-dark border-secondary text-white mb-4 shadow-sm overflow-hidden">
+        <div class="card-header bg-transparent border-secondary py-3 d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold text-white">
+                <i class="fas fa-history text-primary me-2"></i> Legacy Dispatch Records ({{ records.count }})
+            </h6>
+            <span class="badge bg-secondary-soft text-secondary">Historical Data</span>
+        </div>
         <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 datatable" style="width: 100%;">
-                    <thead class="bg-light">
-                        <tr>
-                            <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Date</th>
-                            <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Source Tab</th>
-                            <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Client Name</th>
-                            <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Address</th>
-                            <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Teams</th>
-                            <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Status</th>
-                            <th class="text-muted fw-bold text-uppercase text-end" style="font-size: 0.8rem;">Actions</th>
+            <div class="table-responsive p-3">
+                <table class="table table-dark table-hover align-middle mb-0 datatable" style="width: 100%; background: transparent;">
+                    <thead>
+                        <tr class="text-muted text-uppercase text-xs border-secondary">
+                            <th>Date</th>
+                            <th>Source Tab</th>
+                            <th>Client Name</th>
+                            <th>Address</th>
+                            <th>Teams</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for record in records %}
-                        <tr>
-                            <td>{{ record.date|date:"M d, Y" }}</td>
+                        <tr class="border-secondary">
+                            <td class="text-xs text-muted">{{ record.date|date:"M d, Y" }}</td>
                             <td>
-                                <span class="badge bg-secondary badge-gametech">{{ record.get_source_tab_display }}</span>
+                                <span class="badge bg-secondary badge-gametech text-xs">{{ record.get_source_tab_display }}</span>
                             </td>
-                            <td class="fw-bold">{{ record.client_name }}</td>
-                            <td class="text-muted">{{ record.address|truncatechars:30 }}</td>
+                            <td class="fw-bold text-white">{{ record.client_name }}</td>
+                            <td class="text-xs text-muted">{{ record.address|truncatechars:30 }}</td>
                             <td>
                                 {% for team in record.teams.all %}
-                                    <span class="badge bg-info text-dark">{{ team.name }}</span>
+                                    <span class="badge bg-info text-dark text-xs"><i class="fas fa-users me-1"></i> {{ team.name }}</span>
                                 {% empty %}
-                                    <span class="text-muted small">Unassigned</span>
+                                    <span class="text-muted fst-italic text-xs">Unassigned</span>
                                 {% endfor %}
                             </td>
                             <td>
@@ -83,7 +123,7 @@
                                 {% endif %}
                             </td>
                             <td class="text-end">
-                                <button class="btn btn-sm btn-light text-primary"><i class="fas fa-edit"></i></button>
+                                <button class="btn btn-xs btn-outline-primary" title="Edit Legacy Record"><i class="fas fa-edit"></i> Edit</button>
                             </td>
                         </tr>
                         {% endfor %}
