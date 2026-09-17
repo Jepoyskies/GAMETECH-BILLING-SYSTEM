@@ -54,6 +54,10 @@ class CommissionTransaction(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     created_at = models.DateTimeField(auto_now_add=True)
     paid_at = models.DateTimeField(null=True, blank=True)
+    is_test_data = models.BooleanField(default=False, help_text="Flags historical/test records to exclude from financial reports")
+
+    class Meta:
+        unique_together = ('agent', 'customer')
 
     def __str__(self):
         return f"{self.agent.name} - {self.amount} ({self.status})"
@@ -211,6 +215,10 @@ class Customer(models.Model):
     )
     portal_password = models.CharField(max_length=50, blank=True, null=True)
     must_change_password = models.BooleanField(default=True)
+
+    # Audit & Testing
+    is_test_data = models.BooleanField(default=False, help_text="Flags test accounts to safely ignore without hard-deleting")
+
     CONNECTION_STATUS_CHOICES = (
         ("Offline", "Offline"),
         ("Low", "Low"),
@@ -595,6 +603,10 @@ class Rebate(models.Model):
     expires_at = models.DateTimeField(null=True, blank=True)
     paid_at = models.DateTimeField(default=timezone.now)
     adjusted_by = models.CharField(max_length=255, null=True, blank=True)
+
+    # Audit & Testing
+    is_test_data = models.BooleanField(default=False, help_text="Flags test payments to exclude from revenue")
+
     note = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
