@@ -71,9 +71,9 @@
 
         <!-- Data Table -->
         <div class="px-5 py-4 md:px-10 md:py-6 overflow-x-auto w-full pb-2">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-gametech-dusty/50 text-gray-600 text-[10px] uppercase tracking-wider">
+            <table class="w-full text-left border-collapse block md:table">
+                <thead class="hidden md:table-header-group bg-gametech-dusty/50 text-gray-600 text-[10px] uppercase tracking-wider">
+                    <tr>
                         <th class="py-3 px-4 font-bold rounded-l-lg">Date Paid</th>
                         <th class="py-3 px-4 font-bold">Plan / Description</th>
                         <th class="py-3 px-4 font-bold">Method &amp; Ref #</th>
@@ -82,25 +82,37 @@
                         <th class="py-3 px-4 font-bold rounded-r-lg">Processed By</th>
                     </tr>
                 </thead>
-                <tbody class="text-xs divide-y divide-gray-100">
+                <tbody class="block md:table-row-group text-xs md:text-sm divide-y divide-gray-100">
                     {% for p in payments %}
-                    <tr class="hover:bg-gray-50 transition">
-                        <td class="py-3 px-4 text-gray-500 whitespace-nowrap">
-                            <strong class="text-gray-800">{{ p.paid_at|default:p.created_at|date:"M d, Y" }}</strong><br>
-                            <span class="text-[9px]">{{ p.paid_at|default:p.created_at|date:"h:i A" }}</span>
+                    <tr class="block md:table-row hover:bg-gray-50 transition py-4 md:py-0 border-b md:border-none border-gray-100">
+                        <td class="block md:table-cell py-1 md:py-3 px-2 md:px-4">
+                            <!-- Mobile View: Shows Description, Date & Amount -->
+                            <div class="flex justify-between items-start md:hidden mb-2">
+                                <div>
+                                    <p class="font-bold text-gray-800">{{ p.plan_name|default:"Monthly Subscription" }}</p>
+                                    <p class="text-[10px] text-gray-500">{{ p.paid_at|default:p.created_at|date:"M d, Y" }} • {{ p.paid_at|default:p.created_at|date:"h:i A" }}</p>
+                                </div>
+                                <p class="font-bold text-gametech-cyan text-base whitespace-nowrap">₱ {{ p.amount|floatformat:2 }}</p>
+                            </div>
+
+                            <!-- Desktop View: Just the Date -->
+                            <div class="hidden md:block text-gray-500 whitespace-nowrap">
+                                <strong class="text-gray-800">{{ p.paid_at|default:p.created_at|date:"M d, Y" }}</strong><br>
+                                <span class="text-[9px]">{{ p.paid_at|default:p.created_at|date:"h:i A" }}</span>
+                            </div>
                         </td>
-                        <td class="py-3 px-4 text-gray-600">{{ p.plan_name|default:"Monthly Subscription" }}</td>
-                        <td class="py-3 px-4 text-gray-600 font-mono text-[10px]">
-                            <span class="font-semibold capitalize">{{ p.payment_method|default:"Cash" }}</span>
-                            {% if p.reference_no %}<div class="text-gray-400 text-[9px]">Ref: {{ p.reference_no }}</div>{% endif %}
+                        <td class="hidden md:table-cell py-3 px-4 text-gray-600">{{ p.plan_name|default:"Monthly Subscription" }}</td>
+                        <td class="block md:table-cell py-1 md:py-3 px-2 md:px-4">
+                            <span class="inline-block bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded md:bg-transparent md:p-0 md:font-mono capitalize">{{ p.payment_method|default:"Cash" }}</span>
+                            {% if p.reference_no %}<div class="hidden md:block text-gray-400 text-[9px]">Ref: {{ p.reference_no }}</div>{% endif %}
                         </td>
-                        <td class="py-3 px-4 text-gray-500">{{ p.days_paid|default:"—" }}</td>
-                        <td class="py-3 px-4 text-right font-bold text-gametech-cyan text-sm whitespace-nowrap">₱ {{ p.amount|floatformat:2 }}</td>
-                        <td class="py-3 px-4 text-gray-500">{{ p.adjusted_by|default:"System" }}</td>
+                        <td class="hidden md:table-cell py-3 px-4 text-gray-500">{{ p.days_paid|default:"—" }}</td>
+                        <td class="hidden md:table-cell py-3 px-4 text-right font-bold text-gametech-cyan text-sm whitespace-nowrap">₱ {{ p.amount|floatformat:2 }}</td>
+                        <td class="hidden md:table-cell py-3 px-4 text-gray-500">{{ p.adjusted_by|default:"System" }}</td>
                     </tr>
                     {% empty %}
-                    <tr>
-                        <td colspan="6" class="py-8 text-center text-gray-400 text-xs">No payment records found for this period.</td>
+                    <tr class="block md:table-row">
+                        <td colspan="6" class="block md:table-cell py-8 text-center text-gray-400 text-xs">No payment records found for this period.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
