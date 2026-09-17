@@ -31,20 +31,21 @@
                     <form action="{% url 'agent_add_prospect' %}" method="POST">
                         {% csrf_token %}
                         <div class="row g-4">
+                            <!-- Basic Applicant Info -->
                             <div class="col-md-6">
-                                <label class="form-label text-muted small fw-bold">Full Name</label>
-                                <input type="text" name="full_name" class="form-control bg-dark text-white border-secondary py-2" required placeholder="e.g. John Doe">
+                                <label class="form-label text-muted small fw-bold">Full Name <span class="text-danger">*</span></label>
+                                <input type="text" name="full_name" class="form-control bg-dark text-white border-secondary py-2" required placeholder="e.g. Juan dela Cruz">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label text-muted small fw-bold">Contact Number</label>
+                                <label class="form-label text-muted small fw-bold">Contact Number <span class="text-danger">*</span></label>
                                 <input type="text" name="phone" class="form-control bg-dark text-white border-secondary py-2" required placeholder="09123456789">
                             </div>
                             <div class="col-12">
-                                <label class="form-label text-muted small fw-bold">Specific Address</label>
-                                <textarea name="address" class="form-control bg-dark text-white border-secondary" rows="2" placeholder="Block, Lot, Street, Landmark..."></textarea>
+                                <label class="form-label text-muted small fw-bold">Specific Address <span class="text-danger">*</span></label>
+                                <textarea name="address" class="form-control bg-dark text-white border-secondary" rows="2" required placeholder="Block, Lot, Street, Purok, Landmark..."></textarea>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label text-muted small fw-bold">Barangay</label>
+                                <label class="form-label text-muted small fw-bold">Barangay <span class="text-danger">*</span></label>
                                 <select name="barangay" class="form-select bg-dark text-white border-secondary py-2" required>
                                     <option value="" selected disabled>Select Barangay</option>
                                     {% for brgy in barangays %}
@@ -52,9 +53,67 @@
                                     {% endfor %}
                                 </select>
                             </div>
+
+                            <!-- Subscription Plan & Installation Date -->
                             <div class="col-md-6">
-                                <label class="form-label text-muted small fw-bold">ID Presented (Optional)</label>
-                                <input type="text" name="id_presented" class="form-control bg-dark text-white border-secondary py-2" placeholder="e.g. UMID 323232323">
+                                <label class="form-label text-muted small fw-bold">Subscription Plan <span class="text-danger">*</span></label>
+                                <select name="plan_id" class="form-select bg-dark text-white border-secondary py-2" required>
+                                    <option value="" selected disabled>Choose a Plan...</option>
+                                    {% for p in plans %}
+                                        <option value="{{ p.id }}">{{ p.name }} - ₱{{ p.price }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-bold">Requested Date of Installation <span class="text-danger">*</span></label>
+                                <input type="date" name="preferred_installation_date" class="form-control bg-dark text-white border-secondary py-2" min="{{ today }}" value="{{ today }}" required>
+                            </div>
+
+                            <!-- Identification Info -->
+                            <div class="col-md-3">
+                                <label class="form-label text-muted small fw-bold">ID Type Presented <span class="text-danger">*</span></label>
+                                <select name="id_type" class="form-select bg-dark text-white border-secondary py-2" required>
+                                    <option value="" selected disabled>Select ID Type</option>
+                                    <option value="UMID">UMID</option>
+                                    <option value="PhilSys ID">PhilSys ID (National ID)</option>
+                                    <option value="Driver's License">Driver's License</option>
+                                    <option value="Passport">Passport</option>
+                                    <option value="SSS / GSIS">SSS / GSIS</option>
+                                    <option value="Voter's ID">Voter's ID / Cert</option>
+                                    <option value="Postal ID">Postal ID</option>
+                                    <option value="Senior / PWD ID">Senior / PWD ID</option>
+                                    <option value="Company / Student ID">Company / Student ID</option>
+                                    <option value="Other Valid ID">Other Valid ID</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label text-muted small fw-bold">ID Number <span class="text-danger">*</span></label>
+                                <input type="text" name="id_number" class="form-control bg-dark text-white border-secondary py-2" required placeholder="e.g. 323232323">
+                            </div>
+
+                            <!-- Preferred Payment Method during Installation -->
+                            <div class="col-12">
+                                <label class="form-label text-muted small fw-bold mb-2">Payment Method during Installation <span class="text-danger">*</span></label>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="form-check p-3 border border-secondary rounded" style="background: rgba(255,255,255,0.02); cursor: pointer;">
+                                            <input class="form-check-input ms-1 me-2" type="radio" name="preferred_payment_method" value="cash" id="payCash" checked>
+                                            <label class="form-check-label text-white w-100" for="payCash" style="cursor: pointer;">
+                                                <strong class="text-warning"><i class="fas fa-money-bill-wave me-1"></i> Cash on Hand</strong>
+                                                <div class="text-muted small">Customer will pay installer directly in cash upon completed installation</div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check p-3 border border-secondary rounded" style="background: rgba(255,255,255,0.02); cursor: pointer;">
+                                            <input class="form-check-input ms-1 me-2" type="radio" name="preferred_payment_method" value="gcash" id="payGCash">
+                                            <label class="form-check-label text-white w-100" for="payGCash" style="cursor: pointer;">
+                                                <strong class="text-info"><i class="fas fa-mobile-alt me-1"></i> Direct GCash</strong>
+                                                <div class="text-muted small">Customer will send direct GCash payment to Gametech upon completion</div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="mt-5 text-end border-top border-secondary pt-4">

@@ -48,11 +48,18 @@
                                     <span class="text-info">{{ prospect.barangay.name }}</span>
                                 </td>
                                 <td class="border-secondary text-muted small">
-                                    {% if prospect.agent %}{{ prospect.agent.name }}{% else %}Walk-in{% endif %}
+                                    {% if prospect.agent %}
+                                        <span class="text-white fw-bold"><i class="fas fa-user-tie text-info me-1"></i>{{ prospect.agent.name }}</span>
+                                    {% else %}
+                                        <span class="text-muted">Walk-in</span>
+                                    {% endif %}
+                                    {% if prospect.preferred_payment_method %}
+                                        <br><span class="badge bg-dark border border-secondary text-warning font-monospace" style="font-size: 0.7rem;"><i class="fas fa-wallet me-1"></i>{{ prospect.get_preferred_payment_method_display }}</span>
+                                    {% endif %}
                                 </td>
                                 <td class="border-secondary text-end pe-3">
                                     <button class="btn btn-sm btn-primary fw-bold gt-btn" data-bs-toggle="modal" data-bs-target="#verifyModal{{ prospect.id }}">
-                                        Verify & Assign PPPoE
+                                        <i class="fas fa-clipboard-check me-1"></i> Verify Prospect
                                     </button>
                                 </td>
                             </tr>
@@ -71,6 +78,8 @@
                                                     <span class="mx-2">•</span>
                                                     <span><i class="fas fa-phone me-1 text-success"></i>{{ prospect.phone }}</span>
                                                     {% if prospect.agent %}<span class="mx-2">•</span><span class="text-info"><i class="fas fa-user-tie me-1"></i>Agent: {{ prospect.agent.name }}</span>{% endif %}
+                                                    {% if prospect.id_type %}<span class="mx-2">•</span><span class="badge bg-dark border border-secondary text-info"><i class="fas fa-id-card me-1"></i>{{ prospect.id_type }}: {{ prospect.id_number }}</span>{% endif %}
+                                                    {% if prospect.preferred_payment_method %}<span class="mx-2">•</span><span class="badge bg-dark border border-secondary text-warning"><i class="fas fa-wallet me-1"></i>{{ prospect.get_preferred_payment_method_display }}</span>{% endif %}
                                                 </div>
                                             </div>
                                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -110,7 +119,7 @@
                                                     </div>
                                                     <div class="col-md-3">
                                                         <label class="form-label text-muted small fw-bold"><i class="fas fa-calendar-alt me-1 text-success"></i>Installation Date <span class="text-danger">*</span></label>
-                                                        <input type="date" name="scheduled_date" class="form-control bg-dark text-white border-secondary" value="{{ today }}" min="{{ today }}" required>
+                                                        <input type="date" name="scheduled_date" class="form-control bg-dark text-white border-secondary" value="{% if prospect.preferred_installation_date %}{{ prospect.preferred_installation_date|date:'Y-m-d' }}{% else %}{{ today }}{% endif %}" min="{{ today }}" required>
                                                     </div>
                                                     <div class="col-md-3">
                                                         <label class="form-label text-muted small fw-bold"><i class="fas fa-clock me-1 text-warning"></i>Time Slot <span class="text-danger">*</span></label>

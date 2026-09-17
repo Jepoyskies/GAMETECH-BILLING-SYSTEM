@@ -267,6 +267,18 @@ class Customer(models.Model):
     # --- Security & Verification ---
     is_verified = models.BooleanField(default=False)
 
+    # --- Prospect Application & Identity ---
+    preferred_installation_date = models.DateField(null=True, blank=True, help_text="Requested date for initial installation")
+    id_type = models.CharField(max_length=50, blank=True, null=True, help_text="e.g. UMID, PhilSys, Driver's License, Passport")
+    id_number = models.CharField(max_length=100, blank=True, null=True, help_text="ID card serial or identification number")
+    PAYMENT_METHOD_CHOICES = (
+        ("cash", "Cash on Hand"),
+        ("gcash", "Direct GCash"),
+    )
+    preferred_payment_method = models.CharField(
+        max_length=20, choices=PAYMENT_METHOD_CHOICES, default="cash", help_text="Payment method chosen during prospect application"
+    )
+
     # --- Audit Logs ---
     created_form_by = models.CharField(max_length=100, null=True, blank=True)
     adjusted_by_router = models.CharField(max_length=100, null=True, blank=True)
