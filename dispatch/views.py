@@ -41,11 +41,12 @@ def dispatch_index_view(request):
 def dashboard_view(request):
     today = timezone.now().date()
     
-    # KPI statistics
-    pending_count = JobTicket.objects.filter(status='PENDING').count()
-    assigned_count = JobTicket.objects.filter(status='ASSIGNED').count()
-    in_progress_count = JobTicket.objects.filter(status='IN_PROGRESS').count()
-    completed_today_count = JobTicket.objects.filter(status='COMPLETED', updated_at__date=today).count()
+    # Pipeline KPI statistics
+    pending_verification_count = Customer.objects.filter(status='pending', is_verified=False).count()
+    awaiting_assignment_count = JobTicket.objects.filter(status='PENDING').count()
+    active_in_field_count = JobTicket.objects.filter(status__in=['ASSIGNED', 'IN_PROGRESS']).count()
+    pending_qa_approval_count = JobTicket.objects.filter(status__in=['COMPLETED', 'QA_PASSED']).count()
+    
     total_techs_count = Technician.objects.count()
     
     # Filter parameters
@@ -98,10 +99,10 @@ def dashboard_view(request):
         })
         
     context = {
-        'pending_count': pending_count,
-        'assigned_count': assigned_count,
-        'in_progress_count': in_progress_count,
-        'completed_today_count': completed_today_count,
+        'pending_verification_count': pending_verification_count,
+        'awaiting_assignment_count': awaiting_assignment_count,
+        'active_in_field_count': active_in_field_count,
+        'pending_qa_approval_count': pending_qa_approval_count,
         'total_techs_count': total_techs_count,
         'tickets': tickets,
         'teams': teams,
