@@ -271,7 +271,7 @@
                 </div>
                 <!-- Mascot -->
                 <div class="shrink-0 w-28 h-28 sm:w-32 sm:h-32 flex items-center justify-center">
-                    <img src="{% static 'assets/images/gimi sun.png' %}" alt="Gametech Mascot" class="w-full h-full object-contain drop-shadow-xl">
+                    <img id="mascot-img" src="{% static 'assets/images/gimi sun.png' %}" data-sun="{% static 'assets/images/gimi sun.png' %}" data-moon="{% static 'assets/images/gimi moon.png' %}" alt="Gametech Mascot" class="w-full h-full object-contain drop-shadow-xl">
                 </div>
             </div>
         </div>
@@ -555,14 +555,22 @@ class="{% if is_network_issue %}text-red-600{% elif effective_status == 'Moderat
         document.addEventListener("DOMContentLoaded", function() {
             const hour = new Date().getHours();
             const greetingElement = document.getElementById('dynamic-greeting');
+            const mascotImg = document.getElementById('mascot-img');
             
-            if (greetingElement) {
+            if (greetingElement && mascotImg) {
+                // Read the Django static URLs from the HTML data attributes
+                const sunSrc = mascotImg.getAttribute('data-sun');
+                const moonSrc = mascotImg.getAttribute('data-moon');
+
                 if (hour >= 0 && hour < 12) {
                     greetingElement.innerText = "Good Morning";
+                    mascotImg.src = sunSrc; // Daytime mascot
                 } else if (hour >= 12 && hour < 18) {
                     greetingElement.innerText = "Good Afternoon";
+                    mascotImg.src = sunSrc; // Daytime mascot
                 } else {
                     greetingElement.innerText = "Good Evening";
+                    mascotImg.src = moonSrc; // Evening mascot
                 }
             }
         });
