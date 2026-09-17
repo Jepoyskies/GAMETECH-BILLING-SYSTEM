@@ -265,7 +265,7 @@ def sync_bulk_action(request, device_id):
             for uname in usernames:
                 ru = router_users_dict.get(uname, {})
                 if not Customer.objects.filter(pppoe_username=uname).exists():
-                    Customer.objects.create(
+                    new_cust = Customer.objects.create(
                         full_name=ru.get('comment') or uname,
                         pppoe_username=uname,
                         pppoe_password=ru.get('password', ''),
@@ -275,6 +275,18 @@ def sync_bulk_action(request, device_id):
                         installed_at=timezone.now(),
                         created_form_by='Bulk Import'
                     )
+                    
+                    from billing.models import SystemLog
+                    SystemLog.objects.create(
+                        table_name="Customer",
+                        record_id=str(new_cust.id),
+                        action="ADD",
+                        changed_by=request.user.username if request.user.is_authenticated else "System",
+                        target_name=new_cust.full_name,
+                        old_data="",
+                        new_data=f"Imported from {device.device_name} (Bulk Import)\nUsername: {uname}\nStatus: inactive"
+                    )
+                    
                     success_count += 1
                 else:
                     error_count += 1

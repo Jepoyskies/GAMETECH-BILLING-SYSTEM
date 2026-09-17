@@ -142,9 +142,13 @@ def customer_list(request):
     ).order_by("status_order", "full_name")
 
     devices = MikrotikDevice.objects.all().order_by("device_name")
-    from billing.models import Barangay
+    from billing.models import Barangay, SystemLog
 
     barangays = Barangay.objects.all().order_by("name")
+    
+    # Fetch recent customer logs for the new UI feature
+    customer_logs = SystemLog.objects.filter(table_name="Customer").order_by("-changed_at")[:50]
+    
     return render(
         request,
         "billing/customer_list.html",
@@ -155,6 +159,7 @@ def customer_list(request):
             "filter_type": filter_type,
             "stats": stats,
             "inactive_count": stats.get("inactive", 0),
+            "customer_logs": customer_logs,
         },
     )
 

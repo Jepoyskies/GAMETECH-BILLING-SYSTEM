@@ -119,7 +119,7 @@ def sync_device_users(request, device_id):
                     profile_name = secret.get('profile', '')
                     plan = SubscriptionPlan.objects.filter(name__iexact=profile_name).first()
                     
-                    Customer.objects.create(
+                    new_cust = Customer.objects.create(
                         full_name=full_name,
                         pppoe_username=name,
                         pppoe_password=secret.get('password', ''),
@@ -131,6 +131,18 @@ def sync_device_users(request, device_id):
                         installed_at=timezone.now(),
                         created_form_by='MikroTik Sync'
                     )
+                    
+                    from billing.models import SystemLog
+                    SystemLog.objects.create(
+                        table_name="Customer",
+                        record_id=str(new_cust.id),
+                        action="ADD",
+                        changed_by=request.user.username if request.user.is_authenticated else "System",
+                        target_name=new_cust.full_name,
+                        old_data="",
+                        new_data=f"Imported from {device.device_name} (MikroTik Sync)\nUsername: {name}\nStatus: {status}"
+                    )
+                    
                     added += 1
             
             return JsonResponse({'status': 'success', 'message': f'Synced successfully. Imported {added} new customers from {device.device_name}.'})
