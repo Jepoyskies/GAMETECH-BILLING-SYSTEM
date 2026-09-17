@@ -1,0 +1,134 @@
+{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}Stage 4: QA Review | Gametech Dispatch{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-3 px-md-4">
+    <!-- Hero Banner -->
+    <div class="gt-cl-card p-4 mb-4" style="border-left: 4px solid #10b981;">
+        <div class="d-flex align-items-center">
+            <div class="hero-icon me-3" style="background: rgba(16,185,129,0.15); color: #10b981; padding: 15px; border-radius: 12px;">
+                <i class="fas fa-headset fa-2x"></i>
+            </div>
+            <div>
+                <h4 class="mb-1 fw-bold text-white">Stage 4: Dispatch QA Review</h4>
+                <p class="mb-0 text-muted small">Review completed Job Orders from technicians, call the customer for confirmation, and submit to Admin for final approval.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- QA Review Tickets -->
+        <div class="col-12">
+            <div class="gt-cl-card">
+                <div class="card-header border-bottom border-secondary p-3">
+                    <h6 class="mb-0 text-white fw-bold"><i class="fas fa-search me-2 text-info"></i> Tickets Ready for QA</h6>
+                </div>
+                <div class="card-body p-0 table-responsive">
+                    <table class="table table-dark table-hover mb-0 align-middle">
+                        <thead class="text-muted small" style="background: rgba(255,255,255,0.02);">
+                            <tr>
+                                <th class="ps-3 border-secondary">Ticket / Client</th>
+                                <th class="border-secondary">Tech Team</th>
+                                <th class="border-secondary">JO Data</th>
+                                <th class="border-secondary text-end pe-3">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ticket in tickets %}
+                            <tr>
+                                <td class="ps-3 border-secondary text-white">
+                                    <div class="fw-bold">{{ ticket.ticket_number }}</div>
+                                    <small class="text-muted">{{ ticket.client_name }} <a href="tel:{{ ticket.contact_number }}" class="text-primary"><i class="fas fa-phone"></i></a></small>
+                                </td>
+                                <td class="border-secondary text-muted small">
+                                    {{ ticket.assigned_team.name|default:"-" }}<br>
+                                    <span class="text-info">{{ ticket.completed_at|date:"M d, g:i A" }}</span>
+                                </td>
+                                <td class="border-secondary text-muted small">
+                                    <div class="d-flex gap-3">
+                                        <div><span class="text-muted">Signal:</span> <span class="text-white">{{ ticket.signal_dbm }} dBm</span></div>
+                                        <div><span class="text-muted">NAP:</span> <span class="text-white">{{ ticket.nap_port }}</span></div>
+                                    </div>
+                                    <div><span class="text-muted">Payment:</span> <span class="text-warning text-uppercase">{{ ticket.payment_collected|default:"None" }}</span></div>
+                                </td>
+                                <td class="border-secondary text-end pe-3">
+                                    <button class="btn btn-sm btn-success fw-bold" data-bs-toggle="modal" data-bs-target="#qaModal{{ ticket.id }}">
+                                        Conduct QA
+                                    </button>
+                                </td>
+                            </tr>
+                            
+                            <!-- QA Modal -->
+                            <div class="modal fade" id="qaModal{{ ticket.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered modal-lg">
+                                    <div class="modal-content bg-dark border-secondary">
+                                        <div class="modal-header border-secondary">
+                                            <h5 class="modal-title text-white fw-bold">QA Check: {{ ticket.ticket_number }}</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        
+                                        <div class="modal-body">
+                                            <div class="row mb-4">
+                                                <div class="col-md-6 border-end border-secondary">
+                                                    <h6 class="text-info small fw-bold text-uppercase mb-3">Job Order Data (From Tech)</h6>
+                                                    <table class="table table-sm table-borderless text-white small">
+                                                        <tr><td class="text-muted">Cable Length:</td><td>{{ ticket.cable_length }} m</td></tr>
+                                                        <tr><td class="text-muted">Signal Level:</td><td>{{ ticket.signal_dbm }} dBm</td></tr>
+                                                        <tr><td class="text-muted">NAP Port:</td><td>{{ ticket.nap_port }}</td></tr>
+                                                        <tr><td class="text-muted">ONU SN:</td><td>{{ ticket.onu_sn_mac }}</td></tr>
+                                                        <tr><td class="text-muted">Started:</td><td>{{ ticket.started_at|time:"g:i A" }}</td></tr>
+                                                        <tr><td class="text-muted">Completed:</td><td>{{ ticket.completed_at|time:"g:i A" }}</td></tr>
+                                                    </table>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h6 class="text-warning small fw-bold text-uppercase mb-3">Customer Verification Call</h6>
+                                                    <p class="small text-muted mb-2"><i class="fas fa-phone-alt me-2 text-success"></i> Call customer at <strong>{{ ticket.contact_number }}</strong> to verify:</p>
+                                                    <ul class="small text-muted mb-0">
+                                                        <li>Is the internet working well?</li>
+                                                        <li>Was the technician professional?</li>
+                                                        <li>Confirm payment method ({{ ticket.payment_collected|upper }})</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Form to Submit to Admin -->
+                                            <form action="{% url 'dispatch_qa' %}" method="POST" id="qaForm{{ ticket.id }}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="ticket_id" value="{{ ticket.id }}">
+                                                <input type="hidden" name="action" id="action{{ ticket.id }}" value="approve">
+                                                
+                                                <div class="mb-3">
+                                                    <label class="form-label text-muted small fw-bold">QA Notes (Required if bouncing back)</label>
+                                                    <textarea name="qa_notes" class="form-control bg-dark text-white border-secondary" rows="3" placeholder="e.g. Customer happy. Signal is good."></textarea>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer border-secondary justify-content-between">
+                                            <button type="button" class="btn btn-outline-danger fw-bold" onclick="document.getElementById('action{{ ticket.id }}').value='bounce_back'; document.getElementById('qaForm{{ ticket.id }}').submit();">
+                                                <i class="fas fa-undo-alt me-2"></i> Bounce Back to Tech
+                                            </button>
+                                            <button type="button" class="btn btn-success fw-bold" onclick="document.getElementById('action{{ ticket.id }}').value='approve'; document.getElementById('qaForm{{ ticket.id }}').submit();">
+                                                Submit to Admin <i class="fas fa-arrow-right ms-2"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-5">
+                                    <i class="fas fa-clipboard-check fa-2x mb-3 text-secondary"></i><br>
+                                    No tickets awaiting QA review.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

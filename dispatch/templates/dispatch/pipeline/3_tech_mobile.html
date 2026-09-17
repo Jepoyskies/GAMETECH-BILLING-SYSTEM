@@ -1,0 +1,118 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tech Mobile | {{ ticket.ticket_number }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; }
+        .mobile-card { background: rgba(30,41,59,0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+        .pppoe-box { background: rgba(0,0,0,0.3); border: 1px dashed #38bdf8; border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center; }
+        .btn-massive { padding: 15px; font-size: 1.2rem; font-weight: 800; border-radius: 12px; width: 100%; text-transform: uppercase; letter-spacing: 1px; }
+        .form-control, .form-select { background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 12px; border-radius: 10px; }
+        .form-control:focus, .form-select:focus { background: rgba(0,0,0,0.4); border-color: #38bdf8; box-shadow: 0 0 0 0.25rem rgba(56, 189, 248, 0.25); color: white; }
+    </style>
+</head>
+<body>
+
+<div class="container py-3 pb-5">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0 fw-bold"><i class="fas fa-helmet-safety text-warning me-2"></i> {{ ticket.ticket_number }}</h5>
+        <span class="badge {% if ticket.status == 'in_progress' %}bg-primary{% else %}bg-secondary{% endif %}">
+            {{ ticket.get_status_display }}
+        </span>
+    </div>
+
+    <!-- Client Info -->
+    <div class="mobile-card">
+        <h6 class="fw-bold text-info mb-3"><i class="fas fa-user me-2"></i> Client Details</h6>
+        <div class="mb-2"><strong>Name:</strong> {{ ticket.client_name }}</div>
+        <div class="mb-2"><strong>Contact:</strong> <a href="tel:{{ ticket.contact_number }}" class="text-primary fw-bold">{{ ticket.contact_number }}</a></div>
+        <div class="mb-2"><strong>Address:</strong> {{ ticket.address }}</div>
+        <div class="mb-0 text-muted small"><i class="fas fa-map-marker-alt"></i> GPS coords captured on start</div>
+    </div>
+
+    <!-- PPPoE Credentials -->
+    <div class="mobile-card">
+        <h6 class="fw-bold text-warning mb-3"><i class="fas fa-wifi me-2"></i> Router Configuration</h6>
+        <div class="pppoe-box">
+            <div class="small text-muted mb-1 text-uppercase fw-bold">PPPoE Username</div>
+            <div class="fs-4 fw-bold text-white mb-3" style="letter-spacing: 1px; font-family: monospace;">{{ ticket.account_no }}</div>
+            
+            <div class="small text-muted mb-1 text-uppercase fw-bold">PPPoE Password</div>
+            <div class="fs-5 fw-bold text-info" style="font-family: monospace;">{% if ticket.customer %}{{ ticket.customer.pppoe_password }}{% else %}Auto-Generated{% endif %}</div>
+        </div>
+        <div class="text-center small text-muted">Use these exact credentials when configuring the ONU/Router.</div>
+    </div>
+
+    <!-- Actions Form -->
+    <div class="mobile-card mb-5">
+        {% if ticket.status == 'scheduled' %}
+        <form action="{% url 'api_dispatch_update_status' ticket.id %}" method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="status" value="in_progress">
+            <div class="text-center mb-3">
+                <i class="fas fa-location-arrow fa-3x text-muted mb-2"></i>
+                <p class="text-muted small">Tap start when you arrive at the client's location.</p>
+            </div>
+            <button type="submit" class="btn btn-primary btn-massive shadow-lg" style="background: linear-gradient(135deg, #2563eb, #3b82f6); border: none;">
+                <i class="fas fa-play me-2"></i> Start Operation
+            </button>
+        </form>
+        
+        {% elif ticket.status == 'in_progress' %}
+        <h6 class="fw-bold text-success mb-3"><i class="fas fa-clipboard-list me-2"></i> Physical Job Order Form</h6>
+        <form action="{% url 'api_dispatch_complete_job' ticket.id %}" method="POST">
+            {% csrf_token %}
+            <div class="row g-2 mb-3">
+                <div class="col-6">
+                    <label class="form-label text-muted small fw-bold">Cable Length (m)</label>
+                    <input type="number" name="cable_length" class="form-control" placeholder="e.g. 150" required>
+                </div>
+                <div class="col-6">
+                    <label class="form-label text-muted small fw-bold">Signal (dBm)</label>
+                    <input type="number" step="0.01" name="signal_dbm" class="form-control" placeholder="e.g. -21.5" required>
+                </div>
+            </div>
+            <div class="row g-2 mb-3">
+                <div class="col-6">
+                    <label class="form-label text-muted small fw-bold">NAP Port</label>
+                    <input type="text" name="nap_port" class="form-control" placeholder="e.g. NAP-01 P4" required>
+                </div>
+                <div class="col-6">
+                    <label class="form-label text-muted small fw-bold">ONU SN / MAC</label>
+                    <input type="text" name="onu_sn_mac" class="form-control" placeholder="ALCL..." required>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label class="form-label text-muted small fw-bold">Installation Payment Handled via:</label>
+                <select name="payment_method" class="form-select" required>
+                    <option value="" disabled selected>Select Payment Method...</option>
+                    <option value="cash">Cash on Hand (Paid to Tech)</option>
+                    <option value="gcash">Direct GCash (Verified by Staff)</option>
+                    <option value="none">No Payment Collected Yet</option>
+                </select>
+            </div>
+            
+            <button type="submit" class="btn btn-success btn-massive shadow-lg mt-2" style="background: linear-gradient(135deg, #059669, #10b981); border: none;">
+                <i class="fas fa-check-double me-2"></i> Complete Job
+            </button>
+        </form>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+            <h5 class="fw-bold">Job Completed</h5>
+            <p class="text-muted">This ticket has been submitted to dispatch for QA review.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

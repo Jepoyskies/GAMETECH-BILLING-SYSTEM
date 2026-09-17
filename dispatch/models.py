@@ -280,6 +280,11 @@ class JobTicket(models.Model):
     done_at = models.DateTimeField(null=True, blank=True)
     done_duration = models.IntegerField(null=True, blank=True)
     sla_rebates_given = models.IntegerField(default=0)
+    
+    # New Fields for QA and Payment
+    payment_collected = models.CharField(max_length=50, blank=True, null=True)
+    qa_notes = models.TextField(blank=True, null=True)
+    qa_completed_at = models.DateTimeField(null=True, blank=True)
 
     # Audit & Dispatcher Tracking
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='dispatched_tickets')

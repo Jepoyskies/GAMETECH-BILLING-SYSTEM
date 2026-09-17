@@ -1,0 +1,153 @@
+{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}Stage 5: Final Approval | Gametech Dispatch{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-3 px-md-4">
+    <!-- Hero Banner -->
+    <div class="gt-cl-card p-4 mb-4" style="border-left: 4px solid #ef4444;">
+        <div class="d-flex align-items-center">
+            <div class="hero-icon me-3" style="background: rgba(239,68,68,0.15); color: #ef4444; padding: 15px; border-radius: 12px;">
+                <i class="fas fa-shield-check fa-2x"></i>
+            </div>
+            <div>
+                <h4 class="mb-1 fw-bold text-white">Stage 5: Admin Final Approval</h4>
+                <p class="mb-0 text-muted small">Review the entire operation lifecycle. Approve to mark customer active, or bounce back to Dispatch/Tech for errors.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Approval Tickets -->
+        <div class="col-12">
+            <div class="gt-cl-card">
+                <div class="card-header border-bottom border-secondary p-3">
+                    <h6 class="mb-0 text-white fw-bold"><i class="fas fa-gavel me-2 text-danger"></i> Tickets Awaiting Admin Approval</h6>
+                </div>
+                <div class="card-body p-0 table-responsive">
+                    <table class="table table-dark table-hover mb-0 align-middle">
+                        <thead class="text-muted small" style="background: rgba(255,255,255,0.02);">
+                            <tr>
+                                <th class="ps-3 border-secondary">Ticket / Client</th>
+                                <th class="border-secondary">Tech Team</th>
+                                <th class="border-secondary">Dispatch QA Notes</th>
+                                <th class="border-secondary text-end pe-3">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ticket in tickets %}
+                            <tr>
+                                <td class="ps-3 border-secondary text-white">
+                                    <div class="fw-bold">{{ ticket.ticket_number }}</div>
+                                    <small class="text-muted">{{ ticket.client_name }}</small>
+                                </td>
+                                <td class="border-secondary text-muted small">
+                                    {{ ticket.assigned_team.name|default:"-" }}<br>
+                                    <span class="text-info">{{ ticket.completed_at|date:"M d, g:i A" }}</span>
+                                </td>
+                                <td class="border-secondary text-muted small" style="max-width: 250px;">
+                                    <div class="text-truncate">{{ ticket.qa_notes|default:"No QA notes provided." }}</div>
+                                </td>
+                                <td class="border-secondary text-end pe-3">
+                                    <button class="btn btn-sm btn-danger fw-bold" data-bs-toggle="modal" data-bs-target="#approvalModal{{ ticket.id }}">
+                                        Review & Decide
+                                    </button>
+                                </td>
+                            </tr>
+                            
+                            <!-- Approval Modal -->
+                            <div class="modal fade" id="approvalModal{{ ticket.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered modal-xl">
+                                    <div class="modal-content bg-dark border-secondary">
+                                        <div class="modal-header border-secondary">
+                                            <h5 class="modal-title text-white fw-bold">Admin Review: {{ ticket.ticket_number }}</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        
+                                        <div class="modal-body">
+                                            <!-- Full Operation Summary -->
+                                            <div class="row mb-4">
+                                                <!-- Client / Agent -->
+                                                <div class="col-md-4 border-end border-secondary">
+                                                    <h6 class="text-muted small fw-bold text-uppercase mb-3"><i class="fas fa-user text-primary me-1"></i> Client & Agent</h6>
+                                                    <div class="small text-white">
+                                                        <div class="mb-1"><span class="text-muted">Name:</span> {{ ticket.client_name }}</div>
+                                                        <div class="mb-1"><span class="text-muted">Contact:</span> {{ ticket.contact_number }}</div>
+                                                        <div class="mb-1"><span class="text-muted">Plan:</span> {{ ticket.plan_package }}</div>
+                                                        <div class="mb-1"><span class="text-muted">PPPoE:</span> {{ ticket.account_no }}</div>
+                                                        <div class="mb-1 mt-2 border-top border-secondary pt-2">
+                                                            <span class="text-muted">Agent:</span> {% if ticket.customer.agent %}<span class="text-warning fw-bold">{{ ticket.customer.agent.name }}</span>{% else %}Walk-in{% endif %}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- JO Data -->
+                                                <div class="col-md-4 border-end border-secondary">
+                                                    <h6 class="text-muted small fw-bold text-uppercase mb-3"><i class="fas fa-clipboard-list text-success me-1"></i> Tech JO Data</h6>
+                                                    <div class="small text-white">
+                                                        <div class="mb-1"><span class="text-muted">Techs:</span> 
+                                                            {% for t in ticket.technicians.all %}{{ t.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                                                        </div>
+                                                        <div class="mb-1"><span class="text-muted">Cable:</span> {{ ticket.cable_length }}m</div>
+                                                        <div class="mb-1"><span class="text-muted">Signal:</span> <span class="{% if ticket.signal_dbm > -25 %}text-danger{% else %}text-success{% endif %} fw-bold">{{ ticket.signal_dbm }} dBm</span></div>
+                                                        <div class="mb-1"><span class="text-muted">NAP:</span> {{ ticket.nap_port }}</div>
+                                                        <div class="mb-1"><span class="text-muted">SN:</span> {{ ticket.onu_sn_mac }}</div>
+                                                        <div class="mb-1"><span class="text-muted">Payment:</span> <span class="text-warning fw-bold">{{ ticket.payment_collected|upper }}</span></div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Dispatch QA -->
+                                                <div class="col-md-4">
+                                                    <h6 class="text-muted small fw-bold text-uppercase mb-3"><i class="fas fa-headset text-info me-1"></i> Dispatch QA</h6>
+                                                    <div class="small text-white p-2 bg-dark rounded border border-secondary mb-2" style="min-height: 80px;">
+                                                        {{ ticket.qa_notes|default:"No QA notes provided." }}
+                                                    </div>
+                                                    <div class="small text-muted">QA Completed: {{ ticket.qa_completed_at|date:"M d, g:i A"|default:"-" }}</div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Action Form -->
+                                            <form action="{% url 'dispatch_approval' %}" method="POST" id="approvalForm{{ ticket.id }}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="ticket_id" value="{{ ticket.id }}">
+                                                <input type="hidden" name="action" id="adminAction{{ ticket.id }}" value="approve">
+                                                
+                                                <div class="mb-3">
+                                                    <label class="form-label text-muted small fw-bold">Admin Feedback (Sent to Dispatch/Tech if bounced)</label>
+                                                    <textarea name="admin_notes" class="form-control bg-dark text-white border-secondary" rows="2" placeholder="e.g. Signal is too high, send tech back."></textarea>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer border-secondary justify-content-between">
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-outline-warning fw-bold" onclick="document.getElementById('adminAction{{ ticket.id }}').value='bounce_dispatch'; document.getElementById('approvalForm{{ ticket.id }}').submit();">
+                                                    <i class="fas fa-undo-alt me-1"></i> Bounce to Dispatch
+                                                </button>
+                                                <button type="button" class="btn btn-outline-danger fw-bold" onclick="document.getElementById('adminAction{{ ticket.id }}').value='bounce_tech'; document.getElementById('approvalForm{{ ticket.id }}').submit();">
+                                                    <i class="fas fa-undo-alt me-1"></i> Bounce to Tech
+                                                </button>
+                                            </div>
+                                            <button type="button" class="btn btn-danger fw-bold" onclick="document.getElementById('adminAction{{ ticket.id }}').value='approve'; document.getElementById('approvalForm{{ ticket.id }}').submit();">
+                                                <i class="fas fa-check-circle me-2"></i> Final Approve & Activate
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-5">
+                                    <i class="fas fa-shield-alt fa-2x mb-3 text-secondary"></i><br>
+                                    No tickets awaiting final approval.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

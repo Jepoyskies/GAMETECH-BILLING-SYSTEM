@@ -337,6 +337,11 @@ class Customer(models.Model):
     @property
     def can_pay_staggered(self):
         now = timezone.now()
+        
+        # New Explicit Lock Logic
+        if self.agent_lock_until and now < self.agent_lock_until:
+            return False
+            
         start_date = self.installed_at or self.created_at or now
         days_active = (now - start_date).days
         payments_count = self.payments.count() if self.pk else 0
@@ -352,6 +357,10 @@ class Customer(models.Model):
     def staggered_restriction_reason(self):
         if self.can_pay_staggered:
             return None
+            
+        if self.agent_lock_until and timezone.now() < self.agent_lock_until:
+            return f"Staggered payments are locked until {self.agent_lock_until.strftime('%b %d, %Y')}."
+            
         if self.is_walkin_or_direct:
             return "Please complete your initial full monthly payment to unlock staggered payments."
         else:
