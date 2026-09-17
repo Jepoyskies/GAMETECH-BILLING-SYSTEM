@@ -1,229 +1,156 @@
 {% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Statement of Account - {{ customer.full_name }}</title>
-    <style>
-        body {
-            font-family: 'Inter', Arial, sans-serif;
-            font-size: 14px;
-            color: #1e293b;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            width: 800px;
-            margin: 40px auto;
-            padding: 40px;
-            background: #fff;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            border-radius: 8px;
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .header img {
-            max-height: 80px;
-            margin-bottom: 10px;
-        }
-        .title {
-            text-align: center;
-            font-size: 24px;
-            margin: 20px 0;
-            font-weight: bold;
-            color: #0f172a;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        .info {
-            margin-bottom: 30px;
-            padding: 20px;
-            background: #f8fafc;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-        }
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-        }
-        .info-label {
-            font-weight: 600;
-            color: #475569;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 30px;
-        }
-        table th, table td {
-            border: 1px solid #e2e8f0;
-            padding: 12px;
-            text-align: left;
-        }
-        table th {
-            background: #f1f5f9;
-            font-weight: 600;
-            color: #334155;
-            text-transform: uppercase;
-            font-size: 12px;
-            letter-spacing: 0.05em;
-        }
-        table tbody tr:nth-child(even) {
-            background-color: #f8fafc;
-        }
-        .total {
-            text-align: right;
-            font-weight: bold;
-            font-size: 18px;
-            color: #0f172a;
-            padding: 15px;
-            background: #f1f5f9;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-        }
-        .footer {
-            margin-top: 40px;
-            font-size: 12px;
-            text-align: center;
-            color: #64748b;
-        }
-        .no-print {
-            text-align: center;
-            margin-top: 30px;
-        }
-        .btn {
-            background-color: #0d6efd;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            font-size: 14px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            text-decoration: none;
-            display: inline-block;
-        }
-        .btn:hover {
-            background-color: #0b5ed7;
-        }
-        .btn-secondary {
-            background-color: #64748b;
-            margin-right: 10px;
-        }
-        .btn-secondary:hover {
-            background-color: #475569;
-        }
-        @media print {
-            body { background: white; }
-            .container { 
-                box-shadow: none; 
-                margin: 0; 
-                padding: 0; 
-                width: 100%;
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statement of Account – {{ customer.full_name }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'gametech-cyan':     '#0349cb',
+                        'gametech-darkblue': '#3533cd',
+                        'gametech-orange':   '#fbae1a',
+                        'gametech-dusty':    '#eceef3',
+                    }
+                }
             }
-            .no-print { display: none; }
+        }
+    </script>
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; padding: 0 !important; }
+            .paper { box-shadow: none !important; border: none !important; border-radius: 0 !important; }
         }
     </style>
 </head>
-<body>
 
-<div class="container">
-    <div class="header">
-        <img src="{% static 'assets/images/logo_black.png' %}" alt="GameTech Logo">
-        <div><strong style="font-size: 18px;">GameTech UnliFiber</strong></div>
-        <div style="color: #475569; margin-top: 5px;">043 St. Therese, Patag, CDO</div>
-        <div style="color: #475569;">Phone: 0936-274-2712</div>
-    </div>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center py-10 px-4">
 
-    <div class="title">Statement of Account</div>
+    <!-- THE STATEMENT PAPER -->
+    <div class="paper max-w-4xl w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
 
-    <div class="info">
-        <div class="info-row">
-            <div><span class="info-label">Customer Name:</span> <strong>{{ customer.full_name }}</strong></div>
-            <div><span class="info-label">Date Generated:</span> {{ current_date|date:"M d, Y h:i A" }}</div>
+        <!-- Document Header -->
+        <div class="p-10 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div class="flex items-center gap-4">
+                <div class="w-16 h-16 rounded-full border border-gray-200 flex items-center justify-center bg-white shrink-0">
+                    <img src="{% static 'assets/images/logo_black.png' %}" alt="Gametech Logo" class="h-10 w-auto object-contain">
+                </div>
+                <div>
+                    <p class="font-bold text-lg text-gametech-cyan leading-tight">gametech</p>
+                    <p class="text-[10px] font-bold text-gametech-orange tracking-widest uppercase">Unli Fiber</p>
+                    <p class="text-[11px] text-gray-500 mt-0.5">643 St. Therese, Patag, CDO</p>
+                    <p class="text-[11px] text-gray-500">Phone: 0830-274-2712</p>
+                </div>
+            </div>
+            <div class="text-left md:text-right">
+                <h2 class="text-2xl font-bold tracking-widest uppercase text-gray-800">Statement</h2>
+                <p class="text-sm font-semibold text-gametech-cyan tracking-wide">OF ACCOUNT</p>
+            </div>
         </div>
-        <div class="info-row">
-            <div><span class="info-label">Account No:</span> <strong>#{{ customer.id }}</strong> ({{ customer.account_type.type_name|default:"Standard" }})</div>
-            <div><span class="info-label">Current Status:</span> <strong style="text-transform: uppercase;">{{ customer.status }}</strong></div>
+
+        <!-- Customer Meta Data -->
+        <div class="px-10 py-6 grid grid-cols-1 md:grid-cols-2 gap-8 bg-gray-50/50">
+            <div class="space-y-1">
+                <p class="text-xs text-gray-500"><span class="font-semibold text-gray-700 w-28 inline-block">Customer Name:</span> {{ customer.full_name }}</p>
+                <p class="text-xs text-gray-500"><span class="font-semibold text-gray-700 w-28 inline-block">Account No:</span> #{{ customer.id }} ({{ customer.account_type.type_name|default:"Standard" }})</p>
+                <p class="text-xs text-gray-500"><span class="font-semibold text-gray-700 w-28 inline-block">PPPoE Username:</span> {{ customer.pppoe_username|default:"-" }}</p>
+                <p class="text-xs text-gray-500"><span class="font-semibold text-gray-700 w-28 inline-block">Address:</span> {{ customer.address|default:"-" }}</p>
+            </div>
+            <div class="space-y-1 md:text-right">
+                <p class="text-xs text-gray-500"><span class="font-semibold text-gray-700">Date Generated:</span> {{ current_date|date:"M d, Y h:i A" }}</p>
+                <p class="text-xs text-gray-500"><span class="font-semibold text-gray-700">Current Status:</span>
+                    <span class="bg-blue-50 text-gametech-cyan px-2 py-0.5 rounded font-bold ml-1 uppercase">{{ customer.status }}</span>
+                </p>
+                <p class="text-xs text-gray-500"><span class="font-semibold text-gray-700">Expiration Date:</span> {{ customer.expires_at|date:"M d, Y h:i A"|default:"None" }}</p>
+                {% if date_from and date_to %}
+                <p class="text-xs text-gray-500"><span class="font-semibold text-gray-700">Filtered Period:</span> {{ date_from }} to {{ date_to }}</p>
+                {% endif %}
+            </div>
         </div>
-        <div class="info-row">
-            <div><span class="info-label">PPPoE Username:</span> <strong>{{ customer.pppoe_username|default:"-" }}</strong></div>
-            <div><span class="info-label">Expiration Date:</span> {{ customer.expires_at|date:"M d, Y h:i A"|default:"None" }}</div>
+
+        <!-- Data Table -->
+        <div class="px-10 py-6 overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gametech-dusty/50 text-gray-600 text-[10px] uppercase tracking-wider">
+                        <th class="py-3 px-4 font-bold rounded-l-lg">Date Paid</th>
+                        <th class="py-3 px-4 font-bold">Plan / Description</th>
+                        <th class="py-3 px-4 font-bold">Method &amp; Ref #</th>
+                        <th class="py-3 px-4 font-bold">Days Paid</th>
+                        <th class="py-3 px-4 font-bold text-right">Amount</th>
+                        <th class="py-3 px-4 font-bold rounded-r-lg">Processed By</th>
+                    </tr>
+                </thead>
+                <tbody class="text-xs divide-y divide-gray-100">
+                    {% for p in payments %}
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="py-3 px-4 text-gray-500 whitespace-nowrap">
+                            <strong class="text-gray-800">{{ p.paid_at|default:p.created_at|date:"M d, Y" }}</strong><br>
+                            <span class="text-[9px]">{{ p.paid_at|default:p.created_at|date:"h:i A" }}</span>
+                        </td>
+                        <td class="py-3 px-4 text-gray-600">{{ p.plan_name|default:"Monthly Subscription" }}</td>
+                        <td class="py-3 px-4 text-gray-600 font-mono text-[10px]">
+                            <span class="font-semibold capitalize">{{ p.payment_method|default:"Cash" }}</span>
+                            {% if p.reference_no %}<div class="text-gray-400 text-[9px]">Ref: {{ p.reference_no }}</div>{% endif %}
+                        </td>
+                        <td class="py-3 px-4 text-gray-500">{{ p.days_paid|default:"—" }}</td>
+                        <td class="py-3 px-4 text-right font-bold text-gametech-cyan text-sm whitespace-nowrap">₱ {{ p.amount|floatformat:2 }}</td>
+                        <td class="py-3 px-4 text-gray-500">{{ p.adjusted_by|default:"System" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-8 text-center text-gray-400 text-xs">No payment records found for this period.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
-        <div class="info-row">
-            <div><span class="info-label">Address:</span> {{ customer.address|default:"-" }}</div>
-            {% if date_from and date_to %}
-            <div><span class="info-label">Filtered Period:</span> {{ date_from }} to {{ date_to }}</div>
-            {% endif %}
+
+        <!-- Total Row -->
+        <div class="px-10 pb-6">
+            <div class="flex justify-end">
+                <div class="bg-gray-50 border border-gray-200 rounded-xl px-6 py-4 flex items-center gap-6">
+                    <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Total Amount Paid</span>
+                    <span class="text-2xl font-black text-gametech-cyan">₱{{ total_paid|floatformat:2 }}</span>
+                </div>
+            </div>
         </div>
+
+        <!-- Footer Note -->
+        <div class="px-10 pb-8">
+            <div class="bg-blue-50/50 border border-blue-100 rounded-lg p-4 text-center">
+                <p class="text-[10px] text-gray-500 leading-relaxed font-medium">
+                    <strong class="text-gametech-cyan">Customer Financial Proof:</strong> All payments listed above
+                    represent verified, immutable transactions recorded in the system. Resetting or adjusting wallet
+                    balances does not remove historical payment verifications.
+                </p>
+                <p class="text-[9px] text-gray-400 mt-2">This is an official system-generated Statement of Account from Gametech UnliFiber.</p>
+            </div>
+        </div>
+
     </div>
+    <!-- END: Statement Paper -->
 
-    <table>
-        <thead>
-            <tr>
-                <th>Date Paid</th>
-                <th>Plan / Description</th>
-                <th>Method &amp; Ref #</th>
-                <th>Days Paid</th>
-                <th>Amount</th>
-                <th>Processed By</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for p in payments %}
-                <tr>
-                    <td>
-                        <strong style="color: #0f172a;">{{ p.paid_at|default:p.created_at|date:"M d, Y" }}</strong>
-                        <div style="font-size: 11px; color: #64748b;">{{ p.paid_at|default:p.created_at|date:"h:i A" }}</div>
-                    </td>
-                    <td>{{ p.plan_name|default:"Monthly Subscription" }}</td>
-                    <td>
-                        <span style="font-weight: 600; text-transform: capitalize;">{{ p.payment_method|default:"Cash" }}</span>
-                        {% if p.reference_no %}
-                        <div style="font-size: 11px; color: #64748b; font-family: monospace;">Ref: {{ p.reference_no }}</div>
-                        {% endif %}
-                    </td>
-                    <td>{{ p.days_paid|default:"—" }}</td>
-                    <td><strong style="color: #059669; font-size: 15px;">₱{{ p.amount|floatformat:2 }}</strong></td>
-                    <td>{{ p.adjusted_by|default:"System" }}</td>
-                </tr>
-            {% empty %}
-                <tr>
-                    <td colspan="6" style="text-align: center; color: #64748b; padding: 25px;">No payment records found for this period.</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <div class="total">
-        TOTAL AMOUNT PAID: ₱{{ total_paid|floatformat:2 }}
-    </div>
-
-    <div style="margin-top: 20px; padding: 12px 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 12px; color: #166534; line-height: 1.5;">
-        <strong>Customer Financial Proof:</strong> All payments listed above represent verified, immutable transactions recorded in the system. Resetting or adjusting wallet balances does not remove historical payment verifications.
-    </div>
-
-    <div class="footer">
-        This is an official system-generated Statement of Account from GameTech UnliFiber.
-    </div>
-
-    <div class="no-print">
-        <a href="{% url 'customer_portal:portal_dashboard' %}" class="btn btn-secondary">Go to Dashboard</a>
-        <button class="btn" onclick="window.print()">
-            <svg style="width: 16px; height: 16px; vertical-align: text-bottom; margin-right: 5px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+    <!-- THE BUTTONS — Outside Paper, Horizontal -->
+    <div class="no-print w-full max-w-4xl flex justify-center gap-4 mt-4">
+        <a href="{% url 'customer_portal:portal_dashboard' %}"
+            class="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-6 py-2.5 rounded-lg text-sm font-bold shadow-sm transition flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+            Go to Dashboard
+        </a>
+        <button onclick="window.print()"
+            class="bg-[#0349cb] hover:bg-[#3533cd] text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow-sm transition flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
             Print / Save as PDF
         </button>
     </div>
-</div>
-
-<script>
-    // Auto-open print dialog if explicitly requested via some param if needed, 
-    // but usually better to let user click the button so they see the page first.
-    // window.onload = function() { window.print(); }
-</script>
 
 </body>
 </html>
