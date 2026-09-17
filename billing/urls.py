@@ -117,8 +117,6 @@ urlpatterns = [
         views.manage_monitored_services_view,
         name="manage_monitored_services",
     ),
-    # Network Ops Speedtest route
-    path("network/speedtest/", views.speedtest_view, name="speedtest_view"),
     # Dashboard API routes
     path("api/top-clients/", views.api_top_clients, name="api_top_clients"),
     path("api/popular-plans/", views.api_popular_plans, name="api_popular_plans"),

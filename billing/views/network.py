@@ -433,21 +433,3 @@ def manage_monitored_services_view(request):
     )
 
 
-@login_required
-def speedtest_view(request):
-    """
-    Renders the Network Operations Speedtest engine.
-    Provides an embedded HTML5 live speedtest engine plus direct launcher for Ookla Speedtest.
-    """
-    client_ip = request.META.get('HTTP_X_FORWARDED_FOR')
-    if client_ip:
-        client_ip = client_ip.split(',')[0].strip()
-    else:
-        client_ip = request.META.get('REMOTE_ADDR', '')
-
-    context = {
-        "page_title": "Network Speedtest Engine",
-        "client_ip": client_ip,
-        "isp_name": "Gametech Unli Fiber",
-    }
-    return render(request, "billing/speedtest.html", context)

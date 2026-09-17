@@ -15,6 +15,5 @@ urlpatterns = [
     path('api/apply-addon/', views.portal_apply_addon, name='portal_apply_addon'),
     path('submit-ticket/', views.submit_ticket, name='submit_ticket'),
     path('tickets/', views.portal_ticket_history, name='portal_tickets'),
-    path('speedtest/', views.portal_speedtest, name='portal_speedtest'),
     path('logout/', views.portal_logout, name='portal_logout'),
 ]
