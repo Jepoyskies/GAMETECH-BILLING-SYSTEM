@@ -80,6 +80,17 @@
             </div>
         </div>
     </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="cignal-stat-card cignal-stat-card-emerald">
+            <div class="cignal-stat-icon cignal-stat-icon-emerald">
+                <i class="fas fa-peso-sign"></i>
+            </div>
+            <div class="cignal-stat-content">
+                <div class="cignal-stat-value">₱{{ monthly_cignal_revenue|floatformat:0 }}</div>
+                <div class="cignal-stat-label">Load Revenue This Month</div>
+            </div>
+        </div>
+    </div>
   </div>
 
   <!-- Main Dashboard Grid Layout: Full Width for Subscriptions -->
@@ -148,6 +159,33 @@
     </div>
     {% endif %}
 
+    <!-- Search Bar -->
+    <div class="col-12">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <div class="input-group" style="max-width: 380px;">
+          <span class="input-group-text bg-transparent border-secondary border-opacity-25 text-muted" style="background: rgba(255,255,255,0.05) !important;">
+            <i class="fas fa-search" style="font-size:0.8rem;"></i>
+          </span>
+          <input type="text" id="cignalSearchInput" class="form-control border-secondary border-opacity-25 text-light" placeholder="Search customer, PPPoE, account number…" style="background: rgba(255,255,255,0.05); font-size:0.85rem;" oninput="filterCignalTable(this.value)">
+        </div>
+        <small class="text-muted" id="cignalSearchCount" style="font-size:0.78rem;"></small>
+      </div>
+    </div>
+    <script>
+    function filterCignalTable(q) {
+        q = q.toLowerCase();
+        const rows = document.querySelectorAll('#cignalSubscriptionsTable tbody tr');
+        let visible = 0;
+        rows.forEach(r => {
+            const text = r.textContent.toLowerCase();
+            const show = !q || text.includes(q);
+            r.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+        const counter = document.getElementById('cignalSearchCount');
+        if (counter) counter.textContent = q ? `${visible} result${visible !== 1 ? 's' : ''}` : '';
+    }
+    </script>
     <!-- Left Column: Active Subscriptions at the very top, Expiring Soon directly below -->
     <div class="col-12">
         {% include "billing/cignal_dashboard/_active_subscriptions.html" %}

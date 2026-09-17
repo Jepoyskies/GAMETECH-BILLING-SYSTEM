@@ -33,6 +33,12 @@ def cignal_dashboard_view(request):
         created_at__year=today.year,
     ).count()
 
+    monthly_cignal_revenue = Payment.objects.filter(
+        reason__icontains="Cignal",
+        paid_at__month=today.month,
+        paid_at__year=today.year,
+    ).aggregate(total=Sum("amount"))["total"] or 0
+
     total_notifications = Notification.objects.filter(notification_type="cignal").count()
 
     # Expiring Soon Radar (Next 5 Days) - Active only
@@ -132,6 +138,7 @@ def cignal_dashboard_view(request):
         "active_cignal_customers": active_cignal_customers,
         "pending_applications_count": pending_applications_count,
         "new_cignal_this_month": new_cignal_this_month,
+        "monthly_cignal_revenue": monthly_cignal_revenue,
         "total_notifications": total_notifications,
         "expiring_cignals": expiring_cignals,
         "customers_list": customers_list,
@@ -233,12 +240,19 @@ def process_cignal_payment(request):
             if subscription.hardware_payment_type == "installment" and (subscription.installments_paid or 0) < 12:
                 subscription.installments_paid = (subscription.installments_paid or 0) + 1
                 installment_text = f" [Box Installment #{subscription.installments_paid}/12 (₱250) + Load (₱149)]"
+                # Auto-complete: upgrade to cashout on final installment
+                if subscription.installments_paid >= 12:
+                    subscription.hardware_payment_type = "cashout"
+                    installment_text += " ✅ Hardware FULLY PAID — upgraded to Cashout"
             else:
                 installment_text = " [Box + Load: ₱399]"
         elif payment_type in ("box_installment", "box_only") or (payment_type != "load_only" and amount == Decimal("250.00") and subscription.hardware_payment_type == "installment" and (subscription.installments_paid or 0) < 12):
             if subscription.hardware_payment_type == "installment" and (subscription.installments_paid or 0) < 12:
                 subscription.installments_paid = (subscription.installments_paid or 0) + 1
                 installment_text = f" [Box Installment #{subscription.installments_paid}/12 (₱250)]"
+                if subscription.installments_paid >= 12:
+                    subscription.hardware_payment_type = "cashout"
+                    installment_text += " ✅ Hardware FULLY PAID — upgraded to Cashout"
             else:
                 installment_text = " [Box Installment: ₱250]"
         elif payment_type == "box_cashout" or amount >= Decimal("3000.00"):

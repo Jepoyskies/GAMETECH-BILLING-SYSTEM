@@ -191,4 +191,8 @@ CELERY_BEAT_SCHEDULE = {
         "task": "billing.tasks.auto_cleanup_system_logs_task",
         "schedule": crontab(hour="3", minute="0", day_of_week="sunday"),  # Run weekly at 3:00 AM Sunday
     },
+    "cignal-expiry-notify-daily": {
+        "task": "billing.tasks.cignal_expiry_notification_task",
+        "schedule": crontab(hour="8", minute="0"),  # Run daily at 8:00 AM — alerts staff before workday
+    },
 }
