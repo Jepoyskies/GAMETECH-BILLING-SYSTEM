@@ -314,3 +314,47 @@ def auto_cleanup_system_logs_task(retention_days=90):
     except Exception as e:
         logger.error(f"Error during audit log retention cleanup: {e}")
         return str(e)
+
+
+@shared_task(name="billing.tasks.cignal_expiry_notification_task")
+def cignal_expiry_notification_task():
+    """
+    Daily task: notify staff of Cignal subscriptions expiring within 3 days.
+    Creates a Notification for each affected subscription — fires into the
+    existing notification bell with zero new UI.
+    """
+    logger.info("Starting Cignal expiry notification task...")
+    try:
+        from billing.models import CignalPlay, Notification
+        from django.utils import timezone
+        from datetime import timedelta
+
+        today = timezone.localtime().date()
+        in_3_days = today + timedelta(days=3)
+
+        expiring = CignalPlay.objects.filter(
+            is_cancelled=False,
+            expiration_date__date__gte=today,
+            expiration_date__date__lte=in_3_days,
+        ).select_related("customer")
+
+        created = 0
+        for sub in expiring:
+            exp_str = sub.expiration_date.strftime("%b %d, %Y") if sub.expiration_date else "soon"
+            Notification.objects.create(
+                title=f"⚠️ Cignal Expiring: {sub.customer.full_name}",
+                message=(
+                    f"{sub.customer.full_name}'s Cignal subscription "
+                    f"({sub.account_name or sub.cignal_play_no or 'N/A'}) "
+                    f"expires on {exp_str}. Please reload."
+                ),
+                notification_type="cignal",
+                link=f"/cignal-dashboard/?tab=expiring_soon",
+            )
+            created += 1
+
+        logger.info(f"Cignal expiry task: created {created} notifications.")
+        return f"Notified {created} expiring subscriptions."
+    except Exception as e:
+        logger.error(f"Error in cignal expiry notification task: {e}")
+        return str(e)

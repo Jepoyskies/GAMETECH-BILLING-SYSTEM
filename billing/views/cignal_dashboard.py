@@ -1,10 +1,11 @@
+import csv
 from decimal import Decimal, InvalidOperation
 from datetime import datetime, timedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.db import transaction
 from django.utils import timezone
 from django.db.models import Sum, Count, Q, Prefetch
@@ -33,6 +34,12 @@ def cignal_dashboard_view(request):
         created_at__year=today.year,
     ).count()
 
+    monthly_cignal_revenue = Payment.objects.filter(
+        reason__icontains="Cignal",
+        paid_at__month=today.month,
+        paid_at__year=today.year,
+    ).aggregate(total=Sum("amount"))["total"] or 0
+
     total_notifications = Notification.objects.filter(notification_type="cignal").count()
 
     # Expiring Soon Radar (Next 5 Days) - Active only
@@ -46,6 +53,18 @@ def cignal_dashboard_view(request):
         .select_related("customer")
         .order_by("expiration_date", "end_date")[:25]
     )
+
+    # Overdue / Expired Subscriptions (Past Due Date)
+    expired_cignals_qs = (
+        CignalPlay.objects.filter(is_cancelled=False)
+        .filter(
+            Q(expiration_date__date__lt=today)
+            | (Q(expiration_date__isnull=True) & Q(end_date__date__lt=today))
+        )
+        .select_related("customer")
+        .order_by("expiration_date", "end_date")
+    )
+    count_expired = expired_cignals_qs.count()
 
     # Status counts for navigation bar
     count_active = active_cignal_customers
@@ -64,6 +83,7 @@ def cignal_dashboard_view(request):
 
     # Segmented table dataset
     cancelled_plans = None
+    expired_cignals_list = None
     if current_tab == "installment":
         customers_list = (
             Customer.objects.filter(
@@ -106,6 +126,9 @@ def cignal_dashboard_view(request):
         )
     elif current_tab == "expiring_soon":
         customers_list = []
+    elif current_tab == "expired":
+        customers_list = []
+        expired_cignals_list = list(expired_cignals_qs[:50])
     else:
         current_tab = "active"
         customers_list = (
@@ -132,8 +155,11 @@ def cignal_dashboard_view(request):
         "active_cignal_customers": active_cignal_customers,
         "pending_applications_count": pending_applications_count,
         "new_cignal_this_month": new_cignal_this_month,
+        "monthly_cignal_revenue": monthly_cignal_revenue,
         "total_notifications": total_notifications,
         "expiring_cignals": expiring_cignals,
+        "expired_cignals_list": expired_cignals_list,
+        "count_expired": count_expired,
         "customers_list": customers_list,
         "cancelled_plans": cancelled_plans,
         "count_active": count_active,
@@ -233,12 +259,19 @@ def process_cignal_payment(request):
             if subscription.hardware_payment_type == "installment" and (subscription.installments_paid or 0) < 12:
                 subscription.installments_paid = (subscription.installments_paid or 0) + 1
                 installment_text = f" [Box Installment #{subscription.installments_paid}/12 (₱250) + Load (₱149)]"
+                # Auto-complete: upgrade to cashout on final installment
+                if subscription.installments_paid >= 12:
+                    subscription.hardware_payment_type = "cashout"
+                    installment_text += " ✅ Hardware FULLY PAID — upgraded to Cashout"
             else:
                 installment_text = " [Box + Load: ₱399]"
         elif payment_type in ("box_installment", "box_only") or (payment_type != "load_only" and amount == Decimal("250.00") and subscription.hardware_payment_type == "installment" and (subscription.installments_paid or 0) < 12):
             if subscription.hardware_payment_type == "installment" and (subscription.installments_paid or 0) < 12:
                 subscription.installments_paid = (subscription.installments_paid or 0) + 1
                 installment_text = f" [Box Installment #{subscription.installments_paid}/12 (₱250)]"
+                if subscription.installments_paid >= 12:
+                    subscription.hardware_payment_type = "cashout"
+                    installment_text += " ✅ Hardware FULLY PAID — upgraded to Cashout"
             else:
                 installment_text = " [Box Installment: ₱250]"
         elif payment_type == "box_cashout" or amount >= Decimal("3000.00"):
@@ -584,3 +617,86 @@ def cignal_logs_view(request):
         "notifications": notifications,
     }
     return render(request, "billing/cignal_logs.html", context)
+
+
+@login_required
+def cignal_export_csv_view(request):
+    """
+    Stream a clean CSV file of all Cignal subscribers for manual 3rd-party reconciliation.
+    """
+    today = timezone.localtime().date()
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    filename = f"cignal_subscribers_{today.strftime('%Y%m%d')}.csv"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    writer = csv.writer(response)
+    writer.writerow([
+        "Customer Name",
+        "PPPoE Username",
+        "Contact Number",
+        "Account / Device Label",
+        "Cignal Play No",
+        "Cignal Box No",
+        "Load Plan",
+        "Hardware Status",
+        "Installments Paid",
+        "Due / Expiration Date",
+        "Days Remaining / Overdue",
+        "Tracking Status",
+        "Adjusted By",
+    ])
+
+    plans = (
+        CignalPlay.objects.filter(is_cancelled=False)
+        .select_related("customer")
+        .order_by("customer__full_name", "-created_at")
+    )
+
+    for p in plans:
+        cust = p.customer
+        exp = p.expiration_date or p.end_date
+        exp_str = exp.strftime("%Y-%m-%d") if exp else "No Due Date"
+
+        # Calculate days until expiry
+        days_rem = p.days_until_expiry
+        if days_rem is not None:
+            if days_rem < 0:
+                days_label = f"OVERDUE by {abs(days_rem)} day(s)"
+                status_label = "Expired / Overdue"
+            elif days_rem <= 5:
+                days_label = f"{days_rem} day(s) left"
+                status_label = "Expiring Soon"
+            else:
+                days_label = f"{days_rem} day(s) left"
+                status_label = "Active"
+        else:
+            days_label = "N/A"
+            status_label = "Active" if p.is_active else "No Due Date"
+
+        if p.hardware_payment_type == "installment":
+            hw_display = f"Installment ({p.installments_paid or 0}/12)"
+        elif p.hardware_payment_type == "cashout":
+            hw_display = "Cashout (Fully Paid)"
+        else:
+            hw_display = "App Only / No Box"
+
+        load_plan = p.load_plan_display if hasattr(p, "load_plan_display") else (p.monthly_load_plan or "N/A")
+
+        writer.writerow([
+            cust.full_name or cust.pppoe_username or f"Customer #{cust.id}",
+            cust.pppoe_username or "",
+            cust.phone or "",
+            p.account_name or p.plan_name or "Cignal Subscription",
+            p.cignal_play_no or "",
+            p.cignal_box_no or "",
+            load_plan,
+            hw_display,
+            f"{p.installments_paid or 0}/12" if p.hardware_payment_type == "installment" else "N/A",
+            exp_str,
+            days_label,
+            status_label,
+            p.adjusted_by or "",
+        ])
+
+    return response
+

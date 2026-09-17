@@ -722,6 +722,18 @@ class CignalPlay(models.Model):
             return f"₱{self.monthly_load_plan}/mo"
         return "No Load Set"
 
+    @property
+    def days_until_expiry(self):
+        """Returns days remaining until expiration (int), or None if no date. Can be negative if expired."""
+        exp = self.expiration_date or self.end_date
+        if not exp:
+            return None
+        from django.utils import timezone
+        from datetime import date
+        today = timezone.localdate()
+        exp_date = exp.date() if hasattr(exp, 'date') else exp
+        return (exp_date - today).days
+
     def save(self, *args, **kwargs):
         if self.expiration_date and not self.end_date:
             self.end_date = self.expiration_date

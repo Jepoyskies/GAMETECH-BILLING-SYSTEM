@@ -590,19 +590,70 @@ def apply_cignal_addon(request):
 @require_POST
 def approve_cignal_request(request, request_id):
     from billing.models import AddOnRequest
+    from datetime import datetime
 
     addon_req = get_object_or_404(AddOnRequest, pk=request_id)
     cignal_no = request.POST.get("cignal_play_no") or request.POST.get("cignal_no")
-    cignal_date = request.POST.get("cignal_date")
+    cignal_date = request.POST.get("cignal_date") or request.POST.get("expiration_date")
+    account_name = request.POST.get("account_name", "").strip()
+    hardware_payment_type = request.POST.get("hardware_payment_type", "none")
+    monthly_load_plan = request.POST.get("monthly_load_plan", "149")
+
     if not cignal_no or not cignal_date:
-        messages.error(request, "Cignal Account No and Date are required.")
+        messages.error(request, "Cignal Account No and Due Date are required.")
         return redirect(request.META.get("HTTP_REFERER", "cignal_dashboard"))
+
     customer = addon_req.customer
-    # Legacy Customer cignal fields are no longer written here — CignalPlay is source of truth.
-    addon_req.status = "Resolved"
-    addon_req.save()
+
+    # Parse due date
+    exp_dt = None
+    try:
+        if "T" in cignal_date:
+            exp_dt = datetime.fromisoformat(cignal_date.replace("Z", ""))
+        else:
+            exp_dt = datetime.strptime(cignal_date, "%Y-%m-%d")
+            exp_dt = exp_dt.replace(hour=23, minute=59, second=59)
+        from django.utils import timezone as tz
+        if tz.is_naive(exp_dt):
+            exp_dt = tz.make_aware(exp_dt)
+    except Exception:
+        messages.error(request, "Invalid due date format.")
+        return redirect(request.META.get("HTTP_REFERER", "cignal_dashboard"))
+
+    with transaction.atomic():
+        # Create the CignalPlay subscription record
+        plan_label = account_name or f"Cignal – {cignal_no}"
+        CignalPlay.objects.create(
+            customer=customer,
+            plan_name="Cignal Subscription",
+            account_name=plan_label,
+            cignal_play_no=cignal_no,
+            cignal_box_no=request.POST.get("cignal_box_no", ""),
+            hardware_payment_type=hardware_payment_type,
+            monthly_load_plan=monthly_load_plan,
+            expiration_date=exp_dt,
+            end_date=exp_dt,
+            adjusted_by=request.user.username,
+        )
+
+        # Sync convenience fields on Customer
+        if not customer.cignalplay_no:
+            customer.cignalplay_no = cignal_no
+            customer.save(update_fields=["cignalplay_no"])
+
+        # Mark request resolved
+        addon_req.status = "Resolved"
+        addon_req.save()
+
+        Notification.objects.create(
+            title="Cignal Application Approved & Enrolled",
+            message=f"{customer.full_name}'s Cignal application ({cignal_no}) was approved and enrolled by {request.user.username}.",
+            notification_type="cignal",
+            link=f"/customer/{customer.id}/cignal-logs/",
+        )
+
     messages.success(
-        request, f"Cignal request for {customer.full_name} approved and applied."
+        request, f"Cignal subscription for {customer.full_name} approved and enrolled successfully."
     )
     return redirect(request.META.get("HTTP_REFERER", "cignal_dashboard"))
 

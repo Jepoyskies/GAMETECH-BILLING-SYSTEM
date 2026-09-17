@@ -8,6 +8,7 @@ urlpatterns = [
     path("cignal-dashboard/", views.cignal_dashboard_view, name="cignal_dashboard"),
     path("cignal-dashboard/applications/", views.cignal_applications_view, name="cignal_applications"),
     path("cignal-dashboard/logs/", views.cignal_logs_view, name="cignal_logs"),
+    path("cignal-dashboard/export-csv/", views.cignal_export_csv_view, name="cignal_export_csv"),
     # Customer routes
     path("customers/", views.customer_list, name="customer_list"),
     path("customers/bulk-sms/", views.bulk_sms_view, name="bulk_sms_view"),
