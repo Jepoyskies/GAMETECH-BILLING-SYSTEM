@@ -16,6 +16,8 @@ class BillingConfig(AppConfig):
         def get_user_role(self):
             if self.is_superuser:
                 return "Admin"
+            if hasattr(self, "agent_profile") and not self.is_staff:
+                return "Agent"
             try:
                 from billing.models import SystemAdmin
 
@@ -31,6 +33,16 @@ class BillingConfig(AppConfig):
                 can_access_dispatch = True
                 can_access_administration = True
 
+            class DefaultPerms:
+                can_access_billing = False
+                can_access_network_ops = False
+                can_access_cignal_play = False
+                can_access_dispatch = False
+                can_access_administration = False
+
+            if hasattr(self, "agent_profile") and not self.is_staff:
+                return DefaultPerms()
+
             if self.is_superuser or self.role == "Admin":
                 return AllPerms()
 
@@ -38,12 +50,6 @@ class BillingConfig(AppConfig):
                 from billing.models import StaffRole
                 return StaffRole.objects.get(name=self.role)
             except Exception:
-                class DefaultPerms:
-                    can_access_billing = False
-                    can_access_network_ops = False
-                    can_access_cignal_play = False
-                    can_access_dispatch = False
-                    can_access_administration = False
                 return DefaultPerms()
 
         User.add_to_class("role", property(get_user_role))

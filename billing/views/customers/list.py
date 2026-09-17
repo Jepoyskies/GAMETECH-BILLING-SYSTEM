@@ -45,6 +45,8 @@ from billing.views.services import get_categorized_plans
 
 @login_required
 def customer_list(request):
+    if hasattr(request.user, "agent_profile") and not request.user.is_staff:
+        return redirect("agent_dashboard")
     from network_manager.models import MikrotikDevice
     from django.utils import timezone
     from datetime import timedelta

@@ -1,4 +1,5 @@
 # pyrefly: ignore [missing-import]
+from decimal import Decimal
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -26,6 +27,9 @@ class Agent(models.Model):
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=50, blank=True, null=True)
     password_hash = models.CharField(max_length=255, blank=True, null=True)
+    is_test_data = models.BooleanField(
+        default=False, help_text="Flags test agents to safely ignore without hard-deleting"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     @property
@@ -54,6 +58,10 @@ class CommissionTransaction(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     created_at = models.DateTimeField(auto_now_add=True)
     paid_at = models.DateTimeField(null=True, blank=True)
+    is_test_data = models.BooleanField(default=False, help_text="Flags historical/test records to exclude from financial reports")
+
+    class Meta:
+        unique_together = ('agent', 'customer')
 
     def __str__(self):
         return f"{self.agent.name} - {self.amount} ({self.status})"
@@ -211,6 +219,10 @@ class Customer(models.Model):
     )
     portal_password = models.CharField(max_length=50, blank=True, null=True)
     must_change_password = models.BooleanField(default=True)
+
+    # Audit & Testing
+    is_test_data = models.BooleanField(default=False, help_text="Flags test accounts to safely ignore without hard-deleting")
+
     CONNECTION_STATUS_CHOICES = (
         ("Offline", "Offline"),
         ("Low", "Low"),
@@ -254,6 +266,18 @@ class Customer(models.Model):
 
     # --- Security & Verification ---
     is_verified = models.BooleanField(default=False)
+
+    # --- Prospect Application & Identity ---
+    preferred_installation_date = models.DateField(null=True, blank=True, help_text="Requested date for initial installation")
+    id_type = models.CharField(max_length=50, blank=True, null=True, help_text="e.g. UMID, PhilSys, Driver's License, Passport")
+    id_number = models.CharField(max_length=100, blank=True, null=True, help_text="ID card serial or identification number")
+    PAYMENT_METHOD_CHOICES = (
+        ("cash", "Cash on Hand"),
+        ("gcash", "Direct GCash"),
+    )
+    preferred_payment_method = models.CharField(
+        max_length=20, choices=PAYMENT_METHOD_CHOICES, default="cash", help_text="Payment method chosen during prospect application"
+    )
 
     # --- Audit Logs ---
     created_form_by = models.CharField(max_length=100, null=True, blank=True)
@@ -444,6 +468,9 @@ class Payment(models.Model):
 
     adjusted_by = models.CharField(max_length=100, null=True, blank=True)
 
+    # Audit & Testing
+    is_test_data = models.BooleanField(default=False, help_text="Flags test payments to exclude from revenue")
+
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     def __str__(self):
@@ -595,6 +622,10 @@ class Rebate(models.Model):
     expires_at = models.DateTimeField(null=True, blank=True)
     paid_at = models.DateTimeField(default=timezone.now)
     adjusted_by = models.CharField(max_length=255, null=True, blank=True)
+
+    # Audit & Testing
+    is_test_data = models.BooleanField(default=False, help_text="Flags test payments to exclude from revenue")
+
     note = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -770,6 +801,48 @@ class CignalPlay(models.Model):
         today = timezone.localdate()
         exp_date = exp.date() if hasattr(exp, 'date') else exp
         return (exp_date - today).days
+
+    @property
+    def is_box(self):
+        t = f"{self.addon_type or ''} {self.plan_name or ''}".lower()
+        return "box" in t
+
+    @property
+    def is_tv_box_completed(self):
+        if not self.is_box:
+            return False
+        return (self.amount_paid or Decimal("0.00")) >= Decimal("3000.00")
+
+    @property
+    def tv_box_progress(self):
+        paid = self.amount_paid or Decimal("0.00")
+        target = Decimal("3000.00")
+        months_paid = min(12, int(paid // Decimal("250.00")))
+        remaining = max(Decimal("0.00"), target - paid)
+        pct = min(100, int((paid / target) * 100)) if target > 0 else 100
+        return {
+            "paid": paid,
+            "target": target,
+            "remaining": remaining,
+            "months_paid": months_paid,
+            "total_months": 12,
+            "pct": pct,
+            "is_completed": paid >= target,
+        }
+
+    @property
+    def channel_display_badge(self):
+        if self.is_box:
+            if self.is_tv_box_completed:
+                return "TV Box (Completed - ₱3,000)"
+            return f"TV Box ({self.tv_box_progress['months_paid']}/12 Mos)"
+        paid = self.amount_paid or Decimal("0.00")
+        name = self.plan_name or ""
+        if paid == Decimal("149.00") or "149" in name or "42" in name:
+            return "42 Channels (₱149/mo)"
+        if paid == Decimal("399.00") or "399" in name or "62" in name:
+            return "62 Channels (₱399/mo)"
+        return self.plan_name or "Cignal Play"
 
     def save(self, *args, **kwargs):
         if self.expiration_date and not self.end_date:

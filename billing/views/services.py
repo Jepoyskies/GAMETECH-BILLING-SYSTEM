@@ -532,6 +532,8 @@ def apply_cignal_addon(request):
             barangay=customer.barangay.name if customer.barangay else '',
             contact_number=customer.phone or '',
             account_no=customer.pppoe_username or '',
+            sales_agent=customer.agent,
+            is_test_data=customer.is_test_data,
             plan_package=f"{hw_info} | Load: ₱{monthly_load_plan}/mo",
             concern=f"Cignal Play Activation\n{acct_nos_str}",
             remarks=notes or '',

@@ -22,8 +22,13 @@
         <!-- Unassigned Tickets -->
         <div class="col-12">
             <div class="gt-cl-card">
-                <div class="card-header border-bottom border-secondary p-3">
+                <div class="card-header border-bottom border-secondary p-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <h6 class="mb-0 text-white fw-bold"><i class="fas fa-list-check me-2 text-primary"></i> Pending Job Orders</h6>
+                    <div class="d-flex gap-3 small text-muted">
+                        <span><i class="fas fa-circle text-secondary" style="font-size: 0.5rem; vertical-align: middle;"></i> Pending</span>
+                        <span><i class="fas fa-circle text-primary" style="font-size: 0.5rem; vertical-align: middle;"></i> Assigned</span>
+                        <span><i class="fas fa-circle text-success" style="font-size: 0.5rem; vertical-align: middle;"></i> In Progress</span>
+                    </div>
                 </div>
                 <div class="card-body p-0 table-responsive">
                     <table class="table table-dark table-hover mb-0 align-middle">
@@ -39,8 +44,14 @@
                             {% for ticket in tickets %}
                             <tr>
                                 <td class="ps-3 border-secondary text-white">
-                                    <div class="fw-bold">{{ ticket.ticket_number }}</div>
-                                    <small class="text-muted">{{ ticket.client_name }}</small>
+                                    <div class="mb-1">
+                                        <span class="badge bg-dark border border-secondary text-info font-monospace px-2 py-1">{{ ticket.ticket_number }}</span>
+                                        <span class="badge bg-dark border border-secondary text-muted ms-1 fw-normal"><i class="fas fa-clock"></i> {{ ticket.created_at|timesince }} ago</span>
+                                        {% if ticket.scheduled_date %}
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle ms-1"><i class="fas fa-calendar-check me-1"></i>{{ ticket.scheduled_date|date:"M d, Y" }}{% if ticket.scheduled_time %} • {{ ticket.scheduled_time }}{% endif %}</span>
+                                        {% endif %}
+                                    </div>
+                                    <small class="text-muted fw-bold">{{ ticket.client_name }}</small>
                                 </td>
                                 <td class="border-secondary text-muted small">
                                     {{ ticket.address }}<br>
@@ -51,7 +62,7 @@
                                     <span class="text-warning font-monospace">{{ ticket.account_no }}</span>
                                 </td>
                                 <td class="border-secondary text-end pe-3">
-                                    <button class="btn btn-sm btn-warning fw-bold text-dark" data-bs-toggle="modal" data-bs-target="#assignModal{{ ticket.id }}">
+                                    <button class="btn btn-sm btn-warning fw-bold text-dark gt-btn" data-bs-toggle="modal" data-bs-target="#assignModal{{ ticket.id }}">
                                         Assign Techs
                                     </button>
                                 </td>
@@ -72,11 +83,11 @@
                                                 <div class="row">
                                                     <div class="col-6 mb-3">
                                                         <label class="form-label text-muted small fw-bold">Schedule Date</label>
-                                                        <input type="date" name="scheduled_date" class="form-control bg-dark text-white border-secondary" required>
+                                                        <input type="date" name="scheduled_date" class="form-control bg-dark text-white border-secondary" value="{{ ticket.scheduled_date|date:'Y-m-d' }}" required>
                                                     </div>
                                                     <div class="col-6 mb-3">
                                                         <label class="form-label text-muted small fw-bold">Schedule Time</label>
-                                                        <input type="time" name="scheduled_time" class="form-control bg-dark text-white border-secondary" required>
+                                                        <input type="text" name="scheduled_time" class="form-control bg-dark text-white border-secondary" value="{{ ticket.scheduled_time|default:'Morning (8:00 AM - 12:00 PM)' }}" required>
                                                     </div>
                                                 </div>
                                                 
@@ -117,9 +128,12 @@
                             </div>
                             {% empty %}
                             <tr>
-                                <td colspan="4" class="text-center text-muted py-5">
-                                    <i class="fas fa-truck-loading fa-2x mb-3 text-secondary"></i><br>
-                                    No pending Job Orders.
+                                <td colspan="4" class="text-center py-5">
+                                    <div class="dispatch-empty-state mx-auto" style="max-width: 450px;">
+                                        <i class="fas fa-truck-loading fa-2x mb-3 text-secondary" style="opacity: 0.6;"></i>
+                                        <h6 class="text-white mb-2">No pending Job Orders</h6>
+                                        <p class="text-muted small mb-0">Tickets that pass Stage 1 Verification will appear here for team assignment.</p>
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}

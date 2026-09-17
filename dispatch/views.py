@@ -34,11 +34,15 @@ def log_audit(action, entity_type, entity_id, actor, summary=None, before=None, 
 
 @login_required
 def dispatch_index_view(request):
+    if hasattr(request.user, "agent_profile") and not request.user.is_staff:
+        return redirect('agent_dashboard')
     return redirect('dispatch_dashboard')
 
 
 @login_required
 def dashboard_view(request):
+    if hasattr(request.user, "agent_profile") and not request.user.is_staff:
+        return redirect('agent_dashboard')
     today = timezone.now().date()
     
     # Pipeline KPI statistics
@@ -240,13 +244,36 @@ def api_create_ticket(request):
         if not client_name:
             return JsonResponse({'success': False, 'error': 'Client name is required.'}, status=400)
             
+        agent_obj = None
+        sales_agent_val = data.get('sales_agent')
+        if sales_agent_val:
+            from billing.models import Agent
+            if str(sales_agent_val).isdigit():
+                agent_obj = Agent.objects.filter(id=int(sales_agent_val)).first()
+            if not agent_obj:
+                agent_obj = Agent.objects.filter(name__iexact=str(sales_agent_val).strip()).first()
+        
+        cust_id = data.get('customer_id') or None
+        is_test = False
+        if cust_id:
+            from billing.models import Customer
+            cust = Customer.objects.filter(id=cust_id).first()
+            if cust:
+                if not agent_obj and cust.agent:
+                    agent_obj = cust.agent
+                if getattr(cust, 'is_test_data', False):
+                    is_test = True
+        if agent_obj and getattr(agent_obj, 'is_test_data', False):
+            is_test = True
+
         ticket = JobTicket.objects.create(
             client_name=client_name,
             address=data.get('address', '').strip(),
             barangay=data.get('barangay', '').strip(),
             contact_number=data.get('contact_number', '').strip(),
             account_no=data.get('account_no', '').strip(),
-            sales_agent=data.get('sales_agent', '').strip(),
+            sales_agent=agent_obj,
+            is_test_data=is_test,
             plan_package=data.get('plan_package', '').strip(),
             ticket_type=data.get('ticket_type', 'INSTALLATION'),
             priority=data.get('priority', 'NORMAL'),

@@ -35,22 +35,88 @@
 {% block content %}
 <main class="container py-4">
     {% if agent %}
-    <div class="dashboard-card mb-4">
-        <div class="card-body">
-            <h2 class="card-title mb-0">
-                {{ agent.name }}
-            </h2>
-            <ul class="list-unstyled mb-0 mt-2">
-                <li><strong>Email:</strong> {{ agent.email }}</li>
-                <li><strong>Phone:</strong> {{ agent.phone|default_if_none:"" }}</li>
-            </ul>
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="dashboard-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h3 class="card-title mb-1 fw-bold">{{ agent.name }}</h3>
+                            <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2 py-1 small">
+                                <i class="fas fa-handshake me-1"></i> Sales Agent
+                            </span>
+                        </div>
+                    </div>
+                    <hr class="my-3 opacity-25">
+                    <ul class="list-unstyled mb-0 small">
+                        <li class="mb-2"><i class="fas fa-envelope text-muted me-2"></i><strong>Email:</strong> {{ agent.email }}</li>
+                        <li class="mb-2"><i class="fas fa-phone text-muted me-2"></i><strong>Phone:</strong> {{ agent.phone|default_if_none:"None provided" }}</li>
+                        <li><i class="fas fa-calendar-alt text-muted me-2"></i><strong>Registered:</strong> {{ agent.created_at|date:"M d, Y"|default:"N/A" }}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="dashboard-card h-100" style="border-left: 4px solid {% if agent.user %}#10b981{% else %}#f59e0b{% endif %};">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="card-title mb-0 fw-bold">
+                            <i class="fas fa-id-badge text-primary me-2"></i>Portal Login Account
+                        </h5>
+                        {% if agent.user %}
+                            {% if agent.user.is_active %}
+                                <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> Active</span>
+                            {% else %}
+                                <span class="badge bg-danger"><i class="fas fa-ban me-1"></i> Deactivated</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-circle me-1"></i> No Login Set</span>
+                        {% endif %}
+                    </div>
+
+                    {% if agent.user %}
+                    <div class="p-3 bg-light rounded-3 mb-3 border small">
+                        <div class="row g-2">
+                            <div class="col-sm-6">
+                                <span class="text-muted d-block">Username:</span>
+                                <strong class="text-primary font-monospace fs-6">{{ agent.user.username }}</strong>
+                            </div>
+                            <div class="col-sm-6">
+                                <span class="text-muted d-block">Last Login:</span>
+                                <span>{{ agent.user.last_login|date:"M d, Y H:i"|default:"Never logged in" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#setupLoginModal">
+                            <i class="fas fa-key me-1"></i> Reset Password
+                        </button>
+                        <form method="post" action="{% url 'view_agent' agent.id %}" style="display:inline;" onsubmit="return confirm('Toggle login access for this agent?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="toggle_agent_login" value="1">
+                            <button type="submit" class="btn btn-sm {% if agent.user.is_active %}btn-outline-danger{% else %}btn-outline-success{% endif %}">
+                                {% if agent.user.is_active %}<i class="fas fa-user-slash me-1"></i> Deactivate{% else %}<i class="fas fa-user-check me-1"></i> Activate{% endif %}
+                            </button>
+                        </form>
+                    </div>
+                    {% else %}
+                    <p class="text-muted small mb-3">
+                        This agent does not have login credentials yet. Create an authorized login so they can submit prospect clients directly through the Agent Portal.
+                    </p>
+                    <button type="button" class="btn btn-sm btn-primary fw-bold" data-bs-toggle="modal" data-bs-target="#setupLoginModal">
+                        <i class="fas fa-user-plus me-1"></i> Set Up Portal Login
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
 
     {% if messages %}
         {% for message in messages %}
             <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
-                {{ message }}
+                {{ message|safe }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         {% endfor %}
@@ -150,6 +216,56 @@
     {% else %}
     <div class="alert alert-warning">Agent not found.</div>
     {% endif %}
+
+    <!-- Setup / Reset Login Modal -->
+    {% if agent %}
+    <div class="modal fade" id="setupLoginModal" tabindex="-1" aria-labelledby="setupLoginModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content text-start">
+                <form method="post" action="{% url 'view_agent' agent.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="setup_agent_login" value="1">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="setupLoginModalLabel">
+                            <i class="fas fa-id-badge text-primary me-2"></i>
+                            {% if agent.user %}Reset Agent Login Credentials{% else %}Set Up Agent Portal Login{% endif %}
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info small mb-3">
+                            <i class="fas fa-info-circle me-1"></i>
+                            <strong>Temporary Password Relay:</strong> Staff generates the password here and relays it to <strong>{{ agent.name }}</strong> via phone or Messenger. Agents log in at <code>/login/</code> and can only submit prospects and view their commission wallet.
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Login Username</label>
+                            <input type="text" name="username" class="form-control font-monospace" 
+                                   value="{% if agent.user %}{{ agent.user.username }}{% else %}{{ agent.email|slice:':15' }}{% endif %}" 
+                                   id="agentUsernameInput" required>
+                            <div class="form-text small">Used by the agent to log into <code>/login/</code>.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Temporary Password</label>
+                            <div class="input-group">
+                                <input type="text" name="password" class="form-control font-monospace" id="agentTempPasswordInput" placeholder="Click 'Generate' or type password" required>
+                                <button type="button" class="btn btn-outline-secondary" onclick="generateAgentTempPassword()" title="Generate Random Password">
+                                    <i class="fas fa-dice me-1"></i> Generate
+                                </button>
+                            </div>
+                            <div class="form-text small">At least 6 characters. Relay this directly to the agent.</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary fw-bold">
+                            <i class="fas fa-save me-1"></i> Save & Authorize Login
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </main>
 {% endblock %}
 
@@ -165,5 +281,15 @@
             "info": true
         });
     });
+
+    function generateAgentTempPassword() {
+        const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+        let pass = 'Gt-';
+        for (let i = 0; i < 6; i++) {
+            pass += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        pass += '!';
+        document.getElementById('agentTempPasswordInput').value = pass;
+    }
 </script>
 {% endblock %}

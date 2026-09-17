@@ -95,9 +95,95 @@ def delete_agent(request, agent_id):
     return redirect("agent_list")
 
 
+@login_required
 def view_agent(request, agent_id):
     agent = get_object_or_404(Agent, id=agent_id)
     from billing.models import Customer
+    import re
+
+    if request.method == "POST" and "setup_agent_login" in request.POST:
+        username = request.POST.get("username", "").strip()
+        temp_password = request.POST.get("password", "").strip()
+
+        if not username:
+            if agent.email:
+                username = agent.email.split("@")[0].lower()
+            else:
+                username = re.sub(r"[^a-zA-Z0-9_]", "", agent.name.lower().replace(" ", "_"))
+
+        if not temp_password:
+            import secrets
+            chars = "abcdefghjkmnpqrstuvwxyz23456789"
+            temp_password = "Gt-" + "".join(secrets.choice(chars) for _ in range(6)) + "!"
+
+        if len(temp_password) < 6:
+            messages.error(request, "Password must be at least 6 characters long.")
+            return redirect("view_agent", agent_id=agent.id)
+
+        # Check existing username conflicts
+        existing_user = User.objects.filter(username__iexact=username).first()
+        if existing_user and agent.user and existing_user != agent.user:
+            messages.error(
+                request,
+                f"Username '{username}' is already taken by another account. Please pick a different username.",
+            )
+            return redirect("view_agent", agent_id=agent.id)
+        elif existing_user and not agent.user:
+            if hasattr(existing_user, "agent_profile"):
+                messages.error(
+                    request,
+                    f"Username '{username}' is already linked to agent '{existing_user.agent_profile.name}'.",
+                )
+                return redirect("view_agent", agent_id=agent.id)
+            if existing_user.is_staff or existing_user.is_superuser:
+                messages.error(
+                    request,
+                    f"Username '{username}' belongs to a staff/admin user. Agents cannot use staff usernames.",
+                )
+                return redirect("view_agent", agent_id=agent.id)
+            user = existing_user
+        elif agent.user:
+            user = agent.user
+            user.username = username
+        else:
+            user = User(username=username)
+
+        user.email = agent.email or ""
+        user.first_name = agent.name[:30]
+        user.is_staff = False
+        user.is_superuser = False
+        user.is_active = True
+        user.set_password(temp_password)
+        user.save()
+
+        agent.user = user
+        agent.password_hash = user.password
+        agent.save()
+
+        try:
+            SystemLog.objects.create(
+                user=request.user.username if request.user.is_authenticated else "Staff",
+                action=f"Configured Portal Login for Agent '{agent.name}' (Username: {username})",
+                ip_address=request.META.get("REMOTE_ADDR", ""),
+            )
+        except Exception:
+            pass
+
+        messages.success(
+            request,
+            f"Portal credentials saved for {agent.name}! "
+            f"Username: {username} | Temporary Password: {temp_password} "
+            f"— Please relay these credentials to the agent via Phone or Messenger.",
+        )
+        return redirect("view_agent", agent_id=agent.id)
+
+    if request.method == "POST" and "toggle_agent_login" in request.POST:
+        if agent.user:
+            agent.user.is_active = not agent.user.is_active
+            agent.user.save()
+            status_str = "activated" if agent.user.is_active else "deactivated"
+            messages.success(request, f"Agent portal account {status_str} for {agent.name}.")
+        return redirect("view_agent", agent_id=agent.id)
 
     if request.method == "POST" and "update_referral" in request.POST:
         cust_id = request.POST.get("cust_id")
@@ -397,6 +483,8 @@ def profile_view(request):
 
 def unified_login_view(request):
     if request.user.is_authenticated:
+        if hasattr(request.user, "agent_profile") and not request.user.is_staff:
+            return redirect("agent_dashboard")
         return redirect("dashboard")
     if request.session.get("customer_id"):
         return redirect("customer_portal:portal_dashboard")
@@ -405,10 +493,13 @@ def unified_login_view(request):
         u = request.POST.get("username")
         p = request.POST.get("password")
 
-        # 1. Try standard Admin/Staff login
+        # 1. Try standard Admin/Staff/Agent login
         user = authenticate(request, username=u, password=p)
         if user is not None:
             login(request, user)
+            if hasattr(user, "agent_profile") and not user.is_staff:
+                next_url = request.POST.get("next") or request.GET.get("next")
+                return redirect(next_url if next_url else "agent_dashboard")
             next_url = request.POST.get("next") or request.GET.get("next")
             return redirect(next_url if next_url else "dashboard")
 

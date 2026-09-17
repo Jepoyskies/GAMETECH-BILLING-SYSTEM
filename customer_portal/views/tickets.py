@@ -1,4 +1,4 @@
-﻿from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.utils import timezone
 import logging
@@ -60,6 +60,8 @@ def submit_ticket(request):
             ticket_number=ticket_no,
             status_option=status_opt,
             customer=customer,
+            sales_agent=customer.agent,
+            is_test_data=customer.is_test_data,
             csr=admin_user,
         )
 
@@ -76,6 +78,8 @@ def submit_ticket(request):
             status_option=mon_status_opt,
             dispatch=dispatch_record,
             customer=customer,
+            sales_agent=customer.agent,
+            is_test_data=customer.is_test_data,
             csr=admin_user,
         )
 
@@ -101,7 +105,8 @@ def submit_ticket(request):
                 alternate_contact=alternate_phone or None,
                 facebook_account=facebook_account or None,
                 account_no=customer.pppoe_username or "",
-                sales_agent=agent_name,
+                sales_agent=customer.agent,
+                is_test_data=customer.is_test_data,
                 plan_package=plan_name,
                 concern=full_concern,
                 chat_type="Customer Portal",

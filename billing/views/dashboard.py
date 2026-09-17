@@ -44,8 +44,8 @@ import calendar
 
 @login_required
 def dashboard_view(request):
-    if hasattr(request.user, "role") and request.user.role == "Agent":
-        return redirect("customer_list")
+    if hasattr(request.user, "agent_profile") and not request.user.is_staff:
+        return redirect("agent_dashboard")
 
     today = timezone.localtime().date()
     now = timezone.localtime()
