@@ -2,13 +2,22 @@
 <div class="cignal-glass-card mb-4">
     <div class="cignal-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
       <div class="d-flex align-items-center gap-2">
-        <h6><i class="fas fa-satellite-dish header-icon-danger"></i> Cignal Subscriptions & Status</h6>
+        <h6 class="mb-0"><i class="fas fa-satellite-dish header-icon-danger"></i> Cignal Subscriptions</h6>
       </div>
-      <div class="d-flex align-items-center gap-2">
-        <button type="button" class="btn btn-sm btn-danger rounded-pill px-3 py-1 shadow-sm text-white fw-bold gt-btn" onclick="openEnrollCignalModal()">
-          <i class="fas fa-user-plus me-1"></i> Add Cignal Customer
+      <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-end" style="max-width: 520px;">
+        <!-- Integrated Search Bar -->
+        <div class="input-group input-group-sm" style="max-width: 250px;">
+          <span class="input-group-text bg-transparent border-secondary border-opacity-25 text-muted" style="background: rgba(255,255,255,0.04) !important;">
+            <i class="fas fa-search" style="font-size:0.75rem;"></i>
+          </span>
+          <input type="text" id="cignalSearchInput" class="form-control border-secondary border-opacity-25 text-light" placeholder="Search subscriber, PPPoE..." style="background: rgba(255,255,255,0.04); font-size:0.8rem;" oninput="filterCignalTable(this.value)">
+        </div>
+        <button type="button" class="btn btn-sm btn-danger rounded-pill px-3 py-1 shadow-sm text-white fw-bold gt-btn text-nowrap" onclick="openEnrollCignalModal()" style="font-size: 0.78rem;">
+          <i class="fas fa-user-plus me-1"></i> Add Customer
         </button>
-        <a href="{% url 'cignal_play_list' %}" class="btn-cignal-glass">View All <i class="fas fa-arrow-right ms-1"></i></a>
+        <a href="{% url 'cignal_play_list' %}" class="btn-cignal-glass text-nowrap" style="font-size: 0.78rem;" title="View All Cignal Accounts">
+          <i class="fas fa-arrow-up-right-from-square"></i>
+        </a>
       </div>
     </div>
 
@@ -16,19 +25,19 @@
     <div class="px-3 pt-3 pb-2 border-bottom border-secondary border-opacity-10 d-flex justify-content-between align-items-center flex-wrap gap-2">
       <div class="cignal-nav-tabs">
         <a href="?tab=active" class="cignal-tab-btn {% if current_tab == 'active' %}active{% endif %}" title="Active Cignal Subscriptions">
-          <i class="fas fa-users text-danger"></i> Active Customers
+          <i class="fas fa-users text-danger"></i> Active
           <span class="cignal-tab-badge {% if current_tab == 'active' %}bg-danger text-white{% else %}bg-secondary bg-opacity-25 text-muted{% endif %}">{{ count_active }}</span>
         </a>
         <a href="?tab=expiring_soon" class="cignal-tab-btn {% if current_tab == 'expiring_soon' %}active{% endif %}" title="Subscriptions Expiring in 5 Days">
-          <i class="fas fa-exclamation-triangle text-warning"></i> Expiring Soon
+          <i class="fas fa-clock text-warning"></i> Expiring Soon
           <span class="cignal-tab-badge {% if current_tab == 'expiring_soon' %}bg-warning text-dark{% else %}bg-secondary bg-opacity-25 text-muted{% endif %}">{{ expiring_cignals|length }}</span>
         </a>
         <a href="?tab=expired" class="cignal-tab-btn {% if current_tab == 'expired' %}active{% endif %}" title="Subscriptions Overdue / Past Due Date">
-          <i class="fas fa-history text-danger"></i> Overdue / Expired
+          <i class="fas fa-triangle-exclamation text-danger"></i> Overdue
           <span class="cignal-tab-badge {% if current_tab == 'expired' %}bg-danger text-white{% else %}bg-secondary bg-opacity-25 text-muted{% endif %}">{{ count_expired }}</span>
         </a>
         <a href="?tab=installment" class="cignal-tab-btn {% if current_tab == 'installment' %}active{% endif %}" title="Hardware Installments Ongoing">
-          <i class="fas fa-boxes-packing text-warning"></i> Installments (₱250/mo)
+          <i class="fas fa-box text-warning"></i> Installments
           <span class="cignal-tab-badge {% if current_tab == 'installment' %}bg-warning text-dark{% else %}bg-secondary bg-opacity-25 text-muted{% endif %}">{{ count_installment }}</span>
         </a>
         <a href="?tab=fully_paid" class="cignal-tab-btn {% if current_tab == 'fully_paid' %}active{% endif %}" title="Fully Paid Hardware">
@@ -36,7 +45,7 @@
           <span class="cignal-tab-badge {% if current_tab == 'fully_paid' %}bg-success text-white{% else %}bg-secondary bg-opacity-25 text-muted{% endif %}">{{ count_fully_paid }}</span>
         </a>
         <a href="?tab=deleted" class="cignal-tab-btn tab-deleted {% if current_tab == 'deleted' %}active{% endif %}" title="Soft-deleted or Cancelled Subscriptions">
-          <i class="fas fa-archive text-danger"></i> Cancelled Bar
+          <i class="fas fa-archive text-danger"></i> Cancelled
           <span class="cignal-tab-badge {% if current_tab == 'deleted' %}bg-danger text-white{% else %}bg-secondary bg-opacity-25 text-muted{% endif %}">{{ count_deleted }}</span>
         </a>
       </div>
