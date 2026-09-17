@@ -498,17 +498,17 @@ def cancel_cignal_subscription(request, sub_id):
         admin_user=request.user,
         customer=customer,
         action_type="Cignal Cancellation",
-        remarks=f"Cancelled Cignal subscription '{sub_label}' (ID #{subscription.id}) | Play: {subscription.cignal_play_no or 'N/A'} | Box: {subscription.cignal_box_no or 'N/A'} | by {request.user.username}. Moved to Cancelled Bar.",
+        remarks=f"Marked Cignal subscription '{sub_label}' (ID #{subscription.id}) | Play: {subscription.cignal_play_no or 'N/A'} | Box: {subscription.cignal_box_no or 'N/A'} | by {request.user.username} as Pulled-Out / Removed.",
     )
 
     Notification.objects.create(
-        title="Cignal Subscription Cancelled",
-        message=f"{customer.full_name}'s Cignal subscription '{sub_label}' was moved to the Cancelled Bar by {request.user.username}.",
+        title="Cignal Subscription Pulled-Out / Removed",
+        message=f"{customer.full_name}'s Cignal subscription '{sub_label}' was marked as Pulled-Out / Removed by {request.user.username}.",
         notification_type="cignal",
         link="/cignal-dashboard/?tab=deleted",
     )
 
-    messages.success(request, f"Cignal subscription '{sub_label}' for {customer.full_name} moved to Cancelled / Deleted Bar.")
+    messages.success(request, f"Cignal subscription '{sub_label}' for {customer.full_name} marked as Pulled-Out / Removed.")
     return redirect("/cignal-dashboard/?tab=deleted")
 
 
@@ -585,9 +585,9 @@ def purge_all_cancelled_cignal_subscriptions(request):
         admin_user=request.user,
         customer=None,
         action_type="Cignal Archive Cleared",
-        remarks=f"Admin {request.user.username} cleared all {count} cancelled subscriptions from archive bar.",
+        remarks=f"Admin {request.user.username} cleared all {count} pulled-out / removed subscriptions.",
     )
-    messages.success(request, f"Successfully purged {count} item(s) from the cancelled bar.")
+    messages.success(request, f"Successfully purged {count} item(s) from Pulled-Out / Removed archive.")
     return redirect("/cignal-dashboard/?tab=deleted")
 
 

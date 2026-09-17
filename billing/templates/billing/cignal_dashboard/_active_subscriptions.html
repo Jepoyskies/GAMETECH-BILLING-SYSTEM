@@ -44,18 +44,18 @@
           <i class="fas fa-check-circle text-success"></i> Fully Paid
           <span class="cignal-tab-badge {% if current_tab == 'fully_paid' %}bg-success text-white{% else %}bg-secondary bg-opacity-25 text-muted{% endif %}">{{ count_fully_paid }}</span>
         </a>
-        <a href="?tab=deleted" class="cignal-tab-btn tab-deleted {% if current_tab == 'deleted' %}active{% endif %}" title="Soft-deleted or Cancelled Subscriptions">
-          <i class="fas fa-archive text-danger"></i> Cancelled
+        <a href="?tab=deleted" class="cignal-tab-btn tab-deleted {% if current_tab == 'deleted' %}active{% endif %}" title="Pulled-Out or Removed Subscriptions">
+          <i class="fas fa-archive text-danger"></i> Pulled-Out / Removed
           <span class="cignal-tab-badge {% if current_tab == 'deleted' %}bg-danger text-white{% else %}bg-secondary bg-opacity-25 text-muted{% endif %}">{{ count_deleted }}</span>
         </a>
       </div>
 
       {% if current_tab == 'deleted' and count_deleted > 0 %}
         {% if user.is_staff or user.is_superuser %}
-        <form method="POST" action="{% url 'purge_all_cancelled_cignal_subscriptions' %}" onsubmit="return confirm('ADMIN ACTION: Permanently purge all {{ count_deleted }} cancelled subscriptions from the archive? This CANNOT be undone.');">
+        <form method="POST" action="{% url 'purge_all_cancelled_cignal_subscriptions' %}" onsubmit="return confirm('ADMIN ACTION: Permanently purge all {{ count_deleted }} pulled-out / removed subscriptions? This CANNOT be undone.');">
           {% csrf_token %}
           <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1 fw-bold gt-btn shadow-sm" style="font-size:0.75rem;">
-            <i class="fas fa-trash-can me-1"></i> Clear Archive Bar (Admin Only)
+            <i class="fas fa-trash-can me-1"></i> Clear Pulled-Out / Removed (Admin Only)
           </button>
         </form>
         {% else %}
@@ -69,14 +69,14 @@
     <!-- Table Container -->
     <div class="table-responsive">
       {% if current_tab == 'deleted' %}
-      <!-- ── DELETED / CANCELLED BAR TABLE ── -->
+      <!-- ── PULLED-OUT / REMOVED TABLE ── -->
       <table class="cignal-table table table-hover align-middle mb-0">
         <thead>
           <tr>
             <th>Customer</th>
-            <th>Cancelled Subscription</th>
-            <th>Cancelled When</th>
-            <th>Cancelled By</th>
+            <th>Subscription Details</th>
+            <th>Removed When</th>
+            <th>Removed By</th>
             <th class="text-end">Archive Actions</th>
           </tr>
         </thead>
@@ -142,8 +142,8 @@
             <td colspan="5">
               <div class="cignal-empty-state py-4">
                 <div class="cignal-empty-icon"><i class="fas fa-folder-open text-muted"></i></div>
-                <div class="cignal-empty-title">Cancelled Bar is Empty</div>
-                <div class="cignal-empty-sub">No cancelled subscriptions in archive. Pull-outs and removed subscriptions are kept here safely for admin review.</div>
+                <div class="cignal-empty-title">No Pulled-Out / Removed Records</div>
+                <div class="cignal-empty-sub">No pulled-out or removed subscriptions found. Discontinued hardware and removed accounts are kept here safely for admin review.</div>
               </div>
             </td>
           </tr>
@@ -461,9 +461,9 @@
                   <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2 py-0 gt-btn" style="font-size: 0.7rem;" title="Reload Load" onclick="openCignalPaymentModal({customerId: '{{ customer.id }}', customerName: '{{ customer.full_name|escapejs }}', pppoe: '{{ customer.pppoe_username|escapejs }}', subscriptionId: '{{ plan.id }}', expirationDate: '{% if plan.expiration_date %}{{ plan.expiration_date|date:'Y-m-d\TH:i' }}{% elif plan.end_date %}{{ plan.end_date|date:'Y-m-d\TH:i' }}{% endif %}', subscriptions: [{id: '{{ plan.id }}', cignal_play_no: '{{ plan.cignal_play_no|escapejs }}', cignal_box_no: '{{ plan.cignal_box_no|escapejs }}', account_name: '{{ plan.account_name|escapejs }}', expiration_date: '{% if plan.expiration_date %}{{ plan.expiration_date|date:'Y-m-d\TH:i' }}{% elif plan.end_date %}{{ plan.end_date|date:'Y-m-d\TH:i' }}{% endif %}', hardware_payment_type: '{{ plan.hardware_payment_type|default:'none' }}', installments_paid: '{{ plan.installments_paid|default:0 }}', monthly_load_plan: '{{ plan.monthly_load_plan|default:'149' }}'}]})">
                     <i class="fas fa-coins"></i>
                   </button>
-                  <form method="POST" action="{% url 'cancel_cignal_subscription' plan.id %}" style="display:inline;" onsubmit="return confirm('Cancel & move Cignal subscription \'{{ plan.account_name|escapejs }}\' for {{ customer.full_name|escapejs }} to the Cancelled Bar? You can restore it later.');">
+                  <form method="POST" action="{% url 'cancel_cignal_subscription' plan.id %}" style="display:inline;" onsubmit="return confirm('Mark Cignal subscription \'{{ plan.account_name|escapejs }}\' for {{ customer.full_name|escapejs }} as Pulled-Out / Removed? You can restore it later.');">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2 py-0 gt-btn" style="font-size: 0.7rem;" title="Cancel & Move to Archive Bar">
+                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2 py-0 gt-btn" style="font-size: 0.7rem;" title="Mark as Pulled-Out / Removed">
                       <i class="fas fa-times"></i>
                     </button>
                   </form>

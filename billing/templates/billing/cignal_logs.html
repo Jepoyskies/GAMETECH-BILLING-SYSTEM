@@ -9,13 +9,18 @@
 <div class="container-fluid py-4 px-3 px-md-4">
 
   <!-- Page Hero Banner -->
-  <div class="cignal-hero-banner d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in">
+  <div class="gt-cl-card cignal-hero-banner p-4 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in" style="border-left: 4px solid #ef4444 !important;">
     <div class="d-flex align-items-center gap-3">
       <div class="cignal-hero-icon"><i class="fas fa-history"></i></div>
       <div>
-        <div class="cignal-hero-title">Cignal Activity Logs</div>
-        <div class="cignal-hero-sub">Monitor recent renewals, logs, and system alerts</div>
+        <div class="cignal-hero-title text-light fw-bold">Cignal Activity Logs</div>
+        <div class="cignal-hero-sub text-muted">Monitor recent renewals, logs, and system alerts</div>
       </div>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <a href="{% url 'cignal_dashboard' %}" class="btn btn-sm btn-outline-light rounded-pill px-3 py-1.5 shadow-sm fw-bold gt-btn" style="font-size:0.8rem; background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.15);">
+        <i class="fas fa-arrow-left me-1"></i> Dashboard
+      </a>
     </div>
   </div>
 
@@ -31,20 +36,110 @@
   <div class="tab-content animate-fade-in animate-delay-1">
       <!-- Logs Tab Pane -->
       <div class="tab-pane fade show active" id="logs-pane" role="tabpanel" aria-labelledby="logs-tab">
-          <div class="row">
-              <div class="col-12">
-                  {% include "billing/cignal_dashboard/_recent_logs.html" %}
-              </div>
+        <div class="gt-cl-card cignal-glass-card mb-4">
+          <div class="cignal-card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 text-light fw-bold"><i class="fas fa-receipt text-danger me-1"></i> Recent Logs & Renewals</h6>
+            <small class="text-muted" style="font-size:0.75rem;">Showing {{ cignal_payments|length }} latest records</small>
           </div>
+          <div class="table-responsive">
+            <table class="cignal-table table table-hover align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Customer</th>
+                  <th>Plan / Log</th>
+                  <th>Amount</th>
+                  <th>Hardware</th>
+                  <th>Due Date</th>
+                  <th>Adjusted By</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for log in cignal_payments %}
+                <tr>
+                  <td><small class="text-muted">{{ log.created_at|date:"M d, Y" }}</small></td>
+                  <td>
+                    <a href="{% url 'user_cignal_logs' log.customer.id %}" class="fw-bold text-decoration-none text-info" title="View customer logs">
+                      {{ log.customer.full_name|default:log.customer.pppoe_username }}
+                    </a>
+                  </td>
+                  <td><span class="cignal-badge-neutral">{{ log.plan_name }}</span></td>
+                  <td>
+                    {% if log.amount_paid %}
+                      <span class="text-success fw-bold">₱{{ log.amount_paid }}</span>
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if log.hardware_payment_type == 'cashout' %}
+                      <span class="badge bg-success bg-opacity-25 text-success rounded-pill px-2">Cashout</span>
+                    {% elif log.hardware_payment_type == 'installment' %}
+                      <span class="badge bg-warning bg-opacity-25 text-warning rounded-pill px-2">{{ log.installments_paid }}/12 Mo</span>
+                    {% else %}
+                      <span class="badge bg-secondary bg-opacity-25 text-muted rounded-pill px-2">No Box</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if log.expiration_date or log.end_date %}
+                      <small class="text-light">{{ log.expiration_date|default:log.end_date|date:"M d, Y" }}</small>
+                    {% else %}
+                      <small class="text-muted">N/A</small>
+                    {% endif %}
+                  </td>
+                  <td><small class="text-muted">{{ log.adjusted_by|default:"-" }}</small></td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="7">
+                    <div class="cignal-empty-state py-5 text-center">
+                      <div class="cignal-empty-icon mb-2"><i class="fas fa-history text-muted" style="font-size: 2rem;"></i></div>
+                      <div class="cignal-empty-title" style="font-size: 1.05rem;">No Recent Cignal Logs</div>
+                      <div class="cignal-empty-sub" style="font-size: 0.82rem;">Monthly renewal logs and add-on payments will appear here.</div>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
       
       <!-- Messages Tab Pane -->
       <div class="tab-pane fade" id="messages-pane" role="tabpanel" aria-labelledby="messages-tab">
-          <div class="row">
-              <div class="col-12">
-                  {% include "billing/cignal_dashboard/_recent_messages.html" %}
-              </div>
+        <div class="gt-cl-card cignal-glass-card mb-4">
+          <div class="cignal-card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 text-light fw-bold"><i class="fas fa-bell text-danger me-1"></i> Messages & Alerts</h6>
+            <small class="text-muted" style="font-size:0.75rem;">{{ notifications|length }} alerts</small>
           </div>
+          <div class="list-group list-group-flush">
+            {% for notif in notifications %}
+            <div class="cignal-notif-item p-3">
+              <div class="d-flex w-100 justify-content-between align-items-center mb-1">
+                <h6 class="mb-0 fw-bold" style="font-size:0.86rem; color:#38bdf8;">
+                  <i class="fas fa-info-circle me-1"></i> {{ notif.title }}
+                </h6>
+                <span class="cignal-notif-id">#{{ notif.id }}</span>
+              </div>
+              <p class="mb-1 text-muted small" style="white-space: pre-wrap; font-size:0.8rem; line-height: 1.4;">{{ notif.message }}</p>
+              {% if notif.link %}
+              <div class="text-end">
+                <a href="{{ notif.link }}" class="btn-cignal-details gt-btn" style="padding: 2px 10px; font-size: 0.75rem;">
+                  <i class="fas fa-external-link-alt me-1"></i> View Details
+                </a>
+              </div>
+              {% endif %}
+            </div>
+            {% empty %}
+            <div class="cignal-empty-state py-5 text-center">
+              <div class="cignal-empty-icon mb-2"><i class="fas fa-bell-slash text-muted" style="font-size: 2rem;"></i></div>
+              <div class="cignal-empty-title" style="font-size: 1.05rem;">No Cignal Notifications</div>
+              <div class="cignal-empty-sub" style="font-size: 0.82rem;">All clear! Operational notices will stream here.</div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
       </div>
   </div>
 
