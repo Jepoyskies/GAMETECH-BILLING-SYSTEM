@@ -13,7 +13,11 @@ def role_required(allowed_roles):
     def check_role(user):
         if not user.is_authenticated:
             return False
-        user_role = getattr(user, "role", "Viewer")
+        if user.is_superuser:
+            return True  # Superusers pass all role checks
+        from billing.models import SystemAdmin
+        admin = SystemAdmin.objects.filter(username=user.username).first()
+        user_role = admin.role if admin else "Viewer"
         return user_role in allowed_roles
 
     def decorator(view_func):

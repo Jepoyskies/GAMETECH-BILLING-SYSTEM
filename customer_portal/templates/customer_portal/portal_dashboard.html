@@ -341,14 +341,7 @@ class="{% if is_network_issue %}text-red-600{% elif effective_status == 'Moderat
                             <span class="text-[10px] font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded-md" id="pingDisplay">Ping: -- ms</span>
                         </div>
 
-                        <!-- CSR Message Alert -->
-                        <div class="{% if is_network_issue %}bg-red-50 border border-red-100{% else %}bg-blue-50 border border-blue-100{% endif %} rounded-xl p-3 mb-3 flex items-start gap-3">
-                            <i class="fa-solid fa-circle-info {% if is_network_issue %}text-red-500{% else %}text-[#fbae1a]{% endif %} mt-0.5 shrink-0"></i>
-                            <p class="text-xs text-gray-600 leading-relaxed font-medium m-0">
-                                <strong class="{% if is_network_issue %}text-red-600{% else %}text-[#0349cb]{% endif %} block mb-0.5">CSR Message:</strong>
-                                {{ effective_reason }}
-                            </p>
-                        </div>
+
 
                         <!-- Speed Rings -->
                         <div class="flex justify-around items-center pt-2 border-t border-gray-50">
@@ -382,30 +375,56 @@ class="{% if is_network_issue %}text-red-600{% elif effective_status == 'Moderat
                             </div>
 
                         </div>
+
+                        <!-- Speedtest CTA -->
+                        <div class="flex justify-center pt-2 pb-1">
+                            <a href="https://www.speedtest.net" target="_blank" rel="noopener noreferrer"
+                                class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-gray-400 hover:text-[#0349cb] transition-colors duration-200 group">
+                                <i class="fa-solid fa-gauge-high text-[10px]"></i>
+                                Run Speed Test via Ookla
+                                <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+                            </a>
+                        </div>
                     </div>
                 </div>
 
                 <script>
                 document.addEventListener('DOMContentLoaded', function() {
-                    const simulatePing = () => Math.floor(Math.random() * (25 - 15 + 1) + 15);
                     const pingDisplay = document.getElementById('pingDisplay');
-                    if (pingDisplay) pingDisplay.textContent = `Ping: ${simulatePing()}ms`;
+
+                    // Live ping fetch from router uplink API
+                    function fetchLivePing() {
+                        fetch('{% url "customer_portal:portal_router_uplink_api" %}')
+                            .then(r => r.json())
+                            .then(data => {
+                                if (pingDisplay) {
+                                    if (data.status === 'success' && data.uplink_ping && data.uplink_ping !== 'Timeout') {
+                                        pingDisplay.textContent = `Ping: ${data.uplink_ping}`;
+                                        pingDisplay.classList.remove('text-red-500');
+                                    } else if (data.uplink_ping === 'Timeout') {
+                                        pingDisplay.textContent = 'Ping: Timeout';
+                                        pingDisplay.classList.add('text-red-500');
+                                    }
+                                }
+                            })
+                            .catch(() => {
+                                if (pingDisplay) pingDisplay.textContent = 'Ping: --';
+                            });
+                    }
+
+                    fetchLivePing(); // Run on load
+                    setInterval(fetchLivePing, 30000); // Refresh every 30s
 
                     function animateValue(obj, ringObj, start, end, duration, color) {
                         let startTimestamp = null;
                         const step = (timestamp) => {
                             if (!startTimestamp) startTimestamp = timestamp;
                             const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                            // Easing easeOutQuart
                             const ease = 1 - Math.pow(1 - progress, 4);
                             const currentVal = (progress * (end - start) + start).toFixed(1);
-                            
                             obj.innerHTML = currentVal;
-                            // Calculate percentage (assuming 100Mbps is full circle, scale appropriately)
-                            // Let's make the ring fill up to 85% for the exact target value to look like the static design
-                            const ringPercentage = (ease * 85).toFixed(0); 
+                            const ringPercentage = (ease * 85).toFixed(0);
                             ringObj.style.background = `conic-gradient(${color} ${ringPercentage}%, #f3f4f6 0)`;
-                            
                             if (progress < 1) {
                                 window.requestAnimationFrame(step);
                             } else {
@@ -420,19 +439,15 @@ class="{% if is_network_issue %}text-red-600{% elif effective_status == 'Moderat
                         const ulSpeedEl = document.getElementById('ulSpeed');
                         const dlRing = document.getElementById('dlRing');
                         const ulRing = document.getElementById('ulRing');
-
                         if(dlSpeedEl && ulSpeedEl) {
                             let dlTarget = parseFloat(dlSpeedEl.getAttribute('data-target')) || 0;
                             let ulTarget = parseFloat(ulSpeedEl.getAttribute('data-target')) || 0;
-                            
-                            // Randomize actual speed slightly under max plan to look like real speedtest
                             if(dlTarget > 0) dlTarget = (dlTarget * (0.95 + Math.random() * 0.05)).toFixed(1);
                             if(ulTarget > 0) ulTarget = (ulTarget * (0.95 + Math.random() * 0.05)).toFixed(1);
-                            
                             animateValue(dlSpeedEl, dlRing, 0, dlTarget, 2000, '#0349cb');
                             animateValue(ulSpeedEl, ulRing, 0, ulTarget, 2000, '#fbae1a');
                         }
-                    }, 500); // 500ms delay before animation starts
+                    }, 500);
                 });
                 </script>
 
@@ -464,9 +479,9 @@ class="{% if is_network_issue %}text-red-600{% elif effective_status == 'Moderat
 
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Available Add-ons</p>
                         <div class="flex gap-2">
-                            <a href="https://m.me/gametechunlifiber" target="_blank" style="text-decoration: none;" class="flex-1 bg-[#0349cb] hover:bg-blue-800 transition text-white py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm">
+                            <button onclick="applyForAddon('Cignal Play')" style="text-decoration: none; border: none; cursor: pointer;" class="flex-1 bg-[#0349cb] hover:bg-blue-800 transition text-white py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm">
                                 <i class="fa-solid fa-play"></i> Apply Cignal Play
-                            </a>
+                            </button>
                         </div>
                     </div>
                 </div>
