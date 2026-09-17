@@ -117,6 +117,8 @@ urlpatterns = [
         views.manage_monitored_services_view,
         name="manage_monitored_services",
     ),
+    # Network Ops Speedtest route
+    path("network/speedtest/", views.speedtest_view, name="speedtest_view"),
     # Dashboard API routes
     path("api/top-clients/", views.api_top_clients, name="api_top_clients"),
     path("api/popular-plans/", views.api_popular_plans, name="api_popular_plans"),
@@ -213,6 +215,12 @@ urlpatterns = [
     path("cignal-play/", views.cignal_play_list_view, name="cignal_play_list"),
     path("cignal-play/apply/", views.apply_cignal_addon, name="apply_cignal_addon"),
     path("cignal-play/payment/", views.process_cignal_payment, name="process_cignal_payment"),
+    path("cignal-play/edit/<int:sub_id>/", views.edit_cignal_subscription, name="edit_cignal_subscription"),
+    path("cignal-play/edit/", views.edit_cignal_subscription, name="edit_cignal_subscription_fallback"),
+    path("cignal-play/cancel/<int:sub_id>/", views.cancel_cignal_subscription, name="cancel_cignal_subscription"),
+    path("cignal-play/restore/<int:sub_id>/", views.restore_cignal_subscription, name="restore_cignal_subscription"),
+    path("cignal-play/purge/<int:sub_id>/", views.purge_cignal_subscription, name="purge_cignal_subscription"),
+    path("cignal-play/purge-all/", views.purge_all_cancelled_cignal_subscriptions, name="purge_all_cancelled_cignal_subscriptions"),
     path("add-ons/", views.add_on_payments_view, name="add_on_payments"),
     path(
         "cignal-play/approve/<int:request_id>/",

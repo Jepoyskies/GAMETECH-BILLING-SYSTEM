@@ -286,14 +286,14 @@ def import_legacy_data_view(request):
 
 
 @login_required
-@role_required(["Admin"])
+@role_required(["Admin", "Staff"])
 def message_templates_view(request):
     templates = MessageTemplate.objects.all().order_by("id")
     return render(request, "billing/message_templates.html", {"templates": templates})
 
 
 @login_required
-@role_required(["Admin"])
+@role_required(["Admin", "Staff"])
 @require_POST
 def update_message_template(request, template_id):
     template = get_object_or_404(MessageTemplate, id=template_id)

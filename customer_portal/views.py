@@ -7,6 +7,9 @@ from decimal import Decimal
 from datetime import timedelta
 from django.utils import timezone
 from django.db import transaction
+import logging
+
+logger = logging.getLogger(__name__)
 
 def portal_login(request):
     # If already logged in, redirect to dashboard
@@ -103,6 +106,11 @@ def portal_dashboard(request):
     # Customer Cignal Subscriptions (Multi-TV)
     cignal_plans = customer.cignal_plans.all().order_by('-created_at')
 
+    # Tickets & Repair Status
+    customer_tickets = customer.job_tickets.all().order_by('-created_at')
+    open_tickets_count = customer_tickets.filter(status__in=['PENDING', 'ASSIGNED', 'IN_PROGRESS']).count()
+    recent_ticket = customer_tickets.first()
+
     context = {
         'customer': customer,
         'plan': plan,
@@ -116,6 +124,9 @@ def portal_dashboard(request):
         'plans': plans,
         'cignal_plans': cignal_plans,
         'issue_services': issue_services,
+        'open_tickets_count': open_tickets_count,
+        'recent_ticket': recent_ticket,
+        'total_tickets_count': customer_tickets.count(),
     }
     return render(request, 'customer_portal/portal_dashboard.html', context)
 
@@ -298,6 +309,16 @@ def portal_process_mock_payment(request):
                 customer = Customer.objects.get(id=customer_id)
                 monthly_price = float(customer.plan.price) if customer.plan else 0.0
                 
+                # Check staggered payment eligibility
+                if not customer.can_pay_staggered:
+                    if monthly_price > 0 and amount_float < monthly_price:
+                        messages.error(
+                            request,
+                            customer.staggered_restriction_reason
+                            or f"Minimum payment allowed is 1 Month (₱{monthly_price:.2f}). Staggered payments are not yet available for this account."
+                        )
+                        return redirect('customer_portal:portal_dashboard')
+
                 with transaction.atomic():
                     # Lock for update
                     locked_customer = Customer.objects.select_for_update().get(pk=customer.pk)
@@ -334,14 +355,31 @@ def portal_process_mock_payment(request):
                     else:
                         current_exp = timezone.now()
                         
-                    # Calculate new expiration using amount available for subscription time
+                    # --- Advance Payment / Wallet Logic ---
                     amount_for_time = max(0.0, amount_float - upgrade_fee)
-                    new_expiry = calculate_new_expiration_date(current_exp, amount_for_time, monthly_price)
+
+                    # 1. Deduct any outstanding debt (> 0) first
+                    if locked_customer.outstanding_balance > 0:
+                        debt_paid = min(Decimal(str(amount_for_time)), locked_customer.outstanding_balance)
+                        locked_customer.outstanding_balance -= debt_paid
+                        amount_for_time = max(0.0, amount_for_time - float(debt_paid))
+
+                    # 2. Allocate payment: 1 month is consumed to activate/renew current cycle.
+                    # Any excess amount beyond 1 month goes into the Advance Payment wallet (credit).
+                    if monthly_price > 0 and amount_for_time > monthly_price:
+                        used_for_time = monthly_price
+                        advance_excess = amount_for_time - monthly_price
+                        locked_customer.outstanding_balance -= Decimal(str(advance_excess))
+                    else:
+                        used_for_time = amount_for_time
+
+                    # 3. Calculate new expiration using ONLY what is consumed for current cycle
+                    new_expiry = calculate_new_expiration_date(current_exp, used_for_time, monthly_price)
                     
-                    # Update DB
+                    # 4. Update Customer Expiry
                     locked_customer.expires_at = new_expiry
-                    locked_customer.outstanding_balance -= Decimal(str(amount_for_time))
                     
+                    # 5. Update Status if suspended
                     if was_suspended:
                         locked_customer.status = 'active'
                         
@@ -485,8 +523,10 @@ def submit_ticket(request):
     if request.method == 'POST':
         issue_type = request.POST.get('issue_type') or 'General Concern'
         description = request.POST.get('description') or ''
+        alternate_phone = request.POST.get('alternate_phone', '').strip()
+        facebook_account = request.POST.get('facebook_account', '').strip()
         
-        from dispatch.models import DispatchRecord, MonitoringRecord, ConfigOption
+        from dispatch.models import DispatchRecord, MonitoringRecord, ConfigOption, JobTicket
         from django.contrib.auth.models import User
 
         admin_user = User.objects.filter(is_superuser=True).first() or User.objects.first()
@@ -502,12 +542,25 @@ def submit_ticket(request):
         
         ticket_no = f"TKT-{timezone.now().strftime('%y%m%d%H%M%S')}"
 
+        extra_contacts = []
+        if alternate_phone:
+            extra_contacts.append(f"Alt Phone: {alternate_phone}")
+        if facebook_account:
+            extra_contacts.append(f"FB: {facebook_account}")
+        extra_contact_str = " | ".join(extra_contacts)
+
+        full_concern = f"[{issue_type}] {description}"
+        if extra_contact_str:
+            full_concern += f" [On-Site Contact: {extra_contact_str}]"
+
         dispatch_record = DispatchRecord.objects.create(
             date=timezone.now().date(),
             client_name=customer.full_name,
             address=customer.address or "Not provided",
             contact_number=customer.phone or "Not provided",
-            concern=f"[{issue_type}] {description}",
+            alternate_contact=alternate_phone or None,
+            facebook_account=facebook_account or None,
+            concern=full_concern,
             source_tab='CLIENT_CONCERNS',
             ticket_number=ticket_no,
             status_option=status_opt,
@@ -521,19 +574,59 @@ def submit_ticket(request):
             client_name=customer.full_name,
             address=customer.address or "Not provided",
             contact_number=customer.phone or "Not provided",
-            concern=f"[{issue_type}] {description}",
+            alternate_contact=alternate_phone or None,
+            facebook_account=facebook_account or None,
+            concern=full_concern,
             ticket_number=ticket_no,
             status_option=mon_status_opt,
             dispatch=dispatch_record,
             customer=customer,
             csr=admin_user,
         )
+
+        # Synchronize JobTicket for immediate visibility in Dispatch Cockpit (/dispatch/)
+        try:
+            barangay_name = customer.barangay.name if customer.barangay else ''
+            agent_name = customer.agent.name if customer.agent else ''
+            plan_name = customer.plan.name if customer.plan else ''
+            lat = float(customer.latitude) if customer.latitude else None
+            lng = float(customer.longitude) if customer.longitude else None
+
+            JobTicket.objects.create(
+                ticket_number=ticket_no,
+                ticket_type='REPAIR',
+                status='PENDING',
+                priority='NORMAL',
+                source_tab='CLIENT_CONCERNS',
+                customer=customer,
+                mikrotik_device=customer.mikrotik_device,
+                client_name=customer.full_name,
+                address=customer.address or '',
+                barangay=barangay_name,
+                contact_number=customer.phone or '',
+                alternate_contact=alternate_phone or None,
+                facebook_account=facebook_account or None,
+                account_no=customer.pppoe_username or '',
+                sales_agent=agent_name,
+                plan_package=plan_name,
+                concern=full_concern,
+                chat_type='Customer Portal',
+                special_instruction=f"On-Site Contact: {extra_contact_str}" if extra_contact_str else '',
+                latitude=lat,
+                longitude=lng,
+                created_by=admin_user,
+            )
+        except Exception as e:
+            logger.error(f"Error creating JobTicket from portal submit_ticket: {e}")
         
         # Create system notification for admins & staff
         try:
+            notif_msg = f"[{ticket_no}] {description or issue_type}"
+            if extra_contact_str:
+                notif_msg += f" ({extra_contact_str})"
             Notification.objects.create(
                 title=f"New Ticket: {customer.full_name} ({issue_type})",
-                message=f"[{ticket_no}] {description or issue_type}",
+                message=notif_msg,
                 notification_type='network',
                 link='/dispatch/client-concerns/',
             )
@@ -543,4 +636,132 @@ def submit_ticket(request):
         messages.success(request, f"Your ticket ({ticket_no}) has been submitted. Our technical dispatch team will review it shortly.")
         return redirect('customer_portal:portal_dashboard')
         
-    return render(request, 'customer_portal/submit_ticket.html', {'customer': customer})
+    recent_tickets = customer.job_tickets.prefetch_related('technicians').order_by('-created_at')[:5]
+    return render(request, 'customer_portal/submit_ticket.html', {
+        'customer': customer,
+        'recent_tickets': recent_tickets,
+    })
+
+
+def portal_speedtest(request):
+    """
+    Renders the Speedtest page in the Customer Portal for subscribers to test their internet speed.
+    """
+    customer_id = request.session.get('customer_id')
+    if not customer_id:
+        return redirect('customer_portal:portal_login')
+        
+    try:
+        customer = Customer.objects.select_related('plan').get(id=customer_id)
+    except Customer.DoesNotExist:
+        request.session.flush()
+        return redirect('customer_portal:portal_login')
+
+    client_ip = request.META.get('HTTP_X_FORWARDED_FOR')
+    if client_ip:
+        client_ip = client_ip.split(',')[0].strip()
+    else:
+        client_ip = request.META.get('REMOTE_ADDR', '')
+
+    context = {
+        'customer': customer,
+        'client_ip': client_ip,
+        'page_title': 'Internet Speed Test',
+    }
+    return render(request, 'customer_portal/speedtest.html', context)
+
+
+def portal_ticket_history(request):
+    """
+    Renders the Ticket & Repair History page for the logged-in portal customer.
+    Shows active, in-progress, and past service tickets, technician dispatches, and resolution notes.
+    """
+    customer_id = request.session.get('customer_id')
+    if not customer_id:
+        return redirect('customer_portal:portal_login')
+        
+    try:
+        customer = Customer.objects.select_related('plan').get(id=customer_id)
+    except Customer.DoesNotExist:
+        request.session.flush()
+        return redirect('customer_portal:portal_login')
+
+    raw_tickets = customer.job_tickets.prefetch_related('technicians', 'team').order_by('-created_at')
+    raw_dispatches = customer.dispatches.prefetch_related('teams').order_by('-date')
+
+    ticket_history = []
+    seen_ticket_nums = set()
+
+    for t in raw_tickets:
+        t_num = t.ticket_number or f"TICK-{t.id}"
+        seen_ticket_nums.add(t_num)
+        tech_list = [tech.name for tech in t.technicians.all()]
+        ticket_history.append({
+            "id": t.id,
+            "ticket_number": t_num,
+            "ticket_type": t.ticket_type,
+            "type_display": t.get_ticket_type_display(),
+            "status": t.status,
+            "status_display": t.get_status_display(),
+            "created_at": t.created_at,
+            "concern": t.concern or '',
+            "alternate_contact": t.alternate_contact or '',
+            "facebook_account": t.facebook_account or '',
+            "technicians": tech_list,
+            "team_name": t.team.name if t.team else '',
+            "actions_taken": t.actions_taken or '',
+            "technician_remarks": t.technician_remarks or '',
+            "nap_reading": t.nap_reading or '',
+            "house_reading": t.house_reading or '',
+            "signal_level": t.signal_level or '',
+            "ont_modem_sn": t.ont_modem_sn or '',
+            "duration": t.duration,
+            "done_at": t.done_at,
+        })
+
+    for d in raw_dispatches:
+        d_num = d.ticket_number or f"DISP-{d.id}"
+        if d_num in seen_ticket_nums:
+            continue
+        tech_list = [tech.name for tech in d.teams.all()]
+        is_repair = (d.source_tab == 'CLIENT_CONCERNS')
+        created_dt = timezone.datetime.combine(d.date, timezone.datetime.min.time(), tzinfo=timezone.get_current_timezone()) if d.date else d.created_at
+        ticket_history.append({
+            "id": d.id,
+            "ticket_number": d_num,
+            "ticket_type": 'REPAIR' if is_repair else 'INSTALLATION',
+            "type_display": 'Repair / Client Concern' if is_repair else 'Installation',
+            "status": 'COMPLETED' if d.done_at else 'PENDING',
+            "status_display": 'Completed' if d.done_at else 'Pending',
+            "created_at": created_dt,
+            "concern": d.concern or '',
+            "alternate_contact": d.alternate_contact or '',
+            "facebook_account": d.facebook_account or '',
+            "technicians": tech_list,
+            "team_name": '',
+            "actions_taken": d.actions_taken or '',
+            "technician_remarks": d.remarks or '',
+            "nap_reading": '',
+            "house_reading": '',
+            "signal_level": '',
+            "ont_modem_sn": '',
+            "duration": d.duration,
+            "done_at": d.done_at,
+        })
+
+    ticket_history.sort(key=lambda x: x["created_at"] or timezone.now(), reverse=True)
+
+    open_count = sum(1 for t in ticket_history if t['status'] in ['PENDING', 'ASSIGNED', 'IN_PROGRESS'])
+    completed_count = sum(1 for t in ticket_history if t['status'] == 'COMPLETED')
+
+    context = {
+        'customer': customer,
+        'ticket_history': ticket_history,
+        'open_count': open_count,
+        'completed_count': completed_count,
+        'total_count': len(ticket_history),
+        'page_title': 'My Support & Repair Tickets',
+    }
+    return render(request, 'customer_portal/ticket_history.html', context)
+
+

@@ -1,0 +1,53 @@
+<!-- Pending Applications Card -->
+<div class="cignal-glass-card mb-4">
+    <div class="cignal-card-header d-flex justify-content-between align-items-center">
+      <h6><i class="fas fa-hourglass-half header-icon-danger"></i> Pending Applications</h6>
+      <span class="badge bg-danger rounded-pill" style="font-size: 0.72rem; padding: 4px 10px;">{{ applications|length }} Pending</span>
+    </div>
+    <div class="table-responsive overflow-x-hidden">
+      <table class="cignal-table table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Requested</th>
+            <th>Customer</th>
+            <th>Status</th>
+            <th class="text-end">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for app in applications %}
+          <tr id="app-row-{{ app.customer.id }}" class="{% if request.GET.highlight_customer == app.customer.id|stringformat:'s' %}table-warning fw-bold{% endif %}">
+            <td><small class="text-muted">{{ app.requested_at|date:"M d, Y" }}</small></td>
+            <td>
+              <a href="{% url 'view_customer' app.customer.id %}" class="fw-bold text-decoration-none text-info">
+                {{ app.customer.full_name|default:app.customer.pppoe_username }}
+              </a>
+              <div class="small"><span class="cignal-badge-addon"><i class="fas fa-tv me-1"></i>{{ app.addon_type }}</span></div>
+            </td>
+            <td><span class="cignal-badge-pending"><i class="fas fa-clock me-1"></i>{{ app.status }}</span></td>
+            <td class="text-end">
+              <div class="d-flex justify-content-end gap-1">
+                <button class="btn-cignal-activate gt-btn" data-bs-toggle="modal" data-bs-target="#cignalAppModal_{{ app.id }}">
+                  <i class="fas fa-check-circle me-1"></i> Activate
+                </button>
+                <a href="{% url 'view_customer' app.customer.id %}" class="btn-cignal-icon gt-btn" title="View Customer Profile">
+                  <i class="fas fa-user"></i>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4">
+              <div class="cignal-empty-state py-3">
+                <div class="cignal-empty-icon mb-1"><i class="fas fa-check-circle text-success" style="opacity: 0.85; font-size: 1.5rem;"></i></div>
+                <div class="cignal-empty-title" style="font-size: 0.95rem;">All Applications Cleared</div>
+                <div class="cignal-empty-sub" style="font-size: 0.8rem;">No pending Cignal Play or Box applications at this time.</div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+</div>

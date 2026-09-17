@@ -8,6 +8,11 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 {% endif %}
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<style>
+    .ts-dropdown {
+        z-index: 9999 !important;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -129,50 +134,50 @@
                 </div>
             </div>
             
-            <div class="mb-4 p-3 rounded-3" style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2);">
+            {% if not form.instance.pk or form.instance.status == 'pending' %}
+            {% if not customer.pk or customer.installation_status == 'pending' or customer.status == 'pending' %}
+            <div class="mb-4 p-3 rounded-3" id="installation-setup-block" style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2);">
                 <label class="plan-form-label fw-bold mb-2">
                     <i class="fas fa-tools me-1 text-primary"></i> Installation & Account Setup Type <span class="req">*</span>
                 </label>
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <div class="form-check p-3 border rounded-3 h-100 setup-type-card" id="card-type-installed" style="cursor: pointer; background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.4) !important;">
-                            <input class="form-check-input ms-0 me-2" type="radio" name="installation_status" id="install_status_installed" value="installed" {% if request.user.role != 'Agent' %}checked{% endif %}>
-                            <label class="form-check-label fw-bold d-block" for="install_status_installed" style="cursor: pointer;">
-                                <i class="fas fa-check-circle text-success me-1"></i> Installed / Existing Subscriber
-                                <div class="text-muted fw-normal small mt-1">Physical line is already installed on-site (or migrated/imported). Account is active immediately and will not be marked as Pending Install.</div>
+                        <div class="form-check p-3 border rounded-3 h-100 setup-type-card" id="card-type-pending" style="cursor: pointer; background: rgba(14, 165, 233, 0.08); border-color: rgba(14, 165, 233, 0.4) !important;">
+                            <input class="form-check-input ms-0 me-2" type="radio" name="installation_status" id="install_status_pending" value="pending" checked>
+                            <label class="form-check-label fw-bold d-block" for="install_status_pending" style="cursor: pointer;">
+                                <i class="fas fa-gear text-info me-1"></i> For Installation (New Applicant)
+                                <div class="text-muted fw-normal small mt-1">Standard Flow: Brand new customer. Will be marked as 'Pending Install' until a technician confirms setup and logs the initial payment.</div>
                             </label>
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="form-check p-3 border rounded-3 h-100 setup-type-card" id="card-type-pending" style="cursor: pointer; {% if request.user.role == 'Agent' %}background: rgba(14, 165, 233, 0.08); border-color: rgba(14, 165, 233, 0.4) !important;{% endif %}">
-                            <input class="form-check-input ms-0 me-2" type="radio" name="installation_status" id="install_status_pending" value="pending" {% if request.user.role == 'Agent' %}checked{% endif %}>
-                            <label class="form-check-label fw-bold d-block" for="install_status_pending" style="cursor: pointer;">
-                                <i class="fas fa-gear text-info me-1"></i> For Installation (New Applicant)
-                                <div class="text-muted fw-normal small mt-1">Brand new customer awaiting technician dispatch and equipment setup. Will show with Pending Install badge until completed.</div>
+                        <div class="form-check p-3 border rounded-3 h-100 setup-type-card" id="card-type-installed" style="cursor: pointer;">
+                            <input class="form-check-input ms-0 me-2" type="radio" name="installation_status" id="install_status_installed" value="installed">
+                            <label class="form-check-label fw-bold d-block" for="install_status_installed" style="cursor: pointer;">
+                                <i class="fas fa-check-circle text-success me-1"></i> Installed / Existing Subscriber
+                                <div class="text-muted fw-normal small mt-1">Manual Override: Use this option when importing legacy customers from an old system, or recreating a accidentally deleted record. Account becomes instantly active.</div>
                             </label>
                         </div>
                     </div>
                 </div>
 
-                <div class="row g-3 mt-2" id="installed-dates-row" style="{% if request.user.role == 'Agent' %}display:none;{% endif %}">
-                    <div class="col-md-6">
-                        <label class="plan-form-label">Installation Date</label>
+                <div class="row g-3 mt-2" id="installed-dates-row">
+                    <div class="col-md-6" id="installed-date-col">
+                        <label class="plan-form-label">Installation Date <span class="badge bg-info-subtle text-info ms-1" style="font-size: 0.72rem; font-weight: 500;">Dispatch Target</span></label>
                         <div class="input-icon-wrapper">
                             <i class="fas fa-calendar-check i-icon text-success"></i>
                             <input type="date" name="installed_at" id="input_installed_at" class="plan-form-control" value="{% now 'Y-m-d' %}">
                         </div>
-                        <div class="form-text small">Date physical line was activated/installed.</div>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="plan-form-label">First Due / Expiration Date (Optional)</label>
-                        <div class="input-icon-wrapper">
-                            <i class="fas fa-calendar-day i-icon text-primary"></i>
-                            <input type="date" name="expires_at" id="input_expires_at" class="plan-form-control" placeholder="Leave empty for unbilled">
-                        </div>
-                        <div class="form-text small">Optional initial expiration date if already scheduled/billed.</div>
+                        <div class="form-text small text-muted">Scheduled date for technician dispatch and physical setup.</div>
                     </div>
                 </div>
+
+                <div id="installed-existing-helper" class="alert alert-secondary border-secondary text-light bg-transparent mt-3" style="display:none; font-size: 0.85rem;">
+                    <i class="fas fa-info-circle me-1 text-info"></i> Installation date is not required for existing/legacy subscribers.
+                </div>
             </div>
+            {% endif %}
+            {% endif %}
 
             <div class="mb-4" id="billing-status-group">
                 <label class="plan-form-label">Billing Status <span class="req">*</span></label>
@@ -396,19 +401,34 @@
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
+        // Upgrade dropdowns to smart search with TomSelect
         document.querySelectorAll('select.plan-form-control').forEach((el)=>{
             try {
                 if (!el.tomselect) {
                     const hasOptgroups = el.querySelectorAll('optgroup').length > 0;
+                    const isStatus = el.name === 'status' || el.id === 'customer_status_select';
                     new TomSelect(el, {
                         create: false,
-                        controlInput: null,
-                        sortField: hasOptgroups ? undefined : { field: "text", direction: "asc" }
+                        sortField: (hasOptgroups || isStatus) ? undefined : { field: "text", direction: "asc" }
                     });
                 }
             } catch(err) {
                 console.warn("TomSelect fallback on", el.name, err);
             }
+        });
+
+        // Auto-capitalize text inputs (Full Address, Full Name, Barangay) to Title Case on blur
+        function toTitleCase(str) {
+            if (!str) return '';
+            return str.toLowerCase().replace(/\b\w/g, s => s.toUpperCase());
+        }
+
+        document.querySelectorAll('input[name="address"], input[name="full_name"], input[name="barangay_name"]').forEach(input => {
+            input.addEventListener('blur', function() {
+                if (this.value) {
+                    this.value = toTitleCase(this.value.trim());
+                }
+            });
         });
     });
 </script>
@@ -419,26 +439,38 @@
         const cardInstalled = document.getElementById('card-type-installed');
         const cardPending = document.getElementById('card-type-pending');
         const datesRow = document.getElementById('installed-dates-row');
+        const existingHelper = document.getElementById('installed-existing-helper');
         const statusSelect = document.getElementById('customer_status_select');
 
         function updateSetupUI() {
-            if (radInstalled && radInstalled.checked) {
-                cardInstalled.style.background = 'rgba(16, 185, 129, 0.08)';
-                cardInstalled.style.borderColor = 'rgba(16, 185, 129, 0.4)';
-                cardPending.style.background = '';
-                cardPending.style.borderColor = '';
-                if (datesRow) datesRow.style.display = 'flex';
-                if (statusSelect && statusSelect.value === 'pending') {
-                    statusSelect.value = 'active';
-                }
-            } else if (radPending && radPending.checked) {
+            const installInput = document.getElementById('input_installed_at');
+
+            if (radPending && radPending.checked) {
+                // "For Installation (New Applicant)" -> SHOW date field so staff can schedule dispatch
                 cardPending.style.background = 'rgba(14, 165, 233, 0.08)';
                 cardPending.style.borderColor = 'rgba(14, 165, 233, 0.4)';
                 cardInstalled.style.background = '';
                 cardInstalled.style.borderColor = '';
-                if (datesRow) datesRow.style.display = 'none';
+                if (datesRow) datesRow.style.display = 'flex';
+                if (existingHelper) existingHelper.style.display = 'none';
                 if (statusSelect) {
                     statusSelect.value = 'pending';
+                    if (statusSelect.tomselect) statusSelect.tomselect.setValue('pending');
+                }
+            } else if (radInstalled && radInstalled.checked) {
+                // "Installed / Existing Subscriber" -> HIDE date field because historical dates do not matter
+                cardInstalled.style.background = 'rgba(16, 185, 129, 0.08)';
+                cardInstalled.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                cardPending.style.background = '';
+                cardPending.style.borderColor = '';
+                if (datesRow) datesRow.style.display = 'none';
+                if (existingHelper) existingHelper.style.display = 'block';
+                if (installInput) {
+                    installInput.removeAttribute('required');
+                }
+                if (statusSelect && statusSelect.value === 'pending') {
+                    statusSelect.value = 'active';
+                    if (statusSelect.tomselect) statusSelect.tomselect.setValue('active');
                 }
             }
         }

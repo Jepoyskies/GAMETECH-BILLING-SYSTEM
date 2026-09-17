@@ -1,0 +1,248 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Support &amp; Repair Tickets | Gametech Customer Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        (function() {
+            const theme = localStorage.getItem('gt-portal-theme') || 'dark';
+            document.documentElement.setAttribute('data-bs-theme', theme);
+        })();
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .card-custom { border-radius: 1.25rem; border: 1px solid rgba(255,255,255,0.1); }
+        .ticket-card {
+            border-radius: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: var(--bs-body-bg);
+            padding: 1.25rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .ticket-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        }
+        .ticket-card.border-active {
+            border-left: 5px solid #06b6d4 !important;
+        }
+        .ticket-card.border-pending {
+            border-left: 5px solid #f59e0b !important;
+        }
+        .ticket-card.border-completed {
+            border-left: 5px solid #10b981 !important;
+        }
+        .ticket-card.border-cancelled {
+            border-left: 5px solid #6b7280 !important;
+        }
+    </style>
+</head>
+<body class="bg-body-tertiary">
+
+<div class="container py-4 py-md-5" style="max-width: 1000px;">
+    <!-- Top Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <a href="{% url 'customer_portal:portal_dashboard' %}">
+                <img src="{% static 'assets/images/logo_white.png' %}" alt="Gametech Logo" height="42">
+            </a>
+            <div>
+                <h3 class="fw-bold mb-0">My Support &amp; Repair Tickets</h3>
+                <small class="text-muted">Track on-site technician visits, repair progress, and resolution history</small>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'customer_portal:submit_ticket' %}" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
+                <i class="fas fa-plus me-1"></i> Submit New Ticket
+            </a>
+            <a href="{% url 'customer_portal:portal_dashboard' %}" class="btn btn-outline-secondary rounded-pill px-4">
+                <i class="fas fa-arrow-left me-1"></i> Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Metrics -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-4">
+            <div class="card card-custom p-3 bg-body shadow-sm">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="p-3 rounded-circle bg-primary bg-opacity-10 text-primary fs-4">
+                        <i class="fas fa-ticket-alt"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs text-muted text-uppercase fw-semibold">Total Tickets</div>
+                        <div class="fw-bold fs-4 text-primary">{{ total_count }}</div>
+                        <small class="text-muted">All lifetime requests</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="card card-custom p-3 bg-body shadow-sm">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="p-3 rounded-circle bg-warning bg-opacity-10 text-warning fs-4">
+                        <i class="fas fa-screwdriver-wrench"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs text-muted text-uppercase fw-semibold">In Progress / Dispatched</div>
+                        <div class="fw-bold fs-4 text-warning">{{ open_count }}</div>
+                        <small class="text-muted">Active queue status</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="card card-custom p-3 bg-body shadow-sm">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="p-3 rounded-circle bg-success bg-opacity-10 text-success fs-4">
+                        <i class="fas fa-circle-check"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs text-muted text-uppercase fw-semibold">Resolved Tickets</div>
+                        <div class="fw-bold fs-4 text-success">{{ completed_count }}</div>
+                        <small class="text-muted">Completed repairs</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tickets List -->
+    <div class="d-flex flex-column gap-3">
+        {% for t in ticket_history %}
+        <div class="card card-custom p-4 shadow-sm ticket-card {% if t.status == 'COMPLETED' %}border-completed{% elif t.status == 'IN_PROGRESS' or t.status == 'ASSIGNED' %}border-active{% elif t.status == 'CANCELLED' %}border-cancelled{% else %}border-pending{% endif %}">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="badge bg-light text-dark border font-monospace px-2 py-1" style="font-size:0.85rem;">
+                            <i class="fas fa-hashtag me-1 text-muted"></i>{{ t.ticket_number }}
+                        </span>
+                        <span class="badge bg-secondary-subtle text-secondary border fw-semibold" style="font-size:0.75rem;">
+                            {{ t.type_display }}
+                        </span>
+                    </div>
+                    <small class="text-muted">
+                        <i class="far fa-calendar-alt me-1"></i>Reported: {{ t.created_at|date:"M d, Y" }} at {{ t.created_at|date:"h:i A" }}
+                    </small>
+                </div>
+
+                <!-- Status Pill -->
+                <div>
+                    {% if t.status == 'COMPLETED' %}
+                    <span class="badge bg-success rounded-pill px-3 py-2 fw-semibold" style="font-size:0.82rem;">
+                        <i class="fas fa-check-circle me-1"></i>Completed
+                    </span>
+                    {% elif t.status == 'IN_PROGRESS' %}
+                    <span class="badge bg-info text-dark rounded-pill px-3 py-2 fw-semibold" style="font-size:0.82rem;">
+                        <i class="fas fa-spinner fa-spin me-1"></i>Technician On Site
+                    </span>
+                    {% elif t.status == 'ASSIGNED' %}
+                    <span class="badge bg-primary rounded-pill px-3 py-2 fw-semibold" style="font-size:0.82rem;">
+                        <i class="fas fa-truck-fast me-1"></i>Technician Dispatched
+                    </span>
+                    {% elif t.status == 'CANCELLED' %}
+                    <span class="badge bg-secondary rounded-pill px-3 py-2 fw-semibold" style="font-size:0.82rem;">
+                        Cancelled
+                    </span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark rounded-pill px-3 py-2 fw-semibold" style="font-size:0.82rem;">
+                        <i class="fas fa-clock me-1"></i>Pending Review
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Concern Description -->
+            <div class="my-3 p-3 rounded-3 bg-body-tertiary border">
+                <div class="text-xs text-uppercase text-muted fw-bold mb-1">Reported Concern / Issue:</div>
+                <div class="fw-semibold text-body">{{ t.concern|linebreaksbr }}</div>
+
+                {% if t.alternate_contact or t.facebook_account %}
+                <div class="d-flex flex-wrap gap-3 mt-2 pt-2 border-top" style="font-size:0.82rem;">
+                    {% if t.alternate_contact %}
+                    <span class="text-muted">
+                        <i class="fas fa-phone-alt text-primary me-1"></i>On-Site Contact: <strong>{{ t.alternate_contact }}</strong>
+                    </span>
+                    {% endif %}
+                    {% if t.facebook_account %}
+                    <span class="text-muted">
+                        <i class="fab fa-facebook text-info me-1"></i>Messenger: <strong>{{ t.facebook_account }}</strong>
+                    </span>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Technician & Resolution Info -->
+            <div class="row g-2 align-items-center mt-1 pt-2 border-top">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-user-gear text-secondary"></i>
+                        <span class="text-muted small">Assigned:</span>
+                        {% if t.technicians %}
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for tech in t.technicians %}
+                            <span class="badge bg-light text-dark border rounded-pill px-2 py-1" style="font-size:0.75rem;">{{ tech }}</span>
+                            {% endfor %}
+                        </div>
+                        {% elif t.team_name %}
+                        <span class="badge bg-light text-dark border rounded-pill px-2 py-1" style="font-size:0.75rem;">{{ t.team_name }}</span>
+                        {% else %}
+                        <span class="text-muted small fst-italic">Field team assignment pending</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="col-md-6 text-md-end">
+                    {% if t.actions_taken %}
+                    <div class="small text-success fw-semibold">
+                        <i class="fas fa-wrench me-1"></i>Resolution: {{ t.actions_taken }}
+                    </div>
+                    {% elif t.status == 'COMPLETED' and t.done_at %}
+                    <div class="small text-muted">
+                        <i class="fas fa-check me-1 text-success"></i>Resolved on {{ t.done_at|date:"M d, Y" }}
+                    </div>
+                    {% else %}
+                    <div class="small text-muted fst-italic">
+                        Our technicians are actively reviewing this request
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="card card-custom p-5 text-center bg-body shadow-sm">
+            <div class="mb-3">
+                <i class="fas fa-circle-check text-success" style="font-size: 3.5rem;"></i>
+            </div>
+            <h4 class="fw-bold">No Support Tickets Logged</h4>
+            <p class="text-muted mb-4" style="max-width: 480px; margin: 0 auto;">
+                You currently have no past or active repair tickets. Your Gametech Unli Fiber connection has a clean operational history!
+            </p>
+            <div>
+                <a href="{% url 'customer_portal:submit_ticket' %}" class="btn btn-outline-primary rounded-pill px-4 fw-bold">
+                    <i class="fas fa-headset me-1"></i> Submit a Ticket if You Need Help
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Bottom Actions -->
+    <div class="d-flex justify-content-between align-items-center mt-4">
+        <a href="{% url 'customer_portal:portal_dashboard' %}" class="btn btn-outline-secondary rounded-pill px-4">
+            <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+        </a>
+        <a href="{% url 'customer_portal:submit_ticket' %}" class="btn btn-primary rounded-pill px-4 fw-bold">
+            <i class="fas fa-plus me-1"></i> Submit Another Ticket
+        </a>
+    </div>
+</div>
+
+</body>
+</html>

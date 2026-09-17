@@ -1,0 +1,200 @@
+<!-- Edit Cignal Subscription Modal -->
+<div class="modal fade" id="cignalEditModal" tabindex="-1" aria-labelledby="cignalEditModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content gt-modal-content" style="border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);">
+      <div class="modal-header border-bottom-0 pb-0">
+        <h5 class="modal-title fw-bold" id="cignalEditModalLabel">
+          <i class="fas fa-pencil-alt text-info me-2"></i> Edit Cignal Subscription
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <form action="" method="post" id="cignalEditForm">
+        {% csrf_token %}
+        <input type="hidden" name="subscription_id" id="cemSubscriptionId" value="">
+        <input type="hidden" name="customer_id" id="cemCustomerId" value="">
+
+        <div class="modal-body py-3">
+          <!-- Subscription Target Banner -->
+          <div class="p-3 mb-3 rounded-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1);">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <strong class="text-light fw-bold" style="font-size: 0.96rem;" id="cemCustomerName">
+                <i class="fas fa-satellite-dish me-1 text-muted"></i> {% if target_customer %}{{ target_customer.full_name }}{% elif customer %}{{ customer.full_name }}{% else %}Cignal Subscriber{% endif %}
+              </strong>
+              <span class="badge border border-secondary text-light" id="cemSubBadge">Edit Details</span>
+            </div>
+          </div>
+
+          <!-- Subscription / Device Label -->
+          <div class="mb-3">
+            <label for="cemAccountName" class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
+              <i class="fas fa-tag text-info me-1"></i> Device / Subscription Label
+            </label>
+            <input type="text" name="account_name" id="cemAccountName" class="form-control" 
+                   placeholder="e.g., Living Room STB, Master Bedroom TV" style="border-radius: 8px;">
+          </div>
+
+          <!-- Cignal Play App Number -->
+          <div class="mb-3">
+            <label for="cemPlayNo" class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
+              <i class="fas fa-mobile-screen-button text-primary me-1"></i> Cignal Play No.
+            </label>
+            <div class="input-group">
+              <span class="input-group-text bg-dark-subtle border-secondary-subtle font-monospace fw-bold" style="font-size:0.75rem;">PLAY</span>
+              <input type="text" name="cignal_play_no" id="cemPlayNo" class="form-control font-monospace" 
+                     placeholder="e.g. 1000123456" style="letter-spacing: 0.05em;">
+            </div>
+          </div>
+
+          <!-- Cignal Physical Box Number -->
+          <div class="mb-3">
+            <label for="cemBoxNo" class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
+              <i class="fas fa-tv text-warning me-1"></i> Cignal Box No.
+            </label>
+            <div class="input-group">
+              <span class="input-group-text bg-dark-subtle border-secondary-subtle font-monospace fw-bold" style="font-size:0.75rem;">BOX</span>
+              <input type="text" name="cignal_box_no" id="cemBoxNo" class="form-control font-monospace" 
+                     placeholder="e.g. CCA1234567" style="letter-spacing: 0.05em;">
+            </div>
+          </div>
+
+          <!-- Hardware Setup & Monthly Load -->
+          <div class="row g-2 mb-3">
+            <div class="col-sm-6">
+              <label for="cemHardwareType" class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
+                <i class="fas fa-microchip text-warning me-1"></i> Hardware Setup
+              </label>
+              <select name="hardware_payment_type" id="cemHardwareType" class="form-select" onchange="cemToggleInstallmentInput(this.value)">
+                <option value="none">No Box / App Only</option>
+                <option value="installment">12-Mo Installment (₱250/mo)</option>
+                <option value="cashout">Cashout (₱3,000)</option>
+              </select>
+            </div>
+            <div class="col-sm-6">
+              <label for="cemMonthlyLoad" class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
+                <i class="fas fa-broadcast-tower text-success me-1"></i> Load Plan
+              </label>
+              <select name="monthly_load_plan" id="cemMonthlyLoad" class="form-select">
+                <option value="149">42 Channels (₱149/mo)</option>
+                <option value="399">62 Channels (₱399/mo)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Hidden field to preserve existing installments counter -->
+          <input type="hidden" name="installments_paid" id="cemInstallmentsPaid" value="0">
+
+          <!-- Expiration / Due Date -->
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <label for="cemExpirationDate" class="form-label fw-bold small text-uppercase mb-0" style="letter-spacing: 0.04em;">
+                <i class="far fa-calendar-alt text-success me-1"></i> Expiration Date & Exact Time
+              </label>
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-link p-0 small text-decoration-none text-info" onclick="cemSetDays(30)" style="font-size: 0.76rem;">
+                  <i class="fas fa-plus-circle me-1"></i>+30 Days
+                </button>
+                <button type="button" class="btn btn-link p-0 small text-decoration-none text-success" onclick="cemSetDays(60)" style="font-size: 0.76rem;">
+                  <i class="fas fa-plus-circle me-1"></i>+60 Days
+                </button>
+              </div>
+            </div>
+            <input type="datetime-local" name="expiration_date" id="cemExpirationDate" class="form-control" style="border-radius: 8px;">
+          </div>
+        </div>
+
+        <div class="modal-footer border-top-0 pt-0">
+          <button type="button" class="btn btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary gt-btn rounded-pill px-4 fw-bold">
+            <i class="fas fa-save me-1"></i> Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function cemToggleInstallmentInput(val) {
+  const grp = document.getElementById('cemInstallmentGroup');
+  if (grp) {
+    grp.style.display = (val === 'installment') ? 'block' : 'none';
+  }
+}
+
+function cemSetDays(days) {
+  const expInput = document.getElementById('cemExpirationDate');
+  if (!expInput) return;
+  let base = new Date();
+  if (expInput.value) {
+    const d = new Date(expInput.value);
+    if (!isNaN(d.getTime()) && d >= new Date()) {
+      base = d;
+    }
+  }
+  base.setDate(base.getDate() + days);
+  const y = base.getFullYear();
+  const m = String(base.getMonth() + 1).padStart(2, '0');
+  const d = String(base.getDate()).padStart(2, '0');
+  const hh = String(base.getHours()).padStart(2, '0');
+  const mm = String(base.getMinutes()).padStart(2, '0');
+  expInput.value = y + '-' + m + '-' + d + 'T' + hh + ':' + mm;
+}
+
+function openCignalEditModal(data) {
+  if (!data) return;
+  const form = document.getElementById('cignalEditForm');
+  if (form) {
+    if (data.id) {
+      form.action = '/cignal-play/edit/' + data.id + '/';
+    } else {
+      form.action = '/cignal-play/edit/';
+    }
+  }
+  const idInput = document.getElementById('cemSubscriptionId');
+  if (idInput) idInput.value = data.id || '';
+  const custInput = document.getElementById('cemCustomerId');
+  if (custInput) custInput.value = data.customerId || '';
+  const labelInput = document.getElementById('cemAccountName');
+  if (labelInput) labelInput.value = data.label || '';
+  const playInput = document.getElementById('cemPlayNo');
+  if (playInput) playInput.value = data.playNo || '';
+  const boxInput = document.getElementById('cemBoxNo');
+  if (boxInput) boxInput.value = data.boxNo || '';
+  const nameEl = document.getElementById('cemCustomerName');
+  if (nameEl && data.customerName) {
+    nameEl.innerHTML = '<i class="fas fa-satellite-dish me-1"></i> ' + data.customerName;
+  }
+
+  const expInput = document.getElementById('cemExpirationDate');
+  if (expInput) {
+    let expVal = data.expirationDate || '';
+    if (expVal && expVal.length === 10) {
+      expVal += 'T23:59';
+    }
+    expInput.value = expVal;
+  }
+
+  const hwSelect = document.getElementById('cemHardwareType');
+  if (hwSelect) {
+    hwSelect.value = data.hardwarePaymentType || 'none';
+    cemToggleInstallmentInput(hwSelect.value);
+  }
+
+  const instInput = document.getElementById('cemInstallmentsPaid');
+  if (instInput) {
+    instInput.value = data.installmentsPaid !== undefined ? data.installmentsPaid : 0;
+  }
+
+  const loadSelect = document.getElementById('cemMonthlyLoad');
+  if (loadSelect) {
+    loadSelect.value = data.monthlyLoadPlan || '149';
+  }
+
+  const modalEl = document.getElementById('cignalEditModal');
+  if (modalEl) {
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+  }
+}
+</script>

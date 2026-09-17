@@ -30,9 +30,130 @@
         </div>
 
         <div class="p-3 d-flex flex-column gap-3">
+            <!-- Sept 16 -->
+            <div>
+                <h6 class="fw-bold text-primary mb-2 border-bottom pb-1" style="font-size:0.85rem;">September 16, 2026 <span class="badge bg-success ms-1" style="font-size:0.65rem;">Latest Build</span></h6>
+                <div class="cl-dual-content">
+                    <!-- Tech View -->
+                    <div class="tech-content d-flex flex-column gap-2">
+                        <div class="gt-cl-card gt-cl-blue">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-screwdriver-wrench text-info"></i> Customer Ticket History &amp; Repeat Repair Workmanship Audit:</strong> Added unified repair and service ticket history to Customer Profile (<code>_ticket_history.html</code>) and Customer Portal (<code>/portal/tickets/</code>). Computes repeat repair frequency, flags chronic customer complaints with short-interval alerts (&le; 30 days between repairs), pinpoints prior servicing technicians and resolutions, and adds a My Tickets navigation widget with active queue indicators.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-blue">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-gauge-high text-info"></i> Network Ops &amp; Customer Portal Speedtest Suite:</strong> Added Speedtest engine to Network Ops sidebar (<code>/network/speedtest/</code>) and Customer Portal (<code>/portal/speedtest/</code>). Features an embedded responsive HTML5 multi-stream speedtest engine measuring download, upload, latency, and jitter, plus a 1-click launcher for official <strong>Ookla Speedtest</strong> (<code>speedtest.net</code>) with subscriber plan benchmarking and tech optimization guides.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-blue">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-phone-alt text-info"></i> Customer Portal Alternate On-Site Contact &amp; Facebook Fields:</strong> Added optional on-site contact fields (Alternate Phone / Contact Person, Facebook Account / Messenger profile) to <code>submit_ticket.html</code> and backend <code>submit_ticket</code>. Stored on <code>JobTicket</code>, <code>DispatchRecord</code>, and <code>MonitoringRecord</code>, and rendered as direct clickable phone (<code>tel:</code>) and Messenger links across the Dispatch Cockpit, map popups, and Client Concerns queue.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-green">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-wallet text-success"></i> Fixed Advance Payment Wallet Double-Credit Bug:</strong> Resolved double-counting in <code>pay_customer_view</code> and <code>portal_process_mock_payment</code>. Standard monthly renewals (e.g. ₱1,000 for ₱1,000 plan) are now cleanly consumed for the active cycle without leaking into <code>outstanding_balance</code>. Advance payment credit is now strictly allocated only to excess payments exceeding 1 month (e.g. ₱2,000 on ₱1,000 plan gives 1 month active + ₱1,000 Advance Payment for auto-renewal next month).</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-green">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-comment-dots text-success"></i> Non-Tech Message Template &amp; Quick-Copy Receipt Editor:</strong> Redesigned <code>message_templates.html</code> with 1-click customer smart tags (<code>{customer_name}</code>, <code>{paid_amount}</code>, <code>{new_expiration}</code>, <code>{plan_name}</code>, <code>{payment_method}</code>, <code>{processed_by}</code>, <code>{pppoe_username}</code>), real-time live customer previews (matching the Payment Success receipt screen, SMS bubble, and Email views), SMS character counters, and Staff access permissions.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-purple">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-coins text-primary"></i> Portal Staggered Payment Eligibility Guard:</strong> Introduced <code>can_pay_staggered</code> on <code>Customer</code>. Subscribers registered with an agent are restricted to full monthly dues during their initial 3-month onboarding window; Walk-in / Direct subscribers unlock staggered/partial payments immediately after their first payment.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-blue">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-palette text-info"></i> Customer Directory Dark Theme &amp; Status Streamline:</strong> Eliminated bright yellow row highlight on expired/suspended accounts by replacing <code>.table-warning</code> with dark-mode safe <code>.table-row-expired</code> (subtle rose tint with 3px accent border). Streamlined Status column into <code>.cust-status-wrap</code>, suppressing redundant duplicate offline badges, standardizing table header/cell typography, and normalizing hero stat pills.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-blue">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-screwdriver-wrench text-info"></i> Full-Featured Installation Activation Modal:</strong> Upgraded <code>mark_customer_installed</code> modal to include Subscribed Plan selection, Upfront Payment collection (amount, method, ref #), and real-time client-side auto-calculation of First Due / Expiration date based on payment and monthly plan pricing.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-green">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-coins text-success"></i> Automated Initial Payment Logging:</strong> Marking a customer as installed now automatically creates a verified <code>Payment</code> record, logs transaction audit trails in <code>SystemLog</code>, and pushes updated profile/comments to MikroTik routers.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-purple">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-satellite-dish text-primary"></i> Cignal Architecture Unification:</strong> Refactored <code>CignalPlay</code> model to remove <code>addon_type</code> and unify streaming app account (<code>cignal_play_no</code>) and physical STB hardware (<code>cignal_box_no</code>) into a single subscription entity across activation modals, payment reloads, customer profile, and customer portal.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-blue">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-shield-alt text-primary"></i> Strict Customer Duplicate Prevention:</strong> Implemented backend validation in <code>CustomerForm</code> and customer views to prevent duplicate phone numbers, email addresses, and PPPoE usernames. Safely excludes existing record IDs on edit so customers can update their details without conflict.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-green">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-user-gear text-success"></i> Streamlined Customer Add/Edit UI:</strong> Refined installation setup cards to automatically hide for active/installed subscribers, clarified manual override vs new applicant options, and dynamically hid redundant expiration date inputs for new applicants.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-purple">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-wand-magic-sparkles text-primary"></i> Premium UI Micro-Interactions &amp; Frosted Glass:</strong> Introduced silky dark/light mode transitions, frosted glass topbar with 12px backdrop blur, tactile <code>.gt-btn</code> hover/active micro-presses, and <code>subtleShake</code> keyframe animations for destructive modals.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-blue">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-edit text-info"></i> Cignal Edit Modal &amp; Dashboard Layout Overhaul:</strong> Added dedicated edit modal to update Cignal Play No., Box No., and device labels with instant sync. Reorganized Cignal Hub into an 8/4 grid prioritizing Active Subscriptions at the top followed by Expiring Soon.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-green">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-boxes-packing text-success"></i> Cignal Hardware vs Service Split &amp; Installment Tracking:</strong> Refactored <code>CignalPlay</code> with <code>hardware_payment_type</code> (Cashout, Installment, None), <code>installments_paid</code> (1 to 12 months), and <code>monthly_load_plan</code> (₱149 / ₱399). Upgraded activation and reload modals with real-time math and smart combo presets (₱250 Box + ₱149 Load = ₱399) auto-incrementing installment progress.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-blue">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-calendar-check text-info"></i> Cignal Live Expiration Rollover &amp; Streamlined Reload Modal:</strong> Overhauled <code>_cignal_payment_modal.html</code> with a live Current Subscription Status card, dynamic context-aware presets (smartly displaying box installment vs load renewal based on subscriber hardware), ISP-standard date rollover (+30 Days from existing expiration or payment date), live calculation preview banner, and zero MikroTik router interference.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-purple">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-truck-fast text-primary"></i> 2-Way Dispatch &amp; CRM Auto-Signal Bridge:</strong> Implemented comprehensive bidirectional signal synchronization between <code>Customer</code> and <code>JobTicket</code>. New applicants (<code>installation_status='pending'</code>) automatically generate/update installation tickets; marking a customer as installed in CRM auto-completes their dispatch ticket; and completing an installation ticket in Dispatch auto-promotes the customer to Installed &amp; Active with modem MAC/SN recorded.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-green">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-table-cells text-success"></i> Cignal Subscription Row UI &amp; Financial Status Card:</strong> Enhanced active Cignal subscriber table row with structured chips for Cignal No. and Box No., load plan badge (₱149 / ₱399) with live expiration pill, and a comprehensive hardware status block showing cashout full payment or installment breakdown (Months Paid / 12, Total ₱3k, Amount Paid, and Remaining Balance).</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-blue">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-user-plus text-info"></i> Direct Customer Enrollment Modal:</strong> Added a dedicated "Add Cignal Customer" modal on the Cignal Dashboard allowing staff to search and click existing subscribers, auto-fill profile details, choose hardware setup (Installment, Cashout, or App-Only), select channel tiers (₱149 / ₱399), and record initial payments seamlessly.</p>
+                        </div>
+                    </div>
+                    <!-- Staff View -->
+                    <div class="staff-content d-flex flex-column gap-2" style="display: none;">
+                        <div class="gt-cl-card gt-cl-blue">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-screwdriver-wrench text-info"></i> Customer Repair History &amp; Quality Control Alerts:</strong> Staff and admins can now see a customer's full repair history right on their profile! Automatically highlights repeat repair warnings if a customer has multiple repairs or opened a ticket right after a previous one, showing which technician serviced it so you can catch bad workmanship immediately. Customers can also track their own ticket progress in the Customer Portal!</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-blue">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-gauge-high text-info"></i> Internet Speed Test for Staff &amp; Customers:</strong> Added an easy-to-use Speedtest page in the Network Ops sidebar and Customer Portal! Customers and technicians can now test download/upload speed, ping, and jitter directly on screen or launch official Ookla Speedtest with 1 click.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-blue">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-headset text-info"></i> Support Ticket Alternate Phone &amp; Facebook Info:</strong> When customers submit a repair ticket via the Customer Portal, they can now provide an alternate phone number (e.g. wife/housemate at home) and Facebook profile so technicians know exactly who to call or message if the account owner is not home!</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-green">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-wallet text-success"></i> Fixed Advance Payment Bug:</strong> Paying your regular 1-month bill (e.g. ₱1,000 for ₱1,000 plan) now cleanly renews your account with ₱0.00 Advance Payment! Advance payment credit is now only added when a customer overpays (for example, paying ₱2,000 on a ₱1,000 plan gives 1 month active + ₱1,000 advance payment which will automatically pay for next month).</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-green">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-receipt text-success"></i> Easy Message &amp; Receipt Template Editor:</strong> Staff and admins can now easily edit message templates without typing code! Simply click the colorful buttons (like "+ Customer Name" or "+ Amount Paid") to insert details into your messages, and see an instant live preview of what the customer sees before saving.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-purple">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-hand-holding-dollar text-primary"></i> Agent vs Walk-In Staggered Payment Rules:</strong> New subscribers who joined through an agent must pay full monthly dues during their first 3 months of service. Walk-in and direct subscribers can take advantage of staggered and partial payments right after their first payment!</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-blue">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-eye text-info"></i> Clean Customers Directory &amp; Easy Reading:</strong> Fixed the blinding yellow bar on expired customer rows! Customer names and account details are now crisp and easy to read in dark mode with uniform row heights and clear status badges.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-purple">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-truck-fast text-primary"></i> Automatic Dispatch &amp; Installation Sync:</strong> Creating a new pending applicant automatically queues an installation ticket for field technicians! When field techs complete the job or staff clicks "Mark Installed", both systems update each other instantly.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-blue">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-magic text-info"></i> Smart Installation & Due Date Calculator:</strong> When marking a customer as installed, you can now choose their plan, record what they paid upfront, and the First Due Date is automatically calculated for you!</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-green">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-receipt text-success"></i> Instant Initial Payment Receipt:</strong> Payments collected during installation are now recorded instantly in the payment ledger with no extra steps.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-purple">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-satellite-dish text-primary"></i> Unified Cignal Subscriptions:</strong> Cignal Play and Cignal Box are now unified under a single subscription! Customers can have both a Play App account number and a physical Box number on the same account.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-blue">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-shield-alt text-primary"></i> Duplicate Customer Protection:</strong> The system now checks and prevents duplicate phone numbers, emails, and PPPoE usernames when adding or editing subscribers.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-green">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-user-check text-success"></i> Cleaner Customer Forms:</strong> Installation setup options are now automatically hidden for already-installed customers, and redundant date fields are hidden when creating new applicants.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-purple">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-palette text-primary"></i> Silky Smooth Theme &amp; Button Animations:</strong> Switching between dark and light mode now has a smooth fade, the topbar features a frosted glass look, and buttons now have tactile click animations.</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-blue">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-edit text-info"></i> Edit Cignal Details &amp; Improved Hub Layout:</strong> You can now edit Cignal Play and Box numbers directly with an Edit button, and the Active Subscriptions table is now placed front and center at the top of the Cignal Hub!</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-green">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-calculator text-success"></i> Smart Cignal Box &amp; Load Combinations:</strong> Activation and reload modals now separate hardware from channel load. Staff can ring up combinations like ₱250 Box Installment + ₱149 Load = ₱399 with one click, and the system automatically tracks Month X/12 installment progress!</p>
+                        </div>
+                        <div class="gt-cl-card gt-cl-blue">
+                            <p class="mb-0" style="font-size:0.8rem;"><strong><i class="fas fa-calendar-check text-info"></i> Clear Cignal Due Date &amp; Intelligent Reload:</strong> The Reload modal now clearly displays the subscriber's Current Due Date, automatically rolls forward by +30 days when renewing TV load, shows only relevant presets (no confusing duplicate ₱399 buttons), and lets you record hardware installments without messing up TV service expiration!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Sept 15 -->
             <div>
-                <h6 class="fw-bold text-primary mb-2 border-bottom pb-1" style="font-size:0.85rem;">September 15, 2026 <span class="badge bg-success ms-1" style="font-size:0.65rem;">Latest Build</span></h6>
+                <h6 class="fw-bold text-primary mb-2 border-bottom pb-1" style="font-size:0.85rem;">September 15, 2026</h6>
                 <div class="cl-dual-content">
                     <!-- Tech View -->
                     <div class="tech-content d-flex flex-column gap-2">

@@ -18,16 +18,29 @@
       </div>
     </div>
     <div class="d-flex align-items-center gap-2">
+      <button type="button" class="btn btn-sm btn-light rounded-pill px-3 py-1.5 fw-bold shadow-sm gt-btn text-dark" onclick="openEnrollCignalModal()">
+        <i class="fas fa-user-plus text-danger me-1"></i> Add Cignal Customer
+      </button>
       <span class="cignal-live-badge">
         <span class="cignal-live-dot"></span> Operations Active
       </span>
     </div>
   </div>
 
+  {% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}success{% endif %} border-0 rounded-4 shadow-sm mb-4 d-flex align-items-center gap-2 alert-dismissible fade show" style="background:{% if message.tags == 'error' %}#fef2f2; color:#b91c1c; border:1px solid #fecaca;{% else %}#ecfdf5; color:#059669; border:1px solid #a7f3d0;{% endif %} font-weight: 500;" role="alert">
+      <i class="fas {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} fs-5"></i>
+      <span>{{ message }}</span>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  {% endfor %}
+  {% endif %}
+
   <!-- KPI Stat Cards -->
   <div class="row g-3 mb-4 animate-fade-in animate-delay-1">
     <div class="col-12 col-sm-6 col-xl-3">
-        <div class="cignal-stat-card">
+        <div class="cignal-stat-card cignal-stat-card-red">
             <div class="cignal-stat-icon cignal-stat-icon-red">
                 <i class="fas fa-users"></i>
             </div>
@@ -38,7 +51,7 @@
         </div>
     </div>
     <div class="col-12 col-sm-6 col-xl-3">
-        <div class="cignal-stat-card">
+        <div class="cignal-stat-card cignal-stat-card-amber">
             <div class="cignal-stat-icon cignal-stat-icon-amber">
                 <i class="fas fa-file-signature"></i>
             </div>
@@ -49,7 +62,7 @@
         </div>
     </div>
     <div class="col-12 col-sm-6 col-xl-3">
-        <div class="cignal-stat-card">
+        <div class="cignal-stat-card cignal-stat-card-emerald">
             <div class="cignal-stat-icon cignal-stat-icon-emerald">
                 <i class="fas fa-wallet"></i>
             </div>
@@ -60,7 +73,7 @@
         </div>
     </div>
     <div class="col-12 col-sm-6 col-xl-3">
-        <div class="cignal-stat-card">
+        <div class="cignal-stat-card cignal-stat-card-cyan">
             <div class="cignal-stat-icon cignal-stat-icon-cyan">
                 <i class="fas fa-bell"></i>
             </div>
@@ -72,291 +85,18 @@
     </div>
   </div>
 
+  <!-- Main Dashboard Grid Layout: Left (Focus/Subscriptions) & Right (Sidebar/Logs) -->
   <div class="row g-3 animate-fade-in animate-delay-2">
-    <!-- Left Column: Pending Apps & Active Customers -->
-    <div class="col-12 col-xl-7">
-        
-        <!-- Pending Applications -->
-        <div class="cignal-glass-card mb-4">
-            <div class="cignal-card-header">
-              <h6><i class="fas fa-hourglass-half header-icon-danger"></i> Pending Cignal Applications</h6>
-              <span class="badge bg-danger rounded-pill" style="font-size: 0.72rem; padding: 4px 10px;">{{ applications|length }} Pending</span>
-            </div>
-            <div class="table-responsive">
-              <table class="cignal-table table table-hover align-middle mb-0">
-                <thead>
-                  <tr>
-                    <th>Requested At</th>
-                    <th>Customer</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    <th class="text-end">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for app in applications %}
-                  <tr id="app-row-{{ app.customer.id }}" class="{% if request.GET.highlight_customer == app.customer.id|stringformat:'s' %}table-warning fw-bold{% endif %}">
-                    <td><small class="text-muted">{{ app.requested_at|date:"M d, Y" }}</small></td>
-                    <td>
-                      <a href="{% url 'view_customer' app.customer.id %}" class="fw-bold text-decoration-none text-info">
-                        {{ app.customer.full_name|default:app.customer.pppoe_username }}
-                      </a>
-                    </td>
-                    <td><span class="cignal-badge-addon"><i class="fas fa-tv"></i> {{ app.addon_type }}</span></td>
-                    <td><span class="cignal-badge-pending"><i class="fas fa-clock"></i> {{ app.status }}</span></td>
-                    <td class="text-end">
-                      <div class="d-flex justify-content-end gap-1">
-                        <button class="btn-cignal-activate" data-bs-toggle="modal" data-bs-target="#cignalAppModal_{{ app.id }}">
-                          <i class="fas fa-check-circle me-1"></i> Activate
-                        </button>
-                        <a href="{% url 'view_customer' app.customer.id %}" class="btn-cignal-icon" title="View Customer Profile">
-                          <i class="fas fa-user"></i>
-                        </a>
-                      </div>
-                    </td>
-                  </tr>
-                  {% empty %}
-                  <tr>
-                    <td colspan="5">
-                      <div class="cignal-empty-state">
-                        <div class="cignal-empty-icon"><i class="fas fa-check-circle text-success" style="opacity: 0.8;"></i></div>
-                        <div class="cignal-empty-title">All Applications Cleared</div>
-                        <div class="cignal-empty-sub">No pending Cignal Play or Cignal Box applications at this time.</div>
-                      </div>
-                    </td>
-                  </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-        </div>
-
-        <!-- Expiring Soon Radar (Next 5 Days) -->
-        <div class="cignal-glass-card mb-4">
-            <div class="cignal-card-header d-flex justify-content-between align-items-center">
-              <h6><i class="fas fa-exclamation-triangle text-warning me-2"></i> Expiring Soon (Next 5 Days)</h6>
-              <span class="badge bg-warning text-dark rounded-pill px-2 py-1" style="font-size: 0.72rem; font-weight: 700;">
-                {{ expiring_cignals|length }} Due Soon
-              </span>
-            </div>
-            <div class="table-responsive">
-              <table class="cignal-table table table-hover align-middle mb-0">
-                <thead>
-                  <tr>
-                    <th>Customer</th>
-                    <th>Account Name / Device</th>
-                    <th>Expiration Date</th>
-                    <th class="text-end">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for item in expiring_cignals %}
-                  <tr>
-                    <td>
-                      <a href="{% url 'view_customer' item.customer.id %}" class="fw-bold text-decoration-none text-info">
-                        {{ item.customer.full_name|default:item.customer.pppoe_username }}
-                      </a>
-                    </td>
-                    <td>
-                      <span class="badge {% if 'Box' in item.addon_type %}bg-warning-subtle text-warning{% else %}bg-info-subtle text-info{% endif %} me-1" style="font-size:0.65rem;">
-                        {{ item.addon_type|default:"Cignal" }}
-                      </span>
-                      <strong class="text-light">{{ item.account_name|default:item.label }}</strong>
-                      {% if item.account_number %}
-                        <small class="text-muted d-block font-monospace" style="font-size:0.75rem;">{{ item.account_number }}</small>
-                      {% endif %}
-                    </td>
-                    <td>
-                      <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1" style="font-size:0.75rem;">
-                        <i class="far fa-clock me-1"></i>
-                        {% if item.expiration_date %}{{ item.expiration_date|date:"M d, Y" }}{% elif item.end_date %}{{ item.end_date|date:"M d, Y" }}{% else %}N/A{% endif %}
-                      </span>
-                    </td>
-                    <td class="text-end">
-                      <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-2 py-0" style="font-size: 0.75rem;" onclick="openCignalPaymentModal({customerId: '{{ item.customer.id }}', customerName: '{{ item.customer.full_name|escapejs }}', pppoe: '{{ item.customer.pppoe_username|escapejs }}', subscriptionId: '{{ item.id }}', expirationDate: '{% if item.expiration_date %}{{ item.expiration_date|date:'Y-m-d' }}{% elif item.end_date %}{{ item.end_date|date:'Y-m-d' }}{% endif %}', subscriptions: [{id: '{{ item.id }}', addon_type: '{{ item.addon_type|escapejs }}', account_name: '{{ item.account_name|escapejs }}', account_number: '{{ item.account_number|escapejs }}', expiration_date: '{% if item.expiration_date %}{{ item.expiration_date|date:'Y-m-d' }}{% elif item.end_date %}{{ item.end_date|date:'Y-m-d' }}{% endif %}'}]})">
-                        <i class="fas fa-coins me-1"></i> Reload
-                      </button>
-                    </td>
-                  </tr>
-                  {% empty %}
-                  <tr>
-                    <td colspan="4">
-                      <div class="cignal-empty-state py-3">
-                        <div class="cignal-empty-icon mb-1"><i class="fas fa-shield-alt text-success" style="opacity: 0.85; font-size: 1.5rem;"></i></div>
-                        <div class="cignal-empty-title" style="font-size: 0.95rem;">No Subscriptions Expiring Soon</div>
-                        <div class="cignal-empty-sub" style="font-size: 0.8rem;">All active Cignal Play and Box accounts are in good standing for the next 5 days.</div>
-                      </div>
-                    </td>
-                  </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-        </div>
-
-        <!-- Active Subscriptions -->
-        <div class="cignal-glass-card">
-            <div class="cignal-card-header">
-              <h6><i class="fas fa-users header-icon-danger"></i> Active Cignal Subscriptions</h6>
-              <a href="{% url 'cignal_play_list' %}" class="btn-cignal-glass">View All <i class="fas fa-arrow-right ms-1"></i></a>
-            </div>
-            <div class="table-responsive">
-              <table class="cignal-table table table-hover align-middle mb-0">
-                <thead>
-                  <tr>
-                    <th>Customer</th>
-                    <th>Account No. / Device</th>
-                    <th>Activation Date</th>
-                    <th>Adjusted By</th>
-                    <th class="text-end">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for customer in customers_list %}
-                  <tr>
-                    <td>
-                      <a href="{% url 'view_customer' customer.id %}" class="fw-bold text-decoration-none text-info">
-                        {{ customer.full_name|default:customer.pppoe_username }}
-                      </a>
-                    </td>
-                    <td>
-                      {% if customer.cignal_plans.all %}
-                        {% for plan in customer.cignal_plans.all %}
-                          <div class="mb-1">
-                            <span class="badge {% if 'Box' in plan.addon_type %}bg-warning-subtle text-warning{% else %}bg-info-subtle text-info{% endif %} me-1" style="font-size:0.65rem;">
-                              {{ plan.addon_type|default:"CIGNAL" }}
-                            </span>
-                            <span class="font-monospace fw-bold {% if 'Box' in plan.addon_type %}text-warning{% else %}text-primary{% endif %}" style="letter-spacing:0.03em;">
-                              {{ plan.account_number|default:"—" }}
-                            </span>
-                            {% if plan.account_name %}
-                              <small class="text-muted ms-1">({{ plan.account_name }})</small>
-                            {% endif %}
-                          </div>
-                        {% endfor %}
-                      {% else %}
-                        {% if customer.cignalplay_no %}
-                          <div><span class="badge bg-info-subtle text-info me-1" style="font-size:0.65rem;">PLAY</span><span class="font-monospace fw-bold text-primary" style="letter-spacing:0.04em;">{{ customer.cignalplay_no }}</span></div>
-                        {% endif %}
-                        {% if customer.cignalbox_no %}
-                          <div class="{% if customer.cignalplay_no %}mt-1{% endif %}"><span class="badge bg-warning-subtle text-warning me-1" style="font-size:0.65rem;">BOX</span><span class="font-monospace fw-bold text-warning" style="letter-spacing:0.04em;">{{ customer.cignalbox_no }}</span></div>
-                        {% endif %}
-                      {% endif %}
-                    </td>
-                    <td>
-                      {% if customer.cignalplay_no and customer.cignalplay_date %}
-                        <div><small class="text-muted">{{ customer.cignalplay_date|date:"M d, Y" }}</small></div>
-                      {% endif %}
-                      {% if customer.cignalbox_no and customer.cignalbox_date %}
-                        <div><small class="text-muted">{{ customer.cignalbox_date|date:"M d, Y" }}</small></div>
-                      {% endif %}
-                      {% if not customer.cignalplay_date and not customer.cignalbox_date %}
-                        <small class="text-muted">N/A</small>
-                      {% endif %}
-                    </td>
-                    <td><small class="text-muted">{{ customer.cignalbox_adjustedby|default:customer.cignalplay_adjustedby|default:"-" }}</small></td>
-                    <td class="text-end">
-                      <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2 py-0" style="font-size: 0.75rem;" onclick="openCignalPaymentModal({customerId: '{{ customer.id }}', customerName: '{{ customer.full_name|escapejs }}', pppoe: '{{ customer.pppoe_username|escapejs }}', subscriptions: [{% for s in customer.cignal_plans.all %}{id: '{{ s.id }}', addon_type: '{{ s.addon_type|escapejs }}', account_name: '{{ s.account_name|escapejs }}', account_number: '{{ s.account_number|escapejs }}', expiration_date: '{% if s.expiration_date %}{{ s.expiration_date|date:'Y-m-d' }}{% elif s.end_date %}{{ s.end_date|date:'Y-m-d' }}{% endif %}'}{% if not forloop.last %},{% endif %}{% endfor %}]})">
-                        <i class="fas fa-coins me-1"></i> Reload
-                      </button>
-                    </td>
-                  </tr>
-                  {% empty %}
-                  <tr>
-                    <td colspan="5">
-                      <div class="cignal-empty-state">
-                        <div class="cignal-empty-icon"><i class="fas fa-users text-muted"></i></div>
-                        <div class="cignal-empty-title">No Active Cignal Subscribers</div>
-                        <div class="cignal-empty-sub">Activated Cignal Play and Box subscribers will appear here.</div>
-                      </div>
-                    </td>
-                  </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-        </div>
+    <!-- Left Column: Active Subscriptions at the very top, Expiring Soon directly below -->
+    <div class="col-12 col-lg-8">
+        {% include "billing/cignal_dashboard/_active_subscriptions.html" %}
     </div>
 
-    <!-- Right Column: Logs & Messages -->
-    <div class="col-12 col-xl-5">
-        
-        <!-- Recent Logs/Renewals -->
-        <div class="cignal-glass-card mb-4">
-            <div class="cignal-card-header">
-              <h6><i class="fas fa-list header-icon-danger"></i> Recent Cignal Logs & Renewals</h6>
-            </div>
-            <div class="table-responsive">
-              <table class="cignal-table table table-hover align-middle mb-0">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Customer</th>
-                    <th>Plan/Log</th>
-                    <th>Processed By</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for log in cignal_payments %}
-                  <tr>
-                    <td><small class="text-muted">{{ log.created_at|date:"M d, Y" }}</small></td>
-                    <td>
-                      <a href="{% url 'user_cignal_logs' log.customer.id %}" class="fw-bold text-decoration-none text-info" title="View customer logs">
-                        {{ log.customer.full_name|default:log.customer.pppoe_username }}
-                      </a>
-                    </td>
-                    <td><span class="cignal-badge-neutral">{{ log.plan_name }}</span></td>
-                    <td><small class="text-muted">{{ log.adjusted_by|default:"-" }}</small></td>
-                  </tr>
-                  {% empty %}
-                  <tr>
-                    <td colspan="4">
-                      <div class="cignal-empty-state">
-                        <div class="cignal-empty-icon"><i class="fas fa-history text-muted"></i></div>
-                        <div class="cignal-empty-title">No Recent Cignal Logs</div>
-                        <div class="cignal-empty-sub">Monthly renewal logs and add-on payments will appear here.</div>
-                      </div>
-                    </td>
-                  </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-        </div>
-
-        <!-- Cignal Notifications -->
-        <div class="cignal-glass-card">
-            <div class="cignal-card-header">
-              <h6><i class="fas fa-bell header-icon-danger"></i> Recent Cignal Messages & Alerts</h6>
-            </div>
-            <div class="list-group list-group-flush">
-                {% for notif in notifications %}
-                <div class="cignal-notif-item">
-                    <div class="d-flex w-100 justify-content-between align-items-center mb-1">
-                        <h6 class="mb-0 fw-bold" style="font-size:0.88rem; color:#38bdf8;">
-                          <i class="fas fa-info-circle me-1"></i> {{ notif.title }}
-                        </h6>
-                        <span class="cignal-notif-id">#{{ notif.id }}</span>
-                    </div>
-                    <p class="mb-0 text-muted small" style="white-space: pre-wrap; font-size:0.8rem;">{{ notif.message }}</p>
-                    {% if notif.link %}
-                    <div class="mt-2 text-end">
-                        <a href="{{ notif.link }}" class="btn-cignal-details">
-                          <i class="fas fa-external-link-alt"></i> View Details
-                        </a>
-                    </div>
-                    {% endif %}
-                </div>
-                {% empty %}
-                <div class="cignal-empty-state">
-                    <div class="cignal-empty-icon"><i class="fas fa-bell-slash text-muted"></i></div>
-                    <div class="cignal-empty-title">No Cignal Notifications</div>
-                    <div class="cignal-empty-sub">All clear! New requests and operational notices will be streamed here.</div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-
+    <!-- Right Column: Pending Applications, Recent Logs, Messages -->
+    <div class="col-12 col-lg-4">
+        {% include "billing/cignal_dashboard/_pending_applications.html" %}
+        {% include "billing/cignal_dashboard/_recent_logs.html" %}
+        {% include "billing/cignal_dashboard/_recent_messages.html" %}
     </div>
   </div>
 
@@ -369,6 +109,12 @@
 
 <!-- Flexible Cignal Payment & Expiration Reload Modal -->
 {% include "billing/partials/_cignal_payment_modal.html" %}
+
+<!-- Cignal Subscription Edit Modal -->
+{% include "billing/partials/_cignal_edit_modal.html" %}
+
+<!-- Enroll Existing Customer in Cignal Modal -->
+{% include "billing/partials/_cignal_enroll_modal.html" %}
 
 {% if request.GET.highlight_customer %}
 <script>

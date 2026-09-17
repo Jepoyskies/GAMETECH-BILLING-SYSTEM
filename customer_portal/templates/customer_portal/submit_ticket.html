@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Submit a Support Ticket</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script>
         (function() {
@@ -24,7 +25,7 @@
     <div class="row justify-content-center">
         <div class="col-md-8 col-lg-6">
             <div class="card card-custom shadow-lg">
-                <div class="card-body p-5">
+                <div class="card-body p-4 p-md-5">
                     <div class="text-center mb-4">
                         <img src="{% static 'assets/images/logo_white.png' %}" alt="Gametech Logo" height="60" class="mb-3">
                         <h2 class="fw-bold">Submit a Support Ticket</h2>
@@ -45,9 +46,49 @@
                             </select>
                         </div>
                         
-                        <div class="mb-4">
+                        <div class="mb-3">
                             <label for="description" class="form-label fw-bold">Description</label>
-                            <textarea class="form-control" id="description" name="description" rows="5" placeholder="Please describe the issue in detail..." required></textarea>
+                            <textarea class="form-control" id="description" name="description" rows="4" placeholder="Please describe the issue in detail..." required></textarea>
+                        </div>
+
+                        <!-- On-Site / Technician Contact Info Section -->
+                        <div class="card bg-body-tertiary border p-3 rounded-4 mb-4" style="border-color: rgba(255,255,255,0.12) !important;">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                    <i class="fas fa-user-clock small"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-0" style="font-size: 0.95rem;">Technician On-Site Contact Details</h6>
+                                    <small class="text-muted">Who should our repair technician contact if you're not home?</small>
+                                </div>
+                            </div>
+                            
+                            <!-- Account Owner Phone Display -->
+                            <div class="mb-3 p-2 rounded-3 bg-body border d-flex justify-content-between align-items-center" style="font-size: 0.82rem;">
+                                <div>
+                                    <span class="text-muted"><i class="fas fa-id-badge me-1 text-secondary"></i> Primary Account Phone:</span>
+                                    <strong class="ms-1">{{ customer.phone|default:"No phone on file" }}</strong>
+                                </div>
+                                <span class="badge bg-secondary bg-opacity-25 text-secondary border">Account Owner</span>
+                            </div>
+
+                            <!-- Alternate / Housemate Phone -->
+                            <div class="mb-3">
+                                <label for="alternate_phone" class="form-label fw-semibold small text-uppercase text-muted">
+                                    <i class="fas fa-phone-alt text-warning me-1"></i> Alternate Phone / Contact Person (Optional)
+                                </label>
+                                <input type="text" class="form-control" id="alternate_phone" name="alternate_phone" placeholder="e.g. 0912 345 6789 - Wife / Housemate at home" maxlength="150">
+                                <div class="form-text text-muted" style="font-size: 0.75rem;">Technicians will call this number if the primary phone is unattended or the owner is away.</div>
+                            </div>
+
+                            <!-- Facebook Account / Messenger -->
+                            <div class="mb-1">
+                                <label for="facebook_account" class="form-label fw-semibold small text-uppercase text-muted">
+                                    <i class="fab fa-facebook-messenger text-primary me-1"></i> Facebook Account / Messenger (Optional)
+                                </label>
+                                <input type="text" class="form-control" id="facebook_account" name="facebook_account" placeholder="e.g. facebook.com/juan.delacruz or Juan Dela Cruz" maxlength="255">
+                                <div class="form-text text-muted" style="font-size: 0.75rem;">Helpful for chat coordination, house landmark confirmation, or sending Messenger location pins.</div>
+                            </div>
                         </div>
                         
                         <div class="d-grid gap-2">
@@ -55,6 +96,35 @@
                             <a href="{% url 'customer_portal:portal_dashboard' %}" class="btn btn-outline-secondary btn-lg rounded-pill">Cancel</a>
                         </div>
                     </form>
+
+                    {% if recent_tickets %}
+                    <div class="mt-4 pt-3 border-top">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="small text-uppercase fw-bold text-muted">Your Recent Tickets</span>
+                            <a href="{% url 'customer_portal:portal_tickets' %}" class="small text-decoration-none">View All History &rarr;</a>
+                        </div>
+                        <div class="d-flex flex-column gap-2">
+                            {% for t in recent_tickets %}
+                            <div class="p-2 rounded-2 bg-body-tertiary border d-flex justify-content-between align-items-center" style="font-size: 0.8rem;">
+                                <div>
+                                    <span class="fw-bold font-monospace">{{ t.ticket_number }}</span>
+                                    <span class="text-muted ms-1">&bull; {{ t.created_at|date:"M d" }}</span>
+                                    <div class="text-muted text-truncate" style="max-width: 260px;">{{ t.concern }}</div>
+                                </div>
+                                <div>
+                                    {% if t.status == 'COMPLETED' %}
+                                    <span class="badge bg-success rounded-pill px-2">Completed</span>
+                                    {% elif t.status == 'IN_PROGRESS' or t.status == 'ASSIGNED' %}
+                                    <span class="badge bg-info text-dark rounded-pill px-2">In Progress</span>
+                                    {% else %}
+                                    <span class="badge bg-warning text-dark rounded-pill px-2">Pending</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

@@ -155,20 +155,47 @@
                         <span class="info-value" style="color:var(--p-text-muted);">₱0.00</span>
                     {% endif %}
                 </li>
-                <!-- Cignal Add-ons (Multi-TV Support) -->
+                <!-- Cignal Add-ons (Unified Play & Box Support) -->
                 {% if cignal_plans %}
                     {% for plan in cignal_plans %}
                     <li style="flex-wrap: wrap; gap: 0.5rem; padding: 0.75rem 0;">
                         <div class="d-flex align-items-center gap-2">
-                            <i class="{% if 'Box' in plan.addon_type %}fas fa-satellite-dish{% else %}fas fa-tv{% endif %}" style="color:#facc15; font-size: 1.1rem;"></i>
+                            <i class="fas fa-satellite-dish" style="color: var(--p-text-muted); font-size: 1.1rem;"></i>
                             <div>
-                                <span class="fw-semibold" style="color: var(--p-text-light); font-size: 0.88rem;">{{ plan.account_name|default:plan.label }}</span>
-                                <small class="d-block font-monospace" style="color: var(--p-text-muted); font-size: 0.75rem;">
-                                    {{ plan.cignal_account_number|default:plan.account_number|default:"—" }}
-                                </small>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="fw-semibold" style="color: var(--p-text-light); font-size: 0.88rem;">{{ plan.account_name|default:"Cignal Subscription" }}</span>
+                                    {% if plan.hardware_payment_type == 'installment' %}
+                                        <span class="badge border border-secondary text-light" style="font-size: 0.65rem;">Box: {{ plan.installments_paid|default:0 }}/12</span>
+                                    {% elif plan.hardware_payment_type == 'cashout' %}
+                                        <span class="badge border border-secondary text-light" style="font-size: 0.65rem;">Cashout</span>
+                                    {% endif %}
+                                </div>
+                                <div class="d-flex flex-wrap align-items-center gap-2 mt-1" style="font-size: 0.78rem;">
+                                    {% if plan.cignal_play_no %}
+                                        <span class="d-inline-flex align-items-center gap-1">
+                                            <span class="badge border border-secondary text-light" style="font-size: 0.65rem;">Play</span>
+                                            <span class="font-monospace fw-semibold" style="color: var(--p-text-light);">{{ plan.cignal_play_no }}</span>
+                                        </span>
+                                    {% endif %}
+                                    {% if plan.cignal_play_no and plan.cignal_box_no %}<span style="color: var(--p-text-muted);">|</span>{% endif %}
+                                    {% if plan.cignal_box_no %}
+                                        <span class="d-inline-flex align-items-center gap-1">
+                                            <span class="badge border border-secondary text-light" style="font-size: 0.65rem;">Box</span>
+                                            <span class="font-monospace fw-semibold" style="color: var(--p-text-light);">{{ plan.cignal_box_no }}</span>
+                                        </span>
+                                    {% endif %}
+                                    {% if not plan.cignal_play_no and not plan.cignal_box_no %}
+                                        <span style="color: var(--p-text-muted);">{{ plan.account_number|default:"—" }}</span>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                         <div class="d-flex align-items-center gap-2 ms-auto">
+                            {% if plan.expiration_date or plan.end_date %}
+                                <span style="font-size: 0.75rem; color: var(--p-text-muted);" title="Expiration / Due Date">
+                                    Due: <strong style="color: var(--p-text-light);">{{ plan.expiration_date|default:plan.end_date|date:"M d, Y" }}</strong>
+                                </span>
+                            {% endif %}
                             {% if plan.is_active %}
                                 <span class="addon-badge active"><i class="fas fa-check-circle"></i> Active</span>
                             {% else %}
@@ -177,32 +204,38 @@
                         </div>
                     </li>
                     {% endfor %}
-                    <li>
-                        <span class="info-label"><i class="fas fa-plus-circle me-2" style="color:#38bdf8;"></i>Add More Devices</span>
-                        <span class="info-value">
-                            <span class="addon-badge apply" onclick="applyForAddon('Cignal Box')"><i class="fas fa-satellite-dish"></i> Add TV Box</span>
-                            <span class="addon-badge apply ms-1" onclick="applyForAddon('Cignal Play Add-on')"><i class="fas fa-tv"></i> Add Play</span>
-                        </span>
+                {% elif customer.cignalplay_no or customer.cignalbox_no %}
+                    <li style="flex-wrap: wrap; gap: 0.5rem; padding: 0.75rem 0;">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fas fa-satellite-dish" style="color: var(--p-text-muted); font-size: 1.1rem;"></i>
+                            <div>
+                                <span class="fw-semibold" style="color: var(--p-text-light); font-size: 0.88rem;">Cignal Subscription</span>
+                                <div class="d-flex flex-wrap align-items-center gap-2 mt-1" style="font-size: 0.78rem;">
+                                    {% if customer.cignalplay_no %}
+                                        <span class="d-inline-flex align-items-center gap-1">
+                                            <span class="badge border border-secondary text-light" style="font-size: 0.65rem;">Play</span>
+                                            <span class="font-monospace fw-semibold" style="color: var(--p-text-light);">{{ customer.cignalplay_no }}</span>
+                                        </span>
+                                    {% endif %}
+                                    {% if customer.cignalplay_no and customer.cignalbox_no %}<span style="color: var(--p-text-muted);">|</span>{% endif %}
+                                    {% if customer.cignalbox_no %}
+                                        <span class="d-inline-flex align-items-center gap-1">
+                                            <span class="badge border border-secondary text-light" style="font-size: 0.65rem;">Box</span>
+                                            <span class="font-monospace fw-semibold" style="color: var(--p-text-light);">{{ customer.cignalbox_no }}</span>
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ms-auto">
+                            <span class="addon-badge active"><i class="fas fa-check-circle"></i> Active</span>
+                        </div>
                     </li>
                 {% else %}
                     <li>
-                        <span class="info-label"><i class="fas fa-tv me-2" style="color:#facc15;"></i>Cignal Play</span>
+                        <span class="info-label"><i class="fas fa-satellite-dish me-2" style="color: var(--p-text-muted);"></i>Cignal Add-on</span>
                         <span class="info-value">
-                            {% if customer.cignalplay_no %}
-                                <span class="addon-badge active"><i class="fas fa-check-circle"></i> {{ customer.cignalplay_no }}</span>
-                            {% else %}
-                                <span class="addon-badge apply" onclick="applyForAddon('Cignal Play Add-on')"><i class="fas fa-plus-circle"></i> Apply Now</span>
-                            {% endif %}
-                        </span>
-                    </li>
-                    <li>
-                        <span class="info-label"><i class="fas fa-satellite-dish me-2" style="color:#facc15;"></i>Cignal Box</span>
-                        <span class="info-value">
-                            {% if customer.cignalbox_no %}
-                                <span class="addon-badge active"><i class="fas fa-check-circle"></i> {{ customer.cignalbox_no }}</span>
-                            {% else %}
-                                <span class="addon-badge apply" onclick="applyForAddon('Cignal Box')"><i class="fas fa-plus-circle"></i> Apply Now</span>
-                            {% endif %}
+                            <span class="addon-badge apply" onclick="applyForAddon('Cignal Subscription')"><i class="fas fa-plus-circle"></i> Apply Now</span>
                         </span>
                     </li>
                 {% endif %}

@@ -210,12 +210,27 @@ def pay_customer_view(request, username):
                         locked_customer.save()  # Triggers Mikrotik Sync
                 # --------------------------
 
-                # --- Option B: Wallet/Advance Payment Logic ---
+                # --- Advance Payment / Wallet Logic ---
                 amount_for_time = max(0.0, amount_float - upgrade_fee)
 
-                # Calculate new expiration using ONLY the amount meant for time
+                # 1. Deduct any outstanding debt (> 0) first
+                if locked_customer.outstanding_balance > 0:
+                    debt_paid = min(Decimal(str(amount_for_time)), locked_customer.outstanding_balance)
+                    locked_customer.outstanding_balance -= debt_paid
+                    amount_for_time = max(0.0, amount_for_time - float(debt_paid))
+
+                # 2. Allocate payment: 1 month is consumed to activate/renew current cycle.
+                # Any excess amount beyond 1 month goes into the Advance Payment wallet (credit).
+                if monthly_price > 0 and amount_for_time > monthly_price:
+                    used_for_time = monthly_price
+                    advance_excess = amount_for_time - monthly_price
+                    locked_customer.outstanding_balance -= Decimal(str(advance_excess))
+                else:
+                    used_for_time = amount_for_time
+
+                # 3. Calculate new expiration using ONLY what is consumed for current cycle
                 new_expiry = calculate_new_expiration_date(
-                    current_exp, amount_for_time, monthly_price
+                    current_exp, used_for_time, monthly_price
                 )
 
                 was_suspended = locked_customer.status in [
@@ -224,13 +239,10 @@ def pay_customer_view(request, username):
                     "expired",
                 ]
 
-                # 1. Update Customer Expiry
+                # 4. Update Customer Expiry
                 locked_customer.expires_at = new_expiry
 
-                # 2. Deduct from outstanding balance
-                locked_customer.outstanding_balance -= Decimal(str(amount_for_time))
-
-                # 3. Update Status if suspended
+                # 5. Update Status if suspended
                 if was_suspended:
                     locked_customer.status = "active"
 
@@ -288,8 +300,12 @@ def pay_customer_view(request, username):
                     "{customer_name}": customer.full_name,
                     "{paid_amount}": str(amount),
                     "{new_expiration}": (
-                        new_expiry.strftime("%Y-%m-%d %H:%M") if new_expiry else ""
+                        new_expiry.strftime("%B %d, %Y") if new_expiry else ""
                     ),
+                    "{plan_name}": customer.plan.name if customer.plan else "",
+                    "{payment_method}": payment_method or "",
+                    "{processed_by}": request.user.get_full_name() or request.user.username,
+                    "{pppoe_username}": customer.pppoe_username or "",
                 }
 
                 if send_sms and customer.phone:
@@ -378,6 +394,10 @@ def pay_customer_view(request, username):
                     "{new_expiration}": (
                         new_expiry.strftime("%B %d, %Y") if new_expiry else ""
                     ),
+                    "{plan_name}": customer.plan.name if customer.plan else "",
+                    "{payment_method}": payment_method or "",
+                    "{processed_by}": request.user.get_full_name() or request.user.username,
+                    "{pppoe_username}": customer.pppoe_username or "",
                 }
                 for k, v in context_replacements.items():
                     messenger_msg = messenger_msg.replace(k, str(v))

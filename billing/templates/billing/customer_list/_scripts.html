@@ -32,156 +32,9 @@
             table.column(6).search(this.value).draw();
         });
 
-        // --- Bulk SMS & Email Logic ---
-        function updateSelectedCount() {
-            var selectedCount = table.$('.customer-checkbox:checked').length;
-            $('#selectedCount').text(selectedCount);
-            $('#modalSelectedCount').text(selectedCount);
-            $('#btnBulkSms').prop('disabled', selectedCount === 0);
-            
-            $('#selectedEmailCount').text(selectedCount);
-            $('#modalSelectedEmailCount').text(selectedCount);
-            $('#btnBulkEmail').prop('disabled', selectedCount === 0);
-            
-            var totalCount = table.$('.customer-checkbox').length;
-            $('#selectAllCheckbox').prop('checked', selectedCount > 0 && selectedCount === totalCount);
-            
-            // Add Transfer Logic
-            $('#selectedTransferCount').text(selectedCount);
-            $('#transferCountDisplay').text(selectedCount);
-            $('#btnBulkTransfer').prop('disabled', selectedCount === 0);
-            $('#transferCustomerInputs').empty();
-            table.$('.customer-checkbox:checked').each(function() {
-                $('#transferCustomerInputs').append(`<input type="hidden" name="customer_ids" value="${$(this).val()}">`);
-            });
-        }
-
-        $('#selectAllCheckbox').on('change', function() {
-            var isChecked = $(this).prop('checked');
-            // Only select the rows that are currently visible/filtered by the user's search
-            table.$('.customer-checkbox', {"filter":"applied"}).prop('checked', isChecked);
-            updateSelectedCount();
-        });
-
-        $('#customerTable tbody').on('change', '.customer-checkbox', function() {
-            updateSelectedCount();
-        });
-
-        table.on('draw', function() {
-            updateSelectedCount(); // re-eval when page/filter changes
-        });
-
-        $('#btnSendBulkSms').on('click', function() {
-            var selectedIds = [];
-            // We use table.$ to query all pages of the datatable, not just the visible page.
-            table.$('.customer-checkbox:checked').each(function() {
-                selectedIds.push($(this).val());
-            });
-            var message = $('#bulkSmsMessage').val();
-            
-            if (!message.trim()) {
-                Swal.fire('Error', 'Please enter a message.', 'error');
-                return;
-            }
-            
-            $(this).html('<i class="fas fa-spinner fa-spin me-2"></i> Sending...').prop('disabled', true);
-            
-            $.ajax({
-                url: '{% url "bulk_sms_view" %}',
-                type: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                contentType: 'application/json',
-                data: JSON.stringify({
-                    customer_ids: selectedIds,
-                    message: message
-                }),
-                success: function(response) {
-                    if (response.success) {
-                        $('#bulkSmsModal').modal('hide');
-                        $('#bulkSmsMessage').val('');
-                        table.$('.customer-checkbox').prop('checked', false);
-                        $('#selectAllCheckbox').prop('checked', false);
-                        updateSelectedCount();
-                        
-                        Swal.fire({
-                            title: 'Success!',
-                            text: 'Successfully sent ' + response.sent_count + ' SMS messages.',
-                            icon: 'success',
-                            confirmButtonColor: '#10b981'
-                        });
-                    } else {
-                        Swal.fire('Error', response.error || 'Unknown error occurred.', 'error');
-                    }
-                },
-                error: function(err) {
-                    Swal.fire('Error', 'A network error occurred.', 'error');
-                },
-                complete: function() {
-                    $('#btnSendBulkSms').html('Send Now <i class="fas fa-paper-plane ms-2"></i>').prop('disabled', false);
-                }
-            });
-        });
-
-        $('#btnSendBulkEmail').on('click', function() {
-            var selectedIds = [];
-            table.$('.customer-checkbox:checked').each(function() {
-                selectedIds.push($(this).val());
-            });
-            var subject = $('#bulkEmailSubject').val();
-            var message = $('#bulkEmailMessage').val();
-            
-            if (!subject.trim() || !message.trim()) {
-                Swal.fire('Error', 'Please enter a subject and a message.', 'error');
-                return;
-            }
-            
-            $(this).html('<i class="fas fa-spinner fa-spin me-2"></i> Sending...').prop('disabled', true);
-            
-            $.ajax({
-                url: '{% url "bulk_email_view" %}',
-                type: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                contentType: 'application/json',
-                data: JSON.stringify({
-                    customer_ids: selectedIds,
-                    subject: subject,
-                    message: message
-                }),
-                success: function(response) {
-                    if (response.success) {
-                        $('#bulkEmailModal').modal('hide');
-                        $('#bulkEmailSubject').val('');
-                        $('#bulkEmailMessage').val('');
-                        table.$('.customer-checkbox').prop('checked', false);
-                        $('#selectAllCheckbox').prop('checked', false);
-                        updateSelectedCount();
-                        
-                        Swal.fire({
-                            title: 'Success!',
-                            text: 'Successfully sent ' + response.sent_count + ' Email messages.',
-                            icon: 'success',
-                            confirmButtonColor: '#10b981'
-                        });
-                    } else {
-                        Swal.fire('Error', response.error || 'Unknown error occurred.', 'error');
-                    }
-                },
-                error: function(err) {
-                    Swal.fire('Error', 'A network error occurred.', 'error');
-                },
-                complete: function() {
-                    $('#btnSendBulkEmail').html('Send Now <i class="fas fa-paper-plane ms-2"></i>').prop('disabled', false);
-                }
-            });
-        });
+        {% include "billing/customer_list/_scripts_bulk.html" %}
     });
-</script>
 
-<script>
     function showReason(btn) {
         let el = btn.closest('.conn-status-indicator');
         let status = el.getAttribute('data-status');
@@ -311,31 +164,56 @@
                     let installationStatus = el.getAttribute('data-installation-status') || 'installed';
                     let expiresAt = el.getAttribute('data-expires-at');
                     let routerId = parseInt(el.getAttribute('data-router-id'));
-                    let btnHtml = '<button class="btn btn-sm btn-light p-0 ms-1 rounded-circle shadow-sm border" onclick="showReason(this)" title="View Reason" style="width: 22px; height: 22px; line-height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fas fa-exclamation-circle text-danger" style="font-size: 0.8rem;"></i></button>';
+                    let btnHtml = '<button class="btn btn-xs p-0 ms-1 rounded-circle border-0 text-danger" onclick="showReason(this)" title="View Diagnostic Reason" style="width: 17px; height: 17px; line-height: 15px; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; background: rgba(239, 68, 68, 0.2);"><i class="fas fa-info-circle" style="font-size: 0.7rem; color: #ef4444;"></i></button>';
                     let tr = el.closest('tr');
+                    let baseBadge = tr ? tr.querySelector('.cust-base-badge') : null;
                     
                     // An account is ONLY pending install if explicitly marked as pending installation or pending signup
                     let isPendingInstall = (installationStatus === 'pending') || (status === 'pending' && !expiresAt);
                     
                     if (status === 'suspended') {
-                        if (tr) tr.classList.remove('table-row-paid-offline');
-                        el.innerHTML = '<span class="badge bg-danger rounded-pill shadow-sm mt-1"><i class="fas fa-ban me-1"></i>Suspended</span>' + btnHtml;
+                        if (tr) {
+                            tr.classList.remove('table-row-paid-offline');
+                            tr.classList.remove('table-row-pending-install');
+                            tr.classList.add('table-row-suspended');
+                        }
+                        el.innerHTML = btnHtml;
                     } else if (active_users.has(pppoe)) {
-                        if (tr) tr.classList.remove('table-row-paid-offline');
+                        if (tr) {
+                            tr.classList.remove('table-row-paid-offline');
+                            tr.classList.remove('table-row-pending-install');
+                        }
                         let activeUserRouter = user_router_map[pppoe];
                         if (activeUserRouter && !isNaN(routerId) && activeUserRouter.router_id !== routerId) {
                             // Session active on a different router than assigned
                             el.setAttribute('data-different-router', activeUserRouter.router_name);
-                            el.innerHTML = '<span class="badge rounded-pill shadow-sm mt-1 px-2 py-1 d-inline-flex align-items-center gap-1" style="background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.4); font-weight: 600; font-size: 0.72rem;" title="Connected to ' + activeUserRouter.router_name + ' instead of assigned router"><i class="fas fa-shuffle"></i>Active on ' + activeUserRouter.router_name + '</span>' + btnHtml;
+                            if (baseBadge) baseBadge.style.display = 'none';
+                            el.innerHTML = '<span class="badge rounded-pill shadow-sm px-2 py-1 d-inline-flex align-items-center gap-1" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); font-weight: 600; font-size: 0.72rem;" title="Connected to ' + activeUserRouter.router_name + ' instead of assigned router"><i class="fas fa-shuffle"></i>Active on ' + activeUserRouter.router_name + '</span>' + btnHtml;
                         } else {
-                            el.innerHTML = '<span class="badge bg-success rounded-pill shadow-sm mt-1" style="background-color: #10b981 !important;"><i class="fas fa-check-circle me-1"></i>Connected</span>';
+                            if (baseBadge) {
+                                baseBadge.style.display = '';
+                                baseBadge.className = 'badge bg-success-subtle text-success border border-success-subtle px-2 py-1 cust-base-badge';
+                                baseBadge.innerHTML = '<i class="fas fa-wifi text-success me-1" style="font-size: 0.65rem;"></i>Active';
+                            }
+                            el.innerHTML = '';
                         }
                     } else if (isPendingInstall) {
-                        if (tr) tr.classList.remove('table-row-paid-offline');
-                        el.innerHTML = '<span class="badge rounded-pill shadow-sm mt-1 px-2 py-1 d-inline-flex align-items-center gap-1" style="background: rgba(14, 165, 233, 0.15); color: #0284c7; border: 1px solid rgba(14, 165, 233, 0.35); font-weight: 600; font-size: 0.72rem;"><i class="fas fa-gear"></i>Pending Install</span>';
+                        if (tr) {
+                            tr.classList.remove('table-row-paid-offline');
+                            tr.classList.add('table-row-pending-install');
+                        }
+                        el.innerHTML = '';
                     } else if (!pppoe) {
-                        if (tr) tr.classList.remove('table-row-paid-offline');
-                        el.innerHTML = '<span class="badge bg-secondary rounded-pill shadow-sm mt-1"><i class="fas fa-question-circle me-1"></i>No PPPoE</span>';
+                        if (tr) {
+                            tr.classList.remove('table-row-paid-offline');
+                            tr.classList.remove('table-row-pending-install');
+                        }
+                        if (status === 'active') {
+                            if (baseBadge) baseBadge.style.display = 'none';
+                            el.innerHTML = '<span class="badge bg-secondary rounded-pill shadow-sm px-2 py-1" style="font-size: 0.72rem;"><i class="fas fa-question-circle me-1"></i>No PPPoE</span>';
+                        } else {
+                            el.innerHTML = '';
+                        }
                     } else {
                         let isRouterOffline = false;
                         let isApiDown = false;
@@ -359,11 +237,18 @@
                         }
                         if (status === 'active') {
                             let specificStatus = isApiDown ? 'Offline (Router API Down)' : (isRouterOffline ? 'Offline (Router Off)' : 'Active but Offline');
-                            el.innerHTML = '<span class="badge rounded-pill shadow-sm mt-1 text-white fw-bold px-2 py-1 d-inline-flex align-items-center gap-1" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border: 1px solid #f87171; box-shadow: 0 0 10px rgba(239, 68, 68, 0.45); font-size: 0.72rem;"><i class="fas fa-triangle-exclamation text-white"></i>' + specificStatus + '</span>' + btnHtml;
-                            if (tr) tr.classList.add('table-row-paid-offline');
+                            if (baseBadge) baseBadge.style.display = 'none';
+                            el.innerHTML = '<span class="badge rounded-pill shadow-sm text-white fw-bold px-2 py-1 d-inline-flex align-items-center gap-1" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border: 1px solid #f87171; box-shadow: 0 0 8px rgba(239, 68, 68, 0.4); font-size: 0.72rem;"><i class="fas fa-triangle-exclamation text-white"></i>' + specificStatus + '</span>' + btnHtml;
+                            if (tr) {
+                                tr.classList.remove('table-row-pending-install');
+                                tr.classList.add('table-row-paid-offline');
+                            }
                         } else {
-                            if (tr) tr.classList.remove('table-row-paid-offline');
-                            el.innerHTML = '<span class="badge rounded-pill shadow-sm mt-1" style="background-color: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);"><i class="fas fa-wifi me-1" style="text-decoration: line-through;"></i>Offline</span>' + btnHtml;
+                            if (tr) {
+                                tr.classList.remove('table-row-paid-offline');
+                                tr.classList.remove('table-row-pending-install');
+                            }
+                            el.innerHTML = '';
                         }
                     }
                 });

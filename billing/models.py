@@ -304,6 +304,41 @@ class Customer(models.Model):
     def is_suspicious(self):
         return len(self.suspicious_reasons) > 0
 
+    @property
+    def is_walkin_or_direct(self):
+        if not self.agent:
+            return True
+        agent_name = (self.agent.name or "").lower()
+        return "walk-in" in agent_name or "direct" in agent_name
+
+    @property
+    def can_pay_staggered(self):
+        now = timezone.now()
+        start_date = self.installed_at or self.created_at or now
+        days_active = (now - start_date).days
+        payments_count = self.payments.count() if self.pk else 0
+
+        if self.is_walkin_or_direct:
+            # Walk-in / Direct: unlocked after first payment or after first month (>= 30 days)
+            return payments_count >= 1 or days_active >= 30
+        else:
+            # Has an Agent: only unlocked after 3 months (>= 90 days) or after 3 payments
+            return payments_count >= 3 or days_active >= 90
+
+    @property
+    def staggered_restriction_reason(self):
+        if self.can_pay_staggered:
+            return None
+        if self.is_walkin_or_direct:
+            return "Please complete your initial full monthly payment to unlock staggered payments."
+        else:
+            now = timezone.now()
+            start_date = self.installed_at or self.created_at or now
+            days_active = (now - start_date).days
+            days_left = max(1, 90 - days_active)
+            months_left = max(1, (days_left + 29) // 30)
+            return f"Staggered payments unlock after your first 3 months of service (~{months_left} mo remaining)."
+
     def generate_mikrotik_comment(self):
         latest_payment = self.payments.order_by("-created_at").first()
 
@@ -544,15 +579,38 @@ class CignalPlay(models.Model):
         Customer, on_delete=models.CASCADE, related_name="cignal_plans"
     )
     plan_name = models.CharField(max_length=255)
-    addon_type = models.CharField(max_length=50, default="Cignal Play")
-    account_number = models.CharField(max_length=100, null=True, blank=True)
+    cignal_play_no = models.CharField(max_length=100, null=True, blank=True)
+    cignal_box_no = models.CharField(max_length=100, null=True, blank=True)
     account_name = models.CharField(max_length=150, null=True, blank=True, help_text="e.g. Living Room TV")
     amount_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     start_date = models.DateTimeField(null=True, blank=True)
     end_date = models.DateTimeField(null=True, blank=True)
     expiration_date = models.DateTimeField(null=True, blank=True)
     adjusted_by = models.CharField(max_length=100, null=True, blank=True)
+    hardware_payment_type = models.CharField(
+        max_length=30,
+        choices=[
+            ("cashout", "Cashout ₱3k"),
+            ("installment", "Installment ₱250/mo"),
+            ("none", "App Only / No Box"),
+        ],
+        default="none",
+    )
+    installments_paid = models.IntegerField(default=0)
+    monthly_load_plan = models.CharField(
+        max_length=20,
+        choices=[
+            ("149", "42 Channels (₱149)"),
+            ("399", "62 Channels (₱399)"),
+        ],
+        default="149",
+        blank=True,
+        null=True,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
+    is_cancelled = models.BooleanField(default=False, db_index=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    cancelled_by = models.CharField(max_length=100, null=True, blank=True)
 
     class Meta:
         db_table = "cignal_play"
@@ -560,19 +618,103 @@ class CignalPlay(models.Model):
 
     @property
     def label(self):
-        return self.account_name or self.plan_name or "Cignal Device"
+        return self.account_name or self.plan_name or "Cignal Subscription"
+
+    @property
+    def addon_type(self):
+        return "Cignal Subscription"
+
+    @property
+    def account_number(self):
+        return self.cignal_play_no or self.cignal_box_no or ""
 
     @property
     def cignal_account_number(self):
-        return self.account_number or ""
+        return self.cignal_play_no or self.cignal_box_no or ""
 
     @property
     def is_active(self):
+        if self.is_cancelled:
+            return False
         exp = self.expiration_date or self.end_date
         if not exp:
             return False
         from django.utils import timezone
-        return exp >= timezone.now()
+        now = timezone.now()
+        # Normalise: exp may be a datetime or date
+        if hasattr(exp, 'hour'):
+            if timezone.is_naive(exp):
+                exp = timezone.make_aware(exp, timezone.get_current_timezone())
+            return exp >= now
+        from datetime import date
+        if isinstance(exp, date):
+            return exp >= timezone.localdate()
+        return False
+
+    @property
+    def is_hardware_fully_paid(self):
+        if self.hardware_payment_type == 'cashout':
+            return True
+        if self.hardware_payment_type == 'installment':
+            return (self.installments_paid or 0) >= 12
+        return True
+
+    @property
+    def is_installment_ongoing(self):
+        return self.hardware_payment_type == 'installment' and (self.installments_paid or 0) < 12
+
+    @property
+    def hardware_total_amount(self):
+        if self.hardware_payment_type in ('cashout', 'installment'):
+            return 3000
+        return 0
+
+    @property
+    def hardware_paid_amount(self):
+        if self.hardware_payment_type == 'cashout':
+            return 3000
+        elif self.hardware_payment_type == 'installment':
+            months = min(max(self.installments_paid or 0, 0), 12)
+            return months * 250
+        return 0
+
+    @property
+    def hardware_remaining_amount(self):
+        if self.hardware_payment_type == 'cashout':
+            return 0
+        elif self.hardware_payment_type == 'installment':
+            paid = self.hardware_paid_amount
+            return max(3000 - paid, 0)
+        return 0
+
+    @property
+    def hardware_remaining_months(self):
+        if self.hardware_payment_type == 'installment':
+            months = min(max(self.installments_paid or 0, 0), 12)
+            return max(12 - months, 0)
+        return 0
+
+    @property
+    def hardware_paid_formatted(self):
+        return f"{self.hardware_paid_amount:,}"
+
+    @property
+    def hardware_remaining_formatted(self):
+        return f"{self.hardware_remaining_amount:,}"
+
+    @property
+    def is_installment_completed(self):
+        return self.hardware_payment_type == 'installment' and (self.installments_paid or 0) >= 12
+
+    @property
+    def load_plan_display(self):
+        if self.monthly_load_plan == '149':
+            return "42 Channels (₱149/mo)"
+        elif self.monthly_load_plan == '399':
+            return "62 Channels (₱399/mo)"
+        elif self.monthly_load_plan:
+            return f"₱{self.monthly_load_plan}/mo"
+        return "No Load Set"
 
     def save(self, *args, **kwargs):
         if self.expiration_date and not self.end_date:
@@ -583,7 +725,13 @@ class CignalPlay(models.Model):
 
     def __str__(self):
         lbl = f" ({self.account_name})" if self.account_name else ""
-        return f"{self.addon_type or self.plan_name}{lbl} - {self.account_number or 'No Acct'} for {self.customer.full_name}"
+        nums = []
+        if self.cignal_play_no:
+            nums.append(f"Play: {self.cignal_play_no}")
+        if self.cignal_box_no:
+            nums.append(f"Box: {self.cignal_box_no}")
+        num_str = " | ".join(nums) if nums else "No Numbers"
+        return f"{self.plan_name}{lbl} - {num_str} for {self.customer.full_name}"
 
 
 class AuditLog(models.Model):

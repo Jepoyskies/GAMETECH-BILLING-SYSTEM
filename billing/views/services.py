@@ -38,6 +38,7 @@ from billing.models import (
 )
 import requests
 from network_manager.models import MikrotikDevice, NapBox
+from dispatch.models import JobTicket
 from network_manager.services import MikrotikAPI
 from django.db import transaction
 import calendar
@@ -353,7 +354,7 @@ def cignalplay_form_view(request, customer_id):
         return redirect("user_cignal_logs", customer_id=customer.id)
 
     context = {"customer": customer}
-    return render(request, "billing/cignalplay_form.html", {"form": form})
+    return render(request, "billing/cignalplay_form.html", context)
 
 
 def get_categorized_plans():
@@ -398,10 +399,16 @@ def apply_cignal_addon(request):
     if request.method == "POST":
         request_id = request.POST.get("request_id")
         customer_id = request.POST.get("customer_id")
-        cignalplay_no = request.POST.get("cignalplay_no", "").strip()
+        cignal_play_no = (
+            request.POST.get("cignal_play_no", "").strip()
+            or request.POST.get("cignalplay_no", "").strip()
+        )
+        cignal_box_no = (
+            request.POST.get("cignal_box_no", "").strip()
+            or request.POST.get("cignalbox_no", "").strip()
+        )
         cignalplay_date_raw = request.POST.get("cignalplay_date")
         expiration_date_raw = request.POST.get("expiration_date") or request.POST.get("new_expiration_date")
-        addon_type = request.POST.get("addon_type")
         account_name = (
             request.POST.get("account_name", "").strip()
             or request.POST.get("label", "").strip()
@@ -409,6 +416,11 @@ def apply_cignal_addon(request):
         payment_method = request.POST.get("payment_method", "Cash").strip()
         reference_no = request.POST.get("reference_no", "").strip()
         notes = request.POST.get("notes", "").strip() or request.POST.get("remarks", "").strip()
+
+        # Validate at least one account number is present
+        if not cignal_play_no and not cignal_box_no:
+            messages.error(request, "Please provide at least one Cignal account number (Play No. or Box No.).")
+            return redirect(request.META.get("HTTP_REFERER", "cignal_dashboard"))
 
         # Parse initial payment amount
         initial_amount_raw = request.POST.get("initial_amount") or request.POST.get("amount") or "0"
@@ -460,44 +472,84 @@ def apply_cignal_addon(request):
                 pending_req.status = "Resolved"
                 pending_req.save()
 
-        # Update customer profile summary fields
-        is_box = "box" in (addon_type or "").lower()
-        if is_box:
-            customer.cignalbox_no = cignalplay_no
-            customer.cignalbox_date = activation_dt
-            customer.cignalbox_adjustedby = request.user.username
-        else:
-            customer.cignalplay_no = cignalplay_no
-            customer.cignalplay_date = activation_dt
-            customer.cignalplay_adjustedby = request.user.username
-        customer.save()
+        # Legacy Customer cignal fields are intentionally no longer written here.
+        # CignalPlay record is the single source of truth.
 
-        # Create CignalPlay subscription record (One-to-Many)
-        sub_name = account_name or f"{'Cignal Box' if is_box else 'Cignal Play'} - {cignalplay_no}"
+        # Format account numbers summary
+        account_nos = []
+        if cignal_play_no:
+            account_nos.append(f"Play: {cignal_play_no}")
+        if cignal_box_no:
+            account_nos.append(f"Box: {cignal_box_no}")
+        acct_summary = " | ".join(account_nos)
+        sub_name = account_name or f"Cignal - {acct_summary}"
+
+        # Parse hardware & load plan selections
+        hardware_payment_type = request.POST.get("hardware_payment_type", "none").strip()
+        monthly_load_plan = request.POST.get("monthly_load_plan", "149").strip()
+        if hardware_payment_type == "cashout":
+            installments_paid = 12
+        elif hardware_payment_type == "installment":
+            installments_paid = 1
+        else:
+            installments_paid = 0
+
+        # Create CignalPlay subscription record (Unified)
         subscription = CignalPlay.objects.create(
             customer=customer,
-            plan_name=addon_type or ("Cignal Box Add-on" if is_box else "Cignal Play Add-on"),
-            addon_type="Cignal Box" if is_box else "Cignal Play",
+            plan_name="Cignal Subscription",
             account_name=sub_name,
-            account_number=cignalplay_no,
+            cignal_play_no=cignal_play_no,
+            cignal_box_no=cignal_box_no,
             start_date=activation_dt,
             expiration_date=expiration_dt,
             end_date=expiration_dt,
             amount_paid=initial_amount,
+            hardware_payment_type=hardware_payment_type,
+            installments_paid=installments_paid,
+            monthly_load_plan=monthly_load_plan,
             adjusted_by=request.user.username,
+        )
+
+        # --- Dispatch Bridge: Auto-create a Cignal JobTicket ---
+        acct_nos_str = " | ".join(filter(None, [
+            f"Play No: {cignal_play_no}" if cignal_play_no else None,
+            f"Box No: {cignal_box_no}" if cignal_box_no else None,
+        ]))
+        hw_info = {
+            'cashout': 'Hardware: Cashout ₱3,000',
+            'installment': 'Hardware: Installment ₱250/mo',
+            'none': 'App Only (No Box)',
+        }.get(hardware_payment_type, 'App Only')
+        JobTicket.objects.create(
+            ticket_type='CIGNAL',
+            source_tab='CIGNAL_PLAY',
+            status='PENDING',
+            priority='NORMAL',
+            customer=customer,
+            client_name=customer.full_name,
+            address=customer.address or '',
+            barangay=customer.barangay.name if customer.barangay else '',
+            contact_number=customer.phone or '',
+            account_no=customer.pppoe_username or '',
+            plan_package=f"{hw_info} | Load: ₱{monthly_load_plan}/mo",
+            concern=f"Cignal Play Activation\n{acct_nos_str}",
+            remarks=notes or '',
+            created_by=request.user,
         )
 
         # Crucial: Automatically generate a Payment record for the Initial Payment Amount
         if initial_amount > 0:
-            acct_desc = subscription.account_name or subscription.account_number or "Cignal Subscription"
-            reason_text = f"Cignal Activation: {acct_desc} ({subscription.account_number})"
+            acct_desc = subscription.account_name or acct_summary
+            hw_desc = f"Hardware: {hardware_payment_type.title()}" if hardware_payment_type != "none" else "App Only"
+            reason_text = f"Cignal Activation: {acct_desc} ({hw_desc} + {monthly_load_plan} Load)"
             if notes:
                 reason_text += f" | {notes}"
 
             Payment.objects.create(
                 customer=customer,
                 username=customer.pppoe_username or customer.full_name,
-                plan_name=f"{subscription.addon_type} ({subscription.plan_name})",
+                plan_name="Cignal Subscription",
                 amount=initial_amount,
                 payment_method=payment_method or "Cash",
                 reference_no=reference_no or f"ACT-{customer.id}-{subscription.id}",
@@ -513,19 +565,19 @@ def apply_cignal_addon(request):
                 admin_user=request.user,
                 customer=customer,
                 action_type="Cignal Activation Payment",
-                remarks=f"Initial Payment: ₱{initial_amount:,.2f} | Ref: {reference_no or 'N/A'}{audit_notes} | Due Date: {expiration_dt.strftime('%Y-%m-%d')} | Acct: {cignalplay_no}",
+                remarks=f"Initial Payment: ₱{initial_amount:,.2f} | {hw_desc} ({installments_paid}/12 paid) | Load Plan: ₱{monthly_load_plan} | Ref: {reference_no or 'N/A'}{audit_notes} | Due Date: {expiration_dt.strftime('%Y-%m-%d')} | Accounts: {acct_summary}",
             )
 
         # Notification
         pay_info = f" with initial payment ₱{initial_amount:,.2f}" if initial_amount > 0 else ""
         Notification.objects.create(
-            title="Cignal Add-on Activated",
-            message=f"{customer.full_name} activated {subscription.addon_type} ({sub_name}){pay_info} by {request.user.username}. Due: {expiration_dt.strftime('%b %d, %Y')}.",
+            title="Cignal Subscription Activated",
+            message=f"{customer.full_name} activated Cignal Subscription ({sub_name}){pay_info} by {request.user.username}. Due: {expiration_dt.strftime('%b %d, %Y')}.",
             notification_type="cignal",
             link=f"/customer/{customer.id}/cignal-logs/",
         )
 
-        success_msg = f"Cignal {subscription.addon_type} activated successfully for {customer.full_name}!"
+        success_msg = f"Cignal Subscription activated successfully for {customer.full_name} ({acct_summary})!"
         if initial_amount > 0:
             success_msg += f" Initial payment of ₱{initial_amount:,.2f} recorded (Due: {expiration_dt.strftime('%b %d, %Y')})."
         messages.success(request, success_msg)
@@ -546,25 +598,11 @@ def approve_cignal_request(request, request_id):
         messages.error(request, "Cignal Account No and Date are required.")
         return redirect(request.META.get("HTTP_REFERER", "cignal_dashboard"))
     customer = addon_req.customer
-    is_box = "box" in (addon_req.addon_type or "").lower()
-    if is_box:
-        customer.cignalbox_no = cignal_no
-        customer.cignalbox_adjustedby = request.user.username
-        try:
-            customer.cignalbox_date = timezone.datetime.fromisoformat(cignal_date).date()
-        except ValueError:
-            customer.cignalbox_date = timezone.now()
-    else:
-        customer.cignalplay_no = cignal_no
-        customer.cignalplay_adjustedby = request.user.username
-        try:
-            customer.cignalplay_date = timezone.datetime.fromisoformat(cignal_date).date()
-        except ValueError:
-            customer.cignalplay_date = timezone.now()
-    customer.save()
+    # Legacy Customer cignal fields are no longer written here — CignalPlay is source of truth.
     addon_req.status = "Resolved"
     addon_req.save()
     messages.success(
         request, f"Cignal request for {customer.full_name} approved and applied."
     )
     return redirect(request.META.get("HTTP_REFERER", "cignal_dashboard"))
+

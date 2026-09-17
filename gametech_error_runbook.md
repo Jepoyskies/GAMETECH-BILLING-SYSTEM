@@ -19,6 +19,8 @@
 | **ERR-013** | Logged-out Customer Still Showing as Active in Topbar Live Monitoring Dropdown | `billing/views/auth.py`, `customer_portal/views.py`, `billing/middleware.py` | Session / Cache |
 | **ERR-015** | Accidental Horizontal Scrollbar / Clunky Windows Scrollbars in Topbar Notifications Dropdown | `_topbar.html`, `_scripts.html`, `components.css` | Frontend (CSS) |
 | **ERR-016** | Suspended Customer Retaining Stale Expiration Date in UI & Mikrotik Secret Comment | `billing/models.py`, `_info_cards.html`, `actions.py`, `crud.py` | Model / UI |
+| **ERR-037** | Cignal Reload Modal pre-fills old expiration date, confusing presets with duplicate ₱399 | `billing/templates/billing/partials/_cignal_payment_modal.html`, `_cignal_payment_modal_script.html`, `cignal_dashboard.py` | Billing / UI |
+| **ERR-040** | Blinding Yellow Row for Expired Customers, Unreadable Text, and Stacked Status Column Bloat | `customer_list/_styles.html`, `_table.html`, `_scripts.html`, `_hero.html` | Frontend (CSS/UI) |
 
 ---
 
@@ -622,11 +624,123 @@
 
 ---
 
+### ERR-035: Incomplete Installation Activation Workflow (Missing Plan, Upfront Payment, & Auto First Due Date)
+* **Symptoms**:
+  * Clicking "Mark as Installed" on a pending subscriber only prompted for installation date and manual expiration, requiring staff to navigate separately to `/pay/` to record upfront installation payments or manually calculate the next billing cycle.
+* **Root Causes**:
+  * `mark_customer_installed` view and modal previously only updated `installed_at` and `expires_at` without accepting plan tier adjustments, upfront payment amounts, or executing automated prorated/full-month billing math.
+* **Exact Target Files**:
+  * `billing/views/customers/actions.py`
+  * `billing/views/customers/crud.py`
+  * `billing/templates/billing/view_customer/_modals.html`
+  * `billing/templates/billing/view_customer/_modal_mark_installed.html`
+* **1-Step Fix**:
+  * Pass `plans` in `view_customer` context.
+  * Modularize the installation confirmation modal into `_modal_mark_installed.html` with Plan selection, Upfront Payment collection (amount, method, ref #), and client-side real-time auto-calculation of First Due date.
+  * Update `mark_customer_installed` backend view to update `customer.plan`, create a verified `Payment` record when upfront payment is collected, and push synchronized secrets to MikroTik.
+
+---
+
+### ERR-036: Dispatch System CRM Hook & Field Completion Decoupling
+* **Symptoms**:
+  * New customer applicants registered as "Pending Installation" were invisible to field dispatchers unless manually copied into external dispatch sheets or legacy monitoring databases.
+  * Completing physical fiber installation in the field did not automatically update subscriber CRM records to active/installed status.
+* **Root Causes**:
+  * Legacy dispatch system operated on a standalone Node.js/Prisma database without foreign key linkage to `billing.Customer` or `network_manager.MikrotikDevice`.
+  * Absence of a `post_save` CRM listener to orchestrate automated ticket generation upon applicant onboarding.
+* **Exact Target Files**:
+  * `dispatch/models.py` (`JobTicket` model with `customer` & `mikrotik_device` FKs)
+  * `dispatch/signals.py` (`auto_create_dispatch_ticket_on_pending_install`)
+  * `dispatch/views.py` (`api_complete_job` auto-promoting `installation_status='installed'` and `status='active'`)
+  * `dispatch/templates/dispatch/dashboard.html` (Orchestrator pattern console with CartoDB Dark Matter map)
+* **1-Step Fix**:
+  * Connect `post_save` signal on `Customer` to automatically generate a `JobTicket` (type `INSTALLATION`, status `PENDING`) with customer GPS coords, plan, address, and assigned MikroTik router.
+  * When technicians submit technical completion specs (NAP port, cable length, optical power dBm, ONT serial) in `api_complete_job`, automatically transition the linked customer to `installed` and `active`.
+
+### ERR-037: Cignal Reload Modal Stale Expiration Pre-Fill, Duplicate ₱399 Presets, & Router Confusion
+* **Symptoms**:
+  * Opening the Cignal Reload modal (`_cignal_payment_modal.html`) populated "New Expiration Date" with the subscriber's *current* expiration date instead of an extended date. Submitting without manual date entry left the subscription's expiration date unchanged.
+  * Staff was confused by two duplicate ₱399 preset buttons (`₱399 Load Only` vs `₱399 Box + Load`), and hardware installment buttons were visible for app-only customers.
+  * Modal helper text incorrectly claimed expiration dates synchronize across MikroTik profiles.
+* **Root Causes**:
+  * `cpmOnSubscriptionChange` script read `data-exp` and directly assigned `dateInput.value = exp`, pre-filling the old date without adding +30 days.
+  * Presets were hardcoded in a static list regardless of subscriber hardware setup (`hardware_payment_type`).
+  * Backend `process_cignal_payment` allowed box installment payments to overwrite the TV load expiration date.
+* **Exact Target Files**:
+  * `billing/templates/billing/partials/_cignal_payment_modal.html`
+  * `billing/templates/billing/partials/_cignal_payment_modal_script.html`
+  * `billing/views/cignal_dashboard.py` (`process_cignal_payment`)
+* **1-Step Fix**:
+  * Add a dedicated Current Subscription Status card to `_cignal_payment_modal.html` displaying current due date, plan, and hardware setup.
+  * Calculate ISP-standard rollover: `New Due Date = Current Expiration + 30 Days` (if active) or `Today + 30 Days` (if expired).
+  * Dynamically show/hide hardware presets based on `data-hw` and `data-inst` (< 12 months), and display live extension preview banner.
+### ERR-038: Redundant Cignal Subscription Confirmation Flash Message & One-Way Dispatch Desync
+* **Symptoms**:
+  * Staff saving or updating Cignal subscription details was greeted by an awkward, confusing red/pink flash message: `Cignal subscription 'Cignal Subscription' updated successfully.`
+  * Marking a subscriber as installed in CRM left their open installation `JobTicket` orphaned in `PENDING` in the dispatch module.
+  * Completing an installation ticket via generic status change (`api_update_status`) failed to activate the customer in CRM.
+* **Root Causes**:
+  * `edit_cignal_subscription` formatted messages using `f"Cignal subscription '{subscription.account_name}' updated successfully."`. When `account_name` fell back to default `"Cignal Subscription"`, the wording was duplicated. Unstyled alerts inherited red/pinkish styling, making success messages look like errors.
+  * `dispatch/signals.py` only listened for pending install states without auto-completing tickets when `installation_status == 'installed'`, and lacked a `post_save` listener on `JobTicket` to handle 2-way completion sync.
+* **Exact Target Files**:
+  * `billing/views/cignal_dashboard.py` (`edit_cignal_subscription`)
+  * `billing/templates/billing/cignal_dashboard.html` (styled emerald green flash messages block)
+  * `dispatch/signals.py` (`auto_create_dispatch_ticket_on_pending_install` & `sync_ticket_completion_to_customer`)
+* **1-Step Fix**:
+  * In `cignal_dashboard.py`, format flash message as `f"Cignal details for {customer.full_name}{label} updated successfully."` and render alerts with `#ecfdf5` background, `#059669` text, checkmark icon, and dismiss button.
+  * In `dispatch/signals.py`, auto-complete open installation tickets when a customer's `installation_status` changes to `'installed'`, and register a `post_save` on `JobTicket` to promote `customer.installation_status = 'installed'` and `customer.status = 'active'` whenever an installation ticket is marked `COMPLETED`.
+
+### ERR-039: Cignal Date vs Time Expiry Blindspot, Ghost Active Subscribers, and Archive Purge Control
+* **Symptoms**:
+  * Setting Cignal subscription expiration date to today with an exact time (e.g., 2:00 PM) failed to expire when that time passed; changing the date to yesterday immediately marked it expired.
+  * Clearing or cancelling Cignal subscriptions still showed them in the "Active Customers" KPI count (e.g. 2 active customers despite 0 subscriptions).
+  * Removed subscriptions vanished completely instead of moving to an archive bar for administrative review.
+  * An unwanted vertical scrollbar appeared in the right-column "Messages & Alerts" card.
+* **Root Causes**:
+  * `CignalPlay.is_active` stripped the time component (`exp = exp.date()`) and compared `exp >= timezone.localdate()`, treating any expiration today as valid for the entire 24-hour calendar day regardless of the hour/minute set.
+  * `cignal_dashboard_view` matched customers with non-empty legacy strings `cignalplay_no` on the `Customer` record even if `cignal_plans` count was 0, and `cancel_cignal_subscription` hard-deleted records without clearing customer legacy fields.
+  * `_recent_messages.html` had a fixed inline `max-height: 400px; overflow-y: auto; scrollbar-width: thin;`.
+* **Exact Target Files**:
+  * `billing/models.py` (`CignalPlay.is_active`, `is_cancelled`, `cancelled_at`, `cancelled_by`)
+  * `billing/migrations/0045_cignalplay_cancellation_fields.py`
+  * `billing/views/cignal_dashboard.py` (`cignal_dashboard_view`, `edit_cignal_subscription`, `cancel_cignal_subscription`, `restore_cignal_subscription`, `purge_cignal_subscription`)
+  * `billing/templates/billing/cignal_dashboard/_active_subscriptions.html`
+  * `billing/templates/billing/cignal_dashboard/_recent_messages.html`
+  * `billing/templates/billing/partials/_cignal_edit_modal.html`
+* **1-Step Fix**:
+  * In `CignalPlay.is_active`, compare timezone-aware `datetime >= timezone.now()`, expiring subscriptions instantaneously when their exact target time elapses.
+  * Filter active customers strictly by `cignal_plans__is_cancelled=False`, and provide segmented status tabs: **Active Subscriptions**, **Ongoing Installments (₱250/mo)**, **Fully Paid**, and **Cancelled / Archive Bar**.
+  * Update cancellation to soft-delete (`is_cancelled=True`, `cancelled_at=now()`, `cancelled_by=user.username`), clear legacy fields on customer if no plans remain, and restrict permanent archive purging strictly to staff/admins (`user.is_staff`).
+### ERR-040: Blinding Yellow Row for Expired Customers, Unreadable Text, and Stacked Status Column Bloat
+* **Symptoms**:
+  * In `/customers/` (Customers Directory), rows for expired customers render as a blinding pastel yellow bar (`#fffbeb`) across the dark mode table.
+  * Cell text (`juan delacruz`, email, phone, plan) is light-colored, resulting in near-zero contrast and making customer information unreadable.
+  * Status column contains 3 to 4 vertically-stacked contradictory badges (e.g. green `Active` + yellow `Due Oct 11` + red glowing `Active but Offline` + white button `!`; or pink `Expired` + red `Expired Sep 15` + orange `Offline` + button `!`), ballooning row height to 90–120px.
+  * In `_hero.html`, "Paid but Offline" stat card has an uneven "Alert" tag squished next to the counter number.
+* **Root Causes**:
+  * `_table.html` applied Bootstrap's `.table-warning` to `<tr>` when `status == 'expired'`. Bootstrap forces `--bs-table-bg: #fff3cd`, and `_styles.html` hardcoded `#fffbeb`.
+  * `updateConnectionStatuses` in `_scripts.html` appended redundant `Active but Offline` or `Offline` badges and a large `22px` circle button below the static Django badge without hiding or replacing the primary billing badge.
+* **Exact Target Files**:
+  * `billing/templates/billing/customer_list/_table.html`
+  * `billing/templates/billing/customer_list/_styles.html`
+  * `billing/templates/billing/customer_list/_scripts.html`
+  * `billing/templates/billing/customer_list/_scripts_bulk.html`
+  * `billing/templates/billing/customer_list/_hero.html`
+* **1-Step Fix**:
+  * In `_table.html`, replace `.table-warning` with custom `.table-row-expired` (`rgba(244, 63, 94, 0.06)` with `3px solid #f43f5e` left accent border).
+  * In `_styles.html`, hard-neutralize Bootstrap `.table-warning` and `.table-secondary` in dark mode to guarantee no bright yellow background ever renders, normalize table headers (`0.74rem`) and cells (`0.83rem`), and style `.cust-status-wrap`.
+  * In `_scripts.html`, when `updateConnectionStatuses()` detects `Active but Offline`, hide the static `.cust-base-badge` and render a single high-priority pill with an inline diagnostic button (`17px`); for non-active subscribers (`expired`, `inactive`), suppress redundant `Offline` pills.
+  * In `_hero.html`, remove the squished "Alert" badge so all 6 stat cards maintain identical, balanced typography.
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 1. Assign a new `ERR-XXX` identifier.
 2. Fill in: **Symptoms**, **Root Causes**, **Exact Target Files**, and **1-Step Fix**.
 3. Keep entries short, actionable, and sniper-focused.
+
+
 
 
 

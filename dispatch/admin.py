@@ -1,5 +1,12 @@
 from django.contrib import admin
-from .models import Team, Technician, ConfigOption, DispatchRecord, MonitoringRecord, JobDetail, AuditLog
+from .models import Team, Technician, ConfigOption, DispatchRecord, MonitoringRecord, JobDetail, AuditLog, JobTicket
+
+@admin.register(JobTicket)
+class JobTicketAdmin(admin.ModelAdmin):
+    list_display = ('ticket_number', 'client_name', 'ticket_type', 'status', 'priority', 'scheduled_date', 'created_at')
+    list_filter = ('status', 'ticket_type', 'priority', 'source_tab', 'scheduled_date')
+    search_fields = ('ticket_number', 'client_name', 'contact_number', 'account_no', 'address')
+    date_hierarchy = 'created_at'
 
 @admin.register(Team)
 class TeamAdmin(admin.ModelAdmin):
@@ -42,3 +49,4 @@ class AuditLogAdmin(admin.ModelAdmin):
     list_display = ('action', 'entity_type', 'entity_id', 'actor', 'created_at')
     list_filter = ('action', 'entity_type')
     search_fields = ('summary', 'actor__username')
+

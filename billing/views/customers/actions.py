@@ -481,11 +481,17 @@ def unverify_customer(request, customer_id):
 def mark_customer_installed(request, customer_id):
     customer = get_object_or_404(Customer, id=customer_id)
     installed_at_str = request.POST.get("installed_at")
+    plan_id = request.POST.get("plan_id")
+    amount_str = request.POST.get("amount")
+    payment_method = request.POST.get("payment_method") or "Cash"
+    reference_no = (request.POST.get("reference_no") or "").strip()
     expires_at_str = request.POST.get("expires_at")
 
     if installed_at_str:
         try:
             installed_at = timezone.datetime.strptime(installed_at_str, "%Y-%m-%d")
+            if timezone.is_naive(installed_at):
+                installed_at = timezone.make_aware(installed_at)
         except ValueError:
             installed_at = timezone.now()
     else:
@@ -496,16 +502,89 @@ def mark_customer_installed(request, customer_id):
     if customer.status == "pending":
         customer.status = "active"
 
+    # Update plan if selected
+    old_plan_name = customer.plan.name if customer.plan else "None"
+    if plan_id:
+        new_plan = SubscriptionPlan.objects.filter(id=plan_id).first()
+        if new_plan:
+            customer.plan = new_plan
+
+    # Parse or auto-calculate expiration / first due date
     if expires_at_str:
         try:
-            customer.expires_at = timezone.datetime.strptime(expires_at_str, "%Y-%m-%d")
+            exp_dt = timezone.datetime.strptime(expires_at_str, "%Y-%m-%d")
+            exp_dt = exp_dt.replace(hour=23, minute=59, second=59)
+            if timezone.is_naive(exp_dt):
+                exp_dt = timezone.make_aware(exp_dt)
+            customer.expires_at = exp_dt
         except ValueError:
             pass
     elif not customer.expires_at:
-        # Default first cycle: 30 days from installation date
-        customer.expires_at = installed_at + timedelta(days=30)
+        monthly_price = float(customer.plan.price) if customer.plan else 0.0
+        try:
+            pay_amt = float(amount_str) if amount_str else 0.0
+        except (ValueError, TypeError):
+            pay_amt = 0.0
+
+        if monthly_price > 0 and pay_amt > 0:
+            from billing.views import calculate_new_expiration_date
+
+            customer.expires_at = calculate_new_expiration_date(
+                installed_at, pay_amt, monthly_price
+            )
+        else:
+            customer.expires_at = installed_at + timedelta(days=30)
 
     customer.save()
+
+    # Process Initial Payment if provided and > 0
+    amount = 0.0
+    if amount_str:
+        try:
+            amount = float(amount_str)
+        except (ValueError, TypeError):
+            amount = 0.0
+
+    if amount > 0:
+        Payment.objects.create(
+            customer=customer,
+            username=customer.pppoe_username,
+            plan_name=customer.plan.name if customer.plan else None,
+            mikrotik_device_name=(
+                customer.mikrotik_device.device_name
+                if customer.mikrotik_device
+                else None
+            ),
+            amount=amount,
+            payment_method=payment_method,
+            reference_no=reference_no,
+            reason="Initial payment upon installation",
+            expires_at=customer.expires_at,
+            payment_date_received=installed_at,
+            paid_at=timezone.now(),
+            adjusted_by=request.user.username,
+        )
+
+        Notification.objects.create(
+            title=f"Payment Received: ₱{amount:,.2f}",
+            message=f"{customer.full_name} paid ₱{amount:,.2f} via {payment_method} upon installation.",
+            notification_type="payment",
+            link="/logs/payments/",
+        )
+
+    # Build comprehensive audit log
+    new_data_lines = [
+        "Installation Status: Installed",
+        f"Installed At: {customer.installed_at.strftime('%Y-%m-%d') if customer.installed_at else 'N/A'}",
+        f"Plan: {customer.plan.name if customer.plan else 'None'}",
+        f"First Due / Expires At: {customer.expires_at.strftime('%Y-%m-%d %H:%M') if customer.expires_at else 'N/A'}",
+        f"Status: {customer.status}",
+    ]
+    if amount > 0:
+        ref_text = f" (Ref: {reference_no})" if reference_no else ""
+        new_data_lines.append(
+            f"Initial Payment: ₱{amount:,.2f} via {payment_method}{ref_text}"
+        )
 
     SystemLog.objects.create(
         table_name="Customer",
@@ -513,13 +592,28 @@ def mark_customer_installed(request, customer_id):
         action="INSTALLATION",
         changed_by=request.user.username,
         target_name=customer.full_name,
-        old_data="Installation Status: Pending",
-        new_data=f"Installation Status: Installed\nInstalled At: {customer.installed_at}\nExpires At: {customer.expires_at}\nStatus: {customer.status}",
+        old_data=f"Installation Status: Pending | Plan: {old_plan_name}",
+        new_data="\n".join(new_data_lines),
     )
 
-    messages.success(
-        request,
-        f"Customer {customer.full_name} has been marked as Installed! Account is now active.",
-    )
+    # 2-Way Sync: Close any open dispatch JobTicket for this customer
+    try:
+        from dispatch.models import JobTicket
+        JobTicket.objects.filter(
+            customer=customer,
+            ticket_type="INSTALLATION",
+            status__in=["PENDING", "ASSIGNED", "IN_PROGRESS"],
+        ).update(
+            status="COMPLETED",
+            done_at=timezone.now(),
+            time_accomplish=timezone.now(),
+        )
+    except Exception:
+        pass
+
+    success_msg = f"Customer {customer.full_name} has been marked as Installed! Account is now active."
+    if amount > 0:
+        success_msg += f" Initial payment of ₱{amount:,.2f} recorded."
+    messages.success(request, success_msg)
     return redirect("view_customer", customer_id=customer.id)
 

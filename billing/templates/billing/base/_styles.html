@@ -10,7 +10,29 @@
     --color-dark-blue: #3533cd;
     --color-dark-gray: #15171b;
     --color-dusty: #eceef3;
+    --gt-bg-rgb: 255, 255, 255;
 }
+
+html.dark-mode,
+body.dark-mode {
+    --gt-bg-rgb: 15, 23, 42;
+}
+
+/* ============================================================
+   1. SILKY DARK MODE & SURFACE TRANSITIONS
+   ============================================================ */
+body,
+.main-content,
+.content-wrapper,
+.sidebar,
+.topbar,
+.card,
+.modal-content,
+.dropdown-menu,
+.table {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
 body {
     font-family: var(--font-body);
 }
@@ -123,9 +145,33 @@ h1, h2, h3, h4, h5, h6, .card-title, .modal-title {
 .main-content { margin-left: 250px; transition: margin 0.3s; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
 .main-content.full, .sidebar.collapsed ~ .main-content { margin-left: 70px; }
 @media (max-width: 991.98px) { .main-content, .main-content.full { margin-left: 0; } }
-.topbar { padding: 0.9rem 1.5rem; background: #fff; border-bottom: 1px solid #f0f0f0;
-           display: flex; align-items: center; justify-content: space-between; min-height: 62px;
-           position: sticky; top: 0; z-index: 1030; width: 100%; }
+/* ============================================================
+   2. FROSTED GLASS STICKY HEADER
+   ============================================================ */
+.topbar {
+    padding: 0.9rem 1.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+    width: 100%;
+    min-height: 62px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: rgba(var(--gt-bg-rgb, 255, 255, 255), 0.85) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+html.dark-mode .topbar,
+body.dark-mode .topbar {
+    background-color: rgba(var(--gt-bg-rgb, 15, 23, 42), 0.85) !important;
+    background-image: none !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
 .content-wrapper { width: 100%; max-width: 1600px; margin: 0 auto; }
 .menu-btn, .hide-btn, .show-btn {
     background: none; border: none; font-size: 1.45rem; color: #2151A1;
@@ -259,6 +305,54 @@ html.dark-mode .hamburger-button div { background-color: #eceef3; }
         animation: pulseDanger 2s infinite;
     }
 
+    /* ============================================================
+       3. TACTILE BUTTON & CARD MICRO-INTERACTIONS
+       ============================================================ */
+    .gt-btn,
+    .btn-primary,
+    .gt-cl-card {
+        transition: all 0.2s ease-in-out;
+    }
+
+    .gt-btn:hover,
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .gt-btn:active,
+    .btn-primary:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+
+    .gt-cl-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+    }
+
+    html.dark-mode .gt-cl-card:hover {
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.35);
+    }
+
+    /* ============================================================
+       4. DANGER MODAL ATTENTION SHAKE ANIMATION
+       ============================================================ */
+    @keyframes subtleShake {
+        0%, 100% { transform: translateX(0); }
+        15%, 45%, 75% { transform: translateX(-2px); }
+        30%, 60%, 90% { transform: translateX(2px); }
+    }
+
+    .modal-danger-animate,
+    .modal.show .modal-danger-animate,
+    .modal.modal-danger .modal-content,
+    .modal.danger-modal .modal-content,
+    .swal2-icon.swal2-warning,
+    .swal2-icon.swal2-error {
+        animation: subtleShake 0.4s ease-in-out;
+    }
+
     /* Leaflet Dark Matter Container & Tile Filter Styling */
     html.dark-mode .leaflet-container,
     body.dark-mode .leaflet-container {
@@ -374,6 +468,9 @@ html.dark-mode .hamburger-button div { background-color: #eceef3; }
     body.dark-mode .ts-wrapper.focus .ts-control {
         border-color: #38bdf8 !important;
         box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25) !important;
+    }
+    .ts-dropdown {
+        z-index: 9999 !important;
     }
     html.dark-mode .ts-dropdown,
     body.dark-mode .ts-dropdown {

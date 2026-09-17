@@ -1,0 +1,198 @@
+{% extends 'billing/base.html' %}
+{% load static %}
+
+{% block title %}Network Speedtest Engine | Gametech Unli Fiber{% endblock %}
+
+{% block content %}
+<style>
+    .speedtest-hero-card {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.85) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        backdrop-filter: blur(16px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    }
+    .speedtest-frame-container {
+        position: relative;
+        width: 100%;
+        min-height: 650px;
+        border-radius: 16px;
+        overflow: hidden;
+        background: #0b0f19;
+        border: 1px solid rgba(56, 189, 248, 0.2);
+        box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6);
+    }
+    .speedtest-frame {
+        width: 100%;
+        height: 650px;
+        border: none;
+        display: block;
+    }
+    .btn-ookla {
+        background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+        color: #ffffff;
+        font-weight: 700;
+        border: none;
+        border-radius: 12px;
+        padding: 10px 22px;
+        transition: all 0.25s ease;
+        box-shadow: 0 4px 14px rgba(6, 182, 212, 0.35);
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+    }
+    .btn-ookla:hover {
+        background: linear-gradient(135deg, #0891b2 0%, #2563eb 100%);
+        color: #ffffff;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(6, 182, 212, 0.5);
+    }
+    .stat-badge {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 12px 16px;
+    }
+</style>
+
+<div class="container-fluid px-4 py-4">
+    <!-- Header Section -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-50 px-3 py-1 rounded-pill">
+                    <i class="fas fa-network-wired me-1"></i> Network Operations
+                </span>
+                <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 px-3 py-1 rounded-pill">
+                    <i class="fas fa-circle-check me-1"></i> Live Testing Engine
+                </span>
+            </div>
+            <h2 class="fw-bold text-white mb-0">Network Speedtest &amp; Latency Monitor</h2>
+            <p class="text-muted mb-0">Benchmark real-time fiber downlink, uplink, ping latency, and jitter directly from your browser</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="https://www.speedtest.net" target="_blank" rel="noopener noreferrer" class="btn-ookla" title="Launch official Ookla Speedtest">
+                <i class="fas fa-gauge-high"></i> Open Speedtest.net (Ookla)
+                <i class="fas fa-arrow-up-right-from-square small ms-1"></i>
+            </a>
+            <a href="{% url 'live_monitoring' %}" class="btn btn-outline-secondary rounded-pill px-3 py-2">
+                <i class="fas fa-arrow-left me-1"></i> Live Monitoring
+            </a>
+        </div>
+    </div>
+
+    <!-- Diagnostic Info Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="stat-badge d-flex align-items-center gap-3">
+                <div class="p-3 rounded-circle bg-primary bg-opacity-10 text-primary fs-4">
+                    <i class="fas fa-globe"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-muted text-uppercase fw-semibold">Detected Client IP</div>
+                    <div class="fw-bold text-white fs-5 font-monospace">{{ client_ip|default:"202.61.110.153" }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-badge d-flex align-items-center gap-3">
+                <div class="p-3 rounded-circle bg-success bg-opacity-10 text-success fs-4">
+                    <i class="fas fa-server"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-muted text-uppercase fw-semibold">ISP Gateway / Network</div>
+                    <div class="fw-bold text-white fs-5">Gametech Unli Fiber</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-badge d-flex align-items-center gap-3">
+                <div class="p-3 rounded-circle bg-info bg-opacity-10 text-info fs-4">
+                    <i class="fas fa-satellite-dish"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-muted text-uppercase fw-semibold">Recommended Ookla Server</div>
+                    <div class="fw-bold text-white fs-5">Medrozo IT Solutions (CDO)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Speedtest Main Panel -->
+    <div class="row g-4">
+        <!-- Interactive Speedtest Embed -->
+        <div class="col-lg-8">
+            <div class="speedtest-hero-card p-3 p-md-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-tachometer-alt text-cyan"></i>
+                        <h5 class="fw-bold text-white mb-0">HTML5 In-Browser Speedtest Engine</h5>
+                    </div>
+                    <button class="btn btn-sm btn-outline-info rounded-pill px-3" onclick="document.getElementById('speedtest-iframe').src = document.getElementById('speedtest-iframe').src;">
+                        <i class="fas fa-rotate-right me-1"></i> Reset Gauge
+                    </button>
+                </div>
+
+                <div class="speedtest-frame-container">
+                    <iframe id="speedtest-iframe" class="speedtest-frame" src="https://openspeedtest.com/Get-widget.php" allow="autoplay; fullscreen" loading="lazy" title="Interactive Speedtest"></iframe>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center mt-3 text-xs text-muted">
+                    <div><i class="fas fa-shield-alt text-success me-1"></i> Zero plugin required • Pure HTML5 WebSockets / Multi-stream HTTP</div>
+                    <div><i class="fas fa-server text-info me-1"></i> Measuring Downlink, Uplink, Ping, &amp; Jitter</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Field Technician Quick Diagnostics -->
+        <div class="col-lg-4">
+            <div class="speedtest-hero-card p-4 mb-4">
+                <h5 class="fw-bold text-white mb-3 d-flex align-items-center gap-2">
+                    <i class="fas fa-bolt text-warning"></i> Ookla Speedtest.net
+                </h5>
+                <p class="text-muted text-sm mb-3">
+                    Prefer testing on the official Ookla global server network? Launch Speedtest.net directly.
+                </p>
+                <div class="p-3 rounded-3 bg-black bg-opacity-40 border border-secondary border-opacity-50 mb-3 text-center">
+                    <img src="https://www.speedtest.net/images/speedtest-logo.svg" alt="Speedtest by Ookla" height="32" class="mb-2" onerror="this.style.display='none'">
+                    <div class="fw-bold text-cyan">Speedtest by Ookla</div>
+                    <small class="text-muted">Global ISP Standard Benchmarking</small>
+                </div>
+                <a href="https://www.speedtest.net" target="_blank" rel="noopener noreferrer" class="btn btn-primary w-100 rounded-pill py-2 fw-bold">
+                    <i class="fas fa-external-link-alt me-2"></i> Launch Speedtest.net
+                </a>
+            </div>
+
+            <div class="speedtest-hero-card p-4">
+                <h5 class="fw-bold text-white mb-3 d-flex align-items-center gap-2">
+                    <i class="fas fa-wrench text-cyan"></i> Tech Troubleshooting Guide
+                </h5>
+                <ul class="list-unstyled d-flex flex-column gap-3 mb-0 text-sm text-light">
+                    <li class="d-flex align-items-start gap-2">
+                        <i class="fas fa-check-circle text-success mt-1"></i>
+                        <div>
+                            <strong>Connect via LAN / 5GHz Wi-Fi:</strong>
+                            <div class="text-muted text-xs">2.4GHz Wi-Fi maxes out around 40-60 Mbps due to local 2.4GHz band congestion. Always test on 5GHz or Cat6 Ethernet.</div>
+                        </div>
+                    </li>
+                    <li class="d-flex align-items-start gap-2">
+                        <i class="fas fa-check-circle text-success mt-1"></i>
+                        <div>
+                            <strong>Check Optical Power (dBm):</strong>
+                            <div class="text-muted text-xs">Target optical reception power is -15 dBm to -24 dBm. Levels worse than -27 dBm cause frame drops and packet jitter.</div>
+                        </div>
+                    </li>
+                    <li class="d-flex align-items-start gap-2">
+                        <i class="fas fa-check-circle text-success mt-1"></i>
+                        <div>
+                            <strong>MikroTik Bandwidth Test:</strong>
+                            <div class="text-muted text-xs">Use Winbox Terminal: <code>/tool bandwidth-test address=202.61.110.153 protocol=tcp</code> for raw router-to-router throughput.</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

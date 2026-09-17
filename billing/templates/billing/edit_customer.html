@@ -8,6 +8,11 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 {% endif %}
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<style>
+    .ts-dropdown {
+        z-index: 9999 !important;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -131,6 +136,7 @@
                 </div>
             </div>
             
+            {% if customer.installation_status == 'pending' or customer.status == 'pending' %}
             <div class="mb-4 p-3 rounded-3" style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2);">
                 <label class="plan-form-label fw-bold mb-2">
                     <i class="fas fa-tools me-1 text-primary"></i> Installation & Setup Status <span class="req">*</span>
@@ -152,6 +158,15 @@
                         </div>
                     </div>
                 </div>
+            </div>
+            {% else %}
+            <input type="hidden" name="installation_status" value="{{ customer.installation_status|default:'installed' }}">
+            {% if customer.installed_at %}
+            <input type="hidden" name="installed_at" value="{{ customer.installed_at|date:'Y-m-d' }}">
+            {% endif %}
+            {% endif %}
+
+            <div class="mb-4 p-3 rounded-3" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08);">
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="plan-form-label">Expiration Date / Next Due Date</label>
@@ -407,19 +422,34 @@
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
+        // Upgrade dropdowns to smart search with TomSelect
         document.querySelectorAll('select.plan-form-control').forEach((el)=>{
             try {
                 if (!el.tomselect) {
                     const hasOptgroups = el.querySelectorAll('optgroup').length > 0;
+                    const isStatus = el.name === 'status' || el.name === 'installation_status';
                     new TomSelect(el, {
                         create: false,
-                        controlInput: null,
-                        sortField: hasOptgroups ? undefined : { field: "text", direction: "asc" }
+                        sortField: (hasOptgroups || isStatus) ? undefined : { field: "text", direction: "asc" }
                     });
                 }
             } catch(err) {
                 console.warn("TomSelect fallback on", el.name, err);
             }
+        });
+
+        // Auto-capitalize text inputs (Full Address, Full Name, Barangay) to Title Case on blur
+        function toTitleCase(str) {
+            if (!str) return '';
+            return str.toLowerCase().replace(/\b\w/g, s => s.toUpperCase());
+        }
+
+        document.querySelectorAll('input[name="address"], input[name="full_name"], input[name="barangay_name"]').forEach(input => {
+            input.addEventListener('blur', function() {
+                if (this.value) {
+                    this.value = toTitleCase(this.value.trim());
+                }
+            });
         });
     });
 </script>

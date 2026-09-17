@@ -1,5 +1,5 @@
 from django import forms
-from .models import AccountType, Barangay, AddonPlan
+from .models import AccountType, Barangay, AddonPlan, Customer
 
 
 class AccountTypeForm(forms.ModelForm):
@@ -82,3 +82,71 @@ class AddonPlanForm(forms.ModelForm):
                 }
             ),
         }
+
+
+class CustomerForm(forms.ModelForm):
+    class Meta:
+        model = Customer
+        fields = [
+            "full_name",
+            "email",
+            "phone",
+            "address",
+            "pppoe_username",
+            "pppoe_password",
+            "plan",
+            "mikrotik_device",
+            "agent",
+            "barangay",
+            "account_type",
+            "status",
+            "installation_status",
+            "installed_at",
+            "expires_at",
+            "latitude",
+            "longitude",
+            "cignalplay_no",
+            "cignalbox_no",
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.instance or not self.instance.pk:
+            if "installation_status" in self.fields:
+                self.fields["installation_status"].initial = "pending"
+            if "status" in self.fields:
+                self.fields["status"].initial = "pending"
+
+    def clean_email(self):
+        email = self.cleaned_data.get("email")
+        if email:
+            email = email.strip()
+            qs = Customer.objects.filter(email__iexact=email)
+            if self.instance and self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise forms.ValidationError("A customer with this email address already exists.")
+        return email or None
+
+    def clean_phone(self):
+        phone = self.cleaned_data.get("phone")
+        if phone:
+            phone = phone.strip()
+            qs = Customer.objects.filter(phone=phone)
+            if self.instance and self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise forms.ValidationError("A customer with this phone number already exists.")
+        return phone
+
+    def clean_pppoe_username(self):
+        pppoe_username = self.cleaned_data.get("pppoe_username")
+        if pppoe_username:
+            pppoe_username = pppoe_username.strip()
+            qs = Customer.objects.filter(pppoe_username__iexact=pppoe_username)
+            if self.instance and self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise forms.ValidationError("A customer with this PPPoE username already exists.")
+        return pppoe_username or None
+
