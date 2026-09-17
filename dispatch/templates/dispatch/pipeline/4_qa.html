@@ -22,8 +22,12 @@
         <!-- QA Review Tickets -->
         <div class="col-12">
             <div class="gt-cl-card">
-                <div class="card-header border-bottom border-secondary p-3">
+                <div class="card-header border-bottom border-secondary p-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <h6 class="mb-0 text-white fw-bold"><i class="fas fa-search me-2 text-info"></i> Tickets Ready for QA</h6>
+                    <div class="d-flex gap-3 small text-muted">
+                        <span><i class="fas fa-circle text-warning" style="font-size: 0.5rem; vertical-align: middle;"></i> Completed (Awaiting QA)</span>
+                        <span><i class="fas fa-circle text-success" style="font-size: 0.5rem; vertical-align: middle;"></i> QA Passed (Awaiting Approval)</span>
+                    </div>
                 </div>
                 <div class="card-body p-0 table-responsive">
                     <table class="table table-dark table-hover mb-0 align-middle">
@@ -39,8 +43,13 @@
                             {% for ticket in tickets %}
                             <tr>
                                 <td class="ps-3 border-secondary text-white">
-                                    <div class="fw-bold">{{ ticket.ticket_number }}</div>
-                                    <small class="text-muted">{{ ticket.client_name }} <a href="tel:{{ ticket.contact_number }}" class="text-primary"><i class="fas fa-phone"></i></a></small>
+                                    <div class="mb-1">
+                                        <span class="badge bg-dark border border-secondary text-info font-monospace px-2 py-1">{{ ticket.ticket_number }}</span>
+                                        {% if ticket.completed_at %}
+                                        <span class="badge bg-dark border border-secondary text-muted ms-1 fw-normal"><i class="fas fa-clock"></i> {{ ticket.completed_at|timesince }} ago</span>
+                                        {% endif %}
+                                    </div>
+                                    <small class="text-muted fw-bold">{{ ticket.client_name }} <a href="tel:{{ ticket.contact_number }}" class="text-primary"><i class="fas fa-phone"></i></a></small>
                                 </td>
                                 <td class="border-secondary text-muted small">
                                     {{ ticket.assigned_team.name|default:"-" }}<br>
@@ -54,7 +63,7 @@
                                     <div><span class="text-muted">Payment:</span> <span class="text-warning text-uppercase">{{ ticket.payment_collected|default:"None" }}</span></div>
                                 </td>
                                 <td class="border-secondary text-end pe-3">
-                                    <button class="btn btn-sm btn-success fw-bold" data-bs-toggle="modal" data-bs-target="#qaModal{{ ticket.id }}">
+                                    <button class="btn btn-sm btn-success fw-bold gt-btn" data-bs-toggle="modal" data-bs-target="#qaModal{{ ticket.id }}">
                                         Conduct QA
                                     </button>
                                 </td>
@@ -118,9 +127,12 @@
                             </div>
                             {% empty %}
                             <tr>
-                                <td colspan="4" class="text-center text-muted py-5">
-                                    <i class="fas fa-clipboard-check fa-2x mb-3 text-secondary"></i><br>
-                                    No tickets awaiting QA review.
+                                <td colspan="4" class="text-center py-5">
+                                    <div class="dispatch-empty-state mx-auto" style="max-width: 450px;">
+                                        <i class="fas fa-clipboard-check fa-2x mb-3 text-secondary" style="opacity: 0.6;"></i>
+                                        <h6 class="text-white mb-2">No tickets awaiting QA review</h6>
+                                        <p class="text-muted small mb-0">Tickets marked as 'Completed' by Field Technicians will appear here.</p>
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}

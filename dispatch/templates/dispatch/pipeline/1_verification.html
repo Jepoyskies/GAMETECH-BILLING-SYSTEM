@@ -39,7 +39,8 @@
                             {% for prospect in prospects %}
                             <tr>
                                 <td class="ps-3 border-secondary text-white fw-bold">
-                                    {{ prospect.full_name }}<br>
+                                    {{ prospect.full_name }}
+                                    <span class="badge bg-dark border border-secondary text-muted ms-2 fw-normal"><i class="fas fa-clock"></i> {{ prospect.created_at|timesince }} ago</span><br>
                                     <small class="text-muted">{{ prospect.phone }}</small>
                                 </td>
                                 <td class="border-secondary text-muted small">
@@ -50,7 +51,7 @@
                                     {% if prospect.agent %}{{ prospect.agent.name }}{% else %}Walk-in{% endif %}
                                 </td>
                                 <td class="border-secondary text-end pe-3">
-                                    <button class="btn btn-sm btn-primary fw-bold" data-bs-toggle="modal" data-bs-target="#verifyModal{{ prospect.id }}">
+                                    <button class="btn btn-sm btn-primary fw-bold gt-btn" data-bs-toggle="modal" data-bs-target="#verifyModal{{ prospect.id }}">
                                         Verify & Assign PPPoE
                                     </button>
                                 </td>
@@ -110,9 +111,12 @@
                             </div>
                             {% empty %}
                             <tr>
-                                <td colspan="4" class="text-center text-muted py-5">
-                                    <i class="fas fa-check-double fa-2x mb-3 text-secondary"></i><br>
-                                    No pending prospects to verify.
+                                <td colspan="4" class="text-center py-5">
+                                    <div class="dispatch-empty-state mx-auto" style="max-width: 450px;">
+                                        <i class="fas fa-check-double fa-2x mb-3 text-secondary" style="opacity: 0.6;"></i>
+                                        <h6 class="text-white mb-2">No pending prospects to verify</h6>
+                                        <p class="text-muted small mb-0">New tickets from Agents will appear here automatically.</p>
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
