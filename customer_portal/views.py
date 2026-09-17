@@ -1,13 +1,14 @@
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.contrib import messages
-from billing.models import Customer, Payment, SubscriptionPlan, Notification, AddOnRequest
+from billing.models import Customer, Payment, SubscriptionPlan, Notification, AddOnRequest, MonitoredService
 from billing.views import calculate_new_expiration_date
 from decimal import Decimal
 from datetime import timedelta
 from django.utils import timezone
 from django.db import transaction
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +95,6 @@ def portal_dashboard(request):
         if customer.status == 'active' and days_until_expiry <= 3:
             is_expiring_soon = True
             
-    from billing.models import MonitoredService
     issue_services = MonitoredService.objects.exclude(status='Up').order_by('-latency_ms')[:10]
         
     # Calculate days until expiry for countdown widget
@@ -111,7 +111,6 @@ def portal_dashboard(request):
     open_tickets_count = customer_tickets.filter(status__in=['PENDING', 'ASSIGNED', 'IN_PROGRESS']).count()
     recent_ticket = customer_tickets.first()
 
-    import re
     # Parse speeds (e.g. "50 Mbps" -> 50.0)
     speed_down_val = 0.0
     speed_up_val = 0.0
