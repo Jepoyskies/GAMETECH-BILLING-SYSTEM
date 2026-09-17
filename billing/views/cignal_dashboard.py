@@ -9,7 +9,7 @@ from django.http import JsonResponse, HttpResponse
 from django.db import transaction
 from django.utils import timezone
 from django.db.models import Sum, Count, Q, Prefetch
-from billing.models import Customer, CignalPlay, AddOnRequest, Notification, Payment, AuditLog
+from billing.models import Customer, CignalPlay, AddOnRequest, Notification, Payment, AuditLog, AddonPlan
 
 
 @login_required
@@ -150,6 +150,9 @@ def cignal_dashboard_view(request):
     all_customers = Customer.objects.all().order_by("full_name", "pppoe_username")
     default_cignal_due_date = (today + timedelta(days=30)).strftime("%Y-%m-%d")
 
+    # 4. Active Addon Plans
+    addon_plans = AddonPlan.objects.filter(is_active=True).order_by("price")
+
     context = {
         "current_tab": current_tab,
         "active_cignal_customers": active_cignal_customers,
@@ -171,6 +174,7 @@ def cignal_dashboard_view(request):
         "notifications": notifications,
         "all_customers": all_customers,
         "default_cignal_due_date": default_cignal_due_date,
+        "addon_plans": addon_plans,
     }
 
     return render(request, "billing/cignal_dashboard.html", context)
