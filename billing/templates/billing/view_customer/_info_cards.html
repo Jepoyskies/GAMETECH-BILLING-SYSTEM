@@ -179,11 +179,13 @@
                                     {% if sub.cignal_play_no %}
                                         <span class="badge border border-secondary text-light me-1" style="font-size: 0.65rem;">Play</span>
                                         <strong class="font-monospace text-light">{{ sub.cignal_play_no }}</strong>
+                                        <button type="button" class="btn btn-link p-0 ms-1 text-muted" style="font-size:0.68rem;" title="Copy Play No" onclick="copyCignalText('{{ sub.cignal_play_no|escapejs }}', this)"><i class="far fa-copy"></i></button>
                                     {% endif %}
                                     {% if sub.cignal_play_no and sub.cignal_box_no %}<span class="text-muted mx-1">|</span>{% endif %}
                                     {% if sub.cignal_box_no %}
                                         <span class="badge border border-secondary text-light me-1" style="font-size: 0.65rem;">Box</span>
                                         <strong class="font-monospace text-light">{{ sub.cignal_box_no }}</strong>
+                                        <button type="button" class="btn btn-link p-0 ms-1 text-muted" style="font-size:0.68rem;" title="Copy Box No" onclick="copyCignalText('{{ sub.cignal_box_no|escapejs }}', this)"><i class="far fa-copy"></i></button>
                                     {% endif %}
                                     {% if not sub.cignal_play_no and not sub.cignal_box_no %}<strong class="font-monospace text-muted">—</strong>{% endif %}
                                     {% if sub.hardware_payment_type == 'installment' %}
@@ -213,6 +215,7 @@
                         <span class="info-value">
                             {% if customer.cignalplay_no %}
                             <span class="font-monospace fw-bold text-light">{{ customer.cignalplay_no }}</span>
+                            <button type="button" class="btn btn-link p-0 ms-1 text-muted" style="font-size:0.68rem;" title="Copy Play No" onclick="copyCignalText('{{ customer.cignalplay_no|escapejs }}', this)"><i class="far fa-copy"></i></button>
                             {% else %}
                             —
                             {% endif %}
@@ -227,6 +230,7 @@
                         <span class="info-value">
                             {% if customer.cignalbox_no %}
                             <span class="font-monospace fw-bold text-light">{{ customer.cignalbox_no }}</span>
+                            <button type="button" class="btn btn-link p-0 ms-1 text-muted" style="font-size:0.68rem;" title="Copy Box No" onclick="copyCignalText('{{ customer.cignalbox_no|escapejs }}', this)"><i class="far fa-copy"></i></button>
                             {% else %}
                             —
                             {% endif %}
@@ -240,3 +244,33 @@
             </div>
         </div>
     </div>
+
+<script>
+if (typeof copyCignalText !== 'function') {
+    function copyCignalText(text, btn) {
+        if (!text) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function() {
+                var origHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check text-success"></i>';
+                setTimeout(function() { btn.innerHTML = origHtml; }, 1200);
+            }).catch(function() {
+                fallbackCopy(text, btn);
+            });
+        } else {
+            fallbackCopy(text, btn);
+        }
+    }
+    function fallbackCopy(text, btn) {
+        var input = document.createElement('input');
+        input.value = text;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        var origHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check text-success"></i>';
+        setTimeout(function() { btn.innerHTML = origHtml; }, 1200);
+    }
+}
+</script>

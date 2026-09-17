@@ -23,6 +23,10 @@
           <i class="fas fa-exclamation-triangle text-warning"></i> Expiring Soon
           <span class="cignal-tab-badge {% if current_tab == 'expiring_soon' %}bg-warning text-dark{% else %}bg-secondary bg-opacity-25 text-muted{% endif %}">{{ expiring_cignals|length }}</span>
         </a>
+        <a href="?tab=expired" class="cignal-tab-btn {% if current_tab == 'expired' %}active{% endif %}" title="Subscriptions Overdue / Past Due Date">
+          <i class="fas fa-history text-danger"></i> Overdue / Expired
+          <span class="cignal-tab-badge {% if current_tab == 'expired' %}bg-danger text-white{% else %}bg-secondary bg-opacity-25 text-muted{% endif %}">{{ count_expired }}</span>
+        </a>
         <a href="?tab=installment" class="cignal-tab-btn {% if current_tab == 'installment' %}active{% endif %}" title="Hardware Installments Ongoing">
           <i class="fas fa-boxes-packing text-warning"></i> Installments (₱250/mo)
           <span class="cignal-tab-badge {% if current_tab == 'installment' %}bg-warning text-dark{% else %}bg-secondary bg-opacity-25 text-muted{% endif %}">{{ count_installment }}</span>
@@ -210,6 +214,100 @@
           {% endfor %}
         </tbody>
       </table>
+
+      {% elif current_tab == 'expired' %}
+      <!-- ── OVERDUE / EXPIRED TABLE ── -->
+      <table class="cignal-table table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th>Subscription & Accounts</th>
+            <th>Expiration Date</th>
+            <th>Overdue Status</th>
+            <th class="text-end">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in expired_cignals_list %}
+          <tr>
+            <td>
+              <a href="{% url 'view_customer' item.customer.id %}" class="fw-bold text-decoration-none text-info d-block">
+                {{ item.customer.full_name|default:item.customer.pppoe_username }}
+              </a>
+              <div class="d-flex align-items-center gap-2 mt-1">
+                {% if item.customer.pppoe_username %}
+                  <small class="text-muted font-monospace" style="font-size:0.75rem;"><i class="fas fa-user-circle me-1"></i>{{ item.customer.pppoe_username }}</small>
+                {% endif %}
+                {% if item.customer.phone %}
+                  <a href="tel:{{ item.customer.phone }}" class="text-decoration-none text-success small font-monospace" style="font-size:0.75rem;" title="Call Customer">
+                    <i class="fas fa-phone me-1"></i>{{ item.customer.phone }}
+                  </a>
+                  <button type="button" class="btn btn-link p-0 text-muted" style="font-size:0.7rem;" title="Copy Phone" onclick="copyCignalText('{{ item.customer.phone|escapejs }}', this)">
+                    <i class="far fa-copy"></i>
+                  </button>
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              <div class="d-flex flex-column gap-1">
+                <span class="fw-bold text-light" style="font-size:0.84rem;">
+                  <i class="fas fa-tv text-danger me-1"></i>{{ item.account_name|default:"Cignal Subscription" }}
+                </span>
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                  {% if item.cignal_play_no %}
+                    <span class="cignal-acct-chip">
+                      <i class="fas fa-play text-info" style="font-size:0.6rem;"></i> Play: <strong class="ms-1">{{ item.cignal_play_no }}</strong>
+                      <button type="button" class="btn btn-link p-0 ms-1 text-muted" style="font-size:0.7rem;" title="Copy Play No" onclick="copyCignalText('{{ item.cignal_play_no|escapejs }}', this)"><i class="far fa-copy"></i></button>
+                    </span>
+                  {% endif %}
+                  {% if item.cignal_box_no %}
+                    <span class="cignal-acct-chip cignal-acct-chip-box">
+                      <i class="fas fa-box text-warning" style="font-size:0.6rem;"></i> Box: <strong class="ms-1">{{ item.cignal_box_no }}</strong>
+                      <button type="button" class="btn btn-link p-0 ms-1 text-muted" style="font-size:0.7rem;" title="Copy Box No" onclick="copyCignalText('{{ item.cignal_box_no|escapejs }}', this)"><i class="far fa-copy"></i></button>
+                    </span>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="badge border border-danger text-danger px-2 py-1" style="font-size:0.75rem; background: rgba(239, 68, 68, 0.1);">
+                <i class="far fa-calendar-times me-1"></i>
+                {% if item.expiration_date %}{{ item.expiration_date|date:"M d, Y" }}{% elif item.end_date %}{{ item.end_date|date:"M d, Y" }}{% else %}N/A{% endif %}
+              </span>
+            </td>
+            <td>
+              {% if item.days_until_expiry is not None and item.days_until_expiry < 0 %}
+                <span class="badge bg-danger text-white rounded-pill px-2.5 py-1" style="font-size:0.72rem;">
+                  <i class="fas fa-exclamation-circle me-1"></i> Overdue by {{ item.days_until_expiry|stringformat:"d"|slice:"1:" }} day(s)
+                </span>
+              {% else %}
+                <span class="badge bg-secondary text-light rounded-pill px-2.5 py-1" style="font-size:0.72rem;">Expired</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <div class="d-flex gap-2 justify-content-end align-items-center">
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 gt-btn text-light" style="font-size: 0.75rem;" title="Edit Subscription Details" onclick="openCignalEditModal({id: '{{ item.id }}', label: '{{ item.account_name|escapejs }}', playNo: '{{ item.cignal_play_no|escapejs }}', boxNo: '{{ item.cignal_box_no|escapejs }}', customerName: '{{ item.customer.full_name|escapejs }}', hardwarePaymentType: '{{ item.hardware_payment_type|default:"none" }}', installmentsPaid: '{{ item.installments_paid|default:0 }}', monthlyLoadPlan: '{{ item.monthly_load_plan|default:"149" }}', expirationDate: '{% if item.expiration_date %}{{ item.expiration_date|date:'Y-m-d\TH:i' }}{% elif item.end_date %}{{ item.end_date|date:'Y-m-d\TH:i' }}{% endif %}'})">
+                  <i class="fas fa-pencil-alt me-1"></i> Edit
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 gt-btn fw-bold" style="font-size: 0.75rem;" onclick="openCignalPaymentModal({customerId: '{{ item.customer.id }}', customerName: '{{ item.customer.full_name|escapejs }}', pppoe: '{{ item.customer.pppoe_username|escapejs }}', subscriptionId: '{{ item.id }}', hardware_payment_type: '{{ item.hardware_payment_type|default:"none" }}', installments_paid: '{{ item.installments_paid|default:0 }}', expirationDate: '{% if item.expiration_date %}{{ item.expiration_date|date:'Y-m-d\TH:i' }}{% elif item.end_date %}{{ item.end_date|date:'Y-m-d\TH:i' }}{% endif %}', subscriptions: [{id: '{{ item.id }}', cignal_play_no: '{{ item.cignal_play_no|escapejs }}', cignal_box_no: '{{ item.cignal_box_no|escapejs }}', account_name: '{{ item.account_name|escapejs }}', expiration_date: '{% if item.expiration_date %}{{ item.expiration_date|date:'Y-m-d\TH:i' }}{% elif item.end_date %}{{ item.end_date|date:'Y-m-d\TH:i' }}{% endif %}', hardware_payment_type: '{{ item.hardware_payment_type|default:"none" }}', installments_paid: '{{ item.installments_paid|default:0 }}', monthly_load_plan: '{{ item.monthly_load_plan|default:"149" }}'}]})">
+                  <i class="fas fa-coins me-1"></i> Record Reload
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5">
+              <div class="cignal-empty-state py-4">
+                <div class="cignal-empty-icon mb-1"><i class="fas fa-check-circle text-success" style="font-size: 1.8rem;"></i></div>
+                <div class="cignal-empty-title" style="font-size: 0.95rem;">No Overdue Cignal Subscriptions</div>
+                <div class="cignal-empty-sub" style="font-size: 0.8rem;">All active subscriptions have valid current load dates.</div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
       {% else %}
       <!-- ── ACTIVE / INSTALLMENT / FULLY PAID TABLE ── -->
       <table id="cignalSubscriptionsTable" class="cignal-table table table-hover align-middle mb-0">
@@ -229,9 +327,19 @@
               <a href="{% url 'view_customer' customer.id %}" class="fw-bold text-decoration-none text-info d-block">
                 {{ customer.full_name|default:customer.pppoe_username }}
               </a>
-              {% if customer.full_name and customer.pppoe_username %}
-                <small class="text-muted font-monospace" style="font-size:0.75rem;"><i class="fas fa-user-circle me-1"></i>{{ customer.pppoe_username }}</small>
-              {% endif %}
+              <div class="d-flex align-items-center gap-2 flex-wrap mt-0.5">
+                {% if customer.full_name and customer.pppoe_username %}
+                  <small class="text-muted font-monospace" style="font-size:0.75rem;"><i class="fas fa-user-circle me-1"></i>{{ customer.pppoe_username }}</small>
+                {% endif %}
+                {% if customer.phone %}
+                  <a href="tel:{{ customer.phone }}" class="text-decoration-none text-success small font-monospace" style="font-size:0.75rem;" title="Call Customer">
+                    <i class="fas fa-phone me-1"></i>{{ customer.phone }}
+                  </a>
+                  <button type="button" class="btn btn-link p-0 text-muted" style="font-size:0.68rem;" title="Copy Phone" onclick="copyCignalText('{{ customer.phone|escapejs }}', this)">
+                    <i class="far fa-copy"></i>
+                  </button>
+                {% endif %}
+              </div>
             </td>
             <td>
               <div class="d-flex flex-column gap-2">
@@ -271,11 +379,11 @@
                     <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                       <span class="cignal-acct-chip">
                         <i class="fas fa-tv" style="font-size:0.62rem;"></i>
-                        Play&nbsp;#:&nbsp;{% if plan.cignal_play_no %}{{ plan.cignal_play_no }}{% else %}<em style="opacity:0.5;">None</em>{% endif %}
+                        Play&nbsp;#:&nbsp;{% if plan.cignal_play_no %}{{ plan.cignal_play_no }} <button type="button" class="btn btn-link p-0 ms-1 text-muted" style="font-size:0.68rem;" title="Copy Play No" onclick="copyCignalText('{{ plan.cignal_play_no|escapejs }}', this)"><i class="far fa-copy"></i></button>{% else %}<em style="opacity:0.5;">None</em>{% endif %}
                       </span>
                       <span class="cignal-acct-chip cignal-acct-chip-box">
                         <i class="fas fa-box" style="font-size:0.62rem;"></i>
-                        Box&nbsp;#:&nbsp;{% if plan.cignal_box_no %}{{ plan.cignal_box_no }}{% else %}<em style="opacity:0.5;">None</em>{% endif %}
+                        Box&nbsp;#:&nbsp;{% if plan.cignal_box_no %}{{ plan.cignal_box_no }} <button type="button" class="btn btn-link p-0 ms-1 text-muted" style="font-size:0.68rem;" title="Copy Box No" onclick="copyCignalText('{{ plan.cignal_box_no|escapejs }}', this)"><i class="far fa-copy"></i></button>{% else %}<em style="opacity:0.5;">None</em>{% endif %}
                       </span>
                     </div>
                     <!-- Row 3: Hardware Status -->
@@ -379,3 +487,31 @@
       {% endif %}
     </div>
 </div>
+
+<script>
+function copyCignalText(text, btn) {
+    if (!text) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function() {
+            var origHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check text-success"></i>';
+            setTimeout(function() { btn.innerHTML = origHtml; }, 1200);
+        }).catch(function() {
+            fallbackCopyText(text, btn);
+        });
+    } else {
+        fallbackCopyText(text, btn);
+    }
+}
+function fallbackCopyText(text, btn) {
+    var input = document.createElement('input');
+    input.value = text;
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand('copy');
+    document.body.removeChild(input);
+    var origHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-check text-success"></i>';
+    setTimeout(function() { btn.innerHTML = origHtml; }, 1200);
+}
+</script>
