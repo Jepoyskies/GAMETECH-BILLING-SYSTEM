@@ -104,6 +104,8 @@ def cignal_dashboard_view(request):
             .select_related("customer")
             .order_by("-cancelled_at")[:50]
         )
+    elif current_tab == "expiring_soon":
+        customers_list = []
     else:
         current_tab = "active"
         customers_list = (
