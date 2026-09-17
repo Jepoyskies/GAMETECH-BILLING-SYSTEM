@@ -84,11 +84,76 @@
 
   <!-- Main Dashboard Grid Layout: Full Width for Subscriptions -->
   <div class="row g-3 animate-fade-in animate-delay-2">
+
+    {% if applications %}
+    <!-- ── PENDING APPLICATIONS PANEL ── -->
+    <div class="col-12">
+      <div class="cignal-glass-card mb-0 border-warning border-opacity-50" style="border-left: 4px solid #f59e0b !important;">
+        <div class="cignal-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div class="d-flex align-items-center gap-2">
+            <h6 class="mb-0">
+              <i class="fas fa-file-signature text-warning me-1"></i>
+              Pending Applications
+              <span class="badge bg-warning text-dark ms-1 rounded-pill" style="font-size:0.75rem;">{{ pending_applications_count }}</span>
+            </h6>
+          </div>
+          <small class="text-muted" style="font-size:0.78rem;"><i class="fas fa-clock me-1"></i>Submitted from Customer Portal — action required</small>
+        </div>
+        <div class="table-responsive">
+          <table class="cignal-table table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Add-on Requested</th>
+                <th>Requested At</th>
+                <th class="text-end">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for app in applications %}
+              <tr id="app-row-{{ app.customer.id }}" class="align-middle">
+                <td>
+                  <a href="{% url 'view_customer' app.customer.id %}" class="fw-bold text-decoration-none text-info d-block">
+                    {{ app.customer.full_name|default:app.customer.pppoe_username }}
+                  </a>
+                  {% if app.customer.pppoe_username %}
+                  <small class="text-muted font-monospace" style="font-size:0.75rem;">
+                    <i class="fas fa-user-circle me-1"></i>{{ app.customer.pppoe_username }}
+                  </small>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="badge bg-warning text-dark rounded-pill px-2 py-1" style="font-size:0.78rem;">
+                    <i class="fas fa-play me-1"></i>{{ app.addon_type }}
+                  </span>
+                </td>
+                <td>
+                  <small class="text-muted">{{ app.requested_at|date:"M d, Y — g:i A" }}</small>
+                </td>
+                <td class="text-end">
+                  <button type="button"
+                    class="btn btn-sm btn-warning fw-bold rounded-pill px-3 shadow-sm gt-btn"
+                    data-bs-toggle="modal"
+                    data-bs-target="#cignalAppModal_{{ app.id }}"
+                    title="Activate Cignal for {{ app.customer.full_name }}">
+                    <i class="fas fa-satellite-dish me-1"></i> Activate
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
     <!-- Left Column: Active Subscriptions at the very top, Expiring Soon directly below -->
     <div class="col-12">
         {% include "billing/cignal_dashboard/_active_subscriptions.html" %}
     </div>
   </div>
+
 
 </div>
 
