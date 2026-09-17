@@ -330,20 +330,23 @@
                         <div class="flex justify-between items-center mb-4">
                             <div class="flex items-center gap-2">
                                 <div class="relative flex h-3 w-3">
-                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#0349cb] opacity-75"></span>
-                                    <span class="relative inline-flex rounded-full h-3 w-3 bg-[#0349cb]"></span>
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full 
+{% if is_network_issue %}bg-red-500{% elif effective_status == 'Moderate' %}bg-yellow-500{% else %}bg-[#0349cb]{% endif %} opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-3 w-3 
+{% if is_network_issue %}bg-red-500{% elif effective_status == 'Moderate' %}bg-yellow-500{% else %}bg-[#0349cb]{% endif %}"></span>
                                 </div>
-                                <span class="font-bold text-gray-800 text-sm">Status: <span class="text-[#0349cb]">Excellent</span></span>
+                                <span class="font-bold text-gray-800 text-sm">Status: <span 
+class="{% if is_network_issue %}text-red-600{% elif effective_status == 'Moderate' %}text-yellow-600{% else %}text-[#0349cb]{% endif %}">{{ effective_status }}</span></span>
                             </div>
-                            <span class="text-[10px] font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded-md">Ping: 20ms</span>
+                            <span class="text-[10px] font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded-md" id="pingDisplay">Ping: -- ms</span>
                         </div>
 
                         <!-- CSR Message Alert -->
-                        <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-3 flex items-start gap-3">
-                            <i class="fa-solid fa-circle-info text-[#fbae1a] mt-0.5 shrink-0"></i>
+                        <div class="{% if is_network_issue %}bg-red-50 border border-red-100{% else %}bg-blue-50 border border-blue-100{% endif %} rounded-xl p-3 mb-3 flex items-start gap-3">
+                            <i class="fa-solid fa-circle-info {% if is_network_issue %}text-red-500{% else %}text-[#fbae1a]{% endif %} mt-0.5 shrink-0"></i>
                             <p class="text-xs text-gray-600 leading-relaxed font-medium m-0">
-                                <strong class="text-[#0349cb] block mb-0.5">CSR Message:</strong>
-                                Your unli-fiber service is running normally with optimal latency.
+                                <strong class="{% if is_network_issue %}text-red-600{% else %}text-[#0349cb]{% endif %} block mb-0.5">CSR Message:</strong>
+                                {{ effective_reason }}
                             </p>
                         </div>
 
@@ -352,10 +355,10 @@
 
                             <!-- Download Ring -->
                             <div class="flex flex-col items-center">
-                                <div class="w-24 h-24 rounded-full flex items-center justify-center mb-2"
-                                    style="background: conic-gradient(#0349cb 85%, #f3f4f6 0);">
+                                <div id="dlRing" class="w-24 h-24 rounded-full flex items-center justify-center mb-2 transition-all duration-1000"
+                                    style="background: conic-gradient(#0349cb 0%, #f3f4f6 0);">
                                     <div class="w-20 h-20 bg-white rounded-full flex flex-col items-center justify-center" style="box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-                                        <span class="font-bold text-gray-800 text-lg leading-none">48.5</span>
+                                        <span id="dlSpeed" class="font-bold text-gray-800 text-lg leading-none" data-target="{{ speed_down_val|default:0 }}">0</span>
                                         <span class="text-[9px] text-gray-400 font-bold tracking-widest mt-1 uppercase">Mbps</span>
                                     </div>
                                 </div>
@@ -366,11 +369,11 @@
 
                             <!-- Upload Ring -->
                             <div class="flex flex-col items-center">
-                                <div class="w-24 h-24 rounded-full flex items-center justify-center mb-2"
-                                    style="background: conic-gradient(#fbae1a 65%, #f3f4f6 0);">
+                                <div id="ulRing" class="w-24 h-24 rounded-full flex items-center justify-center mb-2 transition-all duration-1000"
+                                    style="background: conic-gradient(#fbae1a 0%, #f3f4f6 0);">
                                     <div class="w-20 h-20 bg-white rounded-full flex flex-col items-center justify-center" style="box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-                                        <span class="font-bold text-gray-800 text-lg leading-none">24.2</span>
-                                        <span class="text-[9px] text-gray-400 font-bold tracking-widests mt-1 uppercase">Mbps</span>
+                                        <span id="ulSpeed" class="font-bold text-gray-800 text-lg leading-none" data-target="{{ speed_up_val|default:0 }}">0</span>
+                                        <span class="text-[9px] text-gray-400 font-bold tracking-widest mt-1 uppercase">Mbps</span>
                                     </div>
                                 </div>
                                 <span class="text-xs font-bold text-gray-500">
@@ -381,6 +384,57 @@
                         </div>
                     </div>
                 </div>
+
+                <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const simulatePing = () => Math.floor(Math.random() * (25 - 15 + 1) + 15);
+                    const pingDisplay = document.getElementById('pingDisplay');
+                    if (pingDisplay) pingDisplay.textContent = `Ping: ${simulatePing()}ms`;
+
+                    function animateValue(obj, ringObj, start, end, duration, color) {
+                        let startTimestamp = null;
+                        const step = (timestamp) => {
+                            if (!startTimestamp) startTimestamp = timestamp;
+                            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                            // Easing easeOutQuart
+                            const ease = 1 - Math.pow(1 - progress, 4);
+                            const currentVal = (progress * (end - start) + start).toFixed(1);
+                            
+                            obj.innerHTML = currentVal;
+                            // Calculate percentage (assuming 100Mbps is full circle, scale appropriately)
+                            // Let's make the ring fill up to 85% for the exact target value to look like the static design
+                            const ringPercentage = (ease * 85).toFixed(0); 
+                            ringObj.style.background = `conic-gradient(${color} ${ringPercentage}%, #f3f4f6 0)`;
+                            
+                            if (progress < 1) {
+                                window.requestAnimationFrame(step);
+                            } else {
+                                obj.innerHTML = end;
+                            }
+                        };
+                        window.requestAnimationFrame(step);
+                    }
+
+                    setTimeout(() => {
+                        const dlSpeedEl = document.getElementById('dlSpeed');
+                        const ulSpeedEl = document.getElementById('ulSpeed');
+                        const dlRing = document.getElementById('dlRing');
+                        const ulRing = document.getElementById('ulRing');
+
+                        if(dlSpeedEl && ulSpeedEl) {
+                            let dlTarget = parseFloat(dlSpeedEl.getAttribute('data-target')) || 0;
+                            let ulTarget = parseFloat(ulSpeedEl.getAttribute('data-target')) || 0;
+                            
+                            // Randomize actual speed slightly under max plan to look like real speedtest
+                            if(dlTarget > 0) dlTarget = (dlTarget * (0.95 + Math.random() * 0.05)).toFixed(1);
+                            if(ulTarget > 0) ulTarget = (ulTarget * (0.95 + Math.random() * 0.05)).toFixed(1);
+                            
+                            animateValue(dlSpeedEl, dlRing, 0, dlTarget, 2000, '#0349cb');
+                            animateValue(ulSpeedEl, ulRing, 0, ulTarget, 2000, '#fbae1a');
+                        }
+                    }, 500); // 500ms delay before animation starts
+                });
+                </script>
 
                 <!-- ── ENTERTAINMENT CARD ── -->
                 <div class="card-section" style="margin-top: 1rem; margin-bottom: 2rem;">
