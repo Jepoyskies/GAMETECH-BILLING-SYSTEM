@@ -558,4 +558,29 @@ def purge_all_cancelled_cignal_subscriptions(request):
     return redirect("/cignal-dashboard/?tab=deleted")
 
 
+@login_required
+def cignal_applications_view(request):
+    today = timezone.localtime().date()
+    pending_applications = AddOnRequest.objects.filter(
+        Q(addon_type__icontains="Cignal") | Q(addon_type__icontains="Box"),
+        status="Pending",
+    ).order_by("-request_date")
+    
+    context = {
+        "page_title": "Cignal Play Applications",
+        "applications": pending_applications,
+        "pending_applications_count": pending_applications.count(),
+    }
+    return render(request, "billing/cignal_applications.html", context)
 
+@login_required
+def cignal_logs_view(request):
+    cignal_payments = CignalPlay.objects.all().select_related("customer").order_by("-created_at")[:50]
+    notifications = Notification.objects.filter(notification_type="cignal").order_by("-id")[:50]
+    
+    context = {
+        "page_title": "Cignal Activity Logs",
+        "cignal_payments": cignal_payments,
+        "notifications": notifications,
+    }
+    return render(request, "billing/cignal_logs.html", context)

@@ -1,0 +1,40 @@
+{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}Cignal Play Applications | Gametech{% endblock %}
+
+{% block content %}
+{% include "billing/cignal_dashboard/_styles.html" %}
+
+<div class="container-fluid py-4 px-3 px-md-4">
+
+  <!-- Page Hero Banner -->
+  <div class="cignal-hero-banner d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in">
+    <div class="d-flex align-items-center gap-3">
+      <div class="cignal-hero-icon"><i class="fas fa-file-signature"></i></div>
+      <div>
+        <div class="cignal-hero-title">Cignal Play Applications</div>
+        <div class="cignal-hero-sub">Monitor and approve pending Cignal Play and Box requests</div>
+      </div>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <span class="cignal-live-badge">
+        <span class="cignal-live-dot"></span> {{ pending_applications_count }} Pending
+      </span>
+    </div>
+  </div>
+
+  <div class="row g-3 animate-fade-in animate-delay-1">
+    <div class="col-12">
+        {% include "billing/cignal_dashboard/_pending_applications.html" %}
+    </div>
+  </div>
+
+</div>
+
+<!-- Activation Modals for Pending Applications -->
+{% for app in applications %}
+  {% include "billing/partials/_cignal_activation_modal.html" with modal_id="cignalAppModal_" modal_suffix=app.id target_customer=app.customer target_request=app from_dashboard=True %}
+{% endfor %}
+
+{% endblock %}
