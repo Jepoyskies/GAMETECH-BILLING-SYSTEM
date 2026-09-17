@@ -169,13 +169,35 @@ def audit_customer_changes(sender, instance, created, **kwargs):
     Logs changes to Customer fields into SystemLog for audit purposes.
     """
     from billing.models import SystemLog
+    from billing.middleware import get_current_user
 
-    # We only log updates, not creations (unless we want to, but updates are more critical for audits)
-    if (
-        not created
-        and hasattr(instance, "_original_state")
-        and instance._original_state
-    ):
+    current_user = get_current_user()
+
+    # Determine user who made the change
+    if hasattr(instance, "_changed_by_user"):
+        changed_by_user = instance._changed_by_user
+    elif current_user and current_user.is_authenticated:
+        changed_by_user = current_user.username
+    else:
+        changed_by_user = "System/Admin"
+
+    # Log Creation
+    if created:
+        action_msg = "Create Customer"
+        if getattr(instance, "_is_imported", False):
+            action_msg = "Import Customer"
+        
+        SystemLog.objects.create(
+            table_name="Customer",
+            record_id=str(instance.id),
+            action=action_msg,
+            changed_by=changed_by_user,
+            target_name=instance.full_name,
+            old_data="N/A",
+            new_data=f"Customer {instance.pppoe_username} ({instance.full_name}) was added to the system.",
+        )
+    # Log Updates
+    elif hasattr(instance, "_original_state") and instance._original_state:
         changes = []
         new_state = {
             "Full Name": instance.full_name,
@@ -198,19 +220,6 @@ def audit_customer_changes(sender, instance, created, **kwargs):
                 changes.append(f"{field}: '{old_val}' \u2192 '{new_val}'")
 
         if changes:
-            from billing.middleware import get_current_user
-
-            current_user = get_current_user()
-
-            # If changed_by_user was explicitly injected into the model instance, use that.
-            # Otherwise, use the thread local user. Otherwise fallback to System/Admin.
-            if hasattr(instance, "_changed_by_user"):
-                changed_by_user = instance._changed_by_user
-            elif current_user and current_user.is_authenticated:
-                changed_by_user = current_user.username
-            else:
-                changed_by_user = "System/Admin"
-
             log_action = "Profile Update"
             if len(changes) == 1:
                 field_name = changes[0].split(":")[0].strip()
