@@ -1,43 +1,451 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Portal – Gametech Unli Fiber</title>
-    <meta name="description" content="Manage your Gametech Unli Fiber subscription, view your connection status, and pay your bills.">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        // Apply theme immediately to prevent flash
-        (function() {
-            const theme = localStorage.getItem('gt-portal-theme') || 'dark';
-            document.documentElement.setAttribute('data-theme', theme);
-        })();
-    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    {% include "billing/dashboard/_styles.html" %}
+
     <style>
-        {% include "customer_portal/portal_dashboard/_styles.html" %}
+        :root {
+            --p-bg:           #f0f4f8;
+            --p-bg-2:         #e2e8f0;
+            --p-surface:      #ffffff;
+            --p-surface-2:    #f8fafc;
+            --p-border:       rgba(0,0,0,0.08);
+            --p-text:         #0f172a;
+            --p-text-muted:   #64748b;
+            --p-text-subtle:  #94a3b8;
+            --p-nav-bg:       rgba(255,255,255,0.85);
+            --p-nav-border:   rgba(0,0,0,0.08);
+            --p-card-shadow:  0 2px 16px rgba(0,0,0,0.07);
+            --p-card-hover:   0 8px 32px rgba(0,0,0,0.12);
+            --p-input-bg:     #f1f5f9;
+            --p-input-border: rgba(0,0,0,0.1);
+            --p-overlay:      rgba(0,0,0,0.05);
+            --p-row-hover:    rgba(13,110,253,0.04);
+        }
+        
+        .quick-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.6rem;
+            margin-bottom: 1.25rem;
+        }
+        .q-btn {
+            background: var(--p-input-bg);
+            border: 1px solid var(--p-input-border);
+            border-radius: 10px;
+            padding: 0.65rem 0.4rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--p-text-muted);
+        }
+        .q-btn:hover { border-color: #60a5fa; color: var(--p-text); }
+        .q-btn.active { border-color: #10b981; background: rgba(16,185,129,0.08); color: #34d399; }
+        .q-btn .q-months { font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 2px; color: var(--p-text); }
+        .q-btn .q-price { font-size: 0.7rem; opacity: 0.8; }
+
+        .modal-portal .form-label { color: var(--p-text-muted); font-size: 0.82rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+        .modal-portal .form-select,
+        .modal-portal .form-control,
+        .modal-portal .input-group-text {
+            background: var(--p-input-bg);
+            border: 1px solid var(--p-input-border);
+            color: var(--p-text);
+            border-radius: 10px;
+        }
+        .modal-portal .form-select:focus,
+        .modal-portal .form-control:focus {
+            background: var(--p-input-bg);
+            color: var(--p-text);
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96,165,250,0.2);
+        }
+        .modal-portal .modal-content {
+            background: var(--p-surface);
+            border: 1px solid var(--p-border);
+            border-radius: 20px;
+            color: var(--p-text);
+        }
+        .modal-portal .modal-title { font-family: 'Poppins', sans-serif; }
+        .modal-portal .modal-header { border-bottom: 1px solid var(--p-border); }
+        .modal-portal .input-group > .form-control { border-radius: 0 10px 10px 0 !important; }
+        .modal-portal .input-group-text { border-radius: 10px 0 0 10px !important; border-right: none; }
+        #amountInput { font-size: 1.4rem; font-weight: 700; }
+        /* The Premium Floating Animation for the Orbs */
+        @keyframes blob {
+            0% { transform: translate(0px, 0px) scale(1); }
+            33% { transform: translate(30px, -40px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+            100% { transform: translate(0px, 0px) scale(1); }
+        }
+        .animate-blob { animation: blob 8s infinite alternate ease-in-out; }
+        .animation-delay-2000 { animation-delay: 2s; }
+        .animation-delay-4000 { animation-delay: 4s; }
+
+        :root {
+            /* Gametech Brand Colors */
+            --gt-cyan-blue: #0349cb;
+            --gt-golden-orange: #fbae1a;
+            --gt-dark-blue: #3533cd;
+            --gt-dark-gray: #15171b;
+            --gt-dusty-blue: #eceef3;
+            --gt-white: #ffffff;
+            --gt-black: #000000;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--gt-dusty-blue);
+            color: var(--gt-dark-gray);
+            min-height: 100vh;
+        }
+
+        /* Mobile-first centered layout */
+        .app-container {
+            max-width: 480px;
+            margin: 0 auto;
+            background-color: var(--gt-dusty-blue);
+            min-height: 100vh;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Header Section */
+        .header-section {
+            background-color: var(--gt-cyan-blue);
+            color: var(--gt-white);
+            padding: 2.5rem 1.5rem 4.5rem 1.5rem;
+            position: relative;
+            overflow: hidden;
+            border-bottom-left-radius: 2rem;
+            border-bottom-right-radius: 2rem;
+        }
+
+        /* Header inner layout: text left, mascot right — both in-flow */
+        .hero-inner {
+        .hero-text {
+            border-left: 4px solid var(--gt-golden-orange);
+            padding-left: 0.75rem;
+            margin-bottom: 0.5rem;
+            position: relative;
+            z-index: 20;
+            width: 75%;
+        }
+
+        .greeting-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 0.5rem;
+        }
+
+        .greeting-title span {
+            color: var(--gt-golden-orange);
+        }
+
+        .header-subtext {
+            font-size: 0.8rem;
+            font-weight: 300;
+            opacity: 0.95;
+            line-height: 1.4;
+            margin: 0;
+        }
+
+        /* Mascot: Absolute positioned to overlap beautifully */
+        .header-graphic {
+            position: absolute;
+            bottom: -20px;
+            right: -20px;
+            width: 140px;
+            height: auto;
+            filter: drop-shadow(0 12px 20px rgba(0, 0, 0, 0.3));
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        /* Narrow screen adjustments */
+        @media (max-width: 400px) {
+            .header-section {
+                padding: 2rem 1.25rem 4.5rem 1.25rem;
+            }
+            .greeting-title { font-size: 1.45rem; }
+            .header-subtext  { font-size: 0.75rem; }
+        }
+
+        /* Main Card Section */
+        .card-section {
+            padding: 0 1.5rem;
+            margin-top: -4.5rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 480px;
+            background-color: var(--gt-white);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 0.75rem 0.5rem;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+            z-index: 50;
+            border-top-left-radius: 1.5rem;
+            border-top-right-radius: 1.5rem;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+            text-decoration: none;
+            color: #94a3b8;
+            font-size: 0.7rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .nav-item i {
+            font-size: 1.25rem;
+            transition: all 0.3s ease;
+        }
+        .nav-item.active {
+            color: var(--gt-cyan-blue);
+        }
+        .nav-item.active i {
+            color: var(--gt-cyan-blue);
+            transform: translateY(-2px);
+            filter: drop-shadow(0 2px 4px rgba(3, 73, 203, 0.3));
+        }
+        .nav-item:hover:not(.active) {
+            color: var(--gt-dark-blue);
+        }
+        
+        .app-container {
+            padding-bottom: 5rem;
+        }
+
     </style>
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="{% static 'manifest.json' %}">
 </head>
+
 <body>
 
-{% include "customer_portal/portal_dashboard/_navbar.html" %}
-{% include "customer_portal/portal_dashboard/_hero.html" %}
-{% include "customer_portal/portal_dashboard/_alerts.html" %}
+    <div class="app-container">
 
-<!-- MAIN GRID -->
-<div class="p-main">
-    {% include "customer_portal/portal_dashboard/_left_column.html" %}
-    {% include "customer_portal/portal_dashboard/_right_column.html" %}
-</div>
+        <!-- HEADER SECTION -->
+        <header class="header-section bg-[#0349cb] relative overflow-hidden">
+            <!-- Gold Glow (Bottom Right) -->
+            <div class="absolute -bottom-20 -right-20 w-72 h-72 bg-[#fbae1a] opacity-30 rounded-full mix-blend-screen filter blur-[80px] animate-blob"></div>
+            <!-- White Glow (Top Left) -->
+            <div class="absolute -top-10 -left-10 w-56 h-56 bg-white opacity-20 rounded-full mix-blend-overlay filter blur-[60px] animate-blob animation-delay-2000"></div>
+            <!-- Deep Navy Glow (Center Depth) -->
+            <div class="absolute top-20 right-20 w-48 h-48 bg-[#3533cd] opacity-60 rounded-full mix-blend-multiply filter blur-[60px] animate-blob animation-delay-4000"></div>
 
-{% include "customer_portal/portal_dashboard/_footer.html" %}
-{% include "customer_portal/portal_dashboard/_modals.html" %}
-{% include "customer_portal/portal_dashboard/_scripts.html" %}
+            <!-- Foreground Content Layer -->
+            <div class="relative z-10">
+                <div class="hero-text">
+                    <h1 class="greeting-title">
+                        Good Morning,<br>
+                        <span>{{ customer.full_name|default:"Valued Customer" }} !</span>
+                    </h1>
+                    <p class="header-subtext">
+                        Manage your unlimited fiber internet, monitor your connection, and pay your bills all in one place.
+                    </p>
+                </div>
+                <!-- Mascot -->
+                <img src="{% static 'assets/images/gimi sun.png' %}" alt="Gametech Mascot" class="header-graphic">
+            </div>
+        </header>
+
+        <!-- ── PLAN CARD ── -->
+        <div class="card-section">
+            <!-- Main Dashboard Card -->
+            <div class="glass-card no-hover p-4 mb-4 relative overflow-hidden mx-1 border border-slate-100 flex flex-col gap-3 relative z-10">
+                        <!-- Header Row -->
+                        <div class="flex justify-between items-center gap-2">
+                            <div class="flex items-center gap-1.5 min-w-0">
+                                <i class="fas fa-wifi text-[#fbae1a] shrink-0"></i>
+                                <span class="truncate text-xs sm:text-sm font-bold text-[#0349cb] uppercase">{{ plan.name|default:"Gametech Unli Fiber" }}</span>
+                            </div>
+                            <button class="bg-[#fbae1a] hover:bg-[#e89d13] transition text-white text-[9px] sm:text-[10px] font-bold px-2.5 py-1.5 rounded uppercase tracking-wide shrink-0 whitespace-nowrap shadow-sm" data-bs-toggle="modal" data-bs-target="#mockPaymentModal"><i class="fas fa-peso-sign mr-1"></i>Pay Bill</button>
+                        </div>
+
+                        <div class="flex flex-col gap-0">
+                            <!-- Main Data Row (Top: Name and Price) -->
+                            <div class="flex justify-between items-baseline gap-2">
+                                <h2 class="text-base sm:text-lg font-extrabold text-gray-800 truncate min-w-0 leading-tight m-0" style="font-family: 'Montserrat', sans-serif;">
+                                    {{ customer.full_name|default:customer.pppoe_username|title }}'s Plan
+                                </h2>
+                                <div class="text-lg sm:text-xl font-bold whitespace-nowrap shrink-0 text-[#0349cb] text-right">
+                                    <span class="text-sm font-semibold">₱</span>{% if plan %}{{ plan.price }}{% else %}0.00{% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Subtext Row (Bottom: Phone/Status and Monthly Fee) -->
+                            <div class="flex justify-between items-center gap-2">
+                                <div class="flex items-center gap-1.5 min-w-0">
+                                    <span class="whitespace-nowrap text-[10px] sm:text-xs text-slate-500 font-medium">{{ customer.contact_number|default:"0917 123 4567" }}</span>
+                                    <span class="bg-blue-50 text-[#0349cb] border border-blue-100 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                                        <i class="fa-solid fa-circle-check"></i> {{ customer.get_status_display|default:"Registered" }}
+                                    </span>
+                                </div>
+                                <div class="text-[9px] sm:text-[10px] text-slate-400 font-medium text-right shrink-0">
+                                    Monthly Fee
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Due Date text -->
+                        <div class="text-[9px] sm:text-[10px] text-slate-400">
+                            Due Date: {% if customer.expires_at %}{{ customer.expires_at|date:'F j, Y h:i A' }}{% else %}Unknown{% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── CONNECTION QUALITY CARD ── -->
+                <div class="card-section" style="margin-top: -8px;">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Connection Quality</p>
+                    <div class="glass-card no-hover p-4 mb-4 mx-1 border border-slate-100">
+
+                        <!-- Top Row: Status + Ping -->
+                        <div class="flex justify-between items-center mb-4">
+                            <div class="flex items-center gap-2">
+                                <div class="relative flex h-3 w-3">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#0349cb] opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-3 w-3 bg-[#0349cb]"></span>
+                                </div>
+                                <span class="font-bold text-gray-800 text-sm">Status: <span class="text-[#0349cb]">Excellent</span></span>
+                            </div>
+                            <span class="text-[10px] font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded-md">Ping: 20ms</span>
+                        </div>
+
+                        <!-- CSR Message Alert -->
+                        <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-3 flex items-start gap-3">
+                            <i class="fa-solid fa-circle-info text-[#fbae1a] mt-0.5 shrink-0"></i>
+                            <p class="text-xs text-gray-600 leading-relaxed font-medium m-0">
+                                <strong class="text-[#0349cb] block mb-0.5">CSR Message:</strong>
+                                Your unli-fiber service is running normally with optimal latency.
+                            </p>
+                        </div>
+
+                        <!-- Speed Rings -->
+                        <div class="flex justify-around items-center pt-2 border-t border-gray-50">
+
+                            <!-- Download Ring -->
+                            <div class="flex flex-col items-center">
+                                <div class="w-24 h-24 rounded-full flex items-center justify-center mb-2"
+                                    style="background: conic-gradient(#0349cb 85%, #f3f4f6 0);">
+                                    <div class="w-20 h-20 bg-white rounded-full flex flex-col items-center justify-center" style="box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                                        <span class="font-bold text-gray-800 text-lg leading-none">48.5</span>
+                                        <span class="text-[9px] text-gray-400 font-bold tracking-widest mt-1 uppercase">Mbps</span>
+                                    </div>
+                                </div>
+                                <span class="text-xs font-bold text-gray-500">
+                                    <i class="fa-solid fa-arrow-down text-[#0349cb] mr-1"></i> DOWNLOAD
+                                </span>
+                            </div>
+
+                            <!-- Upload Ring -->
+                            <div class="flex flex-col items-center">
+                                <div class="w-24 h-24 rounded-full flex items-center justify-center mb-2"
+                                    style="background: conic-gradient(#fbae1a 65%, #f3f4f6 0);">
+                                    <div class="w-20 h-20 bg-white rounded-full flex flex-col items-center justify-center" style="box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                                        <span class="font-bold text-gray-800 text-lg leading-none">24.2</span>
+                                        <span class="text-[9px] text-gray-400 font-bold tracking-widests mt-1 uppercase">Mbps</span>
+                                    </div>
+                                </div>
+                                <span class="text-xs font-bold text-gray-500">
+                                    <i class="fa-solid fa-arrow-up text-[#fbae1a] mr-1"></i> UPLOAD
+                                </span>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── ENTERTAINMENT CARD ── -->
+                <div class="card-section" style="margin-top: 1rem; margin-bottom: 2rem;">
+                    <h3 class="text-gray-400 font-bold text-xs tracking-widest uppercase mb-3 ml-1 px-1">Entertainment & Add-ons</h3>
+                    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                        <!-- Active Service Block -->
+                        <div class="bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 flex justify-between items-center w-full gap-2 mb-3">
+                            <div class="flex items-center gap-3 min-w-0 flex-1">
+                                <!-- The Icon -->
+                                <div class="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+                                    <i class="fa-solid fa-play text-sm"></i>
+                                </div>
+                                <!-- The Text -->
+                                <div class="flex flex-col justify-center min-w-0">
+                                    <p class="font-bold text-gray-800 text-xs leading-tight truncate">Cignal Play TV</p>
+                                    <p class="text-[9px] text-gray-500 font-mono leading-tight mt-0.5 truncate">Acc: 123546578890</p>
+                                </div>
+                            </div>
+                            <span class="bg-blue-50 text-[#0349cb] border border-blue-100 text-[10px] font-bold px-2 py-1 rounded-md flex items-center gap-1 shrink-0">
+                                <i class="fa-solid fa-circle-check"></i> Active
+                            </span>
+                        </div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Add More Devices</p>
+                        <div class="flex gap-2">
+                            <button class="flex-1 bg-[#0349cb] hover:bg-blue-800 transition text-white py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-box"></i> Add TV Box
+                            </button>
+                            <button class="flex-1 bg-blue-50 hover:bg-blue-100 transition text-[#0349cb] border border-blue-100 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-mobile-screen"></i> Add Play App
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+        <!-- BOTTOM NAVIGATION -->
+        {% url 'customer_portal:portal_dashboard' as dashboard_url %}
+        {% url 'customer_portal:portal_statement' as statement_url %}
+        {% url 'customer_portal:submit_ticket' as ticket_url %}
+        <nav class="bottom-nav">
+            <a href="{{ dashboard_url }}" class="nav-item {% if request.path == dashboard_url %}active{% endif %}">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </a>
+            <a href="{{ statement_url }}" class="nav-item {% if request.path == statement_url %}active{% endif %}">
+                <i class="fas fa-file-invoice-dollar"></i>
+                <span>Billing</span>
+            </a>
+            <a href="{{ ticket_url }}" class="nav-item {% if request.path == ticket_url %}active{% endif %}">
+                <i class="fas fa-headset"></i>
+                <span>Support</span>
+            </a>
+            <a href="{% url 'customer_portal:portal_logout' %}" class="nav-item">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </a>
+        </nav>
+
+    </div>
+
+    <!-- Payment Modal -->
+    {% include 'customer_portal/portal_dashboard/_modals.html' %}
+
+    <!-- Bootstrap JS (required for modals) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
+
 </html>

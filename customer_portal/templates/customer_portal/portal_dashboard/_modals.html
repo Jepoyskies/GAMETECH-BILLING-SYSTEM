@@ -2,22 +2,25 @@
 <!-- ============================================================
      PAYMENT MODAL
      ============================================================ -->
-<div class="modal fade" id="mockPaymentModal" tabindex="-1" aria-labelledby="payModalLabel" aria-hidden="true">
+<div class="modal fade premium-modal" id="mockPaymentModal" tabindex="-1" aria-labelledby="payModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-portal">
-        <div class="modal-content modal-portal">
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold" id="payModalLabel">
-                    {% if is_account_suspended %}
-                    <i class="fas fa-plug-circle-bolt me-2" style="color:#ef4444;"></i> Reconnect Account
-                    {% else %}
-                    <i class="fas fa-wallet me-2" style="color:#facc15;"></i> Complete Payment
-                    {% endif %}
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:{% if current_theme == 'dark' %}invert(1){% else %}none{% endif %};"></button>
-            </div>
-            <form method="POST" action="{% url 'customer_portal:portal_process_mock_payment' %}" id="portalPaymentForm">
-                {% csrf_token %}
-                <div class="modal-body">
+        <div class="modal-content" style="background: transparent; border: none;">
+            <div class="glass-card w-100" style="border-radius: 28px;">
+                <div class="modal-header border-bottom-0 pb-3 px-4 pt-4 d-flex justify-content-between align-items-center">
+                    <h5 class="modal-title fw-bold m-0" id="payModalLabel">
+                        {% if is_account_suspended %}
+                        <i class="fas fa-plug-circle-bolt me-2" style="color:#ef4444;"></i> Reconnect Account
+                        {% else %}
+                        <i class="fas fa-wallet me-2" style="color:#fbae1a;"></i> Complete Payment
+                        {% endif %}
+                    </h5>
+                    <button type="button" class="custom-close-btn" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <form method="POST" action="{% url 'customer_portal:portal_process_mock_payment' %}" id="portalPaymentForm">
+                    {% csrf_token %}
+                    <div class="modal-body px-4 pb-4 pt-2">
                     {% if is_account_suspended %}
                     <div class="alert alert-danger py-2 px-3 mb-3 d-flex align-items-center gap-2" style="border-radius: 10px; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; font-size: 0.85rem;">
                         <i class="fas fa-plug-circle-bolt fs-5 flex-shrink-0"></i>
@@ -105,13 +108,14 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer border-0 px-4 pb-4 gap-2">
                     <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal" style="border-radius:8px;">Cancel</button>
-                    <button type="submit" class="btn px-4 fw-bold" style="border-radius:8px; background:linear-gradient(135deg,#facc15,#eab308); color:#0f172a; border:none;">
+                    <button type="submit" class="btn px-4 fw-bold" style="border-radius:8px; background-color:#fbae1a; color:#000000; border:none;">
                         <i class="fas fa-lock me-2"></i>{% if is_account_suspended %}Pay & Reactivate Service{% else %}Pay Securely{% endif %}
                     </button>
                 </div>
             </form>
+            </div>
         </div>
     </div>
 </div>
@@ -119,13 +123,16 @@
 <!-- ============================================================
      ADDON MODAL
      ============================================================ -->
-<div class="modal fade" id="addonModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade premium-modal" id="addonModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-portal">
-        <div class="modal-content modal-portal" style="border-radius:20px; overflow:hidden;">
-            <div class="modal-header border-0 pb-0 justify-content-end">
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body px-4 pt-0 pb-4 text-center">
+        <div class="modal-content" style="background: transparent; border: none;">
+            <div class="glass-card w-100" style="border-radius: 28px;">
+                <div class="modal-header border-bottom-0 pb-3 px-4 pt-4 d-flex justify-content-end align-items-center">
+                    <button type="button" class="custom-close-btn" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="modal-body px-4 pt-0 pb-4 text-center">
                 <div id="addonIconContainer" class="mb-4 d-inline-flex justify-content-center align-items-center" style="width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,#38bdf8,#3b82f6);box-shadow:0 10px 25px rgba(56,189,248,0.35);">
                     <i id="addonIcon" class="fas fa-play text-white" style="font-size:2rem;"></i>
                 </div>
@@ -150,6 +157,7 @@
                     <i class="fas fa-rocket me-2"></i>Request to Apply
                 </button>
             </div>
+            </div>
         </div>
     </div>
 </div>
@@ -157,14 +165,17 @@
 <!-- ============================================================
      PLAN SELECTION MODAL
      ============================================================ -->
-<div class="modal fade" id="planModal" tabindex="-1" aria-labelledby="planModalLabel" aria-hidden="true">
+<div class="modal fade premium-modal" id="planModal" tabindex="-1" aria-labelledby="planModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-    <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden; background: var(--p-surface);">
-      <div class="modal-header border-0" style="background: linear-gradient(135deg, #3b0764 0%, #6d28d9 60%, #8b5cf6 100%); color: white; padding: 20px 24px;">
-        <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="planModalLabel"><i class="fas fa-network-wired text-warning"></i> Choose Service Plan</h5>
-        <button type="button" class="btn-close btn-close-white opacity-75" data-bs-target="#mockPaymentModal" data-bs-toggle="modal" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body p-4" style="background: var(--p-bg);">
+    <div class="modal-content" style="background: transparent; border: none;">
+      <div class="glass-card w-100" style="border-radius: 28px;">
+        <div class="modal-header border-bottom-0 pb-3 px-4 pt-4 d-flex justify-content-between align-items-center">
+          <h5 class="modal-title fw-bold m-0 d-flex align-items-center gap-2" id="planModalLabel"><i class="fas fa-wifi" style="color: #fbae1a;"></i> Choose Service Plan</h5>
+          <button type="button" class="custom-close-btn" data-bs-target="#mockPaymentModal" data-bs-toggle="modal" data-bs-dismiss="modal" aria-label="Close">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        <div class="modal-body px-4 pb-4 pt-2">
         <ul class="nav nav-pills mb-4 justify-content-center gap-2" id="planTabs" role="tablist">
           <li class="nav-item" role="presentation">
             <button class="nav-link active rounded-pill fw-bold px-4" id="gtipid-tab" data-bs-toggle="pill" data-bs-target="#gtipid-plans" type="button" role="tab" style="color: var(--p-text);">GTipid Fiber</button>
@@ -225,6 +236,8 @@
               {% for p in plans %}{% if 'Enterprise' in p.name %}{% if not customer.plan or p.price >= customer.plan.price %}
                  {% include 'customer_portal/partials/plan_card.html' %}
               {% endif %}{% endif %}{% endfor %}
+            </div>
+          </div>
             </div>
           </div>
         </div>

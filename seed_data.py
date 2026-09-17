@@ -21,14 +21,14 @@ def generate_seed_data():
 
     print("Creating Subscription Plans...")
     plans_data = [
-        ("pppoe-20m", 1500.00),
-        ("pppoe-30m", 2000.00),
-        ("pppoe-50m", 2500.00),
-        ("pppoe-20m speedboost60", 1800.00),
-        ("pppoe-15m_888", 888.00),
-        ("pppoe-10m", 1000.00),
-        ("pppoe-100m", 3500.00),
-        ("pppoe-15m_700", 700.00),
+        ("GHome Fiber 1500", 1500.00),
+        ("GFast Fiber 2000", 2000.00),
+        ("GMax Fiber 2500", 2500.00),
+        ("GHome Boost 1800", 1800.00),
+        ("GStarter Fiber 888", 888.00),
+        ("GTipid Fiber 1000", 1000.00),
+        ("GUltra Fiber 3500", 3500.00),
+        ("GBasic Fiber 700", 700.00),
     ]
     
     plans = {}
@@ -47,12 +47,22 @@ def generate_seed_data():
     
     customers_to_create = []
     
-    # 44 new customers this month
-    for i in range(44):
+    mei_mei = Customer(
+        full_name="Mei Mei",
+        pppoe_username="meimei",
+        pppoe_password="ilovejepandjill",
+        portal_password="ilovejepandjill",
+        plan=plans["GMax Fiber 2500"],
+        status='active',
+        expires_at=now + timedelta(days=30)
+    )
+    customers_to_create.append(mei_mei)
+    
         c = Customer(
             full_name=f"New Customer {i}",
             pppoe_username=f"newcust{i}",
-            plan=plans["pppoe-20m"],
+            pppoe_password="password123",
+            plan=plans["GHome Fiber 1500"],
             status='active',
         )
         customers_to_create.append(c)
@@ -60,13 +70,14 @@ def generate_seed_data():
     # Rest 1825 customers older
     for i in range(1825):
         plan_name = random.choices(
-            ["pppoe-20m", "pppoe-30m", "pppoe-50m", "pppoe-100m"],
+            ["GHome Fiber 1500", "GFast Fiber 2000", "GMax Fiber 2500", "GUltra Fiber 3500"],
             weights=[1412, 168, 122, 24]
         )[0]
         
         c = Customer(
             full_name=f"Customer {i}",
             pppoe_username=f"user_{i}",
+            pppoe_password="password123",
             plan=plans[plan_name],
             status='active',
             expires_at=now + timedelta(days=random.randint(-10, 30))
