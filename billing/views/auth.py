@@ -157,12 +157,77 @@ def staff_list(request):
 
 @role_required(["Admin"])
 @login_required
+def manage_roles(request):
+    from billing.models import StaffRole
+    
+    if request.method == "POST":
+        action = request.POST.get("action")
+        role_id = request.POST.get("role_id")
+        
+        if action == "delete" and role_id:
+            role = StaffRole.objects.filter(id=role_id).first()
+            if role:
+                # Prevent deleting Admin
+                if role.name.lower() == "admin":
+                    messages.error(request, "Cannot delete the core Admin role.")
+                else:
+                    role.delete()
+                    messages.success(request, f"Role '{role.name}' deleted successfully.")
+            return redirect("manage_roles")
+            
+        elif action in ["add", "edit"]:
+            name = request.POST.get("name")
+            can_access_billing = request.POST.get("can_access_billing") == "on"
+            can_access_network_ops = request.POST.get("can_access_network_ops") == "on"
+            can_access_cignal_play = request.POST.get("can_access_cignal_play") == "on"
+            can_access_dispatch = request.POST.get("can_access_dispatch") == "on"
+            can_access_administration = request.POST.get("can_access_administration") == "on"
+            
+            if not name:
+                messages.error(request, "Role name is required.")
+                return redirect("manage_roles")
+                
+            if action == "add":
+                if StaffRole.objects.filter(name__iexact=name).exists():
+                    messages.error(request, "A role with that name already exists.")
+                else:
+                    StaffRole.objects.create(
+                        name=name,
+                        can_access_billing=can_access_billing,
+                        can_access_network_ops=can_access_network_ops,
+                        can_access_cignal_play=can_access_cignal_play,
+                        can_access_dispatch=can_access_dispatch,
+                        can_access_administration=can_access_administration
+                    )
+                    messages.success(request, f"Role '{name}' created successfully.")
+            elif action == "edit" and role_id:
+                role = StaffRole.objects.filter(id=role_id).first()
+                if role:
+                    if role.name.lower() == "admin" and name.lower() != "admin":
+                        messages.error(request, "Cannot rename the core Admin role.")
+                    else:
+                        role.name = name
+                        role.can_access_billing = can_access_billing
+                        role.can_access_network_ops = can_access_network_ops
+                        role.can_access_cignal_play = can_access_cignal_play
+                        role.can_access_dispatch = can_access_dispatch
+                        role.can_access_administration = can_access_administration
+                        role.save()
+                        messages.success(request, f"Role '{name}' updated successfully.")
+            return redirect("manage_roles")
+
+    roles = StaffRole.objects.all().order_by("name")
+    return render(request, "billing/manage_roles.html", {"roles": roles})
+
+
+@role_required(["Admin"])
+@login_required
 def add_staff(request):
     if request.method == "POST":
         username = request.POST.get("username")
         full_name = request.POST.get("full_name")
         email = request.POST.get("email")
-        role = request.POST.get("role")
+        role_name = request.POST.get("role")
         status = request.POST.get("status")
         raw_password = request.POST.get("password")
 
@@ -190,7 +255,7 @@ def add_staff(request):
                     is_staff=True,  # Allows login to /admin/
                     is_active=(status == "Active"),
                 )
-                if role == "Admin":
+                if role_name == "Admin":
                     user.is_superuser = True
                 user.set_password(raw_password)
                 user.save()  # This also triggers the signal to create EmployeeProfile
@@ -198,7 +263,7 @@ def add_staff(request):
                 # 2. Assign User to the correct RBAC Group
                 from django.contrib.auth.models import Group
 
-                group = Group.objects.filter(name=role).first()
+                group = Group.objects.filter(name=role_name).first()
                 if group:
                     user.groups.add(group)
 
@@ -207,9 +272,9 @@ def add_staff(request):
                     username=username,
                     full_name=full_name,
                     email=email,
-                    role=role,
+                    role=role_name,
                     status=status,
-                    password_hash=user.password,
+                    password_hash=make_password(raw_password),
                 )
 
             messages.success(request, f"Staff member '{full_name}' added successfully!")
@@ -218,7 +283,9 @@ def add_staff(request):
             messages.error(request, f"Error creating staff member: {str(e)}")
             return redirect("add_staff")
 
-    return render(request, "billing/add_staff.html")
+    from billing.models import StaffRole
+    available_roles = StaffRole.objects.all().order_by('name')
+    return render(request, "billing/add_staff.html", {"available_roles": available_roles})
 
 
 @role_required(["Admin"])

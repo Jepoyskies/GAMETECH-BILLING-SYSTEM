@@ -83,13 +83,19 @@ class AddonPlan(models.Model):
         verbose_name_plural = "Add-on Plans"
 
 
+class StaffRole(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+    can_access_billing = models.BooleanField(default=False)
+    can_access_network_ops = models.BooleanField(default=False)
+    can_access_cignal_play = models.BooleanField(default=False)
+    can_access_dispatch = models.BooleanField(default=False)
+    can_access_administration = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.name
+
+
 class SystemAdmin(models.Model):
-    ROLE_CHOICES = (
-        ("Admin", "Admin"),
-        ("Technician", "Technician"),
-        ("Agent", "Agent"),
-        ("CSR", "CSR"),
-    )
     STATUS_CHOICES = (
         ("Active", "Active"),
         ("Inactive", "Inactive"),
@@ -98,7 +104,7 @@ class SystemAdmin(models.Model):
     username = models.CharField(max_length=150, unique=True)
     full_name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
-    role = models.CharField(max_length=50, choices=ROLE_CHOICES, default="Admin")
+    role = models.CharField(max_length=50, default="Agent")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="Active")
     password_hash = models.CharField(max_length=255)  # We will hash this securely!
     created_at = models.DateTimeField(auto_now_add=True)

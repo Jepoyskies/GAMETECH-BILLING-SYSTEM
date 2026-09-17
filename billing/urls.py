@@ -150,6 +150,7 @@ urlpatterns = [
     path("addon-plans/delete/<int:pk>/", views.delete_addon_plan, name="delete_addon_plan"),
     path("addon-plans/toggle/<int:pk>/", views.toggle_addon_plan, name="toggle_addon_plan"),
     path("staff/", views.staff_list, name="staff_list"),
+    path("staff/roles/", views.manage_roles, name="manage_roles"),
     path("staff/add/", views.add_staff, name="add_staff"),
     path("staff/edit/<int:pk>/", views.edit_staff, name="edit_staff"),
     # Core UI & Placeholders
