@@ -9,15 +9,18 @@
 <div class="container-fluid py-4 px-3 px-md-4">
 
   <!-- Page Hero Banner -->
-  <div class="cignal-hero-banner d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in">
+  <div class="gt-cl-card cignal-hero-banner p-4 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in" style="border-left: 4px solid #ef4444 !important;">
     <div class="d-flex align-items-center gap-3">
       <div class="cignal-hero-icon"><i class="fas fa-file-signature"></i></div>
       <div>
-        <div class="cignal-hero-title">Cignal Play Applications</div>
-        <div class="cignal-hero-sub">Monitor and approve pending Cignal Play and Box requests</div>
+        <div class="cignal-hero-title text-light fw-bold">Cignal Play Applications</div>
+        <div class="cignal-hero-sub text-muted">Monitor and approve pending Cignal Play and Box requests</div>
       </div>
     </div>
     <div class="d-flex align-items-center gap-2">
+      <a href="{% url 'cignal_dashboard' %}" class="btn btn-sm btn-outline-light rounded-pill px-3 py-1.5 shadow-sm fw-bold gt-btn" style="font-size:0.8rem; background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.15);">
+        <i class="fas fa-arrow-left me-1"></i> Dashboard
+      </a>
       <span class="cignal-live-badge">
         <span class="cignal-live-dot"></span> {{ pending_applications_count }} Pending
       </span>
@@ -26,7 +29,86 @@
 
   <div class="row g-3 animate-fade-in animate-delay-1">
     <div class="col-12">
-        {% include "billing/cignal_dashboard/_pending_applications.html" %}
+      <!-- Full-Width Applications Table Card -->
+      <div class="gt-cl-card cignal-glass-card mb-4" style="border-left: 4px solid #f59e0b !important;">
+        <div class="cignal-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div class="d-flex align-items-center gap-2">
+            <h6 class="mb-0 text-light fw-bold"><i class="fas fa-file-signature text-warning me-1"></i> Pending Applications Queue</h6>
+            <span class="badge bg-warning text-dark rounded-pill px-2.5 py-1 fw-bold" style="font-size: 0.72rem;">{{ pending_applications_count }} Pending</span>
+          </div>
+          <small class="text-muted" style="font-size:0.78rem;"><i class="fas fa-info-circle me-1"></i>Portal applications awaiting external loading & enrollment verification</small>
+        </div>
+        <div class="table-responsive">
+          <table class="cignal-table table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Contact Number</th>
+                <th>Add-on Requested</th>
+                <th>Requested At</th>
+                <th class="text-end">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for app in applications %}
+              <tr id="app-row-{{ app.customer.id }}">
+                <td>
+                  <a href="{% url 'view_customer' app.customer.id %}" class="fw-bold text-decoration-none text-info d-block">
+                    {{ app.customer.full_name|default:app.customer.pppoe_username }}
+                  </a>
+                  {% if app.customer.pppoe_username %}
+                  <small class="text-muted font-monospace" style="font-size:0.75rem;">
+                    <i class="fas fa-user-circle me-1"></i>{{ app.customer.pppoe_username }}
+                  </small>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if app.customer.contact_number or app.customer.phone %}
+                  <a href="tel:{{ app.customer.contact_number|default:app.customer.phone }}" class="text-decoration-none text-light small font-monospace">
+                    <i class="fas fa-phone-alt text-success me-1"></i>{{ app.customer.contact_number|default:app.customer.phone }}
+                  </a>
+                  {% else %}
+                  <small class="text-muted">N/A</small>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="badge bg-warning text-dark rounded-pill px-2.5 py-1" style="font-size:0.78rem;">
+                    <i class="fas fa-play me-1"></i>{{ app.addon_type }}
+                  </span>
+                </td>
+                <td>
+                  <small class="text-muted">{{ app.requested_at|date:"M d, Y — g:i A" }}</small>
+                </td>
+                <td class="text-end">
+                  <div class="d-flex justify-content-end align-items-center gap-1">
+                    <button type="button"
+                      class="btn btn-sm btn-warning fw-bold rounded-pill px-3 py-1 shadow-sm gt-btn"
+                      data-bs-toggle="modal"
+                      data-bs-target="#cignalAppModal_{{ app.id }}"
+                      title="Record external Cignal enrollment details for {{ app.customer.full_name }}">
+                      <i class="fas fa-clipboard-check me-1"></i> Record Enrollment
+                    </button>
+                    <a href="{% url 'view_customer' app.customer.id %}" class="btn-cignal-icon gt-btn" title="View Customer Profile">
+                      <i class="fas fa-user"></i>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="5">
+                  <div class="cignal-empty-state py-5 text-center">
+                    <div class="cignal-empty-icon mb-2"><i class="fas fa-check-circle text-success" style="font-size: 2rem; opacity: 0.85;"></i></div>
+                    <div class="cignal-empty-title" style="font-size: 1.05rem;">All Applications Cleared</div>
+                    <div class="cignal-empty-sub" style="font-size: 0.82rem;">There are currently no pending Cignal Play or TV Box requests from subscribers.</div>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 
