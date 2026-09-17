@@ -34,33 +34,94 @@
         </div>
     </div>
 
-    <!-- KPI Statistics Hero -->
-    {% include "dispatch/_stats_hero.html" %}
-
-    <!-- Navigation Tabs (Queue vs Map) -->
-    <ul class="nav dispatch-nav-tabs mb-3" id="dispatchMainTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="tab-tickets-btn" data-bs-toggle="tab" data-bs-target="#tab-tickets" type="button" role="tab">
-                <i class="fas fa-clipboard-list"></i> Active Ticket Queue
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="tab-map-btn" data-bs-toggle="tab" data-bs-target="#tab-map" type="button" role="tab">
-                <i class="fas fa-map-marked-alt"></i> Live Field Map
-            </button>
-        </li>
-    </ul>
-
-    <!-- Tab Content -->
-    <div class="tab-content" id="dispatchMainTabContent">
-        <!-- Tab 1: Queue -->
-        <div class="tab-pane fade show active" id="tab-tickets" role="tabpanel">
-            {% include "dispatch/_ticket_list.html" %}
+    <!-- Command Center Pipeline Cards -->
+    <div class="row g-4 mt-2">
+        <!-- Stage 1: Verification -->
+        <div class="col-md-6 col-lg-3">
+            <a href="{% url 'dispatch_verification' %}" class="text-decoration-none">
+                <div class="gt-cl-card h-100 p-4 position-relative overflow-hidden group hover-lift transition-all" style="background: rgba(31, 41, 55, 0.4); border: 1px solid rgba(245, 158, 11, 0.2); box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <p class="text-uppercase text-xs fw-bold mb-1" style="letter-spacing: 1px; color: #f59e0b;">Stage 1</p>
+                            <h5 class="fw-bold text-white mb-0">Pending<br>Verification</h5>
+                        </div>
+                        <div class="icon-shape rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; background: rgba(245, 158, 11, 0.1); color: #f59e0b;">
+                            <i class="fas fa-clipboard-check fs-5"></i>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-end mt-4">
+                        <h2 class="display-4 fw-bolder mb-0 text-white lh-1">{{ pending_verification_count|default:0 }}</h2>
+                        <span class="ms-2 text-muted mb-1">Queued</span>
+                    </div>
+                    {% if pending_verification_count > 0 %}
+                    <div class="position-absolute top-0 start-0 w-100 h-100 pulse-border-warning" style="pointer-events: none;"></div>
+                    {% endif %}
+                </div>
+            </a>
         </div>
 
-        <!-- Tab 2: Map View -->
-        <div class="tab-pane fade" id="tab-map" role="tabpanel">
-            {% include "dispatch/_map_view.html" %}
+        <!-- Stage 2: Assignment -->
+        <div class="col-md-6 col-lg-3">
+            <a href="{% url 'dispatch_assignment' %}" class="text-decoration-none">
+                <div class="gt-cl-card h-100 p-4 position-relative overflow-hidden group hover-lift transition-all" style="background: rgba(31, 41, 55, 0.4); border: 1px solid rgba(59, 130, 246, 0.2); box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <p class="text-uppercase text-xs fw-bold mb-1" style="letter-spacing: 1px; color: #3b82f6;">Stage 2</p>
+                            <h5 class="fw-bold text-white mb-0">Awaiting<br>Assignment</h5>
+                        </div>
+                        <div class="icon-shape rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; background: rgba(59, 130, 246, 0.1); color: #3b82f6;">
+                            <i class="fas fa-user-tag fs-5"></i>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-end mt-4">
+                        <h2 class="display-4 fw-bolder mb-0 text-white lh-1">{{ awaiting_assignment_count|default:0 }}</h2>
+                        <span class="ms-2 text-muted mb-1">Unassigned</span>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Stage 3: Field Operations (Read Only for Admin) -->
+        <div class="col-md-6 col-lg-3">
+            <div class="gt-cl-card h-100 p-4 position-relative overflow-hidden" style="background: rgba(31, 41, 55, 0.4); border: 1px solid rgba(16, 185, 129, 0.2); box-shadow: 0 4px 20px rgba(0,0,0,0.3); cursor: default;">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <p class="text-uppercase text-xs fw-bold mb-1" style="letter-spacing: 1px; color: #10b981;">Stage 3</p>
+                        <h5 class="fw-bold text-white mb-0">Active<br>in Field</h5>
+                    </div>
+                    <div class="icon-shape rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; background: rgba(16, 185, 129, 0.1); color: #10b981;">
+                        <i class="fas fa-truck-fast fs-5"></i>
+                    </div>
+                </div>
+                <div class="d-flex align-items-end mt-4">
+                    <h2 class="display-4 fw-bolder mb-0 text-white lh-1">{{ active_in_field_count|default:0 }}</h2>
+                    <span class="ms-2 text-muted mb-1">On-Site</span>
+                </div>
+                <div class="mt-3">
+                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Techs use Mobile UI</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stage 4 & 5: QA and Approval -->
+        <div class="col-md-6 col-lg-3">
+            <a href="{% url 'dispatch_qa' %}" class="text-decoration-none">
+                <div class="gt-cl-card h-100 p-4 position-relative overflow-hidden group hover-lift transition-all" style="background: rgba(31, 41, 55, 0.4); border: 1px solid rgba(239, 68, 68, 0.2); box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <p class="text-uppercase text-xs fw-bold mb-1" style="letter-spacing: 1px; color: #ef4444;">Stage 4 & 5</p>
+                            <h5 class="fw-bold text-white mb-0">Pending QA<br>& Approval</h5>
+                        </div>
+                        <div class="icon-shape rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; background: rgba(239, 68, 68, 0.1); color: #ef4444;">
+                            <i class="fas fa-check-double fs-5"></i>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-end mt-4">
+                        <h2 class="display-4 fw-bolder mb-0 text-white lh-1">{{ pending_qa_approval_count|default:0 }}</h2>
+                        <span class="ms-2 text-muted mb-1">Awaiting</span>
+                    </div>
+                </div>
+            </a>
         </div>
     </div>
 

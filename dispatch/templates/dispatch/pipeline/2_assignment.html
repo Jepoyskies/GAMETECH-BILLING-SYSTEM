@@ -1,0 +1,133 @@
+{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}Stage 2: Assignment | Gametech Dispatch{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-3 px-md-4">
+    <!-- Hero Banner -->
+    <div class="gt-cl-card p-4 mb-4" style="border-left: 4px solid #f59e0b;">
+        <div class="d-flex align-items-center">
+            <div class="hero-icon me-3" style="background: rgba(245,158,11,0.15); color: #f59e0b; padding: 15px; border-radius: 12px;">
+                <i class="fas fa-truck-fast fa-2x"></i>
+            </div>
+            <div>
+                <h4 class="mb-1 fw-bold text-white">Stage 2: Dispatch Assignment</h4>
+                <p class="mb-0 text-muted small">Assign Teams and Technicians to generated Job Orders, and schedule the installation date and time.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Unassigned Tickets -->
+        <div class="col-12">
+            <div class="gt-cl-card">
+                <div class="card-header border-bottom border-secondary p-3">
+                    <h6 class="mb-0 text-white fw-bold"><i class="fas fa-list-check me-2 text-primary"></i> Pending Job Orders</h6>
+                </div>
+                <div class="card-body p-0 table-responsive">
+                    <table class="table table-dark table-hover mb-0 align-middle">
+                        <thead class="text-muted small" style="background: rgba(255,255,255,0.02);">
+                            <tr>
+                                <th class="ps-3 border-secondary">Ticket / Client</th>
+                                <th class="border-secondary">Address / Contact</th>
+                                <th class="border-secondary">Plan / PPPoE</th>
+                                <th class="border-secondary text-end pe-3">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ticket in tickets %}
+                            <tr>
+                                <td class="ps-3 border-secondary text-white">
+                                    <div class="fw-bold">{{ ticket.ticket_number }}</div>
+                                    <small class="text-muted">{{ ticket.client_name }}</small>
+                                </td>
+                                <td class="border-secondary text-muted small">
+                                    {{ ticket.address }}<br>
+                                    <span class="text-info">{{ ticket.contact_number }}</span>
+                                </td>
+                                <td class="border-secondary text-muted small">
+                                    {{ ticket.plan_package }}<br>
+                                    <span class="text-warning font-monospace">{{ ticket.account_no }}</span>
+                                </td>
+                                <td class="border-secondary text-end pe-3">
+                                    <button class="btn btn-sm btn-warning fw-bold text-dark" data-bs-toggle="modal" data-bs-target="#assignModal{{ ticket.id }}">
+                                        Assign Techs
+                                    </button>
+                                </td>
+                            </tr>
+                            
+                            <!-- Assign Modal -->
+                            <div class="modal fade" id="assignModal{{ ticket.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content bg-dark border-secondary">
+                                        <div class="modal-header border-secondary">
+                                            <h5 class="modal-title text-white fw-bold">Assign Ticket: {{ ticket.ticket_number }}</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <form action="{% url 'dispatch_assignment' %}" method="POST">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="ticket_id" value="{{ ticket.id }}">
+                                            <div class="modal-body">
+                                                <div class="row">
+                                                    <div class="col-6 mb-3">
+                                                        <label class="form-label text-muted small fw-bold">Schedule Date</label>
+                                                        <input type="date" name="scheduled_date" class="form-control bg-dark text-white border-secondary" required>
+                                                    </div>
+                                                    <div class="col-6 mb-3">
+                                                        <label class="form-label text-muted small fw-bold">Schedule Time</label>
+                                                        <input type="time" name="scheduled_time" class="form-control bg-dark text-white border-secondary" required>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="mb-3">
+                                                    <label class="form-label text-muted small fw-bold">Dispatch Team</label>
+                                                    <select name="team_id" class="form-select bg-dark text-white border-secondary" required>
+                                                        <option value="" disabled selected>Select a Team...</option>
+                                                        {% for team in teams %}
+                                                            <option value="{{ team.id }}">{{ team.name }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                                
+                                                <div class="mb-4">
+                                                    <label class="form-label text-muted small fw-bold">Select Technicians</label>
+                                                    <div class="row g-2 p-3 border border-secondary rounded bg-dark" style="max-height: 250px; overflow-y: auto;">
+                                                        {% for tech in technicians %}
+                                                        <div class="col-md-6">
+                                                            <div class="form-check p-2 border border-secondary rounded" style="background: rgba(255,255,255,0.02);">
+                                                                <input class="form-check-input ms-1 me-2" type="checkbox" name="tech_ids" value="{{ tech.id }}" id="tech{{ tech.id }}_{{ ticket.id }}">
+                                                                <label class="form-check-label text-white w-100" for="tech{{ tech.id }}_{{ ticket.id }}" style="cursor: pointer;">
+                                                                    <div class="fw-bold">{{ tech.name }}</div>
+                                                                    <div class="small text-muted"><i class="fas fa-users me-1"></i> {{ tech.team.name|default:"Unassigned Team" }}</div>
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer border-secondary">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-warning fw-bold text-dark"><i class="fas fa-paper-plane me-2"></i> Dispatch</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-5">
+                                    <i class="fas fa-truck-loading fa-2x mb-3 text-secondary"></i><br>
+                                    No pending Job Orders.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

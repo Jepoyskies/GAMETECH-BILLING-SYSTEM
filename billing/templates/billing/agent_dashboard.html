@@ -1,0 +1,87 @@
+{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}Agent Dashboard | Gametech{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-3 px-md-4">
+    <!-- Hero Banner -->
+    <div class="gt-cl-card p-4 mb-4" style="border-left: 4px solid #3b82f6;">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h4 class="mb-1 fw-bold text-white"><i class="fas fa-handshake me-2 text-primary"></i> Agent Portal</h4>
+                <p class="mb-0 text-muted small">Welcome, {{ agent.name }}! Track your referrals and commission wallet here.</p>
+            </div>
+            <div class="text-end" style="min-width: 200px;">
+                <div class="small text-muted mb-1 text-uppercase fw-bold" style="letter-spacing: 1px;">Claimable Commission</div>
+                <h3 class="mb-2 text-success fw-bold">₱{{ claimable_commission|floatformat:2 }}</h3>
+                
+                <!-- Commission Tracker -->
+                {% with qualified=prospects.count %} {# Normally we would filter by qualified #}
+                <div class="d-flex justify-content-between small text-muted mb-1">
+                    <span>Progress to ₱2,500</span>
+                    <span class="fw-bold text-white">0 / 5</span>
+                </div>
+                <div class="progress bg-dark border border-secondary" style="height: 8px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="5"></div>
+                </div>
+                {% endwith %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Prospect Tracking Table -->
+        <div class="col-12 mb-4">
+            <div class="gt-cl-card h-100">
+                <div class="card-header border-bottom border-secondary p-3 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 text-white fw-bold"><i class="fas fa-list me-2 text-warning"></i> My Prospects</h6>
+                    <a href="{% url 'agent_add_prospect' %}" class="btn btn-sm btn-primary fw-bold"><i class="fas fa-plus me-1"></i> Add Prospect</a>
+                </div>
+                <div class="card-body p-0 table-responsive">
+                    <table class="table table-dark table-hover mb-0 align-middle">
+                        <thead class="text-muted small" style="background: rgba(255,255,255,0.02);">
+                            <tr>
+                                <th class="ps-3 border-secondary">Client Name</th>
+                                <th class="border-secondary">Contact</th>
+                                <th class="border-secondary">Date Applied</th>
+                                <th class="border-secondary text-center">Status</th>
+                                <th class="border-secondary text-center">Payments</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for prospect in prospects %}
+                            <tr>
+                                <td class="ps-3 border-secondary text-white fw-bold">{{ prospect.full_name }}</td>
+                                <td class="border-secondary text-muted small">{{ prospect.phone|default:"-" }}</td>
+                                <td class="border-secondary text-muted small">{{ prospect.created_at|date:"M d, Y" }}</td>
+                                <td class="border-secondary text-center">
+                                    {% if prospect.status == 'pending' %}
+                                        <span class="badge bg-warning text-dark"><i class="fas fa-clock"></i> Pending</span>
+                                    {% elif prospect.status == 'active' %}
+                                        <span class="badge bg-success"><i class="fas fa-check-circle"></i> Active</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ prospect.get_status_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="border-secondary text-center">
+                                    {% if prospect.payments.count >= 2 %}
+                                        <span class="badge bg-success"><i class="fas fa-star text-warning"></i> Qualified</span>
+                                    {% else %}
+                                        <span class="text-muted small">{{ prospect.payments.count }} / 2</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">No prospects found. Start referring customers!</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

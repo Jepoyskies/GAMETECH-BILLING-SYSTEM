@@ -1,0 +1,224 @@
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.utils import timezone
+from billing.models import Customer, SubscriptionPlan
+from network_manager.models import MikrotikDevice
+from dispatch.models import JobTicket, Team, Technician
+
+@login_required
+def dispatch_verification(request):
+    """
+    Step 1: Staff sees pending Agent prospects, assigns PPPoE, Date/Time,
+    and generates a Job Order (Ticket).
+    """
+    if request.method == "POST":
+        customer_id = request.POST.get("customer_id")
+        pppoe_username = request.POST.get("pppoe_username")
+        plan_id = request.POST.get("plan_id")
+        mikrotik_id = request.POST.get("mikrotik_id")
+        
+        customer = get_object_or_404(Customer, id=customer_id)
+        plan = get_object_or_404(SubscriptionPlan, id=plan_id)
+        mikrotik = get_object_or_404(MikrotikDevice, id=mikrotik_id)
+        
+        # Update Customer
+        customer.pppoe_username = pppoe_username
+        customer.plan = plan
+        customer.mikrotik_device = mikrotik
+        customer.is_verified = True
+        customer.save()
+        
+        # Create Job Ticket
+        ticket = JobTicket.objects.create(
+            customer=customer,
+            client_name=customer.full_name,
+            address=customer.address,
+            contact_number=customer.phone,
+            account_no=customer.pppoe_username,
+            plan_package=plan.name,
+            mikrotik_device=mikrotik,
+            ticket_type='INSTALLATION',
+            status='PENDING',
+            source_tab='INTERNET_INSTALL',
+            created_by=request.user
+        )
+        messages.success(request, f"Verified prospect {customer.full_name} and generated Job Ticket {ticket.ticket_number}.")
+        return redirect('dispatch_assignment')
+        
+    prospects = Customer.objects.filter(status='pending', is_verified=False)
+    plans = SubscriptionPlan.objects.all()
+    mikrotiks = MikrotikDevice.objects.all()
+    
+    return render(request, "dispatch/pipeline/1_verification.html", {
+        "prospects": prospects,
+        "plans": plans,
+        "mikrotiks": mikrotiks
+    })
+
+@login_required
+def dispatch_assignment(request):
+    """
+    Step 2: Assign Tech/Team to the generated Job Ticket.
+    """
+    if request.method == "POST":
+        ticket_id = request.POST.get("ticket_id")
+        team_id = request.POST.get("team_id")
+        scheduled_date = request.POST.get("scheduled_date")
+        scheduled_time = request.POST.get("scheduled_time")
+        tech_ids = request.POST.getlist("tech_ids")
+        
+        ticket = get_object_or_404(JobTicket, id=ticket_id)
+        team = get_object_or_404(Team, id=team_id) if team_id else None
+        
+        ticket.team = team
+        ticket.scheduled_date = scheduled_date
+        ticket.scheduled_time = scheduled_time
+        ticket.status = 'ASSIGNED'
+        ticket.save()
+        
+        if tech_ids:
+            ticket.technicians.set(tech_ids)
+            
+        messages.success(request, f"Assigned {ticket.ticket_number} to team.")
+        return redirect('dispatch_assignment')
+
+    pending_tickets = JobTicket.objects.filter(status='PENDING')
+    teams = Team.objects.all()
+    technicians = Technician.objects.all()
+    
+    return render(request, "dispatch/pipeline/2_assignment.html", {
+        "tickets": pending_tickets,
+        "teams": teams,
+        "technicians": technicians
+    })
+
+@login_required
+def technician_mobile_ui(request):
+    """
+    Step 3: Mobile UI for Technicians to see jobs, start timer, 
+    and fill physical form specs.
+    """
+    try:
+        tech = request.user.technician
+    except:
+        messages.error(request, "You are not registered as a Technician.")
+        return redirect("dashboard")
+        
+    assigned_tickets = tech.job_tickets.filter(status__in=['ASSIGNED', 'IN_PROGRESS'])
+    
+    if request.method == "POST":
+        action = request.POST.get("action")
+        ticket_id = request.POST.get("ticket_id")
+        ticket = get_object_or_404(JobTicket, id=ticket_id)
+        
+        if action == "START":
+            ticket.time_start = timezone.now()
+            ticket.status = 'IN_PROGRESS'
+            ticket.save()
+            messages.success(request, "Installation timer started.")
+            
+        elif action == "DONE":
+            ticket.time_accomplish = timezone.now()
+            # Calculate duration in minutes
+            if ticket.time_start:
+                diff = ticket.time_accomplish - ticket.time_start
+                ticket.duration = int(diff.total_seconds() / 60)
+            
+            # Fill form fields
+            ticket.nap_port = request.POST.get("nap_port")
+            ticket.cable_length = request.POST.get("cable_length")
+            ticket.nap_reading = request.POST.get("nap_reading")
+            ticket.pole_number = request.POST.get("pole_number")
+            ticket.ont_modem_sn = request.POST.get("ont_modem_sn")
+            ticket.signal_level = request.POST.get("signal_level")
+            ticket.facility = request.POST.get("facility")
+            ticket.house_reading = request.POST.get("house_reading")
+            ticket.technician_remarks = request.POST.get("technician_remarks")
+            ticket.payment_collected = request.POST.get("payment_method")
+            
+            ticket.status = 'COMPLETED'  # Wait for QA
+            ticket.save()
+            messages.success(request, "Job marked as Done. Submitted for QA.")
+            
+        return redirect('technician_mobile_ui')
+        
+    return render(request, "dispatch/pipeline/3_tech_mobile.html", {
+        "tickets": assigned_tickets
+    })
+
+@login_required
+def dispatch_qa(request):
+    """
+    Step 4: QA Check (Staff) - reviews technician's form, 
+    confirms customer satisfaction, passes to Admin.
+    """
+    if request.method == "POST":
+        ticket_id = request.POST.get("ticket_id")
+        ticket = get_object_or_404(JobTicket, id=ticket_id)
+        
+        action = request.POST.get("action")
+        qa_notes = request.POST.get("qa_notes")
+        
+        if action == 'approve':
+            ticket.qa_notes = qa_notes
+            ticket.qa_completed_at = timezone.now()
+            ticket.status = 'QA_PASSED'
+            ticket.save()
+            messages.success(request, f"Ticket {ticket.ticket_number} passed QA and sent to Admin.")
+        elif action == 'bounce_back':
+            ticket.remarks = f"QA BOUNCED (To Tech): {qa_notes}\n" + (ticket.remarks or "")
+            ticket.status = 'IN_PROGRESS'  # Send back to Tech
+            ticket.save()
+            messages.warning(request, f"Bounced ticket {ticket.ticket_number} back to Technician.")
+            
+        return redirect('dispatch_qa')
+
+    qa_tickets = JobTicket.objects.filter(status='COMPLETED', customer__status='pending')
+    
+    return render(request, "dispatch/pipeline/4_qa.html", {
+        "tickets": qa_tickets
+    })
+
+@login_required
+def dispatch_approval(request):
+    """
+    Step 5: Admin Final Approval - Activates Customer.
+    """
+    if request.method == "POST":
+        ticket_id = request.POST.get("ticket_id")
+        ticket = get_object_or_404(JobTicket, id=ticket_id)
+        
+        action = request.POST.get("action")
+        
+        if action == 'approve':
+            customer = ticket.customer
+            if customer:
+                customer.status = 'active'
+                customer.installation_status = 'installed'
+                customer.installed_at = timezone.now()
+                customer.save()
+            ticket.status = 'COMPLETED_AND_VERIFIED'
+            ticket.done_at = timezone.now()
+            ticket.save()
+            messages.success(request, f"Customer {customer.full_name} is now ACTIVE.")
+        elif action == 'bounce_dispatch':
+            admin_notes = request.POST.get("admin_notes", "No notes provided.")
+            ticket.remarks = f"ADMIN BOUNCED (To Dispatch): {admin_notes}\n" + (ticket.remarks or "")
+            ticket.status = 'COMPLETED'  # Sends back to QA
+            ticket.save()
+            messages.warning(request, f"Bounced ticket {ticket.ticket_number} back to Dispatch QA.")
+        elif action == 'bounce_tech':
+            admin_notes = request.POST.get("admin_notes", "No notes provided.")
+            ticket.remarks = f"ADMIN BOUNCED (To Tech): {admin_notes}\n" + (ticket.remarks or "")
+            ticket.status = 'IN_PROGRESS'  # Sends back to Tech
+            ticket.save()
+            messages.error(request, f"Bounced ticket {ticket.ticket_number} all the way back to Technician.")
+            
+        return redirect('dispatch_approval')
+        
+    approval_tickets = JobTicket.objects.filter(status='QA_PASSED')
+    
+    return render(request, "dispatch/pipeline/5_approval.html", {
+        "tickets": approval_tickets
+    })

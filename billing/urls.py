@@ -132,6 +132,10 @@ urlpatterns = [
     ),
     # Auth route
     path("login/", views.unified_login_view, name="login"),
+    # Agent Portal
+    path("agent-dashboard/", views.agent_dashboard, name="agent_dashboard"),
+    path("agent-dashboard/add/", views.agent_add_prospect, name="agent_add_prospect"),
+    
     path("agents/", views.agent_list, name="agent_list"),
     path("agents/add/", views.add_agent, name="add_agent"),
     path("agents/edit/<int:agent_id>/", views.edit_agent, name="edit_agent"),

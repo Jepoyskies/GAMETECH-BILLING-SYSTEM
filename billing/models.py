@@ -28,8 +28,35 @@ class Agent(models.Model):
     password_hash = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    @property
+    def claimable_commission(self):
+        """
+        Total claimable commission from CommissionTransactions.
+        """
+        from django.db.models import Sum
+        total = self.commissiontransaction_set.filter(status='CLAIMABLE').aggregate(total=Sum('amount'))['total']
+        return total or 0
+
     def __str__(self):
         return self.name
+
+
+class CommissionTransaction(models.Model):
+    STATUS_CHOICES = (
+        ('PENDING', 'Pending'),
+        ('CLAIMABLE', 'Claimable'),
+        ('PAID', 'Paid'),
+        ('REVERSED', 'Reversed'),
+    )
+    agent = models.ForeignKey(Agent, on_delete=models.CASCADE)
+    customer = models.ForeignKey("Customer", on_delete=models.SET_NULL, null=True, blank=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    created_at = models.DateTimeField(auto_now_add=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.agent.name} - {self.amount} ({self.status})"
 
 
 class SubscriptionPlan(models.Model):
@@ -161,6 +188,7 @@ class Customer(models.Model):
     # --- THE SUPERPOWER: Foreign Keys tying the system together ---
     plan = models.ForeignKey("SubscriptionPlan", on_delete=models.SET_NULL, null=True)
     agent = models.ForeignKey("Agent", on_delete=models.SET_NULL, null=True)
+    agent_lock_until = models.DateTimeField(null=True, blank=True, help_text="Calculated 60 days from Stage 5 Admin Approval. Until this date, the customer cannot use staggered payments.")
     barangay = models.ForeignKey("Barangay", on_delete=models.SET_NULL, null=True)
     account_type = models.ForeignKey(
         "AccountType", on_delete=models.SET_NULL, null=True
@@ -320,6 +348,11 @@ class Customer(models.Model):
     @property
     def can_pay_staggered(self):
         now = timezone.now()
+        
+        # New Explicit Lock Logic
+        if self.agent_lock_until and now < self.agent_lock_until:
+            return False
+            
         start_date = self.installed_at or self.created_at or now
         days_active = (now - start_date).days
         payments_count = self.payments.count() if self.pk else 0
@@ -335,6 +368,10 @@ class Customer(models.Model):
     def staggered_restriction_reason(self):
         if self.can_pay_staggered:
             return None
+            
+        if self.agent_lock_until and timezone.now() < self.agent_lock_until:
+            return f"Staggered payments are locked until {self.agent_lock_until.strftime('%b %d, %Y')}."
+            
         if self.is_walkin_or_direct:
             return "Please complete your initial full monthly payment to unlock staggered payments."
         else:
