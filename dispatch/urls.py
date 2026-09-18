@@ -30,5 +30,6 @@ urlpatterns = [
     path('api/tickets/<int:ticket_id>/undispatch/', views.api_undispatch_ticket, name='api_dispatch_undispatch_ticket'),
     path('api/tickets/<int:ticket_id>/location/', views.api_update_location, name='api_dispatch_update_location'),
     path('api/tickets/<int:ticket_id>/complete/', views.api_complete_job, name='api_dispatch_complete_job'),
+    path('api/tickets/<int:ticket_id>/delete/', views.api_delete_ticket, name='api_dispatch_delete_ticket'),
     path('export/tickets/', views.export_tickets_csv, name='dispatch_export_tickets'),
 ]

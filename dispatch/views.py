@@ -3,6 +3,7 @@ import json
 import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.views.decorators.http import require_POST
 from django.http import JsonResponse, HttpResponse
 from django.contrib import messages
 from django.utils import timezone
@@ -752,4 +753,17 @@ def export_tickets_csv(request):
         ])
 
     return response
+
+
+@login_required
+@require_POST
+def api_delete_ticket(request, ticket_id):
+    if not (request.user.is_staff or request.user.is_superuser):
+        return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
+    ticket = get_object_or_404(JobTicket, id=ticket_id)
+    ticket_num = ticket.ticket_number
+    ticket.delete()
+    log_audit('DELETE', 'JobTicket', ticket_id, request.user, summary=f"Deleted ticket {ticket_num}")
+    return JsonResponse({'success': True, 'message': f"Ticket {ticket_num} deleted successfully."})
+
 

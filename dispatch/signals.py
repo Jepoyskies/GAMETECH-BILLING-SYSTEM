@@ -1,11 +1,27 @@
 import logging
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_delete
 from django.dispatch import receiver
 from django.utils import timezone
 from billing.models import Customer
-from .models import JobTicket
+from .models import JobTicket, DispatchRecord, MonitoringRecord
 
 logger = logging.getLogger(__name__)
+
+
+@receiver(pre_delete, sender=Customer)
+def cleanup_dispatch_records_on_customer_delete(sender, instance, **kwargs):
+    """
+    Smart CRM Hook: When a Customer is deleted from CRM, automatically
+    delete all associated JobTickets, DispatchRecords, and MonitoringRecords
+    so no orphaned tickets remain in the dispatch queue.
+    """
+    if kwargs.get('raw'):
+        return
+    deleted_tickets = JobTicket.objects.filter(customer=instance).delete()
+    DispatchRecord.objects.filter(customer=instance).delete()
+    MonitoringRecord.objects.filter(customer=instance).delete()
+    logger.info(f"[DISPATCH] Cleaned up dispatch records for deleted customer {instance.full_name} (ID: {instance.id}): {deleted_tickets}")
+
 
 
 @receiver(post_save, sender=Customer)

@@ -559,6 +559,35 @@
                 .catch(err => alert('Network error: ' + err));
             }
         });
+
+        // Delete Ticket Listener
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.btn-delete-ticket');
+            if (btn) {
+                e.preventDefault();
+                const ticketId = btn.dataset.id;
+                const ticketNum = btn.dataset.number || ('#' + ticketId);
+                if (!confirm(`Are you sure you want to permanently delete ticket ${ticketNum}? This cannot be undone.`)) {
+                    return;
+                }
+                fetch(`/dispatch/api/tickets/${ticketId}/delete/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        alert('Error deleting ticket: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(err => alert('Network error: ' + err));
+            }
+        });
     });
 
     // ─────────────────────────────────────────────
