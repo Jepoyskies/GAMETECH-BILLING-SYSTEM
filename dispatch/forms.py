@@ -36,6 +36,9 @@ class DispatchRecordForm(forms.ModelForm):
         self.fields['status_option'].queryset = ConfigOption.objects.filter(module='MONITORING', list_type='STATUS', active=True)
         self.fields['type_option'].queryset = ConfigOption.objects.filter(module='MONITORING', list_type='TYPE', active=True)
         self.fields['chat_type_option'].queryset = ConfigOption.objects.filter(module='MONITORING', list_type='CHAT_TYPE', active=True)
+        if 'sales_agent' in self.fields:
+            self.fields['sales_agent'].required = False
+            self.fields['sales_agent'].empty_label = "🚶 Walk-in / Direct (No Agent)"
 
 
 class MonitoringRecordForm(forms.ModelForm):
@@ -73,6 +76,9 @@ class MonitoringRecordForm(forms.ModelForm):
         self.fields['status_option'].queryset = ConfigOption.objects.filter(module='MONITORING', list_type='STATUS', active=True)
         self.fields['type_option'].queryset = ConfigOption.objects.filter(module='MONITORING', list_type='TYPE', active=True)
         self.fields['chat_type_option'].queryset = ConfigOption.objects.filter(module='MONITORING', list_type='CHAT_TYPE', active=True)
+        if 'sales_agent' in self.fields:
+            self.fields['sales_agent'].required = False
+            self.fields['sales_agent'].empty_label = "🚶 Walk-in / Direct (No Agent)"
 
 class JobDetailForm(forms.ModelForm):
     class Meta:

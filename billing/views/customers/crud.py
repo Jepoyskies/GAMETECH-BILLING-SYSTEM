@@ -150,7 +150,7 @@ def add_customer(request):
             expires_at=expires_at_val,
             plan_id=request.POST.get("plan_id"),
             mikrotik_device_id=request.POST.get("device_id") or None,
-            agent_id=request.POST.get("agent_id"),
+            agent_id=request.POST.get("agent_id") or None,
             barangay_id=barangay_id,
             account_type_id=request.POST.get("account_type_id") or None,
             latitude=latitude,

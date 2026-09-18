@@ -316,10 +316,12 @@ def api_create_ticket(request):
         sales_agent_val = data.get('sales_agent')
         if sales_agent_val:
             from billing.models import Agent
-            if str(sales_agent_val).isdigit():
-                agent_obj = Agent.objects.filter(id=int(sales_agent_val)).first()
-            if not agent_obj:
-                agent_obj = Agent.objects.filter(name__iexact=str(sales_agent_val).strip()).first()
+            val_clean = str(sales_agent_val).strip()
+            if val_clean.lower() not in ['', 'none', 'null', 'walk-in', 'direct', 'walk-in / direct', 'walk-in/direct', 'walkin']:
+                if val_clean.isdigit():
+                    agent_obj = Agent.objects.filter(id=int(val_clean)).first()
+                if not agent_obj:
+                    agent_obj = Agent.objects.filter(name__iexact=val_clean).first()
         
         cust_id = data.get('customer_id') or None
         is_test = False
