@@ -9,7 +9,7 @@ from django.db.models import Q
 from billing.models import Customer
 from network_manager.models import MikrotikDevice
 from .models import (
-    JobTicket, DispatchRecord, MonitoringRecord, JobDetail,
+    JobTicket, JobTicketHistory, DispatchRecord, MonitoringRecord, JobDetail,
     ConfigOption, Technician, Team, AuditLog
 )
 from .forms import MonitoringRecordForm, DispatchRecordForm, JobDetailForm
