@@ -212,9 +212,9 @@
                                         latitude: '{{ t.latitude|default:'' }}',
                                         longitude: '{{ t.longitude|default:'' }}',
                                         plan_package: '{{ t.plan_package|default:''|escapejs }}',
-                                        payment_method: '{{ t.get_payment_method_display|default:t.payment_method|default:'Cash'|escapejs }}',
+                                        payment_method: '{% if t.get_payment_method_display %}{{ t.get_payment_method_display|escapejs }}{% elif t.payment_method %}{{ t.payment_method|escapejs }}{% else %}Cash{% endif %}',
                                         concern: '{{ t.concern|default:''|escapejs }}',
-                                        special_instruction: '{{ t.special_instruction|default:t.remarks|default:''|escapejs }}'
+                                        special_instruction: '{% if t.special_instruction %}{{ t.special_instruction|escapejs }}{% elif t.remarks %}{{ t.remarks|escapejs }}{% else %}{% endif %}'
                                     })">
                                 <i class="fas fa-copy"></i>
                             </button>
