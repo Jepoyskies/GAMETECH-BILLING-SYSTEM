@@ -47,6 +47,11 @@
                                     <div class="mb-1">
                                         <span class="badge bg-dark border border-secondary text-info font-monospace px-2 py-1">{{ ticket.ticket_number }}</span>
                                         <span class="badge bg-dark border border-secondary text-muted ms-1 fw-normal"><i class="fas fa-clock"></i> {{ ticket.created_at|timesince }} ago</span>
+                                        {% if ticket.sla_badge_level == 'red' %}
+                                            <span class="badge bg-danger text-white border border-danger ms-1 animate-pulse fw-bold"><i class="fas fa-fire me-1"></i>SLA 48h+ BREACH</span>
+                                        {% elif ticket.sla_badge_level == 'amber' %}
+                                            <span class="badge bg-warning text-dark border border-warning ms-1 fw-bold"><i class="fas fa-exclamation-triangle me-1"></i>SLA 24h+ Stale</span>
+                                        {% endif %}
                                         {% if ticket.scheduled_date %}
                                             <span class="badge bg-success-subtle text-success border border-success-subtle ms-1"><i class="fas fa-calendar-check me-1"></i>{{ ticket.scheduled_date|date:"M d, Y" }}{% if ticket.scheduled_time %} • {{ ticket.scheduled_time }}{% endif %}</span>
                                         {% endif %}

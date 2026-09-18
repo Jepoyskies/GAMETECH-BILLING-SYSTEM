@@ -358,3 +358,155 @@ def cignal_expiry_notification_task():
     except Exception as e:
         logger.error(f"Error in cignal expiry notification task: {e}")
         return str(e)
+
+
+@shared_task(name="billing.tasks.purge_customer_ids_30_days_task")
+def purge_customer_ids_30_days_task(retention_days=30):
+    """
+    Automated 30-day privacy purge:
+    Clears government ID numbers (id_number, id_type) for prospects/customers
+    created more than 30 days ago.
+    Cascades to SystemLog and Dispatch AuditLog to ensure no raw ID numbers
+    remain in audit data snapshots.
+    """
+    logger.info(f"Starting 30-day customer ID purge (retention: {retention_days} days)...")
+    try:
+        from billing.models import Customer, SystemLog
+        from dispatch.models import AuditLog as DispatchAuditLog
+        from django.utils import timezone
+        from datetime import timedelta
+
+        cutoff = timezone.now() - timedelta(days=retention_days)
+        target_customers = list(Customer.objects.filter(
+            created_at__lt=cutoff
+        ).exclude(id_number__isnull=True).exclude(id_number=''))
+
+        purged_count = len(target_customers)
+        audit_scrubbed_count = 0
+
+        for cust in target_customers:
+            old_id = cust.id_number
+            cust.id_number = None
+            cust.id_type = None
+            cust.save(update_fields=['id_number', 'id_type'])
+
+            # Cascade purge to SystemLog
+            if old_id and len(old_id) >= 4:
+                sys_logs = SystemLog.objects.filter(record_id=cust.id)
+                for slog in sys_logs:
+                    updated = False
+                    if slog.new_data and old_id in slog.new_data:
+                        slog.new_data = slog.new_data.replace(old_id, "[ID_PURGED_AFTER_30_DAYS]")
+                        updated = True
+                    if slog.old_data and old_id in slog.old_data:
+                        slog.old_data = slog.old_data.replace(old_id, "[ID_PURGED_AFTER_30_DAYS]")
+                        updated = True
+                    if updated:
+                        slog.save(update_fields=['old_data', 'new_data'])
+                        audit_scrubbed_count += 1
+
+                # Cascade purge to Dispatch AuditLog
+                d_logs = DispatchAuditLog.objects.filter(entity_id=cust.id)
+                for dlog in d_logs:
+                    updated = False
+                    if dlog.after_data and isinstance(dlog.after_data, dict):
+                        if 'id_number' in dlog.after_data:
+                            dlog.after_data['id_number'] = "[ID_PURGED_AFTER_30_DAYS]"
+                            updated = True
+                    if dlog.before_data and isinstance(dlog.before_data, dict):
+                        if 'id_number' in dlog.before_data:
+                            dlog.before_data['id_number'] = "[ID_PURGED_AFTER_30_DAYS]"
+                            updated = True
+                    if updated:
+                        dlog.save(update_fields=['before_data', 'after_data'])
+                        audit_scrubbed_count += 1
+
+        logger.info(f"ID Purge Complete: Purged {purged_count} customer IDs, scrubbed {audit_scrubbed_count} audit log snapshots.")
+        return f"Purged {purged_count} IDs, scrubbed {audit_scrubbed_count} audit logs."
+    except Exception as e:
+        logger.error(f"Error in 30-day ID purge task: {e}")
+        return str(e)
+
+
+@shared_task(name="billing.tasks.check_dispatch_sla_breaches_task")
+def check_dispatch_sla_breaches_task():
+    """
+    Checks for dispatch prospects and JobTickets that exceed 24h (Amber) or 48h (Red) SLA.
+    Dispatches dual-channel urgent alert to Karl / Romnick / Merk via the topbar Notification system.
+    """
+    logger.info("Checking dispatch pipeline SLA breaches...")
+    try:
+        from billing.models import Customer, Notification
+        from dispatch.models import JobTicket
+        from django.utils import timezone
+        from datetime import timedelta
+
+        now = timezone.now()
+        cutoff_24h = now - timedelta(hours=24)
+        cutoff_12h_notify = now - timedelta(hours=12)
+
+        alerts_created = 0
+
+        # 1. Check pending prospects in Stage 1 Verification
+        stale_prospects = Customer.objects.filter(
+            status='pending',
+            is_verified=False,
+            created_at__lt=cutoff_24h
+        )
+
+        for p in stale_prospects:
+            hours = p.staleness_hours
+            severity = "🚨 RED ALERT (48h+ BREACH)" if hours >= 48 else "⚠️ AMBER ALERT (24h+ Stale)"
+            title = f"{severity}: Prospect '{p.full_name}' pending verification ({hours}h)"
+            
+            already_notified = Notification.objects.filter(
+                title__contains=f"Prospect '{p.full_name}' pending verification",
+                created_at__gte=cutoff_12h_notify
+            ).exists()
+
+            if not already_notified:
+                Notification.objects.create(
+                    title=title,
+                    message=(
+                        f"Attention Karl / Romnick / Merk: Applicant {p.full_name} ({p.phone}, {p.address}) "
+                        f"has been waiting in Stage 1 Verification for {hours} hours without action."
+                    ),
+                    notification_type="dispatch",
+                    link="/dispatch/pipeline/1-verification/"
+                )
+                alerts_created += 1
+
+        # 2. Check pending JobTickets in Stage 2 Assignment
+        stale_tickets = JobTicket.objects.filter(
+            status='PENDING',
+            created_at__lt=cutoff_24h
+        )
+
+        for t in stale_tickets:
+            hours = t.staleness_hours
+            severity = "🚨 RED ALERT (48h+ BREACH)" if hours >= 48 else "⚠️ AMBER ALERT (24h+ Stale)"
+            title = f"{severity}: Job Ticket {t.ticket_number} unassigned ({hours}h)"
+
+            already_notified = Notification.objects.filter(
+                title__contains=f"Job Ticket {t.ticket_number}",
+                created_at__gte=cutoff_12h_notify
+            ).exists()
+
+            if not already_notified:
+                Notification.objects.create(
+                    title=title,
+                    message=(
+                        f"Attention Karl / Romnick / Merk: Job Ticket {t.ticket_number} (Client: {t.client_name}, "
+                        f"Plan: {t.plan_package}) has been unassigned in pipeline for {hours} hours."
+                    ),
+                    notification_type="dispatch",
+                    link="/dispatch/pipeline/2-assignment/"
+                )
+                alerts_created += 1
+
+        logger.info(f"SLA Check Complete: Created {alerts_created} urgent dispatch notifications.")
+        return f"Created {alerts_created} SLA breach notifications."
+    except Exception as e:
+        logger.error(f"Error checking SLA breaches: {e}")
+        return str(e)
+

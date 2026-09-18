@@ -15,15 +15,62 @@ def agent_dashboard(request):
     
     # Get all customers referred by this agent
     prospects = Customer.objects.filter(agent=agent).order_by('-created_at')
+    qualified_count = agent.qualified_customers_count
+    target_count = 5
+    progress_pct = min(100, int((qualified_count / target_count) * 100))
+    is_cashout_eligible = agent.is_cashout_eligible
     
     context = {
         'agent': agent,
         'prospects': prospects,
         'claimable_commission': agent.claimable_commission,
+        'qualified_count': qualified_count,
+        'target_count': target_count,
+        'progress_pct': progress_pct,
+        'is_cashout_eligible': is_cashout_eligible,
         'barangays': Barangay.objects.all(),
         'current_tab': 'agents',
     }
     return render(request, 'billing/agent_dashboard.html', context)
+
+@login_required
+def agent_request_cashout(request):
+    try:
+        agent = request.user.agent_profile
+    except Agent.DoesNotExist:
+        messages.error(request, "Your account is not linked to an Agent profile.")
+        return redirect('dashboard')
+
+    if request.method == "POST":
+        # Strict backend threshold validation: 5 qualified customers AND ₱2,500
+        if not agent.is_cashout_eligible:
+            messages.error(
+                request,
+                f"Cash-out gated: You need at least 5 qualifying subscribers and ₱2,500.00 claimable balance. "
+                f"Current: {agent.qualified_customers_count}/5 qualified subscribers (₱{agent.claimable_commission:,.2f})."
+            )
+            return redirect('agent_dashboard')
+
+        from billing.models import Notification, SystemLog
+        Notification.objects.create(
+            title=f"💰 Agent Cash-Out Request: {agent.name}",
+            message=f"Agent {agent.name} has requested a commission payout of ₱{agent.claimable_commission:,.2f} ({agent.qualified_customers_count} qualified subscribers).",
+            notification_type="payment",
+            link=f"/agents/view/{agent.id}/"
+        )
+        try:
+            SystemLog.objects.create(
+                user=request.user.username,
+                action=f"Agent '{agent.name}' submitted cash-out request for ₱{agent.claimable_commission:,.2f}",
+                ip_address=request.META.get("REMOTE_ADDR", ""),
+            )
+        except Exception:
+            pass
+
+        messages.success(request, f"Cash-out request for ₱{agent.claimable_commission:,.2f} submitted to Admin! Accounting will review and disburse your commission.")
+        return redirect('agent_dashboard')
+
+    return redirect('agent_dashboard')
 
 @login_required
 def agent_add_prospect(request):

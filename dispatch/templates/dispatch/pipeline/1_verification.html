@@ -40,7 +40,13 @@
                             <tr>
                                 <td class="ps-3 border-secondary text-white fw-bold">
                                     {{ prospect.full_name }}
-                                    <span class="badge bg-dark border border-secondary text-muted ms-2 fw-normal"><i class="fas fa-clock"></i> {{ prospect.created_at|timesince }} ago</span><br>
+                                    <span class="badge bg-dark border border-secondary text-muted ms-2 fw-normal"><i class="fas fa-clock"></i> {{ prospect.created_at|timesince }} ago</span>
+                                    {% if prospect.sla_badge_level == 'red' %}
+                                        <span class="badge bg-danger text-white border border-danger ms-1 animate-pulse fw-bold"><i class="fas fa-fire me-1"></i>SLA 48h+ BREACH</span>
+                                    {% elif prospect.sla_badge_level == 'amber' %}
+                                        <span class="badge bg-warning text-dark border border-warning ms-1 fw-bold"><i class="fas fa-exclamation-triangle me-1"></i>SLA 24h+ Stale</span>
+                                    {% endif %}
+                                    <br>
                                     <small class="text-muted">{{ prospect.phone }}</small>
                                 </td>
                                 <td class="border-secondary text-muted small">
@@ -78,8 +84,17 @@
                                                     <span class="mx-2">•</span>
                                                     <span><i class="fas fa-phone me-1 text-success"></i>{{ prospect.phone }}</span>
                                                     {% if prospect.agent %}<span class="mx-2">•</span><span class="text-info"><i class="fas fa-user-tie me-1"></i>Agent: {{ prospect.agent.name }}</span>{% endif %}
-                                                    {% if prospect.id_type %}<span class="mx-2">•</span><span class="badge bg-dark border border-secondary text-info"><i class="fas fa-id-card me-1"></i>{{ prospect.id_type }}: {{ prospect.id_number }}</span>{% endif %}
-                                                    {% if prospect.preferred_payment_method %}<span class="mx-2">•</span><span class="badge bg-dark border border-secondary text-warning"><i class="fas fa-wallet me-1"></i>{{ prospect.get_preferred_payment_method_display }}</span>{% endif %}
+                                                    {% if prospect.id_type %}
+                                                        <span class="mx-2">•</span>
+                                                        <span class="badge bg-dark border border-secondary text-info">
+                                                            <i class="fas fa-id-card me-1"></i>{{ prospect.id_type }}: 
+                                                            <span class="font-monospace" id="idHeader{{ prospect.id }}" data-masked="{{ prospect.masked_id_number }}" data-full="{{ prospect.id_number }}">{{ prospect.masked_id_number }}</span>
+                                                            <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-info text-decoration-none" onclick="toggleIdReveal('idHeader{{ prospect.id }}', this)" title="Reveal/Mask ID">
+                                                                <i class="fas fa-eye fa-xs"></i>
+                                                            </button>
+                                                        </span>
+                                                    {% endif %}
+                                                    {% if prospect.preferred_payment_method %}<span class="mx-2">•</span><span class="badge bg-dark border border-secondary text-warning font-monospace"><i class="fas fa-wallet me-1"></i>{{ prospect.get_preferred_payment_method_display }}</span>{% endif %}
                                                 </div>
                                             </div>
                                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -89,12 +104,49 @@
                                             <input type="hidden" name="customer_id" value="{{ prospect.id }}">
                                             <div class="modal-body p-4">
                                                 
+                                                <!-- Agent Handoff Intake Snapshot -->
+                                                <div class="card bg-dark border-secondary p-3 mb-3" style="background: rgba(30, 41, 59, 0.4) !important;">
+                                                    <div class="row g-2 align-items-center">
+                                                        <div class="col-md-6">
+                                                            <div class="small text-muted mb-1"><i class="fas fa-id-card me-1 text-info"></i>Government ID (32•••••23 Masked):</div>
+                                                            {% if prospect.id_type and prospect.id_number %}
+                                                                <div class="d-inline-flex align-items-center bg-dark border border-secondary rounded px-2 py-1">
+                                                                    <strong class="text-info small me-1">{{ prospect.id_type }}:</strong>
+                                                                    <span class="font-monospace text-white small" id="idModal{{ prospect.id }}" data-masked="{{ prospect.masked_id_number }}" data-full="{{ prospect.id_number }}">{{ prospect.masked_id_number }}</span>
+                                                                    <button type="button" class="btn btn-link btn-sm p-0 ms-2 text-info text-decoration-none" onclick="toggleIdReveal('idModal{{ prospect.id }}', this)" title="Show / Hide ID">
+                                                                        <i class="fas fa-eye fa-xs"></i>
+                                                                    </button>
+                                                                </div>
+                                                            {% else %}
+                                                                <span class="text-muted small fst-italic">No ID uploaded during agent intake</span>
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <div class="small text-muted mb-1"><i class="fas fa-wallet me-1 text-warning"></i>Payment Preference (Agent Handoff):</div>
+                                                            <div class="d-flex gap-3">
+                                                                <div class="form-check form-check-inline mb-0">
+                                                                    <input class="form-check-input" type="radio" name="preferred_payment_method" id="payCash{{ prospect.id }}" value="cash" {% if prospect.preferred_payment_method == 'cash' or not prospect.preferred_payment_method %}checked{% endif %}>
+                                                                    <label class="form-check-label text-white small" for="payCash{{ prospect.id }}">
+                                                                        <i class="fas fa-money-bill-wave text-success me-1"></i> Cash on Hand
+                                                                    </label>
+                                                                </div>
+                                                                <div class="form-check form-check-inline mb-0">
+                                                                    <input class="form-check-input" type="radio" name="preferred_payment_method" id="payGcash{{ prospect.id }}" value="gcash" {% if prospect.preferred_payment_method == 'gcash' %}checked{% endif %}>
+                                                                    <label class="form-check-label text-white small" for="payGcash{{ prospect.id }}">
+                                                                        <i class="fas fa-mobile-alt text-primary me-1"></i> Direct GCash
+                                                                    </label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
                                                 <!-- Row 1: Plan & Router Assignment -->
                                                 <div class="row g-3 mb-3">
                                                     <div class="col-md-6">
                                                         <label class="form-label text-muted small fw-bold"><i class="fas fa-wifi me-1 text-info"></i>Select Subscription Plan <span class="text-danger">*</span></label>
                                                         <select name="plan_id" class="form-select bg-dark text-white border-secondary plan-select-trigger" data-prospect-id="{{ prospect.id }}" required>
-                                                            <option value="" disabled selected>Choose a plan...</option>
+                                                            <option value="" disabled {% if not prospect.plan %}selected{% endif %}>Choose a plan...</option>
                                                             {% for plan in plans %}
                                                                 <option value="{{ plan.id }}" {% if prospect.plan and prospect.plan.id == plan.id %}selected{% endif %}>{{ plan.name }} - ₱{{ plan.price }}</option>
                                                             {% endfor %}
@@ -195,9 +247,18 @@
                                                     <div class="border-top border-secondary pt-2 mt-3">
                                                         <div class="text-muted small fw-bold mb-2"><i class="fas fa-tools me-1 text-secondary"></i>Technical & Operational Verification:</div>
                                                         <div class="form-check mb-1">
-                                                            <input class="form-check-input" type="checkbox" name="chk_valid_id" id="chk_valid_id_{{ prospect.id }}">
-                                                            <label class="form-check-label text-white-50 small" for="chk_valid_id_{{ prospect.id }}">
-                                                                <strong>7. Valid ID:</strong> Applicant identity & valid photo ID presented and verified
+                                                            <input class="form-check-input" type="checkbox" name="chk_valid_id" id="chk_valid_id_{{ prospect.id }}" {% if prospect.id_number %}checked{% endif %}>
+                                                            <label class="form-check-label text-white small" for="chk_valid_id_{{ prospect.id }}">
+                                                                <strong>7. Valid ID:</strong> Applicant identity presented 
+                                                                {% if prospect.id_type %}
+                                                                    (<span class="text-info">{{ prospect.id_type }}</span>: 
+                                                                    <span class="font-monospace" id="idChk{{ prospect.id }}" data-masked="{{ prospect.masked_id_number }}" data-full="{{ prospect.id_number }}">{{ prospect.masked_id_number }}</span>
+                                                                    <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-info text-decoration-none" onclick="toggleIdReveal('idChk{{ prospect.id }}', this)" title="Reveal/Mask ID">
+                                                                        <i class="fas fa-eye fa-xs"></i>
+                                                                    </button>)
+                                                                {% else %}
+                                                                    <span class="text-muted fst-italic">(No ID attached)</span>
+                                                                {% endif %}
                                                             </label>
                                                         </div>
                                                         <div class="form-check">
@@ -240,6 +301,27 @@
 
 {% block extra_js %}
 <script>
+function toggleIdReveal(targetId, btn) {
+    var el = document.getElementById(targetId);
+    if (!el) return;
+    var icon = btn ? btn.querySelector('i') : null;
+    var masked = el.getAttribute('data-masked');
+    var full = el.getAttribute('data-full');
+    if (el.textContent.trim() === masked.trim()) {
+        el.textContent = full;
+        if (icon) {
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        }
+    } else {
+        el.textContent = masked;
+        if (icon) {
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Dynamic Plan & Speed label updater for verification checklist
     document.querySelectorAll('.plan-select-trigger').forEach(function(select) {

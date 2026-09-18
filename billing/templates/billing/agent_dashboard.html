@@ -12,20 +12,37 @@
                 <h4 class="mb-1 fw-bold text-white"><i class="fas fa-handshake me-2 text-primary"></i> Agent Portal</h4>
                 <p class="mb-0 text-muted small">Welcome, {{ agent.name }}! Track your referrals and commission wallet here.</p>
             </div>
-            <div class="text-end" style="min-width: 200px;">
+            <div class="text-end" style="min-width: 250px;">
                 <div class="small text-muted mb-1 text-uppercase fw-bold" style="letter-spacing: 1px;">Claimable Commission</div>
                 <h3 class="mb-2 text-success fw-bold">₱{{ claimable_commission|floatformat:2 }}</h3>
                 
-                <!-- Commission Tracker -->
-                {% with qualified=prospects.count %} {# Normally we would filter by qualified #}
+                <!-- Commission Tracker & Threshold Gating -->
                 <div class="d-flex justify-content-between small text-muted mb-1">
-                    <span>Progress to ₱2,500</span>
-                    <span class="fw-bold text-white">0 / 5</span>
+                    <span>Progress to ₱2,500 Threshold</span>
+                    <span class="fw-bold {% if is_cashout_eligible %}text-success{% else %}text-warning{% endif %}">
+                        {{ qualified_count }} / {{ target_count }} Qualified
+                    </span>
                 </div>
-                <div class="progress bg-dark border border-secondary" style="height: 8px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="5"></div>
+                <div class="progress bg-dark border border-secondary mb-2" style="height: 8px;">
+                    <div class="progress-bar {% if is_cashout_eligible %}bg-success{% else %}bg-warning{% endif %}" role="progressbar" style="width: {{ progress_pct }}%;" aria-valuenow="{{ qualified_count }}" aria-valuemin="0" aria-valuemax="{{ target_count }}"></div>
                 </div>
-                {% endwith %}
+
+                <!-- Cash-out Action Button -->
+                {% if is_cashout_eligible %}
+                    <form method="POST" action="{% url 'agent_request_cashout' %}" onsubmit="return confirm('Confirm requesting cash-out of ₱{{ claimable_commission|floatformat:2 }} for your {{ qualified_count }} qualified subscribers?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-success fw-bold px-3 shadow-sm w-100">
+                            <i class="fas fa-money-bill-wave me-1"></i> Request Cash-Out
+                        </button>
+                    </form>
+                {% else %}
+                    <button type="button" class="btn btn-sm btn-outline-secondary fw-bold px-3 w-100" disabled title="Gated: Requires 5 qualified subscribers and ₱2,500.00 claimable balance">
+                        <i class="fas fa-lock me-1 text-warning"></i> Cash-Out Gated ({{ qualified_count }}/5)
+                    </button>
+                    <div class="text-muted mt-1" style="font-size: 0.72rem;">
+                        <i class="fas fa-info-circle me-1 text-info"></i>Unlock at 5 qualified customers (₱2,500)
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>

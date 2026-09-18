@@ -296,6 +296,23 @@ class JobTicket(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @property
+    def staleness_hours(self):
+        if not self.created_at:
+            return 0
+        from django.utils import timezone
+        delta = timezone.now() - self.created_at
+        return int(delta.total_seconds() // 3600)
+
+    @property
+    def sla_badge_level(self):
+        h = self.staleness_hours
+        if h >= 48:
+            return 'red'
+        elif h >= 24:
+            return 'amber'
+        return 'normal'
+
     class Meta:
         ordering = ['-created_at']
 

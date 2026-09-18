@@ -41,6 +41,17 @@ class Agent(models.Model):
         total = self.commissiontransaction_set.filter(status='CLAIMABLE').aggregate(total=Sum('amount'))['total']
         return total or 0
 
+    @property
+    def qualified_customers_count(self):
+        """Count of referred customers who have qualified with >= 2 payments."""
+        from django.db.models import Count
+        return self.customer_set.annotate(pay_count=Count('payments')).filter(pay_count__gte=2).count()
+
+    @property
+    def is_cashout_eligible(self):
+        """Gated behind 5 qualifying customers and ₱2,500 claimable commission."""
+        return self.qualified_customers_count >= 5 and self.claimable_commission >= 2500
+
     def __str__(self):
         return self.name
 
@@ -278,6 +289,33 @@ class Customer(models.Model):
     preferred_payment_method = models.CharField(
         max_length=20, choices=PAYMENT_METHOD_CHOICES, default="cash", help_text="Payment method chosen during prospect application"
     )
+
+    @property
+    def masked_id_number(self):
+        """Returns 32•••••23 masked representation of government ID."""
+        if not self.id_number:
+            return ""
+        s = str(self.id_number).strip()
+        if len(s) <= 4:
+            return "•" * len(s)
+        return f"{s[:2]}{'•' * (len(s) - 4)}{s[-2:]}"
+
+    @property
+    def staleness_hours(self):
+        if not self.created_at:
+            return 0
+        from django.utils import timezone
+        delta = timezone.now() - self.created_at
+        return int(delta.total_seconds() // 3600)
+
+    @property
+    def sla_badge_level(self):
+        h = self.staleness_hours
+        if h >= 48:
+            return 'red'
+        elif h >= 24:
+            return 'amber'
+        return 'normal'
 
     # --- Audit Logs ---
     created_form_by = models.CharField(max_length=100, null=True, blank=True)

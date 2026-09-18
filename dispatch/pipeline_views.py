@@ -43,9 +43,14 @@ def dispatch_verification(request):
         customer.plan = plan
         customer.mikrotik_device = mikrotik
         customer.is_verified = True
+        
+        payment_method = request.POST.get("preferred_payment_method")
+        if payment_method in ['cash', 'gcash']:
+            customer.preferred_payment_method = payment_method
         customer.save()
         
-        # Create Job Ticket
+        # Create Job Ticket with Agent Handoff Snapshot
+        pay_display = customer.get_preferred_payment_method_display()
         ticket = JobTicket.objects.create(
             customer=customer,
             client_name=customer.full_name,
@@ -61,7 +66,8 @@ def dispatch_verification(request):
             ticket_type='INSTALLATION',
             status='PENDING',
             source_tab='INTERNET_INSTALL',
-            remarks=f"Verified 6 Policy Guarantees. Scheduled: {scheduled_date or 'TBD'} ({scheduled_time or 'Anytime'}).",
+            remarks=f"Verified 6 Policy Guarantees. Scheduled: {scheduled_date or 'TBD'} ({scheduled_time or 'Anytime'}). Payment: {pay_display}.",
+            special_instruction=f"Payment Preference: {pay_display} | ID: {customer.id_type or 'None'} ({customer.masked_id_number or 'None'})",
             created_by=request.user
         )
         
@@ -71,12 +77,19 @@ def dispatch_verification(request):
             actor=request.user,
             from_status="PROSPECT",
             to_status="PENDING",
-            note=f"Stage 1 Verification completed by {request.user.get_full_name() or request.user.username}. Confirmed: Free Install, Plan {plan.name}, No Lock-in, Staggered Payments, Same-day Repair, 24hr Rebates. Scheduled: {scheduled_date or 'TBD'} ({scheduled_time or 'Anytime'}). PPPoE: {pppoe_username}."
+            note=f"Stage 1 Verification completed by {request.user.get_full_name() or request.user.username}. Confirmed: Free Install, Plan {plan.name}, No Lock-in, Staggered Payments, Same-day Repair, 24hr Rebates. Scheduled: {scheduled_date or 'TBD'} ({scheduled_time or 'Anytime'}). PPPoE: {pppoe_username}. Payment: {pay_display}."
         )
         
         messages.success(request, f"Verified prospect {customer.full_name} and generated Job Ticket {ticket.ticket_number}.")
         return redirect('dispatch_assignment')
         
+    # Trigger SLA check on pipeline load
+    try:
+        from billing.tasks import check_dispatch_sla_breaches_task
+        check_dispatch_sla_breaches_task()
+    except Exception:
+        pass
+
     prospects = Customer.objects.filter(status='pending', is_verified=False)
     plans = SubscriptionPlan.objects.all()
     mikrotiks = MikrotikDevice.objects.all()
@@ -115,6 +128,13 @@ def dispatch_assignment(request):
             
         messages.success(request, f"Assigned {ticket.ticket_number} to team.")
         return redirect('dispatch_assignment')
+
+    # Trigger SLA check on pipeline load
+    try:
+        from billing.tasks import check_dispatch_sla_breaches_task
+        check_dispatch_sla_breaches_task()
+    except Exception:
+        pass
 
     pending_tickets = JobTicket.objects.filter(status='PENDING')
     teams = Team.objects.all()

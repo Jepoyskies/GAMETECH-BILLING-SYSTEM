@@ -135,6 +135,7 @@ urlpatterns = [
     # Agent Portal
     path("agent-dashboard/", views.agent_dashboard, name="agent_dashboard"),
     path("agent-dashboard/add/", views.agent_add_prospect, name="agent_add_prospect"),
+    path("agent-dashboard/cashout/", views.agent_request_cashout, name="agent_request_cashout"),
     
     path("agents/", views.agent_list, name="agent_list"),
     path("agents/add/", views.add_agent, name="add_agent"),
