@@ -668,6 +668,10 @@ def management_view(request):
     teams = Team.objects.all()
     technicians = Technician.objects.select_related('team').all()
     config_options = ConfigOption.objects.all().order_by('module', 'list_type', 'sort_order')
+    locked_labels = {'done', 'cancelled', 'pending', 'installation', 'repair', 'concern', 'inquiry'}
+    for opt in config_options:
+        opt.is_locked = opt.hardcoded or (opt.label.strip().lower() in locked_labels)
+
     return render(request, 'dispatch/management.html', {
         'teams': teams,
         'technicians': technicians,
@@ -767,5 +771,180 @@ def api_delete_ticket(request, ticket_id):
     ticket.delete()
     log_audit('DELETE', 'JobTicket', ticket_id, request.user, summary=f"Deleted ticket {ticket_num}")
     return JsonResponse({'success': True, 'message': f"Ticket {ticket_num} deleted successfully."})
+
+
+# --- Phase 3 APIs: Customer Autofill & Duplicate Name Lockout ---
+
+@login_required
+def api_customer_search(request):
+    """
+    Live customer search endpoint for real-time autofill.
+    Searches by name, phone, address, and pppoe_username.
+    """
+    q = request.GET.get('q', '').strip()
+    limit = int(request.GET.get('limit', 10))
+    if not q or len(q) < 2:
+        return JsonResponse({'success': True, 'customers': []})
+
+    from billing.models import Customer
+    from django.db.models import Q
+
+    customers = Customer.objects.filter(
+        Q(full_name__icontains=q) |
+        Q(phone__icontains=q) |
+        Q(address__icontains=q) |
+        Q(pppoe_username__icontains=q)
+    ).select_related('barangay', 'plan')[:limit]
+
+    results = []
+    for c in customers:
+        results.append({
+            'id': c.id,
+            'name': c.full_name,
+            'phone': c.phone or '',
+            'address': c.address or '',
+            'barangay': c.barangay.name if c.barangay else '',
+            'barangay_id': c.barangay_id,
+            'plan_name': c.plan.name if c.plan else '',
+            'plan_id': c.plan_id,
+            'pppoe_username': c.pppoe_username or '',
+            'latitude': c.latitude,
+            'longitude': c.longitude,
+            'account_no': c.account_number or '',
+        })
+    return JsonResponse({'success': True, 'customers': results})
+
+
+@login_required
+def api_customer_check_name(request):
+    """
+    Real-time duplicate customer name verification.
+    Triggers red-border lockout on client forms if unconfirmed exact match is detected.
+    """
+    name = request.GET.get('name', '').strip()
+    exclude_id = request.GET.get('exclude_id')
+    if not name:
+        return JsonResponse({'success': True, 'exists': False})
+
+    from billing.models import Customer
+    qs = Customer.objects.filter(full_name__iexact=name)
+    if exclude_id and str(exclude_id).isdigit():
+        qs = qs.exclude(id=int(exclude_id))
+
+    existing = qs.first()
+    return JsonResponse({
+        'success': True,
+        'exists': existing is not None,
+        'customer_id': existing.id if existing else None,
+        'customer_name': existing.full_name if existing else None,
+        'phone': existing.phone if existing else '',
+        'address': existing.address if existing else ''
+    })
+
+
+# --- Phase 3 APIs: Dynamic Dropdown Config Manager ---
+
+LOCKED_SYSTEM_LABELS = {'done', 'cancelled', 'pending', 'installation', 'repair', 'concern', 'inquiry'}
+
+@login_required
+@require_POST
+def api_config_options_create(request):
+    if not (request.user.is_staff or request.user.is_superuser):
+        return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
+
+    data = json.loads(request.body.decode('utf-8')) if request.body else request.POST
+    label = data.get('label', '').strip()
+    module = data.get('module', 'MONITORING').strip().upper()
+    list_type = data.get('list_type', 'STATUS').strip().upper()
+    color = data.get('color', '#6b7280').strip()
+    active = data.get('active', True)
+    if isinstance(active, str):
+        active = active.lower() in ('true', '1', 'yes')
+
+    if not label:
+        return JsonResponse({'success': False, 'error': 'Label is required.'}, status=400)
+    if module not in ['DISPATCH', 'MONITORING']:
+        return JsonResponse({'success': False, 'error': 'Invalid module.'}, status=400)
+    if list_type not in ['STATUS', 'TYPE', 'CHAT_TYPE']:
+        return JsonResponse({'success': False, 'error': 'Invalid list type.'}, status=400)
+
+    if ConfigOption.objects.filter(module=module, list_type=list_type, label__iexact=label).exists():
+        return JsonResponse({'success': False, 'error': f'An option with label "{label}" already exists in {module} {list_type}.'}, status=400)
+
+    max_order = ConfigOption.objects.filter(module=module, list_type=list_type).aggregate(models.Max('sort_order'))['sort_order__max'] or 0
+    opt = ConfigOption.objects.create(
+        module=module,
+        list_type=list_type,
+        label=label,
+        color=color,
+        sort_order=max_order + 1,
+        active=active,
+        hardcoded=False
+    )
+    log_audit('CREATE', 'ConfigOption', opt.id, request.user, summary=f"Created {module} {list_type} option: {label}", after={'label': label, 'color': color, 'active': active})
+    return JsonResponse({
+        'success': True,
+        'option': {
+            'id': opt.id, 'module': opt.module, 'list_type': opt.list_type,
+            'label': opt.label, 'color': opt.color, 'active': opt.active, 'hardcoded': opt.hardcoded
+        }
+    })
+
+
+@login_required
+@require_POST
+def api_config_options_update(request, option_id):
+    if not (request.user.is_staff or request.user.is_superuser):
+        return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
+
+    opt = get_object_or_404(ConfigOption, id=option_id)
+    data = json.loads(request.body.decode('utf-8')) if request.body else request.POST
+
+    is_locked = opt.hardcoded or (opt.label.strip().lower() in LOCKED_SYSTEM_LABELS)
+    before_data = {'label': opt.label, 'color': opt.color, 'active': opt.active}
+
+    new_label = data.get('label', '').strip()
+    if new_label and not is_locked:
+        if ConfigOption.objects.filter(module=opt.module, list_type=opt.list_type, label__iexact=new_label).exclude(id=opt.id).exists():
+            return JsonResponse({'success': False, 'error': f'An option with label "{new_label}" already exists.'}, status=400)
+        opt.label = new_label
+
+    if 'color' in data:
+        opt.color = str(data['color']).strip()
+
+    if 'active' in data:
+        val = data['active']
+        if isinstance(val, str):
+            opt.active = val.lower() in ('true', '1', 'yes')
+        else:
+            opt.active = bool(val)
+
+    opt.save()
+    after_data = {'label': opt.label, 'color': opt.color, 'active': opt.active}
+    log_audit('UPDATE', 'ConfigOption', opt.id, request.user, summary=f"Updated config option #{opt.id} ({opt.label})", before=before_data, after=after_data)
+
+    return JsonResponse({
+        'success': True,
+        'option': {
+            'id': opt.id, 'module': opt.module, 'list_type': opt.list_type,
+            'label': opt.label, 'color': opt.color, 'active': opt.active, 'hardcoded': is_locked
+        }
+    })
+
+
+@login_required
+@require_POST
+def api_config_options_delete(request, option_id):
+    if not (request.user.is_staff or request.user.is_superuser):
+        return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
+
+    opt = get_object_or_404(ConfigOption, id=option_id)
+    if opt.hardcoded or (opt.label.strip().lower() in LOCKED_SYSTEM_LABELS):
+        return JsonResponse({'success': False, 'error': f'"{opt.label}" is a system-critical option and cannot be deleted. You can recolor it or toggle active.'}, status=400)
+
+    label = opt.label
+    opt.delete()
+    log_audit('DELETE', 'ConfigOption', option_id, request.user, summary=f"Deleted custom config option: {label}")
+    return JsonResponse({'success': True, 'message': f'Option "{label}" deleted successfully.'})
 
 

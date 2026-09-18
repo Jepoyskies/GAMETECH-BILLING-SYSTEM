@@ -1,0 +1,245 @@
+<style>
+/* Slide To Confirm Component - Dark Theme Aligned (Legacy SlideToConfirm.tsx Port) */
+.slide-confirm {
+    position: relative;
+    width: 100%;
+    height: 52px;
+    border-radius: 26px;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    display: flex;
+    align-items: center;
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+.slide-confirm.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+.slide-confirm-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #059669);
+    border-radius: 26px;
+    pointer-events: none;
+    width: 0;
+    transition: none;
+}
+.slide-confirm.variant-danger .slide-confirm-fill {
+    background: linear-gradient(90deg, #ef4444, #b91c1c);
+}
+.slide-confirm.variant-warning .slide-confirm-fill {
+    background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+.slide-confirm.variant-primary .slide-confirm-fill {
+    background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+}
+.slide-confirm.confirmed .slide-confirm-fill {
+    width: 100% !important;
+}
+.slide-confirm-label {
+    position: absolute;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #94a3b8;
+    pointer-events: none;
+    transition: color 0.2s ease;
+}
+.slide-confirm.confirmed .slide-confirm-label {
+    color: #ffffff;
+    font-weight: 700;
+}
+.slide-confirm-thumb {
+    position: absolute;
+    left: 4px;
+    top: 4px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: #ffffff;
+    color: #10b981;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: grab;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    transition: transform 0.25s ease;
+}
+.slide-confirm.variant-danger .slide-confirm-thumb { color: #ef4444; }
+.slide-confirm.variant-warning .slide-confirm-thumb { color: #f59e0b; }
+.slide-confirm.variant-primary .slide-confirm-thumb { color: #3b82f6; }
+.slide-confirm-thumb:active {
+    cursor: grabbing;
+}
+</style>
+
+<script>
+class SlideToConfirm {
+    constructor(element, options = {}) {
+        this.element = typeof element === 'string' ? document.querySelector(element) : element;
+        if (!this.element) return;
+
+        this.options = Object.assign({
+            label: this.element.dataset.label || "Slide to Confirm",
+            confirmedLabel: this.element.dataset.confirmedLabel || "Confirming...",
+            threshold: 0.9,
+            thumbWidth: 44,
+            padding: 4,
+            onConfirm: null,
+            targetForm: this.element.dataset.targetForm || null
+        }, options);
+
+        this.offset = 0;
+        this.isDragging = false;
+        this.isConfirmed = false;
+
+        this.initDOM();
+        this.bindEvents();
+    }
+
+    initDOM() {
+        this.element.classList.add('slide-confirm');
+        this.element.innerHTML = `
+            <div class="slide-confirm-fill"></div>
+            <div class="slide-confirm-label">${this.options.label}</div>
+            <button type="button" class="slide-confirm-thumb" aria-label="Slide thumb">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        `;
+        this.fill = this.element.querySelector('.slide-confirm-fill');
+        this.labelEl = this.element.querySelector('.slide-confirm-label');
+        this.thumb = this.element.querySelector('.slide-confirm-thumb');
+    }
+
+    maxOffset() {
+        return Math.max(0, this.element.clientWidth - this.options.thumbWidth - (this.options.padding * 2));
+    }
+
+    reset() {
+        this.offset = 0;
+        this.isDragging = false;
+        this.isConfirmed = false;
+        this.element.classList.remove('confirmed');
+        this.thumb.style.transition = "transform 0.25s ease";
+        this.fill.style.transition = "width 0.25s ease";
+        this.thumb.style.transform = "translateX(0px)";
+        this.fill.style.width = "0px";
+        this.labelEl.textContent = this.options.label;
+        this.thumb.innerHTML = '<i class="fas fa-chevron-right"></i>';
+    }
+
+    moveTo(clientX) {
+        if (!this.isDragging || this.isConfirmed) return;
+        const rect = this.element.getBoundingClientRect();
+        const max = this.maxOffset();
+        let next = clientX - rect.left - (this.options.thumbWidth / 2) - this.options.padding;
+        if (next < 0) next = 0;
+        if (next > max) next = max;
+
+        this.offset = next;
+        this.thumb.style.transform = `translateX(${next}px)`;
+        this.fill.style.width = `${next + (this.options.thumbWidth / 2)}px`;
+    }
+
+    endDrag() {
+        if (!this.isDragging || this.isConfirmed) return;
+        this.isDragging = false;
+        const max = this.maxOffset();
+        const progress = max > 0 ? this.offset / max : 0;
+
+        if (progress >= this.options.threshold) {
+            this.offset = max;
+            this.isConfirmed = true;
+            this.element.classList.add('confirmed');
+            this.thumb.style.transition = "transform 0.2s ease";
+            this.fill.style.transition = "width 0.2s ease";
+            this.thumb.style.transform = `translateX(${max}px)`;
+            this.fill.style.width = "100%";
+            this.labelEl.textContent = this.options.confirmedLabel;
+            this.thumb.innerHTML = '<i class="fas fa-check"></i>';
+
+            if (typeof this.options.onConfirm === 'function') {
+                this.options.onConfirm(this);
+            } else if (this.options.targetForm) {
+                const form = document.querySelector(this.options.targetForm);
+                if (form) {
+                    if (typeof form.reportValidity === 'function' && !form.reportValidity()) {
+                        this.reset();
+                        return;
+                    }
+                    if (typeof form.requestSubmit === 'function') {
+                        form.requestSubmit();
+                    } else {
+                        form.submit();
+                    }
+                }
+            }
+        } else {
+            this.reset();
+        }
+    }
+
+    bindEvents() {
+        const onStart = (e) => {
+            if (this.isConfirmed || this.element.classList.contains('disabled')) return;
+            this.isDragging = true;
+            this.thumb.style.transition = "none";
+            this.fill.style.transition = "none";
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            this.moveTo(clientX);
+        };
+
+        const onMove = (e) => {
+            if (!this.isDragging) return;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            this.moveTo(clientX);
+        };
+
+        const onEnd = () => {
+            if (this.isDragging) this.endDrag();
+        };
+
+        this.thumb.addEventListener('mousedown', onStart);
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onEnd);
+
+        this.thumb.addEventListener('touchstart', onStart, { passive: true });
+        window.addEventListener('touchmove', onMove, { passive: true });
+        window.addEventListener('touchend', onEnd);
+        window.addEventListener('touchcancel', onEnd);
+    }
+}
+
+// Auto-initialize elements with data-slide-confirm
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('[data-slide-confirm]').forEach(el => {
+        if (!el._slider) {
+            el._slider = new SlideToConfirm(el);
+        }
+    });
+
+    document.addEventListener('shown.bs.modal', function(e) {
+        e.target.querySelectorAll('[data-slide-confirm]').forEach(el => {
+            if (el._slider) el._slider.reset();
+        });
+    });
+
+    document.addEventListener('hidden.bs.modal', function(e) {
+        e.target.querySelectorAll('[data-slide-confirm]').forEach(el => {
+            if (el._slider) el._slider.reset();
+        });
+    });
+});
+</script>

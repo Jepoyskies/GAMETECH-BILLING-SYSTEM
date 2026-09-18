@@ -207,13 +207,72 @@ class AuditLog(models.Model):
         if not isinstance(after, dict):
             after = {}
 
+        DIFF_IGNORE_KEYS = {"created_at", "updated_at", "id", "pk", "deleted_at"}
+
+        FIELD_LABELS = {
+            "name": "Name",
+            "email": "Email",
+            "role": "Role",
+            "phone": "Phone",
+            "contact_number": "Contact #",
+            "address": "Address",
+            "barangay": "Barangay",
+            "barangay_city": "Barangay / City",
+            "client": "Client Name",
+            "client_name": "Client Name",
+            "account_no": "Account #",
+            "concern": "Concern / Issue",
+            "status": "Status",
+            "status_option": "Status",
+            "type_option": "Type",
+            "chat_type_option": "Chat Type",
+            "ticket_type": "Ticket Type",
+            "priority": "Priority",
+            "sales_agent": "Sales Agent",
+            "technicians": "Assigned Techs",
+            "teams": "Assigned Techs / Teams",
+            "remarks": "Remarks",
+            "actions_taken": "Actions Taken",
+            "ticket_number": "Ticket #",
+            "plan_package": "Plan Package",
+            "cable_length": "Cable Length (m)",
+            "signal_level": "Signal Level (dBm)",
+            "signal_dbm": "Signal (dBm)",
+            "nap_port": "NAP Port",
+            "pole_number": "Pole #",
+            "nap_reading": "NAP Reading (dBm)",
+            "house_reading": "House Reading (dBm)",
+            "ont_modem_sn": "ONT/Modem S/N",
+            "onu_sn_mac": "ONU SN / MAC",
+            "payment_method": "Payment Method",
+            "payment_collected": "Payment Collected",
+            "amount_paid": "Amount Paid",
+            "receipt_no": "Receipt #",
+            "facility": "Facility",
+            "special_instruction": "Special Instruction",
+            "technician_remarks": "Technician Remarks",
+            "qa_notes": "QA Notes",
+            "admin_notes": "Admin Notes",
+            "time_start": "Service Start",
+            "time_accomplish": "Service End",
+            "done_at": "Date Completed",
+            "color": "Color",
+            "label": "Label",
+            "active": "Active",
+            "sort_order": "Sort Order",
+        }
+
         all_keys = sorted(set(before.keys()).union(set(after.keys())))
         for k in all_keys:
+            if k.lower() in DIFF_IGNORE_KEYS:
+                continue
             old_v = before.get(k)
             new_v = after.get(k)
             if old_v != new_v:
+                label = FIELD_LABELS.get(k, k.replace('_', ' ').title())
                 diffs.append({
                     'field': k,
+                    'label': label,
                     'old': str(old_v) if old_v is not None else '-',
                     'new': str(new_v) if new_v is not None else '-',
                     'is_change': (k in before and k in after),

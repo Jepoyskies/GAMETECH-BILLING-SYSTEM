@@ -95,15 +95,18 @@ def dispatch_verification(request):
     except Exception:
         pass
 
+    from billing.models import Barangay
     prospects = Customer.objects.filter(status='pending', is_verified=False)
     plans = SubscriptionPlan.objects.all()
     mikrotiks = MikrotikDevice.objects.all()
+    barangays = Barangay.objects.all()
     today = timezone.now().date().strftime("%Y-%m-%d")
     
     return render(request, "dispatch/pipeline/1_verification.html", {
         "prospects": prospects,
         "plans": plans,
         "mikrotiks": mikrotiks,
+        "barangays": barangays,
         "today": today
     })
 

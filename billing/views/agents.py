@@ -127,16 +127,19 @@ def agent_add_prospect(request):
             is_verified=False
         )
         
-        # Create staff notification for new agent prospect
-        Notification.objects.create(
-            title=f"New Prospect from Agent {agent.name}",
-            message=f"{agent.name} submitted applicant {full_name} ({barangay.name}) for verification.",
-            notification_type="dispatch",
-            link="/dispatch/pipeline/1-verification/"
-        )
-        
-        messages.success(request, f"Prospect {full_name} submitted successfully! Dispatch staff has been notified to verify the application.")
-        return redirect('agent_dashboard')
+        if agent:
+            # Create staff notification for new agent prospect
+            Notification.objects.create(
+                title=f"New Prospect from Agent {agent.name}",
+                message=f"{agent.name} submitted applicant {full_name} ({barangay.name}) for verification.",
+                notification_type="dispatch",
+                link="/dispatch/pipeline/1-verification/"
+            )
+            messages.success(request, f"Prospect {full_name} submitted successfully! Dispatch staff has been notified to verify the application.")
+            return redirect('agent_dashboard')
+        else:
+            messages.success(request, f"Walk-in Prospect {full_name} submitted successfully for Stage 1 verification!")
+            return redirect('dispatch_verification')
         
     context = {
         'agent': agent,

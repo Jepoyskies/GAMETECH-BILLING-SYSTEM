@@ -3,15 +3,36 @@
         <!-- Basic Info -->
         <div class="col-lg-4">
             <div class="info-card">
-                <h3 class="info-title"><i class="fas fa-user"></i> Basic Information</h3>
+                <h3 class="info-title"><i class="fas fa-id-card-clip text-primary"></i> Contact & Account Information</h3>
                 <ul class="info-list">
                     <li>
-                        <span class="info-label">Email</span>
-                        <span class="info-value">{{ customer.email|default:"—" }}</span>
+                        <span class="info-label">Address</span>
+                        <span class="info-value">
+                            {{ customer.address|default:"—" }}
+                            {% if customer.latitude and customer.longitude %}
+                                <a href="https://www.google.com/maps?q={{ customer.latitude }},{{ customer.longitude }}" target="_blank" class="badge bg-info bg-opacity-20 text-info border border-info border-opacity-30 ms-1" title="Open in Google Maps">
+                                    <i class="fas fa-location-dot"></i> Pin
+                                </a>
+                            {% endif %}
+                        </span>
+                    </li>
+                    <li>
+                        <span class="info-label">Barangay</span>
+                        <span class="info-value text-info fw-semibold">{{ customer.barangay.name|default:"—" }}</span>
                     </li>
                     <li>
                         <span class="info-label">Phone</span>
-                        <span class="info-value">{{ customer.phone|default:"—" }}</span>
+                        <span class="info-value">
+                            {% if customer.phone %}
+                                <a href="tel:{{ customer.phone }}" class="text-white fw-bold text-decoration-none"><i class="fas fa-phone me-1 text-success"></i>{{ customer.phone }}</a>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </span>
+                    </li>
+                    <li>
+                        <span class="info-label">Email</span>
+                        <span class="info-value">{{ customer.email|default:"—" }}</span>
                     </li>
                     <li>
                         <span class="info-label">Account Type</span>

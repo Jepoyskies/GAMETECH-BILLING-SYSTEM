@@ -31,5 +31,15 @@ urlpatterns = [
     path('api/tickets/<int:ticket_id>/location/', views.api_update_location, name='api_dispatch_update_location'),
     path('api/tickets/<int:ticket_id>/complete/', views.api_complete_job, name='api_dispatch_complete_job'),
     path('api/tickets/<int:ticket_id>/delete/', views.api_delete_ticket, name='api_dispatch_delete_ticket'),
+    
+    # Phase 3: Customer search & duplicate check APIs
+    path('api/customers/search/', views.api_customer_search, name='api_dispatch_customer_search'),
+    path('api/customers/check-name/', views.api_customer_check_name, name='api_dispatch_customer_check_name'),
+
+    # Phase 3: Dynamic Dropdown Config APIs
+    path('api/config-options/create/', views.api_config_options_create, name='api_dispatch_config_options_create'),
+    path('api/config-options/<int:option_id>/update/', views.api_config_options_update, name='api_dispatch_config_options_update'),
+    path('api/config-options/<int:option_id>/delete/', views.api_config_options_delete, name='api_dispatch_config_options_delete'),
+
     path('export/tickets/', views.export_tickets_csv, name='dispatch_export_tickets'),
 ]

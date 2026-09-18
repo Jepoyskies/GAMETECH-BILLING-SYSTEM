@@ -123,18 +123,27 @@
                                                 </div>
                                             </form>
                                         </div>
-                                        <div class="modal-footer border-secondary justify-content-between">
-                                            <div class="btn-group">
-                                                <button type="button" class="btn btn-outline-warning fw-bold" onclick="document.getElementById('adminAction{{ ticket.id }}').value='bounce_dispatch'; document.getElementById('approvalForm{{ ticket.id }}').submit();">
-                                                    <i class="fas fa-undo-alt me-1"></i> Bounce to Dispatch
-                                                </button>
-                                                <button type="button" class="btn btn-outline-danger fw-bold" onclick="document.getElementById('adminAction{{ ticket.id }}').value='bounce_tech'; document.getElementById('approvalForm{{ ticket.id }}').submit();">
-                                                    <i class="fas fa-undo-alt me-1"></i> Bounce to Tech
-                                                </button>
+                                        <div class="modal-footer border-secondary flex-column align-items-stretch gap-3">
+                                            <div class="d-flex justify-content-between align-items-center w-100">
+                                                <div class="btn-group">
+                                                    <button type="button" class="btn btn-outline-warning fw-bold btn-sm" onclick="document.getElementById('adminAction{{ ticket.id }}').value='bounce_dispatch'; document.getElementById('approvalForm{{ ticket.id }}').submit();">
+                                                        <i class="fas fa-undo-alt me-1"></i> Bounce to Dispatch
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-danger fw-bold btn-sm" onclick="document.getElementById('adminAction{{ ticket.id }}').value='bounce_tech'; document.getElementById('approvalForm{{ ticket.id }}').submit();">
+                                                        <i class="fas fa-undo-alt me-1"></i> Bounce to Tech
+                                                    </button>
+                                                </div>
+                                                <span class="text-muted text-xs"><i class="fas fa-shield-alt text-danger me-1"></i> Slide to activate</span>
                                             </div>
-                                            <button type="button" class="btn btn-danger fw-bold" onclick="document.getElementById('adminAction{{ ticket.id }}').value='approve'; document.getElementById('approvalForm{{ ticket.id }}').submit();">
-                                                <i class="fas fa-check-circle me-2"></i> Final Approve & Activate
-                                            </button>
+                                            <div class="w-100">
+                                                <div data-slide-confirm 
+                                                     class="variant-danger"
+                                                     data-label="Slide to Final Approve & Activate" 
+                                                     data-confirmed-label="Activating Subscriber..." 
+                                                     data-target-form="#approvalForm{{ ticket.id }}"
+                                                     id="slideApprove{{ ticket.id }}">
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -154,4 +163,5 @@
         </div>
     </div>
 </div>
+{% include "dispatch/_slide_to_confirm.html" %}
 {% endblock %}

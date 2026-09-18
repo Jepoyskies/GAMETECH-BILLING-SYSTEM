@@ -126,43 +126,44 @@
                                             <h5 class="modal-title text-white fw-bold">Assign Ticket: {{ ticket.ticket_number }}</h5>
                                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                         </div>
-                                        <form action="{% url 'dispatch_assignment' %}" method="POST">
+                                        <form action="{% url 'dispatch_assignment' %}" method="POST" id="assignForm{{ ticket.id }}">
                                             {% csrf_token %}
                                             <input type="hidden" name="ticket_id" value="{{ ticket.id }}">
                                             <div class="modal-body">
                                                 <div class="row">
                                                     <div class="col-6 mb-3">
                                                         <label class="form-label text-muted small fw-bold">Schedule Date</label>
-                                                        <input type="date" name="scheduled_date" class="form-control bg-dark text-white border-secondary" value="{{ ticket.scheduled_date|date:'Y-m-d' }}" required>
+                                                        <input type="date" name="schedule_date" class="form-control bg-dark text-white border-secondary" value="{{ ticket.schedule_date|date:'Y-m-d'|default:'' }}" required>
                                                     </div>
                                                     <div class="col-6 mb-3">
-                                                        <label class="form-label text-muted small fw-bold">Schedule Time</label>
-                                                        <input type="text" name="scheduled_time" class="form-control bg-dark text-white border-secondary" value="{{ ticket.scheduled_time|default:'Morning (8:00 AM - 12:00 PM)' }}" required>
+                                                        <label class="form-label text-muted small fw-bold">Time Slot</label>
+                                                        <select name="schedule_time" class="form-select bg-dark text-white border-secondary">
+                                                            <option value="AM" {% if ticket.schedule_time == 'AM' %}selected{% endif %}>Morning (AM)</option>
+                                                            <option value="PM" {% if ticket.schedule_time == 'PM' %}selected{% endif %}>Afternoon (PM)</option>
+                                                            <option value="ANYTIME" {% if ticket.schedule_time == 'ANYTIME' %}selected{% endif %}>Anytime</option>
+                                                        </select>
                                                     </div>
                                                 </div>
                                                 
                                                 <div class="mb-3">
-                                                    <label class="form-label text-muted small fw-bold">Dispatch Team</label>
-                                                    <select name="team_id" class="form-select bg-dark text-white border-secondary" required>
-                                                        <option value="" disabled selected>Select a Team...</option>
+                                                    <label class="form-label text-muted small fw-bold">Assign Team</label>
+                                                    <select name="team_id" class="form-select bg-dark text-white border-secondary">
+                                                        <option value="">-- No Team (Individual Only) --</option>
                                                         {% for team in teams %}
-                                                            <option value="{{ team.id }}">{{ team.name }}</option>
+                                                        <option value="{{ team.id }}" {% if ticket.team_id == team.id %}selected{% endif %}>{{ team.name }}</option>
                                                         {% endfor %}
                                                     </select>
                                                 </div>
                                                 
-                                                <div class="mb-4">
+                                                <div class="mb-3">
                                                     <label class="form-label text-muted small fw-bold">Select Technicians</label>
-                                                    <div class="row g-2 p-3 border border-secondary rounded bg-dark" style="max-height: 250px; overflow-y: auto;">
+                                                    <div class="p-2 border border-secondary rounded bg-dark" style="max-height: 140px; overflow-y: auto;">
                                                         {% for tech in technicians %}
-                                                        <div class="col-md-6">
-                                                            <div class="form-check p-2 border border-secondary rounded" style="background: rgba(255,255,255,0.02);">
-                                                                <input class="form-check-input ms-1 me-2" type="checkbox" name="tech_ids" value="{{ tech.id }}" id="tech{{ tech.id }}_{{ ticket.id }}">
-                                                                <label class="form-check-label text-white w-100" for="tech{{ tech.id }}_{{ ticket.id }}" style="cursor: pointer;">
-                                                                    <div class="fw-bold">{{ tech.name }}</div>
-                                                                    <div class="small text-muted"><i class="fas fa-users me-1"></i> {{ tech.team.name|default:"Unassigned Team" }}</div>
-                                                                </label>
-                                                            </div>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" name="technician_ids" value="{{ tech.id }}" id="t{{ ticket.id }}_{{ tech.id }}" {% if tech in ticket.technicians.all %}checked{% endif %}>
+                                                            <label class="form-check-label text-white text-xs" for="t{{ ticket.id }}_{{ tech.id }}">
+                                                                {{ tech.name }} {% if tech.team %}<span class="text-muted">({{ tech.team.name }})</span>{% endif %}
+                                                            </label>
                                                         </div>
                                                         {% endfor %}
                                                     </div>
@@ -315,4 +316,5 @@ function copyTicketBrief(btn) {
     }
 }
 </script>
+{% include "dispatch/_slide_to_confirm.html" %}
 {% endblock %}
