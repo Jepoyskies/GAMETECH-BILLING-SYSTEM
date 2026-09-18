@@ -231,6 +231,23 @@
                             <span class="addon-badge active"><i class="fas fa-check-circle"></i> Active</span>
                         </div>
                     </li>
+                {% elif pending_cignal_requests %}
+                    {% for req in pending_cignal_requests %}
+                    <li id="portal-left-pending-addon-{{ req.id }}" style="flex-wrap: wrap; gap: 0.5rem; padding: 0.75rem 0;">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fas fa-satellite-dish text-warning" style="font-size: 1.1rem;"></i>
+                            <div>
+                                <span class="fw-semibold" style="color: var(--p-text-light); font-size: 0.88rem;">{{ req.addon_type }}</span>
+                                <div class="text-warning small" style="font-size: 0.75rem;"><i class="fas fa-hourglass-half me-1"></i>Pending Approval</div>
+                            </div>
+                        </div>
+                        <div class="ms-auto">
+                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 rounded-pill" style="font-size: 0.72rem;" onclick="cancelPortalAddon('{{ req.id }}', '{{ req.addon_type|escapejs }}')">
+                                Cancel
+                            </button>
+                        </div>
+                    </li>
+                    {% endfor %}
                 {% else %}
                     <li>
                         <span class="info-label"><i class="fas fa-satellite-dish me-2" style="color: var(--p-text-muted);"></i>Cignal Add-on</span>

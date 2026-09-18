@@ -455,6 +455,33 @@ class="{% if is_network_issue %}text-red-600{% elif effective_status == 'Moderat
                 <div class="card-section" style="margin-top: 1rem; margin-bottom: 2rem;">
                     <h3 class="text-gray-400 font-bold text-xs tracking-widest uppercase mb-3 ml-1 px-1">Entertainment & Add-ons</h3>
                     <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                        {% if pending_cignal_requests %}
+                            {% for req in pending_cignal_requests %}
+                            <!-- Pending Application Block -->
+                            <div id="portal-pending-addon-{{ req.id }}" class="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 flex justify-between items-center w-full gap-2 mb-3 shadow-xs">
+                                <div class="flex items-center gap-3 min-w-0 flex-1">
+                                    <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                                        <i class="fa-solid fa-hourglass-half text-sm"></i>
+                                    </div>
+                                    <div class="flex flex-col justify-center min-w-0">
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            <p class="font-bold text-amber-900 text-xs leading-tight truncate">{{ req.addon_type }}</p>
+                                            <span class="bg-amber-200 text-amber-800 text-[9px] font-bold px-1.5 py-0.5 rounded-md">Pending</span>
+                                        </div>
+                                        <p class="text-[9px] text-amber-700 leading-tight mt-0.5">Requested on {{ req.requested_at|date:"M d, Y h:i A" }}</p>
+                                        <p class="text-[9px] text-gray-500 leading-tight">Staff is currently processing your request.</p>
+                                    </div>
+                                </div>
+                                <button type="button"
+                                    onclick="cancelPortalAddon('{{ req.id }}', '{{ req.addon_type|escapejs }}')"
+                                    style="border: none; cursor: pointer;"
+                                    class="bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 transition text-[10px] font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 shrink-0 shadow-xs">
+                                    <i class="fa-solid fa-xmark text-[9px]"></i> Cancel Request
+                                </button>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+
                         {% for plan in cignal_plans %}
                             {% if plan.is_active %}
                             <!-- Active Service Block -->

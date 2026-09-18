@@ -13,6 +13,7 @@ urlpatterns = [
     path('process-mock-payment/', views.portal_process_mock_payment, name='portal_process_mock_payment'),
     path('api/router-uplink/', views.portal_router_uplink_api, name='portal_router_uplink_api'),
     path('api/apply-addon/', views.portal_apply_addon, name='portal_apply_addon'),
+    path('api/cancel-addon/<int:request_id>/', views.portal_cancel_addon, name='portal_cancel_addon'),
     path('submit-ticket/', views.submit_ticket, name='submit_ticket'),
     path('tickets/', views.portal_ticket_history, name='portal_tickets'),
     path('logout/', views.portal_logout, name='portal_logout'),

@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from django.utils import timezone
-from billing.models import Customer, Payment, SubscriptionPlan, MonitoredService
+from django.db.models import Q
+from billing.models import Customer, Payment, SubscriptionPlan, MonitoredService, AddOnRequest
 import re
 
 import logging
@@ -31,27 +32,13 @@ def portal_dashboard(request):
         return redirect('customer_portal:force_change_password')
 
     plan = customer.plan
-    payments = Payment.objects.filter(customer=customer).order_by('-created_at')[:10]
+    payments = customer.payments.all().order_by('-paid_at')[:10]
     plans = SubscriptionPlan.objects.all().order_by('price')
 
-    effective_status = 'Excellent'
-    effective_reason = 'Your service is running normally.'
+    # Effective status logic
+    effective_status = customer.effective_status
+    effective_reason = customer.effective_status_reason
     is_network_issue = False
-
-    if customer.health_status and _get_priority(customer.health_status) > _get_priority(effective_status):
-        effective_status = customer.health_status
-        effective_reason = customer.health_reason or "We have detected an issue with your connection."
-        is_network_issue = True
-
-    if customer.barangay and _get_priority(customer.barangay.health_status) > _get_priority(effective_status):
-        effective_status = customer.barangay.health_status
-        effective_reason = customer.barangay.health_reason or f"Network issue reported in {customer.barangay.name}"
-        is_network_issue = True
-
-    if customer.mikrotik_device and _get_priority(customer.mikrotik_device.health_status) > _get_priority(effective_status):
-        effective_status = customer.mikrotik_device.health_status
-        effective_reason = customer.mikrotik_device.health_reason or "Network issue reported for your sector"
-        is_network_issue = True
 
     is_account_suspended = customer.status in ['suspended', 'expired', 'inactive']
     if is_account_suspended:
@@ -93,6 +80,7 @@ def portal_dashboard(request):
         'payments': payments,
         'plans': plans,
         'cignal_plans': cignal_plans,
+        'pending_cignal_requests': pending_cignal_requests,
         'issue_services': issue_services,
         'open_tickets_count': open_tickets_count,
         'recent_ticket': recent_ticket,

@@ -129,7 +129,7 @@
                 </div>
 
                 {% if pending_cignal_addon %}
-                <div class="cignal-pending-banner mb-3 p-2 rounded d-flex align-items-center justify-content-between">
+                <div id="cignalPendingBanner" class="cignal-pending-banner mb-3 p-2 rounded d-flex align-items-center justify-content-between flex-wrap gap-2">
                     <div class="d-flex align-items-center gap-2">
                         <span class="cignal-radar-pulse"><i class="fas fa-satellite-dish text-primary"></i></span>
                         <div>
@@ -141,9 +141,18 @@
                             </small>
                         </div>
                     </div>
-                    <a href="{% url 'cignal_dashboard' %}?highlight_customer={{ customer.id }}" class="btn btn-sm btn-warning text-dark py-0 px-2 fw-semibold" style="font-size: 0.74rem;">
-                        Go to Hub <i class="fas fa-arrow-right ms-1"></i>
-                    </a>
+                    <div class="d-flex align-items-center gap-1.5">
+                        <button type="button"
+                            class="btn btn-sm btn-outline-danger py-0 px-2 fw-semibold rounded-pill d-inline-flex align-items-center gap-1"
+                            style="font-size: 0.74rem; height: 26px;"
+                            title="Cancel / Delete this pending request"
+                            onclick="cancelCustomerCignalAddon('{{ pending_cignal_addon.id }}', '{{ pending_cignal_addon.addon_type|escapejs }}')">
+                            <i class="fas fa-trash-alt"></i> Cancel
+                        </button>
+                        <a href="{% url 'cignal_dashboard' %}?highlight_customer={{ customer.id }}" class="btn btn-sm btn-warning text-dark py-0 px-2 fw-semibold rounded-pill d-inline-flex align-items-center gap-1" style="font-size: 0.74rem; height: 26px;">
+                            Go to Hub <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
                 </div>
                 {% endif %}
 
