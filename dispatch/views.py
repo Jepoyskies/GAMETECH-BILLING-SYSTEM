@@ -7,7 +7,7 @@ from django.views.decorators.http import require_POST
 from django.http import JsonResponse, HttpResponse
 from django.contrib import messages
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, Max
 from billing.models import Customer
 from network_manager.models import MikrotikDevice
 from .models import (
@@ -667,6 +667,29 @@ def audit_log_view(request):
 def management_view(request):
     teams = Team.objects.all()
     technicians = Technician.objects.select_related('team').all()
+    
+    # Auto-seed baseline options if table is empty
+    if not ConfigOption.objects.filter(module='DISPATCH').exists():
+        defaults = [
+            ('DISPATCH', 'STATUS', 'Pending', '#f59e0b', 1, True),
+            ('DISPATCH', 'STATUS', 'Assigned', '#3b82f6', 2, False),
+            ('DISPATCH', 'STATUS', 'In Progress', '#06b6d4', 3, False),
+            ('DISPATCH', 'STATUS', 'Done', '#10b981', 4, True),
+            ('DISPATCH', 'STATUS', 'Cancelled', '#ef4444', 5, True),
+            ('DISPATCH', 'TYPE', 'Installation', '#10b981', 1, True),
+            ('DISPATCH', 'TYPE', 'Repair', '#ef4444', 2, True),
+            ('DISPATCH', 'TYPE', 'Cignal', '#a855f7', 3, False),
+            ('DISPATCH', 'TYPE', 'Migration', '#06b6d4', 4, False),
+            ('MONITORING', 'CHAT_TYPE', 'Inquiry', '#3b82f6', 1, True),
+            ('MONITORING', 'CHAT_TYPE', 'Concern', '#f59e0b', 2, True),
+            ('MONITORING', 'CHAT_TYPE', 'Follow-up', '#6366f1', 3, False),
+        ]
+        for mod, ltype, lbl, clr, sorder, hcode in defaults:
+            ConfigOption.objects.get_or_create(
+                module=mod, list_type=ltype, label=lbl,
+                defaults={'color': clr, 'sort_order': sorder, 'active': True, 'hardcoded': hcode}
+            )
+
     config_options = ConfigOption.objects.all().order_by('module', 'list_type', 'sort_order')
     locked_labels = {'done', 'cancelled', 'pending', 'installation', 'repair', 'concern', 'inquiry'}
     for opt in config_options:
@@ -871,7 +894,7 @@ def api_config_options_create(request):
     if ConfigOption.objects.filter(module=module, list_type=list_type, label__iexact=label).exists():
         return JsonResponse({'success': False, 'error': f'An option with label "{label}" already exists in {module} {list_type}.'}, status=400)
 
-    max_order = ConfigOption.objects.filter(module=module, list_type=list_type).aggregate(models.Max('sort_order'))['sort_order__max'] or 0
+    max_order = ConfigOption.objects.filter(module=module, list_type=list_type).aggregate(Max('sort_order'))['sort_order__max'] or 0
     opt = ConfigOption.objects.create(
         module=module,
         list_type=list_type,
