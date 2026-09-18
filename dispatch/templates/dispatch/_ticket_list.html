@@ -142,8 +142,24 @@
                             {% endif %}
                         </div>
                     </td>
-                    <td class="text-end">
+                    <td class="text-end text-nowrap">
                         <div class="btn-group">
+                            <button type="button" class="btn btn-sm btn-outline-info" title="Copy Dispatch Brief for Techs / Group Chat"
+                                    onclick="copyDispatchBrief({
+                                        ticket_type_display: '{{ t.get_ticket_type_display|escapejs }}',
+                                        client_name: '{{ t.client_name|escapejs }}',
+                                        contact_number: '{{ t.contact_number|default:''|escapejs }}',
+                                        address: '{{ t.address|default:''|escapejs }}',
+                                        barangay: '{{ t.barangay|default:''|escapejs }}',
+                                        latitude: '{{ t.latitude|default:'' }}',
+                                        longitude: '{{ t.longitude|default:'' }}',
+                                        plan_package: '{{ t.plan_package|default:''|escapejs }}',
+                                        payment_method: '{{ t.get_payment_method_display|default:t.payment_method|default:'Cash'|escapejs }}',
+                                        concern: '{{ t.concern|default:''|escapejs }}',
+                                        special_instruction: '{{ t.special_instruction|default:t.remarks|default:''|escapejs }}'
+                                    })">
+                                <i class="fas fa-copy"></i>
+                            </button>
                             <button type="button" class="btn btn-sm btn-outline-primary btn-open-assign" 
                                     data-id="{{ t.id }}" data-ticket="{{ t.ticket_number }}" data-name="{{ t.client_name }}" title="Assign & Schedule">
                                 <i class="fas fa-user-plus"></i>
@@ -161,6 +177,10 @@
                                     <span class="visually-hidden">Toggle Dropdown</span>
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow-lg">
+                                    {% if t.status == 'ASSIGNED' or t.status == 'IN_PROGRESS' %}
+                                    <li><a class="dropdown-item text-warning btn-undispatch" href="#" data-id="{{ t.id }}" data-number="{{ t.ticket_number }}"><i class="fas fa-undo text-warning me-2"></i> Undispatch (Return to Pending)</a></li>
+                                    <li><hr class="dropdown-divider border-secondary"></li>
+                                    {% endif %}
                                     <li><a class="dropdown-item btn-quick-status" href="#" data-id="{{ t.id }}" data-status="PENDING"><i class="fas fa-clock text-info me-2"></i> Set Pending</a></li>
                                     <li><a class="dropdown-item btn-quick-status" href="#" data-id="{{ t.id }}" data-status="IN_PROGRESS"><i class="fas fa-spinner text-primary me-2"></i> Set In Progress</a></li>
                                     <li><a class="dropdown-item btn-set-location" href="#" data-id="{{ t.id }}" data-name="{{ t.client_name }}"><i class="fas fa-map-marker-alt text-warning me-2"></i> Update GPS Pin</a></li>

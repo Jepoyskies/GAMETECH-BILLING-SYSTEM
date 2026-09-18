@@ -1,34 +1,56 @@
 {% extends "billing/base.html" %}
 {% load static %}
 
-{% block title %}Stage 2: Assignment | Gametech Dispatch{% endblock %}
+{% block title %}Stage 2: Assignment & Dispatch | Gametech Dispatch{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4 px-3 px-md-4">
     <!-- Hero Banner -->
     <div class="gt-cl-card p-4 mb-4" style="border-left: 4px solid #f59e0b;">
-        <div class="d-flex align-items-center">
-            <div class="hero-icon me-3" style="background: rgba(245,158,11,0.15); color: #f59e0b; padding: 15px; border-radius: 12px;">
-                <i class="fas fa-truck-fast fa-2x"></i>
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div class="d-flex align-items-center">
+                <div class="hero-icon me-3" style="background: rgba(245,158,11,0.15); color: #f59e0b; padding: 15px; border-radius: 12px;">
+                    <i class="fas fa-truck-fast fa-2x"></i>
+                </div>
+                <div>
+                    <h4 class="mb-1 fw-bold text-white">Stage 2: Dispatch Assignment</h4>
+                    <p class="mb-0 text-muted small">Assign Teams and Technicians to Job Orders, copy formatted briefs for technician chat handoff, or undispatch jobs if assignments change.</p>
+                </div>
             </div>
-            <div>
-                <h4 class="mb-1 fw-bold text-white">Stage 2: Dispatch Assignment</h4>
-                <p class="mb-0 text-muted small">Assign Teams and Technicians to generated Job Orders, and schedule the installation date and time.</p>
+            <div class="d-flex gap-2">
+                <a href="{% url 'dispatch_verification' %}" class="btn btn-outline-secondary rounded-pill px-3">
+                    <i class="fas fa-arrow-left me-1"></i> Stage 1 Verification
+                </a>
+                <a href="{% url 'dispatch_dashboard' %}" class="btn btn-primary rounded-pill px-3">
+                    <i class="fas fa-chart-pie me-1"></i> Dispatch Console
+                </a>
             </div>
         </div>
     </div>
 
-    <div class="row">
-        <!-- Unassigned Tickets -->
-        <div class="col-12">
+    <!-- Navigation Tabs: Pending vs Ongoing -->
+    <ul class="nav nav-pills mb-3 gap-2" id="assignmentTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {% if active_tab != 'ongoing' %}active{% endif %} rounded-pill px-4 fw-bold" id="tab-pending-btn" data-bs-toggle="pill" data-bs-target="#tab-pending" type="button" role="tab">
+                <i class="fas fa-inbox me-2"></i> Pending Queue
+                <span class="badge bg-warning text-dark ms-2 rounded-pill">{{ pending_count|default:0 }}</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {% if active_tab == 'ongoing' %}active{% endif %} rounded-pill px-4 fw-bold" id="tab-ongoing-btn" data-bs-toggle="pill" data-bs-target="#tab-ongoing" type="button" role="tab">
+                <i class="fas fa-truck-fast me-2"></i> Ongoing / Dispatched
+                <span class="badge bg-primary ms-2 rounded-pill">{{ ongoing_count|default:0 }}</span>
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="assignmentTabsContent">
+        <!-- TAB 1: PENDING QUEUE -->
+        <div class="tab-pane fade {% if active_tab != 'ongoing' %}show active{% endif %}" id="tab-pending" role="tabpanel">
             <div class="gt-cl-card">
                 <div class="card-header border-bottom border-secondary p-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <h6 class="mb-0 text-white fw-bold"><i class="fas fa-list-check me-2 text-primary"></i> Pending Job Orders</h6>
-                    <div class="d-flex gap-3 small text-muted">
-                        <span><i class="fas fa-circle text-secondary" style="font-size: 0.5rem; vertical-align: middle;"></i> Pending</span>
-                        <span><i class="fas fa-circle text-primary" style="font-size: 0.5rem; vertical-align: middle;"></i> Assigned</span>
-                        <span><i class="fas fa-circle text-success" style="font-size: 0.5rem; vertical-align: middle;"></i> In Progress</span>
-                    </div>
+                    <h6 class="mb-0 text-white fw-bold"><i class="fas fa-list-check me-2 text-warning"></i> Pending Job Orders (Awaiting Assignment)</h6>
+                    <span class="badge bg-dark border border-secondary text-muted">{{ pending_count|default:0 }} awaiting field crew</span>
                 </div>
                 <div class="card-body p-0 table-responsive">
                     <table class="table table-dark table-hover mb-0 align-middle">
@@ -36,12 +58,12 @@
                             <tr>
                                 <th class="ps-3 border-secondary">Ticket / Client</th>
                                 <th class="border-secondary">Address / Contact</th>
-                                <th class="border-secondary">Plan / PPPoE</th>
-                                <th class="border-secondary text-end pe-3">Action</th>
+                                <th class="border-secondary">Plan & Payment</th>
+                                <th class="border-secondary text-end pe-3">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for ticket in tickets %}
+                            {% for ticket in pending_tickets %}
                             <tr>
                                 <td class="ps-3 border-secondary text-white">
                                     <div class="mb-1">
@@ -56,19 +78,42 @@
                                             <span class="badge bg-success-subtle text-success border border-success-subtle ms-1"><i class="fas fa-calendar-check me-1"></i>{{ ticket.scheduled_date|date:"M d, Y" }}{% if ticket.scheduled_time %} • {{ ticket.scheduled_time }}{% endif %}</span>
                                         {% endif %}
                                     </div>
-                                    <small class="text-muted fw-bold">{{ ticket.client_name }}</small>
+                                    <div class="fw-bold text-white">{{ ticket.client_name }}</div>
+                                    {% if ticket.concern %}
+                                    <small class="text-warning"><i class="fas fa-info-circle me-1"></i>{{ ticket.concern|truncatechars:60 }}</small>
+                                    {% endif %}
                                 </td>
                                 <td class="border-secondary text-muted small">
-                                    {{ ticket.address }}<br>
-                                    <span class="text-info">{{ ticket.contact_number }}</span>
+                                    {{ ticket.address }}{% if ticket.barangay %}, {{ ticket.barangay }}{% endif %}<br>
+                                    <span class="text-info"><i class="fas fa-phone-alt me-1"></i>{{ ticket.contact_number|default:"No phone" }}</span>
+                                    {% if ticket.latitude and ticket.longitude %}
+                                    <span class="badge bg-dark border border-secondary text-success ms-1"><i class="fas fa-map-marker-alt me-1"></i>GPS</span>
+                                    {% endif %}
                                 </td>
                                 <td class="border-secondary text-muted small">
-                                    {{ ticket.plan_package }}<br>
-                                    <span class="text-warning font-monospace">{{ ticket.account_no }}</span>
+                                    <span class="text-white fw-bold">{{ ticket.plan_package|default:"Standard Plan" }}</span><br>
+                                    <span class="badge bg-dark border border-info text-info font-monospace">{{ ticket.get_payment_method_display|default:ticket.payment_method|default:"CASH" }}</span>
+                                    {% if ticket.account_no %}
+                                    <span class="text-warning font-monospace ms-1">{{ ticket.account_no }}</span>
+                                    {% endif %}
                                 </td>
-                                <td class="border-secondary text-end pe-3">
+                                <td class="border-secondary text-end pe-3 text-nowrap">
+                                    <button type="button" class="btn btn-sm btn-outline-info me-1" title="Copy Dispatch Brief for Techs / Group Chat" onclick="copyTicketBrief(this)"
+                                        data-type="{{ ticket.get_ticket_type_display }}"
+                                        data-client="{{ ticket.client_name }}"
+                                        data-phone="{{ ticket.contact_number|default:'' }}"
+                                        data-address="{{ ticket.address|default:'' }}"
+                                        data-barangay="{{ ticket.barangay|default:'' }}"
+                                        data-lat="{{ ticket.latitude|default:'' }}"
+                                        data-lng="{{ ticket.longitude|default:'' }}"
+                                        data-plan="{{ ticket.plan_package|default:'' }}"
+                                        data-payment="{{ ticket.get_payment_method_display|default:ticket.payment_method|default:'Cash' }}"
+                                        data-concern="{{ ticket.concern|default:'' }}"
+                                        data-remarks="{{ ticket.special_instruction|default:ticket.remarks|default:'' }}">
+                                        <i class="fas fa-copy me-1"></i> Brief
+                                    </button>
                                     <button class="btn btn-sm btn-warning fw-bold text-dark gt-btn" data-bs-toggle="modal" data-bs-target="#assignModal{{ ticket.id }}">
-                                        Assign Techs
+                                        <i class="fas fa-user-plus me-1"></i> Assign Techs
                                     </button>
                                 </td>
                             </tr>
@@ -147,6 +192,127 @@
                 </div>
             </div>
         </div>
+
+        <!-- TAB 2: ONGOING / DISPATCHED QUEUE -->
+        <div class="tab-pane fade {% if active_tab == 'ongoing' %}show active{% endif %}" id="tab-ongoing" role="tabpanel">
+            <div class="gt-cl-card">
+                <div class="card-header border-bottom border-secondary p-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h6 class="mb-0 text-white fw-bold"><i class="fas fa-truck-fast me-2 text-primary"></i> Ongoing & Dispatched Jobs (Active in Field)</h6>
+                    <span class="badge bg-dark border border-secondary text-info">{{ ongoing_count|default:0 }} in progress</span>
+                </div>
+                <div class="card-body p-0 table-responsive">
+                    <table class="table table-dark table-hover mb-0 align-middle">
+                        <thead class="text-muted small" style="background: rgba(255,255,255,0.02);">
+                            <tr>
+                                <th class="ps-3 border-secondary">Ticket / Client</th>
+                                <th class="border-secondary">Assigned Unit</th>
+                                <th class="border-secondary">Schedule & Status</th>
+                                <th class="border-secondary text-end pe-3">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ticket in ongoing_tickets %}
+                            <tr>
+                                <td class="ps-3 border-secondary text-white">
+                                    <div class="mb-1">
+                                        <span class="badge bg-dark border border-secondary text-info font-monospace px-2 py-1">{{ ticket.ticket_number }}</span>
+                                        <span class="badge bg-dark border border-secondary text-muted ms-1 fw-normal"><i class="fas fa-clock"></i> {{ ticket.created_at|timesince }} ago</span>
+                                        {% if ticket.sla_badge_level == 'red' %}
+                                            <span class="badge bg-danger text-white border border-danger ms-1 animate-pulse fw-bold"><i class="fas fa-fire me-1"></i>SLA 48h+</span>
+                                        {% elif ticket.sla_badge_level == 'amber' %}
+                                            <span class="badge bg-warning text-dark border border-warning ms-1 fw-bold"><i class="fas fa-exclamation-triangle me-1"></i>SLA 24h+</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="fw-bold text-white">{{ ticket.client_name }}</div>
+                                    <small class="text-muted">{{ ticket.address }}{% if ticket.barangay %}, {{ ticket.barangay }}{% endif %}</small>
+                                </td>
+                                <td class="border-secondary text-muted small">
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fw-bold">
+                                        <i class="fas fa-users me-1"></i>{{ ticket.team.name|default:"Assigned Crew" }}
+                                    </span>
+                                    {% if ticket.technicians.all %}
+                                    <div class="text-muted small mt-1">
+                                        {% for tech in ticket.technicians.all %}
+                                            <span class="badge bg-dark border border-secondary text-light me-1">{{ tech.name }}</span>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                <td class="border-secondary text-muted small">
+                                    <div>
+                                        <span class="badge {% if ticket.status == 'IN_PROGRESS' %}bg-success{% else %}bg-info text-dark{% endif %} fw-bold px-2 py-1">
+                                            {{ ticket.get_status_display }}
+                                        </span>
+                                    </div>
+                                    {% if ticket.scheduled_date %}
+                                    <div class="text-muted small mt-1">
+                                        <i class="fas fa-calendar-day me-1"></i>{{ ticket.scheduled_date|date:"M d, Y" }}
+                                        {% if ticket.scheduled_time %} • {{ ticket.scheduled_time }}{% endif %}
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                <td class="border-secondary text-end pe-3 text-nowrap">
+                                    <button type="button" class="btn btn-sm btn-outline-info me-1" title="Copy Dispatch Brief for Techs / Group Chat" onclick="copyTicketBrief(this)"
+                                        data-type="{{ ticket.get_ticket_type_display }}"
+                                        data-client="{{ ticket.client_name }}"
+                                        data-phone="{{ ticket.contact_number|default:'' }}"
+                                        data-address="{{ ticket.address|default:'' }}"
+                                        data-barangay="{{ ticket.barangay|default:'' }}"
+                                        data-lat="{{ ticket.latitude|default:'' }}"
+                                        data-lng="{{ ticket.longitude|default:'' }}"
+                                        data-plan="{{ ticket.plan_package|default:'' }}"
+                                        data-payment="{{ ticket.get_payment_method_display|default:ticket.payment_method|default:'Cash' }}"
+                                        data-concern="{{ ticket.concern|default:'' }}"
+                                        data-remarks="{{ ticket.special_instruction|default:ticket.remarks|default:'' }}">
+                                        <i class="fas fa-copy me-1"></i> Brief
+                                    </button>
+                                    <form action="{% url 'dispatch_undispatch' ticket.id %}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to undispatch {{ ticket.ticket_number }}? It will be removed from team {{ ticket.team.name|default:\'current team\' }} and returned to the Pending queue.');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-warning" title="Undispatch (Return to Pending Queue)">
+                                            <i class="fas fa-undo me-1"></i> Undispatch
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-5">
+                                    <div class="dispatch-empty-state mx-auto" style="max-width: 450px;">
+                                        <i class="fas fa-truck-fast fa-2x mb-3 text-secondary" style="opacity: 0.6;"></i>
+                                        <h6 class="text-white mb-2">No active Ongoing jobs</h6>
+                                        <p class="text-muted small mb-0">When pending tickets are assigned to teams, they will be tracked here in the field.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+
+{% include "dispatch/_scripts.html" %}
+
+<script>
+function copyTicketBrief(btn) {
+    const data = btn.dataset;
+    if (window.copyDispatchBrief) {
+        window.copyDispatchBrief({
+            ticket_type_display: data.type,
+            client_name: data.client,
+            contact_number: data.phone,
+            address: data.address,
+            barangay: data.barangay,
+            latitude: data.lat,
+            longitude: data.lng,
+            plan_package: data.plan,
+            payment_method: data.payment,
+            concern: data.concern,
+            special_instruction: data.remarks
+        });
+    }
+}
+</script>
 {% endblock %}

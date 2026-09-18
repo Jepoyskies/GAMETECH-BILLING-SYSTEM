@@ -22,6 +22,12 @@
             <p class="text-muted text-sm mb-0">Real-time job queue, field technician dispatching, and GPS service map</p>
         </div>
         <div class="d-flex flex-wrap align-items-center gap-2">
+            <!-- Legacy Operational Date Filter (Bypasses Stages 1-3 Live Queue) -->
+            <div class="btn-group btn-group-sm rounded-pill p-1 bg-dark border border-secondary shadow-sm" role="group">
+                <a href="?date_range=all{% if status_filter != 'ALL' %}&status={{ status_filter }}{% endif %}{% if type_filter != 'ALL' %}&type={{ type_filter }}{% endif %}" class="btn btn-sm rounded-pill px-3 {% if date_filter == 'all' or not date_filter %}btn-primary text-white{% else %}btn-dark text-muted{% endif %}">All</a>
+                <a href="?date_range=today{% if status_filter != 'ALL' %}&status={{ status_filter }}{% endif %}{% if type_filter != 'ALL' %}&type={{ type_filter }}{% endif %}" class="btn btn-sm rounded-pill px-3 {% if date_filter == 'today' %}btn-primary text-white{% else %}btn-dark text-muted{% endif %}">Today</a>
+                <a href="?date_range=this_month{% if status_filter != 'ALL' %}&status={{ status_filter }}{% endif %}{% if type_filter != 'ALL' %}&type={{ type_filter }}{% endif %}" class="btn btn-sm rounded-pill px-3 {% if date_filter == 'this_month' %}btn-primary text-white{% else %}btn-dark text-muted{% endif %}">This Month</a>
+            </div>
             <button class="btn btn-primary rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modal-create-ticket">
                 <i class="fas fa-plus-circle me-1"></i> New Job Ticket
             </button>
@@ -53,6 +59,9 @@
                         <h2 class="display-4 fw-bolder mb-0 text-white lh-1">{{ pending_verification_count|default:0 }}</h2>
                         <span class="ms-2 text-muted mb-1">Queued</span>
                     </div>
+                    <div class="mt-2">
+                        <span class="badge bg-dark border border-secondary text-muted text-xs"><i class="fas fa-bolt text-warning me-1"></i>Always Live Queue</span>
+                    </div>
                     {% if pending_verification_count > 0 %}
                     <div class="position-absolute top-0 start-0 w-100 h-100 pulse-border-warning" style="pointer-events: none;"></div>
                     {% endif %}
@@ -77,6 +86,9 @@
                         <h2 class="display-4 fw-bolder mb-0 text-white lh-1">{{ awaiting_assignment_count|default:0 }}</h2>
                         <span class="ms-2 text-muted mb-1">Unassigned</span>
                     </div>
+                    <div class="mt-2">
+                        <span class="badge bg-dark border border-secondary text-muted text-xs"><i class="fas fa-bolt text-primary me-1"></i>Always Live Queue</span>
+                    </div>
                 </div>
             </a>
         </div>
@@ -97,8 +109,9 @@
                     <h2 class="display-4 fw-bolder mb-0 text-white lh-1">{{ active_in_field_count|default:0 }}</h2>
                     <span class="ms-2 text-muted mb-1">On-Site</span>
                 </div>
-                <div class="mt-3">
-                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Techs use Mobile UI</small>
+                <div class="mt-2 d-flex justify-content-between align-items-center">
+                    <span class="badge bg-dark border border-secondary text-muted text-xs"><i class="fas fa-bolt text-success me-1"></i>Always Live Queue</span>
+                    <small class="text-muted"><i class="fas fa-mobile-alt me-1"></i>Tech UI</small>
                 </div>
             </div>
         </div>
@@ -119,6 +132,9 @@
                     <div class="d-flex align-items-end mt-4">
                         <h2 class="display-4 fw-bolder mb-0 text-white lh-1">{{ pending_qa_approval_count|default:0 }}</h2>
                         <span class="ms-2 text-muted mb-1">Awaiting</span>
+                    </div>
+                    <div class="mt-2">
+                        <span class="badge bg-dark border border-secondary text-muted text-xs"><i class="fas fa-calendar-check text-info me-1"></i>Closed: {{ closed_count|default:0 }} ({% if date_filter == 'today' %}Today{% elif date_filter == 'this_month' %}This Month{% else %}All Time{% endif %})</span>
                     </div>
                     {% if pending_qa_approval_count > 0 %}
                     <div class="position-absolute top-0 start-0 w-100 h-100 pulse-border-danger" style="pointer-events: none;"></div>

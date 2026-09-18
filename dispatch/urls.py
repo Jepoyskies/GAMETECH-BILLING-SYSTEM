@@ -16,6 +16,7 @@ urlpatterns = [
     # 5-Stage ERP Pipeline
     path('pipeline/1-verification/', pipeline_views.dispatch_verification, name='dispatch_verification'),
     path('pipeline/2-assignment/', pipeline_views.dispatch_assignment, name='dispatch_assignment'),
+    path('pipeline/2-assignment/undispatch/<int:ticket_id>/', pipeline_views.dispatch_undispatch, name='dispatch_undispatch'),
     path('pipeline/3-mobile-tech/', pipeline_views.technician_mobile_ui, name='technician_mobile_ui'),
     path('pipeline/4-qa/', pipeline_views.dispatch_qa, name='dispatch_qa'),
     path('pipeline/5-approval/', pipeline_views.dispatch_approval, name='dispatch_approval'),
@@ -26,6 +27,7 @@ urlpatterns = [
     path('api/tickets/<int:ticket_id>/', views.api_ticket_detail, name='api_dispatch_ticket_detail'),
     path('api/tickets/<int:ticket_id>/assign/', views.api_assign_ticket, name='api_dispatch_assign_ticket'),
     path('api/tickets/<int:ticket_id>/status/', views.api_update_status, name='api_dispatch_update_status'),
+    path('api/tickets/<int:ticket_id>/undispatch/', views.api_undispatch_ticket, name='api_dispatch_undispatch_ticket'),
     path('api/tickets/<int:ticket_id>/location/', views.api_update_location, name='api_dispatch_update_location'),
     path('api/tickets/<int:ticket_id>/complete/', views.api_complete_job, name='api_dispatch_complete_job'),
 ]

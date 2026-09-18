@@ -226,6 +226,12 @@ class JobTicket(models.Model):
         ('CIGNAL_PLAY', 'CIGNAL_PLAY'),
         ('CLIENT_CONCERNS', 'CLIENT_CONCERNS'),
     )
+    PAYMENT_METHOD_CHOICES = (
+        ('CASH', 'Cash'),
+        ('GCASH', 'GCash'),
+        ('BANK_TRANSFER', 'Bank Transfer'),
+        ('OTHER', 'Other'),
+    )
 
     ticket_number = models.CharField(max_length=50, unique=True, blank=True)
     ticket_type = models.CharField(max_length=30, choices=TICKET_TYPE_CHOICES, default='INSTALLATION')
@@ -287,6 +293,7 @@ class JobTicket(models.Model):
     sla_rebates_given = models.IntegerField(default=0)
     
     # New Fields for QA and Payment
+    payment_method = models.CharField(max_length=30, choices=PAYMENT_METHOD_CHOICES, default='CASH', blank=True, null=True, db_index=True)
     payment_collected = models.CharField(max_length=50, blank=True, null=True)
     qa_notes = models.TextField(blank=True, null=True)
     qa_completed_at = models.DateTimeField(null=True, blank=True)

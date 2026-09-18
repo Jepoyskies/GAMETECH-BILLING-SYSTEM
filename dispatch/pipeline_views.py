@@ -51,6 +51,10 @@ def dispatch_verification(request):
         
         # Create Job Ticket with Agent Handoff Snapshot
         pay_display = customer.get_preferred_payment_method_display()
+        ticket_pay_method = (customer.preferred_payment_method or 'CASH').upper()
+        if ticket_pay_method not in ['CASH', 'GCASH', 'BANK_TRANSFER', 'OTHER']:
+            ticket_pay_method = 'CASH'
+        
         ticket = JobTicket.objects.create(
             customer=customer,
             client_name=customer.full_name,
@@ -58,6 +62,7 @@ def dispatch_verification(request):
             contact_number=customer.phone,
             account_no=customer.pppoe_username,
             plan_package=plan.name,
+            payment_method=ticket_pay_method,
             mikrotik_device=mikrotik,
             sales_agent=customer.agent,
             is_test_data=getattr(customer, 'is_test_data', False),
@@ -136,15 +141,50 @@ def dispatch_assignment(request):
     except Exception:
         pass
 
-    pending_tickets = JobTicket.objects.filter(status='PENDING')
+    pending_tickets = JobTicket.objects.filter(status='PENDING').select_related('customer', 'team').prefetch_related('technicians').order_by('-created_at')
+    ongoing_tickets = JobTicket.objects.filter(status__in=['ASSIGNED', 'IN_PROGRESS']).select_related('customer', 'team').prefetch_related('technicians').order_by('-created_at')
     teams = Team.objects.all()
     technicians = Technician.objects.all()
+    active_tab = request.GET.get('tab', 'pending')
     
     return render(request, "dispatch/pipeline/2_assignment.html", {
-        "tickets": pending_tickets,
+        "pending_tickets": pending_tickets,
+        "ongoing_tickets": ongoing_tickets,
         "teams": teams,
-        "technicians": technicians
+        "technicians": technicians,
+        "active_tab": active_tab,
+        "pending_count": pending_tickets.count(),
+        "ongoing_count": ongoing_tickets.count(),
     })
+
+@login_required
+def dispatch_undispatch(request, ticket_id):
+    """
+    Undispatch: Bounces an Assigned or In-Progress JobTicket back to Pending.
+    Clears the assigned team and technicians, resets timers, and logs an audit history entry.
+    """
+    if request.method == "POST":
+        ticket = get_object_or_404(JobTicket, id=ticket_id)
+        if ticket.status in ['ASSIGNED', 'IN_PROGRESS']:
+            old_status = ticket.status
+            old_team_name = ticket.team.name if ticket.team else 'No Team'
+            ticket.status = 'PENDING'
+            ticket.team = None
+            ticket.technicians.clear()
+            ticket.time_start = None
+            ticket.save()
+
+            JobTicketHistory.objects.create(
+                job_ticket=ticket,
+                actor=request.user,
+                from_status=old_status,
+                to_status="PENDING",
+                note=f"Undispatched by {request.user.get_full_name() or request.user.username}. Removed from {old_team_name} and returned to Pending assignment queue."
+            )
+            messages.success(request, f"Ticket {ticket.ticket_number} successfully undispatched and returned to Pending queue.")
+        else:
+            messages.warning(request, f"Ticket {ticket.ticket_number} is in {ticket.status} status and cannot be undispatched.")
+    return redirect('dispatch_assignment')
 
 @login_required
 def technician_mobile_ui(request):

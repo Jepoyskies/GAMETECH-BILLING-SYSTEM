@@ -57,8 +57,38 @@ def dashboard_view(request):
     status_filter = request.GET.get('status', 'ALL')
     type_filter = request.GET.get('type', 'ALL')
     search_q = request.GET.get('q', '').strip()
+    date_filter = request.GET.get('date_range', 'all')
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
+    
+    # Operational Rule: Live Queue Cards ALWAYS ignore the date filter (showing current live reality)
+    pending_verification_count = Customer.objects.filter(status='pending', is_verified=False).count()
+    awaiting_assignment_count = JobTicket.objects.filter(status='PENDING').count()
+    active_in_field_count = JobTicket.objects.filter(status__in=['ASSIGNED', 'IN_PROGRESS']).count()
+    pending_qa_approval_count = JobTicket.objects.filter(status__in=['COMPLETED', 'QA_PASSED']).count()
+    total_techs_count = Technician.objects.count()
+
+    # Closed and historical metrics: respect the date filter (completion date)
+    closed_qs = JobTicket.objects.filter(status__in=['COMPLETED', 'QA_PASSED'])
+    cancelled_qs = JobTicket.objects.filter(status='CANCELLED')
     
     tickets_qs = JobTicket.objects.select_related('customer', 'team', 'mikrotik_device').prefetch_related('technicians')
+    
+    if date_filter == 'today':
+        tickets_qs = tickets_qs.filter(created_at__date=today)
+        closed_qs = closed_qs.filter(done_at__date=today)
+        cancelled_qs = cancelled_qs.filter(updated_at__date=today)
+    elif date_filter == 'this_month':
+        tickets_qs = tickets_qs.filter(created_at__year=today.year, created_at__month=today.month)
+        closed_qs = closed_qs.filter(done_at__year=today.year, done_at__month=today.month)
+        cancelled_qs = cancelled_qs.filter(updated_at__year=today.year, updated_at__month=today.month)
+    elif date_filter == 'custom' and date_from and date_to:
+        tickets_qs = tickets_qs.filter(created_at__date__gte=date_from, created_at__date__lte=date_to)
+        closed_qs = closed_qs.filter(done_at__date__gte=date_from, done_at__date__lte=date_to)
+        cancelled_qs = cancelled_qs.filter(updated_at__date__gte=date_from, updated_at__date__lte=date_to)
+
+    closed_count = closed_qs.count()
+    cancelled_count = cancelled_qs.count()
     
     if status_filter != 'ALL':
         tickets_qs = tickets_qs.filter(status=status_filter)
@@ -97,6 +127,7 @@ def dashboard_view(request):
             'lat': t.latitude,
             'lng': t.longitude,
             'plan_package': t.plan_package or '',
+            'payment_method': t.payment_method or 'CASH',
             'concern': t.concern or '',
             'assigned_team': t.team.name if t.team else 'Unassigned',
             'scheduled_date': t.scheduled_date.strftime('%b %d, %Y') if t.scheduled_date else 'Not scheduled',
@@ -108,6 +139,8 @@ def dashboard_view(request):
         'active_in_field_count': active_in_field_count,
         'pending_qa_approval_count': pending_qa_approval_count,
         'total_techs_count': total_techs_count,
+        'closed_count': closed_count,
+        'cancelled_count': cancelled_count,
         'tickets': tickets,
         'teams': teams,
         'technicians': technicians,
@@ -115,6 +148,9 @@ def dashboard_view(request):
         'status_filter': status_filter,
         'type_filter': type_filter,
         'search_q': search_q,
+        'date_filter': date_filter,
+        'date_from': date_from,
+        'date_to': date_to,
         'map_points_json': json.dumps(map_points),
     }
     return render(request, 'dispatch/dashboard.html', context)
@@ -266,6 +302,10 @@ def api_create_ticket(request):
         if agent_obj and getattr(agent_obj, 'is_test_data', False):
             is_test = True
 
+        raw_pay_method = data.get('payment_method', 'CASH').upper()
+        if raw_pay_method not in ['CASH', 'GCASH', 'BANK_TRANSFER', 'OTHER']:
+            raw_pay_method = 'CASH'
+
         ticket = JobTicket.objects.create(
             client_name=client_name,
             address=data.get('address', '').strip(),
@@ -275,6 +315,7 @@ def api_create_ticket(request):
             sales_agent=agent_obj,
             is_test_data=is_test,
             plan_package=data.get('plan_package', '').strip(),
+            payment_method=raw_pay_method,
             ticket_type=data.get('ticket_type', 'INSTALLATION'),
             priority=data.get('priority', 'NORMAL'),
             status='PENDING',
@@ -362,6 +403,45 @@ def api_update_status(request, ticket_id):
         return JsonResponse({'success': True, 'status': ticket.status, 'status_display': ticket.get_status_display()})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def api_undispatch_ticket(request, ticket_id):
+    """
+    API endpoint: Reverts an Assigned or In-Progress JobTicket back to Pending.
+    Clears assigned team and technicians, resets timers, and writes a history audit log.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+
+    ticket = get_object_or_404(JobTicket, id=ticket_id)
+    if ticket.status in ['ASSIGNED', 'IN_PROGRESS']:
+        old_status = ticket.status
+        old_team_name = ticket.team.name if ticket.team else 'Unassigned'
+        ticket.status = 'PENDING'
+        ticket.team = None
+        ticket.technicians.clear()
+        ticket.time_start = None
+        ticket.save()
+
+        JobTicketHistory.objects.create(
+            job_ticket=ticket,
+            actor=request.user,
+            from_status=old_status,
+            to_status='PENDING',
+            note=f"Undispatched via API by {request.user.get_full_name() or request.user.username}. Removed from {old_team_name} and returned to Pending assignment queue."
+        )
+        log_audit('UPDATE', 'JobTicket', ticket.id, request.user, summary=f"Undispatched ticket {ticket.ticket_number} (reverted to PENDING)")
+        return JsonResponse({
+            'success': True,
+            'message': f'Ticket {ticket.ticket_number} undispatched and moved back to Pending queue.',
+            'status': ticket.status,
+            'status_display': ticket.get_status_display()
+        })
+    return JsonResponse({
+        'success': False,
+        'error': f'Ticket {ticket.ticket_number} is in {ticket.status} status and cannot be undispatched.'
+    }, status=400)
 
 
 @login_required
