@@ -52,13 +52,13 @@
                                     <small class="text-muted fw-bold">{{ ticket.client_name }} <a href="tel:{{ ticket.contact_number }}" class="text-primary"><i class="fas fa-phone"></i></a></small>
                                 </td>
                                 <td class="border-secondary text-muted small">
-                                    {{ ticket.assigned_team.name|default:"-" }}<br>
-                                    <span class="text-info">{{ ticket.completed_at|date:"M d, g:i A" }}</span>
+                                    {{ ticket.team.name|default:ticket.assigned_team.name|default:"-" }}<br>
+                                    <span class="text-info">{{ ticket.time_accomplish|default:ticket.done_at|default:ticket.completed_at|date:"M d, g:i A" }}</span>
                                 </td>
                                 <td class="border-secondary text-muted small">
                                     <div class="d-flex gap-3">
-                                        <div><span class="text-muted">Signal:</span> <span class="text-white">{{ ticket.signal_dbm }} dBm</span></div>
-                                        <div><span class="text-muted">NAP:</span> <span class="text-white">{{ ticket.nap_port }}</span></div>
+                                        <div><span class="text-muted">Signal:</span> <span class="text-white">{{ ticket.signal_level|default:ticket.signal_dbm|default:"-" }} dBm</span></div>
+                                        <div><span class="text-muted">NAP:</span> <span class="text-white">{{ ticket.nap_port|default:"-" }}</span></div>
                                     </div>
                                     <div><span class="text-muted">Payment:</span> <span class="text-warning text-uppercase">{{ ticket.payment_collected|default:"None" }}</span></div>
                                 </td>
@@ -83,12 +83,18 @@
                                                 <div class="col-md-6 border-end border-secondary">
                                                     <h6 class="text-info small fw-bold text-uppercase mb-3">Job Order Data (From Tech)</h6>
                                                     <table class="table table-sm table-borderless text-white small">
-                                                        <tr><td class="text-muted">Cable Length:</td><td>{{ ticket.cable_length }} m</td></tr>
-                                                        <tr><td class="text-muted">Signal Level:</td><td>{{ ticket.signal_dbm }} dBm</td></tr>
-                                                        <tr><td class="text-muted">NAP Port:</td><td>{{ ticket.nap_port }}</td></tr>
-                                                        <tr><td class="text-muted">ONU SN:</td><td>{{ ticket.onu_sn_mac }}</td></tr>
-                                                        <tr><td class="text-muted">Started:</td><td>{{ ticket.started_at|time:"g:i A" }}</td></tr>
-                                                        <tr><td class="text-muted">Completed:</td><td>{{ ticket.completed_at|time:"g:i A" }}</td></tr>
+                                                        <tr><td class="text-muted">Cable Length:</td><td>{{ ticket.cable_length|default:"-" }} m</td></tr>
+                                                        <tr><td class="text-muted">Signal Level:</td><td>{{ ticket.signal_level|default:ticket.signal_dbm|default:"-" }} dBm</td></tr>
+                                                        <tr><td class="text-muted">NAP Port:</td><td>{{ ticket.nap_port|default:"-" }}</td></tr>
+                                                        <tr><td class="text-muted">Pole Number:</td><td>{{ ticket.pole_number|default:"-" }}</td></tr>
+                                                        <tr><td class="text-muted">NAP Reading:</td><td>{{ ticket.nap_reading|default:"-" }} dBm</td></tr>
+                                                        <tr><td class="text-muted">House Reading:</td><td>{{ ticket.house_reading|default:"-" }} dBm</td></tr>
+                                                        <tr><td class="text-muted">ONU / Modem SN:</td><td class="font-monospace text-cyan">{{ ticket.ont_modem_sn|default:ticket.onu_sn_mac|default:"-" }}</td></tr>
+                                                        <tr><td class="text-muted">Started:</td><td>{{ ticket.time_start|default:ticket.started_at|time:"g:i A"|default:"-" }}</td></tr>
+                                                        <tr><td class="text-muted">Completed:</td><td>{{ ticket.time_accomplish|default:ticket.done_at|default:ticket.completed_at|time:"g:i A"|default:"-" }}</td></tr>
+                                                        {% if ticket.technician_remarks %}
+                                                        <tr><td class="text-muted">Tech Remarks:</td><td>{{ ticket.technician_remarks }}</td></tr>
+                                                        {% endif %}
                                                     </table>
                                                 </div>
                                                 <div class="col-md-6">

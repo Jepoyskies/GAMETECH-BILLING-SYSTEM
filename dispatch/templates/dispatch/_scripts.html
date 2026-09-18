@@ -338,6 +338,8 @@
                             document.getElementById('comp-cable-length').value = t.cable_length || '';
                             document.getElementById('comp-nap-reading').value = t.nap_reading || '';
                             document.getElementById('comp-house-reading').value = t.house_reading || '';
+                            const sigEl = document.getElementById('comp-signal-level');
+                            if (sigEl) sigEl.value = t.signal_level || '';
                             document.getElementById('comp-facility').value = t.facility || '';
                             document.getElementById('comp-ont-sn').value = t.ont_modem_sn || '';
                             document.getElementById('comp-acknowledged').value = t.acknowledged_by || '';
@@ -363,6 +365,7 @@
                     cable_length: document.getElementById('comp-cable-length').value,
                     nap_reading: document.getElementById('comp-nap-reading').value,
                     house_reading: document.getElementById('comp-house-reading').value,
+                    signal_level: document.getElementById('comp-signal-level') ? document.getElementById('comp-signal-level').value : '',
                     facility: document.getElementById('comp-facility').value,
                     ont_modem_sn: document.getElementById('comp-ont-sn').value,
                     acknowledged_by: document.getElementById('comp-acknowledged').value,
@@ -652,5 +655,26 @@
                 toastEl.style.transform = 'translateY(10px)';
             }, 3200);
         }
+
+        // Technicals Ranking View Toggle
+        window.toggleTechRanking = function(type) {
+            const staffCont = document.getElementById('tech-rank-staff-container');
+            const teamCont = document.getElementById('tech-rank-team-container');
+            const btnStaff = document.getElementById('btn-rank-by-staff');
+            const btnTeam = document.getElementById('btn-rank-by-team');
+            if (!staffCont || !teamCont) return;
+
+            if (type === 'staff') {
+                staffCont.classList.remove('d-none');
+                teamCont.classList.add('d-none');
+                if (btnStaff) btnStaff.className = 'btn btn-sm rounded-pill px-3 btn-primary text-white';
+                if (btnTeam) btnTeam.className = 'btn btn-sm rounded-pill px-3 btn-dark text-muted';
+            } else {
+                staffCont.classList.add('d-none');
+                teamCont.classList.remove('d-none');
+                if (btnStaff) btnStaff.className = 'btn btn-sm rounded-pill px-3 btn-dark text-muted';
+                if (btnTeam) btnTeam.className = 'btn btn-sm rounded-pill px-3 btn-primary text-white';
+            }
+        };
     };
 </script>

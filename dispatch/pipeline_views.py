@@ -223,12 +223,16 @@ def technician_mobile_ui(request):
             ticket.cable_length = request.POST.get("cable_length")
             ticket.nap_reading = request.POST.get("nap_reading")
             ticket.pole_number = request.POST.get("pole_number")
-            ticket.ont_modem_sn = request.POST.get("ont_modem_sn")
-            ticket.signal_level = request.POST.get("signal_level")
+            ticket.ont_modem_sn = request.POST.get("ont_modem_sn") or request.POST.get("onu_sn_mac")
+            ticket.signal_level = request.POST.get("signal_level") or request.POST.get("signal_dbm")
             ticket.facility = request.POST.get("facility")
             ticket.house_reading = request.POST.get("house_reading")
             ticket.technician_remarks = request.POST.get("technician_remarks")
+            ticket.acknowledged_by = request.POST.get("acknowledged_by")
             ticket.payment_collected = request.POST.get("payment_method")
+            ticket.done_at = timezone.now()
+            if ticket.duration:
+                ticket.done_duration = ticket.duration
             
             ticket.status = 'COMPLETED'  # Wait for QA
             ticket.save()

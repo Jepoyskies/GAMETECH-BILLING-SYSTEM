@@ -13,6 +13,7 @@ from .models import (
     ConfigOption, Technician, Team, AuditLog
 )
 from .forms import MonitoringRecordForm, DispatchRecordForm, JobDetailForm
+from .reports import get_csr_performance_report, get_technician_productivity_report
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +134,10 @@ def dashboard_view(request):
             'scheduled_date': t.scheduled_date.strftime('%b %d, %Y') if t.scheduled_date else 'Not scheduled',
         })
         
+    # Compute Phase 2 Analytical Reports (Legacy Formulas)
+    csr_report = get_csr_performance_report(date_filter=date_filter, date_from=date_from, date_to=date_to)
+    tech_report = get_technician_productivity_report(date_filter=date_filter, date_from=date_from, date_to=date_to)
+
     context = {
         'pending_verification_count': pending_verification_count,
         'awaiting_assignment_count': awaiting_assignment_count,
@@ -152,6 +157,8 @@ def dashboard_view(request):
         'date_from': date_from,
         'date_to': date_to,
         'map_points_json': json.dumps(map_points),
+        'csr_report': csr_report,
+        'tech_report': tech_report,
     }
     return render(request, 'dispatch/dashboard.html', context)
 

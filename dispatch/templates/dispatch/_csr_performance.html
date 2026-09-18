@@ -1,0 +1,136 @@
+<div class="dispatch-card p-4">
+    <!-- Header with summary stats -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-info text-dark px-2 py-1 rounded-pill fw-bold"><i class="fas fa-chart-line me-1"></i> CSR Performance</span>
+                <span class="text-xs text-muted">Admin Operational Statistics</span>
+            </div>
+            <h5 class="fw-bold text-white mb-0">Staff Close Rates & Resolution Quality</h5>
+            <p class="text-muted text-xs mb-0">Proven Formula: Closed &divide; (Handled &minus; Cancelled) &times; 100 &bull; Concerns take priority</p>
+        </div>
+        <!-- Color Legend -->
+        <div class="d-flex align-items-center gap-2 bg-dark p-2 rounded border border-secondary text-xs">
+            <span class="text-muted me-1">Rating Tiers:</span>
+            <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> &ge; 70% Optimal</span>
+            <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-circle me-1"></i> 40-69% Average</span>
+            <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i> &lt; 40% Focus</span>
+        </div>
+    </div>
+
+    <!-- CSR Performance Table -->
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0 text-sm" style="background: transparent;">
+            <thead>
+                <tr class="text-muted text-uppercase text-xs border-secondary">
+                    <th class="ps-3" style="width: 220px;">Staff / CSR Member</th>
+                    <th class="text-center" colspan="4" style="border-left: 1px solid rgba(255,255,255,0.08); border-right: 1px solid rgba(255,255,255,0.08); background: rgba(59, 130, 246, 0.05);">
+                        <i class="fas fa-truck text-primary me-1"></i> Dispatch Jobs
+                    </th>
+                    <th class="text-center" colspan="4" style="border-right: 1px solid rgba(255,255,255,0.08); background: rgba(245, 158, 11, 0.05);">
+                        <i class="fas fa-headset text-warning me-1"></i> Client Concerns
+                    </th>
+                    <th class="text-center" colspan="3" style="background: rgba(16, 185, 129, 0.05);">
+                        <i class="fas fa-trophy text-success me-1"></i> Overall Output
+                    </th>
+                </tr>
+                <tr class="text-muted text-uppercase text-xs border-secondary" style="font-size: 0.72rem;">
+                    <th class="ps-3">Full Name</th>
+                    <!-- Dispatch Columns -->
+                    <th class="text-center" style="border-left: 1px solid rgba(255,255,255,0.08);">Handled</th>
+                    <th class="text-center">Closed</th>
+                    <th class="text-center">Cancelled</th>
+                    <th class="text-center" style="border-right: 1px solid rgba(255,255,255,0.08);">Close Rate</th>
+                    <!-- Concern Columns -->
+                    <th class="text-center">Handled</th>
+                    <th class="text-center">Closed</th>
+                    <th class="text-center">Cancelled</th>
+                    <th class="text-center" style="border-right: 1px solid rgba(255,255,255,0.08);">Close Rate</th>
+                    <!-- Overall Columns -->
+                    <th class="text-center">Total Handled</th>
+                    <th class="text-center">Total Closed</th>
+                    <th class="text-center pe-3">Overall Rate</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in csr_report.rows %}
+                <tr class="border-secondary">
+                    <td class="ps-3 fw-bold text-white">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center bg-dark border border-secondary text-info fw-bold" style="width: 32px; height: 32px; font-size: 0.75rem;">
+                                {{ row.name|slice:":2"|upper }}
+                            </div>
+                            <div>
+                                <div>{{ row.name }}</div>
+                                <span class="text-xs text-muted font-monospace">@{{ row.user.username }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <!-- Dispatch Data -->
+                    <td class="text-center text-muted font-monospace" style="border-left: 1px solid rgba(255,255,255,0.08);">{{ row.disp_handled }}</td>
+                    <td class="text-center text-white font-monospace fw-bold">{{ row.disp_closed }}</td>
+                    <td class="text-center text-muted font-monospace">{{ row.disp_cancelled }}</td>
+                    <td class="text-center" style="border-right: 1px solid rgba(255,255,255,0.08);">
+                        {% if row.disp_handled > 0 %}
+                        <span class="{{ row.disp_tier.badge_class }} px-2 py-1 font-monospace">{{ row.disp_rate }}%</span>
+                        {% else %}
+                        <span class="text-muted text-xs">-</span>
+                        {% endif %}
+                    </td>
+                    <!-- Concern Data -->
+                    <td class="text-center text-muted font-monospace">{{ row.concern_handled }}</td>
+                    <td class="text-center text-white font-monospace fw-bold">{{ row.concern_closed }}</td>
+                    <td class="text-center text-muted font-monospace">{{ row.concern_cancelled }}</td>
+                    <td class="text-center" style="border-right: 1px solid rgba(255,255,255,0.08);">
+                        {% if row.concern_handled > 0 %}
+                        <span class="{{ row.concern_tier.badge_class }} px-2 py-1 font-monospace">{{ row.concern_rate }}%</span>
+                        {% else %}
+                        <span class="text-muted text-xs">-</span>
+                        {% endif %}
+                    </td>
+                    <!-- Overall Data -->
+                    <td class="text-center text-muted font-monospace">{{ row.total_handled }}</td>
+                    <td class="text-center text-success font-monospace fw-bold">{{ row.total_closed }}</td>
+                    <td class="text-center pe-3">
+                        {% if row.total_handled > 0 %}
+                        <span class="{{ row.total_tier.badge_class }} px-2 py-1 font-monospace fw-bold">{{ row.total_rate }}%</span>
+                        {% else %}
+                        <span class="text-muted text-xs">0.0%</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="12" class="text-center text-muted py-4 fst-italic">No staff activity recorded in selected timeframe.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <!-- Summary Row -->
+            <tfoot>
+                <tr class="border-secondary bg-dark" style="font-weight: 700;">
+                    <td class="ps-3 text-uppercase text-xs text-info">Operations Total</td>
+                    <!-- Dispatch Total -->
+                    <td class="text-center text-white font-monospace" style="border-left: 1px solid rgba(255,255,255,0.08);">{{ csr_report.totals.disp_handled }}</td>
+                    <td class="text-center text-white font-monospace">{{ csr_report.totals.disp_closed }}</td>
+                    <td class="text-center text-muted font-monospace">{{ csr_report.totals.disp_cancelled }}</td>
+                    <td class="text-center" style="border-right: 1px solid rgba(255,255,255,0.08);">
+                        <span class="{{ csr_report.totals.disp_tier.badge_class }} px-2 py-1 font-monospace">{{ csr_report.totals.disp_rate }}%</span>
+                    </td>
+                    <!-- Concern Total -->
+                    <td class="text-center text-white font-monospace">{{ csr_report.totals.concern_handled }}</td>
+                    <td class="text-center text-white font-monospace">{{ csr_report.totals.concern_closed }}</td>
+                    <td class="text-center text-muted font-monospace">{{ csr_report.totals.concern_cancelled }}</td>
+                    <td class="text-center" style="border-right: 1px solid rgba(255,255,255,0.08);">
+                        <span class="{{ csr_report.totals.concern_tier.badge_class }} px-2 py-1 font-monospace">{{ csr_report.totals.concern_rate }}%</span>
+                    </td>
+                    <!-- Overall Total -->
+                    <td class="text-center text-white font-monospace">{{ csr_report.totals.total_handled }}</td>
+                    <td class="text-center text-success font-monospace">{{ csr_report.totals.total_closed }}</td>
+                    <td class="text-center pe-3">
+                        <span class="{{ csr_report.totals.total_tier.badge_class }} px-2 py-1 font-monospace">{{ csr_report.totals.total_rate }}%</span>
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
