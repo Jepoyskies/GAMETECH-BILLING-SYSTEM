@@ -267,11 +267,26 @@ def dispatch_qa(request):
             ticket.qa_completed_at = timezone.now()
             ticket.status = 'QA_PASSED'
             ticket.save()
+            JobTicketHistory.objects.create(
+                job_ticket=ticket,
+                actor=request.user,
+                from_status='COMPLETED',
+                to_status='QA_PASSED',
+                note=f"QA Check Passed: {qa_notes or 'Customer satisfied and specs verified.'}"
+            )
             messages.success(request, f"Ticket {ticket.ticket_number} passed QA and sent to Admin.")
         elif action == 'bounce_back':
-            ticket.remarks = f"QA BOUNCED (To Tech): {qa_notes}\n" + (ticket.remarks or "")
+            timestamp_str = timezone.now().strftime("%b %d, %I:%M %p")
+            ticket.remarks = f"[{timestamp_str}] QA BOUNCED TO TECH by {request.user.username}: {qa_notes}\n" + (ticket.remarks or "")
             ticket.status = 'IN_PROGRESS'  # Send back to Tech
             ticket.save()
+            JobTicketHistory.objects.create(
+                job_ticket=ticket,
+                actor=request.user,
+                from_status='COMPLETED',
+                to_status='IN_PROGRESS',
+                note=f"QA Bounced back to Technician: {qa_notes}"
+            )
             messages.warning(request, f"Bounced ticket {ticket.ticket_number} back to Technician.")
             
         return redirect('dispatch_qa')
@@ -299,22 +314,48 @@ def dispatch_approval(request):
                 customer.status = 'active'
                 customer.installation_status = 'installed'
                 customer.installed_at = timezone.now()
+                # 60-day lock on staggered payments if referred by an agent
+                if customer.agent:
+                    customer.agent_lock_until = timezone.now() + timezone.timedelta(days=60)
                 customer.save()
             ticket.status = 'COMPLETED_AND_VERIFIED'
             ticket.done_at = timezone.now()
             ticket.save()
+            JobTicketHistory.objects.create(
+                job_ticket=ticket,
+                actor=request.user,
+                from_status='QA_PASSED',
+                to_status='COMPLETED_AND_VERIFIED',
+                note="Super Admin Final Sign-Off & Activation Approved."
+            )
             messages.success(request, f"Customer {customer.full_name} is now ACTIVE.")
         elif action == 'bounce_dispatch':
             admin_notes = request.POST.get("admin_notes", "No notes provided.")
-            ticket.remarks = f"ADMIN BOUNCED (To Dispatch): {admin_notes}\n" + (ticket.remarks or "")
+            timestamp_str = timezone.now().strftime("%b %d, %I:%M %p")
+            ticket.remarks = f"[{timestamp_str}] ADMIN BOUNCED TO QA by {request.user.username}: {admin_notes}\n" + (ticket.remarks or "")
             ticket.status = 'COMPLETED'  # Sends back to QA
             ticket.save()
+            JobTicketHistory.objects.create(
+                job_ticket=ticket,
+                actor=request.user,
+                from_status='QA_PASSED',
+                to_status='COMPLETED',
+                note=f"Admin Bounced back to Dispatch QA: {admin_notes}"
+            )
             messages.warning(request, f"Bounced ticket {ticket.ticket_number} back to Dispatch QA.")
         elif action == 'bounce_tech':
             admin_notes = request.POST.get("admin_notes", "No notes provided.")
-            ticket.remarks = f"ADMIN BOUNCED (To Tech): {admin_notes}\n" + (ticket.remarks or "")
+            timestamp_str = timezone.now().strftime("%b %d, %I:%M %p")
+            ticket.remarks = f"[{timestamp_str}] ADMIN BOUNCED TO TECH by {request.user.username}: {admin_notes}\n" + (ticket.remarks or "")
             ticket.status = 'IN_PROGRESS'  # Sends back to Tech
             ticket.save()
+            JobTicketHistory.objects.create(
+                job_ticket=ticket,
+                actor=request.user,
+                from_status='QA_PASSED',
+                to_status='IN_PROGRESS',
+                note=f"Admin Bounced back to Technician: {admin_notes}"
+            )
             messages.error(request, f"Bounced ticket {ticket.ticket_number} all the way back to Technician.")
             
         return redirect('dispatch_approval')
