@@ -70,6 +70,12 @@ def portal_dashboard(request):
 
     issue_services = MonitoredService.objects.exclude(status='Up').order_by('-latency_ms')[:10]
     cignal_plans = customer.cignal_plans.all().order_by('-created_at')
+    pending_cignal_requests = AddOnRequest.objects.filter(
+        customer=customer,
+        status="Pending",
+    ).filter(
+        Q(addon_type__icontains="Cignal") | Q(addon_type__icontains="Box")
+    ).order_by("-requested_at")
     customer_tickets = customer.job_tickets.all().order_by('-created_at')
     open_tickets_count = customer_tickets.filter(status__in=['PENDING', 'ASSIGNED', 'IN_PROGRESS']).count()
     recent_ticket = customer_tickets.first()
