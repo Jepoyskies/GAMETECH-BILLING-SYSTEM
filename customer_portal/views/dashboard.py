@@ -1,13 +1,8 @@
 from django.shortcuts import render, redirect
 from django.utils import timezone
-<<<<<<< HEAD
-from django.core.paginator import Paginator
-import datetime
-from billing.models import Customer, Payment, SubscriptionPlan, MonitoredService
-=======
 from django.db.models import Q
+import datetime
 from billing.models import Customer, Payment, SubscriptionPlan, MonitoredService, AddOnRequest
->>>>>>> 0402f1293206f5afaf0f848d3dfb7d02d05ac4df
 import re
 
 import logging
