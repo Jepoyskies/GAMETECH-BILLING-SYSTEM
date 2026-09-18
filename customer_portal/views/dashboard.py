@@ -1,5 +1,7 @@
 from django.shortcuts import render, redirect
 from django.utils import timezone
+from django.core.paginator import Paginator
+import datetime
 from billing.models import Customer, Payment, SubscriptionPlan, MonitoredService
 import re
 
@@ -115,17 +117,24 @@ def portal_statement_view(request):
     if customer.must_change_password:
         return redirect('customer_portal:force_change_password')
 
-    payments = Payment.objects.filter(customer=customer).order_by('-created_at')
-    date_from = request.GET.get('from')
-    date_to = request.GET.get('to')
-    if date_from and date_to:
-        payments = payments.filter(paid_at__date__gte=date_from, paid_at__date__lte=date_to)
-    total_paid = sum(p.amount for p in payments)
+    payments_qs = Payment.objects.filter(customer=customer).order_by('-created_at')
+    
+    available_years = list(payments_qs.dates('created_at', 'year', order='DESC'))
+    available_years = [d.year for d in available_years]
+    
+    year_str = request.GET.get('year')
+    if year_str and year_str.isdigit():
+        current_year = int(year_str)
+    else:
+        current_year = datetime.date.today().year
+
+    payments_qs = payments_qs.filter(created_at__year=current_year)
+    total_paid = sum(p.amount for p in payments_qs)
 
     return render(request, 'customer_portal/portal_statement.html', {
         'customer': customer,
-        'payments': payments,
-        'date_from': date_from,
-        'date_to': date_to,
+        'payments': payments_qs,
+        'available_years': available_years,
+        'current_year': current_year,
         'total_paid': total_paid,
     })

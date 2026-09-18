@@ -5,12 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Statement of Account – {{ customer.full_name }}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
+                    fontFamily: { sans: ['Poppins', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
                     colors: {
                         'gametech-cyan':     '#0349cb',
                         'gametech-darkblue': '#3533cd',
@@ -25,23 +27,41 @@
         body { font-family: 'Poppins', sans-serif; }
         @media print {
             .no-print { display: none !important; }
-            body { background: white !important; padding: 0 !important; }
+            body { 
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                background: white !important; 
+                padding: 0 !important; 
+            }
             .paper { box-shadow: none !important; border: none !important; border-radius: 0 !important; }
         }
     </style>
 </head>
 
-<body class="bg-gray-100 min-h-screen flex flex-col items-center py-6 md:py-10 px-4">
+<body class="bg-gray-100 print:bg-white min-h-screen flex flex-col items-center py-6 md:py-10 px-4 font-sans">
 
-    <!-- THE STATEMENT PAPER -->
-    <div class="paper max-w-4xl w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+    <!-- THE STATEMENT PAPER (Web UI) -->
+    <div class="paper print:hidden max-w-4xl w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
 
         <!-- Document Header -->
         <div class="p-5 md:p-10 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-            <div class="flex flex-col items-start gap-0.5">
-                <img src="{% static 'assets/images/logo_black.png' %}" alt="Gametech Logo" class="h-14 w-auto object-contain mb-2">
-                <p class="text-[11px] text-gray-500">643 St. Therese, Patag, CDO</p>
-                <p class="text-[11px] text-gray-500">Phone: 0830-274-2712</p>
+            <div class="flex justify-between items-start w-full md:w-auto">
+                <div class="flex-1 flex flex-col items-start gap-0.5">
+                    <img src="{% static 'assets/images/logo_black.png' %}" alt="Gametech Logo" class="h-14 w-auto object-contain mb-2">
+                    <p class="text-[11px] text-gray-500">643 St. Therese, Patag, CDO</p>
+                    <p class="text-[11px] text-gray-500">Phone: 0830-274-2712</p>
+                </div>
+                <!-- Mobile Action Buttons -->
+                <div class="flex gap-2 shrink-0 md:hidden print:hidden mt-1">
+                    <!-- Go Back -->
+                    <a href="{% url 'customer_portal:portal_dashboard' %}" class="w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg flex items-center justify-center transition shadow-sm">
+                        <i class="fa-solid fa-arrow-left text-[11px]"></i>
+                    </a>
+                    <!-- Print -->
+                    <button onclick="window.print()" class="w-8 h-8 bg-[#0349cb] hover:bg-blue-800 text-white rounded-lg flex items-center justify-center transition shadow-sm">
+                        <i class="fa-solid fa-print text-[11px]"></i>
+                    </button>
+                </div>
             </div>
             <div class="text-left md:text-right">
                 <h2 class="text-2xl font-bold tracking-widest uppercase text-gray-800">Statement</h2>
@@ -63,15 +83,58 @@
                     <span class="bg-blue-50 text-gametech-cyan px-2 py-0.5 rounded font-bold ml-1 uppercase">{{ customer.status }}</span>
                 </p>
                 <p class="text-xs text-gray-500"><span class="font-semibold text-gray-700">Expiration Date:</span> {{ customer.expires_at|date:"M d, Y h:i A"|default:"None" }}</p>
-                {% if date_from and date_to %}
-                <p class="text-xs text-gray-500"><span class="font-semibold text-gray-700">Filtered Period:</span> {{ date_from }} to {{ date_to }}</p>
+                {% if current_year %}
+                <p class="text-xs text-gray-500"><span class="font-semibold text-gray-700">Filtered Year:</span> {{ current_year }}</p>
                 {% endif %}
             </div>
         </div>
 
-        <!-- Data Table -->
-        <div class="px-5 py-4 md:px-10 md:py-6 overflow-x-auto w-full pb-2">
-            <table class="w-full text-left border-collapse block md:table">
+        <!-- Data Table Section -->
+        <div class="px-5 py-4 md:px-10 md:py-6 w-full pb-2">
+            
+            <!-- HEADER ROW: Title + Typable Year Filter -->
+            <div class="flex justify-between items-center mb-5">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Transaction History</h3>
+
+                <form action="" method="GET" class="flex items-center gap-2">
+                    <div class="relative">
+                        <!-- CUSTOM COMBO-BOX (Typable Input + Dropdown) -->
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" name="year" id="year-input" placeholder="Year" value="{{ current_year }}"
+                            autocomplete="off"
+                            class="w-24 bg-gray-50 border border-gray-200 text-[#0349cb] text-xs font-bold py-1.5 pl-3 pr-8 rounded-lg focus:outline-none focus:border-[#0349cb] focus:ring-1 focus:ring-[#0349cb] shadow-sm transition"
+                            onfocus="document.getElementById('year-options').classList.remove('hidden')"
+                            onblur="setTimeout(() => { document.getElementById('year-options')?.classList.add('hidden'); }, 200)"
+                            oninput="
+                                let v = this.value.toLowerCase();
+                                let opts = document.getElementById('year-options').children;
+                                for(let i=0; i<opts.length; i++) {
+                                    opts[i].style.display = opts[i].innerText.toLowerCase().includes(v) ? 'block' : 'none';
+                                }
+                            ">
+
+                        <!-- CUSTOM BRANDED ARROW -->
+                        <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#0349cb] cursor-pointer"
+                           onclick="document.getElementById('year-input').focus()"></i>
+
+                        <!-- CUSTOM DROPDOWN MENU -->
+                        <div id="year-options" class="hidden absolute top-full left-0 mt-1 w-full bg-white border border-gray-100 rounded-lg shadow-xl z-50 py-1 max-h-48 overflow-y-auto">
+                            {% for y in available_years %}
+                            <div class="px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-blue-50 hover:text-[#0349cb] cursor-pointer transition"
+                                 onclick="document.getElementById('year-input').value = '{{ y }}'; document.getElementById('year-input').form.submit();">
+                                {{ y }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <button type="submit"
+                        class="w-8 h-8 bg-blue-50 text-[#0349cb] rounded-lg flex items-center justify-center hover:bg-[#0349cb] hover:text-white transition shadow-sm border border-blue-100 cursor-pointer">
+                        <i class="fa-solid fa-magnifying-glass text-[11px]"></i>
+                    </button>
+                </form>
+            </div>
+
+            <div class="overflow-x-auto w-full">
+                <table class="w-full text-left border-collapse block md:table">
                 <thead class="hidden md:table-header-group bg-gametech-dusty/50 text-gray-600 text-[10px] uppercase tracking-wider">
                     <tr>
                         <th class="py-3 px-4 font-bold rounded-l-lg">Date Paid</th>
@@ -112,11 +175,12 @@
                     </tr>
                     {% empty %}
                     <tr class="block md:table-row">
-                        <td colspan="6" class="block md:table-cell py-8 text-center text-gray-400 text-xs">No payment records found for this period.</td>
+                        <td colspan="6" class="block md:table-cell py-8 text-center text-gray-400 text-xs">No payment records found for this year.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
         </div>
 
         <!-- Total Row -->
@@ -144,18 +208,88 @@
     </div>
     <!-- END: Statement Paper -->
 
-    <!-- THE BUTTONS — Outside Paper, Horizontal -->
-    <div class="no-print w-full max-w-4xl flex flex-col md:flex-row justify-center gap-4 mt-6">
-        <a href="{% url 'customer_portal:portal_dashboard' %}"
-            class="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-6 py-2.5 rounded-lg text-sm font-bold shadow-sm transition flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-            Go to Dashboard
+    <!-- THE BUTTONS — Outside Paper, Horizontal 50/50 -->
+    <div class="no-print print:hidden max-w-4xl w-full flex flex-row justify-center gap-3 mt-6 px-4 md:px-0">
+        <!-- Secondary Button -->
+        <a href="{% url 'customer_portal:portal_dashboard' %}" class="flex-1 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-2 py-3 rounded-lg text-[10px] sm:text-xs font-bold shadow-sm transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+            <i class="fa-solid fa-arrow-left"></i> Dashboard
         </a>
-        <button onclick="window.print()"
-            class="bg-[#0349cb] hover:bg-[#3533cd] text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow-sm transition flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-            Print / Save as PDF
+        <!-- Primary Button -->
+        <button onclick="window.print()" class="flex-1 bg-[#0349cb] hover:bg-[#3533cd] text-white px-2 py-3 rounded-lg text-[10px] sm:text-xs font-bold shadow-sm transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+            <i class="fa-solid fa-print"></i> Print / PDF
         </button>
     </div>
+
+    <!-- ============================================================== -->
+    <!-- 2. THE PRINT UI (Hidden on screen, visible on print)           -->
+    <!-- ============================================================== -->
+    <div class="hidden print:block w-[80mm] max-w-full mx-auto text-black bg-white font-sans">
+        
+        <!-- Print Header -->
+        <div class="text-center flex flex-col items-center mb-6 pt-4">
+            <img src="{% static 'assets/images/logo_black.png' %}" alt="Gametech Logo" class="h-12 w-auto object-contain mb-3">
+            <p class="text-[10px] leading-tight text-black font-medium">
+                643 St. Therese, Patag, CDO<br>
+                Phone: 0830-274-2712<br>
+                VAT Reg TIN: 000-123-456-000
+            </p>
+        </div>
+
+        <div class="border-b-2 border-dashed border-black mb-4"></div>
+
+        <!-- Print Meta Data -->
+        <div class="text-xs space-y-1 mb-4">
+            <div class="flex justify-between">
+                <span class="font-normal">Receipt No:</span>
+                <span class="font-mono font-bold">#GT-{{ customer.id }}{% now "mdy" %}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="font-normal">Date:</span>
+                <span class="font-mono font-bold">{{ current_date|date:"M d, Y h:i A" }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="font-normal">Customer:</span>
+                <span class="font-bold">{{ customer.full_name }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="font-normal">Account:</span>
+                <span class="font-bold">#{{ customer.id }} ({{ customer.account_type.type_name|default:"Standard" }})</span>
+            </div>
+        </div>
+
+        <div class="border-b-2 border-dashed border-black mb-4"></div>
+
+        <!-- Print Transaction -->
+        <div class="space-y-4 mb-4">
+            {% for p in payments %}
+            <div>
+                <div class="flex justify-between items-start text-xs font-bold">
+                    <span>{{ p.plan_name|default:"Monthly Subscription" }}</span>
+                    <span class="font-mono">₱{{ p.amount|floatformat:2 }}</span>
+                </div>
+                <p class="text-[9px] font-normal mt-0.5">{{ p.paid_at|default:p.created_at|date:"M d, Y" }} - {{ p.payment_method|default:"Cash" }}</p>
+            </div>
+            {% empty %}
+            <div>
+                <p class="text-[10px] font-normal mt-0.5 text-center">No payment records found for this year.</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="border-b-2 border-dashed border-black mb-4"></div>
+
+        <!-- Print Total -->
+        <div class="flex justify-between items-center mt-2 pt-2 border-t-2 border-black">
+            <span class="text-sm font-bold uppercase tracking-widest">Total Paid</span>
+            <span class="text-xl font-bold font-mono">₱{{ total_paid|floatformat:2 }}</span>
+        </div>
+
+        <div class="text-center text-[10px] mt-8 text-black pb-4">
+            <i class="fa-solid fa-qrcode text-4xl mb-3"></i>
+            <p class="font-bold">Thank you for choosing Gametech!</p>
+            <p class="font-medium mt-1">This is an official system-generated receipt.<br>Valid for claiming refunds if applicable.</p>
+        </div>
+    </div>
+
 </body>
 </html>

@@ -58,6 +58,7 @@ def generate_seed_data():
     )
     customers_to_create.append(mei_mei)
     
+    for i in range(10):
         c = Customer(
             full_name=f"New Customer {i}",
             pppoe_username=f"newcust{i}",
