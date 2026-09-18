@@ -103,6 +103,10 @@ function submitAddonRequest() {
             background: isDark ? '#111827' : '#fff',
             color: isDark ? '#e2e8f0' : '#0f172a',
             confirmButtonColor: '#facc15',
+        }).then(() => {
+            if (data.status === 'success') {
+                window.location.reload();
+            }
         });
     })
     .catch(() => {
@@ -110,6 +114,76 @@ function submitAddonRequest() {
         Swal.fire({ title:'Error!', text:'An error occurred. Please try again.', icon:'error', background: isDark?'#111827':'#fff', color: isDark?'#e2e8f0':'#0f172a', confirmButtonColor:'#ef4444' });
     })
     .finally(() => { btn.innerHTML = orig; btn.disabled = false; });
+}
+
+function cancelPortalAddon(requestId, addonType) {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    Swal.fire({
+        title: 'Cancel Request?',
+        text: `Did you click this by accident? Are you sure you want to cancel your request for ${addonType}?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: '<i class="fa-solid fa-xmark me-1"></i> Yes, cancel it',
+        cancelButtonText: 'Keep request',
+        background: isDark ? '#111827' : '#fff',
+        color: isDark ? '#e2e8f0' : '#0f172a',
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`/portal/api/cancel-addon/${requestId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const el = document.getElementById(`portal-pending-addon-${requestId}`);
+                    if (el) {
+                        el.style.transition = 'opacity 0.3s, transform 0.3s';
+                        el.style.opacity = '0';
+                        el.style.transform = 'scale(0.95)';
+                        setTimeout(() => el.remove(), 300);
+                    }
+                    const leftEl = document.getElementById(`portal-left-pending-addon-${requestId}`);
+                    if (leftEl) {
+                        leftEl.remove();
+                    }
+                    Swal.fire({
+                        title: 'Cancelled',
+                        text: data.message || 'Your request has been cancelled.',
+                        icon: 'success',
+                        timer: 1800,
+                        showConfirmButton: false,
+                        background: isDark ? '#111827' : '#fff',
+                        color: isDark ? '#e2e8f0' : '#0f172a',
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Error',
+                        text: data.message || 'Unable to cancel request.',
+                        icon: 'error',
+                        background: isDark ? '#111827' : '#fff',
+                        color: isDark ? '#e2e8f0' : '#0f172a',
+                        confirmButtonColor: '#ef4444'
+                    });
+                }
+            })
+            .catch(() => {
+                Swal.fire({
+                    title: 'Error',
+                    text: 'An unexpected network error occurred.',
+                    icon: 'error',
+                    background: isDark ? '#111827' : '#fff',
+                    color: isDark ? '#e2e8f0' : '#0f172a',
+                    confirmButtonColor: '#ef4444'
+                });
+            });
+        }
+    });
 }
 
 /* ============================================================

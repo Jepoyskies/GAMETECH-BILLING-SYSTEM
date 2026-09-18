@@ -52,13 +52,13 @@
                                     <small class="text-muted fw-bold">{{ ticket.client_name }} <a href="tel:{{ ticket.contact_number }}" class="text-primary"><i class="fas fa-phone"></i></a></small>
                                 </td>
                                 <td class="border-secondary text-muted small">
-                                    {{ ticket.assigned_team.name|default:"-" }}<br>
-                                    <span class="text-info">{{ ticket.completed_at|date:"M d, g:i A" }}</span>
+                                    {{ ticket.team.name|default:"-" }}<br>
+                                    <span class="text-info">{{ ticket.done_at|date:"M d, g:i A"|default:"-" }}</span>
                                 </td>
                                 <td class="border-secondary text-muted small">
                                     <div class="d-flex gap-3">
-                                        <div><span class="text-muted">Signal:</span> <span class="text-white">{{ ticket.signal_dbm }} dBm</span></div>
-                                        <div><span class="text-muted">NAP:</span> <span class="text-white">{{ ticket.nap_port }}</span></div>
+                                        <div><span class="text-muted">Signal:</span> <span class="text-white">{{ ticket.signal_level|default:"-" }} dBm</span></div>
+                                        <div><span class="text-muted">NAP:</span> <span class="text-white">{{ ticket.nap_port|default:"-" }}</span></div>
                                     </div>
                                     <div><span class="text-muted">Payment:</span> <span class="text-warning text-uppercase">{{ ticket.payment_collected|default:"None" }}</span></div>
                                 </td>
@@ -83,12 +83,18 @@
                                                 <div class="col-md-6 border-end border-secondary">
                                                     <h6 class="text-info small fw-bold text-uppercase mb-3">Job Order Data (From Tech)</h6>
                                                     <table class="table table-sm table-borderless text-white small">
-                                                        <tr><td class="text-muted">Cable Length:</td><td>{{ ticket.cable_length }} m</td></tr>
-                                                        <tr><td class="text-muted">Signal Level:</td><td>{{ ticket.signal_dbm }} dBm</td></tr>
-                                                        <tr><td class="text-muted">NAP Port:</td><td>{{ ticket.nap_port }}</td></tr>
-                                                        <tr><td class="text-muted">ONU SN:</td><td>{{ ticket.onu_sn_mac }}</td></tr>
-                                                        <tr><td class="text-muted">Started:</td><td>{{ ticket.started_at|time:"g:i A" }}</td></tr>
-                                                        <tr><td class="text-muted">Completed:</td><td>{{ ticket.completed_at|time:"g:i A" }}</td></tr>
+                                                        <tr><td class="text-muted">Cable Length:</td><td>{{ ticket.cable_length|default:"-" }} m</td></tr>
+                                                        <tr><td class="text-muted">Signal Level:</td><td>{{ ticket.signal_level|default:"-" }} dBm</td></tr>
+                                                        <tr><td class="text-muted">NAP Port:</td><td>{{ ticket.nap_port|default:"-" }}</td></tr>
+                                                        <tr><td class="text-muted">Pole Number:</td><td>{{ ticket.pole_number|default:"-" }}</td></tr>
+                                                        <tr><td class="text-muted">NAP Reading:</td><td>{{ ticket.nap_reading|default:"-" }} dBm</td></tr>
+                                                        <tr><td class="text-muted">House Reading:</td><td>{{ ticket.house_reading|default:"-" }} dBm</td></tr>
+                                                        <tr><td class="text-muted">ONU / Modem SN:</td><td class="font-monospace text-cyan">{{ ticket.ont_modem_sn|default:"-" }}</td></tr>
+                                                        <tr><td class="text-muted">Started:</td><td>{{ ticket.time_start|time:"g:i A"|default:"-" }}</td></tr>
+                                                        <tr><td class="text-muted">Completed:</td><td>{% if ticket.time_accomplish %}{{ ticket.time_accomplish|time:"g:i A" }}{% elif ticket.done_at %}{{ ticket.done_at|time:"g:i A" }}{% else %}-{% endif %}</td></tr>
+                                                        {% if ticket.technician_remarks %}
+                                                        <tr><td class="text-muted">Tech Remarks:</td><td>{{ ticket.technician_remarks }}</td></tr>
+                                                        {% endif %}
                                                     </table>
                                                 </div>
                                                 <div class="col-md-6">
@@ -100,6 +106,15 @@
                                                         <li>Confirm payment method ({{ ticket.payment_collected|upper }})</li>
                                                     </ul>
                                                 </div>
+                                                
+                                                {% if ticket.remarks %}
+                                                <div class="col-12 mt-2">
+                                                    <div class="p-2 rounded bg-dark border border-warning border-opacity-50 text-warning small">
+                                                        <div class="fw-bold mb-1"><i class="fas fa-history me-1"></i> Previous Bounce / Transition Notes:</div>
+                                                        <div class="text-white small font-monospace" style="white-space: pre-line; max-height: 100px; overflow-y: auto;">{{ ticket.remarks }}</div>
+                                                    </div>
+                                                </div>
+                                                {% endif %}
                                             </div>
                                             
                                             <!-- Form to Submit to Admin -->

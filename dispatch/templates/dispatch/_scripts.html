@@ -338,6 +338,8 @@
                             document.getElementById('comp-cable-length').value = t.cable_length || '';
                             document.getElementById('comp-nap-reading').value = t.nap_reading || '';
                             document.getElementById('comp-house-reading').value = t.house_reading || '';
+                            const sigEl = document.getElementById('comp-signal-level');
+                            if (sigEl) sigEl.value = t.signal_level || '';
                             document.getElementById('comp-facility').value = t.facility || '';
                             document.getElementById('comp-ont-sn').value = t.ont_modem_sn || '';
                             document.getElementById('comp-acknowledged').value = t.acknowledged_by || '';
@@ -363,6 +365,7 @@
                     cable_length: document.getElementById('comp-cable-length').value,
                     nap_reading: document.getElementById('comp-nap-reading').value,
                     house_reading: document.getElementById('comp-house-reading').value,
+                    signal_level: document.getElementById('comp-signal-level') ? document.getElementById('comp-signal-level').value : '',
                     facility: document.getElementById('comp-facility').value,
                     ont_modem_sn: document.getElementById('comp-ont-sn').value,
                     acknowledged_by: document.getElementById('comp-acknowledged').value,
@@ -527,5 +530,180 @@
                 });
             }
         });
+
+        // Undispatch Action Handler
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.btn-undispatch');
+            if (btn) {
+                e.preventDefault();
+                const ticketId = btn.dataset.id;
+                const ticketNum = btn.dataset.number || ('#' + ticketId);
+                if (!confirm(`Are you sure you want to undispatch ${ticketNum}? It will be removed from its team and returned to Pending assignment.`)) {
+                    return;
+                }
+                fetch(`/dispatch/api/tickets/${ticketId}/undispatch/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        alert('Error undispatching ticket: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(err => alert('Network error: ' + err));
+            }
+        });
+
+        // Delete Ticket Listener
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.btn-delete-ticket');
+            if (btn) {
+                e.preventDefault();
+                const ticketId = btn.dataset.id;
+                const ticketNum = btn.dataset.number || ('#' + ticketId);
+                if (!confirm(`Are you sure you want to permanently delete ticket ${ticketNum}? This cannot be undone.`)) {
+                    return;
+                }
+                fetch(`/dispatch/api/tickets/${ticketId}/delete/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        alert('Error deleting ticket: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(err => alert('Network error: ' + err));
+            }
+        });
     });
+
+    // ─────────────────────────────────────────────
+    // UNIVERSAL 1-CLICK DISPATCH BRIEF CLIPBOARD HELPER
+    // ─────────────────────────────────────────────
+    window.copyDispatchBrief = function(ticket) {
+        if (!ticket) return;
+        const type = (ticket.ticket_type_display || ticket.ticket_type || 'DISPATCH').toUpperCase();
+        const client = ticket.client_name || '';
+        const phone = ticket.contact_number || '';
+        const address = ticket.address || '';
+        const barangay = ticket.barangay || '';
+        const fullAddress = [address, barangay].filter(Boolean).join(', ');
+        
+        const latLngParts = [];
+        if (ticket.lng || ticket.longitude) latLngParts.push('lng-' + (ticket.lng || ticket.longitude));
+        if (ticket.lat || ticket.latitude) latLngParts.push('lat-' + (ticket.lat || ticket.latitude));
+        const coords = latLngParts.join('  ');
+        
+        const plan = ticket.plan_package ? `Plan: ${ticket.plan_package}` : '';
+        const payment = ticket.payment_method ? `Payment: ${ticket.payment_method}` : '';
+        const planPay = [plan, payment].filter(Boolean).join(' | ');
+        
+        const concern = ticket.concern ? `Concern: ${ticket.concern}` : '';
+        const notes = ticket.special_instruction || ticket.remarks ? `Notes: ${ticket.special_instruction || ticket.remarks}` : '';
+        
+        const lines = [
+            type,
+            '',
+            client,
+            phone,
+            fullAddress,
+            coords,
+            planPay,
+            concern,
+            notes
+        ].filter(function(l) { return l !== null && l !== undefined && l !== ''; });
+        
+        const briefText = lines.join('\n');
+        
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(briefText).then(function() {
+                showBriefToast('Dispatch brief copied to clipboard!');
+            }).catch(function() {
+                fallbackCopyBrief(briefText);
+            });
+        } else {
+            fallbackCopyBrief(briefText);
+        }
+        
+        function fallbackCopyBrief(text) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try {
+                document.execCommand('copy');
+                showBriefToast('Dispatch brief copied to clipboard!');
+            } catch(e) {
+                alert('Failed to copy. Please manually copy:\n\n' + text);
+            }
+            document.body.removeChild(ta);
+        }
+        
+        function showBriefToast(msg) {
+            let toastEl = document.getElementById('gt-clipboard-toast');
+            if (!toastEl) {
+                toastEl = document.createElement('div');
+                toastEl.id = 'gt-clipboard-toast';
+                toastEl.style.position = 'fixed';
+                toastEl.style.bottom = '24px';
+                toastEl.style.right = '24px';
+                toastEl.style.zIndex = '99999';
+                toastEl.style.padding = '12px 22px';
+                toastEl.style.borderRadius = '30px';
+                toastEl.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                toastEl.style.color = '#ffffff';
+                toastEl.style.fontWeight = 'bold';
+                toastEl.style.fontSize = '14px';
+                toastEl.style.boxShadow = '0 10px 25px rgba(0,0,0,0.5)';
+                toastEl.style.display = 'flex';
+                toastEl.style.alignItems = 'center';
+                toastEl.style.gap = '8px';
+                toastEl.style.transition = 'all 0.3s ease';
+                document.body.appendChild(toastEl);
+            }
+            toastEl.innerHTML = '<i class="fas fa-clipboard-check"></i> ' + msg;
+            toastEl.style.opacity = '1';
+            toastEl.style.transform = 'translateY(0)';
+            setTimeout(function() {
+                toastEl.style.opacity = '0';
+                toastEl.style.transform = 'translateY(10px)';
+            }, 3200);
+        }
+
+        // Technicals Ranking View Toggle
+        window.toggleTechRanking = function(type) {
+            const staffCont = document.getElementById('tech-rank-staff-container');
+            const teamCont = document.getElementById('tech-rank-team-container');
+            const btnStaff = document.getElementById('btn-rank-by-staff');
+            const btnTeam = document.getElementById('btn-rank-by-team');
+            if (!staffCont || !teamCont) return;
+
+            if (type === 'staff') {
+                staffCont.classList.remove('d-none');
+                teamCont.classList.add('d-none');
+                if (btnStaff) btnStaff.className = 'btn btn-sm rounded-pill px-3 btn-primary text-white';
+                if (btnTeam) btnTeam.className = 'btn btn-sm rounded-pill px-3 btn-dark text-muted';
+            } else {
+                staffCont.classList.add('d-none');
+                teamCont.classList.remove('d-none');
+                if (btnStaff) btnStaff.className = 'btn btn-sm rounded-pill px-3 btn-dark text-muted';
+                if (btnTeam) btnTeam.className = 'btn btn-sm rounded-pill px-3 btn-primary text-white';
+            }
+        };
+    };
 </script>

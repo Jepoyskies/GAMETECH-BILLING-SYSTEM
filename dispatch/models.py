@@ -197,6 +197,90 @@ class AuditLog(models.Model):
     def __str__(self):
         return f"{self.action} {self.entity_type} {self.entity_id} by {self.actor}"
 
+    @property
+    def diff_list(self):
+        diffs = []
+        before = self.before_data or {}
+        after = self.after_data or {}
+        if not isinstance(before, dict):
+            before = {}
+        if not isinstance(after, dict):
+            after = {}
+
+        DIFF_IGNORE_KEYS = {"created_at", "updated_at", "id", "pk", "deleted_at"}
+
+        FIELD_LABELS = {
+            "name": "Name",
+            "email": "Email",
+            "role": "Role",
+            "phone": "Phone",
+            "contact_number": "Contact #",
+            "address": "Address",
+            "barangay": "Barangay",
+            "barangay_city": "Barangay / City",
+            "client": "Client Name",
+            "client_name": "Client Name",
+            "account_no": "Account #",
+            "concern": "Concern / Issue",
+            "status": "Status",
+            "status_option": "Status",
+            "type_option": "Type",
+            "chat_type_option": "Chat Type",
+            "ticket_type": "Ticket Type",
+            "priority": "Priority",
+            "sales_agent": "Sales Agent",
+            "technicians": "Assigned Techs",
+            "teams": "Assigned Techs / Teams",
+            "remarks": "Remarks",
+            "actions_taken": "Actions Taken",
+            "ticket_number": "Ticket #",
+            "plan_package": "Plan Package",
+            "cable_length": "Cable Length (m)",
+            "signal_level": "Signal Level (dBm)",
+            "signal_dbm": "Signal (dBm)",
+            "nap_port": "NAP Port",
+            "pole_number": "Pole #",
+            "nap_reading": "NAP Reading (dBm)",
+            "house_reading": "House Reading (dBm)",
+            "ont_modem_sn": "ONT/Modem S/N",
+            "onu_sn_mac": "ONU SN / MAC",
+            "payment_method": "Payment Method",
+            "payment_collected": "Payment Collected",
+            "amount_paid": "Amount Paid",
+            "receipt_no": "Receipt #",
+            "facility": "Facility",
+            "special_instruction": "Special Instruction",
+            "technician_remarks": "Technician Remarks",
+            "qa_notes": "QA Notes",
+            "admin_notes": "Admin Notes",
+            "time_start": "Service Start",
+            "time_accomplish": "Service End",
+            "done_at": "Date Completed",
+            "color": "Color",
+            "label": "Label",
+            "active": "Active",
+            "sort_order": "Sort Order",
+        }
+
+        all_keys = sorted(set(before.keys()).union(set(after.keys())))
+        for k in all_keys:
+            if k.lower() in DIFF_IGNORE_KEYS:
+                continue
+            old_v = before.get(k)
+            new_v = after.get(k)
+            if old_v != new_v:
+                label = FIELD_LABELS.get(k, k.replace('_', ' ').title())
+                diffs.append({
+                    'field': k,
+                    'label': label,
+                    'old': str(old_v) if old_v is not None else '-',
+                    'new': str(new_v) if new_v is not None else '-',
+                    'is_change': (k in before and k in after),
+                    'is_addition': (k not in before),
+                    'is_deletion': (k not in after),
+                })
+        return diffs
+
 
 class JobTicket(models.Model):
     TICKET_TYPE_CHOICES = (
@@ -225,6 +309,12 @@ class JobTicket(models.Model):
         ('INTERNET_INSTALL', 'INTERNET_INSTALL'),
         ('CIGNAL_PLAY', 'CIGNAL_PLAY'),
         ('CLIENT_CONCERNS', 'CLIENT_CONCERNS'),
+    )
+    PAYMENT_METHOD_CHOICES = (
+        ('CASH', 'Cash'),
+        ('GCASH', 'GCash'),
+        ('BANK_TRANSFER', 'Bank Transfer'),
+        ('OTHER', 'Other'),
     )
 
     ticket_number = models.CharField(max_length=50, unique=True, blank=True)
@@ -287,6 +377,7 @@ class JobTicket(models.Model):
     sla_rebates_given = models.IntegerField(default=0)
     
     # New Fields for QA and Payment
+    payment_method = models.CharField(max_length=30, choices=PAYMENT_METHOD_CHOICES, default='CASH', blank=True, null=True, db_index=True)
     payment_collected = models.CharField(max_length=50, blank=True, null=True)
     qa_notes = models.TextField(blank=True, null=True)
     qa_completed_at = models.DateTimeField(null=True, blank=True)
@@ -312,6 +403,38 @@ class JobTicket(models.Model):
         elif h >= 24:
             return 'amber'
         return 'normal'
+
+    @property
+    def turnaround_display(self):
+        end_time = self.time_accomplish or self.done_at
+        if self.duration:
+            mins = self.duration
+            if mins < 60:
+                return f"{mins}m"
+            hours = mins // 60
+            rem_mins = mins % 60
+            return f"{hours}h {rem_mins}m" if rem_mins else f"{hours}h"
+        if self.time_start and end_time:
+            delta = end_time - self.time_start
+            total_mins = int(delta.total_seconds() // 60)
+            if total_mins < 60:
+                return f"{total_mins}m"
+            hours = total_mins // 60
+            rem_mins = total_mins % 60
+            return f"{hours}h {rem_mins}m" if rem_mins else f"{hours}h"
+        if self.created_at and end_time:
+            delta = end_time - self.created_at
+            total_mins = int(delta.total_seconds() // 60)
+            if total_mins < 60:
+                return f"{total_mins}m"
+            hours = total_mins // 60
+            if hours < 24:
+                rem_mins = total_mins % 60
+                return f"{hours}h {rem_mins}m" if rem_mins else f"{hours}h"
+            days = hours // 24
+            rem_hours = hours % 24
+            return f"{days}d {rem_hours}h" if rem_hours else f"{days}d"
+        return "In Progress" if self.status in ['ASSIGNED', 'IN_PROGRESS'] else "-"
 
     class Meta:
         ordering = ['-created_at']

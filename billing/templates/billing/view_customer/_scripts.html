@@ -390,4 +390,64 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 });
+
+function cancelCustomerCignalAddon(requestId, addonType, isFromModal) {
+    const isDark = document.documentElement.classList.contains('dark-mode');
+    Swal.fire({
+        title: 'Cancel Request?',
+        html: `Cancel and delete the pending <strong>${addonType}</strong> request for <strong>{{ customer.full_name|escapejs }}</strong>?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: '<i class="fas fa-trash-alt me-1"></i> Yes, Cancel Request',
+        cancelButtonText: 'Keep Request',
+        background: isDark ? '#1e293b' : '#fff',
+        color: isDark ? '#f8fafc' : '#0f172a'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            if (isFromModal) {
+                const modalEl = document.querySelector('.modal.show');
+                if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
+            }
+            fetch(`/cignal-dashboard/applications/${requestId}/cancel/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const banner = document.getElementById('cignalPendingBanner');
+                    if (banner) {
+                        banner.style.transition = 'all 0.3s ease';
+                        banner.style.opacity = '0';
+                        setTimeout(() => {
+                            banner.remove();
+                            const card = document.querySelector('.cignal-pending-card');
+                            if (card) card.classList.remove('cignal-pending-card');
+                        }, 300);
+                    }
+                    Swal.fire({
+                        title: 'Cancelled!',
+                        text: data.message || 'Request successfully cancelled.',
+                        icon: 'success',
+                        timer: 1800,
+                        showConfirmButton: false,
+                        background: isDark ? '#1e293b' : '#fff',
+                        color: isDark ? '#f8fafc' : '#0f172a'
+                    });
+                } else {
+                    Swal.fire({ title: 'Error', text: data.message || 'Unable to cancel request.', icon: 'error' });
+                }
+            })
+            .catch(() => {
+                Swal.fire({ title: 'Error', text: 'Network error occurred.', icon: 'error' });
+            });
+        }
+    });
+}
 </script>

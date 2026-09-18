@@ -1,18 +1,25 @@
+import csv
 import json
 import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.http import JsonResponse, HttpResponse
 from django.contrib import messages
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, Max
 from billing.models import Customer
 from network_manager.models import MikrotikDevice
 from .models import (
-    JobTicket, DispatchRecord, MonitoringRecord, JobDetail,
+    JobTicket, JobTicketHistory, DispatchRecord, MonitoringRecord, JobDetail,
     ConfigOption, Technician, Team, AuditLog
 )
 from .forms import MonitoringRecordForm, DispatchRecordForm, JobDetailForm
+from .reports import get_csr_performance_report, get_technician_productivity_report
+from .analytics import (
+    get_operational_overview_stats, get_overview_kpis_and_chart,
+    get_monitoring_summary, get_monthly_targets_data
+)
 
 logger = logging.getLogger(__name__)
 
@@ -56,14 +63,53 @@ def dashboard_view(request):
     # Filter parameters
     status_filter = request.GET.get('status', 'ALL')
     type_filter = request.GET.get('type', 'ALL')
+    source_tab_filter = request.GET.get('source_tab', 'ALL')
+    team_filter = request.GET.get('team', 'ALL')
     search_q = request.GET.get('q', '').strip()
+    date_filter = request.GET.get('date_range', 'all')
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
+    
+    # Operational Rule: Live Queue Cards ALWAYS ignore the date filter (showing current live reality)
+    pending_verification_count = Customer.objects.filter(status='pending', is_verified=False).count()
+    awaiting_assignment_count = JobTicket.objects.filter(status='PENDING').count()
+    active_in_field_count = JobTicket.objects.filter(status__in=['ASSIGNED', 'IN_PROGRESS']).count()
+    pending_qa_approval_count = JobTicket.objects.filter(status__in=['COMPLETED', 'QA_PASSED']).count()
+    total_techs_count = Technician.objects.count()
+
+    # Closed and historical metrics: respect the date filter (completion date)
+    closed_qs = JobTicket.objects.filter(status__in=['COMPLETED', 'QA_PASSED'])
+    cancelled_qs = JobTicket.objects.filter(status='CANCELLED')
     
     tickets_qs = JobTicket.objects.select_related('customer', 'team', 'mikrotik_device').prefetch_related('technicians')
+    
+    if date_filter == 'today':
+        tickets_qs = tickets_qs.filter(created_at__date=today)
+        closed_qs = closed_qs.filter(done_at__date=today)
+        cancelled_qs = cancelled_qs.filter(updated_at__date=today)
+    elif date_filter == 'this_month':
+        tickets_qs = tickets_qs.filter(created_at__year=today.year, created_at__month=today.month)
+        closed_qs = closed_qs.filter(done_at__year=today.year, done_at__month=today.month)
+        cancelled_qs = cancelled_qs.filter(updated_at__year=today.year, updated_at__month=today.month)
+    elif date_filter == 'custom' and date_from and date_to:
+        tickets_qs = tickets_qs.filter(created_at__date__gte=date_from, created_at__date__lte=date_to)
+        closed_qs = closed_qs.filter(done_at__date__gte=date_from, done_at__date__lte=date_to)
+        cancelled_qs = cancelled_qs.filter(updated_at__date__gte=date_from, updated_at__date__lte=date_to)
+
+    closed_count = closed_qs.count()
+    cancelled_count = cancelled_qs.count()
     
     if status_filter != 'ALL':
         tickets_qs = tickets_qs.filter(status=status_filter)
     if type_filter != 'ALL':
         tickets_qs = tickets_qs.filter(ticket_type=type_filter)
+    if source_tab_filter != 'ALL':
+        if source_tab_filter == 'CLIENT_CONCERNS':
+            tickets_qs = tickets_qs.filter(Q(source_tab='CLIENT_CONCERNS') | Q(chat_type__icontains='concern'))
+        else:
+            tickets_qs = tickets_qs.filter(source_tab=source_tab_filter)
+    if team_filter != 'ALL' and team_filter.isdigit():
+        tickets_qs = tickets_qs.filter(team_id=int(team_filter))
     if search_q:
         tickets_qs = tickets_qs.filter(
             Q(ticket_number__icontains=search_q) |
@@ -97,25 +143,47 @@ def dashboard_view(request):
             'lat': t.latitude,
             'lng': t.longitude,
             'plan_package': t.plan_package or '',
+            'payment_method': t.payment_method or 'CASH',
             'concern': t.concern or '',
             'assigned_team': t.team.name if t.team else 'Unassigned',
             'scheduled_date': t.scheduled_date.strftime('%b %d, %Y') if t.scheduled_date else 'Not scheduled',
         })
         
+    # Compute Legacy Analytical Sections
+    operational_overview = get_operational_overview_stats()
+    overview_data = get_overview_kpis_and_chart(date_filter=date_filter, date_from=date_from, date_to=date_to)
+    monitoring_summary = get_monitoring_summary(date_filter=date_filter, date_from=date_from, date_to=date_to)
+    monthly_targets = get_monthly_targets_data()
+    csr_report = get_csr_performance_report(date_filter=date_filter, date_from=date_from, date_to=date_to)
+    tech_report = get_technician_productivity_report(date_filter=date_filter, date_from=date_from, date_to=date_to)
+
     context = {
         'pending_verification_count': pending_verification_count,
         'awaiting_assignment_count': awaiting_assignment_count,
         'active_in_field_count': active_in_field_count,
         'pending_qa_approval_count': pending_qa_approval_count,
         'total_techs_count': total_techs_count,
+        'closed_count': closed_count,
+        'cancelled_count': cancelled_count,
         'tickets': tickets,
         'teams': teams,
         'technicians': technicians,
         'mikrotik_devices': mikrotik_devices,
         'status_filter': status_filter,
         'type_filter': type_filter,
+        'source_tab_filter': source_tab_filter,
+        'team_filter': team_filter,
         'search_q': search_q,
+        'date_filter': date_filter,
+        'date_from': date_from,
+        'date_to': date_to,
         'map_points_json': json.dumps(map_points),
+        'operational_overview': operational_overview,
+        'overview_data': overview_data,
+        'monitoring_summary': monitoring_summary,
+        'monthly_targets': monthly_targets,
+        'csr_report': csr_report,
+        'tech_report': tech_report,
     }
     return render(request, 'dispatch/dashboard.html', context)
 
@@ -248,10 +316,12 @@ def api_create_ticket(request):
         sales_agent_val = data.get('sales_agent')
         if sales_agent_val:
             from billing.models import Agent
-            if str(sales_agent_val).isdigit():
-                agent_obj = Agent.objects.filter(id=int(sales_agent_val)).first()
-            if not agent_obj:
-                agent_obj = Agent.objects.filter(name__iexact=str(sales_agent_val).strip()).first()
+            val_clean = str(sales_agent_val).strip()
+            if val_clean.lower() not in ['', 'none', 'null', 'walk-in', 'direct', 'walk-in / direct', 'walk-in/direct', 'walkin']:
+                if val_clean.isdigit():
+                    agent_obj = Agent.objects.filter(id=int(val_clean)).first()
+                if not agent_obj:
+                    agent_obj = Agent.objects.filter(name__iexact=val_clean).first()
         
         cust_id = data.get('customer_id') or None
         is_test = False
@@ -266,6 +336,10 @@ def api_create_ticket(request):
         if agent_obj and getattr(agent_obj, 'is_test_data', False):
             is_test = True
 
+        raw_pay_method = data.get('payment_method', 'CASH').upper()
+        if raw_pay_method not in ['CASH', 'GCASH', 'BANK_TRANSFER', 'OTHER']:
+            raw_pay_method = 'CASH'
+
         ticket = JobTicket.objects.create(
             client_name=client_name,
             address=data.get('address', '').strip(),
@@ -275,6 +349,7 @@ def api_create_ticket(request):
             sales_agent=agent_obj,
             is_test_data=is_test,
             plan_package=data.get('plan_package', '').strip(),
+            payment_method=raw_pay_method,
             ticket_type=data.get('ticket_type', 'INSTALLATION'),
             priority=data.get('priority', 'NORMAL'),
             status='PENDING',
@@ -362,6 +437,45 @@ def api_update_status(request, ticket_id):
         return JsonResponse({'success': True, 'status': ticket.status, 'status_display': ticket.get_status_display()})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def api_undispatch_ticket(request, ticket_id):
+    """
+    API endpoint: Reverts an Assigned or In-Progress JobTicket back to Pending.
+    Clears assigned team and technicians, resets timers, and writes a history audit log.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+
+    ticket = get_object_or_404(JobTicket, id=ticket_id)
+    if ticket.status in ['ASSIGNED', 'IN_PROGRESS']:
+        old_status = ticket.status
+        old_team_name = ticket.team.name if ticket.team else 'Unassigned'
+        ticket.status = 'PENDING'
+        ticket.team = None
+        ticket.technicians.clear()
+        ticket.time_start = None
+        ticket.save()
+
+        JobTicketHistory.objects.create(
+            job_ticket=ticket,
+            actor=request.user,
+            from_status=old_status,
+            to_status='PENDING',
+            note=f"Undispatched via API by {request.user.get_full_name() or request.user.username}. Removed from {old_team_name} and returned to Pending assignment queue."
+        )
+        log_audit('UPDATE', 'JobTicket', ticket.id, request.user, summary=f"Undispatched ticket {ticket.ticket_number} (reverted to PENDING)")
+        return JsonResponse({
+            'success': True,
+            'message': f'Ticket {ticket.ticket_number} undispatched and moved back to Pending queue.',
+            'status': ticket.status,
+            'status_display': ticket.get_status_display()
+        })
+    return JsonResponse({
+        'success': False,
+        'error': f'Ticket {ticket.ticket_number} is in {ticket.status} status and cannot be undispatched.'
+    }, status=400)
 
 
 @login_required
@@ -553,9 +667,307 @@ def audit_log_view(request):
 def management_view(request):
     teams = Team.objects.all()
     technicians = Technician.objects.select_related('team').all()
+    
+    # Auto-seed baseline options if table is empty
+    if not ConfigOption.objects.filter(module='DISPATCH').exists():
+        defaults = [
+            ('DISPATCH', 'STATUS', 'Pending', '#f59e0b', 1, True),
+            ('DISPATCH', 'STATUS', 'Assigned', '#3b82f6', 2, False),
+            ('DISPATCH', 'STATUS', 'In Progress', '#06b6d4', 3, False),
+            ('DISPATCH', 'STATUS', 'Done', '#10b981', 4, True),
+            ('DISPATCH', 'STATUS', 'Cancelled', '#ef4444', 5, True),
+            ('DISPATCH', 'TYPE', 'Installation', '#10b981', 1, True),
+            ('DISPATCH', 'TYPE', 'Repair', '#ef4444', 2, True),
+            ('DISPATCH', 'TYPE', 'Cignal', '#a855f7', 3, False),
+            ('DISPATCH', 'TYPE', 'Migration', '#06b6d4', 4, False),
+            ('MONITORING', 'CHAT_TYPE', 'Inquiry', '#3b82f6', 1, True),
+            ('MONITORING', 'CHAT_TYPE', 'Concern', '#f59e0b', 2, True),
+            ('MONITORING', 'CHAT_TYPE', 'Follow-up', '#6366f1', 3, False),
+        ]
+        for mod, ltype, lbl, clr, sorder, hcode in defaults:
+            ConfigOption.objects.get_or_create(
+                module=mod, list_type=ltype, label=lbl,
+                defaults={'color': clr, 'sort_order': sorder, 'active': True, 'hardcoded': hcode}
+            )
+
     config_options = ConfigOption.objects.all().order_by('module', 'list_type', 'sort_order')
+    locked_labels = {'done', 'cancelled', 'pending', 'installation', 'repair', 'concern', 'inquiry'}
+    for opt in config_options:
+        opt.is_locked = opt.hardcoded or (opt.label.strip().lower() in locked_labels)
+
     return render(request, 'dispatch/management.html', {
         'teams': teams,
         'technicians': technicians,
         'config_options': config_options
     })
+
+
+@login_required
+def export_tickets_csv(request):
+    """
+    Export Dispatch tickets to CSV matching legacy DMS columns:
+    Ticket #, Status, Date Created, Date Completed, Turnaround, Client, Address, Barangay, Contact, Type, Concern, Team, Technicians
+    Filtered by date, type, status, source_tab, or search query.
+    """
+    today = timezone.now().date()
+    qs = JobTicket.objects.select_related('customer', 'team').prefetch_related('technicians')
+
+    date_filter = request.GET.get('date_range', 'all')
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
+    status_filter = request.GET.get('status', 'ALL')
+    type_filter = request.GET.get('type', 'ALL')
+    source_tab_filter = request.GET.get('source_tab', 'ALL')
+    search_q = request.GET.get('q', '').strip()
+    month = request.GET.get('month', '')
+
+    if month and month.isdigit():
+        qs = qs.filter(created_at__month=int(month), created_at__year=today.year)
+    elif date_filter == 'today':
+        qs = qs.filter(created_at__date=today)
+    elif date_filter == 'this_month':
+        qs = qs.filter(created_at__year=today.year, created_at__month=today.month)
+    elif date_filter == 'custom' and date_from and date_to:
+        qs = qs.filter(created_at__date__gte=date_from, created_at__date__lte=date_to)
+
+    if status_filter != 'ALL':
+        qs = qs.filter(status=status_filter)
+    if type_filter != 'ALL':
+        qs = qs.filter(ticket_type=type_filter)
+    if source_tab_filter != 'ALL':
+        if source_tab_filter == 'CLIENT_CONCERNS':
+            qs = qs.filter(Q(source_tab='CLIENT_CONCERNS') | Q(chat_type__icontains='concern'))
+        else:
+            qs = qs.filter(source_tab=source_tab_filter)
+    if search_q:
+        qs = qs.filter(
+            Q(ticket_number__icontains=search_q) |
+            Q(client_name__icontains=search_q) |
+            Q(contact_number__icontains=search_q) |
+            Q(address__icontains=search_q) |
+            Q(barangay__icontains=search_q)
+        )
+
+    response = HttpResponse(content_type='text/csv')
+    timestamp_str = timezone.now().strftime('%Y%m%d_%H%M%S')
+    response['Content-Disposition'] = f'attachment; filename="dispatch_tickets_{timestamp_str}.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow([
+        'Ticket #', 'Status', 'Date Created', 'Date Completed', 'Turnaround',
+        'Client Name', 'Address', 'Barangay', 'Contact', 'Type', 'Concern',
+        'Assigned Team', 'Technicians', 'Signal (dBm)', 'Modem SN'
+    ])
+
+    for t in qs.order_by('-created_at')[:5000]:
+        techs_str = ", ".join(tech.name for tech in t.technicians.all())
+        created_str = t.created_at.strftime('%Y-%m-%d %H:%M') if t.created_at else ''
+        done_str = t.done_at.strftime('%Y-%m-%d %H:%M') if t.done_at else ''
+        writer.writerow([
+            t.ticket_number,
+            t.get_status_display(),
+            created_str,
+            done_str,
+            t.turnaround_display,
+            t.client_name,
+            t.address or '',
+            t.barangay or '',
+            t.contact_number or '',
+            t.get_ticket_type_display(),
+            t.concern or '',
+            t.team.name if t.team else 'Unassigned',
+            techs_str,
+            t.signal_level or '',
+            t.ont_modem_sn or ''
+        ])
+
+    return response
+
+
+@login_required
+@require_POST
+def api_delete_ticket(request, ticket_id):
+    if not (request.user.is_staff or request.user.is_superuser):
+        return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
+    ticket = get_object_or_404(JobTicket, id=ticket_id)
+    ticket_num = ticket.ticket_number
+    ticket.delete()
+    log_audit('DELETE', 'JobTicket', ticket_id, request.user, summary=f"Deleted ticket {ticket_num}")
+    return JsonResponse({'success': True, 'message': f"Ticket {ticket_num} deleted successfully."})
+
+
+# --- Phase 3 APIs: Customer Autofill & Duplicate Name Lockout ---
+
+@login_required
+def api_customer_search(request):
+    """
+    Live customer search endpoint for real-time autofill.
+    Searches by name, phone, address, and pppoe_username.
+    """
+    q = request.GET.get('q', '').strip()
+    limit = int(request.GET.get('limit', 10))
+    if not q or len(q) < 2:
+        return JsonResponse({'success': True, 'customers': []})
+
+    from billing.models import Customer
+    from django.db.models import Q
+
+    customers = Customer.objects.filter(
+        Q(full_name__icontains=q) |
+        Q(phone__icontains=q) |
+        Q(address__icontains=q) |
+        Q(pppoe_username__icontains=q)
+    ).select_related('barangay', 'plan')[:limit]
+
+    results = []
+    for c in customers:
+        results.append({
+            'id': c.id,
+            'name': c.full_name,
+            'phone': c.phone or '',
+            'address': c.address or '',
+            'barangay': c.barangay.name if c.barangay else '',
+            'barangay_id': c.barangay_id,
+            'plan_name': c.plan.name if c.plan else '',
+            'plan_id': c.plan_id,
+            'pppoe_username': c.pppoe_username or '',
+            'latitude': c.latitude,
+            'longitude': c.longitude,
+            'account_no': getattr(c, 'account_number', c.pppoe_username or ''),
+        })
+    return JsonResponse({'success': True, 'customers': results})
+
+
+@login_required
+def api_customer_check_name(request):
+    """
+    Real-time duplicate customer name verification.
+    Triggers red-border lockout on client forms if unconfirmed exact match is detected.
+    """
+    name = request.GET.get('name', '').strip()
+    exclude_id = request.GET.get('exclude_id')
+    if not name:
+        return JsonResponse({'success': True, 'exists': False})
+
+    from billing.models import Customer
+    qs = Customer.objects.filter(full_name__iexact=name)
+    if exclude_id and str(exclude_id).isdigit():
+        qs = qs.exclude(id=int(exclude_id))
+
+    existing = qs.first()
+    return JsonResponse({
+        'success': True,
+        'exists': existing is not None,
+        'customer_id': existing.id if existing else None,
+        'customer_name': existing.full_name if existing else None,
+        'phone': existing.phone if existing else '',
+        'address': existing.address if existing else ''
+    })
+
+
+# --- Phase 3 APIs: Dynamic Dropdown Config Manager ---
+
+LOCKED_SYSTEM_LABELS = {'done', 'cancelled', 'pending', 'installation', 'repair', 'concern', 'inquiry'}
+
+@login_required
+@require_POST
+def api_config_options_create(request):
+    if not (request.user.is_staff or request.user.is_superuser):
+        return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
+
+    data = json.loads(request.body.decode('utf-8')) if request.body else request.POST
+    label = data.get('label', '').strip()
+    module = data.get('module', 'MONITORING').strip().upper()
+    list_type = data.get('list_type', 'STATUS').strip().upper()
+    color = data.get('color', '#6b7280').strip()
+    active = data.get('active', True)
+    if isinstance(active, str):
+        active = active.lower() in ('true', '1', 'yes')
+
+    if not label:
+        return JsonResponse({'success': False, 'error': 'Label is required.'}, status=400)
+    if module not in ['DISPATCH', 'MONITORING']:
+        return JsonResponse({'success': False, 'error': 'Invalid module.'}, status=400)
+    if list_type not in ['STATUS', 'TYPE', 'CHAT_TYPE']:
+        return JsonResponse({'success': False, 'error': 'Invalid list type.'}, status=400)
+
+    if ConfigOption.objects.filter(module=module, list_type=list_type, label__iexact=label).exists():
+        return JsonResponse({'success': False, 'error': f'An option with label "{label}" already exists in {module} {list_type}.'}, status=400)
+
+    max_order = ConfigOption.objects.filter(module=module, list_type=list_type).aggregate(Max('sort_order'))['sort_order__max'] or 0
+    opt = ConfigOption.objects.create(
+        module=module,
+        list_type=list_type,
+        label=label,
+        color=color,
+        sort_order=max_order + 1,
+        active=active,
+        hardcoded=False
+    )
+    log_audit('CREATE', 'ConfigOption', opt.id, request.user, summary=f"Created {module} {list_type} option: {label}", after={'label': label, 'color': color, 'active': active})
+    return JsonResponse({
+        'success': True,
+        'option': {
+            'id': opt.id, 'module': opt.module, 'list_type': opt.list_type,
+            'label': opt.label, 'color': opt.color, 'active': opt.active, 'hardcoded': opt.hardcoded
+        }
+    })
+
+
+@login_required
+@require_POST
+def api_config_options_update(request, option_id):
+    if not (request.user.is_staff or request.user.is_superuser):
+        return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
+
+    opt = get_object_or_404(ConfigOption, id=option_id)
+    data = json.loads(request.body.decode('utf-8')) if request.body else request.POST
+
+    is_locked = opt.hardcoded or (opt.label.strip().lower() in LOCKED_SYSTEM_LABELS)
+    before_data = {'label': opt.label, 'color': opt.color, 'active': opt.active}
+
+    new_label = data.get('label', '').strip()
+    if new_label and not is_locked:
+        if ConfigOption.objects.filter(module=opt.module, list_type=opt.list_type, label__iexact=new_label).exclude(id=opt.id).exists():
+            return JsonResponse({'success': False, 'error': f'An option with label "{new_label}" already exists.'}, status=400)
+        opt.label = new_label
+
+    if 'color' in data:
+        opt.color = str(data['color']).strip()
+
+    if 'active' in data:
+        val = data['active']
+        if isinstance(val, str):
+            opt.active = val.lower() in ('true', '1', 'yes')
+        else:
+            opt.active = bool(val)
+
+    opt.save()
+    after_data = {'label': opt.label, 'color': opt.color, 'active': opt.active}
+    log_audit('UPDATE', 'ConfigOption', opt.id, request.user, summary=f"Updated config option #{opt.id} ({opt.label})", before=before_data, after=after_data)
+
+    return JsonResponse({
+        'success': True,
+        'option': {
+            'id': opt.id, 'module': opt.module, 'list_type': opt.list_type,
+            'label': opt.label, 'color': opt.color, 'active': opt.active, 'hardcoded': is_locked
+        }
+    })
+
+
+@login_required
+@require_POST
+def api_config_options_delete(request, option_id):
+    if not (request.user.is_staff or request.user.is_superuser):
+        return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
+
+    opt = get_object_or_404(ConfigOption, id=option_id)
+    if opt.hardcoded or (opt.label.strip().lower() in LOCKED_SYSTEM_LABELS):
+        return JsonResponse({'success': False, 'error': f'"{opt.label}" is a system-critical option and cannot be deleted. You can recolor it or toggle active.'}, status=400)
+
+    label = opt.label
+    opt.delete()
+    log_audit('DELETE', 'ConfigOption', option_id, request.user, summary=f"Deleted custom config option: {label}")
+    return JsonResponse({'success': True, 'message': f'Option "{label}" deleted successfully.'})
+
+

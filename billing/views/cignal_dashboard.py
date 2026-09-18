@@ -610,6 +610,40 @@ def cignal_applications_view(request):
     }
     return render(request, "billing/cignal_applications.html", context)
 
+
+@login_required
+@require_POST
+def cancel_cignal_application(request, request_id):
+    """
+    Cancel / delete a pending Cignal add-on or box application.
+    Accessible from Cignal Applications list and Customer Profile view.
+    """
+    addon_req = get_object_or_404(AddOnRequest, id=request_id)
+    customer = addon_req.customer
+    addon_type = addon_req.addon_type
+
+    try:
+        AuditLog.objects.create(
+            customer=customer,
+            admin_user=request.user,
+            action_type="Cignal Request Cancelled",
+            remarks=f"Cancelled pending {addon_type} request for {customer.full_name} (PPPoE: {customer.pppoe_username})",
+        )
+    except Exception:
+        pass
+
+    addon_req.delete()
+    messages.success(request, f"Pending request for {addon_type} by {customer.full_name} has been cancelled.")
+
+    if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", ""):
+        return JsonResponse({"status": "success", "message": f"Request for {addon_type} has been cancelled."})
+
+    referer = request.META.get("HTTP_REFERER")
+    if referer:
+        return redirect(referer)
+    return redirect("cignal_applications")
+
+
 @login_required
 def cignal_logs_view(request):
     cignal_payments = CignalPlay.objects.all().select_related("customer").order_by("-created_at")[:50]

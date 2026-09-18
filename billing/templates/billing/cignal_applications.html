@@ -22,7 +22,7 @@
       </div>
       <div class="d-flex align-items-center gap-2">
         <a href="{% url 'cignal_dashboard' %}" class="btn btn-outline-secondary fw-bold gt-btn"><i class="fas fa-arrow-left me-2"></i> Dashboard</a>
-        <span class="badge bg-warning text-dark px-3 py-2 rounded-pill" style="font-size: 0.85rem;"><span class="cignal-live-dot"></span> {{ pending_applications_count }} Pending</span>
+        <span class="badge bg-warning text-dark px-3 py-2 rounded-pill" style="font-size: 0.85rem;"><span class="cignal-live-dot"></span> <span id="cignalAppHeaderCount">{{ pending_applications_count }}</span> Pending</span>
       </div>
     </div>
   </div>
@@ -34,7 +34,7 @@
         <div class="cignal-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
           <div class="d-flex align-items-center gap-2">
             <h6 class="mb-0 text-light fw-bold"><i class="fas fa-file-signature text-warning me-1"></i> Pending Applications Queue</h6>
-            <span class="badge bg-warning text-dark rounded-pill px-2.5 py-1 fw-bold" style="font-size: 0.72rem;">{{ pending_applications_count }} Pending</span>
+            <span class="badge bg-warning text-dark rounded-pill px-2.5 py-1 fw-bold" style="font-size: 0.72rem;"><span id="cignalAppCardCount">{{ pending_applications_count }}</span> Pending</span>
           </div>
           <small class="text-muted" style="font-size:0.78rem;"><i class="fas fa-info-circle me-1"></i>Portal applications awaiting external loading & enrollment verification</small>
         </div>
@@ -51,7 +51,7 @@
             </thead>
             <tbody>
               {% for app in applications %}
-              <tr id="app-row-{{ app.customer.id }}">
+              <tr id="cignal-app-row-{{ app.id }}">
                 <td>
                   <a href="{% url 'view_customer' app.customer.id %}" class="fw-bold text-decoration-none text-info d-block">
                     {{ app.customer.full_name|default:app.customer.pppoe_username }}
@@ -80,7 +80,7 @@
                   <small class="text-muted">{{ app.requested_at|date:"M d, Y — g:i A" }}</small>
                 </td>
                 <td class="text-end">
-                  <div class="d-flex justify-content-end align-items-center gap-1">
+                  <div class="d-flex justify-content-end align-items-center gap-1.5">
                     <button type="button"
                       class="btn btn-sm btn-warning fw-bold rounded-pill px-3 py-1 shadow-sm gt-btn"
                       data-bs-toggle="modal"
@@ -91,6 +91,13 @@
                     <a href="{% url 'view_customer' app.customer.id %}" class="btn-cignal-icon gt-btn" title="View Customer Profile">
                       <i class="fas fa-user"></i>
                     </a>
+                    <button type="button"
+                      class="btn btn-sm btn-outline-danger rounded-circle p-0 d-flex align-items-center justify-content-center gt-btn"
+                      style="width: 32px; height: 32px; font-size: 0.78rem;"
+                      title="Cancel / Delete Application Request"
+                      onclick="confirmCancelCignalApp('{{ app.id }}', '{{ app.customer.full_name|escapejs }}', '{{ app.addon_type|escapejs }}')">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -120,5 +127,90 @@
 {% for app in applications %}
   {% include "billing/partials/_cignal_activation_modal.html" with modal_id="cignalAppModal_" modal_suffix=app.id target_customer=app.customer target_request=app from_dashboard=True %}
 {% endfor %}
+
+<script>
+function confirmCancelCignalApp(requestId, customerName, addonType, isFromModal) {
+    const isDark = document.documentElement.classList.contains('dark-mode');
+    Swal.fire({
+        title: 'Cancel Application?',
+        html: `Are you sure you want to cancel and delete the pending <strong>${addonType}</strong> request for <strong>${customerName}</strong>?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: '<i class="fas fa-trash-alt me-1"></i> Yes, Cancel Request',
+        cancelButtonText: 'Keep Application',
+        background: isDark ? '#1e293b' : '#fff',
+        color: isDark ? '#f8fafc' : '#0f172a'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            if (isFromModal) {
+                const modalEl = document.querySelector('.modal.show');
+                if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
+            }
+            fetch(`/cignal-dashboard/applications/${requestId}/cancel/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const row = document.getElementById(`cignal-app-row-${requestId}`);
+                    if (row) {
+                        row.style.transition = 'all 0.3s ease';
+                        row.style.opacity = '0';
+                        row.style.transform = 'scale(0.95)';
+                        setTimeout(() => {
+                            row.remove();
+                            const tbody = document.querySelector('table.table tbody');
+                            const remainingRows = tbody.querySelectorAll('tr[id^="cignal-app-row-"]');
+                            if (remainingRows.length === 0) {
+                                tbody.innerHTML = `
+                                  <tr>
+                                    <td colspan="5">
+                                      <div class="d-flex flex-column align-items-center justify-content-center py-5 text-center cignal-empty-state">
+                                        <div class="mb-3 p-3 rounded-circle" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
+                                            <i class="fas fa-check-circle fa-2x"></i>
+                                        </div>
+                                        <h6 class="text-white fw-bold mb-1">All Applications Cleared</h6>
+                                        <p class="text-muted small mb-0">There are currently no pending Cignal Play or TV Box requests.</p>
+                                      </div>
+                                    </td>
+                                  </tr>`;
+                            }
+                        }, 300);
+                    }
+                    // Update badge counts
+                    ['cignalAppHeaderCount', 'cignalAppCardCount'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) {
+                            let count = parseInt(el.textContent.trim()) || 0;
+                            el.textContent = Math.max(0, count - 1);
+                        }
+                    });
+                    Swal.fire({
+                        title: 'Cancelled!',
+                        text: data.message || 'Request successfully cancelled.',
+                        icon: 'success',
+                        timer: 1800,
+                        showConfirmButton: false,
+                        background: isDark ? '#1e293b' : '#fff',
+                        color: isDark ? '#f8fafc' : '#0f172a'
+                    });
+                } else {
+                    Swal.fire({ title: 'Error', text: data.message || 'Unable to cancel request.', icon: 'error' });
+                }
+            })
+            .catch(() => {
+                Swal.fire({ title: 'Error', text: 'Network error occurred.', icon: 'error' });
+            });
+        }
+    });
+}
+</script>
 
 {% endblock %}

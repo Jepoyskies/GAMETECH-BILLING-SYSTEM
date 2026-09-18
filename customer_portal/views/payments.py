@@ -1,6 +1,7 @@
-﻿from django.shortcuts import redirect
+from django.shortcuts import redirect
 from django.contrib import messages
 from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 from django.utils import timezone
 from django.db import transaction
 from django.urls import reverse
@@ -184,3 +185,26 @@ def portal_apply_addon(request):
         link=customer_url,
     )
     return JsonResponse({"status": "success", "message": "Request submitted successfully. Our staff will contact you soon."})
+
+
+@require_POST
+def portal_cancel_addon(request, request_id):
+    """
+    Allow a customer to cancel their own pending add-on application if clicked accidentally.
+    """
+    customer_id = request.session.get("customer_id")
+    if not customer_id:
+        return JsonResponse({"status": "error", "message": "Unauthorized. Please log in."}, status=401)
+
+    try:
+        addon_req = AddOnRequest.objects.get(id=request_id, customer_id=customer_id, status="Pending")
+    except AddOnRequest.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Pending request not found or already processed."}, status=404)
+
+    addon_type = addon_req.addon_type
+    addon_req.delete()
+
+    return JsonResponse({
+        "status": "success",
+        "message": f"Your request for {addon_type} has been cancelled."
+    })

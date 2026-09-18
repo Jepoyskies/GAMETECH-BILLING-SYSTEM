@@ -1,8 +1,13 @@
 from django.shortcuts import render, redirect
 from django.utils import timezone
+<<<<<<< HEAD
 from django.core.paginator import Paginator
 import datetime
 from billing.models import Customer, Payment, SubscriptionPlan, MonitoredService
+=======
+from django.db.models import Q
+from billing.models import Customer, Payment, SubscriptionPlan, MonitoredService, AddOnRequest
+>>>>>>> 0402f1293206f5afaf0f848d3dfb7d02d05ac4df
 import re
 
 import logging
@@ -33,7 +38,7 @@ def portal_dashboard(request):
         return redirect('customer_portal:force_change_password')
 
     plan = customer.plan
-    payments = Payment.objects.filter(customer=customer).order_by('-created_at')[:10]
+    payments = customer.payments.all().order_by('-paid_at')[:10]
     plans = SubscriptionPlan.objects.all().order_by('price')
 
     effective_status = 'Excellent'
@@ -71,6 +76,12 @@ def portal_dashboard(request):
 
     issue_services = MonitoredService.objects.exclude(status='Up').order_by('-latency_ms')[:10]
     cignal_plans = customer.cignal_plans.all().order_by('-created_at')
+    pending_cignal_requests = AddOnRequest.objects.filter(
+        customer=customer,
+        status="Pending",
+    ).filter(
+        Q(addon_type__icontains="Cignal") | Q(addon_type__icontains="Box")
+    ).order_by("-requested_at")
     customer_tickets = customer.job_tickets.all().order_by('-created_at')
     open_tickets_count = customer_tickets.filter(status__in=['PENDING', 'ASSIGNED', 'IN_PROGRESS']).count()
     recent_ticket = customer_tickets.first()
@@ -95,6 +106,7 @@ def portal_dashboard(request):
         'payments': payments,
         'plans': plans,
         'cignal_plans': cignal_plans,
+        'pending_cignal_requests': pending_cignal_requests,
         'issue_services': issue_services,
         'open_tickets_count': open_tickets_count,
         'recent_ticket': recent_ticket,

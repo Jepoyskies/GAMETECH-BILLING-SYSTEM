@@ -1,96 +1,223 @@
 {% extends "billing/base.html" %}
 {% load static %}
 
-{% block title %}Audit Log - Gametech Unli Fiber{% endblock %}
+{% block title %}System Audit Log - Gametech Unli Fiber{% endblock %}
 
 {% block extra_css %}
-<!-- DataTables CSS -->
-<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css"/>
 {% include "dispatch/_styles.html" %}
 <style>
-    .table-container {
-        border-radius: 12px;
-        padding: 0;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    .diff-del {
+        background: rgba(239, 68, 68, 0.15);
+        color: #fca5a5;
+        padding: 2px 6px;
+        border-radius: 4px;
+        text-decoration: line-through;
+        font-family: monospace;
     }
-    table.dataTable {
-        border-collapse: collapse !important;
+    .diff-ins {
+        background: rgba(16, 185, 129, 0.15);
+        color: #86efac;
+        padding: 2px 6px;
+        border-radius: 4px;
+        text-decoration: none;
+        font-weight: 600;
+        font-family: monospace;
     }
-    table.dataTable thead th {
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        color: #94a3b8;
+    .json-box {
+        background: #0d1117;
+        color: #e6edf3;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 6px;
+        padding: 10px;
+        font-family: monospace;
+        font-size: 0.75rem;
+        max-height: 220px;
+        overflow-y: auto;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <main class="content px-3 px-md-4 py-4">
-    <div class="live-header-row mb-4">
-        <h2 class="live-title" style="color: #fff; font-weight: 700;">
-            <div class="kpi-icon icon-blue" style="width: 48px; height: 48px; font-size: 1.4rem; margin-right: 0;">
-                <i class="fas fa-history"></i>
+    <!-- Header -->
+    <div class="dispatch-header d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-secondary px-2 py-1 rounded-pill"><i class="fas fa-shield-alt"></i> Security & Audit</span>
+                <span class="text-xs text-muted">Field Dispatch System v2.0</span>
             </div>
-            System Audit Log
-        </h2>
+            <h2 class="h3 fw-bold text-white mb-0">System Audit Log</h2>
+            <p class="text-muted text-sm mb-0">Track all operational changes, ticket state transitions, assignments, and completions</p>
+        </div>
+        <div>
+            <a href="{% url 'dispatch_dashboard' %}" class="btn btn-outline-secondary rounded-pill px-3">
+                <i class="fas fa-arrow-left me-1"></i> Back to Console
+            </a>
+        </div>
     </div>
 
-    <div style="border: 1px solid rgba(255,255,255,0.05); background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(12px); border-radius: 12px; margin-bottom: 2rem; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-        <div class="p-0">
-            <div class="table-responsive p-3">
-                <table class="table table-dark table-hover align-middle mb-0 w-100" id="auditTable" style="background: transparent;">
-                    <thead>
-                        <tr class="text-muted text-uppercase text-xs border-secondary">
-                            <th>Date & Time</th>
-                            <th>Action</th>
-                            <th>Entity</th>
-                            <th>Actor</th>
-                            <th>Summary</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for log in logs %}
-                        <tr class="border-secondary">
-                            <td class="text-xs text-muted">{{ log.created_at|date:"M d, Y h:i A" }}</td>
-                            <td>
-                                {% if log.action == 'CREATE' %}
-                                    <span class="badge bg-success text-xs">CREATE</span>
-                                {% elif log.action == 'UPDATE' %}
-                                    <span class="badge bg-primary text-xs">UPDATE</span>
-                                {% elif log.action == 'DELETE' %}
-                                    <span class="badge bg-danger text-xs">DELETE</span>
-                                {% else %}
-                                    <span class="badge bg-secondary text-xs">{{ log.action }}</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-xs">{{ log.entity_type }} #{{ log.entity_id }}</td>
-                            <td class="fw-bold text-white">{{ log.actor.username|default:"System" }}</td>
-                            <td class="text-xs text-muted">{{ log.summary }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+    <!-- Audit Log Table with Expandable Rows -->
+    <div class="gt-cl-card p-4" style="background: rgba(31, 41, 55, 0.4);">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0 text-sm" id="auditTable" style="background: transparent;">
+                <thead>
+                    <tr class="text-muted text-uppercase text-xs border-secondary">
+                        <th style="width: 40px;"></th>
+                        <th style="width: 170px;">When</th>
+                        <th style="width: 100px;">Action</th>
+                        <th style="width: 180px;">Record</th>
+                        <th style="width: 150px;">Performed By</th>
+                        <th>Summary</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <!-- Main Summary Row -->
+                    <tr class="border-secondary cursor-pointer" data-bs-toggle="collapse" data-bs-target="#diff-drawer-{{ log.id }}" aria-expanded="false">
+                        <td class="text-center">
+                            <i class="fas fa-chevron-right text-muted expand-chevron transition-all" id="chevron-{{ log.id }}"></i>
+                        </td>
+                        <td class="text-xs text-muted">{{ log.created_at|date:"M d, Y h:i A" }}</td>
+                        <td>
+                            {% if log.action == 'CREATE' %}
+                                <span class="badge bg-success text-xs">CREATE</span>
+                            {% elif log.action == 'UPDATE' %}
+                                <span class="badge bg-primary text-xs">UPDATE</span>
+                            {% elif log.action == 'DELETE' %}
+                                <span class="badge bg-danger text-xs">DELETE</span>
+                            {% else %}
+                                <span class="badge bg-secondary text-xs">{{ log.action }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-xs fw-semibold text-white">
+                            <span class="badge bg-dark border border-secondary text-info">{{ log.entity_type }} #{{ log.entity_id }}</span>
+                        </td>
+                        <td class="fw-bold text-white text-xs">
+                            <i class="fas fa-user-circle text-primary me-1"></i>{{ log.actor.username|default:"System" }}
+                        </td>
+                        <td class="text-xs text-light">{{ log.summary|default:"State transition logged" }}</td>
+                    </tr>
+
+                    <!-- Expandable Sub-Row (Clean Diff View + Raw JSON Toggle) -->
+                    <tr class="collapse-row border-secondary">
+                        <td colspan="6" class="p-0 border-0">
+                            <div class="collapse" id="diff-drawer-{{ log.id }}">
+                                <div class="p-3 my-2 mx-3 rounded bg-dark border border-secondary border-opacity-30 shadow-sm">
+                                    <!-- View Switcher Tabs -->
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <ul class="nav nav-pills gap-1 p-1 bg-black bg-opacity-40 rounded-pill d-inline-flex text-xs" role="tablist">
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link active rounded-pill px-3 py-1 text-xs" id="tab-diff-btn-{{ log.id }}" data-bs-toggle="pill" data-bs-target="#tab-diff-{{ log.id }}" type="button" role="tab">
+                                                    <i class="fas fa-code-compare me-1"></i> Clean Diff View
+                                                </button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link rounded-pill px-3 py-1 text-xs text-muted" id="tab-json-btn-{{ log.id }}" data-bs-toggle="pill" data-bs-target="#tab-json-{{ log.id }}" type="button" role="tab">
+                                                    <i class="fas fa-file-code me-1"></i> Raw JSON View
+                                                </button>
+                                            </li>
+                                        </ul>
+                                        <span class="text-xs text-muted">ID: #{{ log.id }}</span>
+                                    </div>
+
+                                    <div class="tab-content">
+                                        <!-- 1. Clean Diff View -->
+                                        <div class="tab-pane fade show active" id="tab-diff-{{ log.id }}" role="tabpanel">
+                                            {% if log.diff_list %}
+                                            <div class="table-responsive">
+                                                <table class="table table-dark table-sm align-middle mb-0 text-xs" style="background: transparent;">
+                                                    <thead>
+                                                        <tr class="text-muted text-uppercase text-xs border-secondary">
+                                                            <th style="width: 200px;">Field Name</th>
+                                                            <th>Value Transition</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for d in log.diff_list %}
+                                                        <tr class="border-secondary border-opacity-25">
+                                                            <td class="fw-bold text-info">
+                                                                <span>{% if d.label %}{{ d.label }}{% else %}{{ d.field }}{% endif %}</span>
+                                                                {% if d.label and d.label != d.field %}
+                                                                <span class="text-muted text-xs font-monospace ms-1 opacity-50">({{ d.field }})</span>
+                                                                {% endif %}
+                                                            </td>
+                                                            <td>
+                                                                {% if d.is_change %}
+                                                                    <span class="diff-del">{{ d.old }}</span>
+                                                                    <i class="fas fa-arrow-right text-muted mx-2"></i>
+                                                                    <span class="diff-ins">{{ d.new }}</span>
+                                                                {% elif d.is_addition %}
+                                                                    <span class="badge bg-success bg-opacity-20 text-success me-1">+ Added</span>
+                                                                    <span class="diff-ins">{{ d.new }}</span>
+                                                                {% elif d.is_deletion %}
+                                                                    <span class="badge bg-danger bg-opacity-20 text-danger me-1">- Removed</span>
+                                                                    <span class="diff-del">{{ d.old }}</span>
+                                                                {% endif %}
+                                                            </td>
+                                                        </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            {% else %}
+                                            <div class="text-muted text-xs py-2 fst-italic">
+                                                <i class="fas fa-info-circle me-1"></i> No discrete field modifications recorded in payload.
+                                            </div>
+                                            {% endif %}
+                                        </div>
+
+                                        <!-- 2. Raw JSON View (Side-by-Side) -->
+                                        <div class="tab-pane fade" id="tab-json-{{ log.id }}" role="tabpanel">
+                                            <div class="row g-2">
+                                                <div class="col-12 col-md-6">
+                                                    <span class="text-xs text-muted fw-bold d-block mb-1">Before Data:</span>
+                                                    <div class="json-box">
+                                                        <pre class="mb-0 text-light">{{ log.before_data|default:"{}" }}</pre>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-md-6">
+                                                    <span class="text-xs text-muted fw-bold d-block mb-1">After Data:</span>
+                                                    <div class="json-box">
+                                                        <pre class="mb-0 text-light">{{ log.after_data|default:"{}" }}</pre>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="fas fa-clipboard-check fa-3x mb-3 text-secondary"></i>
+                            <p class="mb-0">No system audit records logged yet.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </main>
 {% endblock %}
 
 {% block extra_js %}
-<!-- DataTables JS -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-<script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
-
 <script>
-$(document).ready(function() {
-    $('#auditTable').DataTable({
-        "order": [[ 0, "desc" ]],
-        "pageLength": 25,
-        "language": {
-            "search": "",
-            "searchPlaceholder": "Search logs...",
-            "emptyTable": "No audit logs available."
-        }
+document.addEventListener('DOMContentLoaded', function() {
+    // Rotate chevron on collapse show/hide
+    document.querySelectorAll('.collapse').forEach(function(el) {
+        el.addEventListener('show.bs.collapse', function() {
+            const rowId = this.id.replace('diff-drawer-', '');
+            const ch = document.getElementById('chevron-' + rowId);
+            if (ch) ch.style.transform = 'rotate(90deg)';
+        });
+        el.addEventListener('hide.bs.collapse', function() {
+            const rowId = this.id.replace('diff-drawer-', '');
+            const ch = document.getElementById('chevron-' + rowId);
+            if (ch) ch.style.transform = 'rotate(0deg)';
+        });
     });
 });
 </script>

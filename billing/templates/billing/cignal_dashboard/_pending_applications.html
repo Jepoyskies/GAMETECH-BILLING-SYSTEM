@@ -5,15 +5,15 @@
         <i class="fas fa-file-signature text-warning me-1"></i>
         Pending Applications
       </h6>
-      <span class="badge bg-warning text-dark rounded-pill px-2.5 py-1 fw-bold" style="font-size: 0.72rem;">
-        {{ pending_applications_count|default:applications|length }} Pending
-      </span>
+      <a href="{% url 'cignal_applications' %}" class="btn btn-sm btn-warning text-dark fw-bold rounded-pill px-2.5 py-0.5 d-inline-flex align-items-center gap-1 shadow-sm text-decoration-none gt-btn" style="font-size: 0.72rem;" title="Go to Cignal Play Applications Queue">
+        <span id="cignalPendingBadgeCount">{{ pending_applications_count|default:applications|length }}</span> Pending <i class="fas fa-arrow-right ms-0.5" style="font-size: 0.65rem;"></i>
+      </a>
     </div>
     <div class="p-0">
       {% if applications %}
-      <div class="list-group list-group-flush bg-transparent" style="max-height: 380px; overflow-y: auto; scrollbar-width: thin;">
+      <div id="cignalPendingListGroup" class="list-group list-group-flush bg-transparent" style="max-height: 380px; overflow-y: auto; scrollbar-width: thin;">
         {% for app in applications %}
-        <div id="app-row-{{ app.customer.id }}" class="list-group-item bg-transparent border-secondary border-opacity-10 p-3 {% if request.GET.highlight_customer == app.customer.id|stringformat:'s' %}bg-warning bg-opacity-10{% endif %}">
+        <div id="cignal-card-row-{{ app.id }}" class="list-group-item bg-transparent border-secondary border-opacity-10 p-3 {% if request.GET.highlight_customer == app.customer.id|stringformat:'s' %}bg-warning bg-opacity-10{% endif %}">
           <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
             <div class="min-w-0">
               <a href="{% url 'view_customer' app.customer.id %}" class="fw-bold text-decoration-none text-info d-block text-truncate" style="font-size:0.88rem;">
@@ -34,9 +34,9 @@
             <small class="text-muted" style="font-size:0.72rem;">
               <i class="far fa-clock me-1"></i>{{ app.requested_at|date:"M d, g:i A" }}
             </small>
-            <div class="d-flex gap-1">
+            <div class="d-flex gap-1 align-items-center">
               <button type="button"
-                class="btn btn-sm btn-warning fw-bold rounded-pill px-3 py-1 shadow-sm gt-btn"
+                class="btn btn-sm btn-warning fw-bold rounded-pill px-2.5 py-1 shadow-sm gt-btn"
                 style="font-size:0.75rem;"
                 data-bs-toggle="modal"
                 data-bs-target="#cignalAppModal_{{ app.id }}"
@@ -46,6 +46,13 @@
               <a href="{% url 'view_customer' app.customer.id %}" class="btn btn-sm btn-outline-secondary rounded-circle p-0 d-flex align-items-center justify-content-center" style="width: 26px; height: 26px; font-size: 0.72rem;" title="View Customer Profile">
                 <i class="fas fa-user"></i>
               </a>
+              <button type="button"
+                class="btn btn-sm btn-outline-danger rounded-circle p-0 d-flex align-items-center justify-content-center gt-btn"
+                style="width: 26px; height: 26px; font-size: 0.7rem;"
+                title="Cancel / Delete Request"
+                onclick="confirmCancelCignalApp('{{ app.id }}', '{{ app.customer.full_name|escapejs }}', '{{ app.addon_type|escapejs }}')">
+                <i class="fas fa-trash-alt"></i>
+              </button>
             </div>
           </div>
         </div>

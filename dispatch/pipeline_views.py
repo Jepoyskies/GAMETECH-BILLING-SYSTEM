@@ -51,6 +51,10 @@ def dispatch_verification(request):
         
         # Create Job Ticket with Agent Handoff Snapshot
         pay_display = customer.get_preferred_payment_method_display()
+        ticket_pay_method = (customer.preferred_payment_method or 'CASH').upper()
+        if ticket_pay_method not in ['CASH', 'GCASH', 'BANK_TRANSFER', 'OTHER']:
+            ticket_pay_method = 'CASH'
+        
         ticket = JobTicket.objects.create(
             customer=customer,
             client_name=customer.full_name,
@@ -58,6 +62,7 @@ def dispatch_verification(request):
             contact_number=customer.phone,
             account_no=customer.pppoe_username,
             plan_package=plan.name,
+            payment_method=ticket_pay_method,
             mikrotik_device=mikrotik,
             sales_agent=customer.agent,
             is_test_data=getattr(customer, 'is_test_data', False),
@@ -90,15 +95,18 @@ def dispatch_verification(request):
     except Exception:
         pass
 
+    from billing.models import Barangay
     prospects = Customer.objects.filter(status='pending', is_verified=False)
     plans = SubscriptionPlan.objects.all()
     mikrotiks = MikrotikDevice.objects.all()
+    barangays = Barangay.objects.all()
     today = timezone.now().date().strftime("%Y-%m-%d")
     
     return render(request, "dispatch/pipeline/1_verification.html", {
         "prospects": prospects,
         "plans": plans,
         "mikrotiks": mikrotiks,
+        "barangays": barangays,
         "today": today
     })
 
@@ -136,15 +144,50 @@ def dispatch_assignment(request):
     except Exception:
         pass
 
-    pending_tickets = JobTicket.objects.filter(status='PENDING')
+    pending_tickets = JobTicket.objects.filter(status='PENDING').select_related('customer', 'team').prefetch_related('technicians').order_by('-created_at')
+    ongoing_tickets = JobTicket.objects.filter(status__in=['ASSIGNED', 'IN_PROGRESS']).select_related('customer', 'team').prefetch_related('technicians').order_by('-created_at')
     teams = Team.objects.all()
     technicians = Technician.objects.all()
+    active_tab = request.GET.get('tab', 'pending')
     
     return render(request, "dispatch/pipeline/2_assignment.html", {
-        "tickets": pending_tickets,
+        "pending_tickets": pending_tickets,
+        "ongoing_tickets": ongoing_tickets,
         "teams": teams,
-        "technicians": technicians
+        "technicians": technicians,
+        "active_tab": active_tab,
+        "pending_count": pending_tickets.count(),
+        "ongoing_count": ongoing_tickets.count(),
     })
+
+@login_required
+def dispatch_undispatch(request, ticket_id):
+    """
+    Undispatch: Bounces an Assigned or In-Progress JobTicket back to Pending.
+    Clears the assigned team and technicians, resets timers, and logs an audit history entry.
+    """
+    if request.method == "POST":
+        ticket = get_object_or_404(JobTicket, id=ticket_id)
+        if ticket.status in ['ASSIGNED', 'IN_PROGRESS']:
+            old_status = ticket.status
+            old_team_name = ticket.team.name if ticket.team else 'No Team'
+            ticket.status = 'PENDING'
+            ticket.team = None
+            ticket.technicians.clear()
+            ticket.time_start = None
+            ticket.save()
+
+            JobTicketHistory.objects.create(
+                job_ticket=ticket,
+                actor=request.user,
+                from_status=old_status,
+                to_status="PENDING",
+                note=f"Undispatched by {request.user.get_full_name() or request.user.username}. Removed from {old_team_name} and returned to Pending assignment queue."
+            )
+            messages.success(request, f"Ticket {ticket.ticket_number} successfully undispatched and returned to Pending queue.")
+        else:
+            messages.warning(request, f"Ticket {ticket.ticket_number} is in {ticket.status} status and cannot be undispatched.")
+    return redirect('dispatch_assignment')
 
 @login_required
 def technician_mobile_ui(request):
@@ -183,12 +226,16 @@ def technician_mobile_ui(request):
             ticket.cable_length = request.POST.get("cable_length")
             ticket.nap_reading = request.POST.get("nap_reading")
             ticket.pole_number = request.POST.get("pole_number")
-            ticket.ont_modem_sn = request.POST.get("ont_modem_sn")
-            ticket.signal_level = request.POST.get("signal_level")
+            ticket.ont_modem_sn = request.POST.get("ont_modem_sn") or request.POST.get("onu_sn_mac")
+            ticket.signal_level = request.POST.get("signal_level") or request.POST.get("signal_dbm")
             ticket.facility = request.POST.get("facility")
             ticket.house_reading = request.POST.get("house_reading")
             ticket.technician_remarks = request.POST.get("technician_remarks")
+            ticket.acknowledged_by = request.POST.get("acknowledged_by")
             ticket.payment_collected = request.POST.get("payment_method")
+            ticket.done_at = timezone.now()
+            if ticket.duration:
+                ticket.done_duration = ticket.duration
             
             ticket.status = 'COMPLETED'  # Wait for QA
             ticket.save()
@@ -196,8 +243,10 @@ def technician_mobile_ui(request):
             
         return redirect('technician_mobile_ui')
         
+    active_ticket = assigned_tickets.first()
     return render(request, "dispatch/pipeline/3_tech_mobile.html", {
-        "tickets": assigned_tickets
+        "tickets": assigned_tickets,
+        "ticket": active_ticket
     })
 
 @login_required
@@ -218,11 +267,26 @@ def dispatch_qa(request):
             ticket.qa_completed_at = timezone.now()
             ticket.status = 'QA_PASSED'
             ticket.save()
+            JobTicketHistory.objects.create(
+                job_ticket=ticket,
+                actor=request.user,
+                from_status='COMPLETED',
+                to_status='QA_PASSED',
+                note=f"QA Check Passed: {qa_notes or 'Customer satisfied and specs verified.'}"
+            )
             messages.success(request, f"Ticket {ticket.ticket_number} passed QA and sent to Admin.")
         elif action == 'bounce_back':
-            ticket.remarks = f"QA BOUNCED (To Tech): {qa_notes}\n" + (ticket.remarks or "")
+            timestamp_str = timezone.now().strftime("%b %d, %I:%M %p")
+            ticket.remarks = f"[{timestamp_str}] QA BOUNCED TO TECH by {request.user.username}: {qa_notes}\n" + (ticket.remarks or "")
             ticket.status = 'IN_PROGRESS'  # Send back to Tech
             ticket.save()
+            JobTicketHistory.objects.create(
+                job_ticket=ticket,
+                actor=request.user,
+                from_status='COMPLETED',
+                to_status='IN_PROGRESS',
+                note=f"QA Bounced back to Technician: {qa_notes}"
+            )
             messages.warning(request, f"Bounced ticket {ticket.ticket_number} back to Technician.")
             
         return redirect('dispatch_qa')
@@ -250,22 +314,48 @@ def dispatch_approval(request):
                 customer.status = 'active'
                 customer.installation_status = 'installed'
                 customer.installed_at = timezone.now()
+                # 60-day lock on staggered payments if referred by an agent
+                if customer.agent:
+                    customer.agent_lock_until = timezone.now() + timezone.timedelta(days=60)
                 customer.save()
             ticket.status = 'COMPLETED_AND_VERIFIED'
             ticket.done_at = timezone.now()
             ticket.save()
+            JobTicketHistory.objects.create(
+                job_ticket=ticket,
+                actor=request.user,
+                from_status='QA_PASSED',
+                to_status='COMPLETED_AND_VERIFIED',
+                note="Super Admin Final Sign-Off & Activation Approved."
+            )
             messages.success(request, f"Customer {customer.full_name} is now ACTIVE.")
         elif action == 'bounce_dispatch':
             admin_notes = request.POST.get("admin_notes", "No notes provided.")
-            ticket.remarks = f"ADMIN BOUNCED (To Dispatch): {admin_notes}\n" + (ticket.remarks or "")
+            timestamp_str = timezone.now().strftime("%b %d, %I:%M %p")
+            ticket.remarks = f"[{timestamp_str}] ADMIN BOUNCED TO QA by {request.user.username}: {admin_notes}\n" + (ticket.remarks or "")
             ticket.status = 'COMPLETED'  # Sends back to QA
             ticket.save()
+            JobTicketHistory.objects.create(
+                job_ticket=ticket,
+                actor=request.user,
+                from_status='QA_PASSED',
+                to_status='COMPLETED',
+                note=f"Admin Bounced back to Dispatch QA: {admin_notes}"
+            )
             messages.warning(request, f"Bounced ticket {ticket.ticket_number} back to Dispatch QA.")
         elif action == 'bounce_tech':
             admin_notes = request.POST.get("admin_notes", "No notes provided.")
-            ticket.remarks = f"ADMIN BOUNCED (To Tech): {admin_notes}\n" + (ticket.remarks or "")
+            timestamp_str = timezone.now().strftime("%b %d, %I:%M %p")
+            ticket.remarks = f"[{timestamp_str}] ADMIN BOUNCED TO TECH by {request.user.username}: {admin_notes}\n" + (ticket.remarks or "")
             ticket.status = 'IN_PROGRESS'  # Sends back to Tech
             ticket.save()
+            JobTicketHistory.objects.create(
+                job_ticket=ticket,
+                actor=request.user,
+                from_status='QA_PASSED',
+                to_status='IN_PROGRESS',
+                note=f"Admin Bounced back to Technician: {admin_notes}"
+            )
             messages.error(request, f"Bounced ticket {ticket.ticket_number} all the way back to Technician.")
             
         return redirect('dispatch_approval')

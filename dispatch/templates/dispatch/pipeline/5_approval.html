@@ -43,8 +43,8 @@
                                     <small class="text-muted">{{ ticket.client_name }}</small>
                                 </td>
                                 <td class="border-secondary text-muted small">
-                                    {{ ticket.assigned_team.name|default:"-" }}<br>
-                                    <span class="text-info">{{ ticket.completed_at|date:"M d, g:i A" }}</span>
+                                    {{ ticket.team.name|default:"-" }}<br>
+                                    <span class="text-info">{{ ticket.done_at|date:"M d, g:i A"|default:"-" }}</span>
                                 </td>
                                 <td class="border-secondary text-muted small" style="max-width: 250px;">
                                     <div class="text-truncate">{{ ticket.qa_notes|default:"No QA notes provided." }}</div>
@@ -87,13 +87,17 @@
                                                     <h6 class="text-muted small fw-bold text-uppercase mb-3"><i class="fas fa-clipboard-list text-success me-1"></i> Tech JO Data</h6>
                                                     <div class="small text-white">
                                                         <div class="mb-1"><span class="text-muted">Techs:</span> 
-                                                            {% for t in ticket.technicians.all %}{{ t.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                                                            {% for t in ticket.technicians.all %}{{ t.name }}{% if not forloop.last %}, {% endif %}{% empty %}Unassigned{% endfor %}
                                                         </div>
-                                                        <div class="mb-1"><span class="text-muted">Cable:</span> {{ ticket.cable_length }}m</div>
-                                                        <div class="mb-1"><span class="text-muted">Signal:</span> <span class="{% if ticket.signal_dbm > -25 %}text-danger{% else %}text-success{% endif %} fw-bold">{{ ticket.signal_dbm }} dBm</span></div>
-                                                        <div class="mb-1"><span class="text-muted">NAP:</span> {{ ticket.nap_port }}</div>
-                                                        <div class="mb-1"><span class="text-muted">SN:</span> {{ ticket.onu_sn_mac }}</div>
-                                                        <div class="mb-1"><span class="text-muted">Payment:</span> <span class="text-warning fw-bold">{{ ticket.payment_collected|upper }}</span></div>
+                                                        <div class="mb-1"><span class="text-muted">Cable:</span> {{ ticket.cable_length|default:"-" }} m</div>
+                                                        <div class="mb-1"><span class="text-muted">Signal:</span> <span class="text-success fw-bold">{{ ticket.signal_level|default:"-" }} dBm</span></div>
+                                                        <div class="mb-1"><span class="text-muted">NAP Port:</span> {{ ticket.nap_port|default:"-" }} {% if ticket.pole_number %}(Pole: {{ ticket.pole_number }}){% endif %}</div>
+                                                        <div class="mb-1"><span class="text-muted">Readings:</span> NAP {{ ticket.nap_reading|default:"-" }} / House {{ ticket.house_reading|default:"-" }} dBm</div>
+                                                        <div class="mb-1"><span class="text-muted">Modem SN:</span> <span class="font-monospace text-cyan">{{ ticket.ont_modem_sn|default:"-" }}</span></div>
+                                                        <div class="mb-1"><span class="text-muted">Payment:</span> <span class="text-warning fw-bold">{{ ticket.payment_collected|default:"None"|upper }}</span></div>
+                                                        {% if ticket.acknowledged_by %}
+                                                        <div class="mb-1"><span class="text-muted">Ack By:</span> {{ ticket.acknowledged_by }}</div>
+                                                        {% endif %}
                                                     </div>
                                                 </div>
                                                 
@@ -105,6 +109,15 @@
                                                     </div>
                                                     <div class="small text-muted">QA Completed: {{ ticket.qa_completed_at|date:"M d, g:i A"|default:"-" }}</div>
                                                 </div>
+                                                
+                                                {% if ticket.remarks %}
+                                                <div class="col-12 mt-3">
+                                                    <div class="p-2 rounded bg-dark border border-warning border-opacity-50 text-warning small">
+                                                        <div class="fw-bold mb-1"><i class="fas fa-history me-1"></i> Bounce / Feedback Trail:</div>
+                                                        <div class="text-white small font-monospace" style="white-space: pre-line; max-height: 120px; overflow-y: auto;">{{ ticket.remarks }}</div>
+                                                    </div>
+                                                </div>
+                                                {% endif %}
                                             </div>
                                             
                                             <!-- Action Form -->
@@ -119,18 +132,27 @@
                                                 </div>
                                             </form>
                                         </div>
-                                        <div class="modal-footer border-secondary justify-content-between">
-                                            <div class="btn-group">
-                                                <button type="button" class="btn btn-outline-warning fw-bold" onclick="document.getElementById('adminAction{{ ticket.id }}').value='bounce_dispatch'; document.getElementById('approvalForm{{ ticket.id }}').submit();">
-                                                    <i class="fas fa-undo-alt me-1"></i> Bounce to Dispatch
-                                                </button>
-                                                <button type="button" class="btn btn-outline-danger fw-bold" onclick="document.getElementById('adminAction{{ ticket.id }}').value='bounce_tech'; document.getElementById('approvalForm{{ ticket.id }}').submit();">
-                                                    <i class="fas fa-undo-alt me-1"></i> Bounce to Tech
-                                                </button>
+                                        <div class="modal-footer border-secondary flex-column align-items-stretch gap-3">
+                                            <div class="d-flex justify-content-between align-items-center w-100">
+                                                <div class="btn-group">
+                                                    <button type="button" class="btn btn-outline-warning fw-bold btn-sm" onclick="document.getElementById('adminAction{{ ticket.id }}').value='bounce_dispatch'; document.getElementById('approvalForm{{ ticket.id }}').submit();">
+                                                        <i class="fas fa-undo-alt me-1"></i> Bounce to Dispatch
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-danger fw-bold btn-sm" onclick="document.getElementById('adminAction{{ ticket.id }}').value='bounce_tech'; document.getElementById('approvalForm{{ ticket.id }}').submit();">
+                                                        <i class="fas fa-undo-alt me-1"></i> Bounce to Tech
+                                                    </button>
+                                                </div>
+                                                <span class="text-muted text-xs"><i class="fas fa-shield-alt text-danger me-1"></i> Slide to activate</span>
                                             </div>
-                                            <button type="button" class="btn btn-danger fw-bold" onclick="document.getElementById('adminAction{{ ticket.id }}').value='approve'; document.getElementById('approvalForm{{ ticket.id }}').submit();">
-                                                <i class="fas fa-check-circle me-2"></i> Final Approve & Activate
-                                            </button>
+                                            <div class="w-100">
+                                                <div data-slide-confirm 
+                                                     class="variant-danger"
+                                                     data-label="Slide to Final Approve & Activate" 
+                                                     data-confirmed-label="Activating Subscriber..." 
+                                                     data-target-form="#approvalForm{{ ticket.id }}"
+                                                     id="slideApprove{{ ticket.id }}">
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -150,4 +172,5 @@
         </div>
     </div>
 </div>
+{% include "dispatch/_slide_to_confirm.html" %}
 {% endblock %}

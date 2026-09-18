@@ -1,0 +1,60 @@
+<!-- Section 4: Monthly Install Targets (Bar Chart + Mini-Cards) -->
+<div class="gt-cl-card p-4 mb-4" style="background: rgba(31, 41, 55, 0.4);">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-2 border-bottom border-secondary border-opacity-25">
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-primary px-2 py-1 rounded-pill text-xs fw-bold">
+                    <i class="fas fa-bullseye me-1"></i>Targets
+                </span>
+                <h5 class="fw-bold text-white mb-0">Monthly Install Targets</h5>
+            </div>
+            <span class="text-xs text-muted">Target (100) vs Actual Completed Installs per Month &bull; Avg Target: {{ monthly_targets.avg_target|floatformat:0 }}</span>
+        </div>
+        <div class="d-flex align-items-center gap-3 text-xs">
+            <span class="d-flex align-items-center"><span class="d-inline-block rounded-circle me-1" style="width: 10px; height: 10px; background: #6b7280;"></span> Gray = Target</span>
+            <span class="d-flex align-items-center"><span class="d-inline-block rounded-circle me-1" style="width: 10px; height: 10px; background: #3b82f6;"></span> Blue = Actual Installs</span>
+            <span class="d-flex align-items-center"><span class="d-inline-block me-1 border-top border-warning border-2 border-dashed" style="width: 16px;"></span> Dashed = Avg Target</span>
+        </div>
+    </div>
+
+    <!-- Chart Container -->
+    <div style="position: relative; height: 260px; width: 100%;">
+        <canvas id="monthlyTargetsBarChart"></canvas>
+    </div>
+
+    <!-- Mini-Cards per Month -->
+    <div class="row g-2 g-md-3 mt-3 pt-3 border-top border-secondary border-opacity-25">
+        {% for m in monthly_targets.months %}
+        <div class="col">
+            <div class="p-2 rounded bg-dark bg-opacity-60 border {% if m.is_reached %}border-success{% else %}border-secondary border-opacity-30{% endif %} text-center h-100 d-flex flex-column justify-content-between">
+                <div>
+                    <span class="text-xs text-muted fw-bold text-uppercase d-block">{{ m.month_name }}</span>
+                    <div class="my-1">
+                        <span class="h6 fw-bold text-white mb-0">{{ m.actual }}</span>
+                        <span class="text-xs text-muted">/ {{ m.target }}</span>
+                    </div>
+                </div>
+                <div>
+                    {% if m.is_reached %}
+                    <span class="badge bg-success text-white text-xs fw-bold px-2 py-1 w-100">
+                        <i class="fas fa-check-circle me-1"></i>{{ m.pct }}%
+                    </span>
+                    {% else %}
+                    <span class="badge bg-secondary text-light text-xs fw-medium px-2 py-1 w-100">
+                        {{ m.pct }}%
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center text-muted py-2 text-xs">No monthly historical data recorded yet.</div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Raw Monthly Targets Data for Chart -->
+<script id="monthly-targets-data-raw" type="application/json">
+{{ monthly_targets.months_json|safe }}
+</script>

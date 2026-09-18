@@ -732,6 +732,23 @@
   * In `_scripts.html`, when `updateConnectionStatuses()` detects `Active but Offline`, hide the static `.cust-base-badge` and render a single high-priority pill with an inline diagnostic button (`17px`); for non-active subscribers (`expired`, `inactive`), suppress redundant `Offline` pills.
   * In `_hero.html`, remove the squished "Alert" badge so all 6 stat cards maintain identical, balanced typography.
 
+### ERR-041: Orphaned Dispatch Tickets and Queue Counters After Customer Deletion
+* **Symptoms**:
+  * After deleting customers in the CRM (/customers/), the Dispatch Operations Console (/dispatch/dashboard/) continues to show tickets in the Live Operational Queue (e.g. 5 Pending, 1 In Progress, 4 Completed) even though their customer profiles were removed.
+* **Root Causes**:
+  * `JobTicket.customer`, `DispatchRecord.customer`, and `MonitoringRecord.customer` models are defined with `on_delete=models.SET_NULL, null=True`. When a customer is deleted in Django, Django updates `customer_id=NULL` on the tickets but leaves the `JobTicket` records in the database with their cached `client_name`.
+  * No `pre_delete` or `post_delete` signal existed on `Customer` to purge associated tickets and records upon customer removal.
+* **Exact Target Files**:
+  * `dispatch/signals.py`
+  * `dispatch/views.py` (`api_delete_ticket`)
+  * `dispatch/urls.py`
+  * `dispatch/templates/dispatch/_ticket_list.html`
+  * `dispatch/templates/dispatch/_tab_ticket_table.html`
+  * `dispatch/templates/dispatch/_scripts.html`
+* **1-Step Fix**:
+  * In `dispatch/signals.py`, register a `@receiver(pre_delete, sender=Customer)` hook that automatically runs `JobTicket.objects.filter(customer=instance).delete()`, `DispatchRecord.objects.filter(customer=instance).delete()`, and `MonitoringRecord.objects.filter(customer=instance).delete()`.
+  * Add a `@require_POST` `api_delete_ticket` endpoint (`/dispatch/api/tickets/<id>/delete/`) with trash button handlers in the UI so staff can also delete any rogue/orphaned ticket directly from the console with 1 click.
+
 ---
 
 ## 📝 How to Add a New Error Entry

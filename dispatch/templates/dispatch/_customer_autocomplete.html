@@ -1,0 +1,255 @@
+<style>
+/* Customer Autocomplete Suggestions & Duplicate Lockout (Legacy MonitoringForm.tsx Port) */
+.cust-autocomplete-wrapper {
+    position: relative;
+}
+.cust-suggestions-box {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 1060;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+    margin-top: 4px;
+    display: none;
+}
+.cust-suggestion-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background 0.15s ease;
+}
+.cust-suggestion-item:last-child {
+    border-bottom: none;
+}
+.cust-suggestion-item:hover, .cust-suggestion-item.active {
+    background: rgba(59, 130, 246, 0.25);
+}
+.input-duplicate-locked {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.3) !important;
+}
+.duplicate-lockout-msg {
+    color: #f87171;
+    font-size: 0.78rem;
+    margin-top: 4px;
+    display: none;
+}
+</style>
+
+<script>
+class CustomerAutocomplete {
+    constructor(inputElement, options = {}) {
+        this.input = typeof inputElement === 'string' ? document.querySelector(inputElement) : inputElement;
+        if (!this.input) return;
+
+        this.options = Object.assign({
+            searchUrl: '/dispatch/api/customers/search/',
+            checkNameUrl: '/dispatch/api/customers/check-name/',
+            submitButton: null,
+            fields: {
+                customerId: 'input[name="customer_id"]',
+                phone: 'input[name="contact_number"], input[name="phone"]',
+                address: 'textarea[name="address"], input[name="address"]',
+                barangay: 'input[name="barangay"], select[name="barangay_id"]',
+                plan: 'input[name="plan_package"], select[name="plan_id"]',
+                accountNo: 'input[name="account_no"]',
+                lat: 'input[name="latitude"]',
+                lng: 'input[name="longitude"]'
+            }
+        }, options);
+
+        this.selectedFromSuggestion = false;
+        this.debounceTimer = null;
+        this.initDOM();
+        this.bindEvents();
+    }
+
+    initDOM() {
+        // Wrap input in relative container
+        const parent = this.input.parentNode;
+        this.wrapper = document.createElement('div');
+        this.wrapper.className = 'cust-autocomplete-wrapper';
+        parent.insertBefore(this.wrapper, this.input);
+        this.wrapper.appendChild(this.input);
+
+        // Suggestions Dropdown Box
+        this.suggestionsBox = document.createElement('div');
+        this.suggestionsBox.className = 'cust-suggestions-box';
+        this.wrapper.appendChild(this.suggestionsBox);
+
+        // Duplicate warning message container
+        this.warningMsg = document.createElement('div');
+        this.warningMsg.className = 'duplicate-lockout-msg';
+        this.warningMsg.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> <strong>Duplicate Customer Detected:</strong> An active customer with this exact name already exists. Please select them from suggestions to link or confirm spelling.';
+        this.wrapper.appendChild(this.warningMsg);
+    }
+
+    bindEvents() {
+        this.input.addEventListener('input', () => {
+            this.selectedFromSuggestion = false;
+            clearTimeout(this.debounceTimer);
+            const val = this.input.value.trim();
+            if (val.length >= 2) {
+                this.debounceTimer = setTimeout(() => this.search(val), 250);
+            } else {
+                this.hideSuggestions();
+                this.clearLockout();
+            }
+        });
+
+        this.input.addEventListener('blur', () => {
+            // Small delay to allow click on suggestion
+            setTimeout(() => {
+                this.hideSuggestions();
+                this.checkDuplicate();
+            }, 200);
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!this.wrapper.contains(e.target)) {
+                this.hideSuggestions();
+            }
+        });
+    }
+
+    async search(query) {
+        try {
+            const res = await fetch(`${this.options.searchUrl}?q=${encodeURIComponent(query)}`);
+            const data = await res.json();
+            if (data.success && data.customers && data.customers.length > 0) {
+                this.renderSuggestions(data.customers);
+            } else {
+                this.hideSuggestions();
+            }
+        } catch (e) {
+            console.error('Customer search failed:', e);
+        }
+    }
+
+    renderSuggestions(customers) {
+        this.suggestionsBox.innerHTML = '';
+        customers.forEach(c => {
+            const item = document.createElement('div');
+            item.className = 'cust-suggestion-item d-flex justify-content-between align-items-center';
+            item.innerHTML = `
+                <div>
+                    <div class="fw-bold text-white small"><i class="fas fa-user-check text-info me-1"></i>${c.name}</div>
+                    <div class="text-muted" style="font-size: 0.72rem;">${c.address || 'No address'} &bull; ${c.barangay || ''}</div>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-dark border border-secondary text-success font-monospace" style="font-size: 0.68rem;">${c.phone || c.account_no || 'Existing'}</span>
+                    ${c.plan_name ? `<div class="text-info" style="font-size: 0.68rem;">${c.plan_name}</div>` : ''}
+                </div>
+            `;
+            item.addEventListener('click', () => this.selectCustomer(c));
+            this.suggestionsBox.appendChild(item);
+        });
+        this.suggestionsBox.style.display = 'block';
+    }
+
+    hideSuggestions() {
+        this.suggestionsBox.style.display = 'none';
+    }
+
+    selectCustomer(c) {
+        this.input.value = c.name;
+        this.selectedFromSuggestion = true;
+        this.hideSuggestions();
+        this.clearLockout();
+
+        // Populate fields
+        this.setFieldValue(this.options.fields.customerId, c.id);
+        this.setFieldValue(this.options.fields.phone, c.phone);
+        this.setFieldValue(this.options.fields.address, c.address);
+        this.setFieldValue(this.options.fields.accountNo, c.account_no);
+        this.setFieldValue(this.options.fields.lat, c.latitude);
+        this.setFieldValue(this.options.fields.lng, c.longitude);
+        
+        if (c.barangay_id) {
+            this.setFieldValue(this.options.fields.barangay, c.barangay_id);
+        } else if (c.barangay) {
+            this.setFieldValue(this.options.fields.barangay, c.barangay);
+        }
+
+        if (c.plan_id) {
+            this.setFieldValue(this.options.fields.plan, c.plan_id);
+        } else if (c.plan_name) {
+            this.setFieldValue(this.options.fields.plan, c.plan_name);
+        }
+
+        // Trigger change events
+        ['phone', 'address', 'accountNo', 'barangay', 'plan'].forEach(fKey => {
+            const el = document.querySelector(this.options.fields[fKey]);
+            if (el) el.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+    }
+
+    setFieldValue(selector, val) {
+        if (!selector || val === undefined || val === null) return;
+        const el = document.querySelector(selector);
+        if (el) {
+            el.value = val;
+        }
+    }
+
+    async checkDuplicate() {
+        const val = this.input.value.trim();
+        if (!val || this.selectedFromSuggestion) {
+            this.clearLockout();
+            return;
+        }
+
+        try {
+            const res = await fetch(`${this.options.checkNameUrl}?name=${encodeURIComponent(val)}`);
+            const data = await res.json();
+            if (data.success && data.exists) {
+                this.applyLockout();
+            } else {
+                this.clearLockout();
+            }
+        } catch (e) {
+            console.error('Duplicate name check failed:', e);
+        }
+    }
+
+    applyLockout() {
+        this.input.classList.add('input-duplicate-locked');
+        this.warningMsg.style.display = 'block';
+        if (this.options.submitButton) {
+            const btn = typeof this.options.submitButton === 'string' ? document.querySelector(this.options.submitButton) : this.options.submitButton;
+            if (btn) {
+                btn.disabled = true;
+                btn.classList.add('disabled');
+            }
+        }
+    }
+
+    clearLockout() {
+        this.input.classList.remove('input-duplicate-locked');
+        this.warningMsg.style.display = 'none';
+        if (this.options.submitButton) {
+            const btn = typeof this.options.submitButton === 'string' ? document.querySelector(this.options.submitButton) : this.options.submitButton;
+            if (btn) {
+                btn.disabled = false;
+                btn.classList.remove('disabled');
+            }
+        }
+    }
+}
+
+// Auto-initialize inputs with data-customer-autocomplete
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('[data-customer-autocomplete]').forEach(input => {
+        if (!input._autocomplete) {
+            const submitSelector = input.dataset.submitButton || 'button[type="submit"]';
+            input._autocomplete = new CustomerAutocomplete(input, { submitButton: submitSelector });
+        }
+    });
+});
+</script>

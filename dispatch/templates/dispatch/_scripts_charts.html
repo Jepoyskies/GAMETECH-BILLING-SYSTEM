@@ -1,0 +1,192 @@
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ─────────────────────────────────────────────
+    // 1. OVERVIEW STATUS DISTRIBUTION DONUT CHART
+    // ─────────────────────────────────────────────
+    const donutCanvas = document.getElementById('overviewDonutChart');
+    const donutRawEl = document.getElementById('overview-chart-data-raw');
+    
+    if (donutCanvas && donutRawEl && typeof Chart !== 'undefined') {
+        let chartData = {};
+        try {
+            chartData = JSON.parse(donutRawEl.textContent.trim());
+        } catch (err) {
+            console.error('Error parsing overview chart JSON:', err);
+        }
+
+        const statusLabels = ['Pending', 'Assigned', 'In Progress', 'Completed', 'Cancelled'];
+        const statusColors = ['#f59e0b', '#3b82f6', '#06b6d4', '#10b981', '#ef4444'];
+        
+        let overviewChart = new Chart(donutCanvas.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: statusLabels,
+                datasets: [{
+                    data: [0, 0, 0, 0, 0],
+                    backgroundColor: statusColors,
+                    borderWidth: 2,
+                    borderColor: '#111827',
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                        titleColor: '#fff',
+                        bodyColor: '#cbd5e1',
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 1,
+                        padding: 10
+                    }
+                }
+            }
+        });
+
+        function updateDonutView(catKey) {
+            const dataObj = chartData[catKey] || { pending: 0, assigned: 0, in_progress: 0, completed: 0, cancelled: 0 };
+            const counts = [
+                dataObj.pending || 0,
+                dataObj.assigned || 0,
+                dataObj.in_progress || 0,
+                dataObj.completed || 0,
+                dataObj.cancelled || 0
+            ];
+            const total = counts.reduce((a, b) => a + b, 0);
+
+            overviewChart.data.datasets[0].data = counts;
+            overviewChart.update();
+
+            const centerCountEl = document.getElementById('chartCenterCount');
+            if (centerCountEl) centerCountEl.textContent = total;
+
+            const updateLegend = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = val;
+            };
+            updateLegend('legend-count-pending', dataObj.pending || 0);
+            updateLegend('legend-count-assigned', dataObj.assigned || 0);
+            updateLegend('legend-count-inprogress', dataObj.in_progress || 0);
+            updateLegend('legend-count-completed', dataObj.completed || 0);
+            updateLegend('legend-count-cancelled', dataObj.cancelled || 0);
+        }
+
+        // Hook category buttons
+        document.querySelectorAll('.chart-filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.chart-filter-btn').forEach(b => {
+                    b.classList.remove('btn-primary', 'text-white', 'active');
+                    b.classList.add('btn-dark', 'text-muted');
+                });
+                this.classList.remove('btn-dark', 'text-muted');
+                this.classList.add('btn-primary', 'text-white', 'active');
+
+                const cat = this.getAttribute('data-category');
+                updateDonutView(cat);
+            });
+        });
+
+        // Initialize with 'all'
+        updateDonutView('all');
+    }
+
+    // ─────────────────────────────────────────────
+    // 2. MONTHLY INSTALL TARGETS BAR & LINE CHART
+    // ─────────────────────────────────────────────
+    const barCanvas = document.getElementById('monthlyTargetsBarChart');
+    const barRawEl = document.getElementById('monthly-targets-data-raw');
+
+    if (barCanvas && barRawEl && typeof Chart !== 'undefined') {
+        let monthlyData = [];
+        try {
+            monthlyData = JSON.parse(barRawEl.textContent.trim());
+        } catch (err) {
+            console.error('Error parsing monthly targets JSON:', err);
+        }
+
+        if (Array.isArray(monthlyData) && monthlyData.length > 0) {
+            const labels = monthlyData.map(m => m.month_name);
+            const targets = monthlyData.map(m => m.target);
+            const actuals = monthlyData.map(m => m.actual);
+            
+            const totalTargets = targets.reduce((a, b) => a + b, 0);
+            const avgTarget = Math.round(totalTargets / targets.length);
+            const avgLineData = labels.map(() => avgTarget);
+
+            new Chart(barCanvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Target (100)',
+                            data: targets,
+                            backgroundColor: 'rgba(107, 114, 128, 0.45)',
+                            borderColor: 'rgba(156, 163, 175, 0.8)',
+                            borderWidth: 1,
+                            borderRadius: 4,
+                            barPercentage: 0.6,
+                            categoryPercentage: 0.7,
+                            order: 2
+                        },
+                        {
+                            label: 'Actual Completed Installs',
+                            data: actuals,
+                            backgroundColor: '#3b82f6',
+                            borderColor: '#60a5fa',
+                            borderWidth: 1,
+                            borderRadius: 4,
+                            barPercentage: 0.6,
+                            categoryPercentage: 0.7,
+                            order: 1
+                        },
+                        {
+                            label: 'Average Target',
+                            data: avgLineData,
+                            type: 'line',
+                            borderColor: '#f59e0b',
+                            borderWidth: 2,
+                            borderDash: [6, 6],
+                            pointRadius: 0,
+                            fill: false,
+                            order: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#94a3b8', font: { family: 'inherit', size: 12 } }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#94a3b8', font: { family: 'inherit', size: 12 } }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                            titleColor: '#fff',
+                            bodyColor: '#cbd5e1',
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1,
+                            padding: 10
+                        }
+                    }
+                }
+            });
+        }
+    }
+});
+</script>
