@@ -810,7 +810,7 @@ def api_customer_search(request):
             'pppoe_username': c.pppoe_username or '',
             'latitude': c.latitude,
             'longitude': c.longitude,
-            'account_no': c.account_number or '',
+            'account_no': getattr(c, 'account_number', c.pppoe_username or ''),
         })
     return JsonResponse({'success': True, 'customers': results})
 
