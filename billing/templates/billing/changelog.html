@@ -40,8 +40,11 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush" id="list-tab" role="tablist" style="border-radius: 0 0 16px 16px; overflow: hidden; max-height: 70vh; overflow-y: auto;">
-                        <a class="list-group-item list-group-item-action active py-3 fw-semibold border-0" id="list-sep17-list" data-bs-toggle="list" href="#list-sep17" role="tab" style="font-size: 0.9rem;">
-                            September 17, 2026 <br><small class="text-white-50">Cignal Pure-Tracking Suite, Overdue Tab, 1-Click Copy &amp; CSV Export</small>
+                        <a class="list-group-item list-group-item-action active py-3 fw-semibold border-0" id="list-sep18-list" data-bs-toggle="list" href="#list-sep18" role="tab" style="font-size: 0.9rem;">
+                            September 18, 2026 <br><small class="text-white-50">ID Masking, 30-Day Purge Cascade, SLA Alerts, Commission Threshold Gate</small>
+                        </a>
+                        <a class="list-group-item list-group-item-action py-3 fw-semibold border-0" id="list-sep17-list" data-bs-toggle="list" href="#list-sep17" role="tab" style="font-size: 0.9rem;">
+                            September 17, 2026 <br><small class="text-muted">Cignal Pure-Tracking Suite, Overdue Tab, 1-Click Copy &amp; CSV Export</small>
                         </a>
                         <a class="list-group-item list-group-item-action py-3 fw-semibold border-0" id="list-sep16-list" data-bs-toggle="list" href="#list-sep16" role="tab" style="font-size: 0.9rem;">
                             September 16, 2026 <br><small class="text-muted">Cignal Live Rollover, Streamlined Reload Modal, Due Date Alignment</small>
@@ -111,11 +114,94 @@
                 <div class="card-body p-4 p-lg-5">
                     <div class="tab-content" id="nav-tabContent">
                         
+                        <!-- SEPTEMBER 18 -->
+                        <div class="tab-pane fade show active" id="list-sep18" role="tabpanel" aria-labelledby="list-sep18-list">
+                            <h3 class="fw-bold mb-4 border-bottom pb-3" style="color: #1e3a8a;">
+                                September 18, 2026: Privacy ID Masking, 30-Day Purge Cascade, SLA Alerts &amp; Commission Gating
+                                <span class="badge bg-success ms-2 fs-6 align-middle" style="border-radius: 8px;">Latest Build</span>
+                            </h3>
+
+                            <p class="lead text-muted mb-4">Enterprise security, SLA responsiveness, and operational compliance hardening: introducing privacy-masked government ID cards (32•••••23) with staff reveal toggles, an automated 30-day ID purge task cascading across system logs and audit records, real-time SLA staleness badges (24h Amber / 48h Red Breach) with dual-channel notification dispatch to Karl, Romnick, and Merk, and strict Agent Portal commission threshold enforcement gating cash-outs behind 5 qualified subscribers (₱2,500).</p>
+
+                            <div class="cl-dual-content">
+                                <!-- Tech View -->
+                                <div class="tech-content">
+                                    <div class="card border-0 mb-4" style="background:#f5f3ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#6d28d9;"><i class="fas fa-id-card me-2"></i> Stage 1 Verification: Government ID Masking &amp; Reveal Icon</h5>
+                                            <ul class="mb-0">
+                                                <li><strong>Privacy Data Masking:</strong> Added model property <code>Customer.masked_id_number</code> rendering identification numbers in compliant <code>32•••••23</code> masked format across the verification modal header, intake snapshot card, and Policy Guarantee #7.</li>
+                                                <li><strong>Interactive Reveal Toggle:</strong> Integrated zero-dependency JavaScript function <code>toggleIdReveal()</code> with eye icon state toggling between masked and plain text for authorized dispatch verifiers.</li>
+                                                <li><strong>Applicant Handoff Snapshot:</strong> Pre-populated applicant plan, preferred installation date, payment method preference (Cash vs GCash), and ID verification directly into the Stage 1 Verification modal and forwarded cleanly into JobTicket attributes upon dispatch.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <div class="card border-0 mb-4" style="background:#eff6ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#1d4ed8;"><i class="fas fa-shield-alt me-2"></i> Automated 30-Day ID Purge &amp; Audit Log Cascading</h5>
+                                            <ul class="mb-0">
+                                                <li><strong>Data Retention Purge Task:</strong> Built Celery scheduled task <code>purge_customer_ids_30_days_task</code> clearing government ID numbers on customer records 30 days post-creation.</li>
+                                                <li><strong>Deep Audit Log Cascade:</strong> Recursively scans and redacts historical ID numbers stored in <code>billing.SystemLog</code> (old_data/new_data text fields) and <code>dispatch.AuditLog</code> (before_data/after_data JSON fields) replacing them with <code>[ID_PURGED_AFTER_30_DAYS]</code>.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <div class="card border-0 mb-4" style="background:#ecfdf5; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#047857;"><i class="fas fa-exclamation-triangle me-2"></i> SLA Staleness Badges &amp; Dispatcher Alert System</h5>
+                                            <ul class="mb-0">
+                                                <li><strong>Tri-Domain SLA Badges:</strong> Added <code>staleness_hours</code> and <code>sla_badge_level</code> properties to <code>Customer</code> and <code>JobTicket</code>. Renders 24h Amber (<code>SLA 24h+ Stale</code>) and 48h Red pulsing (<code>SLA 48h+ BREACH</code>) badges across Stage 1 Verification and Stage 2 Assignment tables.</li>
+                                                <li><strong>Dual-Channel Bell Notifications:</strong> Built <code>check_dispatch_sla_breaches_task</code> generating high-priority topbar notifications directed to Karl, Romnick, and Merk when tickets remain unassigned or unverified past 24/48 hours.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <div class="card border-0 mb-4" style="background:#fef2f2; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#b91c1c;"><i class="fas fa-lock me-2"></i> Agent Portal: Commission Threshold &amp; Cash-Out Gating</h5>
+                                            <ul class="mb-0">
+                                                <li><strong>Dynamic Progress Bar:</strong> Wired live qualified subscriber tracking (<code>qualified_count / target_count</code>) and progress bar visualization to the Agent Portal hero banner.</li>
+                                                <li><strong>Full-Stack Threshold Gate:</strong> Gated cash-out button behind 5 qualifying subscribers (>= 2 payments) and ₱2,500 minimum threshold. Implemented strict backend enforcement view <code>agent_request_cashout</code> preventing unauthorized withdrawals.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Staff View -->
+                                <div class="staff-content" style="display: none;">
+                                    <div class="card border-0 mb-4" style="background:#f8fafc; border-radius:12px; border-left: 4px solid #3b82f6 !important;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-2 text-dark"><i class="fas fa-id-card text-primary me-2"></i> Government ID Privacy Masking</h5>
+                                            <p class="text-muted mb-0">Applicant IDs are now masked for privacy (e.g. 32•••••23). Verifiers can click the eye icon to reveal the number when confirming applicant details.</p>
+                                        </div>
+                                    </div>
+                                    <div class="card border-0 mb-4" style="background:#f8fafc; border-radius:12px; border-left: 4px solid #10b981 !important;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-2 text-dark"><i class="fas fa-user-shield text-success me-2"></i> Automated 30-Day ID Purge</h5>
+                                            <p class="text-muted mb-0">Government IDs are automatically scrubbed from the system after 30 days to protect customer privacy and comply with data privacy policies.</p>
+                                        </div>
+                                    </div>
+                                    <div class="card border-0 mb-4" style="background:#f8fafc; border-radius:12px; border-left: 4px solid #f59e0b !important;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-2 text-dark"><i class="fas fa-clock text-warning me-2"></i> SLA Warnings &amp; Dispatcher Alerts</h5>
+                                            <p class="text-muted mb-0">Tickets waiting over 24 hours now display amber warnings, and over 48 hours display urgent red breach badges with notifications sent to supervisors Karl, Romnick, and Merk.</p>
+                                        </div>
+                                    </div>
+                                    <div class="card border-0 mb-4" style="background:#f8fafc; border-radius:12px; border-left: 4px solid #8b5cf6 !important;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-2 text-dark"><i class="fas fa-hand-holding-usd text-purple me-2"></i> Agent ₱2,500 Cash-Out Requirement</h5>
+                                            <p class="text-muted mb-0">Sales agents now have a live progress bar tracking their 5 qualifying customers. Once they reach 5 qualified subscribers (₱2,500), the Cash-Out button unlocks automatically!</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- SEPTEMBER 17 -->
-                        <div class="tab-pane fade show active" id="list-sep17" role="tabpanel" aria-labelledby="list-sep17-list">
+                        <div class="tab-pane fade" id="list-sep17" role="tabpanel" aria-labelledby="list-sep17-list">
                             <h3 class="fw-bold mb-4 border-bottom pb-3" style="color: #1e3a8a;">
                                 September 17, 2026: Cignal Pure-Tracking Architecture &amp; Operations Suite
-                                <span class="badge bg-success ms-2 fs-6 align-middle" style="border-radius: 8px;">Latest Build</span>
                             </h3>
 
                             <p class="lead text-muted mb-4">Pure-tracking operational alignment for Cignal Play and TV Box services: formalizing third-party manual reload workflows with zero automated activation overhead, adding a dedicated Overdue / Expired tracking tab to surface lapsed subscriptions instantly, providing 1-click clipboard copy buttons for Play #, Box #, and Phone # to streamline external portal data entry, streaming complete CSV exports for dealer reconciliation, and refining enrollment terminology.</p>
