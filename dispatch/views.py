@@ -1,8 +1,9 @@
+import csv
 import json
 import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Q
@@ -14,6 +15,10 @@ from .models import (
 )
 from .forms import MonitoringRecordForm, DispatchRecordForm, JobDetailForm
 from .reports import get_csr_performance_report, get_technician_productivity_report
+from .analytics import (
+    get_operational_overview_stats, get_overview_kpis_and_chart,
+    get_monitoring_summary, get_monthly_targets_data
+)
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +62,8 @@ def dashboard_view(request):
     # Filter parameters
     status_filter = request.GET.get('status', 'ALL')
     type_filter = request.GET.get('type', 'ALL')
+    source_tab_filter = request.GET.get('source_tab', 'ALL')
+    team_filter = request.GET.get('team', 'ALL')
     search_q = request.GET.get('q', '').strip()
     date_filter = request.GET.get('date_range', 'all')
     date_from = request.GET.get('date_from', '').strip()
@@ -95,6 +102,13 @@ def dashboard_view(request):
         tickets_qs = tickets_qs.filter(status=status_filter)
     if type_filter != 'ALL':
         tickets_qs = tickets_qs.filter(ticket_type=type_filter)
+    if source_tab_filter != 'ALL':
+        if source_tab_filter == 'CLIENT_CONCERNS':
+            tickets_qs = tickets_qs.filter(Q(source_tab='CLIENT_CONCERNS') | Q(chat_type__icontains='concern'))
+        else:
+            tickets_qs = tickets_qs.filter(source_tab=source_tab_filter)
+    if team_filter != 'ALL' and team_filter.isdigit():
+        tickets_qs = tickets_qs.filter(team_id=int(team_filter))
     if search_q:
         tickets_qs = tickets_qs.filter(
             Q(ticket_number__icontains=search_q) |
@@ -134,7 +148,11 @@ def dashboard_view(request):
             'scheduled_date': t.scheduled_date.strftime('%b %d, %Y') if t.scheduled_date else 'Not scheduled',
         })
         
-    # Compute Phase 2 Analytical Reports (Legacy Formulas)
+    # Compute Legacy Analytical Sections
+    operational_overview = get_operational_overview_stats()
+    overview_data = get_overview_kpis_and_chart(date_filter=date_filter, date_from=date_from, date_to=date_to)
+    monitoring_summary = get_monitoring_summary(date_filter=date_filter, date_from=date_from, date_to=date_to)
+    monthly_targets = get_monthly_targets_data()
     csr_report = get_csr_performance_report(date_filter=date_filter, date_from=date_from, date_to=date_to)
     tech_report = get_technician_productivity_report(date_filter=date_filter, date_from=date_from, date_to=date_to)
 
@@ -152,11 +170,17 @@ def dashboard_view(request):
         'mikrotik_devices': mikrotik_devices,
         'status_filter': status_filter,
         'type_filter': type_filter,
+        'source_tab_filter': source_tab_filter,
+        'team_filter': team_filter,
         'search_q': search_q,
         'date_filter': date_filter,
         'date_from': date_from,
         'date_to': date_to,
         'map_points_json': json.dumps(map_points),
+        'operational_overview': operational_overview,
+        'overview_data': overview_data,
+        'monitoring_summary': monitoring_summary,
+        'monthly_targets': monthly_targets,
         'csr_report': csr_report,
         'tech_report': tech_report,
     }
@@ -646,3 +670,86 @@ def management_view(request):
         'technicians': technicians,
         'config_options': config_options
     })
+
+
+@login_required
+def export_tickets_csv(request):
+    """
+    Export Dispatch tickets to CSV matching legacy DMS columns:
+    Ticket #, Status, Date Created, Date Completed, Turnaround, Client, Address, Barangay, Contact, Type, Concern, Team, Technicians
+    Filtered by date, type, status, source_tab, or search query.
+    """
+    today = timezone.now().date()
+    qs = JobTicket.objects.select_related('customer', 'team').prefetch_related('technicians')
+
+    date_filter = request.GET.get('date_range', 'all')
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
+    status_filter = request.GET.get('status', 'ALL')
+    type_filter = request.GET.get('type', 'ALL')
+    source_tab_filter = request.GET.get('source_tab', 'ALL')
+    search_q = request.GET.get('q', '').strip()
+    month = request.GET.get('month', '')
+
+    if month and month.isdigit():
+        qs = qs.filter(created_at__month=int(month), created_at__year=today.year)
+    elif date_filter == 'today':
+        qs = qs.filter(created_at__date=today)
+    elif date_filter == 'this_month':
+        qs = qs.filter(created_at__year=today.year, created_at__month=today.month)
+    elif date_filter == 'custom' and date_from and date_to:
+        qs = qs.filter(created_at__date__gte=date_from, created_at__date__lte=date_to)
+
+    if status_filter != 'ALL':
+        qs = qs.filter(status=status_filter)
+    if type_filter != 'ALL':
+        qs = qs.filter(ticket_type=type_filter)
+    if source_tab_filter != 'ALL':
+        if source_tab_filter == 'CLIENT_CONCERNS':
+            qs = qs.filter(Q(source_tab='CLIENT_CONCERNS') | Q(chat_type__icontains='concern'))
+        else:
+            qs = qs.filter(source_tab=source_tab_filter)
+    if search_q:
+        qs = qs.filter(
+            Q(ticket_number__icontains=search_q) |
+            Q(client_name__icontains=search_q) |
+            Q(contact_number__icontains=search_q) |
+            Q(address__icontains=search_q) |
+            Q(barangay__icontains=search_q)
+        )
+
+    response = HttpResponse(content_type='text/csv')
+    timestamp_str = timezone.now().strftime('%Y%m%d_%H%M%S')
+    response['Content-Disposition'] = f'attachment; filename="dispatch_tickets_{timestamp_str}.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow([
+        'Ticket #', 'Status', 'Date Created', 'Date Completed', 'Turnaround',
+        'Client Name', 'Address', 'Barangay', 'Contact', 'Type', 'Concern',
+        'Assigned Team', 'Technicians', 'Signal (dBm)', 'Modem SN'
+    ])
+
+    for t in qs.order_by('-created_at')[:5000]:
+        techs_str = ", ".join(tech.name for tech in t.technicians.all())
+        created_str = t.created_at.strftime('%Y-%m-%d %H:%M') if t.created_at else ''
+        done_str = t.done_at.strftime('%Y-%m-%d %H:%M') if t.done_at else ''
+        writer.writerow([
+            t.ticket_number,
+            t.get_status_display(),
+            created_str,
+            done_str,
+            t.turnaround_display,
+            t.client_name,
+            t.address or '',
+            t.barangay or '',
+            t.contact_number or '',
+            t.get_ticket_type_display(),
+            t.concern or '',
+            t.team.name if t.team else 'Unassigned',
+            techs_str,
+            t.signal_level or '',
+            t.ont_modem_sn or ''
+        ])
+
+    return response
+

@@ -712,6 +712,13 @@ def view_customer(request, customer_id):
         .first()
     )
 
+    jobs_done_count = sum(1 for t in ticket_history if t.get("status") in ['COMPLETED', 'QA_PASSED'])
+    jobs_pending_count = sum(1 for t in ticket_history if t.get("status") not in ['COMPLETED', 'QA_PASSED', 'CANCELLED'])
+    install_jobs_count = sum(1 for t in ticket_history if t.get("ticket_type") == 'INSTALLATION')
+    repair_jobs_count = len(repair_items)
+    cignal_jobs_count = sum(1 for t in ticket_history if t.get("ticket_type") == 'CIGNAL')
+    migration_jobs_count = sum(1 for t in ticket_history if t.get("ticket_type") == 'MIGRATION')
+
     context = {
         "customer": customer,
         "plans": SubscriptionPlan.objects.all().order_by("price"),
@@ -720,6 +727,12 @@ def view_customer(request, customer_id):
         "ticket_history": ticket_history,
         "repair_count": repair_count,
         "total_tickets_count": len(ticket_history),
+        "jobs_done_count": jobs_done_count,
+        "jobs_pending_count": jobs_pending_count,
+        "install_jobs_count": install_jobs_count,
+        "repair_jobs_count": repair_jobs_count,
+        "cignal_jobs_count": cignal_jobs_count,
+        "migration_jobs_count": migration_jobs_count,
         "repeat_repair_alerts": repeat_repair_alerts,
         "has_repeat_repairs": has_repeat_repairs,
         "reverted_expiration": reverted_expiration,

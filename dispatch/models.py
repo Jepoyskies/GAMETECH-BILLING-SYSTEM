@@ -197,6 +197,31 @@ class AuditLog(models.Model):
     def __str__(self):
         return f"{self.action} {self.entity_type} {self.entity_id} by {self.actor}"
 
+    @property
+    def diff_list(self):
+        diffs = []
+        before = self.before_data or {}
+        after = self.after_data or {}
+        if not isinstance(before, dict):
+            before = {}
+        if not isinstance(after, dict):
+            after = {}
+
+        all_keys = sorted(set(before.keys()).union(set(after.keys())))
+        for k in all_keys:
+            old_v = before.get(k)
+            new_v = after.get(k)
+            if old_v != new_v:
+                diffs.append({
+                    'field': k,
+                    'old': str(old_v) if old_v is not None else '-',
+                    'new': str(new_v) if new_v is not None else '-',
+                    'is_change': (k in before and k in after),
+                    'is_addition': (k not in before),
+                    'is_deletion': (k not in after),
+                })
+        return diffs
+
 
 class JobTicket(models.Model):
     TICKET_TYPE_CHOICES = (
@@ -319,6 +344,38 @@ class JobTicket(models.Model):
         elif h >= 24:
             return 'amber'
         return 'normal'
+
+    @property
+    def turnaround_display(self):
+        end_time = self.time_accomplish or self.done_at
+        if self.duration:
+            mins = self.duration
+            if mins < 60:
+                return f"{mins}m"
+            hours = mins // 60
+            rem_mins = mins % 60
+            return f"{hours}h {rem_mins}m" if rem_mins else f"{hours}h"
+        if self.time_start and end_time:
+            delta = end_time - self.time_start
+            total_mins = int(delta.total_seconds() // 60)
+            if total_mins < 60:
+                return f"{total_mins}m"
+            hours = total_mins // 60
+            rem_mins = total_mins % 60
+            return f"{hours}h {rem_mins}m" if rem_mins else f"{hours}h"
+        if self.created_at and end_time:
+            delta = end_time - self.created_at
+            total_mins = int(delta.total_seconds() // 60)
+            if total_mins < 60:
+                return f"{total_mins}m"
+            hours = total_mins // 60
+            if hours < 24:
+                rem_mins = total_mins % 60
+                return f"{hours}h {rem_mins}m" if rem_mins else f"{hours}h"
+            days = hours // 24
+            rem_hours = hours % 24
+            return f"{days}d {rem_hours}h" if rem_hours else f"{days}d"
+        return "In Progress" if self.status in ['ASSIGNED', 'IN_PROGRESS'] else "-"
 
     class Meta:
         ordering = ['-created_at']

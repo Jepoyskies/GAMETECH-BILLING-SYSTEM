@@ -18,6 +18,54 @@
             </div>
 
             <div class="p-3 p-md-4">
+                <!-- Legacy-Style Per-Customer Dispatch Stats & Breakdown -->
+                <div class="p-3 mb-4 rounded-3 border border-secondary border-opacity-25 bg-dark bg-opacity-40">
+                    <div class="row g-3 align-items-center">
+                        <!-- Job Stats Counters -->
+                        <div class="col-12 col-md-5">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="p-2 rounded bg-dark border border-secondary text-center" style="min-width: 75px;">
+                                    <span class="text-xs text-muted d-block">Total Jobs</span>
+                                    <span class="h5 fw-bold text-white mb-0">{{ total_tickets_count|default:0 }}</span>
+                                </div>
+                                <div class="p-2 rounded bg-dark border border-success border-opacity-50 text-center" style="min-width: 75px;">
+                                    <span class="text-xs text-success d-block">Done</span>
+                                    <span class="h5 fw-bold text-success mb-0">{{ jobs_done_count|default:0 }}</span>
+                                </div>
+                                <div class="p-2 rounded bg-dark border border-warning border-opacity-50 text-center" style="min-width: 75px;">
+                                    <span class="text-xs text-warning d-block">Pending</span>
+                                    <span class="h5 fw-bold text-warning mb-0">{{ jobs_pending_count|default:0 }}</span>
+                                </div>
+                                {% if customer.latitude and customer.longitude %}
+                                <a href="https://www.google.com/maps?q={{ customer.latitude }},{{ customer.longitude }}" target="_blank" 
+                                   class="btn btn-sm btn-outline-info rounded-pill px-3 ms-auto" title="View Customer on Google Maps">
+                                    <i class="fas fa-location-dot me-1"></i> Map Pin
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- "By Type" Breakdown Chips -->
+                        <div class="col-12 col-md-7">
+                            <div class="d-flex flex-wrap align-items-center gap-2 justify-content-md-end">
+                                <span class="text-xs text-muted fw-semibold me-1">By Type:</span>
+                                <span class="badge bg-primary bg-opacity-20 text-primary border border-primary border-opacity-30 px-2 py-1">
+                                    <i class="fas fa-plug me-1"></i>Installs: <strong>{{ install_jobs_count|default:0 }}</strong>
+                                </span>
+                                <span class="badge bg-danger bg-opacity-20 text-danger border border-danger border-opacity-30 px-2 py-1">
+                                    <i class="fas fa-tools me-1"></i>Repairs: <strong>{{ repair_jobs_count|default:0 }}</strong>
+                                </span>
+                                <span class="badge bg-purple bg-opacity-20 text-purple border border-purple border-opacity-30 px-2 py-1" style="color: #c084fc;">
+                                    <i class="fas fa-tv me-1"></i>Cignal: <strong>{{ cignal_jobs_count|default:0 }}</strong>
+                                </span>
+                                <span class="badge bg-secondary bg-opacity-20 text-light border border-secondary border-opacity-30 px-2 py-1">
+                                    <i class="fas fa-arrows-split-up-and-left me-1"></i>Migrations: <strong>{{ migration_jobs_count|default:0 }}</strong>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Repeat Repair & Workmanship Quality Alert -->
                 {% if has_repeat_repairs %}
                 <div class="repeat-repair-alert-card mb-4">
