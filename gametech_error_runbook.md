@@ -747,7 +747,17 @@
   * `dispatch/templates/dispatch/_scripts.html`
 * **1-Step Fix**:
   * In `dispatch/signals.py`, register a `@receiver(pre_delete, sender=Customer)` hook that automatically runs `JobTicket.objects.filter(customer=instance).delete()`, `DispatchRecord.objects.filter(customer=instance).delete()`, and `MonitoringRecord.objects.filter(customer=instance).delete()`.
-  * Add a `@require_POST` `api_delete_ticket` endpoint (`/dispatch/api/tickets/<id>/delete/`) with trash button handlers in the UI so staff can also delete any rogue/orphaned ticket directly from the console with 1 click.
+### ERR-042: Server Error (500) on `/logout/` or Any Page Due to Raw Git Merge Conflict Markers
+* **Symptoms**:
+  * Navigating to `/logout/` or loading pages throws `Internal Server Error (500)`.
+  * Container logs show: `SyntaxError: leading zeros in decimal integer literals are not permitted; use an 0o prefix for octal integers` at `>>>>>>> <commit_hash>` in `customer_portal/views/dashboard.py`.
+* **Root Causes**:
+  * An automated or manual `git merge` or remote pull was pushed to `origin/main` containing unresolved conflict markers (`<<<<<<< HEAD`, `=======`, `>>>>>>>`).
+  * Because `gametech_core/urls.py` imports `customer_portal.urls` on any URL evaluation, a syntax error in an imported view crashes Django's URL resolver globally on all requests.
+* **Exact Target Files**:
+  * `customer_portal/views/dashboard.py`
+* **1-Step Fix**:
+  * Remove the git conflict markers, clean up imports (`from django.db.models import Q`, `import datetime`, `from billing.models import ... AddOnRequest`), compile with `python -m py_compile`, and restart Gunicorn: `docker restart gametech-billing-system_web_1`.
 
 ---
 
