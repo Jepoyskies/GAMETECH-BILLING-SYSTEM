@@ -243,8 +243,10 @@ def technician_mobile_ui(request):
             
         return redirect('technician_mobile_ui')
         
+    active_ticket = assigned_tickets.first()
     return render(request, "dispatch/pipeline/3_tech_mobile.html", {
-        "tickets": assigned_tickets
+        "tickets": assigned_tickets,
+        "ticket": active_ticket
     })
 
 @login_required
