@@ -21,6 +21,7 @@
 | **ERR-016** | Suspended Customer Retaining Stale Expiration Date in UI & Mikrotik Secret Comment | `billing/models.py`, `_info_cards.html`, `actions.py`, `crud.py` | Model / UI |
 | **ERR-037** | Cignal Reload Modal pre-fills old expiration date, confusing presets with duplicate ₱399 | `billing/templates/billing/partials/_cignal_payment_modal.html`, `_cignal_payment_modal_script.html`, `cignal_dashboard.py` | Billing / UI |
 | **ERR-040** | Blinding Yellow Row for Expired Customers, Unreadable Text, and Stacked Status Column Bloat | `customer_list/_styles.html`, `_table.html`, `_scripts.html`, `_hero.html` | Frontend (CSS/UI) |
+| **ERR-043** | System-Wide Tab Lag, Freezes, and 499 Timeouts on Customers Directory & Profiles | `network_manager/services/base.py`, `billing/views/api/network.py`, `billing/views/customers/list.py` | Hardware API / Caching |
 
 ---
 
@@ -758,6 +759,25 @@
   * `customer_portal/views/dashboard.py`
 * **1-Step Fix**:
   * Remove the git conflict markers, clean up imports (`from django.db.models import Q`, `import datetime`, `from billing.models import ... AddOnRequest`), compile with `python -m py_compile`, and restart Gunicorn: `docker restart gametech-billing-system_web_1`.
+
+### ERR-043: System-Wide Tab Lag, Freezes, and 499 Timeouts on Customers Directory & Profiles
+* **Symptoms**:
+  * Severe delay (10–30s or timeout) when navigating tabs, loading `/customers/` (Customers Directory), or opening customer profiles (`/customers/<id>/`).
+  * Nginx access logs show client connection aborts (`HTTP 499 0`) for `/customers/`, `/api/active-usernames/`, and `/api/router-uplink/`.
+  * Container logs flooded with `Timeout/Error connecting to Mikrotik API on <ip>: timed out` or `[Errno 101] Network is unreachable`.
+* **Root Causes**:
+  1. Synchronous connection attempts to unreachable or dummy router IPs (e.g. `192.168.1.1` from seed data or down physical routers) holding Gunicorn worker threads for 5–10s per socket timeout.
+  2. Sequential iteration across all routers in `/api/active-usernames/`, `/api/router-uplink/`, and `customer_list` without circuit breaker failure caching or payload caching, causing complete worker starvation.
+* **Exact Target Files**:
+  * `network_manager/services/base.py` (`MikrotikBase`)
+  * `billing/views/api/network.py` (`api_active_pppoe_usernames`, `api_router_uplink`, `api_customer_mikrotik_status`)
+  * `billing/views/customers/list.py` (`customer_list`)
+  * `billing/management/commands/seed.py`
+* **1-Step Fix**:
+  1. In `network_manager/services/base.py`, implement a Redis circuit breaker (`router_unreachable_<id>` for 45s) on connection failures and reduce socket timeout to 2.0s. If cached unreachable, fail fast immediately in 0ms.
+  2. In `billing/views/api/network.py`, cache `api_router_uplink_payload` (25s) and `api_active_pppoe_usernames_payload` (20s), and skip unreachable routers immediately.
+  3. In `billing/views/customers/list.py`, check existing `live_monitoring_data` or API payloads before querying physical routers, and skip cached unreachable routers.
+  4. Purge any dummy or unreachable seed routers (`192.168.1.1`) from the database.
 
 ---
 

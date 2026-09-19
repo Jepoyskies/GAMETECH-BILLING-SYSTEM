@@ -120,14 +120,16 @@ class Command(BaseCommand):
 
         # 5. Mikrotik Devices
         self.stdout.write("Creating Mikrotik Devices...")
-        mikrotik, _ = MikrotikDevice.objects.get_or_create(
-            device_name="Main Router - Gametech",
-            defaults={
-                "ip_address": "192.168.1.1",
-                "api_username": "admin",
-                "api_password": "password",
-            },
-        )
+        mikrotik = MikrotikDevice.objects.first()
+        if not mikrotik:
+            mikrotik, _ = MikrotikDevice.objects.get_or_create(
+                device_name="Mikrotik A",
+                defaults={
+                    "ip_address": "192.168.88.2",
+                    "api_username": "admin",
+                    "api_password": "",
+                },
+            )
 
         # 6. Nap Boxes
         self.stdout.write("Creating Nap Boxes...")
@@ -395,14 +397,16 @@ class Command(BaseCommand):
 
         # 5. Mikrotik Devices
         self.stdout.write("Creating Mikrotik Devices...")
-        mikrotik, _ = MikrotikDevice.objects.get_or_create(
-            device_name="Main Router - Gametech",
-            defaults={
-                "ip_address": "192.168.1.1",
-                "api_username": "admin",
-                "api_password": "password",
-            },
-        )
+        mikrotik = MikrotikDevice.objects.first()
+        if not mikrotik:
+            mikrotik, _ = MikrotikDevice.objects.get_or_create(
+                device_name="Mikrotik A",
+                defaults={
+                    "ip_address": "192.168.88.2",
+                    "api_username": "admin",
+                    "api_password": "",
+                },
+            )
 
         # 6. Nap Boxes
         self.stdout.write("Creating Nap Boxes...")

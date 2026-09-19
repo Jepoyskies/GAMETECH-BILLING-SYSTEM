@@ -3,6 +3,8 @@ import socket
 import routeros_api
 from network_manager.models import MikrotikDevice
 
+from django.core.cache import cache
+
 logger = logging.getLogger(__name__)
 
 class MikrotikBase:
@@ -20,7 +22,7 @@ class MikrotikBase:
 
             # Set a default timeout for this thread's sockets to prevent infinite hangs
             old_timeout = socket.getdefaulttimeout()
-            socket.setdefaulttimeout(5.0)
+            socket.setdefaulttimeout(2.0)
             try:
                 # We set up the API connection pool
                 self.connection = routeros_api.RouterOsApiPool(
@@ -37,15 +39,22 @@ class MikrotikBase:
 
         def _get_api(self):
             """Handles connection securely with timeouts and returns the API instance, with automatic fallback for older RouterOS versions."""
+            dev_id = getattr(self.device, "id", None) or self.device.ip_address
+            cache_key = f"router_unreachable_{dev_id}"
+            if cache.get(cache_key):
+                raise ConnectionError(f"Router {self.device.device_name} ({self.device.ip_address}) is currently unreachable (cached).")
+
             if getattr(self, '_connection_failed', False):
                 raise ConnectionError(f"Previous connection attempt to {self.device.ip_address} failed, skipping retry.")
 
             try:
                 # First attempt with plaintext_login (RouterOS v6.43+)
                 old_timeout = socket.getdefaulttimeout()
-                socket.setdefaulttimeout(5.0)
+                socket.setdefaulttimeout(2.0)
                 try:
-                    return self.connection.get_api()
+                    api = self.connection.get_api()
+                    cache.delete(cache_key)
+                    return api
                 finally:
                     socket.setdefaulttimeout(old_timeout)
             except routeros_api.exceptions.RouterOsApiCommunicationError as e:
@@ -55,7 +64,7 @@ class MikrotikBase:
                 
                 try:
                     old_timeout = socket.getdefaulttimeout()
-                    socket.setdefaulttimeout(5.0)
+                    socket.setdefaulttimeout(2.0)
                     try:
                         # Re-create connection with legacy auth
                         self.connection = routeros_api.RouterOsApiPool(
@@ -66,16 +75,20 @@ class MikrotikBase:
                             plaintext_login=False,
                             use_ssl=self.connection.use_ssl
                         )
-                        return self.connection.get_api()
+                        api = self.connection.get_api()
+                        cache.delete(cache_key)
+                        return api
                     finally:
                         socket.setdefaulttimeout(old_timeout)
                 except Exception as retry_e:
                     self._connection_failed = True
+                    cache.set(cache_key, True, 45)
                     logger.error(f"Legacy Auth Failed for {self.device.device_name}: {retry_e}")
                     raise ConnectionError(f"Could not authenticate to {self.device.device_name} API. Check credentials.") from retry_e
                     
             except Exception as e:
                 self._connection_failed = True
+                cache.set(cache_key, True, 45)
                 logger.error(f"Timeout/Error connecting to Mikrotik API on {self.device.ip_address}: {e}")
                 raise ConnectionError(f"Could not connect to {self.device.device_name} API. Check IP/Port and credentials.") from e
 

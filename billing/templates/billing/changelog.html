@@ -40,8 +40,11 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush" id="list-tab" role="tablist" style="border-radius: 0 0 16px 16px; overflow: hidden; max-height: 70vh; overflow-y: auto;">
-                        <a class="list-group-item list-group-item-action active py-3 fw-semibold border-0" id="list-sep18-list" data-bs-toggle="list" href="#list-sep18" role="tab" style="font-size: 0.9rem;">
-                            September 18, 2026 <br><small class="text-white-50">ID Masking, 30-Day Purge Cascade, SLA Alerts, Commission Threshold Gate</small>
+                        <a class="list-group-item list-group-item-action active py-3 fw-semibold border-0" id="list-sep19-list" data-bs-toggle="list" href="#list-sep19" role="tab" style="font-size: 0.9rem;">
+                            September 19, 2026 <br><small class="text-white-50">Zero-Latency Router Circuit Breaker, Speed Optimization, Seed Purge</small>
+                        </a>
+                        <a class="list-group-item list-group-item-action py-3 fw-semibold border-0" id="list-sep18-list" data-bs-toggle="list" href="#list-sep18" role="tab" style="font-size: 0.9rem;">
+                            September 18, 2026 <br><small class="text-muted">ID Masking, 30-Day Purge Cascade, SLA Alerts, Commission Threshold Gate</small>
                         </a>
                         <a class="list-group-item list-group-item-action py-3 fw-semibold border-0" id="list-sep17-list" data-bs-toggle="list" href="#list-sep17" role="tab" style="font-size: 0.9rem;">
                             September 17, 2026 <br><small class="text-muted">Cignal Pure-Tracking Suite, Overdue Tab, 1-Click Copy &amp; CSV Export</small>
@@ -114,11 +117,50 @@
                 <div class="card-body p-4 p-lg-5">
                     <div class="tab-content" id="nav-tabContent">
                         
+                        <!-- SEPTEMBER 19 -->
+                        <div class="tab-pane fade show active" id="list-sep19" role="tabpanel" aria-labelledby="list-sep19-list">
+                            <h3 class="fw-bold mb-4 border-bottom pb-3" style="color: #1e3a8a;">
+                                September 19, 2026: Zero-Latency Router Circuit Breaker, Speed Optimization &amp; Seed Purge
+                                <span class="badge bg-success ms-2 fs-6 align-middle" style="border-radius: 8px;">Latest Build</span>
+                            </h3>
+
+                            <p class="lead text-muted mb-4">Infrastructure resilience and extreme UI responsiveness: resolving system-wide tab delays and freezes by implementing a Redis circuit breaker (45s failure cache) and fast 2.0s TCP socket timeout across MikroTik hardware services, multi-tiered payload caching across <code>/api/active-usernames/</code> and <code>/api/router-uplink/</code>, and purging unreachable dummy seed routers (192.168.1.1) to restore instant sub-second page loads.</p>
+
+                            <div class="cl-dual-content">
+                                <!-- Tech View -->
+                                <div class="tech-content">
+                                    <div class="card border-0 mb-4" style="background:#f0fdfa; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#0f766e;"><i class="fas fa-bolt me-2"></i> Hardware Circuit Breaker &amp; Worker Starvation Fix</h5>
+                                            <ul class="mb-0">
+                                                <li><strong>Redis Circuit Breaker:</strong> Added automatic reachability caching in <code>network_manager/services/base.py</code> (<code>router_unreachable_&lt;id&gt;</code>, 45s TTL). Failed routers fail-fast in 0ms without blocking worker threads on socket timeouts.</li>
+                                                <li><strong>Fast Socket Connect Timeout:</strong> Reduced TCP socket connect timeout from 5.0s to 2.0s, preventing cascading Gunicorn worker starvation and Nginx HTTP 499 client aborts.</li>
+                                                <li><strong>API Response Payload Caching:</strong> Added Redis caching in <code>/api/active-usernames/</code> (20s) and <code>/api/router-uplink/</code> (25s) with unreachable device skipping, allowing high-frequency frontend polling to return in &lt;1ms.</li>
+                                                <li><strong>Dummy Seed Router Purged:</strong> Removed unreachable dummy device 192.168.1.1 from production and updated <code>seed.py</code> to reuse existing physical routers.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Staff View -->
+                                <div class="staff-content" style="display: none;">
+                                    <div class="card border-0 mb-4" style="background:#eff6ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#1d4ed8;"><i class="fas fa-tachometer-alt me-2"></i> Instant Page and Profile Loading</h5>
+                                            <ul class="mb-0">
+                                                <li><strong>Zero Delay on Customer Tabs:</strong> Opening the Customer Directory and Customer Profiles now loads instantly without any lag or freezing!</li>
+                                                <li><strong>Automated Offline Protection:</strong> If any router experiences connection issues or drops power, the system automatically detects it and keeps the web interface lightning fast for all team members.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- SEPTEMBER 18 -->
-                        <div class="tab-pane fade show active" id="list-sep18" role="tabpanel" aria-labelledby="list-sep18-list">
+                        <div class="tab-pane fade" id="list-sep18" role="tabpanel" aria-labelledby="list-sep18-list">
                             <h3 class="fw-bold mb-4 border-bottom pb-3" style="color: #1e3a8a;">
                                 September 18, 2026: Privacy ID Masking, 30-Day Purge Cascade, SLA Alerts &amp; Commission Gating
-                                <span class="badge bg-success ms-2 fs-6 align-middle" style="border-radius: 8px;">Latest Build</span>
                             </h3>
 
                             <p class="lead text-muted mb-4">Enterprise security, SLA responsiveness, and operational compliance hardening: introducing privacy-masked government ID cards (32•••••23) with staff reveal toggles, an automated 30-day ID purge task cascading across system logs and audit records, real-time SLA staleness badges (24h Amber / 48h Red Breach) with dual-channel notification dispatch to Karl, Romnick, and Merk, and strict Agent Portal commission threshold enforcement gating cash-outs behind 5 qualified subscribers (₱2,500).</p>

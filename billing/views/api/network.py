@@ -123,9 +123,26 @@ def api_offline_users(request):
 
 @login_required
 def api_router_uplink(request):
+    from django.core.cache import cache
+
+    cached_uplinks = cache.get("api_router_uplink_payload")
+    if cached_uplinks:
+        return JsonResponse(cached_uplinks)
+
     routers = []
     devices = MikrotikDevice.objects.all()
     for device in devices:
+        if cache.get(f"router_unreachable_{device.id}"):
+            routers.append(
+                {
+                    "id": device.id,
+                    "name": device.device_name,
+                    "ip": device.ip_address,
+                    "uplink_status": "Offline",
+                    "uplink_ping": "Unreachable",
+                }
+            )
+            continue
         try:
             api = MikrotikAPI(device)
             uplink_status = "Offline"
@@ -178,7 +195,9 @@ def api_router_uplink(request):
                 }
             )
 
-    return JsonResponse({"routers": routers})
+    response_payload = {"routers": routers}
+    cache.set("api_router_uplink_payload", response_payload, 25)
+    return JsonResponse(response_payload)
 
 
 @login_required
@@ -292,6 +311,8 @@ def api_customer_mikrotik_status(request, customer_id):
                 if not other_found:
                     other_devices = MikrotikDevice.objects.exclude(id=customer.mikrotik_device_id)
                     for odev in other_devices:
+                        if cache.get(f"router_unreachable_{odev.id}"):
+                            continue
                         try:
                             oapi = MikrotikAPI(odev)
                             oactive = oapi.get_active_pppoe_users()
@@ -473,8 +494,11 @@ def api_active_pppoe_usernames(request):
     from network_manager.models import MikrotikDevice
     from network_manager.services import MikrotikAPI
     from django.http import JsonResponse
-
     from django.core.cache import cache
+
+    cached_payload = cache.get("api_active_pppoe_usernames_payload")
+    if cached_payload:
+        return JsonResponse(cached_payload)
 
     devices = MikrotikDevice.objects.all()
     active_usernames = set()
@@ -482,6 +506,9 @@ def api_active_pppoe_usernames(request):
     offline_routers = []
 
     for device in devices:
+        if cache.get(f"router_unreachable_{device.id}"):
+            offline_routers.append(device.id)
+            continue
         try:
             api = MikrotikAPI(device)
             active_users = api.get_active_pppoe_users()
@@ -497,15 +524,15 @@ def api_active_pppoe_usernames(request):
             offline_routers.append(device.id)
 
     cache.set("active_pppoe_usernames_set", active_usernames, 30)
+    response_payload = {
+        "status": "success",
+        "active_usernames": list(active_usernames),
+        "user_router_map": user_router_map,
+        "offline_routers": offline_routers,
+    }
+    cache.set("api_active_pppoe_usernames_payload", response_payload, 20)
 
-    return JsonResponse(
-        {
-            "status": "success",
-            "active_usernames": list(active_usernames),
-            "user_router_map": user_router_map,
-            "offline_routers": offline_routers,
-        }
-    )
+    return JsonResponse(response_payload)
 
 
 @login_required

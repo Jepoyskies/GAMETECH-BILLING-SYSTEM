@@ -72,17 +72,29 @@ def customer_list(request):
 
     connected_usernames = cache.get("active_pppoe_usernames_set")
     if connected_usernames is None:
-        connected_usernames = set()
-        for device in MikrotikDevice.objects.all():
-            try:
-                api = MikrotikAPI(device)
-                for au in api.get_active_pppoe_users():
-                    name = au.get("name")
-                    if name:
-                        connected_usernames.add(name)
-            except Exception:
-                pass
-        cache.set("active_pppoe_usernames_set", connected_usernames, 30)
+        # Check existing live monitoring or API payload cache first (0ms lookup)
+        live_data = cache.get("live_monitoring_data")
+        api_payload = cache.get("api_active_pppoe_usernames_payload")
+        if live_data and "users" in live_data:
+            connected_usernames = {u["user"] for u in live_data["users"] if u.get("user")}
+            cache.set("active_pppoe_usernames_set", connected_usernames, 30)
+        elif api_payload and "active_usernames" in api_payload:
+            connected_usernames = set(api_payload.get("active_usernames", []))
+            cache.set("active_pppoe_usernames_set", connected_usernames, 30)
+        else:
+            connected_usernames = set()
+            for device in MikrotikDevice.objects.all():
+                if cache.get(f"router_unreachable_{device.id}"):
+                    continue
+                try:
+                    api = MikrotikAPI(device)
+                    for au in api.get_active_pppoe_users():
+                        name = au.get("name")
+                        if name:
+                            connected_usernames.add(name)
+                except Exception:
+                    pass
+            cache.set("active_pppoe_usernames_set", connected_usernames, 45)
 
     # Calculate Paid but Offline subscribers (active billing status with active expiration, but disconnected from router)
     # Brand new accounts (pending install) have installation_status='pending', expires_at=None, or status='pending' and are excluded.
