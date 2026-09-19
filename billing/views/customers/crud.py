@@ -135,7 +135,13 @@ def add_customer(request):
         if installation_status == "pending":
             cust_status = "pending"
         else:
-            cust_status = "pending" if request.user.role == "Agent" else request.POST.get("status", "active")
+            if request.user.role == "Agent":
+                cust_status = "pending"
+            else:
+                cust_status = request.POST.get("status")
+                # An installed subscriber with no future expiration date or no payment cannot be active
+                if not cust_status or (cust_status == "active" and not expires_at_val):
+                    cust_status = "expired"
 
         customer = Customer.objects.create(
             full_name=request.POST.get("full_name"),

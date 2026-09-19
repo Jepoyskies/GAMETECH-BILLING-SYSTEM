@@ -164,7 +164,7 @@ def subscription_plans_data_api(request):
 
         if c.status in ["suspended", "inactive"]:
             count_inactive += 1
-        elif not c.expires_at:
+        elif c.status == "expired" or not c.expires_at:
             count_expired += 1
         elif c.expires_at <= one_week_ago:
             count_inactive += 1
@@ -212,7 +212,7 @@ def subscription_plans_data_api(request):
     elif status_filter == "expired":
         customer_list = [
             c for c in customer_list
-            if (not c.expires_at or (c.expires_at <= now and c.expires_at > one_week_ago))
+            if (c.status == "expired" or not c.expires_at or (c.expires_at <= now and c.expires_at > one_week_ago))
             and c.status not in ["suspended", "inactive"]
         ]
     elif status_filter == "inactive":

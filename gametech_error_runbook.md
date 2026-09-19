@@ -22,6 +22,7 @@
 | **ERR-037** | Cignal Reload Modal pre-fills old expiration date, confusing presets with duplicate ₱399 | `billing/templates/billing/partials/_cignal_payment_modal.html`, `_cignal_payment_modal_script.html`, `cignal_dashboard.py` | Billing / UI |
 | **ERR-040** | Blinding Yellow Row for Expired Customers, Unreadable Text, and Stacked Status Column Bloat | `customer_list/_styles.html`, `_table.html`, `_scripts.html`, `_hero.html` | Frontend (CSS/UI) |
 | **ERR-043** | System-Wide Tab Lag, Freezes, and 499 Timeouts on Customers Directory & Profiles | `network_manager/services/base.py`, `billing/views/api/network.py`, `billing/views/customers/list.py` | Hardware API / Caching |
+| **ERR-044** | Installed Customer Displayed as Active / Connected Without Payment or Expiration Date | `billing/views/customers/crud.py`, `billing/views/customers/list.py`, `billing/models.py`, `add_customer.html` | Billing / Security |
 
 ---
 
@@ -778,6 +779,29 @@
   2. In `billing/views/api/network.py`, cache `api_router_uplink_payload` (25s) and `api_active_pppoe_usernames_payload` (20s), and skip unreachable routers immediately.
   3. In `billing/views/customers/list.py`, check existing `live_monitoring_data` or API payloads before querying physical routers, and skip cached unreachable routers.
   4. Purge any dummy or unreachable seed routers (`192.168.1.1`) from the database.
+
+### ERR-044: Installed Customer Defaults to Active & Grants Free Internet Without Payment
+* **Symptoms**:
+  * Newly created customer with `installation_status = 'installed'` shows as `Active` and `Connected` in `/customers/` but `Expired` in `/subscriptions/`.
+  * Subscriber is active on MikroTik router without having made any payment and has `expires_at = None`.
+  * Hero count mismatch between Customers Directory and Subscriptions.
+* **Root Causes**:
+  1. In `add_customer.html`, selecting "Installed / Existing Subscriber" set form status to `active`.
+  2. `add_customer` view defaulted status to `"active"` for installed customers without checking if payment or expiration date existed.
+  3. `Customer.STATUS_CHOICES` lacked canonical `"expired"` choice, causing inconsistent querying (`c.status == 'expired'`).
+  4. MikroTik provisioning enabled PPPoE secrets for all `active` accounts regardless of payment or expiration dates.
+* **Exact Target Files**:
+  * `billing/models.py` (`STATUS_CHOICES`)
+  * `billing/views/customers/crud.py` (`add_customer`)
+  * `billing/views/customers/list.py` (`customer_list`)
+  * `billing/views/api/dashboard.py` (`subscription_plans_data_api`)
+  * `billing/templates/billing/add_customer.html` & `edit_customer.html`
+* **1-Step Fix**:
+  1. Add `("expired", "Expired")` to `Customer.STATUS_CHOICES`.
+  2. In `add_customer` view, if `installation_status == 'installed'` and no expiration date or payment exists, force `cust_status = "expired"`.
+  3. In `add_customer.html`, update "Installed / Existing Subscriber" card to set `statusSelect.value = 'expired'` and inform staff that newly installed accounts start expired until payment is logged or force-reactivated.
+  4. In `customer_list` and `subscription_plans_data_api`, include `Q(status="expired")` in expired counts and filters.
+  5. Kicking/suspending the unpaid PPPoE user on MikroTik via `api.suspend_pppoe_user()`.
 
 ---
 

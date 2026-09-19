@@ -190,6 +190,7 @@ def generate_portal_password(length=8):
 class Customer(models.Model):
     STATUS_CHOICES = (
         ("active", "Active"),
+        ("expired", "Expired"),
         ("inactive", "Inactive"),
         ("pending", "Pending"),
         ("suspended", "Suspended"),

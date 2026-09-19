@@ -61,9 +61,9 @@ def customer_list(request):
         total=Count("id"),
         active=Count("id", filter=Q(expires_at__gt=seven_days_from_now, status="active")),
         expiring=Count("id", filter=Q(expires_at__gt=now, expires_at__lte=seven_days_from_now, status="active")),
-        expired=Count("id", filter=Q(expires_at__lte=now, expires_at__gt=seven_days_ago)),
+        expired=Count("id", filter=Q(expires_at__lte=now, expires_at__gt=seven_days_ago) | Q(status="expired")),
         inactive=Count("id", filter=Q(status__in=["suspended", "inactive", "pull out"]) | Q(expires_at__lte=seven_days_ago)),
-        offline=Count("id", filter=Q(status__in=["suspended", "inactive", "pull out"]) | Q(expires_at__lte=now)),
+        offline=Count("id", filter=Q(status__in=["suspended", "inactive", "pull out", "expired"]) | Q(expires_at__lte=now) | Q(expires_at__isnull=True)),
     )
 
     # MikroTik Live Connectivity for Paid but Offline metric
@@ -129,7 +129,9 @@ def customer_list(request):
     elif filter_type in ["paid_offline", "paid_but_offline"]:
         customers = customers.filter(id__in=paid_but_offline_ids)
     elif filter_type == "expired":
-        customers = customers.filter(expires_at__lte=now, expires_at__gt=seven_days_ago)
+        customers = customers.filter(
+            Q(expires_at__lte=now, expires_at__gt=seven_days_ago) | Q(status="expired")
+        )
     elif filter_type == "inactive":
         customers = customers.filter(
             Q(status__in=["suspended", "inactive", "pull out"]) | Q(expires_at__lte=seven_days_ago)

@@ -155,7 +155,7 @@
                             <input class="form-check-input ms-0 me-2" type="radio" name="installation_status" id="install_status_installed" value="installed">
                             <label class="form-check-label fw-bold d-block" for="install_status_installed" style="cursor: pointer;">
                                 <i class="fas fa-check-circle text-success me-1"></i> Installed / Existing Subscriber
-                                <div class="text-muted fw-normal small mt-1">Manual Override: Use this option when importing legacy customers from an old system, or recreating a accidentally deleted record. Account becomes instantly active.</div>
+                                <div class="text-muted fw-normal small mt-1">Manual Override: Use this option when importing legacy customers or adding an already-installed subscriber. Will be marked as 'Expired (Unpaid)' until an initial payment is logged or force-reactivated.</div>
                             </label>
                         </div>
                     </div>
@@ -182,7 +182,8 @@
             <div class="mb-4" id="billing-status-group">
                 <label class="plan-form-label">Billing Status <span class="req">*</span></label>
                 <select name="status" id="customer_status_select" class="plan-form-control" required>
-                    <option value="active" selected>Active</option>
+                    <option value="expired" selected>Expired (Unpaid)</option>
+                    <option value="active">Active (Paid)</option>
                     <option value="inactive">Inactive</option>
                     <option value="pending">Pending</option>
                     <option value="suspended">Suspended</option>
@@ -468,9 +469,9 @@
                 if (installInput) {
                     installInput.removeAttribute('required');
                 }
-                if (statusSelect && statusSelect.value === 'pending') {
-                    statusSelect.value = 'active';
-                    if (statusSelect.tomselect) statusSelect.tomselect.setValue('active');
+                if (statusSelect && (statusSelect.value === 'pending' || !statusSelect.value)) {
+                    statusSelect.value = 'expired';
+                    if (statusSelect.tomselect) statusSelect.tomselect.setValue('expired');
                 }
             }
         }

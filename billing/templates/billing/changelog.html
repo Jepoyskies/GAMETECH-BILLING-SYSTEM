@@ -138,6 +138,7 @@
                                                 <li><strong>API Response Payload Caching:</strong> Added Redis caching in <code>/api/active-usernames/</code> (20s) and <code>/api/router-uplink/</code> (25s) with unreachable device skipping, allowing high-frequency frontend polling to return in &lt;1ms.</li>
                                                 <li><strong>Dummy Seed Router Purged:</strong> Removed unreachable dummy device 192.168.1.1 from production and updated <code>seed.py</code> to reuse existing physical routers.</li>
                                                 <li><strong>Restored Dual Active &amp; Connected Status Visibility:</strong> Conforming strictly to AGENTS.md Rule #35 (Status Vocabulary Law), restored the dynamic hardware indicators in <code>billing/templates/billing/customer_list/_scripts.html</code>. When active in billing and authenticated on MikroTik, subscribers display both <code>Active</code> and <code>Connected</code> badges side-by-side. For suspended accounts, subscribers display <code>Suspended</code> and their hardware status (<code>Disconnected</code> or <code>Still Online</code>). Active subscribers without PPPoE sessions trigger the high-priority red <code>Active but Offline</code> warning badge.</li>
+                                                <li><strong>Unbilled Installed Customer Auto-Expiration:</strong> Eliminated the vulnerability where newly added or installed accounts defaulted to Active with free internet without payments or expiration dates. Unbilled installed subscribers now strictly default to <code>Expired</code> in the database and have their Mikrotik PPPoE sessions suspended until an initial payment is logged or Master Override Force-Reactivation is authorized.</li>
                                             </ul>
                                         </div>
                                     </div>
@@ -152,6 +153,7 @@
                                                 <li><strong>Zero Delay on Customer Tabs:</strong> Opening the Customer Directory and Customer Profiles now loads instantly without any lag or freezing!</li>
                                                 <li><strong>Automated Offline Protection:</strong> If any router experiences connection issues or drops power, the system automatically detects it and keeps the web interface lightning fast for all team members.</li>
                                                 <li><strong>Clear Connection Statuses:</strong> Restored the clear badges showing when a customer is both Active &amp; Connected, when a Suspended customer is Disconnected, or when an Active customer has an outage (Active but Offline).</li>
+                                                <li><strong>No Free Internet on Unbilled Accounts:</strong> Newly installed customers who have not yet paid will no longer be marked as Active. They are set to Expired and kept disconnected until their payment is recorded or authorized by an admin.</li>
                                             </ul>
                                         </div>
                                     </div>
