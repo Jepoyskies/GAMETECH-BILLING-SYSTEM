@@ -177,11 +177,17 @@
                             tr.classList.remove('table-row-pending-install');
                             tr.classList.add('table-row-suspended');
                         }
-                        el.innerHTML = btnHtml;
+                        if (baseBadge) baseBadge.style.display = '';
+                        if (active_users.has(pppoe)) {
+                            el.innerHTML = '<span class="badge rounded-pill shadow-sm px-2 py-1 d-inline-flex align-items-center gap-1" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); font-weight: 600; font-size: 0.72rem;" title="Account is suspended but PPPoE session is still active on router"><i class="fas fa-exclamation-circle"></i>Still Online</span>' + btnHtml;
+                        } else {
+                            el.innerHTML = '<span class="badge rounded-pill shadow-sm px-2 py-1 d-inline-flex align-items-center gap-1" style="background-color: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 0.72rem;"><i class="fas fa-wifi me-1" style="text-decoration: line-through;"></i>Disconnected</span>' + btnHtml;
+                        }
                     } else if (active_users.has(pppoe)) {
                         if (tr) {
                             tr.classList.remove('table-row-paid-offline');
                             tr.classList.remove('table-row-pending-install');
+                            tr.classList.remove('table-row-suspended');
                         }
                         let activeUserRouter = user_router_map[pppoe];
                         if (activeUserRouter && !isNaN(routerId) && activeUserRouter.router_id !== routerId) {
@@ -193,26 +199,30 @@
                             if (baseBadge) {
                                 baseBadge.style.display = '';
                                 baseBadge.className = 'badge bg-success-subtle text-success border border-success-subtle px-2 py-1 cust-base-badge';
-                                baseBadge.innerHTML = '<i class="fas fa-wifi text-success me-1" style="font-size: 0.65rem;"></i>Active';
+                                baseBadge.innerHTML = '<i class="fas fa-circle text-success me-1" style="font-size: 0.45rem; vertical-align: middle;"></i>Active';
                             }
-                            el.innerHTML = '';
+                            el.innerHTML = '<span class="badge rounded-pill shadow-sm px-2 py-1 d-inline-flex align-items-center gap-1" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); font-weight: 600; font-size: 0.72rem;"><i class="fas fa-check-circle"></i>Connected</span>';
                         }
                     } else if (isPendingInstall) {
                         if (tr) {
                             tr.classList.remove('table-row-paid-offline');
+                            tr.classList.remove('table-row-suspended');
                             tr.classList.add('table-row-pending-install');
                         }
+                        if (baseBadge) baseBadge.style.display = '';
                         el.innerHTML = '';
                     } else if (!pppoe) {
                         if (tr) {
                             tr.classList.remove('table-row-paid-offline');
                             tr.classList.remove('table-row-pending-install');
+                            tr.classList.remove('table-row-suspended');
                         }
                         if (status === 'active') {
                             if (baseBadge) baseBadge.style.display = 'none';
                             el.innerHTML = '<span class="badge bg-secondary rounded-pill shadow-sm px-2 py-1" style="font-size: 0.72rem;"><i class="fas fa-question-circle me-1"></i>No PPPoE</span>';
                         } else {
-                            el.innerHTML = '';
+                            if (baseBadge) baseBadge.style.display = '';
+                            el.innerHTML = '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1" style="font-size: 0.72rem;"><i class="fas fa-question-circle me-1"></i>No PPPoE</span>';
                         }
                     } else {
                         let isRouterOffline = false;
@@ -241,14 +251,21 @@
                             el.innerHTML = '<span class="badge rounded-pill shadow-sm text-white fw-bold px-2 py-1 d-inline-flex align-items-center gap-1" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border: 1px solid #f87171; box-shadow: 0 0 8px rgba(239, 68, 68, 0.4); font-size: 0.72rem;"><i class="fas fa-triangle-exclamation text-white"></i>' + specificStatus + '</span>' + btnHtml;
                             if (tr) {
                                 tr.classList.remove('table-row-pending-install');
+                                tr.classList.remove('table-row-suspended');
                                 tr.classList.add('table-row-paid-offline');
                             }
                         } else {
                             if (tr) {
                                 tr.classList.remove('table-row-paid-offline');
                                 tr.classList.remove('table-row-pending-install');
+                                tr.classList.remove('table-row-suspended');
                             }
-                            el.innerHTML = '';
+                            if (baseBadge) baseBadge.style.display = '';
+                            if (active_users.has(pppoe)) {
+                                el.innerHTML = '<span class="badge rounded-pill shadow-sm px-2 py-1 d-inline-flex align-items-center gap-1" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); font-weight: 600; font-size: 0.72rem;" title="Account is ' + status + ' but session is still active on router"><i class="fas fa-exclamation-circle"></i>Still Online</span>' + btnHtml;
+                            } else {
+                                el.innerHTML = '<span class="badge rounded-pill shadow-sm px-2 py-1 d-inline-flex align-items-center gap-1" style="background-color: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 0.72rem;"><i class="fas fa-wifi me-1" style="text-decoration: line-through;"></i>Offline</span>' + btnHtml;
+                            }
                         }
                     }
                 });
