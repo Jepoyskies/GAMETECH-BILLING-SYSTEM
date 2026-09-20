@@ -329,6 +329,84 @@
             color: #6b7280;
         }
 
+        /* ── SECTION LABEL ── */
+        .section-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: .1em;
+            margin: 0 0 8px;
+            padding: 0 4px;
+        }
+
+        /* ── ADDON CARD ── */
+        .addon-card {
+            background: #ffffff;
+            border: 1px solid #e6e8ef;
+            border-radius: 16px;
+            padding: 14px 16px 16px;
+        }
+        .addon-top {
+            display: flex;
+            align-items: flex-start;
+            gap: 11px;
+        }
+        .addon-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            flex-shrink: 0;
+            background: linear-gradient(135deg, #0349cb, #3533cd);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+        }
+        .addon-icon svg { width: 21px; height: 21px; }
+        .addon-title {
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            font-size: 13px;
+            color: #15171b;
+        }
+        .addon-desc {
+            margin: 2px 0 0;
+            font-size: 11px;
+            color: #6b7280;
+            line-height: 1.4;
+        }
+        .addon-tags { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+        .addon-tag {
+            font-size: 9.5px;
+            font-weight: 600;
+            color: #0349cb;
+            background: rgba(3,73,203,0.08);
+            padding: 4px 9px;
+            border-radius: 999px;
+        }
+        .addon-cta {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            margin-top: 13px;
+            width: 100%;
+            border: 1.5px solid #0349cb;
+            background: #fff;
+            color: #0349cb;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            font-size: 12px;
+            border-radius: 999px;
+            padding: 10px;
+            cursor: pointer;
+            transition: background .15s, color .15s;
+        }
+        .addon-cta:hover { background: #0349cb; color: #fff; }
+        .addon-cta svg { width: 13px; height: 13px; }
+
     </style>
 </head>
 
@@ -350,7 +428,7 @@
                 <div class="flex-1 border-l-4 border-[#fbae1a] pl-3">
                     <h1 class="text-white font-bold text-lg sm:text-xl leading-tight">
                         <span id="dynamic-greeting">Good Morning</span>,<br>
-                        <span class="text-[#fbae1a]">{{ customer.full_name|default:"Valued Customer" }} !</span>
+                        <span class="text-[#fbae1a]">{{ customer.full_name|default:"Valued Customer" }}!</span>
                     </h1>
                     <p class="text-white/80 text-[10px] sm:text-xs mt-1.5 leading-relaxed pr-2 mb-0">
                         Manage your unlimited fiber internet, monitor your connection, and pay your bills all in one place.
@@ -423,7 +501,7 @@
                 <!-- ── CONNECTION QUALITY CARD ── -->
                 <div class="card-section" style="margin-top: -8px;">
                     <div class="glass-card no-hover p-4 mb-4 mx-1 border border-slate-100">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Connection Quality</p>
+                        <p class="section-label">Connection Quality</p>
 
                         <!-- Top Row: Status + Ping -->
                         <div class="flex justify-between items-center mb-4">
@@ -552,8 +630,9 @@ class="{% if is_network_issue %}text-red-600{% elif effective_status == 'Moderat
 
                 <!-- ── ENTERTAINMENT CARD ── -->
                 <div class="card-section" style="margin-top: 1rem; margin-bottom: 2rem;">
-                    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mx-1">
-                        <h3 class="text-gray-400 font-bold text-xs tracking-widest uppercase mb-4">Entertainment & Add-ons</h3>
+                    <div class="addon-card mx-1">
+                        <p class="section-label">Entertainment &amp; Add-ons</p>
+
                         {% if pending_cignal_requests %}
                             {% for req in pending_cignal_requests %}
                             <!-- Pending Application Block -->
@@ -586,11 +665,9 @@ class="{% if is_network_issue %}text-red-600{% elif effective_status == 'Moderat
                             <!-- Active Service Block -->
                             <div class="bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 flex justify-between items-center w-full gap-2 mb-3">
                                 <div class="flex items-center gap-3 min-w-0 flex-1">
-                                    <!-- The Icon -->
                                     <div class="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0">
                                         <i class="fa-solid fa-play text-sm"></i>
                                     </div>
-                                    <!-- The Text -->
                                     <div class="flex flex-col justify-center min-w-0">
                                         <p class="font-bold text-gray-800 text-xs leading-tight truncate">Cignal {{ plan.plan_name }}</p>
                                         <p class="text-[9px] text-gray-500 font-mono leading-tight mt-0.5 truncate">Acc: {{ plan.cignal_play_no|default:plan.cignal_box_no|default:"Pending" }}</p>
@@ -632,12 +709,29 @@ class="{% if is_network_issue %}text-red-600{% elif effective_status == 'Moderat
                             {% endif %}
                         {% endfor %}
 
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Available Add-ons</p>
-                        <div class="flex gap-2">
-                            <button onclick="applyForAddon('Cignal Play')" style="text-decoration: none; border: none; cursor: pointer;" class="flex-1 bg-[#0349cb] hover:bg-blue-800 transition text-white py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm">
-                                <i class="fa-solid fa-play"></i> Apply Cignal Play
-                            </button>
+                        <!-- Cignal Play TV promo block -->
+                        <div class="addon-top">
+                            <div class="addon-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="2" y="7" width="20" height="13" rx="2"/>
+                                    <path d="M8 3l4 4 4-4"/>
+                                    <path d="M10 15.2V10l4 2.6-4 2.6z" fill="currentColor" stroke="none"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="addon-title">Cignal Play TV</p>
+                                <p class="addon-desc">Stream 15+ live channels over your existing fiber connection.</p>
+                            </div>
                         </div>
+                        <div class="addon-tags">
+                            <span class="addon-tag">Easy setup</span>
+                            <span class="addon-tag">No extra box</span>
+                        </div>
+                        <button class="addon-cta" onclick="applyForAddon('Cignal Play')" style="border: 1.5px solid #0349cb; cursor: pointer;">
+                            Apply Cignal Play
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                        </button>
+
                     </div>
                 </div>
 
