@@ -242,6 +242,93 @@
             padding-bottom: 5rem;
         }
 
+        /* ── PLAN CARD ── */
+        .plan-card {
+            background: #ffffff;
+            border-radius: 18px;
+            padding: 16px 18px 14px;
+            box-shadow: 0 14px 26px -16px rgba(3,73,203,0.35);
+            position: relative;
+            z-index: 10;
+        }
+        .plan-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .plan-provider {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            font-size: 12px;
+            color: #15171b;
+        }
+        .plan-provider i { color: #0349cb; font-size: 14px; }
+        .pay-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            font-size: 11.5px;
+            background: #fbae1a;
+            color: #15171b;
+            border: none;
+            border-radius: 999px;
+            padding: 8px 12px 8px 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .pay-btn:hover { background: #e89d13; }
+        .plan-mid {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-top: 14px;
+            gap: 10px;
+        }
+        .plan-name {
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            font-size: 15px;
+            color: #15171b;
+        }
+        .plan-phone {
+            margin: 4px 0 0;
+            font-size: 12.5px;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .badge-active {
+            color: #0349cb;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .plan-price { text-align: right; flex-shrink: 0; }
+        .price {
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 700;
+            font-size: 17px;
+            color: #0349cb;
+        }
+        .price-label { margin: 2px 0 0; font-size: 11px; color: #6b7280; }
+        .plan-due {
+            margin: 12px 0 0;
+            padding-top: 10px;
+            border-top: 1px dashed #e6e8ef;
+            font-size: 11px;
+            color: #6b7280;
+        }
+
     </style>
 </head>
 
@@ -278,53 +365,65 @@
 
         <!-- ── PLAN CARD ── -->
         <div class="card-section">
-            <!-- Main Dashboard Card -->
-            <div class="glass-card no-hover p-4 mb-4 relative overflow-hidden mx-1 border border-slate-100 flex flex-col gap-3 relative z-10">
-                        <!-- Header Row -->
-                        <div class="flex justify-between items-center gap-2">
-                            <div class="flex items-center gap-1.5 min-w-0">
-                                <i class="fas fa-wifi text-[#fbae1a] shrink-0"></i>
-                                <span class="truncate text-xs sm:text-sm font-bold text-[#0349cb] uppercase">{{ plan.name|default:"Gametech Unli Fiber" }}</span>
-                            </div>
-                            <button class="bg-[#fbae1a] hover:bg-[#e89d13] transition text-white text-[9px] sm:text-[10px] font-bold px-2.5 py-1.5 rounded uppercase tracking-wide shrink-0 whitespace-nowrap shadow-sm" data-bs-toggle="modal" data-bs-target="#mockPaymentModal"><i class="fas fa-peso-sign mr-1"></i>Pay Bill</button>
-                        </div>
+            <div class="plan-card mx-1 mb-4">
 
-                        <div class="flex flex-col gap-0">
-                            <!-- Main Data Row (Top: Name and Price) -->
-                            <div class="flex justify-between items-baseline gap-2">
-                                <h2 class="text-base sm:text-lg font-extrabold text-gray-800 truncate min-w-0 leading-tight m-0" style="font-family: 'Montserrat', sans-serif;">
-                                    {{ customer.full_name|default:customer.pppoe_username|title }}'s Plan
-                                </h2>
-                                <div class="text-lg sm:text-xl font-bold whitespace-nowrap shrink-0 text-[#0349cb] text-right">
-                                    <span class="text-sm font-semibold">₱</span>{% if plan %}{{ plan.price }}{% else %}0.00{% endif %}
-                                </div>
-                            </div>
+                <!-- 1. Top row: provider name + pay button -->
+                <div class="plan-top">
+                    <div class="plan-provider">
+                        <i class="fas fa-wifi"></i>
+                        <span class="uppercase">{{ plan.name|default:"Gametech Unli Fiber" }}</span>
+                    </div>
+                    <!-- 2. Pill Pay Bill button with chevron -->
+                    <button class="pay-btn" data-bs-toggle="modal" data-bs-target="#mockPaymentModal">
+                        Pay Bill
+                        <i class="fas fa-chevron-right" style="font-size:10px;"></i>
+                    </button>
+                </div>
 
-                            <!-- Subtext Row (Bottom: Phone/Status and Monthly Fee) -->
-                            <div class="flex justify-between items-center gap-2">
-                                <div class="flex items-center gap-1.5 min-w-0">
-                                    <span class="whitespace-nowrap text-[10px] sm:text-xs text-slate-500 font-medium">{{ customer.contact_number|default:"0917 123 4567" }}</span>
-                                    <span class="bg-blue-50 text-[#0349cb] border border-blue-100 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
-                                        <i class="fa-solid fa-circle-check"></i> {{ customer.get_status_display|default:"Registered" }}
-                                    </span>
-                                </div>
-                                <div class="text-[9px] sm:text-[10px] text-slate-400 font-medium text-right shrink-0">
-                                    Monthly Fee
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Due Date text -->
-                        <div class="text-[9px] sm:text-[10px] text-slate-400">
-                            Due Date: {% if customer.expires_at %}{{ customer.expires_at|date:'F j, Y h:i A' }}{% else %}Unknown{% endif %}
-                        </div>
+                <!-- 3. Mid row: plan name stack (left) + price (right), both top-aligned -->
+                <div class="plan-mid">
+                    <div>
+                        <p class="plan-name">{{ customer.full_name|default:customer.pppoe_username|title }}'s Plan</p>
+                        <p class="plan-phone">
+                            {{ customer.phone|default:"—" }}
+                            <span class="badge-active">
+                                <i class="fa-solid fa-circle-check" style="font-size:11px;"></i>
+                                {{ customer.get_status_display|default:"Active" }}
+                            </span>
+                        </p>
+                    </div>
+                    <!-- 4. Price formatted with comma via JS -->
+                    <div class="plan-price">
+                        <p class="price" id="planPriceDisplay">₱{% if plan %}{{ plan.price }}{% else %}0.00{% endif %}</p>
+                        <p class="price-label">Monthly Fee</p>
                     </div>
                 </div>
 
+                <!-- 5. Dashed divider + due date -->
+                <p class="plan-due">
+                    Due Date: {% if customer.expires_at %}{{ customer.expires_at|date:'F j, Y · g:i A' }}{% else %}Unknown{% endif %}
+                </p>
+
+            </div>
+        </div>
+
+        <script>
+        (function() {
+            function formatPeso(amount) {
+                return '\u20b1' + amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+            var el = document.getElementById('planPriceDisplay');
+            if (el) {
+                var raw = parseFloat(el.textContent.replace(/[^0-9.]/g, ''));
+                if (!isNaN(raw)) el.textContent = formatPeso(raw);
+            }
+        })();
+        </script>
+
                 <!-- ── CONNECTION QUALITY CARD ── -->
                 <div class="card-section" style="margin-top: -8px;">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Connection Quality</p>
                     <div class="glass-card no-hover p-4 mb-4 mx-1 border border-slate-100">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Connection Quality</p>
 
                         <!-- Top Row: Status + Ping -->
                         <div class="flex justify-between items-center mb-4">
@@ -453,8 +552,8 @@ class="{% if is_network_issue %}text-red-600{% elif effective_status == 'Moderat
 
                 <!-- ── ENTERTAINMENT CARD ── -->
                 <div class="card-section" style="margin-top: 1rem; margin-bottom: 2rem;">
-                    <h3 class="text-gray-400 font-bold text-xs tracking-widest uppercase mb-3 ml-1 px-1">Entertainment & Add-ons</h3>
-                    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mx-1">
+                        <h3 class="text-gray-400 font-bold text-xs tracking-widest uppercase mb-4">Entertainment & Add-ons</h3>
                         {% if pending_cignal_requests %}
                             {% for req in pending_cignal_requests %}
                             <!-- Pending Application Block -->
