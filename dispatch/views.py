@@ -780,7 +780,7 @@ def management_view(request):
     from django.contrib.auth import get_user_model
     User = get_user_model()
 
-    teams = Team.objects.prefetch_related('technicians').all()
+    teams = Team.objects.prefetch_related('members').all()
     technicians = Technician.objects.select_related('team').all()
     accounts = User.objects.filter(is_active=True).order_by('-date_joined')
 
