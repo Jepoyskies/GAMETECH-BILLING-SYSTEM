@@ -1,0 +1,109 @@
+<!-- TAB 3: TARGET INSTALLMENT (PDF Page 13 Standard) -->
+<div class="tab-pane fade" id="tab-targets" role="tabpanel" aria-labelledby="targets-tab">
+    <div class="p-3">
+        <!-- Target Overview KPI Row -->
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-md-4">
+                <div class="p-3 rounded-3" style="background: rgba(15,23,42,0.6); border: 1px solid rgba(59,130,246,0.25);">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-xs text-muted text-uppercase fw-bold">Combined Daily Quota</span>
+                        <i class="fas fa-calendar-day text-primary"></i>
+                    </div>
+                    <div class="h3 fw-bold text-white mb-0">{{ total_daily_target }} <span class="text-xs text-muted fw-normal">jobs / day</span></div>
+                    <span class="text-xs text-info mt-1 d-block"><i class="fas fa-check-circle me-1"></i>Across all field crews</span>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="p-3 rounded-3" style="background: rgba(15,23,42,0.6); border: 1px solid rgba(16,185,129,0.25);">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-xs text-muted text-uppercase fw-bold">Combined Monthly Quota</span>
+                        <i class="fas fa-calendar-alt text-success"></i>
+                    </div>
+                    <div class="h3 fw-bold text-white mb-0">{{ total_monthly_target }} <span class="text-xs text-muted fw-normal">installs / mo</span></div>
+                    <span class="text-xs text-success mt-1 d-block"><i class="fas fa-bullseye me-1"></i>Monthly operations target</span>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="p-3 rounded-3" style="background: rgba(15,23,42,0.6); border: 1px solid rgba(245,158,11,0.25);">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-xs text-muted text-uppercase fw-bold">Active Assigned Techs</span>
+                        <i class="fas fa-hard-hat text-warning"></i>
+                    </div>
+                    <div class="h3 fw-bold text-white mb-0">{{ technicians.count }} <span class="text-xs text-muted fw-normal">technicians</span></div>
+                    <span class="text-xs text-warning mt-1 d-block"><i class="fas fa-users-cog me-1"></i>{{ teams.count }} deployed field teams</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Technicians Targets Breakdown -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h6 class="fw-bold mb-0 text-white"><i class="fas fa-bullseye text-success me-2"></i> Individual Technician Installation Targets</h6>
+                <span class="text-muted text-xs">Pacing benchmarks for daily routes and monthly install quotas</span>
+            </div>
+        </div>
+
+        <div class="table-responsive rounded-3 border border-secondary border-opacity-25">
+            <table class="table table-hover align-middle mb-0 text-sm" style="background: transparent;">
+                <thead>
+                    <tr class="text-muted text-uppercase text-xs border-secondary border-opacity-25">
+                        <th class="ps-3">Technician</th>
+                        <th>Assigned Team</th>
+                        <th class="text-center" style="width: 160px;">Target / Day</th>
+                        <th class="text-center" style="width: 180px;">Target / Month</th>
+                        <th class="text-center" style="width: 160px;">Benchmark Status</th>
+                        <th class="text-end pe-3" style="width: 100px;">Configure</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tech in technicians %}
+                    <tr class="border-secondary border-opacity-25">
+                        <td class="ps-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle d-inline-flex align-items-center justify-content-center text-white fw-bold"
+                                     style="width: 28px; height: 28px; font-size: 0.75rem; background: linear-gradient(135deg, #10b981, #059669);">
+                                    {{ tech.name|make_list|first|upper }}
+                                </div>
+                                <span class="fw-bold text-white text-xs">{{ tech.name }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% if tech.team %}
+                            <span class="badge bg-secondary bg-opacity-25 text-white border border-secondary border-opacity-25 text-xs">
+                                {{ tech.team.name }}
+                            </span>
+                            {% else %}
+                            <span class="text-muted text-xs fst-italic">Unassigned</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <span class="badge rounded-pill bg-primary bg-opacity-15 text-primary border border-primary border-opacity-25 text-xs px-3 py-1">
+                                {{ tech.target_per_day|default:"5" }} jobs / day
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge rounded-pill bg-success bg-opacity-15 text-success border border-success border-opacity-25 text-xs px-3 py-1">
+                                {{ tech.target_per_month|default:"100" }} installs / mo
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge rounded-pill bg-dark border border-secondary text-xs text-muted">
+                                <i class="fas fa-check text-success me-1"></i>Active Quota
+                            </span>
+                        </td>
+                        <td class="text-end pe-3">
+                            <a href="/admin/dispatch/technician/{{ tech.id }}/change/" target="_blank" class="btn btn-outline-secondary btn-xs" style="padding: 2px 8px; border-radius: 6px;">
+                                <i class="fas fa-sliders-h"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-muted fst-italic">No technicians configured.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

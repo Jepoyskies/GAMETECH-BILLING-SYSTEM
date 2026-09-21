@@ -1,0 +1,120 @@
+<!-- Modal: Add Config Option -->
+<div class="modal fade" id="modal-add-config-option" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border-secondary text-white" style="border-radius: 14px; box-shadow: 0 12px 36px rgba(0,0,0,0.5);">
+            <div class="modal-header border-secondary border-opacity-25">
+                <h5 class="modal-title fw-bold fs-6"><i class="fas fa-plus-circle text-primary me-2"></i> Add Custom Option</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="form-add-config-option">
+                <div class="modal-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-xs fw-bold text-muted text-uppercase">Module</label>
+                            <select name="module" class="form-select bg-dark border-secondary text-white" required>
+                                <option value="MONITORING" selected>MONITORING</option>
+                                <option value="DISPATCH">DISPATCH</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-xs fw-bold text-muted text-uppercase">List Type</label>
+                            <select name="list_type" class="form-select bg-dark border-secondary text-white" required>
+                                <option value="STATUS" selected>STATUS</option>
+                                <option value="TYPE">TYPE</option>
+                                <option value="CHAT_TYPE">CHAT_TYPE</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-xs fw-bold text-muted text-uppercase">Option Label *</label>
+                        <input type="text" name="label" class="form-control bg-dark border-secondary text-white" required placeholder="e.g. Follow Up">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-xs fw-bold text-muted text-uppercase">Badge Color</label>
+                        <div class="d-flex align-items-center gap-3">
+                            <input type="color" name="color" class="form-control form-control-color bg-dark border-secondary" value="#3b82f6" title="Choose color" style="width: 50px; height: 38px; border-radius: 8px;">
+                            <div class="d-flex flex-wrap gap-1">
+                                <button type="button" class="btn btn-xs rounded-circle p-2" style="background:#10b981;" onclick="setFormColor(this.closest('form'), '#10b981')"></button>
+                                <button type="button" class="btn btn-xs rounded-circle p-2" style="background:#3b82f6;" onclick="setFormColor(this.closest('form'), '#3b82f6')"></button>
+                                <button type="button" class="btn btn-xs rounded-circle p-2" style="background:#f59e0b;" onclick="setFormColor(this.closest('form'), '#f59e0b')"></button>
+                                <button type="button" class="btn btn-xs rounded-circle p-2" style="background:#ef4444;" onclick="setFormColor(this.closest('form'), '#ef4444')"></button>
+                                <button type="button" class="btn btn-xs rounded-circle p-2" style="background:#8b5cf6;" onclick="setFormColor(this.closest('form'), '#8b5cf6')"></button>
+                                <button type="button" class="btn btn-xs rounded-circle p-2" style="background:#6b7280;" onclick="setFormColor(this.closest('form'), '#6b7280')"></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" name="active" value="1" id="addOptionActive" checked>
+                        <label class="form-check-label text-white small" for="addOptionActive">Active in dropdowns</label>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary border-opacity-25">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save me-1"></i> Save Option</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Edit Config Option -->
+<div class="modal fade" id="modal-edit-config-option" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border-secondary text-white" style="border-radius: 14px; box-shadow: 0 12px 36px rgba(0,0,0,0.5);">
+            <div class="modal-header border-secondary border-opacity-25">
+                <h5 class="modal-title fw-bold fs-6"><i class="fas fa-sliders-h text-info me-2"></i> Edit Option</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="form-edit-config-option">
+                <input type="hidden" name="option_id" id="edit-option-id">
+                <div class="modal-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-xs fw-bold text-muted text-uppercase">Module</label>
+                            <input type="text" id="edit-option-module" class="form-control bg-dark border-secondary text-muted" readonly>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-xs fw-bold text-muted text-uppercase">List Type</label>
+                            <input type="text" id="edit-option-list-type" class="form-control bg-dark border-secondary text-muted" readonly>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-xs fw-bold text-muted text-uppercase">Option Label</label>
+                        <input type="text" name="label" id="edit-option-label" class="form-control bg-dark border-secondary text-white" required>
+                        <div id="edit-option-locked-msg" class="text-warning text-xs mt-1" style="display:none;">
+                            <i class="fas fa-lock me-1"></i> System-critical label locked. You can customize the badge color and active status below.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-xs fw-bold text-muted text-uppercase">Badge Color</label>
+                        <div class="d-flex align-items-center gap-3">
+                            <input type="color" name="color" id="edit-option-color" class="form-control form-control-color bg-dark border-secondary" title="Choose color" style="width: 50px; height: 38px; border-radius: 8px;">
+                            <div class="d-flex flex-wrap gap-1">
+                                <button type="button" class="btn btn-xs rounded-circle p-2" style="background:#10b981;" onclick="setFormColor(this.closest('form'), '#10b981')"></button>
+                                <button type="button" class="btn btn-xs rounded-circle p-2" style="background:#3b82f6;" onclick="setFormColor(this.closest('form'), '#3b82f6')"></button>
+                                <button type="button" class="btn btn-xs rounded-circle p-2" style="background:#f59e0b;" onclick="setFormColor(this.closest('form'), '#f59e0b')"></button>
+                                <button type="button" class="btn btn-xs rounded-circle p-2" style="background:#ef4444;" onclick="setFormColor(this.closest('form'), '#ef4444')"></button>
+                                <button type="button" class="btn btn-xs rounded-circle p-2" style="background:#8b5cf6;" onclick="setFormColor(this.closest('form'), '#8b5cf6')"></button>
+                                <button type="button" class="btn btn-xs rounded-circle p-2" style="background:#6b7280;" onclick="setFormColor(this.closest('form'), '#6b7280')"></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" name="active" value="1" id="edit-option-active">
+                        <label class="form-check-label text-white small" for="edit-option-active">Active in dropdowns</label>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary border-opacity-25">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save me-1"></i> Update Option</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,139 @@
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function setFormColor(formEl, color) {
+    const input = formEl.querySelector('input[type="color"]');
+    if (input) input.value = color;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Add Option Handler
+    const formAdd = document.getElementById('form-add-config-option');
+    if (formAdd) {
+        formAdd.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const data = {
+                module: formAdd.module.value,
+                list_type: formAdd.list_type.value,
+                label: formAdd.label.value.trim(),
+                color: formAdd.color.value,
+                active: formAdd.active.checked
+            };
+
+            fetch("{% url 'api_dispatch_config_options_create' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.status === 'success') {
+                    location.reload();
+                } else {
+                    alert('Error creating option: ' + (res.error || 'Unknown error'));
+                }
+            })
+            .catch(err => alert('Network error: ' + err));
+        });
+    }
+
+    // 2. Open Edit Option Modal
+    document.querySelectorAll('.btn-edit-config').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const mod = this.dataset.module;
+            const ltype = this.dataset.listType;
+            const label = this.dataset.label;
+            const color = this.dataset.color;
+            const active = this.dataset.active === '1';
+            const locked = this.dataset.locked === '1';
+
+            document.getElementById('edit-option-id').value = id;
+            document.getElementById('edit-option-module').value = mod;
+            document.getElementById('edit-option-list-type').value = ltype;
+            const labelInput = document.getElementById('edit-option-label');
+            labelInput.value = label;
+            labelInput.readOnly = locked;
+
+            const lockedMsg = document.getElementById('edit-option-locked-msg');
+            if (lockedMsg) lockedMsg.style.display = locked ? 'block' : 'none';
+
+            document.getElementById('edit-option-color').value = color;
+            document.getElementById('edit-option-active').checked = active;
+
+            const modal = new bootstrap.Modal(document.getElementById('modal-edit-config-option'));
+            modal.show();
+        });
+    });
+
+    // 3. Submit Edit Option
+    const formEdit = document.getElementById('form-edit-config-option');
+    if (formEdit) {
+        formEdit.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit-option-id').value;
+            const data = {
+                label: document.getElementById('edit-option-label').value.trim(),
+                color: document.getElementById('edit-option-color').value,
+                active: document.getElementById('edit-option-active').checked
+            };
+
+            fetch(`/dispatch/api/config-options/${id}/update/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.status === 'success') {
+                    location.reload();
+                } else {
+                    alert('Error updating option: ' + (res.error || 'Unknown error'));
+                }
+            })
+            .catch(err => alert('Network error: ' + err));
+        });
+    }
+});
+
+function deleteConfigOption(id, label) {
+    if (!confirm(`Are you sure you want to delete the option "${label}"?`)) return;
+
+    fetch(`/dispatch/api/config-options/${id}/delete/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(res => res.json())
+    .then(res => {
+        if (res.status === 'success') {
+            const row = document.getElementById(`config-row-${id}`);
+            if (row) row.remove();
+        } else {
+            alert('Error deleting option: ' + (res.error || 'Unknown error'));
+        }
+    })
+    .catch(err => alert('Network error: ' + err));
+}
+</script>

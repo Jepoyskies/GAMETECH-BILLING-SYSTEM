@@ -1,0 +1,110 @@
+<!-- TAB 2: TEAMS & TECHNICIANS (PDF Page 13 Standard) -->
+<div class="tab-pane fade" id="tab-teams" role="tabpanel" aria-labelledby="teams-tab">
+    <div class="row g-4 p-3">
+        <!-- Teams Column -->
+        <div class="col-12 col-lg-5">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h6 class="fw-bold mb-0 text-white"><i class="fas fa-users text-primary me-2"></i> Field Teams</h6>
+                    <span class="text-muted text-xs">Active service crews</span>
+                </div>
+                <a href="/admin/dispatch/team/add/" target="_blank" class="btn btn-xs btn-outline-primary" style="border-radius: 6px;">
+                    <i class="fas fa-plus me-1"></i> Add Team
+                </a>
+            </div>
+            <div class="table-responsive rounded-3 border border-secondary border-opacity-25">
+                <table class="table table-hover align-middle mb-0 text-sm" style="background: transparent;">
+                    <thead>
+                        <tr class="text-muted text-uppercase text-xs border-secondary border-opacity-25">
+                            <th class="ps-3">Team Name</th>
+                            <th class="text-center">Techs</th>
+                            <th class="text-end pe-3">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for team in teams %}
+                        <tr class="border-secondary border-opacity-25">
+                            <td class="ps-3 fw-bold text-white text-xs">
+                                <i class="fas fa-shield-alt text-info me-2"></i>{{ team.name }}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge rounded-pill bg-primary bg-opacity-15 text-primary border border-primary border-opacity-25 text-xs">
+                                    {{ team.technicians.count }} crew
+                                </span>
+                            </td>
+                            <td class="text-end pe-3">
+                                <a href="/admin/dispatch/team/{{ team.id }}/change/" target="_blank" class="btn btn-outline-secondary btn-xs" style="padding: 2px 6px;">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center py-3 text-muted fst-italic text-xs">No teams registered.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Technicians Column -->
+        <div class="col-12 col-lg-7">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h6 class="fw-bold mb-0 text-white"><i class="fas fa-user-hard-hat text-warning me-2"></i> Field Technicians</h6>
+                    <span class="text-muted text-xs">Active personnel & assignments</span>
+                </div>
+                <a href="/admin/dispatch/technician/add/" target="_blank" class="btn btn-xs btn-outline-warning" style="border-radius: 6px;">
+                    <i class="fas fa-plus me-1"></i> Add Technician
+                </a>
+            </div>
+            <div class="table-responsive rounded-3 border border-secondary border-opacity-25">
+                <table class="table table-hover align-middle mb-0 text-sm" style="background: transparent;">
+                    <thead>
+                        <tr class="text-muted text-uppercase text-xs border-secondary border-opacity-25">
+                            <th class="ps-3">Technician</th>
+                            <th>Contact</th>
+                            <th>Assigned Team</th>
+                            <th class="text-end pe-3">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tech in technicians %}
+                        <tr class="border-secondary border-opacity-25">
+                            <td class="ps-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center text-white fw-bold"
+                                         style="width: 28px; height: 28px; font-size: 0.75rem; background: linear-gradient(135deg, #f59e0b, #d97706);">
+                                        {{ tech.name|make_list|first|upper }}
+                                    </div>
+                                    <span class="fw-bold text-white text-xs">{{ tech.name }}</span>
+                                </div>
+                            </td>
+                            <td class="text-xs text-muted font-monospace">{{ tech.contact_number|default:"—" }}</td>
+                            <td>
+                                {% if tech.team %}
+                                <span class="badge bg-secondary bg-opacity-25 text-white border border-secondary border-opacity-25 text-xs">
+                                    <i class="fas fa-users me-1 text-info"></i>{{ tech.team.name }}
+                                </span>
+                                {% else %}
+                                <span class="badge bg-danger bg-opacity-15 text-danger border border-danger border-opacity-25 text-xs">Unassigned</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-3">
+                                <a href="/admin/dispatch/technician/{{ tech.id }}/change/" target="_blank" class="btn btn-outline-secondary btn-xs" style="padding: 2px 6px;">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-3 text-muted fst-italic text-xs">No technicians registered.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

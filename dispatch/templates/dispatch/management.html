@@ -1,7 +1,7 @@
 {% extends "billing/base.html" %}
 {% load static %}
 
-{% block title %}Management - Gametech Unli Fiber{% endblock %}
+{% block title %}Field Unit Management - Gametech Unli Fiber{% endblock %}
 
 {% block extra_css %}
 {% include "dispatch/_styles.html" %}
@@ -14,472 +14,54 @@
         <div>
             <div class="d-flex align-items-center gap-2 mb-2">
                 <span class="badge rounded-pill px-3 py-1 fw-semibold" style="background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase;">
-                    <i class="fas fa-cog me-1"></i> Dispatch System
+                    <i class="fas fa-cog me-1"></i> Field Unit Management
+                </span>
+                <span class="badge rounded-pill px-2 py-0.5" style="background: rgba(16,185,129,0.15); color: #34d399; font-size: 0.68rem;">
+                    PDF v5.7.0 Standard
                 </span>
             </div>
             <h1 class="h4 fw-bold text-white mb-1" style="letter-spacing: -0.02em;">Field Unit Management</h1>
-            <p class="text-muted mb-0" style="font-size: 0.82rem;">Manage dispatch teams, technicians, and configurable dropdown options</p>
+            <p class="text-muted mb-0" style="font-size: 0.82rem;">Manage operator accounts, dispatch teams, technician targets, and dropdown options</p>
         </div>
-        <a href="{% url 'dispatch_dashboard' %}" class="btn btn-sm px-3 py-2"
-           style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; border-radius: 10px; font-size: 0.82rem;">
-            <i class="fas fa-arrow-left me-1"></i> Back to Console
-        </a>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'dispatch_dashboard' %}" class="btn btn-sm px-3 py-2"
+               style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; border-radius: 10px; font-size: 0.82rem;">
+                <i class="fas fa-arrow-left me-1"></i> Operations Console
+            </a>
+        </div>
     </div>
 
-    <!-- Management Tabs -->
-    <div class="dispatch-tab-bar" id="managementTabBar">
-        <button class="dispatch-tab-btn active" id="teams-tab" data-bs-toggle="tab" data-bs-target="#teams" type="button" role="tab" aria-controls="teams" aria-selected="true">
-            <i class="fas fa-users me-1"></i> Teams
+    <!-- 4 Sub-Tabs Bar matching PDF Page 13 -->
+    <div class="dispatch-tab-bar mb-0" id="managementTabBar">
+        <button class="dispatch-tab-btn active" id="accounts-tab" data-bs-toggle="tab" data-bs-target="#tab-accounts" type="button" role="tab" aria-controls="tab-accounts" aria-selected="true">
+            <i class="fas fa-id-badge me-1"></i> Accounts
         </button>
-        <button class="dispatch-tab-btn" id="techs-tab" data-bs-toggle="tab" data-bs-target="#techs" type="button" role="tab" aria-controls="techs" aria-selected="false">
-            <i class="fas fa-user-hard-hat me-1"></i> Technicians
+        <button class="dispatch-tab-btn" id="teams-tab" data-bs-toggle="tab" data-bs-target="#tab-teams" type="button" role="tab" aria-controls="tab-teams" aria-selected="false">
+            <i class="fas fa-users me-1"></i> Teams & Technicians
         </button>
-        <button class="dispatch-tab-btn" id="dropdowns-tab" data-bs-toggle="tab" data-bs-target="#dropdowns" type="button" role="tab" aria-controls="dropdowns" aria-selected="false">
+        <button class="dispatch-tab-btn" id="targets-tab" data-bs-toggle="tab" data-bs-target="#tab-targets" type="button" role="tab" aria-controls="tab-targets" aria-selected="false">
+            <i class="fas fa-bullseye me-1"></i> Target Installment
+        </button>
+        <button class="dispatch-tab-btn" id="dropdowns-tab" data-bs-toggle="tab" data-bs-target="#tab-dropdowns" type="button" role="tab" aria-controls="tab-dropdowns" aria-selected="false">
             <i class="fas fa-list-ul me-1"></i> Dropdown Options
         </button>
     </div>
 
+    <!-- Tab Contents Container -->
     <div class="dispatch-tab-body" id="managementTabsContent">
-        <div class="p-0">
-            <div class="tab-content">
-                <!-- TEAMS TAB -->
-                <div class="tab-pane fade show active" id="teams" role="tabpanel" aria-labelledby="teams-tab">
-                    <div class="d-flex justify-content-between p-3 border-bottom border-secondary">
-                        <h6 class="fw-bold mb-0 text-white"><i class="fas fa-users text-primary me-2"></i> Manage Teams</h6>
-                        <a href="/admin/dispatch/team/add/" class="btn btn-xs btn-outline-primary" target="_blank"><i class="fas fa-plus me-1"></i> Add Team</a>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-dark table-hover align-middle mb-0" style="background: transparent;">
-                            <thead>
-                                <tr class="text-muted text-uppercase text-xs border-secondary">
-                                    <th>Name</th>
-                                    <th>Created At</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for team in teams %}
-                                <tr class="border-secondary">
-                                    <td class="fw-bold text-white">{{ team.name }}</td>
-                                    <td class="text-xs text-muted">{{ team.created_at|date:"M d, Y" }}</td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="2" class="text-center text-muted fst-italic">No teams found.</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- TECHNICIANS TAB -->
-                <div class="tab-pane fade" id="techs" role="tabpanel" aria-labelledby="techs-tab">
-                    <div class="d-flex justify-content-between p-3 border-bottom border-secondary">
-                        <h6 class="fw-bold mb-0 text-white"><i class="fas fa-user-hard-hat text-primary me-2"></i> Manage Technicians</h6>
-                        <a href="/admin/dispatch/technician/add/" class="btn btn-xs btn-outline-primary" target="_blank"><i class="fas fa-plus me-1"></i> Add Technician</a>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-dark table-hover align-middle mb-0" style="background: transparent;">
-                            <thead>
-                                <tr class="text-muted text-uppercase text-xs border-secondary">
-                                    <th>Name</th>
-                                    <th>Contact</th>
-                                    <th>Team</th>
-                                    <th>Target / Day</th>
-                                    <th>Target / Mo</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for tech in technicians %}
-                                <tr class="border-secondary">
-                                    <td class="fw-bold text-white">{{ tech.name }}</td>
-                                    <td class="text-xs">{{ tech.contact_number|default:"-" }}</td>
-                                    <td>
-                                        {% if tech.team %}
-                                        <span class="badge bg-secondary text-xs">{{ tech.team.name }}</span>
-                                        {% else %}
-                                        <span class="text-muted fst-italic text-xs">Unassigned</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-xs text-muted">{{ tech.target_per_day|default:"5" }}</td>
-                                    <td class="text-xs text-muted">{{ tech.target_per_month|default:"100" }}</td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="5" class="text-center text-muted fst-italic">No technicians found.</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- DROPDOWNS TAB -->
-                <div class="tab-pane fade" id="dropdowns" role="tabpanel" aria-labelledby="dropdowns-tab">
-                    <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary flex-wrap gap-2">
-                        <div>
-                            <h6 class="fw-bold mb-0 text-white"><i class="fas fa-list-ul text-primary me-2"></i> Dropdown Options Configurator</h6>
-                            <span class="text-muted text-xs">Customize labels, colors, and statuses for Statuses, Types, and Chat Types</span>
-                        </div>
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modal-add-config-option">
-                                <i class="fas fa-plus me-1"></i> Add Custom Option
-                            </button>
-                        </div>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-dark table-hover align-middle mb-0" id="table-config-options" style="background: transparent;">
-                            <thead>
-                                <tr class="text-muted text-uppercase text-xs border-secondary">
-                                    <th style="width: 120px;">Module</th>
-                                    <th style="width: 120px;">List Type</th>
-                                    <th>Option Label</th>
-                                    <th style="width: 180px;">Color Preview</th>
-                                    <th style="width: 110px;">Status</th>
-                                    <th class="text-end pe-3" style="width: 130px;">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for opt in config_options %}
-                                <tr class="border-secondary" id="config-row-{{ opt.id }}">
-                                    <td><span class="badge bg-dark border border-secondary text-xs">{{ opt.module }}</span></td>
-                                    <td class="text-xs text-muted font-monospace">{{ opt.list_type }}</td>
-                                    <td class="fw-bold text-white text-xs">
-                                        <span class="opt-label-text">{{ opt.label }}</span>
-                                        {% if opt.is_locked %}
-                                        <span class="badge bg-secondary bg-opacity-25 text-white-50 border border-secondary border-opacity-25 ms-1" style="font-size: 0.68rem;" title="System-critical label protected from renaming/deletion">
-                                            <i class="fas fa-lock me-1"></i>System
-                                        </span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <span class="badge px-3 py-1 text-white border border-secondary border-opacity-25 opt-badge-preview" style="background-color: {{ opt.color }};">
-                                                {{ opt.label }}
-                                            </span>
-                                            <span class="text-xs text-muted font-monospace opt-color-code">{{ opt.color }}</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        {% if opt.active %}
-                                        <span class="badge bg-success bg-opacity-20 text-success border border-success border-opacity-25 text-xs">Active</span>
-                                        {% else %}
-                                        <span class="badge bg-secondary bg-opacity-20 text-muted border border-secondary border-opacity-25 text-xs">Inactive</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-end pe-3">
-                                        <div class="btn-group btn-group-sm">
-                                            <button type="button" class="btn btn-outline-info btn-xs btn-edit-config" 
-                                                    data-id="{{ opt.id }}"
-                                                    data-module="{{ opt.module }}"
-                                                    data-list-type="{{ opt.list_type }}"
-                                                    data-label="{{ opt.label }}"
-                                                    data-color="{{ opt.color }}"
-                                                    data-active="{% if opt.active %}1{% else %}0{% endif %}"
-                                                    data-locked="{% if opt.is_locked %}1{% else %}0{% endif %}"
-                                                    title="Edit label, color, or status">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            {% if opt.is_locked %}
-                                            <button type="button" class="btn btn-outline-secondary btn-xs" disabled title="System-critical options cannot be deleted">
-                                                <i class="fas fa-lock"></i>
-                                            </button>
-                                            {% else %}
-                                            <button type="button" class="btn btn-outline-danger btn-xs" onclick="deleteConfigOption({{ opt.id }}, '{{ opt.label|escapejs }}')" title="Delete custom option">
-                                                <i class="fas fa-trash-alt"></i>
-                                            </button>
-                                            {% endif %}
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="6" class="text-center text-muted fst-italic py-4">No configuration options found.</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="alert alert-dark border-secondary mt-4 d-flex align-items-center">
-        <i class="fas fa-info-circle text-primary fs-4 me-3"></i> 
-        <div class="text-muted text-sm">
-            <strong class="text-white">Dynamic Color Customization:</strong> System-critical labels (<em>Done, Cancelled, Pending, Installation, Repair, Concern, Inquiry</em>) remain locked to protect core database workflows, but their badge colors and active states can be freely customized right here without redeploying code.
+        <div class="tab-content">
+            {% include "dispatch/_management_accounts.html" %}
+            {% include "dispatch/_management_teams_techs.html" %}
+            {% include "dispatch/_management_targets.html" %}
+            {% include "dispatch/_management_dropdowns.html" %}
         </div>
     </div>
 
-    <!-- Modal: Add Config Option -->
-    <div class="modal fade" id="modal-add-config-option" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content bg-dark border-secondary text-white">
-                <div class="modal-header border-secondary">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-plus-circle text-primary me-2"></i> Add Custom Option</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <form id="form-add-config-option">
-                    <div class="modal-body">
-                        <div class="row g-3 mb-3">
-                            <div class="col-6">
-                                <label class="form-label text-xs fw-bold text-muted text-uppercase">Module</label>
-                                <select name="module" class="form-select bg-dark border-secondary text-white" required>
-                                    <option value="MONITORING" selected>MONITORING</option>
-                                    <option value="DISPATCH">DISPATCH</option>
-                                </select>
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label text-xs fw-bold text-muted text-uppercase">List Type</label>
-                                <select name="list_type" class="form-select bg-dark border-secondary text-white" required>
-                                    <option value="STATUS" selected>STATUS</option>
-                                    <option value="TYPE">TYPE</option>
-                                    <option value="CHAT_TYPE">CHAT_TYPE</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label text-xs fw-bold text-muted text-uppercase">Option Label *</label>
-                            <input type="text" name="label" class="form-control bg-dark border-secondary text-white" required placeholder="e.g. Follow Up">
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label text-xs fw-bold text-muted text-uppercase">Badge Color</label>
-                            <div class="d-flex align-items-center gap-3">
-                                <input type="color" name="color" class="form-control form-control-color bg-dark border-secondary" value="#3b82f6" title="Choose color" style="width: 60px; height: 38px;">
-                                <div class="d-flex flex-wrap gap-1">
-                                    <button type="button" class="btn btn-xs rounded-circle p-2" style="background:#10b981;" onclick="setFormColor(this.closest('form'), '#10b981')"></button>
-                                    <button type="button" class="btn btn-xs rounded-circle p-2" style="background:#3b82f6;" onclick="setFormColor(this.closest('form'), '#3b82f6')"></button>
-                                    <button type="button" class="btn btn-xs rounded-circle p-2" style="background:#f59e0b;" onclick="setFormColor(this.closest('form'), '#f59e0b')"></button>
-                                    <button type="button" class="btn btn-xs rounded-circle p-2" style="background:#ef4444;" onclick="setFormColor(this.closest('form'), '#ef4444')"></button>
-                                    <button type="button" class="btn btn-xs rounded-circle p-2" style="background:#8b5cf6;" onclick="setFormColor(this.closest('form'), '#8b5cf6')"></button>
-                                    <button type="button" class="btn btn-xs rounded-circle p-2" style="background:#6b7280;" onclick="setFormColor(this.closest('form'), '#6b7280')"></button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-check form-switch mb-2">
-                            <input class="form-check-input" type="checkbox" name="active" value="1" id="addOptionActive" checked>
-                            <label class="form-check-label text-white small" for="addOptionActive">Active in dropdowns</label>
-                        </div>
-                    </div>
-                    <div class="modal-footer border-secondary">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save me-1"></i> Save Option</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal: Edit Config Option -->
-    <div class="modal fade" id="modal-edit-config-option" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content bg-dark border-secondary text-white">
-                <div class="modal-header border-secondary">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-sliders-h text-info me-2"></i> Edit Option</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <form id="form-edit-config-option">
-                    <input type="hidden" name="option_id" id="edit-option-id">
-                    <div class="modal-body">
-                        <div class="row g-3 mb-3">
-                            <div class="col-6">
-                                <label class="form-label text-xs fw-bold text-muted text-uppercase">Module</label>
-                                <input type="text" id="edit-option-module" class="form-control bg-dark border-secondary text-muted" readonly>
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label text-xs fw-bold text-muted text-uppercase">List Type</label>
-                                <input type="text" id="edit-option-list-type" class="form-control bg-dark border-secondary text-muted" readonly>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label text-xs fw-bold text-muted text-uppercase">Option Label</label>
-                            <input type="text" name="label" id="edit-option-label" class="form-control bg-dark border-secondary text-white" required>
-                            <div id="edit-option-locked-msg" class="text-warning text-xs mt-1" style="display:none;">
-                                <i class="fas fa-lock me-1"></i> System-critical label locked. You can customize the badge color and active status below.
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label text-xs fw-bold text-muted text-uppercase">Badge Color</label>
-                            <div class="d-flex align-items-center gap-3">
-                                <input type="color" name="color" id="edit-option-color" class="form-control form-control-color bg-dark border-secondary" title="Choose color" style="width: 60px; height: 38px;">
-                                <div class="d-flex flex-wrap gap-1">
-                                    <button type="button" class="btn btn-xs rounded-circle p-2" style="background:#10b981;" onclick="setFormColor(this.closest('form'), '#10b981')"></button>
-                                    <button type="button" class="btn btn-xs rounded-circle p-2" style="background:#3b82f6;" onclick="setFormColor(this.closest('form'), '#3b82f6')"></button>
-                                    <button type="button" class="btn btn-xs rounded-circle p-2" style="background:#f59e0b;" onclick="setFormColor(this.closest('form'), '#f59e0b')"></button>
-                                    <button type="button" class="btn btn-xs rounded-circle p-2" style="background:#ef4444;" onclick="setFormColor(this.closest('form'), '#ef4444')"></button>
-                                    <button type="button" class="btn btn-xs rounded-circle p-2" style="background:#8b5cf6;" onclick="setFormColor(this.closest('form'), '#8b5cf6')"></button>
-                                    <button type="button" class="btn btn-xs rounded-circle p-2" style="background:#6b7280;" onclick="setFormColor(this.closest('form'), '#6b7280')"></button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-check form-switch mb-2">
-                            <input class="form-check-input" type="checkbox" name="active" value="1" id="edit-option-active">
-                            <label class="form-check-label text-white small" for="edit-option-active">Active in dropdowns</label>
-                        </div>
-                    </div>
-                    <div class="modal-footer border-secondary">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save me-1"></i> Update Option</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
+    <!-- Modals -->
+    {% include "dispatch/_management_modals.html" %}
 </main>
 {% endblock %}
 
 {% block extra_js %}
-<script>
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-const csrftoken = getCookie('csrftoken');
-
-function setFormColor(form, hex) {
-    const picker = form.querySelector('input[name="color"]');
-    if (picker) picker.value = hex;
-}
-
-// Bind Edit Buttons
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.btn-edit-config').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const d = this.dataset;
-            document.getElementById('edit-option-id').value = d.id;
-            document.getElementById('edit-option-module').value = d.module;
-            document.getElementById('edit-option-list-type').value = d.listType;
-            const labelInput = document.getElementById('edit-option-label');
-            labelInput.value = d.label;
-            document.getElementById('edit-option-color').value = d.color || '#6b7280';
-            document.getElementById('edit-option-active').checked = d.active === '1';
-
-            const lockedMsg = document.getElementById('edit-option-locked-msg');
-            if (d.locked === '1') {
-                labelInput.readOnly = true;
-                labelInput.classList.add('text-muted');
-                lockedMsg.style.display = 'block';
-            } else {
-                labelInput.readOnly = false;
-                labelInput.classList.remove('text-muted');
-                lockedMsg.style.display = 'none';
-            }
-
-            const modal = new bootstrap.Modal(document.getElementById('modal-edit-config-option'));
-            modal.show();
-        });
-    });
-
-    // Handle Add Form Submit
-    const addForm = document.getElementById('form-add-config-option');
-    if (addForm) {
-        addForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            const payload = {
-                module: formData.get('module'),
-                list_type: formData.get('list_type'),
-                label: formData.get('label'),
-                color: formData.get('color'),
-                active: formData.get('active') ? true : false
-            };
-
-            try {
-                const res = await fetch('/dispatch/api/config-options/create/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert(data.error || 'Failed to create option.');
-                }
-            } catch (err) {
-                console.error(err);
-                alert('Network error while saving option.');
-            }
-        });
-    }
-
-    // Handle Edit Form Submit
-    const editForm = document.getElementById('form-edit-config-option');
-    if (editForm) {
-        editForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const optionId = document.getElementById('edit-option-id').value;
-            const payload = {
-                label: document.getElementById('edit-option-label').value,
-                color: document.getElementById('edit-option-color').value,
-                active: document.getElementById('edit-option-active').checked
-            };
-
-            try {
-                const res = await fetch(`/dispatch/api/config-options/${optionId}/update/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert(data.error || 'Failed to update option.');
-                }
-            } catch (err) {
-                console.error(err);
-                alert('Network error while updating option.');
-            }
-        });
-    }
-});
-
-async function deleteConfigOption(id, label) {
-    if (!confirm(`Are you sure you want to permanently delete custom option "${label}"?`)) return;
-
-    try {
-        const res = await fetch(`/dispatch/api/config-options/${id}/delete/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': csrftoken
-            }
-        });
-        const data = await res.json();
-        if (data.success) {
-            const row = document.getElementById(`config-row-${id}`);
-            if (row) row.remove();
-        } else {
-            alert(data.error || 'Failed to delete option.');
-        }
-    } catch (err) {
-        console.error(err);
-        alert('Network error while deleting option.');
-    }
-}
-</script>
+{% include "dispatch/_management_scripts.html" %}
 {% endblock %}

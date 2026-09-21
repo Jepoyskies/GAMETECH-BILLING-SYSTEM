@@ -731,15 +731,63 @@ def complete_job_view(request, record_id):
 
 @login_required
 def audit_log_view(request):
-    logs = AuditLog.objects.select_related('actor').order_by('-created_at')[:100]
-    return render(request, 'dispatch/audit_log.html', {'logs': logs})
+    action_filter = request.GET.get('action', 'ALL').strip().upper()
+    entity_filter = request.GET.get('entity', 'ALL').strip()
+    search_q = request.GET.get('q', '').strip()
+
+    qs = AuditLog.objects.select_related('actor').order_by('-created_at')
+
+    # Summary KPI stats
+    base_qs = AuditLog.objects.all()
+    total_events = base_qs.count()
+    creates_count = base_qs.filter(action='CREATE').count()
+    updates_count = base_qs.filter(action='UPDATE').count()
+    deletes_count = base_qs.filter(action='DELETE').count()
+
+    if action_filter and action_filter != 'ALL':
+        qs = qs.filter(action=action_filter)
+
+    if entity_filter and entity_filter != 'ALL':
+        qs = qs.filter(entity_type=entity_filter)
+
+    if search_q:
+        qs = qs.filter(
+            Q(summary__icontains=search_q) |
+            Q(entity_type__icontains=search_q) |
+            Q(actor__username__icontains=search_q)
+        )
+
+    logs = qs[:150]
+
+    # Distinct entity types for dropdown filter
+    available_entities = sorted(list(set(AuditLog.objects.values_list('entity_type', flat=True).distinct())))
+
+    return render(request, 'dispatch/audit_log.html', {
+        'logs': logs,
+        'action_filter': action_filter,
+        'entity_filter': entity_filter,
+        'search_q': search_q,
+        'total_events': total_events,
+        'creates_count': creates_count,
+        'updates_count': updates_count,
+        'deletes_count': deletes_count,
+        'available_entities': available_entities,
+    })
 
 
 @login_required
 def management_view(request):
-    teams = Team.objects.all()
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
+    teams = Team.objects.prefetch_related('technicians').all()
     technicians = Technician.objects.select_related('team').all()
-    
+    accounts = User.objects.filter(is_active=True).order_by('-date_joined')
+
+    # Aggregate target statistics
+    total_daily_target = sum(t.target_per_day or 5 for t in technicians)
+    total_monthly_target = sum(t.target_per_month or 100 for t in technicians)
+
     # Auto-seed baseline options if table is empty
     if not ConfigOption.objects.filter(module='DISPATCH').exists():
         defaults = [
@@ -770,7 +818,10 @@ def management_view(request):
     return render(request, 'dispatch/management.html', {
         'teams': teams,
         'technicians': technicians,
-        'config_options': config_options
+        'accounts': accounts,
+        'total_daily_target': total_daily_target,
+        'total_monthly_target': total_monthly_target,
+        'config_options': config_options,
     })
 
 

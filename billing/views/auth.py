@@ -43,9 +43,29 @@ from django.db import transaction
 import calendar
 
 
+@login_required
 def agent_list(request):
-    agents = Agent.objects.all().order_by("name")
-    return render(request, "billing/agents.html", {"agents": agents})
+    from django.db.models import Count
+    agents = Agent.objects.annotate(
+        customer_count=Count('customer')
+    ).order_by("name")
+
+    total_agents = agents.count()
+    active_agents = sum(1 for a in agents if a.customer_count > 0)
+    total_referrals = sum(a.customer_count for a in agents)
+    total_commission = sum(a.claimable_commission for a in agents)
+
+    return render(
+        request,
+        "billing/agents.html",
+        {
+            "agents": agents,
+            "total_agents": total_agents,
+            "active_agents": active_agents,
+            "total_referrals": total_referrals,
+            "total_commission": total_commission,
+        },
+    )
 
 
 @login_required

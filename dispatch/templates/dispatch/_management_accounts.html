@@ -1,0 +1,86 @@
+<!-- TAB 1: ACCOUNTS (PDF Page 13 Standard) -->
+<div class="tab-pane fade show active" id="tab-accounts" role="tabpanel" aria-labelledby="accounts-tab">
+    <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-25 flex-wrap gap-2">
+        <div>
+            <h6 class="fw-bold mb-0 text-white"><i class="fas fa-id-badge text-primary me-2"></i> System User Accounts</h6>
+            <span class="text-muted text-xs">Active operators, administrators, CSRs, and field technicians</span>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="/admin/auth/user/add/" target="_blank" class="btn btn-sm btn-primary" style="border-radius: 8px; font-size: 0.82rem;">
+                <i class="fas fa-user-plus me-1"></i> Add Account
+            </a>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 text-sm" style="background: transparent;">
+            <thead>
+                <tr class="text-muted text-uppercase text-xs border-secondary border-opacity-25">
+                    <th class="ps-3" style="width: 220px;">Operator / Username</th>
+                    <th>Full Name</th>
+                    <th>Email Address</th>
+                    <th style="width: 140px;">Role & Access</th>
+                    <th style="width: 150px;">Last Login</th>
+                    <th class="text-end pe-3" style="width: 120px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for acc in accounts %}
+                <tr class="border-secondary border-opacity-25">
+                    <td class="ps-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center text-white fw-bold"
+                                 style="width: 32px; height: 32px; font-size: 0.8rem; background: linear-gradient(135deg, #3b82f6, #6366f1);">
+                                {{ acc.username|make_list|first|upper }}
+                            </div>
+                            <div>
+                                <span class="fw-bold text-white text-xs d-block">{{ acc.username }}</span>
+                                <span class="text-muted" style="font-size: 0.7rem;">ID #{{ acc.id }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="text-light text-xs fw-semibold">
+                            {% if acc.get_full_name %}{{ acc.get_full_name }}{% else %}<span class="text-muted fst-italic">Not specified</span>{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="text-muted text-xs font-monospace">{{ acc.email|default:"—" }}</span>
+                    </td>
+                    <td>
+                        {% if acc.is_superuser %}
+                        <span class="badge bg-danger bg-opacity-20 text-danger border border-danger border-opacity-30 text-xs">
+                            <i class="fas fa-crown me-1"></i>Super Admin
+                        </span>
+                        {% elif acc.is_staff %}
+                        <span class="badge bg-primary bg-opacity-20 text-primary border border-primary border-opacity-30 text-xs">
+                            <i class="fas fa-shield-alt me-1"></i>Staff / CSR
+                        </span>
+                        {% else %}
+                        <span class="badge bg-secondary bg-opacity-20 text-muted border border-secondary border-opacity-30 text-xs">
+                            Standard
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="text-xs text-muted">
+                        {% if acc.last_login %}
+                        {{ acc.last_login|date:"M d, Y h:i A" }}
+                        {% else %}
+                        <span class="fst-italic text-muted">Never</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end pe-3">
+                        <a href="/admin/auth/user/{{ acc.id }}/change/" target="_blank" class="btn btn-outline-secondary btn-xs" style="padding: 3px 8px; border-radius: 6px;" title="Edit in Admin Panel">
+                            <i class="fas fa-external-link-alt me-1"></i> Edit
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-muted fst-italic">No active user accounts found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,103 @@
+<!-- TAB 4: DROPDOWN OPTIONS CONFIGURATOR (PDF Page 13 Standard) -->
+<div class="tab-pane fade" id="tab-dropdowns" role="tabpanel" aria-labelledby="dropdowns-tab">
+    <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-25 flex-wrap gap-2">
+        <div>
+            <h6 class="fw-bold mb-0 text-white"><i class="fas fa-list-ul text-primary me-2"></i> Dropdown Options Configurator</h6>
+            <span class="text-muted text-xs">Customize labels, colors, and statuses for Statuses, Types, and Chat Types</span>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modal-add-config-option" style="border-radius: 8px; font-size: 0.82rem;">
+                <i class="fas fa-plus me-1"></i> Add Custom Option
+            </button>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 text-sm" id="table-config-options" style="background: transparent;">
+            <thead>
+                <tr class="text-muted text-uppercase text-xs border-secondary border-opacity-25">
+                    <th class="ps-3" style="width: 140px;">Module</th>
+                    <th style="width: 140px;">List Type</th>
+                    <th>Option Label</th>
+                    <th style="width: 200px;">Badge Color Preview</th>
+                    <th style="width: 120px;">Status</th>
+                    <th class="text-end pe-3" style="width: 130px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for opt in config_options %}
+                <tr class="border-secondary border-opacity-25" id="config-row-{{ opt.id }}">
+                    <td class="ps-3">
+                        <span class="badge bg-dark border border-secondary text-xs">{{ opt.module }}</span>
+                    </td>
+                    <td class="text-xs text-muted font-monospace">{{ opt.list_type }}</td>
+                    <td class="fw-bold text-white text-xs">
+                        <span class="opt-label-text">{{ opt.label }}</span>
+                        {% if opt.is_locked %}
+                        <span class="badge bg-secondary bg-opacity-25 text-white-50 border border-secondary border-opacity-25 ms-1" style="font-size: 0.68rem;" title="System-critical label protected from renaming/deletion">
+                            <i class="fas fa-lock me-1"></i>System
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge px-3 py-1.5 text-white border border-secondary border-opacity-25 opt-badge-preview" style="background-color: {{ opt.color }}; border-radius: 6px;">
+                                {{ opt.label }}
+                            </span>
+                            <span class="text-xs text-muted font-monospace opt-color-code">{{ opt.color }}</span>
+                        </div>
+                    </td>
+                    <td>
+                        {% if opt.active %}
+                        <span class="badge bg-success bg-opacity-20 text-success border border-success border-opacity-25 text-xs">
+                            <i class="fas fa-check-circle me-1"></i>Active
+                        </span>
+                        {% else %}
+                        <span class="badge bg-secondary bg-opacity-20 text-muted border border-secondary border-opacity-25 text-xs">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end pe-3">
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-info btn-xs btn-edit-config" 
+                                    data-id="{{ opt.id }}"
+                                    data-module="{{ opt.module }}"
+                                    data-list-type="{{ opt.list_type }}"
+                                    data-label="{{ opt.label }}"
+                                    data-color="{{ opt.color }}"
+                                    data-active="{% if opt.active %}1{% else %}0{% endif %}"
+                                    data-locked="{% if opt.is_locked %}1{% else %}0{% endif %}"
+                                    title="Edit label, color, or status"
+                                    style="padding: 3px 8px; border-radius: 6px 0 0 6px;">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            {% if opt.is_locked %}
+                            <button type="button" class="btn btn-outline-secondary btn-xs" disabled title="System-critical options cannot be deleted" style="padding: 3px 8px; border-radius: 0 6px 6px 0;">
+                                <i class="fas fa-lock"></i>
+                            </button>
+                            {% else %}
+                            <button type="button" class="btn btn-outline-danger btn-xs" onclick="deleteConfigOption({{ opt.id }}, '{{ opt.label|escapejs }}')" title="Delete custom option" style="padding: 3px 8px; border-radius: 0 6px 6px 0;">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted fst-italic py-4">No configuration options found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Security & Protection Callout -->
+    <div class="m-3 p-3 rounded-3" style="background: rgba(15,23,42,0.6); border: 1px solid rgba(59,130,246,0.2);">
+        <div class="d-flex align-items-center gap-3">
+            <i class="fas fa-shield-alt text-primary fs-4"></i>
+            <div class="text-muted text-xs">
+                <strong class="text-white">Dynamic Color Customization:</strong> System-critical labels (<em>Done, Cancelled, Pending, Installation, Repair, Concern, Inquiry</em>) remain locked to protect core database workflows, but their badge colors and active states can be freely customized right here without redeploying code.
+            </div>
+        </div>
+    </div>
+</div>
