@@ -803,6 +803,22 @@
   4. In `customer_list` and `subscription_plans_data_api`, include `Q(status="expired")` in expired counts and filters.
   5. Kicking/suspending the unpaid PPPoE user on MikroTik via `api.suspend_pppoe_user()`.
 
+
+### ERR-045: Team Reverse Relation 'members' vs 'technicians' & Un-namespaced Dashboard URL
+* **Symptoms**:
+  * `AttributeError: Cannot find 'technicians' on Team object, 'technicians' is an invalid parameter to prefetch_related()` when accessing `/dispatch/management/`.
+  * `django.urls.exceptions.NoReverseMatch: 'billing' is not a registered namespace` when rendering `agents.html`.
+* **Root Causes**:
+  * In `dispatch/models.py`, `Technician.team` foreign key declares `related_name='members'`, NOT `'technicians'`. Querying `Team.objects.prefetch_related('technicians')` or calling `team.technicians.count` fails with AttributeError.
+  * In `billing/urls.py`, URL patterns are included at the root level without namespace `billing:`. Calling `{% url 'billing:dashboard' %}` raises `NoReverseMatch`.
+* **Exact Target Files**:
+  * `dispatch/views.py` (`management_view`)
+  * `dispatch/templates/dispatch/_management_teams_techs.html`
+  * `billing/templates/billing/agents.html`
+* **1-Step Fix**:
+  * Use `Team.objects.prefetch_related('members')` in Python views and `{{ team.members.count }}` in templates.
+  * Use non-namespaced `{% url 'dashboard' %}` across all core billing templates.
+
 ---
 
 ## 📝 How to Add a New Error Entry
