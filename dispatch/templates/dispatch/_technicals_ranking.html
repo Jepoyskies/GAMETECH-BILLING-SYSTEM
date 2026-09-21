@@ -1,21 +1,18 @@
 <div class="dispatch-card p-4">
-    <!-- Header with Toggle -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <!-- Header -->
+    <div class="dispatch-section-header mb-4">
         <div>
-            <div class="d-flex align-items-center gap-2 mb-1">
-                <span class="badge bg-primary px-2 py-1 rounded-pill fw-bold"><i class="fas fa-tools me-1"></i> Technicals</span>
-                <span class="text-xs text-muted">Field Productivity Ranking</span>
-            </div>
-            <h5 class="fw-bold text-white mb-0">Technician & Team Performance League</h5>
-            <p class="text-muted text-xs mb-0">Target scaling based on {{ tech_report.working_days|floatformat:0 }} operational working days &bull; Standard 26 days/mo</p>
+            <div class="dispatch-section-title"><i class="fas fa-trophy" style="color: #fbbf24;"></i> Technician &amp; Team League</div>
+            <div class="dispatch-section-subtitle">Productivity ranking · Target: {{ tech_report.working_days|floatformat:0 }} working days · Standard 26 days/mo</div>
         </div>
-        
         <!-- Toggle Staff vs Team -->
-        <div class="btn-group btn-group-sm rounded-pill p-1 bg-dark border border-secondary shadow-sm" role="group">
-            <button type="button" class="btn btn-sm rounded-pill px-3 btn-primary text-white" id="btn-rank-by-staff" onclick="toggleTechRanking('staff')">
+        <div style="display:flex; gap:0.25rem; background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 3px;">
+            <button type="button" class="btn btn-sm px-3 fw-semibold" id="btn-rank-by-staff" onclick="toggleTechRanking('staff')"
+                    style="background: rgba(37,99,235,0.35); color: #fff; border: none; border-radius: 7px; font-size: 0.78rem;">
                 <i class="fas fa-user-hard-hat me-1"></i> By Staff
             </button>
-            <button type="button" class="btn btn-sm rounded-pill px-3 btn-dark text-muted" id="btn-rank-by-team" onclick="toggleTechRanking('team')">
+            <button type="button" class="btn btn-sm px-3 fw-semibold" id="btn-rank-by-team" onclick="toggleTechRanking('team')"
+                    style="background: transparent; color: #64748b; border: none; border-radius: 7px; font-size: 0.78rem;">
                 <i class="fas fa-users me-1"></i> By Team
             </button>
         </div>
@@ -23,64 +20,67 @@
 
     <!-- 1. BY STAFF VIEW -->
     <div id="tech-rank-staff-container" class="table-responsive">
-        <table class="table table-dark table-hover align-middle mb-0 text-sm" style="background: transparent;">
+        <table class="dispatch-table">
             <thead>
-                <tr class="text-muted text-uppercase text-xs border-secondary">
+                <tr>
                     <th class="ps-3" style="width: 60px;">Rank</th>
                     <th>Technician</th>
-                    <th>Assigned Team</th>
-                    <th class="text-center" style="width: 100px;">Target / Day</th>
-                    <th class="text-center" style="width: 110px;">Target / Mo</th>
+                    <th>Team</th>
+                    <th class="text-center" style="width: 100px;">Target/Day</th>
+                    <th class="text-center" style="width: 110px;">Target/Mo</th>
                     <th class="text-center" style="width: 90px;">Installs</th>
                     <th class="text-center" style="width: 90px;">Repairs</th>
                     <th class="text-center" style="width: 90px;">Total</th>
-                    <th class="text-center" style="width: 160px;">% of Product</th>
+                    <th class="text-center" style="width: 175px;">% of Product</th>
                     <th class="text-center pe-3" style="width: 120px;">Per Day (Avg)</th>
                 </tr>
             </thead>
             <tbody>
                 {% for row in tech_report.by_staff %}
-                <tr class="border-secondary">
-                    <td class="ps-3 font-monospace">
+                <tr>
+                    <td class="ps-3">
                         {% if forloop.counter == 1 %}
-                        <span class="badge bg-warning text-dark fw-bold rounded-circle" style="width: 24px; height: 24px; line-height: 16px;">1</span>
+                        <span class="rank-medal gold">1</span>
                         {% elif forloop.counter == 2 %}
-                        <span class="badge bg-secondary text-white fw-bold rounded-circle" style="width: 24px; height: 24px; line-height: 16px;">2</span>
+                        <span class="rank-medal silver">2</span>
                         {% elif forloop.counter == 3 %}
-                        <span class="badge bg-danger text-white fw-bold rounded-circle" style="width: 24px; height: 24px; line-height: 16px;">3</span>
+                        <span class="rank-medal bronze">3</span>
                         {% else %}
-                        <span class="text-muted text-xs ms-1">#{{ forloop.counter }}</span>
+                        <span class="rank-medal plain">#{{ forloop.counter }}</span>
                         {% endif %}
                     </td>
-                    <td class="fw-bold text-white">
-                        <i class="fas fa-user-circle text-primary me-2"></i>{{ row.name }}
+                    <td>
+                        <div class="fw-semibold" style="color: #e2e8f0; font-size: 0.85rem;"><i class="fas fa-user-circle me-2" style="color: #60a5fa;"></i>{{ row.name }}</div>
                     </td>
                     <td>
-                        <span class="badge bg-dark border border-secondary text-muted text-xs">{{ row.team_name }}</span>
+                        <span style="background: rgba(100,116,139,0.1); border: 1px solid rgba(100,116,139,0.2); color: #64748b; border-radius: 5px; font-size: 0.7rem; padding: 0.15rem 0.5rem;">{{ row.team_name }}</span>
                     </td>
-                    <td class="text-center text-muted font-monospace">{{ row.target_day }}</td>
-                    <td class="text-center text-muted font-monospace">{{ row.target_month }}</td>
-                    <td class="text-center text-info font-monospace">{{ row.installs }}</td>
-                    <td class="text-center text-warning font-monospace">{{ row.repairs }}</td>
-                    <td class="text-center text-white font-monospace fw-bold">{{ row.total }}</td>
+                    <td class="text-center font-monospace" style="color: #64748b; font-size: 0.82rem;">{{ row.target_day }}</td>
+                    <td class="text-center font-monospace" style="color: #64748b; font-size: 0.82rem;">{{ row.target_month }}</td>
+                    <td class="text-center font-monospace" style="color: #67e8f9; font-size: 0.85rem;">{{ row.installs }}</td>
+                    <td class="text-center font-monospace" style="color: #fcd34d; font-size: 0.85rem;">{{ row.repairs }}</td>
+                    <td class="text-center font-monospace fw-bold" style="color: #f8fafc; font-size: 0.9rem;">{{ row.total }}</td>
                     <td class="text-center">
                         <div class="d-flex align-items-center gap-2">
-                            <div class="progress flex-grow-1 bg-dark" style="height: 6px;">
-                                <div class="progress-bar {% if row.pct_product >= 100 %}bg-success{% elif row.pct_product >= 50 %}bg-info{% else %}bg-warning{% endif %}" 
-                                     role="progressbar" style="width: {% if row.pct_product > 100 %}100{% else %}{{ row.pct_product }}{% endif %}%;"></div>
+                            <div class="dp-meter flex-grow-1">
+                                <div class="dp-meter-fill" style="width: {% if row.pct_product > 100 %}100{% else %}{{ row.pct_product }}{% endif %}%; background: {% if row.pct_product >= 100 %}linear-gradient(90deg,#34d399,#059669){% elif row.pct_product >= 50 %}linear-gradient(90deg,#38bdf8,#0284c7){% else %}linear-gradient(90deg,#fbbf24,#d97706){% endif %};"></div>
                             </div>
-                            <span class="font-monospace text-xs fw-bold {% if row.pct_product >= 100 %}text-success{% elif row.pct_product >= 50 %}text-info{% else %}text-warning{% endif %}">
-                                {{ row.pct_product }}%
-                            </span>
+                            <span class="font-monospace fw-bold" style="font-size: 0.75rem; color: {% if row.pct_product >= 100 %}#34d399{% elif row.pct_product >= 50 %}#38bdf8{% else %}#fbbf24{% endif %}; min-width: 38px; text-align: right;">{{ row.pct_product }}%</span>
                         </div>
                     </td>
-                    <td class="text-center pe-3 font-monospace fw-bold text-cyan">
-                        {{ row.per_day_avg }} <span class="text-xs text-muted fw-normal">/ day</span>
+                    <td class="text-center pe-3 font-monospace fw-bold" style="color: #67e8f9; font-size: 0.85rem;">
+                        {{ row.per_day_avg }} <span class="fw-normal" style="color: #475569; font-size: 0.7rem;">/ day</span>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="10" class="text-center text-muted py-4 fst-italic">No technicians registered or completed tickets in this timeframe.</td>
+                    <td colspan="10" class="border-0 p-0">
+                        <div class="dispatch-empty-state">
+                            <div class="dispatch-empty-icon mx-auto"><i class="fas fa-hard-hat"></i></div>
+                            <h6>No technician data</h6>
+                            <p>No technicians have completed tickets in this timeframe.</p>
+                        </div>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -89,64 +89,67 @@
 
     <!-- 2. BY TEAM VIEW (Initially Hidden) -->
     <div id="tech-rank-team-container" class="table-responsive d-none">
-        <table class="table table-dark table-hover align-middle mb-0 text-sm" style="background: transparent;">
+        <table class="dispatch-table">
             <thead>
-                <tr class="text-muted text-uppercase text-xs border-secondary">
+                <tr>
                     <th class="ps-3" style="width: 60px;">Rank</th>
                     <th>Team Name</th>
                     <th>Field Techs</th>
-                    <th class="text-center" style="width: 100px;">Target / Day</th>
-                    <th class="text-center" style="width: 110px;">Target / Mo</th>
+                    <th class="text-center" style="width: 100px;">Target/Day</th>
+                    <th class="text-center" style="width: 110px;">Target/Mo</th>
                     <th class="text-center" style="width: 90px;">Installs</th>
                     <th class="text-center" style="width: 90px;">Repairs</th>
                     <th class="text-center" style="width: 90px;">Total</th>
-                    <th class="text-center" style="width: 160px;">% of Product</th>
+                    <th class="text-center" style="width: 175px;">% of Product</th>
                     <th class="text-center pe-3" style="width: 120px;">Per Day (Avg)</th>
                 </tr>
             </thead>
             <tbody>
                 {% for row in tech_report.by_team %}
-                <tr class="border-secondary">
-                    <td class="ps-3 font-monospace">
+                <tr>
+                    <td class="ps-3">
                         {% if forloop.counter == 1 %}
-                        <span class="badge bg-warning text-dark fw-bold rounded-circle" style="width: 24px; height: 24px; line-height: 16px;">1</span>
+                        <span class="rank-medal gold">1</span>
                         {% elif forloop.counter == 2 %}
-                        <span class="badge bg-secondary text-white fw-bold rounded-circle" style="width: 24px; height: 24px; line-height: 16px;">2</span>
+                        <span class="rank-medal silver">2</span>
                         {% elif forloop.counter == 3 %}
-                        <span class="badge bg-danger text-white fw-bold rounded-circle" style="width: 24px; height: 24px; line-height: 16px;">3</span>
+                        <span class="rank-medal bronze">3</span>
                         {% else %}
-                        <span class="text-muted text-xs ms-1">#{{ forloop.counter }}</span>
+                        <span class="rank-medal plain">#{{ forloop.counter }}</span>
                         {% endif %}
                     </td>
-                    <td class="fw-bold text-white">
-                        <i class="fas fa-truck text-warning me-2"></i>{{ row.name }}
+                    <td>
+                        <div class="fw-semibold" style="color: #e2e8f0; font-size: 0.85rem;"><i class="fas fa-truck me-2" style="color: #fbbf24;"></i>{{ row.name }}</div>
                     </td>
                     <td>
-                        <span class="badge bg-dark border border-secondary text-info text-xs">{{ row.member_count }} Techs</span>
+                        <span style="background: rgba(6,182,212,0.08); border: 1px solid rgba(6,182,212,0.2); color: #22d3ee; border-radius: 5px; font-size: 0.7rem; padding: 0.15rem 0.5rem;">{{ row.member_count }} Techs</span>
                     </td>
-                    <td class="text-center text-muted font-monospace">{{ row.target_day }}</td>
-                    <td class="text-center text-muted font-monospace">{{ row.target_month }}</td>
-                    <td class="text-center text-info font-monospace">{{ row.installs }}</td>
-                    <td class="text-center text-warning font-monospace">{{ row.repairs }}</td>
-                    <td class="text-center text-white font-monospace fw-bold">{{ row.total }}</td>
+                    <td class="text-center font-monospace" style="color: #64748b; font-size: 0.82rem;">{{ row.target_day }}</td>
+                    <td class="text-center font-monospace" style="color: #64748b; font-size: 0.82rem;">{{ row.target_month }}</td>
+                    <td class="text-center font-monospace" style="color: #67e8f9; font-size: 0.85rem;">{{ row.installs }}</td>
+                    <td class="text-center font-monospace" style="color: #fcd34d; font-size: 0.85rem;">{{ row.repairs }}</td>
+                    <td class="text-center font-monospace fw-bold" style="color: #f8fafc; font-size: 0.9rem;">{{ row.total }}</td>
                     <td class="text-center">
                         <div class="d-flex align-items-center gap-2">
-                            <div class="progress flex-grow-1 bg-dark" style="height: 6px;">
-                                <div class="progress-bar {% if row.pct_product >= 100 %}bg-success{% elif row.pct_product >= 50 %}bg-info{% else %}bg-warning{% endif %}" 
-                                     role="progressbar" style="width: {% if row.pct_product > 100 %}100{% else %}{{ row.pct_product }}{% endif %}%;"></div>
+                            <div class="dp-meter flex-grow-1">
+                                <div class="dp-meter-fill" style="width: {% if row.pct_product > 100 %}100{% else %}{{ row.pct_product }}{% endif %}%; background: {% if row.pct_product >= 100 %}linear-gradient(90deg,#34d399,#059669){% elif row.pct_product >= 50 %}linear-gradient(90deg,#38bdf8,#0284c7){% else %}linear-gradient(90deg,#fbbf24,#d97706){% endif %};"></div>
                             </div>
-                            <span class="font-monospace text-xs fw-bold {% if row.pct_product >= 100 %}text-success{% elif row.pct_product >= 50 %}text-info{% else %}text-warning{% endif %}">
-                                {{ row.pct_product }}%
-                            </span>
+                            <span class="font-monospace fw-bold" style="font-size: 0.75rem; color: {% if row.pct_product >= 100 %}#34d399{% elif row.pct_product >= 50 %}#38bdf8{% else %}#fbbf24{% endif %}; min-width: 38px; text-align: right;">{{ row.pct_product }}%</span>
                         </div>
                     </td>
-                    <td class="text-center pe-3 font-monospace fw-bold text-cyan">
-                        {{ row.per_day_avg }} <span class="text-xs text-muted fw-normal">/ day</span>
+                    <td class="text-center pe-3 font-monospace fw-bold" style="color: #67e8f9; font-size: 0.85rem;">
+                        {{ row.per_day_avg }} <span class="fw-normal" style="color: #475569; font-size: 0.7rem;">/ day</span>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="10" class="text-center text-muted py-4 fst-italic">No teams registered or active in this timeframe.</td>
+                    <td colspan="10" class="border-0 p-0">
+                        <div class="dispatch-empty-state">
+                            <div class="dispatch-empty-icon mx-auto"><i class="fas fa-users"></i></div>
+                            <h6>No team data</h6>
+                            <p>No teams are registered or active in this timeframe.</p>
+                        </div>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>

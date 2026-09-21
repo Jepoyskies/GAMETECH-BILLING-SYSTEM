@@ -5,70 +5,114 @@
 
 {% block content %}
 <div class="container-fluid py-4 px-3 px-md-4">
-    <!-- Hero Banner -->
-    <div class="gt-cl-card p-4 mb-4" style="border-left: 4px solid #8b5cf6;">
-        <div class="d-flex align-items-center">
-            <div class="hero-icon me-3" style="background: rgba(139,92,246,0.15); color: #8b5cf6; padding: 15px; border-radius: 12px;">
-                <i class="fas fa-clipboard-check fa-2x"></i>
+    <!-- Page Header -->
+    <div class="dispatch-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="badge rounded-pill px-3 py-1 fw-semibold" style="background: rgba(139,92,246,0.15); color: #a78bfa; border: 1px solid rgba(139,92,246,0.25); font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase;">
+                    <i class="fas fa-clipboard-check me-1"></i> Dispatch Pipeline
+                </span>
             </div>
-            <div>
-                <h4 class="mb-1 fw-bold text-white">Stage 1: Verification & PPPoE Generation</h4>
-                <p class="mb-0 text-muted small">Review pending Agent prospects, assign a MikroTik router and Plan, and generate their PPPoE credentials before dispatch.</p>
-            </div>
+            <h1 class="h4 fw-bold text-white mb-1" style="letter-spacing: -0.02em;">Stage 1 — Verification &amp; PPPoE Generation</h1>
+            <p class="text-muted mb-0" style="font-size: 0.82rem;">Review pending Agent prospects, assign a MikroTik router and Plan, and generate their PPPoE credentials before dispatch.</p>
         </div>
+        <a href="{% url 'dispatch_dashboard' %}" class="btn btn-sm px-3 py-2"
+           style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; border-radius: 10px; font-size: 0.82rem;">
+            <i class="fas fa-arrow-left me-1"></i> Back to Console
+        </a>
+    </div>
+
+    <!-- Pipeline Stepper -->
+    <div class="dispatch-stepper mb-4">
+        <span class="ds-step ds-step--active" title="Stage 1: Verification & PPPoE">
+            <div class="ds-step__num">1</div>
+            <div class="ds-step__label">
+                <span class="ds-step__title">Verification</span>
+                <span class="ds-step__sub">PPPoE Generation</span>
+            </div>
+        </span>
+        <div class="ds-connector"></div>
+        <a href="{% url 'dispatch_assignment' %}" class="ds-step ds-step--disabled" title="Stage 2: Dispatch Assignment">
+            <div class="ds-step__num">2</div>
+            <div class="ds-step__label">
+                <span class="ds-step__title">Assignment</span>
+                <span class="ds-step__sub">Team Dispatch</span>
+            </div>
+        </a>
+        <div class="ds-connector"></div>
+        <span class="ds-step ds-step--disabled" title="Stage 3: Active Field">
+            <div class="ds-step__num">3</div>
+            <div class="ds-step__label">
+                <span class="ds-step__title">Active Field</span>
+                <span class="ds-step__sub">In Progress</span>
+            </div>
+        </span>
+        <div class="ds-connector"></div>
+        <a href="{% url 'dispatch_qa' %}" class="ds-step ds-step--disabled" title="Stage 4 & 5: QA & Approval">
+            <div class="ds-step__num">4</div>
+            <div class="ds-step__label">
+                <span class="ds-step__title">QA &amp; Approval</span>
+                <span class="ds-step__sub">Review &amp; Sign-off</span>
+            </div>
+        </a>
     </div>
 
     <div class="row">
         <!-- Pending Prospects List -->
         <div class="col-12">
-            <div class="gt-cl-card">
-                <div class="card-header border-bottom border-secondary p-3 d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0 text-white fw-bold"><i class="fas fa-user-clock me-2 text-warning"></i> Pending Prospects</h6>
-                    <button class="btn btn-sm btn-outline-info fw-bold" data-bs-toggle="modal" data-bs-target="#intakeWalkinModal">
-                        <i class="fas fa-user-plus me-1"></i> Intake Walk-in Applicant
+            <div class="dispatch-card">
+                <div class="p-3 px-4 d-flex justify-content-between align-items-center" style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+                    <div>
+                        <div class="dispatch-section-title"><i class="fas fa-user-clock" style="color: #fbbf24;"></i> Pending Prospects</div>
+                        <div class="dispatch-section-subtitle">Awaiting router assignment and PPPoE generation</div>
+                    </div>
+                    <button class="btn btn-sm fw-semibold px-3 py-2" data-bs-toggle="modal" data-bs-target="#intakeWalkinModal"
+                            style="background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.25); color: #22d3ee; border-radius: 9px; font-size: 0.82rem;">
+                        <i class="fas fa-user-plus me-1"></i> Intake Walk-in
                     </button>
                 </div>
-                <div class="card-body p-0 table-responsive">
-                    <table class="table table-dark table-hover mb-0 align-middle">
-                        <thead class="text-muted small" style="background: rgba(255,255,255,0.02);">
+                <div class="table-responsive">
+                    <table class="dispatch-table">
+                        <thead>
                             <tr>
-                                <th class="ps-3 border-secondary">Client Name</th>
-                                <th class="border-secondary">Address</th>
-                                <th class="border-secondary">Agent</th>
-                                <th class="border-secondary text-end pe-3">Action</th>
+                                <th class="ps-3">Client Name</th>
+                                <th>Address</th>
+                                <th>Agent / Source</th>
+                                <th class="text-end pe-3">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for prospect in prospects %}
                             <tr>
-                                <td class="ps-3 border-secondary text-white fw-bold">
-                                    {{ prospect.full_name }}
-                                    <span class="badge bg-dark border border-secondary text-muted ms-2 fw-normal"><i class="fas fa-clock"></i> {{ prospect.created_at|timesince }} ago</span>
-                                    {% if prospect.sla_badge_level == 'red' %}
-                                        <span class="badge bg-danger text-white border border-danger ms-1 animate-pulse fw-bold"><i class="fas fa-fire me-1"></i>SLA 48h+ BREACH</span>
-                                    {% elif prospect.sla_badge_level == 'amber' %}
-                                        <span class="badge bg-warning text-dark border border-warning ms-1 fw-bold"><i class="fas fa-exclamation-triangle me-1"></i>SLA 24h+ Stale</span>
-                                    {% endif %}
-                                    <br>
-                                    <small class="text-muted">{{ prospect.phone }}</small>
+                                <td class="ps-3">
+                                    <div class="fw-semibold" style="color: #e2e8f0; font-size: 0.87rem;">{{ prospect.full_name }}</div>
+                                    <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
+                                        <span style="background: rgba(100,116,139,0.1); border: 1px solid rgba(100,116,139,0.2); color: #64748b; border-radius: 5px; font-size: 0.68rem; padding: 0.1rem 0.4rem;"><i class="fas fa-clock me-1"></i>{{ prospect.created_at|timesince }} ago</span>
+                                        {% if prospect.sla_badge_level == 'red' %}
+                                            <span class="badge fw-bold" style="background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); font-size: 0.65rem;"><i class="fas fa-fire me-1"></i>SLA 48h+ BREACH</span>
+                                        {% elif prospect.sla_badge_level == 'amber' %}
+                                            <span class="badge fw-bold" style="background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); font-size: 0.65rem;"><i class="fas fa-triangle-exclamation me-1"></i>SLA 24h+</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="mt-1" style="font-size: 0.75rem; color: #64748b;"><i class="fas fa-phone me-1"></i>{{ prospect.phone }}</div>
                                 </td>
-                                <td class="border-secondary text-muted small">
-                                    {{ prospect.address }}<br>
-                                    <span class="text-info">{{ prospect.barangay.name }}</span>
+                                <td>
+                                    <div style="font-size: 0.8rem; color: #cbd5e1;">{{ prospect.address }}</div>
+                                    <div style="font-size: 0.72rem; color: #22d3ee; margin-top: 2px;"><i class="fas fa-map-pin me-1"></i>{{ prospect.barangay.name }}</div>
                                 </td>
-                                <td class="border-secondary text-muted small">
+                                <td>
                                     {% if prospect.agent %}
-                                        <span class="text-white fw-bold"><i class="fas fa-user-tie text-info me-1"></i>{{ prospect.agent.name }}</span>
+                                        <div class="fw-semibold" style="font-size: 0.8rem; color: #e2e8f0;"><i class="fas fa-user-tie me-1" style="color: #22d3ee;"></i>{{ prospect.agent.name }}</div>
                                     {% else %}
-                                        <span class="text-muted">Walk-in</span>
+                                        <div style="font-size: 0.78rem; color: #334155; font-style: italic;">Walk-in / Direct</div>
                                     {% endif %}
                                     {% if prospect.preferred_payment_method %}
-                                        <br><span class="badge bg-dark border border-secondary text-warning font-monospace" style="font-size: 0.7rem;"><i class="fas fa-wallet me-1"></i>{{ prospect.get_preferred_payment_method_display }}</span>
+                                        <span class="mt-1 d-inline-block" style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); color: #fbbf24; border-radius: 5px; font-size: 0.68rem; padding: 0.12rem 0.45rem;"><i class="fas fa-wallet me-1"></i>{{ prospect.get_preferred_payment_method_display }}</span>
                                     {% endif %}
                                 </td>
-                                <td class="border-secondary text-end pe-3">
-                                    <button class="btn btn-sm btn-primary fw-bold gt-btn" data-bs-toggle="modal" data-bs-target="#verifyModal{{ prospect.id }}">
-                                        <i class="fas fa-clipboard-check me-1"></i> Verify Prospect
+                                <td class="text-end pe-3">
+                                    <button class="btn btn-sm fw-semibold px-3" style="background: linear-gradient(135deg,#7c3aed,#6d28d9); color: #fff; border: none; border-radius: 9px; font-size: 0.8rem;" data-bs-toggle="modal" data-bs-target="#verifyModal{{ prospect.id }}">
+                                        <i class="fas fa-clipboard-check me-1"></i> Verify
                                     </button>
                                 </td>
                             </tr>

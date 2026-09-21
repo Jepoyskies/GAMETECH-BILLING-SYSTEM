@@ -11,54 +11,91 @@
 
 {% block content %}
 <main class="content px-3 px-md-4 py-4">
-    <!-- Header Section -->
-    <div class="dispatch-header d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+    <!-- Page Header -->
+    <div class="dispatch-header d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div>
-            <div class="d-flex align-items-center gap-2 mb-1">
-                <span class="badge bg-primary px-2 py-1 rounded-pill"><i class="fas fa-satellite-dish"></i> Operations</span>
-                <span class="text-xs text-muted">Field Dispatch System v2.0 &bull; Legacy Aligned</span>
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="badge rounded-pill px-3 py-1 fw-semibold" style="background: rgba(37,99,235,0.15); color: #60a5fa; border: 1px solid rgba(37,99,235,0.25); font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase;">
+                    <i class="fas fa-satellite-dish me-1"></i> Dispatch Operations
+                </span>
+                <span class="d-realtime-chip">Live</span>
             </div>
-            <h2 class="h3 fw-bold text-white mb-0">Dispatch Operations Console</h2>
-            <p class="text-muted text-sm mb-0">Live operations queue, monitoring summaries, productivity league, and dispatch logs</p>
+            <h1 class="h3 fw-bold text-white mb-1" style="letter-spacing: -0.02em;">Operations Console</h1>
+            <p class="text-muted mb-0" style="font-size: 0.82rem;">Field queue monitoring, technician performance, and full dispatch log</p>
         </div>
         <div class="d-flex flex-wrap align-items-center gap-2">
-            <!-- Legacy Operational Date Filter -->
-            <div class="btn-group btn-group-sm rounded-pill p-1 bg-dark border border-secondary shadow-sm" role="group">
-                <a href="?date_range=all{% if status_filter != 'ALL' %}&status={{ status_filter }}{% endif %}{% if type_filter != 'ALL' %}&type={{ type_filter }}{% endif %}" class="btn btn-sm rounded-pill px-3 {% if date_filter == 'all' or not date_filter %}btn-primary text-white{% else %}btn-dark text-muted{% endif %}">All</a>
-                <a href="?date_range=today{% if status_filter != 'ALL' %}&status={{ status_filter }}{% endif %}{% if type_filter != 'ALL' %}&type={{ type_filter }}{% endif %}" class="btn btn-sm rounded-pill px-3 {% if date_filter == 'today' %}btn-primary text-white{% else %}btn-dark text-muted{% endif %}">Today</a>
-                <a href="?date_range=this_month{% if status_filter != 'ALL' %}&status={{ status_filter }}{% endif %}{% if type_filter != 'ALL' %}&type={{ type_filter }}{% endif %}" class="btn btn-sm rounded-pill px-3 {% if date_filter == 'this_month' %}btn-primary text-white{% else %}btn-dark text-muted{% endif %}">This Month</a>
+            <!-- Date Range Filter -->
+            <div class="btn-group btn-group-sm" role="group" style="background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 3px;">
+                <a href="?date_range=all{% if status_filter != 'ALL' %}&status={{ status_filter }}{% endif %}{% if type_filter != 'ALL' %}&type={{ type_filter }}{% endif %}"
+                   class="btn btn-sm px-3 {% if date_filter == 'all' or not date_filter %}text-white fw-bold{% else %}text-muted{% endif %}"
+                   style="{% if date_filter == 'all' or not date_filter %}background: rgba(37,99,235,0.35); border-radius: 7px;{% else %}background: transparent;{% endif %} border: none; font-size: 0.78rem;">All Time</a>
+                <a href="?date_range=today{% if status_filter != 'ALL' %}&status={{ status_filter }}{% endif %}{% if type_filter != 'ALL' %}&type={{ type_filter }}{% endif %}"
+                   class="btn btn-sm px-3 {% if date_filter == 'today' %}text-white fw-bold{% else %}text-muted{% endif %}"
+                   style="{% if date_filter == 'today' %}background: rgba(37,99,235,0.35); border-radius: 7px;{% else %}background: transparent;{% endif %} border: none; font-size: 0.78rem;">Today</a>
+                <a href="?date_range=this_month{% if status_filter != 'ALL' %}&status={{ status_filter }}{% endif %}{% if type_filter != 'ALL' %}&type={{ type_filter }}{% endif %}"
+                   class="btn btn-sm px-3 {% if date_filter == 'this_month' %}text-white fw-bold{% else %}text-muted{% endif %}"
+                   style="{% if date_filter == 'this_month' %}background: rgba(37,99,235,0.35); border-radius: 7px;{% else %}background: transparent;{% endif %} border: none; font-size: 0.78rem;">This Month</a>
             </div>
-            <button class="btn btn-primary rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modal-create-ticket">
-                <i class="fas fa-plus-circle me-1"></i> New Job Ticket
+            <button class="btn btn-sm fw-semibold px-3 py-2" data-bs-toggle="modal" data-bs-target="#modal-create-ticket"
+                    style="background: linear-gradient(135deg, #2563eb, #4f46e5); color: #fff; border: none; border-radius: 10px; font-size: 0.82rem; box-shadow: 0 4px 14px rgba(37,99,235,0.3);">
+                <i class="fas fa-plus me-1"></i> New Job Ticket
             </button>
-            <a href="{% url 'dispatch_management' %}" class="btn btn-outline-secondary rounded-pill px-3">
+            <a href="{% url 'dispatch_management' %}" class="btn btn-sm px-3 py-2"
+               style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; border-radius: 10px; font-size: 0.82rem;">
                 <i class="fas fa-users-cog me-1"></i> Field Units
             </a>
-            <a href="{% url 'audit_log' %}" class="btn btn-outline-secondary rounded-pill px-3">
+            <a href="{% url 'audit_log' %}" class="btn btn-sm px-3 py-2"
+               style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; border-radius: 10px; font-size: 0.82rem;">
                 <i class="fas fa-shield-alt me-1"></i> Audit Log
             </a>
         </div>
     </div>
 
-    <!-- Quick Pipeline Navigation Ribbon (Compact ERP Jump Bar) -->
-    <div class="p-2 mb-4 rounded-3 border border-secondary border-opacity-25 bg-dark bg-opacity-40 d-flex flex-wrap align-items-center justify-content-between gap-2">
-        <div class="d-flex align-items-center gap-2">
-            <span class="text-xs text-muted text-uppercase fw-bold ps-2"><i class="fas fa-route text-cyan me-1"></i>Pipeline:</span>
-            <a href="{% url 'dispatch_verification' %}" class="btn btn-xs rounded-pill px-3 py-1 {% if pending_verification_count > 0 %}btn-warning text-dark fw-bold{% else %}btn-outline-secondary text-muted{% endif %}">
-                1. Verification ({{ pending_verification_count|default:0 }})
-            </a>
-            <a href="{% url 'dispatch_assignment' %}" class="btn btn-xs rounded-pill px-3 py-1 {% if awaiting_assignment_count > 0 %}btn-primary text-white fw-bold{% else %}btn-outline-secondary text-muted{% endif %}">
-                2. Assignment ({{ awaiting_assignment_count|default:0 }})
-            </a>
-            <span class="badge bg-dark border border-secondary text-success px-2 py-1">
-                3. Active Field ({{ active_in_field_count|default:0 }})
-            </span>
-            <a href="{% url 'dispatch_qa' %}" class="btn btn-xs rounded-pill px-3 py-1 {% if pending_qa_approval_count > 0 %}btn-danger text-white fw-bold{% else %}btn-outline-secondary text-muted{% endif %}">
-                4 & 5. QA & Approval ({{ pending_qa_approval_count|default:0 }})
-            </a>
-        </div>
-        <div class="pe-2 text-xs text-muted">
-            <i class="fas fa-check-double text-info me-1"></i>Closed Today: <strong class="text-white">{{ closed_count|default:0 }}</strong>
+    <!-- Pipeline Stage Stepper -->
+    <div class="dispatch-stepper mb-4">
+        <!-- Stage 1: Verification -->
+        <a href="{% url 'dispatch_verification' %}" class="ds-step {% if pending_verification_count > 0 %}ds-step--alert{% else %}ds-step--done{% endif %}" title="Stage 1: Verification & PPPoE Generation">
+            <div class="ds-step__num">{% if pending_verification_count > 0 %}{{ pending_verification_count }}{% else %}<i class="fas fa-check" style="font-size:0.6rem;"></i>{% endif %}</div>
+            <div class="ds-step__label">
+                <span class="ds-step__title">Verification</span>
+                <span class="ds-step__sub">PPPoE Generation</span>
+            </div>
+        </a>
+        <div class="ds-connector"></div>
+
+        <!-- Stage 2: Assignment -->
+        <a href="{% url 'dispatch_assignment' %}" class="ds-step {% if awaiting_assignment_count > 0 %}ds-step--alert{% else %}ds-step--done{% endif %}" title="Stage 2: Dispatch Assignment">
+            <div class="ds-step__num">{% if awaiting_assignment_count > 0 %}{{ awaiting_assignment_count }}{% else %}<i class="fas fa-check" style="font-size:0.6rem;"></i>{% endif %}</div>
+            <div class="ds-step__label">
+                <span class="ds-step__title">Assignment</span>
+                <span class="ds-step__sub">Team Dispatch</span>
+            </div>
+        </a>
+        <div class="ds-connector"></div>
+
+        <!-- Stage 3: Active Field (non-clickable status) -->
+        <span class="ds-step ds-step--disabled" title="Stage 3: Active Field Operations">
+            <div class="ds-step__num" style="background: rgba(59,130,246,0.15); color: #60a5fa; border: 1.5px solid rgba(59,130,246,0.3);">{{ active_in_field_count|default:0 }}</div>
+            <div class="ds-step__label">
+                <span class="ds-step__title" style="color: #60a5fa;">Active Field</span>
+                <span class="ds-step__sub">In Progress</span>
+            </div>
+        </span>
+        <div class="ds-connector"></div>
+
+        <!-- Stage 4 & 5: QA & Approval -->
+        <a href="{% url 'dispatch_qa' %}" class="ds-step {% if pending_qa_approval_count > 0 %}ds-step--alert{% else %}ds-step--done{% endif %}" title="Stage 4 & 5: QA Review & Final Approval">
+            <div class="ds-step__num">{% if pending_qa_approval_count > 0 %}{{ pending_qa_approval_count }}{% else %}<i class="fas fa-check" style="font-size:0.6rem;"></i>{% endif %}</div>
+            <div class="ds-step__label">
+                <span class="ds-step__title">QA & Approval</span>
+                <span class="ds-step__sub">Review & Sign-off</span>
+            </div>
+        </a>
+
+        <!-- Live Pill -->
+        <div class="ds-live-pill ms-auto">
+            <div class="ds-live-dot"></div>
+            Closed Today: <strong class="ms-1">{{ closed_count|default:0 }}</strong>
         </div>
     </div>
 
@@ -87,15 +124,19 @@
     <!-- 7. Dispatch Log & Queue Tabs (Queue Table + Service Map) -->
     <div class="mb-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <ul class="nav nav-pills gap-2 p-1 bg-dark border border-secondary rounded-pill d-inline-flex shadow-sm" id="dispatchLogTabs" role="tablist">
+            <div>
+                <div class="dispatch-section-title"><i class="fas fa-list-check text-primary"></i> Dispatch Log</div>
+                <div class="dispatch-section-subtitle">Full ticket queue · Filter, search, and export all dispatch records</div>
+            </div>
+            <ul class="nav nav-pills gap-2 p-1 bg-dark border border-secondary rounded-pill d-inline-flex shadow-sm dispatch-nav-tabs" id="dispatchLogTabs" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active rounded-pill px-4 py-2 fw-bold text-sm" id="tab-queue-btn" data-bs-toggle="pill" data-bs-target="#tab-queue" type="button" role="tab" aria-controls="tab-queue" aria-selected="true">
-                        <i class="fas fa-list-check me-2"></i>Dispatch Log / Ticket List
+                    <button class="nav-link active px-4 py-2" id="tab-queue-btn" data-bs-toggle="pill" data-bs-target="#tab-queue" type="button" role="tab" aria-controls="tab-queue" aria-selected="true">
+                        <i class="fas fa-table me-2"></i>Ticket Table
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link rounded-pill px-4 py-2 fw-bold text-sm text-muted" id="tab-map-btn" data-bs-toggle="pill" data-bs-target="#tab-map" type="button" role="tab" aria-controls="tab-map" aria-selected="false">
-                        <i class="fas fa-map-marked-alt me-2"></i>Service Map View
+                    <button class="nav-link px-4 py-2" id="tab-map-btn" data-bs-toggle="pill" data-bs-target="#tab-map" type="button" role="tab" aria-controls="tab-map" aria-selected="false">
+                        <i class="fas fa-map-marked-alt me-2"></i>Service Map
                     </button>
                 </li>
             </ul>

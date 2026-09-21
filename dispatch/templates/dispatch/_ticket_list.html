@@ -1,20 +1,19 @@
-<div class="gt-cl-card p-4" style="background: rgba(31, 41, 55, 0.4);">
-    <!-- Filter & Search Controls Form (Matches Legacy Information Architecture) -->
+<div class="dispatch-card p-4" style="background: rgba(17, 24, 39, 0.5);">
+    <!-- Filter & Search Controls -->
     <form method="GET" action="" id="ticket-filter-form" class="mb-4">
-        <!-- Up-Front Visible Filters -->
         <div class="row g-2 align-items-center">
             <!-- Search Bar -->
             <div class="col-12 col-md-4 col-lg-3">
                 <div class="input-group input-group-sm">
-                    <span class="input-group-text bg-dark border-secondary text-muted"><i class="fas fa-search"></i></span>
-                    <input type="text" name="q" id="ticket-search-input" class="form-control bg-dark border-secondary text-white" 
-                           placeholder="Search ticket, client, address, concern..." value="{{ search_q }}">
+                    <span class="input-group-text dispatch-search-addon"><i class="fas fa-search"></i></span>
+                    <input type="text" name="q" id="ticket-search-input" class="form-control dispatch-search-input"
+                           placeholder="Search ticket, client, address, concern…" value="{{ search_q }}">
                 </div>
             </div>
 
             <!-- Date Filter -->
             <div class="col-6 col-md-2 col-lg-2">
-                <select name="date_range" id="date-filter-select" class="form-select form-select-sm bg-dark border-secondary text-white" onchange="this.form.submit()">
+                <select name="date_range" id="date-filter-select" class="form-select form-select-sm dispatch-filter-select" onchange="this.form.submit()">
                     <option value="all" {% if date_filter == 'all' or not date_filter %}selected{% endif %}>All Dates</option>
                     <option value="today" {% if date_filter == 'today' %}selected{% endif %}>Today</option>
                     <option value="this_month" {% if date_filter == 'this_month' %}selected{% endif %}>This Month</option>
@@ -23,7 +22,7 @@
 
             <!-- Type Filter -->
             <div class="col-6 col-md-2 col-lg-2">
-                <select name="type" id="type-filter-select" class="form-select form-select-sm bg-dark border-secondary text-white" onchange="this.form.submit()">
+                <select name="type" id="type-filter-select" class="form-select form-select-sm dispatch-filter-select" onchange="this.form.submit()">
                     <option value="ALL" {% if type_filter == 'ALL' %}selected{% endif %}>All Types</option>
                     <option value="INSTALLATION" {% if type_filter == 'INSTALLATION' %}selected{% endif %}>Installation</option>
                     <option value="REPAIR" {% if type_filter == 'REPAIR' %}selected{% endif %}>Repair / Concern</option>
@@ -34,7 +33,7 @@
 
             <!-- Source Tab Filter -->
             <div class="col-6 col-md-2 col-lg-2">
-                <select name="source_tab" id="source-filter-select" class="form-select form-select-sm bg-dark border-secondary text-white" onchange="this.form.submit()">
+                <select name="source_tab" id="source-filter-select" class="form-select form-select-sm dispatch-filter-select" onchange="this.form.submit()">
                     <option value="ALL" {% if source_tab_filter == 'ALL' or not source_tab_filter %}selected{% endif %}>All Sources</option>
                     <option value="INTERNET_INSTALL" {% if source_tab_filter == 'INTERNET_INSTALL' %}selected{% endif %}>Internet Install</option>
                     <option value="CIGNAL_PLAY" {% if source_tab_filter == 'CIGNAL_PLAY' %}selected{% endif %}>Cignal Play</option>
@@ -44,7 +43,7 @@
 
             <!-- Status Filter -->
             <div class="col-6 col-md-2 col-lg-2">
-                <select name="status" id="status-filter-select" class="form-select form-select-sm bg-dark border-secondary text-white" onchange="this.form.submit()">
+                <select name="status" id="status-filter-select" class="form-select form-select-sm dispatch-filter-select" onchange="this.form.submit()">
                     <option value="ALL" {% if status_filter == 'ALL' %}selected{% endif %}>All Statuses</option>
                     <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending</option>
                     <option value="ASSIGNED" {% if status_filter == 'ASSIGNED' %}selected{% endif %}>Assigned</option>
@@ -54,24 +53,26 @@
                 </select>
             </div>
 
-            <!-- Actions: More Filters Toggle & Export -->
+            <!-- Actions: Advanced Filters Toggle + Export -->
             <div class="col-12 col-lg-1 d-flex gap-1 justify-content-end">
-                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#moreFiltersCollapse" title="Advanced Filters">
+                <button class="btn btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#moreFiltersCollapse" title="Advanced Filters"
+                        style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; border-radius: 9px;">
                     <i class="fas fa-sliders"></i>
                 </button>
-                <a href="{% url 'dispatch_export_tickets' %}?date_range={{ date_filter }}&type={{ type_filter }}&status={{ status_filter }}&source_tab={{ source_tab_filter }}&team={{ team_filter }}&q={{ search_q }}" 
-                   class="btn btn-sm btn-outline-success" title="Export CSV matching current filter">
+                <a href="{% url 'dispatch_export_tickets' %}?date_range={{ date_filter }}&type={{ type_filter }}&status={{ status_filter }}&source_tab={{ source_tab_filter }}&team={{ team_filter }}&q={{ search_q }}"
+                   class="btn btn-sm" title="Export CSV matching current filter"
+                   style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25); color: #34d399; border-radius: 9px;">
                     <i class="fas fa-file-csv"></i>
                 </a>
             </div>
         </div>
 
-        <!-- "More Filters" Expandable Section -->
-        <div class="collapse mt-2 pt-2 border-top border-secondary border-opacity-25" id="moreFiltersCollapse">
+        <!-- Advanced Filters Collapse -->
+        <div class="collapse mt-3 pt-3 border-top border-secondary border-opacity-25" id="moreFiltersCollapse">
             <div class="row g-2 align-items-center">
                 <div class="col-6 col-md-3">
-                    <label class="text-xs text-muted mb-1 d-block">Assigned Field Team:</label>
-                    <select name="team" class="form-select form-select-sm bg-dark border-secondary text-white" onchange="this.form.submit()">
+                    <label class="text-xs fw-semibold mb-1 d-block" style="color: #475569; text-transform: uppercase; letter-spacing: 0.06em;">Field Team</label>
+                    <select name="team" class="form-select form-select-sm dispatch-filter-select" onchange="this.form.submit()">
                         <option value="ALL" {% if team_filter == 'ALL' or not team_filter %}selected{% endif %}>All Teams</option>
                         {% for tm in teams %}
                         <option value="{{ tm.id }}" {% if team_filter == tm.id|stringformat:"s" %}selected{% endif %}>{{ tm.name }}</option>
@@ -79,122 +80,121 @@
                     </select>
                 </div>
                 <div class="col-6 col-md-3 d-flex align-items-end">
-                    <a href="{% url 'dispatch_dashboard' %}" class="btn btn-sm btn-outline-secondary w-100">
-                        <i class="fas fa-undo me-1"></i> Reset Filters
+                    <a href="{% url 'dispatch_dashboard' %}" class="btn btn-sm w-100"
+                       style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: #64748b; border-radius: 9px; font-size: 0.8rem;">
+                        <i class="fas fa-rotate-left me-1"></i> Reset All Filters
                     </a>
                 </div>
             </div>
         </div>
     </form>
 
-    <!-- Legacy Information Architecture Table -->
+    <!-- Ticket Table -->
     <div class="table-responsive">
-        <table class="table table-dark table-hover align-middle mb-0 text-sm" id="dispatch-tickets-table" style="background: transparent;">
+        <table class="dispatch-table" id="dispatch-tickets-table">
             <thead>
-                <tr class="text-muted text-uppercase text-xs border-secondary">
-                    <th style="width: 100px;">Status</th>
-                    <th style="width: 110px;">Ticket #</th>
-                    <th style="width: 130px;">Date Created</th>
-                    <th style="width: 130px;">Date Completed</th>
-                    <th style="width: 110px;">Turnaround</th>
+                <tr>
+                    <th style="width: 110px;">Status</th>
+                    <th style="width: 115px;">Ticket #</th>
+                    <th style="width: 125px;">Created</th>
+                    <th style="width: 125px;">Completed</th>
+                    <th style="width: 100px;">Turnaround</th>
                     <th>Client</th>
                     <th>Concern / Plan</th>
-                    <th>Assigned Tech</th>
-                    <th class="text-end pe-3" style="width: 140px;">Actions</th>
+                    <th>Assigned Team</th>
+                    <th class="text-end pe-3" style="width: 130px;">Actions</th>
                 </tr>
             </thead>
             <tbody id="tickets-tbody">
                 {% for t in tickets %}
-                <tr id="ticket-row-{{ t.id }}" class="border-secondary">
+                <tr id="ticket-row-{{ t.id }}">
                     <!-- 1. Status -->
                     <td>
-                        <span class="status-badge status-{{ t.status|lower }}">
-                            {{ t.get_status_display }}
-                        </span>
+                        <span class="status-badge status-{{ t.status|lower }}">{{ t.get_status_display }}</span>
                         {% if t.sla_badge_level == 'red' %}
-                            <div class="mt-1"><span class="badge bg-danger text-white border border-danger fw-bold text-xs"><i class="fas fa-fire me-1"></i>48h+ SLA</span></div>
+                            <div class="mt-1"><span class="badge fw-bold" style="background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); font-size: 0.65rem;"><i class="fas fa-fire me-1"></i>48h+ SLA</span></div>
                         {% elif t.sla_badge_level == 'amber' %}
-                            <div class="mt-1"><span class="badge bg-warning text-dark border border-warning fw-bold text-xs"><i class="fas fa-triangle-exclamation me-1"></i>24h+ SLA</span></div>
+                            <div class="mt-1"><span class="badge fw-bold" style="background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); font-size: 0.65rem;"><i class="fas fa-triangle-exclamation me-1"></i>24h+ SLA</span></div>
                         {% endif %}
                     </td>
 
                     <!-- 2. Ticket # -->
                     <td>
-                        <div class="fw-bold text-white font-monospace text-xs">{{ t.ticket_number }}</div>
+                        <div class="fw-bold text-white font-monospace" style="font-size: 0.78rem;">{{ t.ticket_number }}</div>
                         <span class="priority-pill {{ t.priority|lower }} mt-1 d-inline-block">{{ t.get_priority_display }}</span>
                     </td>
 
                     <!-- 3. Date Created -->
-                    <td class="text-xs text-muted">
-                        <div>{{ t.created_at|date:"M d, Y" }}</div>
-                        <div class="text-xs">{{ t.created_at|date:"h:i A" }}</div>
+                    <td>
+                        <div class="fw-medium" style="font-size: 0.8rem; color: #cbd5e1;">{{ t.created_at|date:"M d, Y" }}</div>
+                        <div style="font-size: 0.72rem; color: #475569;">{{ t.created_at|date:"h:i A" }}</div>
                     </td>
 
                     <!-- 4. Date Completed -->
-                    <td class="text-xs">
+                    <td>
                         {% if t.done_at %}
-                            <span class="text-success">{{ t.done_at|date:"M d, Y" }}</span>
-                            <div class="text-xs text-muted">{{ t.done_at|date:"h:i A" }}</div>
+                            <div class="fw-medium" style="font-size: 0.8rem; color: #34d399;">{{ t.done_at|date:"M d, Y" }}</div>
+                            <div style="font-size: 0.72rem; color: #475569;">{{ t.done_at|date:"h:i A" }}</div>
                         {% else %}
-                            <span class="text-muted fst-italic">-</span>
+                            <span style="color: #334155; font-size: 0.78rem;">—</span>
                         {% endif %}
                     </td>
 
                     <!-- 5. Turnaround -->
-                    <td class="text-xs">
+                    <td>
                         {% if t.turnaround_display != '-' %}
-                            <span class="badge bg-dark border border-info text-cyan font-monospace">
-                                <i class="fas fa-stopwatch me-1"></i>{{ t.turnaround_display }}
+                            <span class="font-monospace" style="font-size: 0.75rem; color: #67e8f9; background: rgba(6,182,212,0.08); border: 1px solid rgba(6,182,212,0.2); border-radius: 6px; padding: 0.18rem 0.5rem; white-space: nowrap;">
+                                <i class="fas fa-stopwatch me-1" style="font-size: 0.65rem;"></i>{{ t.turnaround_display }}
                             </span>
                         {% else %}
-                            <span class="text-muted">-</span>
+                            <span style="color: #334155;">—</span>
                         {% endif %}
                     </td>
 
                     <!-- 6. Client -->
                     <td>
-                        <div class="fw-bold text-white d-flex align-items-center gap-2">
+                        <div class="fw-semibold d-flex align-items-center gap-2" style="color: #e2e8f0; font-size: 0.85rem;">
                             <span>{{ t.client_name }}</span>
                             {% if t.customer %}
-                            <a href="{% url 'view_customer' t.customer.id %}" target="_blank" class="text-cyan text-xs text-decoration-none" title="View CRM Profile">
-                                <i class="fas fa-external-link-alt"></i>
+                            <a href="{% url 'view_customer' t.customer.id %}" target="_blank" class="text-decoration-none" title="View CRM Profile" style="color: #22d3ee; font-size: 0.72rem;">
+                                <i class="fas fa-arrow-up-right-from-square"></i>
                             </a>
                             {% endif %}
                         </div>
-                        <div class="text-xs text-muted text-truncate" style="max-width: 220px;" title="{{ t.address }}">
-                            <i class="fas fa-map-marker-alt text-danger me-1"></i>{{ t.address|default:"No address set" }}
-                            {% if t.barangay %}<span class="badge bg-secondary ms-1">{{ t.barangay }}</span>{% endif %}
+                        <div class="text-truncate mt-1" style="max-width: 220px; font-size: 0.75rem; color: #475569;" title="{{ t.address }}">
+                            <i class="fas fa-location-dot me-1" style="color: #f43f5e;"></i>{{ t.address|default:"No address recorded" }}
+                            {% if t.barangay %}<span class="ms-1" style="background: rgba(100,116,139,0.15); color: #64748b; border-radius: 4px; padding: 0.1rem 0.35rem; font-size: 0.68rem;">{{ t.barangay }}</span>{% endif %}
                         </div>
                         {% if t.contact_number %}
-                        <div class="text-xs mt-1">
-                            <a href="tel:{{ t.contact_number }}" class="text-info text-decoration-none"><i class="fas fa-phone-alt me-1"></i>{{ t.contact_number }}</a>
+                        <div class="mt-1">
+                            <a href="tel:{{ t.contact_number }}" class="text-decoration-none" style="font-size: 0.75rem; color: #38bdf8;"><i class="fas fa-phone-alt me-1"></i>{{ t.contact_number }}</a>
                         </div>
                         {% endif %}
                     </td>
 
                     <!-- 7. Concern / Plan -->
                     <td>
-                        <div class="text-xs fw-semibold text-info">{{ t.get_ticket_type_display }}</div>
+                        <div class="fw-semibold" style="font-size: 0.78rem; color: #67e8f9;">{{ t.get_ticket_type_display }}</div>
                         {% if t.plan_package %}
-                        <div class="text-xs text-muted"><i class="fas fa-wifi me-1"></i>{{ t.plan_package }}</div>
+                        <div class="mt-1" style="font-size: 0.75rem; color: #475569;"><i class="fas fa-wifi me-1"></i>{{ t.plan_package }}</div>
                         {% endif %}
-                        <div class="text-xs text-light mt-1 text-truncate" style="max-width: 200px;" title="{{ t.concern }}">
+                        <div class="text-truncate mt-1" style="max-width: 200px; font-size: 0.75rem; color: #94a3b8;" title="{{ t.concern }}">
                             {{ t.concern|default:"No specific concern noted" }}
                         </div>
                     </td>
 
-                    <!-- 8. Assigned Tech -->
+                    <!-- 8. Assigned Team -->
                     <td>
                         {% if t.team %}
-                        <div class="text-xs fw-bold text-white"><i class="fas fa-users text-primary me-1"></i>{{ t.team.name }}</div>
+                        <div class="fw-semibold" style="font-size: 0.8rem; color: #e2e8f0;"><i class="fas fa-users me-1" style="color: #60a5fa;"></i>{{ t.team.name }}</div>
                         {% else %}
-                        <div class="text-xs text-muted fst-italic">Unassigned</div>
+                        <div style="font-size: 0.78rem; color: #334155; font-style: italic;">Unassigned</div>
                         {% endif %}
-                        <div class="text-xs text-muted mt-1">
+                        <div class="mt-1 d-flex flex-wrap gap-1">
                             {% for tech in t.technicians.all %}
-                            <span class="badge bg-dark border border-secondary me-1">{{ tech.name }}</span>
+                            <span style="background: rgba(100,116,139,0.1); border: 1px solid rgba(100,116,139,0.2); color: #94a3b8; border-radius: 5px; font-size: 0.68rem; padding: 0.1rem 0.4rem;">{{ tech.name }}</span>
                             {% empty %}
-                            <span class="text-xs text-muted">No techs</span>
+                            <span style="font-size: 0.72rem; color: #334155;">No technicians assigned</span>
                             {% endfor %}
                         </div>
                     </td>
@@ -202,7 +202,8 @@
                     <!-- 9. Actions -->
                     <td class="text-end pe-3 text-nowrap">
                         <div class="btn-group btn-group-sm">
-                            <button type="button" class="btn btn-outline-info" title="Copy Dispatch Brief"
+                            <button type="button" class="btn btn-sm" title="Copy Dispatch Brief"
+                                    style="background: rgba(6,182,212,0.08); border: 1px solid rgba(6,182,212,0.2); color: #22d3ee; border-radius: 7px 0 0 7px;"
                                     onclick="copyDispatchBrief({
                                         ticket_type_display: '{{ t.get_ticket_type_display|escapejs }}',
                                         client_name: '{{ t.client_name|escapejs }}',
@@ -218,31 +219,34 @@
                                     })">
                                 <i class="fas fa-copy"></i>
                             </button>
-                            <button type="button" class="btn btn-outline-primary btn-open-assign" 
-                                    data-id="{{ t.id }}" data-ticket="{{ t.ticket_number }}" data-name="{{ t.client_name }}" title="Assign">
+                            <button type="button" class="btn btn-sm btn-open-assign"
+                                    style="background: rgba(37,99,235,0.1); border: 1px solid rgba(37,99,235,0.25); border-left: none; border-right: none; color: #60a5fa;"
+                                    data-id="{{ t.id }}" data-ticket="{{ t.ticket_number }}" data-name="{{ t.client_name }}" title="Assign Team">
                                 <i class="fas fa-user-plus"></i>
                             </button>
                             {% if t.status != 'COMPLETED' %}
-                            <button type="button" class="btn btn-outline-success btn-open-complete" 
-                                    data-id="{{ t.id }}" data-ticket="{{ t.ticket_number }}" data-name="{{ t.client_name }}" 
-                                    data-type="{{ t.ticket_type }}" title="Complete">
+                            <button type="button" class="btn btn-sm btn-open-complete"
+                                    style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25); border-right: none; color: #34d399; {% if t.status == 'COMPLETED' %}border-radius: 0 7px 7px 0;{% endif %}"
+                                    data-id="{{ t.id }}" data-ticket="{{ t.ticket_number }}" data-name="{{ t.client_name }}"
+                                    data-type="{{ t.ticket_type }}" title="Complete Job">
                                 <i class="fas fa-check"></i>
                             </button>
                             {% endif %}
                             <div class="btn-group btn-group-sm">
-                                <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" 
+                                <button type="button" class="btn btn-sm dropdown-toggle dropdown-toggle-split"
+                                        style="background: rgba(100,116,139,0.1); border: 1px solid rgba(100,116,139,0.2); color: #64748b; border-radius: 0 7px 7px 0;"
                                         data-bs-toggle="dropdown" aria-expanded="false"></button>
-                                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow-lg">
+                                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow-lg" style="background: rgba(15,23,42,0.95); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; min-width: 190px;">
                                     {% if t.status == 'ASSIGNED' or t.status == 'IN_PROGRESS' %}
-                                    <li><a class="dropdown-item text-warning btn-undispatch" href="#" data-id="{{ t.id }}" data-number="{{ t.ticket_number }}"><i class="fas fa-undo text-warning me-2"></i> Undispatch</a></li>
-                                    <li><hr class="dropdown-divider border-secondary"></li>
+                                    <li><a class="dropdown-item text-warning btn-undispatch" href="#" data-id="{{ t.id }}" data-number="{{ t.ticket_number }}" style="font-size: 0.82rem;"><i class="fas fa-rotate-left me-2"></i>Undispatch</a></li>
+                                    <li><hr class="dropdown-divider border-secondary my-1"></li>
                                     {% endif %}
-                                    <li><a class="dropdown-item btn-quick-status" href="#" data-id="{{ t.id }}" data-status="PENDING"><i class="fas fa-clock text-info me-2"></i> Set Pending</a></li>
-                                    <li><a class="dropdown-item btn-quick-status" href="#" data-id="{{ t.id }}" data-status="IN_PROGRESS"><i class="fas fa-spinner text-primary me-2"></i> Set In Progress</a></li>
-                                    <li><a class="dropdown-item btn-set-location" href="#" data-id="{{ t.id }}" data-name="{{ t.client_name }}"><i class="fas fa-map-marker-alt text-warning me-2"></i> Update GPS</a></li>
-                                    <li><hr class="dropdown-divider border-secondary"></li>
-                                    <li><a class="dropdown-item text-danger btn-quick-status" href="#" data-id="{{ t.id }}" data-status="CANCELLED"><i class="fas fa-times-circle me-2"></i> Cancel Ticket</a></li>
-                                    <li><a class="dropdown-item text-danger btn-delete-ticket" href="#" data-id="{{ t.id }}" data-number="{{ t.ticket_number }}"><i class="fas fa-trash-alt me-2"></i> Delete Ticket</a></li>
+                                    <li><a class="dropdown-item btn-quick-status" href="#" data-id="{{ t.id }}" data-status="PENDING" style="font-size: 0.82rem;"><i class="fas fa-clock me-2" style="color: #22d3ee;"></i>Set Pending</a></li>
+                                    <li><a class="dropdown-item btn-quick-status" href="#" data-id="{{ t.id }}" data-status="IN_PROGRESS" style="font-size: 0.82rem;"><i class="fas fa-spinner me-2" style="color: #60a5fa;"></i>Set In Progress</a></li>
+                                    <li><a class="dropdown-item btn-set-location" href="#" data-id="{{ t.id }}" data-name="{{ t.client_name }}" style="font-size: 0.82rem;"><i class="fas fa-location-dot me-2" style="color: #fbbf24;"></i>Update GPS Location</a></li>
+                                    <li><hr class="dropdown-divider border-secondary my-1"></li>
+                                    <li><a class="dropdown-item text-danger btn-quick-status" href="#" data-id="{{ t.id }}" data-status="CANCELLED" style="font-size: 0.82rem;"><i class="fas fa-ban me-2"></i>Cancel Ticket</a></li>
+                                    <li><a class="dropdown-item text-danger btn-delete-ticket" href="#" data-id="{{ t.id }}" data-number="{{ t.ticket_number }}" style="font-size: 0.82rem;"><i class="fas fa-trash-alt me-2"></i>Delete Ticket</a></li>
                                 </ul>
                             </div>
                         </div>
@@ -250,9 +254,14 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="9" class="text-center py-5 text-muted">
-                        <i class="fas fa-clipboard-list fa-3x mb-3 text-secondary"></i>
-                        <p class="mb-0">No job tickets found matching the selected filters.</p>
+                    <td colspan="9" class="border-0 p-0">
+                        <div class="dispatch-empty-state">
+                            <div class="dispatch-empty-icon mx-auto">
+                                <i class="fas fa-clipboard-list"></i>
+                            </div>
+                            <h6>No job tickets found</h6>
+                            <p>No tickets match your current filters. Try adjusting the date range, status, or clearing the search term.</p>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
