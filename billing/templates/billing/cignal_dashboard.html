@@ -3,36 +3,43 @@
 
 {% block title %}Cignal Play & Box Dashboard | Gametech{% endblock %}
 
-{% block content %}
+{% block extra_css %}
 {% include "billing/cignal_dashboard/_styles.html" %}
+{% endblock %}
 
+{% block content %}
 <div class="container-fluid py-4 px-3 px-md-4">
 
-  <!-- Page Hero Banner -->
-  <div class="gt-cl-card p-4 mb-4" style="border-left: 4px solid #ef4444;">
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-      <div class="d-flex align-items-center">
-        <div class="hero-icon me-3" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; padding: 15px; border-radius: 12px;">
-          <i class="fas fa-satellite-dish fa-2x"></i>
+  <!-- Page Header -->
+  <div class="cignal-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 animate-fade-in">
+    <div class="d-flex align-items-center gap-3">
+      <div class="cignal-header-icon"><i class="fas fa-satellite-dish"></i></div>
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <span class="badge rounded-pill px-3 py-1 fw-semibold" style="background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.25); font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase;">
+            <i class="fas fa-satellite-dish me-1"></i> Cignal Play & Box
+          </span>
         </div>
-        <div>
-          <h4 class="mb-1 fw-bold text-white">Cignal Play & Box Operations</h4>
-          <p class="mb-0 text-muted small">Monitor Cignal applications, customers, and active logs</p>
-        </div>
+        <h1 class="cignal-header-title mb-0">Operations Dashboard</h1>
+        <p class="cignal-header-sub mb-0">Monitor Cignal applications, active subscriptions, and renewal logs</p>
       </div>
-      <div class="d-flex align-items-center gap-2">
-        <a href="{% url 'cignal_export_csv' %}" class="btn btn-outline-secondary fw-bold gt-btn"><i class="fas fa-file-excel me-2 text-success"></i> Export CSV</a>
-        <span class="badge bg-success px-3 py-2 rounded-pill" style="font-size: 0.85rem;"><span class="cignal-live-dot"></span> Tracking Active</span>
-      </div>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <a href="{% url 'cignal_export_csv' %}" class="btn-cignal-glass">
+        <i class="fas fa-file-excel" style="color:#34d399;"></i> Export CSV
+      </a>
+      <span class="cignal-live-badge"><span class="cignal-live-dot"></span> Live Tracking</span>
     </div>
   </div>
 
   {% if messages %}
   {% for message in messages %}
-    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}success{% endif %} border-0 rounded-4 shadow-sm mb-4 d-flex align-items-center gap-2 alert-dismissible fade show" style="background:{% if message.tags == 'error' %}#fef2f2; color:#b91c1c; border:1px solid #fecaca;{% else %}#ecfdf5; color:#059669; border:1px solid #a7f3d0;{% endif %} font-weight: 500;" role="alert">
-      <i class="fas {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} fs-5"></i>
+    <div class="alert border-0 rounded-3 mb-3 d-flex align-items-center gap-2 alert-dismissible fade show"
+         style="background: {% if message.tags == 'error' %}rgba(239,68,68,0.1); color:#f87171; border:1px solid rgba(239,68,68,0.25) !important;{% else %}rgba(16,185,129,0.1); color:#34d399; border:1px solid rgba(16,185,129,0.25) !important;{% endif %} font-weight:600; font-size:0.85rem;"
+         role="alert">
+      <i class="fas {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %}"></i>
       <span>{{ message }}</span>
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
     </div>
   {% endfor %}
   {% endif %}

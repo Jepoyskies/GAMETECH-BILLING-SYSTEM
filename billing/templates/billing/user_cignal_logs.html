@@ -1,66 +1,80 @@
 {% extends "billing/base.html" %}
 {% load static %}
 
-{% block title %}Cignal Play Logs - {{ customer.full_name }} | Gametech{% endblock %}
+{% block title %}Cignal Play Logs — {{ customer.full_name }} | Gametech{% endblock %}
+
+{% block extra_css %}
+{% include "billing/cignal_dashboard/_styles.html" %}
+{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4 px-3 px-md-4">
 
-  <!-- Page Hero -->
-  <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in"
-       style="background: linear-gradient(135deg, #713f12 0%, #a16207 50%, #ca8a04 100%);">
-    <div class="d-flex align-items-center">
-      <div class="hero-icon"><i class="fas fa-satellite-dish"></i></div>
+  <!-- Page Header -->
+  <div class="cignal-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 animate-fade-in">
+    <div class="d-flex align-items-center gap-3">
+      <div class="cignal-header-icon"><i class="fas fa-satellite-dish"></i></div>
       <div>
-        <div class="hero-title">Cignal Play Logs</div>
-        <div class="hero-sub">Transaction history for <strong>{{ customer.full_name }}</strong></div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <span class="badge rounded-pill px-3 py-1 fw-semibold" style="background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.25); font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase;">
+            <i class="fas fa-satellite-dish me-1"></i> Cignal Play
+          </span>
+        </div>
+        <h1 class="cignal-header-title mb-0">Transaction Logs</h1>
+        <p class="cignal-header-sub mb-0">History for <strong style="color: #fbbf24;">{{ customer.full_name }}</strong></p>
       </div>
     </div>
-    <a href="{% url 'cignal_play_list' %}" class="btn-premium" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.3);">
+    <a href="{% url 'cignal_play_list' %}" class="btn-cignal-glass">
       <i class="fas fa-arrow-left"></i> Back to List
     </a>
   </div>
 
   {% if messages %}
   {% for message in messages %}
-  <div class="alert alert-{{ message.tags }} alert-dismissible fade show rounded-3 shadow-sm mb-3" role="alert">
-    {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  <div class="alert border-0 rounded-3 mb-3 d-flex align-items-center gap-2 alert-dismissible fade show"
+       style="background: {% if message.tags == 'error' %}rgba(239,68,68,0.1); color:#f87171; border:1px solid rgba(239,68,68,0.25) !important;{% else %}rgba(16,185,129,0.1); color:#34d399; border:1px solid rgba(16,185,129,0.25) !important;{% endif %} font-weight:600; font-size:0.85rem;"
+       role="alert">
+    <i class="fas {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %}"></i>
+    <span>{{ message }}</span>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
   </div>
   {% endfor %}
   {% endif %}
 
   <!-- Customer Info Strip -->
-  <div class="filter-glass animate-fade-in animate-delay-1 d-flex align-items-center gap-4 flex-wrap">
-    <div class="d-flex align-items-center gap-2">
-      <div class="av av-sm av-blue">{{ customer.full_name|make_list|first|upper }}</div>
+  <div class="cignal-info-strip animate-fade-in animate-delay-1">
+    <div class="d-flex align-items-center gap-3">
+      <div class="cignal-av">{{ customer.full_name|make_list|first|upper }}</div>
       <div>
-        <div class="fw-bold" style="font-size:0.9rem;">{{ customer.full_name }}</div>
-        <div class="text-muted" style="font-size:0.78rem;">Customer</div>
+        <div class="cignal-info-label">Customer</div>
+        <div class="cignal-info-value">{{ customer.full_name }}</div>
       </div>
     </div>
-    <div class="d-flex align-items-center gap-2">
-      <span class="text-muted" style="font-size:0.83rem;"><i class="fas fa-user me-1"></i>Username:</span>
-      <span class="fw-bold" style="color:#2563eb; font-size:0.88rem;">{{ customer.username|default:"N/A" }}</span>
+    {% if customer.username %}
+    <div>
+      <div class="cignal-info-label">PPPoE Username</div>
+      <div class="cignal-info-value" style="color: #60a5fa;">{{ customer.username }}</div>
     </div>
-    <div class="d-flex align-items-center gap-2">
-      <span class="text-muted" style="font-size:0.83rem;"><i class="fas fa-tv me-1"></i>Cignal No.:</span>
-      <span class="pill pill-suspended" style="background:rgba(202,138,4,0.12); color:#92400e; border-color:rgba(202,138,4,0.3);">
-        <span class="pill-dot" style="background:#ca8a04;"></span>{{ customer.cignalplay_no|default:"N/A" }}
-      </span>
+    {% endif %}
+    <div>
+      <div class="cignal-info-label">Cignal Play No.</div>
+      <div class="mt-1">
+        <span class="cignal-no-chip"><i class="fas fa-tv" style="font-size:0.65rem;"></i> {{ customer.cignalplay_no|default:"N/A" }}</span>
+      </div>
     </div>
   </div>
 
   <!-- Logs Table -->
-  <div class="dashboard-card animate-fade-in animate-delay-2" style="overflow:hidden;">
-    <div class="section-header section-header-amber">
-      <h6><i class="fas fa-receipt sh-icon"></i> Transaction History</h6>
-      <small>{{ logs|length }} records</small>
+  <div class="cignal-glass-card animate-fade-in animate-delay-2">
+    <div class="cignal-card-header d-flex justify-content-between align-items-center">
+      <h6 class="mb-0"><i class="fas fa-receipt header-icon-danger"></i> Transaction History</h6>
+      <span class="cignal-badge-neutral">{{ logs|length }} records</span>
     </div>
     <div class="table-responsive">
-      <table class="table table-premium table-hover align-middle mb-0">
+      <table class="cignal-table">
         <thead>
           <tr>
-            <th>Date Recorded</th>
+            <th class="ps-3">Date Recorded</th>
             <th>Plan / Item</th>
             <th>Start Date</th>
             <th>End Date</th>
@@ -70,43 +84,47 @@
         <tbody>
           {% for log in logs %}
           <tr>
-            <td>
-              <div class="fw-semibold" style="font-size:0.85rem;">{{ log.created_at|date:"M d, Y" }}</div>
-              <div class="text-muted" style="font-size:0.75rem;">{{ log.created_at|date:"h:i A" }}</div>
+            <td class="ps-3">
+              <div class="fw-semibold" style="font-size:0.84rem; color:#e2e8f0;">{{ log.created_at|date:"M d, Y" }}</div>
+              <div style="font-size:0.72rem; color:#475569;">{{ log.created_at|date:"h:i A" }}</div>
             </td>
             <td>
-              <span class="fw-bold" style="color:#2563eb;">{{ log.addon_type|default:log.plan_name }}</span>
+              <span class="cignal-badge-addon">{{ log.addon_type|default:log.plan_name }}</span>
               {% if log.account_name %}
-                <div class="small text-muted" style="font-size:0.75rem;">{{ log.account_name }}{% if log.account_number %} &bull; <span class="font-monospace text-info">{{ log.account_number }}</span>{% endif %}</div>
+                <div style="font-size:0.72rem; color:#64748b; margin-top:3px;">
+                  {{ log.account_name }}{% if log.account_number %} &bull; <span class="font-monospace" style="color:#38bdf8;">{{ log.account_number }}</span>{% endif %}
+                </div>
               {% elif log.account_number %}
-                <div class="small text-muted" style="font-size:0.75rem;">Acct: <span class="font-monospace text-info">{{ log.account_number }}</span></div>
+                <div style="font-size:0.72rem; color:#64748b; margin-top:3px;">
+                  Acct: <span class="font-monospace" style="color:#38bdf8;">{{ log.account_number }}</span>
+                </div>
               {% endif %}
             </td>
             <td>
               {% if log.start_date %}
-                <span class="pill pill-active"><span class="pill-dot"></span>{{ log.start_date|date:"M d, Y" }}</span>
+                <span class="cignal-expiry-ok"><i class="fas fa-play" style="font-size:0.62rem;"></i> {{ log.start_date|date:"M d, Y" }}</span>
               {% else %}
-                <span class="text-muted">—</span>
+                <span style="color:#334155;">&mdash;</span>
               {% endif %}
             </td>
             <td>
               {% if log.end_date %}
-                <span class="pill pill-expired"><span class="pill-dot"></span>{{ log.end_date|date:"M d, Y" }}</span>
+                <span class="cignal-expiry-warn"><i class="fas fa-flag" style="font-size:0.62rem;"></i> {{ log.end_date|date:"M d, Y" }}</span>
               {% else %}
-                <span class="text-muted">—</span>
+                <span style="color:#334155;">&mdash;</span>
               {% endif %}
             </td>
             <td>
-              <span class="pill pill-inactive"><span class="pill-dot"></span><i class="fas fa-user-shield me-1"></i>{{ log.adjusted_by|default:"—" }}</span>
+              <span class="cignal-badge-neutral"><i class="fas fa-user-shield" style="font-size:0.62rem;"></i> {{ log.adjusted_by|default:"&mdash;" }}</span>
             </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="5">
-              <div class="empty-state">
-                <div class="es-icon"><i class="fas fa-inbox"></i></div>
-                <h6>No Transactions Found</h6>
-                <p>No Cignal Play transactions have been recorded for this customer.</p>
+            <td colspan="5" class="border-0 p-0">
+              <div class="cignal-empty-state">
+                <div class="cignal-empty-icon"><i class="fas fa-inbox"></i></div>
+                <div class="cignal-empty-title">No Transactions Found</div>
+                <div class="cignal-empty-sub">No Cignal Play transactions have been recorded for this customer.</div>
               </div>
             </td>
           </tr>
@@ -115,5 +133,6 @@
       </table>
     </div>
   </div>
+
 </div>
 {% endblock %}
