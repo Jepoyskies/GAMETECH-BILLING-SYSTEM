@@ -6,85 +6,114 @@
 {% block extra_css %}
 <link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
 {% include "dispatch/_styles.html" %}
-<style>
-    .card {
-        border-radius: 16px;
-        border: none;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    }
-    .table > :not(caption) > * > * {
-        padding: 1rem 1rem;
-        vertical-align: middle;
-    }
-</style>
 {% endblock %}
 
 {% block content %}
-<main class="content px-4 py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-1 fw-bold text-white">Cignal Play Queue</h1>
-            <p class="text-muted mb-0">Monitor Cignal Play installations and tasks</p>
-        </div>
-        <div class="d-flex gap-2">
-            <a href="{% url 'dispatch_dashboard' %}?type=CIGNAL" class="btn btn-outline-primary" style="border-radius: 12px; padding: 10px 16px;">
-                <i class="fas fa-map-marked-alt me-1"></i> View on Map
-            </a>
-            <button class="btn btn-primary shadow-sm" style="border-radius: 12px; padding: 10px 20px;" data-bs-toggle="modal" data-bs-target="#addRecordModal">
-                <i class="fas fa-plus me-2"></i> Add Record
-            </button>
-        </div>
-    </div>
+<main class="content px-3 px-md-4 py-4">
 
-    {% include "dispatch/_tab_ticket_table.html" %}
-
-    <div class="card p-0 overflow-hidden">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 datatable" style="width: 100%;">
-                    <thead class="bg-light">
-                        <tr>
-                            <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Date</th>
-                            <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Client Name</th>
-                            <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Address</th>
-                            <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Concern</th>
-                            <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Teams</th>
-                            <th class="text-muted fw-bold text-uppercase" style="font-size: 0.8rem;">Status</th>
-                            <th class="text-muted fw-bold text-uppercase text-end" style="font-size: 0.8rem;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for record in records %}
-                        <tr>
-                            <td>{{ record.date|date:"M d, Y" }}</td>
-                            <td class="fw-bold">{{ record.client_name }}</td>
-                            <td class="text-muted">{{ record.address|truncatechars:30 }}</td>
-                            <td>{{ record.concern|truncatechars:30 }}</td>
-                            <td>
-                                {% for team in record.teams.all %}
-                                    <span class="badge bg-info text-dark">{{ team.name }}</span>
-                                {% empty %}
-                                    <span class="text-muted small">Unassigned</span>
-                                {% endfor %}
-                            </td>
-                            <td>
-                                {% if record.status_option %}
-                                <span class="badge" style="background-color: {{ record.status_option.color }}">{{ record.status_option.label }}</span>
-                                {% else %}
-                                <span class="badge bg-light text-dark">Pending</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-end">
-                                <button class="btn btn-sm btn-light text-primary" title="Edit"><i class="fas fa-edit"></i></button>
-                                <a href="{% url 'complete_job' record.id %}" class="btn btn-sm btn-light text-success" title="Mark as Done"><i class="fas fa-check-circle"></i></a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+  <!-- Page Header -->
+  <div class="dispatch-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 fade-in-up">
+    <div class="d-flex align-items-center gap-3">
+      <div class="metric-hero-icon" style="width:52px;height:52px;min-width:52px;border-radius:16px;font-size:1.35rem;background:rgba(239,68,68,0.12);color:#f87171;border:1.5px solid rgba(239,68,68,0.28);">
+        <i class="fas fa-satellite-dish"></i>
+      </div>
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <span class="badge rounded-pill" style="background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.25); font-size: 0.65rem; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 10px; font-weight: 700;">
+            <i class="fas fa-satellite-dish me-1"></i> Dispatch
+          </span>
+          <span class="d-realtime-chip" style="color: #f87171; background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.2);">
+            <span style="background: #f87171;"></span> Live Queue
+          </span>
         </div>
+        <h1 style="font-size: 1.55rem; font-weight: 900; color: #f8fafc; margin: 0; letter-spacing: -0.03em; font-family: 'Inter', sans-serif;">Cignal Play Queue</h1>
+        <p style="font-size: 0.8rem; color: #475569; margin: 0.15rem 0 0; font-family: 'Inter', sans-serif;">Monitor Cignal Play installations, assignments, and completion status</p>
+      </div>
     </div>
+    <div class="d-flex gap-2 align-items-center">
+      <a href="{% url 'dispatch_dashboard' %}?type=CIGNAL" class="btn-dispatch-cockpit" style="color: #f87171 !important; border-color: rgba(239,68,68,0.28); background: rgba(239,68,68,0.08);">
+        <i class="fas fa-map-marked-alt"></i> View on Map
+      </a>
+      <button class="btn-dispatch-add" data-bs-toggle="modal" data-bs-target="#addRecordModal">
+        <i class="fas fa-plus"></i> Add Record
+      </button>
+    </div>
+  </div>
+
+  {% include "dispatch/_tab_ticket_table.html" %}
+
+  <!-- Cignal Install Records Table -->
+  <div class="dispatch-card fade-in-up" style="overflow: hidden; margin-bottom: 2rem;">
+    <div class="dispatch-card-header">
+      <h6>
+        <i class="fas fa-satellite-dish" style="color: #f87171;"></i>
+        Cignal Play Records
+      </h6>
+      <span class="dispatch-source-badge dsb-cignal"><i class="fas fa-database"></i> Archive</span>
+    </div>
+    <div class="table-responsive">
+      <table class="dispatch-table datatable" style="width: 100%;">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Client Name</th>
+            <th>Address</th>
+            <th>Concern</th>
+            <th>Teams</th>
+            <th>Status</th>
+            <th class="text-end pe-4">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in records %}
+          <tr>
+            <td>
+              <span style="font-size: 0.82rem; color: #64748b;">{{ record.date|date:"M d, Y" }}</span>
+            </td>
+            <td>
+              <span style="font-weight: 700; color: #e2e8f0; font-size: 0.86rem;">{{ record.client_name }}</span>
+            </td>
+            <td>
+              <span style="font-size: 0.81rem; color: #64748b;">{{ record.address|truncatechars:30 }}</span>
+            </td>
+            <td>
+              <span style="font-size: 0.81rem; color: #94a3b8;">{{ record.concern|truncatechars:30 }}</span>
+            </td>
+            <td>
+              {% for team in record.teams.all %}
+                <span style="display:inline-flex;align-items:center;gap:4px;font-size:0.72rem;font-weight:700;background:rgba(239,68,68,0.1);color:#f87171;border:1px solid rgba(239,68,68,0.25);border-radius:6px;padding:2px 8px;margin-right:3px;">
+                  <i class="fas fa-users" style="font-size:0.6rem;"></i> {{ team.name }}
+                </span>
+              {% empty %}
+                <span style="font-size:0.8rem;color:#334155;font-style:italic;">Unassigned</span>
+              {% endfor %}
+            </td>
+            <td>
+              {% if record.status_option %}
+                <span class="status-badge" style="background-color: {{ record.status_option.color }}22; color: {{ record.status_option.color }}; border: 1px solid {{ record.status_option.color }}44;">
+                  {{ record.status_option.label }}
+                </span>
+              {% else %}
+                <span class="status-badge status-pending">Pending</span>
+              {% endif %}
+            </td>
+            <td class="text-end pe-3">
+              <div class="d-flex justify-content-end gap-2">
+                <button class="dispatch-action-btn dispatch-action-btn-blue" title="Edit">
+                  <i class="fas fa-edit"></i> Edit
+                </button>
+                <a href="{% url 'complete_job' record.id %}" class="dispatch-action-btn dispatch-action-btn-green" title="Mark as Done">
+                  <i class="fas fa-check-circle"></i> Done
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
 </main>
 
 {% include "dispatch/_add_record_modal.html" %}
@@ -96,16 +125,19 @@
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
 <script>
-    $(document).ready(function() {
-        $('.datatable').DataTable({
-            "order": [[ 0, "desc" ]],
-            "pageLength": 25,
-            "language": {
-                "search": "",
-                "searchPlaceholder": "Search records..."
-            }
-        });
-        $('.dataTables_filter input').addClass('form-control').css({'border-radius': '8px'});
+$(document).ready(function() {
+    $('.datatable').DataTable({
+        "order": [[ 0, "desc" ]],
+        "pageLength": 25,
+        "language": {
+            "search": "",
+            "searchPlaceholder": "Search records...",
+            "lengthMenu": "Show _MENU_ records",
+            "info": "Showing _START_–_END_ of _TOTAL_ records"
+        }
     });
+    $('.dataTables_filter input').addClass('dispatch-search-input').css({'min-width': '200px'});
+    $('.dataTables_length select').addClass('dispatch-filter-select');
+});
 </script>
 {% endblock %}

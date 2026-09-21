@@ -6,100 +6,113 @@
 {% block extra_css %}
 <link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
 {% include "dispatch/_styles.html" %}
-<style>
-    .card {
-        border-radius: 16px;
-        border: none;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    }
-    .table > :not(caption) > * > * {
-        padding: 1rem 1rem;
-        vertical-align: middle;
-    }
-</style>
 {% endblock %}
 
 {% block content %}
 <main class="content px-3 px-md-4 py-4">
-    <!-- Page Header -->
-    <div class="dispatch-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
-        <div>
-            <div class="d-flex align-items-center gap-2 mb-2">
-                <span class="badge rounded-pill px-3 py-1 fw-semibold" style="background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase;">
-                    <i class="fas fa-network-wired me-1"></i> Dispatch System
+
+  <!-- Page Header -->
+  <div class="dispatch-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 fade-in-up">
+    <div class="d-flex align-items-center gap-3">
+      <div class="metric-hero-icon cyan" style="width: 52px; height: 52px; min-width: 52px; border-radius: 16px; font-size: 1.35rem;">
+        <i class="fas fa-network-wired"></i>
+      </div>
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <span class="badge rounded-pill" style="background: rgba(6,182,212,0.12); color: #22d3ee; border: 1px solid rgba(6,182,212,0.25); font-size: 0.65rem; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 10px; font-weight: 700;">
+            <i class="fas fa-network-wired me-1"></i> Dispatch HQ
+          </span>
+          <span class="d-realtime-chip">Live Queue</span>
+        </div>
+        <h1 style="font-size: 1.55rem; font-weight: 900; color: #f8fafc; margin: 0; letter-spacing: -0.03em; font-family: 'Inter', sans-serif;">Internet Install Queue</h1>
+        <p style="font-size: 0.8rem; color: #475569; margin: 0.15rem 0 0; font-family: 'Inter', sans-serif;">Monitor fiber drop installations, field assignments, and completion logs</p>
+      </div>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+      <a href="{% url 'dispatch_dashboard' %}?type=INSTALLATION" class="btn-dispatch-cockpit">
+        <i class="fas fa-map-marked-alt"></i> View on Map
+      </a>
+      <button class="btn-dispatch-add" data-bs-toggle="modal" data-bs-target="#addRecordModal">
+        <i class="fas fa-plus"></i> Add Record
+      </button>
+    </div>
+  </div>
+
+  {% include "dispatch/_tab_ticket_table.html" %}
+
+  <!-- Legacy Internet Install Records -->
+  <div class="dispatch-card fade-in-up" style="overflow: hidden; margin-bottom: 2rem;">
+    <div class="dispatch-card-header">
+      <h6>
+        <i class="fas fa-history" style="color: #38bdf8;"></i>
+        Legacy Internet Install Records
+        <span style="font-size: 0.72rem; font-weight: 600; color: #475569; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 9999px; padding: 2px 8px; margin-left: 2px;">({{ records.count }})</span>
+      </h6>
+      <span class="dispatch-source-badge dsb-internet"><i class="fas fa-database"></i> Historical Data</span>
+    </div>
+    <div class="table-responsive">
+      <table class="dispatch-table datatable" style="width: 100%;">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Client Name</th>
+            <th>Address</th>
+            <th>Concern</th>
+            <th>Teams</th>
+            <th>Status</th>
+            <th class="text-end pe-4">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in records %}
+          <tr>
+            <td>
+              <span style="font-size: 0.82rem; color: #64748b; font-family: 'Inter', sans-serif;">{{ record.date|date:"M d, Y" }}</span>
+            </td>
+            <td>
+              <span style="font-weight: 700; color: #e2e8f0; font-size: 0.86rem;">{{ record.client_name }}</span>
+            </td>
+            <td>
+              <span style="font-size: 0.81rem; color: #64748b;">{{ record.address|truncatechars:32 }}</span>
+            </td>
+            <td>
+              <span style="font-size: 0.81rem; color: #94a3b8;">{{ record.concern|truncatechars:30 }}</span>
+            </td>
+            <td>
+              {% for team in record.teams.all %}
+                <span style="display:inline-flex; align-items:center; gap:4px; font-size:0.72rem; font-weight:700; background:rgba(6,182,212,0.1); color:#22d3ee; border:1px solid rgba(6,182,212,0.25); border-radius:6px; padding:2px 8px; margin-right:3px;">
+                  <i class="fas fa-users" style="font-size:0.6rem;"></i> {{ team.name }}
                 </span>
-            </div>
-            <h1 class="h4 fw-bold text-white mb-1" style="letter-spacing: -0.02em;">Internet Install Queue</h1>
-            <p class="text-muted mb-0" style="font-size: 0.82rem;">Active installation job orders and historical records</p>
-        </div>
-        <div class="d-flex gap-2">
-            <a href="{% url 'dispatch_dashboard' %}?type=INSTALLATION" class="btn btn-sm px-3 py-2"
-               style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.25); color: #60a5fa; border-radius: 10px; font-size: 0.82rem;">
-                <i class="fas fa-map-marked-alt me-1"></i> View on Map
-            </a>
-            <button class="btn btn-sm px-3 py-2 fw-semibold"
-                    style="background: linear-gradient(135deg,#16a34a,#10b981); color: white; border: none; border-radius: 10px; font-size: 0.82rem;"
-                    data-bs-toggle="modal" data-bs-target="#addRecordModal">
-                <i class="fas fa-plus me-1"></i> Add Record
-            </button>
-        </div>
+              {% empty %}
+                <span style="font-size:0.8rem; color:#334155; font-style:italic;">Unassigned</span>
+              {% endfor %}
+            </td>
+            <td>
+              {% if record.status_option %}
+                <span class="status-badge" style="background-color: {{ record.status_option.color }}22; color: {{ record.status_option.color }}; border: 1px solid {{ record.status_option.color }}44;">
+                  {{ record.status_option.label }}
+                </span>
+              {% else %}
+                <span class="status-badge status-pending">Pending</span>
+              {% endif %}
+            </td>
+            <td class="text-end pe-3">
+              <div class="d-flex justify-content-end gap-2">
+                <button class="dispatch-action-btn dispatch-action-btn-blue" title="Edit Record">
+                  <i class="fas fa-edit"></i> Edit
+                </button>
+                <a href="{% url 'complete_job' record.id %}" class="dispatch-action-btn dispatch-action-btn-green" title="Mark as Done">
+                  <i class="fas fa-check-circle"></i> Done
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+  </div>
 
-    {% include "dispatch/_tab_ticket_table.html" %}
-
-    <div style="border: 1px solid rgba(255,255,255,0.05); background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(12px); border-radius: 12px; margin-bottom: 2rem; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-        <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.2); display: flex; justify-content: space-between; align-items: center;">
-            <h6 class="mb-0 fw-bold text-white" style="font-size: 1.1rem;">
-                <i class="fas fa-history" style="color: #3b82f6; margin-right: 8px;"></i> Legacy Internet Install Records ({{ records.count }})
-            </h6>
-            <span class="badge" style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3);">Historical Data</span>
-        </div>
-        <div class="p-0">
-            <div class="table-responsive p-3">
-                <table class="table table-dark table-hover align-middle mb-0 datatable" style="width: 100%; background: transparent;">
-                    <thead>
-                        <tr class="text-muted text-uppercase text-xs border-secondary">
-                            <th>Date</th>
-                            <th>Client Name</th>
-                            <th>Address</th>
-                            <th>Concern</th>
-                            <th>Teams</th>
-                            <th>Status</th>
-                            <th class="text-end">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for record in records %}
-                        <tr class="border-secondary">
-                            <td class="text-xs text-muted">{{ record.date|date:"M d, Y" }}</td>
-                            <td class="fw-bold text-white">{{ record.client_name }}</td>
-                            <td class="text-xs text-muted">{{ record.address|truncatechars:30 }}</td>
-                            <td class="text-xs">{{ record.concern|truncatechars:30 }}</td>
-                            <td>
-                                {% for team in record.teams.all %}
-                                    <span class="badge bg-info text-dark text-xs"><i class="fas fa-users me-1"></i> {{ team.name }}</span>
-                                {% empty %}
-                                    <span class="text-muted fst-italic text-xs">Unassigned</span>
-                                {% endfor %}
-                            </td>
-                            <td>
-                                {% if record.status_option %}
-                                <span class="badge" style="background-color: {{ record.status_option.color }}">{{ record.status_option.label }}</span>
-                                {% else %}
-                                <span class="badge bg-light text-dark">Pending</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-end">
-                                <button class="btn btn-xs btn-outline-primary" title="Edit"><i class="fas fa-edit"></i></button>
-                                <a href="{% url 'complete_job' record.id %}" class="btn btn-xs btn-outline-success" title="Mark as Done"><i class="fas fa-check-circle"></i> Done</a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
 </main>
 
 {% include "dispatch/_add_record_modal.html" %}
@@ -111,16 +124,23 @@
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
 <script>
-    $(document).ready(function() {
-        $('.datatable').DataTable({
-            "order": [[ 0, "desc" ]],
-            "pageLength": 25,
-            "language": {
-                "search": "",
-                "searchPlaceholder": "Search records..."
-            }
-        });
-        $('.dataTables_filter input').addClass('form-control').css({'border-radius': '8px'});
+$(document).ready(function() {
+    $('.datatable').DataTable({
+        "order": [[ 0, "desc" ]],
+        "pageLength": 25,
+        "language": {
+            "search": "",
+            "searchPlaceholder": "Search records...",
+            "lengthMenu": "Show _MENU_ records",
+            "info": "Showing _START_–_END_ of _TOTAL_ records",
+            "paginate": { "previous": "← Prev", "next": "Next →" }
+        }
     });
+    $('.dataTables_filter input')
+        .addClass('dispatch-search-input')
+        .css({'min-width': '220px'});
+    $('.dataTables_filter label').addClass('d-flex align-items-center gap-2').css('color','#475569');
+    $('.dataTables_length select').addClass('dispatch-filter-select').css({'padding': '0.35rem 0.6rem'});
+});
 </script>
 {% endblock %}

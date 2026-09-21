@@ -1,74 +1,149 @@
 {% if job_tickets %}
-<div class="card bg-dark border-secondary text-white mb-4 shadow-sm">
-    <div class="card-header bg-transparent border-secondary py-3 d-flex justify-content-between align-items-center">
-        <h6 class="mb-0 fw-bold text-white">
-            <i class="fas fa-ticket-alt text-primary me-2"></i> Active Job Tickets ({{ job_tickets.count }})
-        </h6>
-        <span class="badge bg-primary-soft text-primary">Live CRM Queue</span>
+<div class="dispatch-card fade-in-up mb-4" style="overflow: hidden;">
+  <div class="dispatch-card-header">
+    <h6>
+      <i class="fas fa-bolt" style="color: #fbbf24;"></i>
+      Active Job Tickets
+      <span style="font-size: 0.72rem; font-weight: 600; color: #475569; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 9999px; padding: 2px 8px; margin-left: 2px;">({{ job_tickets.count }})</span>
+    </h6>
+    <div class="d-flex align-items-center gap-2">
+      <span class="d-realtime-chip">Live CRM Queue</span>
     </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-dark table-hover align-middle mb-0" style="background: transparent;">
-                <thead>
-                    <tr class="text-muted text-uppercase text-xs border-secondary">
-                        <th>Ticket / Type</th>
-                        <th>Subscriber Details</th>
-                        <th>Assigned Unit</th>
-                        <th>Status</th>
-                        <th>Schedule</th>
-                        <th class="text-end">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for t in job_tickets %}
-                    <tr class="border-secondary">
-                        <td>
-                            <div class="fw-bold font-monospace text-cyan">{{ t.ticket_number }}</div>
-                            <span class="priority-pill {{ t.priority|lower }} text-xs">{{ t.get_priority_display }}</span>
-                        </td>
-                        <td>
-                            <div class="fw-bold text-white">{{ t.client_name }}</div>
-                            <div class="text-xs text-muted">{{ t.address|truncatechars:35 }} {% if t.barangay %}<span class="badge bg-secondary ms-1">{{ t.barangay }}</span>{% endif %}</div>
-                            {% if t.contact_number %}
-                            <div><a href="tel:{{ t.contact_number }}" class="text-xs text-info text-decoration-none" title="Primary Phone"><i class="fas fa-phone-alt me-1"></i> {{ t.contact_number }}</a></div>
-                            {% endif %}
-                            {% if t.alternate_contact %}
-                            <div><a href="tel:{{ t.alternate_contact }}" class="text-xs text-warning text-decoration-none" title="On-Site Alternate Contact"><i class="fas fa-phone-square-alt me-1"></i> Alt: {{ t.alternate_contact }}</a></div>
-                            {% endif %}
-                            {% if t.facebook_account %}
-                            <div><a href="{% if 'facebook.com' in t.facebook_account or 'http' in t.facebook_account %}{{ t.facebook_account }}{% else %}https://facebook.com/search/top?q={{ t.facebook_account|urlencode }}{% endif %}" target="_blank" class="text-xs text-primary text-decoration-none" title="Facebook / Messenger Link"><i class="fab fa-facebook-messenger me-1"></i> {{ t.facebook_account }}</a></div>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if t.team %}
-                            <div class="text-xs fw-bold text-white"><i class="fas fa-users text-primary me-1"></i> {{ t.team.name }}</div>
-                            {% else %}
-                            <span class="text-xs text-muted fst-italic">Unassigned</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="status-badge status-{{ t.status|lower }}">{{ t.get_status_display }}</span>
-                        </td>
-                        <td class="text-xs text-muted">
-                            {% if t.scheduled_date %}
-                            <i class="far fa-calendar-alt text-warning me-1"></i> {{ t.scheduled_date|date:"M d, Y" }}
-                            {% else %}
-                            Not scheduled
-                            {% endif %}
-                        </td>
-                        <td class="text-end">
-                            <a href="{% url 'dispatch_dashboard' %}?q={{ t.ticket_number }}" class="btn btn-xs btn-outline-primary" title="Open in Dispatch Cockpit">
-                                <i class="fas fa-external-link-alt"></i> Manage
-                            </a>
-                            <button type="button" class="btn btn-xs btn-outline-danger btn-delete-ticket ms-1" data-id="{{ t.id }}" data-number="{{ t.ticket_number }}" title="Delete Ticket">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+  </div>
+
+  <!-- Ticket rows — card-style instead of a plain table -->
+  <div class="p-2">
+    {% for t in job_tickets %}
+    <div class="dispatch-ticket-row {{ t.priority|lower }} d-flex flex-wrap align-items-center gap-3" style="padding-left: 1.4rem;">
+
+      <!-- Ticket # + priority -->
+      <div style="min-width: 140px; flex-shrink: 0;">
+        <div class="fw-bold font-monospace" style="font-size: 0.78rem; color: #60a5fa; letter-spacing: 0.02em;">{{ t.ticket_number }}</div>
+        <span class="priority-pill {{ t.priority|lower }} mt-1 d-inline-block">{{ t.get_priority_display }}</span>
+      </div>
+
+      <!-- Subscriber Details -->
+      <div style="flex: 1 1 220px; min-width: 180px;">
+        <div class="fw-bold" style="font-size: 0.87rem; color: #f1f5f9;">{{ t.client_name }}</div>
+        <div style="font-size: 0.76rem; color: #475569; margin-top: 2px;">
+          {{ t.address|truncatechars:38 }}
+          {% if t.barangay %}<span style="display:inline-flex;align-items:center;gap:3px;font-size:0.65rem;background:rgba(100,116,139,0.12);color:#64748b;border:1px solid rgba(100,116,139,0.2);border-radius:5px;padding:1px 6px;margin-left:4px;">{{ t.barangay }}</span>{% endif %}
         </div>
+        {% if t.contact_number %}
+        <div style="margin-top: 3px;">
+          <a href="tel:{{ t.contact_number }}" style="font-size:0.74rem; color:#38bdf8; text-decoration:none;">
+            <i class="fas fa-phone-alt" style="font-size:0.65rem;"></i> {{ t.contact_number }}
+          </a>
+          {% if t.alternate_contact %}
+          <a href="tel:{{ t.alternate_contact }}" style="font-size:0.74rem; color:#fbbf24; text-decoration:none; margin-left:8px;">
+            <i class="fas fa-phone-square-alt" style="font-size:0.65rem;"></i> Alt: {{ t.alternate_contact }}
+          </a>
+          {% endif %}
+        </div>
+        {% endif %}
+        {% if t.facebook_account %}
+        <div style="margin-top: 3px;">
+          <a href="{% if 'facebook.com' in t.facebook_account or 'http' in t.facebook_account %}{{ t.facebook_account }}{% else %}https://facebook.com/search/top?q={{ t.facebook_account|urlencode }}{% endif %}"
+             target="_blank" style="font-size:0.74rem; color:#818cf8; text-decoration:none;">
+            <i class="fab fa-facebook-messenger" style="font-size:0.68rem;"></i> {{ t.facebook_account }}
+          </a>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Assigned Unit -->
+      <div style="min-width: 110px; flex-shrink: 0;">
+        <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #334155; margin-bottom: 4px; font-family: 'Inter', sans-serif;">Unit</div>
+        {% if t.team %}
+          <div style="display:inline-flex; align-items:center; gap:5px; font-size:0.78rem; font-weight:700; color:#e2e8f0;">
+            <i class="fas fa-users" style="color:#60a5fa; font-size:0.7rem;"></i> {{ t.team.name }}
+          </div>
+        {% else %}
+          <span style="font-size:0.77rem; color:#334155; font-style:italic;">Unassigned</span>
+        {% endif %}
+      </div>
+
+      <!-- Status -->
+      <div style="min-width: 130px; flex-shrink: 0;">
+        <span class="status-badge status-{{ t.status|lower }}">{{ t.get_status_display }}</span>
+      </div>
+
+      <!-- Schedule -->
+      <div style="min-width: 110px; flex-shrink: 0;">
+        <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #334155; margin-bottom: 4px; font-family: 'Inter', sans-serif;">Schedule</div>
+        {% if t.scheduled_date %}
+          <div style="font-size:0.78rem; color:#94a3b8;">
+            <i class="far fa-calendar-alt" style="color:#fbbf24; font-size:0.72rem;"></i>
+            {{ t.scheduled_date|date:"M d, Y" }}
+          </div>
+        {% else %}
+          <span style="font-size:0.77rem; color:#334155; font-style:italic;">Not scheduled</span>
+        {% endif %}
+      </div>
+
+      <!-- Actions -->
+      <div class="ms-auto d-flex gap-2 flex-shrink-0">
+        <a href="{% url 'dispatch_dashboard' %}?q={{ t.ticket_number }}"
+           class="dispatch-action-btn dispatch-action-btn-blue" title="Open in Dispatch Cockpit">
+          <i class="fas fa-external-link-alt"></i> Manage
+        </a>
+        <button type="button"
+                class="dispatch-action-btn dispatch-action-btn-red btn-delete-ticket"
+                data-id="{{ t.id }}" data-number="{{ t.ticket_number }}"
+                title="Delete Ticket">
+          <i class="fas fa-trash-alt"></i>
+        </button>
+      </div>
+
     </div>
+    {% endfor %}
+  </div>
 </div>
+<script>
+if (!window._deleteTicketListenerAttached) {
+    window._deleteTicketListenerAttached = true;
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-delete-ticket');
+        if (btn) {
+            e.preventDefault();
+            const ticketId = btn.dataset.id;
+            const ticketNum = btn.dataset.number || ('#' + ticketId);
+            if (!confirm(`Are you sure you want to permanently delete ticket ${ticketNum}? This cannot be undone.`)) {
+                return;
+            }
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+            const csrftoken = getCookie('csrftoken') || document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+            fetch(`/dispatch/api/tickets/${ticketId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert('Error deleting ticket: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(err => alert('Network error: ' + err));
+        }
+    });
+}
+</script>
 {% endif %}
