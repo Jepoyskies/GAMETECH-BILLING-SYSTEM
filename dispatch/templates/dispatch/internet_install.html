@@ -20,102 +20,37 @@
       <div>
         <div class="d-flex align-items-center gap-2 mb-1">
           <span class="badge rounded-pill" style="background: rgba(6,182,212,0.12); color: #22d3ee; border: 1px solid rgba(6,182,212,0.25); font-size: 0.65rem; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 10px; font-weight: 700;">
-            <i class="fas fa-network-wired me-1"></i> Dispatch HQ
+            <i class="fas fa-network-wired me-1"></i> Fiber Install Queue
           </span>
           <span class="d-realtime-chip">Live Queue</span>
         </div>
-        <h1 style="font-size: 1.55rem; font-weight: 900; color: #f8fafc; margin: 0; letter-spacing: -0.03em; font-family: 'Inter', sans-serif;">Internet Install Queue</h1>
-        <p style="font-size: 0.8rem; color: #475569; margin: 0.15rem 0 0; font-family: 'Inter', sans-serif;">Monitor fiber drop installations, field assignments, and completion logs</p>
+        <h1 style="font-size: 1.55rem; font-weight: 900; color: #f8fafc; margin: 0; letter-spacing: -0.03em; font-family: 'Inter', sans-serif;">Internet Install Monitoring</h1>
+        <p style="font-size: 0.8rem; color: #475569; margin: 0.15rem 0 0; font-family: 'Inter', sans-serif;">Active subscriber installation orders, field unit assignments, and completion logs</p>
       </div>
     </div>
-    <div class="d-flex gap-2 align-items-center">
+    <div class="d-flex gap-2 align-items-center flex-wrap">
       <a href="{% url 'dispatch_dashboard' %}?type=INSTALLATION" class="btn-dispatch-cockpit">
         <i class="fas fa-map-marked-alt"></i> View on Map
       </a>
+      <button class="btn-dispatch-cockpit" data-bs-toggle="modal" data-bs-target="#modal-create-ticket">
+        <i class="fas fa-ticket-alt"></i> New Ticket
+      </button>
       <button class="btn-dispatch-add" data-bs-toggle="modal" data-bs-target="#addRecordModal">
         <i class="fas fa-plus"></i> Add Record
       </button>
     </div>
   </div>
 
-  {% include "dispatch/_tab_ticket_table.html" %}
+  <!-- 1. Operational Overview (PDF Manual Page 4) -->
+  {% include "dispatch/_queue_kpi_cards.html" %}
 
-  <!-- Legacy Internet Install Records -->
-  <div class="dispatch-card fade-in-up" style="overflow: hidden; margin-bottom: 2rem;">
-    <div class="dispatch-card-header">
-      <h6>
-        <i class="fas fa-history" style="color: #38bdf8;"></i>
-        Legacy Internet Install Records
-        <span style="font-size: 0.72rem; font-weight: 600; color: #475569; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 9999px; padding: 2px 8px; margin-left: 2px;">({{ records.count }})</span>
-      </h6>
-      <span class="dispatch-source-badge dsb-internet"><i class="fas fa-database"></i> Historical Data</span>
-    </div>
-    <div class="table-responsive">
-      <table class="dispatch-table datatable" style="width: 100%;">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Client Name</th>
-            <th>Address</th>
-            <th>Concern</th>
-            <th>Teams</th>
-            <th>Status</th>
-            <th class="text-end pe-4">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for record in records %}
-          <tr>
-            <td>
-              <span style="font-size: 0.82rem; color: #64748b; font-family: 'Inter', sans-serif;">{{ record.date|date:"M d, Y" }}</span>
-            </td>
-            <td>
-              <span style="font-weight: 700; color: #e2e8f0; font-size: 0.86rem;">{{ record.client_name }}</span>
-            </td>
-            <td>
-              <span style="font-size: 0.81rem; color: #64748b;">{{ record.address|truncatechars:32 }}</span>
-            </td>
-            <td>
-              <span style="font-size: 0.81rem; color: #94a3b8;">{{ record.concern|truncatechars:30 }}</span>
-            </td>
-            <td>
-              {% for team in record.teams.all %}
-                <span style="display:inline-flex; align-items:center; gap:4px; font-size:0.72rem; font-weight:700; background:rgba(6,182,212,0.1); color:#22d3ee; border:1px solid rgba(6,182,212,0.25); border-radius:6px; padding:2px 8px; margin-right:3px;">
-                  <i class="fas fa-users" style="font-size:0.6rem;"></i> {{ team.name }}
-                </span>
-              {% empty %}
-                <span style="font-size:0.8rem; color:#334155; font-style:italic;">Unassigned</span>
-              {% endfor %}
-            </td>
-            <td>
-              {% if record.status_option %}
-                <span class="status-badge" style="background-color: {{ record.status_option.color }}22; color: {{ record.status_option.color }}; border: 1px solid {{ record.status_option.color }}44;">
-                  {{ record.status_option.label }}
-                </span>
-              {% else %}
-                <span class="status-badge status-pending">Pending</span>
-              {% endif %}
-            </td>
-            <td class="text-end pe-3">
-              <div class="d-flex justify-content-end gap-2">
-                <button class="dispatch-action-btn dispatch-action-btn-blue" title="Edit Record">
-                  <i class="fas fa-edit"></i> Edit
-                </button>
-                <a href="{% url 'complete_job' record.id %}" class="dispatch-action-btn dispatch-action-btn-green" title="Mark as Done">
-                  <i class="fas fa-check-circle"></i> Done
-                </a>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
+  <!-- 2. Dual Workflow Tabs: Pending vs Ongoing vs Completed (PDF Manual Page 10) -->
+  {% include "dispatch/_queue_tabs.html" %}
 
 </main>
 
 {% include "dispatch/_add_record_modal.html" %}
+{% include "dispatch/_modals.html" %}
 
 {% endblock %}
 
@@ -125,22 +60,101 @@
 <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
 <script>
 $(document).ready(function() {
+    // Initialize DataTables on the All Records tab
     $('.datatable').DataTable({
         "order": [[ 0, "desc" ]],
         "pageLength": 25,
         "language": {
             "search": "",
-            "searchPlaceholder": "Search records...",
+            "searchPlaceholder": "Search all records...",
             "lengthMenu": "Show _MENU_ records",
             "info": "Showing _START_–_END_ of _TOTAL_ records",
             "paginate": { "previous": "← Prev", "next": "Next →" }
         }
     });
-    $('.dataTables_filter input')
-        .addClass('dispatch-search-input')
-        .css({'min-width': '220px'});
+    $('.dataTables_filter input').addClass('dispatch-search-input').css({'min-width': '220px'});
     $('.dataTables_filter label').addClass('d-flex align-items-center gap-2').css('color','#475569');
     $('.dataTables_length select').addClass('dispatch-filter-select').css({'padding': '0.35rem 0.6rem'});
+
+    // 📋 Toast helper for clipboard copy (PDF Manual Page 10)
+    function showCopyToast(msg) {
+        var toast = $('#dispatch-copy-toast');
+        $('#dispatch-copy-toast-msg').text(msg);
+        toast.stop(true, true).fadeIn(200).delay(2200).fadeOut(300);
+    }
+
+    $(document).on('click', '.btn-copy-brief', function(e) {
+        e.preventDefault();
+        var client = $(this).data('client') || 'Customer';
+        var phone = $(this).data('phone') || 'N/A';
+        var addr = $(this).data('addr') || 'N/A';
+        var concern = $(this).data('concern') || 'Installation';
+        var num = $(this).data('num') || '';
+        var text = '📋 [GAMETECH DISPATCH BRIEF]\nOrder/Ticket: ' + num + '\nClient: ' + client + '\nPhone: ' + phone + '\nAddress: ' + addr + '\nPackage: ' + concern;
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(function() {
+                showCopyToast('Copied brief for ' + client + ' to clipboard!');
+            }).catch(function() {
+                fallbackCopy(text, client);
+            });
+        } else {
+            fallbackCopy(text, client);
+        }
+    });
+
+    function fallbackCopy(text, client) {
+        var $temp = $('<textarea>');
+        $('body').append($temp);
+        $temp.val(text).select();
+        document.execCommand('copy');
+        $temp.remove();
+        showCopyToast('Copied brief for ' + client + ' to clipboard!');
+    }
+
+    // ↩️ Undispatch Action: Single click button or double-click row (PDF Manual Page 11)
+    $(document).on('click', '.btn-undispatch', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var ticketId = $(this).data('id');
+        var ticketNum = $(this).data('number') || ('#' + ticketId);
+        if (!confirm('Undispatch ' + ticketNum + ' and return to Pending queue?')) return;
+        
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        var csrftoken = getCookie('csrftoken') || $('[name=csrfmiddlewaretoken]').val();
+        fetch('/dispatch/api/tickets/' + ticketId + '/undispatch/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to undispatch'));
+            }
+        });
+    });
+
+    // Double-click row on Ongoing tab moves to Pending (PDF Page 11)
+    $(document).on('dblclick', '#tab-ongoing .dispatch-ticket-row', function(e) {
+        var btn = $(this).find('.btn-undispatch');
+        if (btn.length) {
+            btn.trigger('click');
+        }
+    });
 });
 </script>
 {% endblock %}

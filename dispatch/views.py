@@ -575,7 +575,38 @@ def dispatch_monitoring_view(request):
     
     records = DispatchRecord.objects.all().order_by('-date')
     job_tickets = JobTicket.objects.all().select_related('customer', 'team').prefetch_related('technicians').order_by('-created_at')
-    return render(request, 'dispatch/dispatch_monitoring.html', {'records': records, 'job_tickets': job_tickets, 'form': form})
+
+    pending_tickets = job_tickets.filter(status='PENDING')
+    ongoing_tickets = job_tickets.filter(status__in=['ASSIGNED', 'IN_PROGRESS'])
+    completed_tickets = job_tickets.filter(status__in=['COMPLETED', 'QA_PASSED'])
+    cancelled_tickets = job_tickets.filter(status='CANCELLED')
+
+    pending_count = pending_tickets.count()
+    ongoing_count = ongoing_tickets.count()
+    completed_count = completed_tickets.count() + records.count()
+    cancelled_count = cancelled_tickets.count()
+    total_count = job_tickets.count() + records.count()
+
+    teams = Team.objects.all()
+    technicians = Technician.objects.all()
+
+    return render(request, 'dispatch/dispatch_monitoring.html', {
+        'records': records,
+        'job_tickets': job_tickets,
+        'pending_tickets': pending_tickets,
+        'ongoing_tickets': ongoing_tickets,
+        'completed_tickets': completed_tickets,
+        'pending_count': pending_count,
+        'ongoing_count': ongoing_count,
+        'completed_count': completed_count,
+        'cancelled_count': cancelled_count,
+        'total_count': total_count,
+        'teams': teams,
+        'technicians': technicians,
+        'form': form,
+        'tab_type': 'ALL',
+        'queue_name': 'Master Dispatch & Operations Log',
+    })
 
 
 def _handle_monitoring_view(request, tab_type, template_name):
@@ -595,13 +626,54 @@ def _handle_monitoring_view(request, tab_type, template_name):
     else:
         form = MonitoringRecordForm(initial={'tab_type': tab_type, 'date': timezone.now().date()})
     
-    records = MonitoringRecord.objects.filter(tab_type=tab_type).order_by('-date')
+    records = MonitoringRecord.objects.filter(tab_type=tab_type).select_related('status_option', 'customer').prefetch_related('teams').order_by('-date')
     job_tickets = JobTicket.objects.filter(source_tab=tab_type).select_related('customer', 'team').prefetch_related('technicians').order_by('-created_at')
+
+    # PDF Page 10: Pending (not yet dispatched) vs Ongoing (currently being worked on)
+    pending_tickets = job_tickets.filter(status='PENDING')
+    ongoing_tickets = job_tickets.filter(status__in=['ASSIGNED', 'IN_PROGRESS'])
+    completed_tickets = job_tickets.filter(status__in=['COMPLETED', 'QA_PASSED'])
+    cancelled_tickets = job_tickets.filter(status='CANCELLED')
+
+    pending_records = records.filter(Q(status_option__label__icontains='Pending') | Q(status_option__isnull=True, done_at__isnull=True))
+    ongoing_records = records.filter(Q(status_option__label__icontains='Ongoing') | Q(status_option__label__icontains='Progress') | Q(time_start__isnull=False, done_at__isnull=True))
+    completed_records = records.filter(Q(status_option__label__icontains='Done') | Q(done_at__isnull=False))
+    cancelled_records = records.filter(status_option__label__icontains='Cancelled')
+
+    pending_count = pending_tickets.count() + pending_records.count()
+    ongoing_count = ongoing_tickets.count() + ongoing_records.count()
+    completed_count = completed_tickets.count() + completed_records.count()
+    cancelled_count = cancelled_tickets.count() + cancelled_records.count()
+    total_count = records.count() + job_tickets.count()
+
+    teams = Team.objects.all()
+    technicians = Technician.objects.all()
+
+    queue_labels = {
+        'INTERNET_INSTALL': 'Internet Installation Queue',
+        'CIGNAL_PLAY': 'Cignal Play Installation Queue',
+        'CLIENT_CONCERNS': 'Client Concerns & Repairs Queue',
+    }
+
     return render(request, template_name, {
         'records': records,
         'job_tickets': job_tickets,
+        'pending_tickets': pending_tickets,
+        'ongoing_tickets': ongoing_tickets,
+        'completed_tickets': completed_tickets,
+        'pending_records': pending_records,
+        'ongoing_records': ongoing_records,
+        'completed_records': completed_records,
+        'pending_count': pending_count,
+        'ongoing_count': ongoing_count,
+        'completed_count': completed_count,
+        'cancelled_count': cancelled_count,
+        'total_count': total_count,
+        'teams': teams,
+        'technicians': technicians,
         'form': form,
-        'tab_type': tab_type
+        'tab_type': tab_type,
+        'queue_name': queue_labels.get(tab_type, 'Dispatch Queue'),
     })
 
 
