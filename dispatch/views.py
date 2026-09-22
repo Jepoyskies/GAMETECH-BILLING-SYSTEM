@@ -905,13 +905,21 @@ def export_tickets_csv(request):
 @login_required
 @require_POST
 def api_delete_ticket(request, ticket_id):
-    if not (request.user.is_staff or request.user.is_superuser):
-        return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
     ticket = get_object_or_404(JobTicket, id=ticket_id)
     ticket_num = ticket.ticket_number
     ticket.delete()
     log_audit('DELETE', 'JobTicket', ticket_id, request.user, summary=f"Deleted ticket {ticket_num}")
     return JsonResponse({'success': True, 'message': f"Ticket {ticket_num} deleted successfully."})
+
+
+@login_required
+@require_POST
+def api_delete_record(request, record_id):
+    record = get_object_or_404(MonitoringRecord, id=record_id)
+    client_name = record.client_name
+    record.delete()
+    log_audit('DELETE', 'MonitoringRecord', record_id, request.user, summary=f"Deleted monitoring record #{record_id} for {client_name}")
+    return JsonResponse({'success': True, 'message': f"Record #{record_id} deleted successfully."})
 
 
 # --- Phase 3 APIs: Customer Autofill & Duplicate Name Lockout ---

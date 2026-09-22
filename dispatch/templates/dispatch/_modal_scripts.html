@@ -196,21 +196,16 @@
         const btn = e.target.closest('.btn-delete-ticket');
         if (!btn) return;
         e.preventDefault();
+        e.stopPropagation();
+
         const ticketId = btn.dataset.id;
         const ticketNum = btn.dataset.number || ('#' + ticketId);
         
-        const confirmFn = window.gametechConfirm || function(opts) {
-            return Promise.resolve({ isConfirmed: confirm(opts.text || opts.title) });
-        };
-
-        confirmFn({
-            title: 'Delete Ticket?',
-            text: `Are you sure you want to permanently delete ticket ${ticketNum}? This cannot be undone.`,
-            icon: 'warning',
-            confirmButtonText: 'Yes, Delete',
-            confirmButtonColor: '#ef4444'
-        }).then(res => {
-            if (!res.isConfirmed) return;
+        const executeDelete = function() {
+            btn.disabled = true;
+            const prevHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
             fetch('/dispatch/api/tickets/' + ticketId + '/delete/', {
                 method: 'POST',
                 headers: {
@@ -221,13 +216,145 @@
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    window.location.reload();
+                    const row = btn.closest('.dispatch-ticket-row') || btn.closest('tr');
+                    if (row) {
+                        row.style.transition = 'all 0.25s ease';
+                        row.style.opacity = '0';
+                        row.style.transform = 'translateX(20px)';
+                        setTimeout(() => window.location.reload(), 250);
+                    } else {
+                        window.location.reload();
+                    }
                 } else {
-                    alert('Failed to delete ticket: ' + (data.error || 'Unknown error'));
+                    btn.disabled = false;
+                    btn.innerHTML = prevHtml;
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            title: 'Error',
+                            text: data.error || 'Failed to delete ticket.',
+                            icon: 'error',
+                            confirmButtonColor: '#ef4444',
+                            background: '#0f172a',
+                            color: '#f8fafc'
+                        });
+                    } else {
+                        alert('Failed to delete ticket: ' + (data.error || 'Unknown error'));
+                    }
                 }
             })
-            .catch(err => alert('Network error: ' + String(err)));
-        });
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = prevHtml;
+                alert('Network error: ' + String(err));
+            });
+        };
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Delete Ticket?',
+                text: `Permanently delete ticket ${ticketNum}? This action cannot be undone.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Delete',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#475569',
+                background: '#0f172a',
+                color: '#f8fafc',
+                customClass: {
+                    popup: 'border border-secondary shadow-lg rounded-4'
+                }
+            }).then(res => {
+                if (res.isConfirmed) {
+                    executeDelete();
+                }
+            });
+        } else if (confirm(`Permanently delete ticket ${ticketNum}? This action cannot be undone.`)) {
+            executeDelete();
+        }
+    });
+
+    // 5. Delete Monitoring Record Listener
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-delete-record');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        const recordId = btn.dataset.id;
+        const recordNum = btn.dataset.number || ('REC-' + recordId);
+        
+        const executeDeleteRecord = function() {
+            btn.disabled = true;
+            const prevHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            fetch('/dispatch/api/records/' + recordId + '/delete/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const row = btn.closest('.dispatch-ticket-row') || btn.closest('tr');
+                    if (row) {
+                        row.style.transition = 'all 0.25s ease';
+                        row.style.opacity = '0';
+                        row.style.transform = 'translateX(20px)';
+                        setTimeout(() => window.location.reload(), 250);
+                    } else {
+                        window.location.reload();
+                    }
+                } else {
+                    btn.disabled = false;
+                    btn.innerHTML = prevHtml;
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            title: 'Error',
+                            text: data.error || 'Failed to delete record.',
+                            icon: 'error',
+                            confirmButtonColor: '#ef4444',
+                            background: '#0f172a',
+                            color: '#f8fafc'
+                        });
+                    } else {
+                        alert('Failed to delete record: ' + (data.error || 'Unknown error'));
+                    }
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = prevHtml;
+                alert('Network error: ' + String(err));
+            });
+        };
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Delete Record?',
+                text: `Permanently delete direct record ${recordNum}? This action cannot be undone.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Delete',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#475569',
+                background: '#0f172a',
+                color: '#f8fafc',
+                customClass: {
+                    popup: 'border border-secondary shadow-lg rounded-4'
+                }
+            }).then(res => {
+                if (res.isConfirmed) {
+                    executeDeleteRecord();
+                }
+            });
+        } else if (confirm(`Permanently delete direct record ${recordNum}? This cannot be undone.`)) {
+            executeDeleteRecord();
+        }
     });
 })();
 </script>

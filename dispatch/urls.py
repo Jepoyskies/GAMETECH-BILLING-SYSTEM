@@ -31,6 +31,7 @@ urlpatterns = [
     path('api/tickets/<int:ticket_id>/location/', views.api_update_location, name='api_dispatch_update_location'),
     path('api/tickets/<int:ticket_id>/complete/', views.api_complete_job, name='api_dispatch_complete_job'),
     path('api/tickets/<int:ticket_id>/delete/', views.api_delete_ticket, name='api_dispatch_delete_ticket'),
+    path('api/records/<int:record_id>/delete/', views.api_delete_record, name='api_dispatch_delete_record'),
     path('api/tickets/<int:ticket_id>/contact-attempt/', views.api_log_contact_attempt, name='api_dispatch_contact_attempt'),
     path('api/tickets/<int:ticket_id>/mark-unreachable/', views.api_mark_unreachable, name='api_dispatch_mark_unreachable'),
     path('api/tickets/<int:ticket_id>/send-welcome-sms/', views.api_send_welcome_sms, name='api_dispatch_send_welcome_sms'),
