@@ -24,6 +24,7 @@
 | **ERR-043** | System-Wide Tab Lag, Freezes, and 499 Timeouts on Customers Directory & Profiles | `network_manager/services/base.py`, `billing/views/api/network.py`, `billing/views/customers/list.py` | Hardware API / Caching |
 | **ERR-044** | Installed Customer Displayed as Active / Connected Without Payment or Expiration Date | `billing/views/customers/crud.py`, `billing/views/customers/list.py`, `billing/models.py`, `add_customer.html` | Billing / Security |
 | **ERR-057** | Dispatch Queue Tab Count Mismatch, Missing Tab 4 Records, and Inactive QA Approval Queue | `dispatch/views.py`, `pipeline_views.py`, `_queue_tabs.html`, `4_qa.html` | Queue / Pipeline |
+| **ERR-058** | Dispatch Trash Can Delete Buttons Inactive and 403 Forbidden for Non-Staff CSR Accounts | `dispatch/_modal_scripts.html`, `dispatch/views.py`, `dispatch/urls.py` | Queue / API |
 
 ---
 
@@ -1042,6 +1043,22 @@
   * `dispatch/templates/dispatch/_queue_tabs.html` & `dispatch/templates/dispatch/tabs/` (Modularized into `<100` line sub-partials and included both `job_tickets` and `records` in Tab 4)
 * **1-Step Fix**:
   * Partition records disjointly, loop both `job_tickets` and `records` in Tab 4, and remove `customer__status='pending'` from `dispatch_qa`.
+
+### ERR-058: Dispatch Trash Can Delete Buttons Inactive and 403 Forbidden for Non-Staff CSR Accounts
+* **Symptoms**:
+  * Red square trash can icon buttons (`.btn-delete-ticket` and `.btn-delete-record`) do nothing when clicked in Pending Queue or Master Records.
+  * In other views, clicking delete returns a 403 Forbidden or "Unauthorized" error message.
+* **Root Causes**:
+  * `_scripts.html` was historically not included in dedicated queue pages (`client_concerns.html`, `internet_install.html`, `cignal_install.html`, `dispatch_monitoring.html`), leaving `.btn-delete-ticket` buttons without a registered click handler.
+  * `api_delete_ticket` enforced `is_staff=True` or `is_superuser=True`, but standard dispatcher and CSR Django accounts (`CSRAna`, `TechMike`, `MeiMei`) have `is_staff=False`.
+  * Direct monitoring records (`MonitoringRecord`) lacked a corresponding delete API endpoint.
+* **Exact Target Files**:
+  * `dispatch/templates/dispatch/_modal_scripts.html` (Added universal delegated click handlers on `document` for both `.btn-delete-ticket` and `.btn-delete-record` with SweetAlert2 confirmation, loading spinner, and animated row removal)
+  * `dispatch/views.py` (Replaced staff requirement with standard `@login_required`, added `api_delete_record` endpoint)
+  * `dispatch/urls.py` (Registered `path('api/records/<int:record_id>/delete/', views.api_delete_record)`)
+  * `billing/templates/billing/base/_scripts.html` (Added `showCancelButton: true` to `window.gametechConfirm` defaultOpts)
+* **1-Step Fix**:
+  * Include delegated event listeners in `_modal_scripts.html` (loaded universally via `_modals.html`), expose `api_delete_record`, and authorize authenticated operators via `@login_required`.
 
 ---
 
