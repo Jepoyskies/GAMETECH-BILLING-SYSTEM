@@ -893,6 +893,21 @@
 
 ---
 
+### ERR-050: Modal Alert Hijacked into Topbar Floating Toast on Dispatch Page Load
+* **Symptoms**:
+  * An amber alert box (`⚠️ This will cancel the ticket. Technician attempted to reach client 3 times with no response. If the client comes back, the agent must create a new ticket.`) unexpectedly pops up floating in the top-right corner over the topbar and page header whenever opening any tab related to dispatch (Dashboard, Internet Install, Cignal Install, etc.).
+* **Root Causes**:
+  * In `billing/templates/billing/base/_scripts.html`, a global DOM handler converts `.content-wrapper .alert` elements into floating toasts on page load. It only excluded alerts inside forms (`if(alert.closest('form')) return;`), but did NOT exclude alerts inside modals (`.modal`).
+  * In `dispatch/templates/dispatch/_modals.html`, `#modal-mark-unreachable` did not wrap its body in a `<form>` (unlike other modals), causing its inner `.alert.alert-warning` to be selected, detached from the modal, and appended into `#toast-container` at `top: 20px; right: 20px;` on every dispatch page load.
+* **Exact Target Files**:
+  * `billing/templates/billing/base/_scripts.html` (Added `|| alert.closest('.modal')` to toast converter)
+  * `dispatch/templates/dispatch/_modals.html` (Wrapped `#modal-mark-unreachable` in `<form id="form-mark-unreachable">`, added `style="display: none;"`)
+* **1-Step Fix**:
+  * Update `base/_scripts.html` line 204 to `if (alert.closest('form') || alert.closest('.modal')) return;` so modal alerts are never converted into page toasts.
+  * Wrap `#modal-mark-unreachable` in `<form id="form-mark-unreachable" onsubmit="event.preventDefault();">` for structural consistency.
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 1. Assign a new `ERR-XXX` identifier.

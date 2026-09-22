@@ -102,12 +102,24 @@ def dashboard_view(request):
     cancelled_count = cancelled_qs.count()
     
     if status_filter != 'ALL':
-        tickets_qs = tickets_qs.filter(status=status_filter)
+        if status_filter == 'ONGOING':
+            tickets_qs = tickets_qs.filter(status__in=['ASSIGNED', 'IN_PROGRESS'])
+        elif status_filter in ['CLOSED', 'COMPLETED', 'DONE']:
+            tickets_qs = tickets_qs.filter(status__in=['COMPLETED', 'QA_PASSED'])
+        else:
+            tickets_qs = tickets_qs.filter(status=status_filter)
+
     if type_filter != 'ALL':
-        tickets_qs = tickets_qs.filter(ticket_type=type_filter)
+        if type_filter == 'REPAIR':
+            tickets_qs = tickets_qs.filter(Q(ticket_type='REPAIR') | Q(source_tab='CLIENT_CONCERNS'))
+        elif type_filter == 'INSTALLATION':
+            tickets_qs = tickets_qs.filter(ticket_type='INSTALLATION')
+        else:
+            tickets_qs = tickets_qs.filter(ticket_type=type_filter)
+
     if source_tab_filter != 'ALL':
         if source_tab_filter == 'CLIENT_CONCERNS':
-            tickets_qs = tickets_qs.filter(Q(source_tab='CLIENT_CONCERNS') | Q(chat_type__icontains='concern'))
+            tickets_qs = tickets_qs.filter(Q(source_tab='CLIENT_CONCERNS') | Q(ticket_type='REPAIR') | Q(chat_type__icontains='concern'))
         else:
             tickets_qs = tickets_qs.filter(source_tab=source_tab_filter)
     if team_filter != 'ALL' and team_filter.isdigit():
