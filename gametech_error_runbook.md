@@ -837,6 +837,21 @@
   * Provide an explicit submit button in modal footers to guarantee clean submission without depending on missing slider classes.
   * Support both `tech_ids` and `technician_ids` in `pipeline_views.py`.
 
+### ERR-047: DataTables warning: table id=agentsDataTable - Incorrect column count (TN/18)
+* **Symptoms**:
+  * Browser alert popup on `/agents/`: `DataTables warning: table id=agentsDataTable - Incorrect column count. For more information about this error, please see http://datatables.net/tn/18`.
+* **Root Causes**:
+  * The table `agentsDataTable` declared 7 column headers in `<thead>`.
+  * When no agents existed in the database, the template rendered `{% empty %} <tr><td colspan="7">...</td></tr>`.
+  * DataTables client-side DOM parser does not support `colspan` on `<tbody>` rows and counts only 1 cell on row 0, detecting a mismatch against the 7 `<th>` elements and throwing Tech Note 18.
+* **Exact Target Files**:
+  * `billing/templates/billing/agents.html`
+  * `billing/templates/billing/agents/_table.html`
+  * `billing/templates/billing/agents/_scripts.html`
+* **1-Step Fix**:
+  * Remove `{% empty %} <tr><td colspan="7">...</td></tr>` from inside the DataTables `<tbody>`.
+  * Configure DataTables `language.emptyTable` and `language.zeroRecords` to render the empty state dynamically across all columns without DOM count mismatches.
+
 ---
 
 ## 📝 How to Add a New Error Entry
