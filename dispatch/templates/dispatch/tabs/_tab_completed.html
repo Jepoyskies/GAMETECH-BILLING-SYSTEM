@@ -1,0 +1,59 @@
+<!-- ══════════════ TAB 3: COMPLETED ARCHIVE ══════════════ -->
+<div class="tab-pane fade p-3" id="tab-completed" role="tabpanel" aria-labelledby="completed-tab">
+  {% if completed_tickets or completed_records %}
+    {% for t in completed_tickets %}
+    <div class="dispatch-ticket-row low d-flex flex-wrap align-items-center gap-3 mb-2" style="padding-left: 1.4rem;">
+      <div style="min-width: 130px; flex-shrink: 0;">
+        <div class="fw-bold font-monospace" style="font-size: 0.8rem; color: #34d399;">{{ t.ticket_number }}</div>
+        <span class="status-badge" style="background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.25);">Done</span>
+      </div>
+      <div style="flex: 1 1 220px; min-width: 180px;">
+        <div class="fw-bold" style="font-size: 0.88rem; color: #f1f5f9;">{{ t.client_name }}</div>
+        <div style="font-size: 0.76rem; color: #64748b;">{{ t.address|truncatechars:38 }}</div>
+      </div>
+      <div style="min-width: 130px; flex-shrink: 0;">
+        <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: #475569;">Accomplished By</div>
+        <div style="font-size: 0.78rem; color: #94a3b8;">{{ t.team.name|default:"Field Staff" }}</div>
+      </div>
+      <div class="ms-auto d-flex gap-2 flex-shrink-0">
+        <span class="badge" style="background: rgba(16,185,129,0.1); color: #34d399; border: 1px solid rgba(16,185,129,0.2); padding: 5px 10px;">
+          <i class="fas fa-check-double me-1"></i> Closed
+        </span>
+      </div>
+    </div>
+    {% endfor %}
+
+    {% for r in completed_records %}
+    <div class="dispatch-ticket-row low d-flex flex-wrap align-items-center gap-3 mb-2" style="padding-left: 1.4rem;">
+      <div style="min-width: 130px; flex-shrink: 0;">
+        <div style="font-size: 0.78rem; color: #64748b;">{{ r.date|date:"M d, Y" }}</div>
+        <span class="status-badge" style="background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.25);">Done</span>
+      </div>
+      <div style="flex: 1 1 220px; min-width: 180px;">
+        <div class="fw-bold" style="font-size: 0.88rem; color: #f1f5f9;">{{ r.client_name }}</div>
+        <div style="font-size: 0.76rem; color: #64748b;">{{ r.address|truncatechars:38 }}</div>
+      </div>
+      <div style="min-width: 130px; flex-shrink: 0;">
+        <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: #475569;">Status</div>
+        <span style="font-size:0.75rem; color:#34d399;">Completed</span>
+      </div>
+      <div class="ms-auto d-flex gap-2 flex-shrink-0">
+        <a href="{% url 'complete_job' r.id %}" class="dispatch-action-btn dispatch-action-btn-ghost" title="View Job Details">
+          <i class="fas fa-eye"></i> Details
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+
+  {% else %}
+    <div class="text-center py-5">
+      <div class="d-inline-flex align-items-center justify-content-center mb-3" style="width: 72px; height: 72px; border-radius: 50%; background: rgba(16,185,129,0.08); border: 1.5px solid rgba(16,185,129,0.22); color: #34d399; font-size: 1.75rem;">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <h5 class="fw-bold text-white mb-1" style="font-family: 'Inter', sans-serif;">No Completed Records Yet</h5>
+      <p class="text-muted mb-0 mx-auto" style="font-size: 0.84rem; max-width: 440px;">
+        Jobs marked as Done or Completed will be cataloged here automatically.
+      </p>
+    </div>
+  {% endif %}
+</div>

@@ -1,0 +1,106 @@
+<!-- ══════════════ TAB 1: PENDING QUEUE ══════════════ -->
+<div class="tab-pane fade show active p-3" id="tab-pending" role="tabpanel" aria-labelledby="pending-tab">
+  {% if pending_tickets or pending_records %}
+    <!-- Pending Job Tickets -->
+    {% for t in pending_tickets %}
+    <div class="dispatch-ticket-row {{ t.priority|lower }} d-flex flex-wrap align-items-center gap-3 mb-2" style="padding-left: 1.4rem;">
+      <div style="min-width: 130px; flex-shrink: 0;">
+        <div class="fw-bold font-monospace" style="font-size: 0.8rem; color: #60a5fa;">{{ t.ticket_number }}</div>
+        <span class="priority-pill {{ t.priority|lower }} mt-1 d-inline-block">{{ t.get_priority_display }}</span>
+      </div>
+      <div style="flex: 1 1 220px; min-width: 180px;">
+        <div class="fw-bold" style="font-size: 0.88rem; color: #f1f5f9;">{{ t.client_name }}</div>
+        <div style="font-size: 0.76rem; color: #64748b; margin-top: 2px;">
+          {{ t.address|truncatechars:38 }}
+          {% if t.barangay %}<span class="badge bg-dark border border-secondary text-muted ms-1" style="font-size: 0.65rem;">{{ t.barangay }}</span>{% endif %}
+        </div>
+        {% if t.contact_number %}
+        <div style="margin-top: 3px;">
+          <a href="tel:{{ t.contact_number }}" style="font-size:0.75rem; color:#38bdf8; text-decoration:none;"><i class="fas fa-phone-alt" style="font-size:0.65rem;"></i> {{ t.contact_number }}</a>
+          {% if t.alternate_contact %}<a href="tel:{{ t.alternate_contact }}" style="font-size:0.75rem; color:#fbbf24; text-decoration:none; margin-left:8px;"><i class="fas fa-phone-square-alt" style="font-size:0.65rem;"></i> Alt: {{ t.alternate_contact }}</a>{% endif %}
+        </div>
+        {% endif %}
+      </div>
+      <div style="min-width: 150px; flex-shrink: 0;">
+        {% include "dispatch/_ticket_type_badge.html" with ticket=t %}
+        <div style="font-size: 0.78rem; color: #cbd5e1; margin-top:2px;">{{ t.concern|default:t.plan_package|default:"Standard Request"|truncatechars:26 }}</div>
+      </div>
+      <div style="min-width: 110px; flex-shrink: 0;">
+        <span class="status-badge status-pending">Pending Dispatch</span>
+      </div>
+      <div class="ms-auto d-flex gap-2 flex-shrink-0">
+        <button type="button" class="dispatch-action-btn dispatch-action-btn-ghost btn-copy-brief"
+                data-client="{{ t.client_name }}" data-phone="{{ t.contact_number }}" data-addr="{{ t.address }}" data-concern="{{ t.concern|default:t.plan_package }}" data-num="{{ t.ticket_number }}"
+                title="Copy Brief to Clipboard">
+          <i class="fas fa-copy"></i> Copy
+        </button>
+        <button type="button" class="dispatch-action-btn dispatch-action-btn-blue btn-open-assign"
+                data-id="{{ t.id }}" data-ticket="{{ t.ticket_number }}" data-name="{{ t.client_name }}"
+                data-type="{{ t.get_ticket_type_display }}" data-concern="{{ t.concern|default:t.plan_package }}"
+                title="Dispatch & Assign Unit">
+          <i class="fas fa-paper-plane"></i> Dispatch
+        </button>
+        <button type="button" class="dispatch-action-btn dispatch-action-btn-red btn-delete-ticket" data-id="{{ t.id }}" data-number="{{ t.ticket_number }}" title="Delete Ticket">
+          <i class="fas fa-trash-alt"></i>
+        </button>
+      </div>
+    </div>
+    {% endfor %}
+
+    <!-- Pending Monitoring Records -->
+    {% for r in pending_records %}
+    <div class="dispatch-ticket-row normal d-flex flex-wrap align-items-center gap-3 mb-2" style="padding-left: 1.4rem;">
+      <div style="min-width: 130px; flex-shrink: 0;">
+        <div style="font-size: 0.78rem; color: #64748b;">{{ r.date|date:"M d, Y" }}</div>
+        <span class="badge" style="background: rgba(100,116,139,0.15); color: #94a3b8; font-size: 0.65rem;">Direct Record</span>
+      </div>
+      <div style="flex: 1 1 220px; min-width: 180px;">
+        <div class="fw-bold" style="font-size: 0.88rem; color: #f1f5f9;">{{ r.client_name }}</div>
+        <div style="font-size: 0.76rem; color: #64748b; margin-top: 2px;">{{ r.address|truncatechars:38 }}</div>
+        {% if r.contact_number %}
+        <div style="margin-top: 3px;">
+          <a href="tel:{{ r.contact_number }}" style="font-size:0.75rem; color:#38bdf8; text-decoration:none;"><i class="fas fa-phone-alt" style="font-size:0.65rem;"></i> {{ r.contact_number }}</a>
+        </div>
+        {% endif %}
+      </div>
+      <div style="min-width: 140px; flex-shrink: 0;">
+        <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: #475569;">Concern</div>
+        <div style="font-size: 0.8rem; color: #cbd5e1;">{{ r.concern|truncatechars:26 }}</div>
+      </div>
+      <div style="min-width: 110px; flex-shrink: 0;">
+        <span class="status-badge status-pending">Pending</span>
+      </div>
+      <div class="ms-auto d-flex gap-2 flex-shrink-0">
+        <button type="button" class="dispatch-action-btn dispatch-action-btn-ghost btn-copy-brief"
+                data-client="{{ r.client_name }}" data-phone="{{ r.contact_number }}" data-addr="{{ r.address }}" data-concern="{{ r.concern }}" data-num="REC-{{ r.id }}"
+                title="Copy Brief to Clipboard">
+          <i class="fas fa-copy"></i> Copy
+        </button>
+        <a href="{% url 'complete_job' r.id %}" class="dispatch-action-btn dispatch-action-btn-green" title="Complete Job">
+          <i class="fas fa-check"></i> Done
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+
+  {% else %}
+    <!-- Modern Executive Empty State -->
+    <div class="text-center py-5">
+      <div class="d-inline-flex align-items-center justify-content-center mb-3" style="width: 72px; height: 72px; border-radius: 50%; background: rgba(245,158,11,0.08); border: 1.5px solid rgba(245,158,11,0.22); color: #fbbf24; font-size: 1.75rem;">
+        <i class="fas fa-clipboard-check"></i>
+      </div>
+      <h5 class="fw-bold text-white mb-1" style="font-family: 'Inter', sans-serif;">No Pending Orders in Queue</h5>
+      <p class="text-muted mb-4 mx-auto" style="font-size: 0.84rem; max-width: 440px;">
+        All jobs for this monitoring queue are currently assigned to field units or successfully completed.
+      </p>
+      <div class="d-flex justify-content-center gap-2">
+        <button type="button" class="btn-dispatch-add" data-bs-toggle="modal" data-bs-target="#addRecordModal">
+          <i class="fas fa-plus"></i> Add New Record
+        </button>
+        <a href="{% url 'dispatch_dashboard' %}" class="btn-dispatch-cockpit">
+          <i class="fas fa-desktop"></i> Operations Cockpit
+        </a>
+      </div>
+    </div>
+  {% endif %}
+</div>

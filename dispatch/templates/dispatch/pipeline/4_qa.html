@@ -83,8 +83,17 @@
                                     <div class="mb-1 d-flex align-items-center gap-1 flex-wrap">
                                         <span class="badge bg-dark border border-secondary text-info font-monospace px-2 py-1">{{ ticket.ticket_number }}</span>
                                         {% include "dispatch/_ticket_type_badge.html" with ticket=ticket %}
-                                        {% if ticket.completed_at %}
-                                        <span class="badge bg-dark border border-secondary text-muted ms-1 fw-normal"><i class="fas fa-clock"></i> {{ ticket.completed_at|timesince }} ago</span>
+                                        {% if ticket.status == 'QA_PASSED' %}
+                                        <span class="badge rounded-pill" style="background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); font-size: 0.68rem;">
+                                            <i class="fas fa-check-circle me-1"></i> QA Passed
+                                        </span>
+                                        {% else %}
+                                        <span class="badge rounded-pill" style="background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); font-size: 0.68rem;">
+                                            <i class="fas fa-hourglass-half me-1"></i> Awaiting QA
+                                        </span>
+                                        {% endif %}
+                                        {% if ticket.done_at or ticket.time_accomplish %}
+                                        <span class="badge bg-dark border border-secondary text-muted ms-1 fw-normal"><i class="fas fa-clock"></i> {{ ticket.done_at|default:ticket.time_accomplish|timesince }} ago</span>
                                         {% endif %}
                                     </div>
                                     <div class="fw-bold text-white">{{ ticket.client_name }} <a href="tel:{{ ticket.contact_number }}" class="text-primary ms-1"><i class="fas fa-phone"></i></a></div>
@@ -106,9 +115,15 @@
                                     <div><span class="text-muted">Payment:</span> <span class="text-warning text-uppercase">{{ ticket.payment_collected|default:"None" }}</span></div>
                                 </td>
                                 <td class="border-secondary text-end pe-3">
-                                    <button class="btn btn-sm btn-success fw-bold gt-btn" data-bs-toggle="modal" data-bs-target="#qaModal{{ ticket.id }}">
-                                        Conduct QA
+                                    {% if ticket.status == 'QA_PASSED' %}
+                                    <button class="btn btn-sm btn-primary fw-bold gt-btn" data-bs-toggle="modal" data-bs-target="#qaModal{{ ticket.id }}">
+                                        <i class="fas fa-stamp me-1"></i> Final Approval
                                     </button>
+                                    {% else %}
+                                    <button class="btn btn-sm btn-success fw-bold gt-btn" data-bs-toggle="modal" data-bs-target="#qaModal{{ ticket.id }}">
+                                        <i class="fas fa-magnifying-glass-check me-1"></i> Conduct QA
+                                    </button>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% empty %}
@@ -131,12 +146,19 @@
 </div>
 
 <!-- QA Modals outside table and card -->
-{% for ticket in qa_tickets %}
+{% for ticket in tickets %}
 <div class="modal fade" id="qaModal{{ ticket.id }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content bg-dark border-secondary">
             <div class="modal-header border-secondary">
-                <h5 class="modal-title text-white fw-bold">QA Check: {{ ticket.ticket_number }}</h5>
+                <div class="d-flex align-items-center gap-2">
+                    <h5 class="modal-title text-white fw-bold mb-0">QA Review: {{ ticket.ticket_number }}</h5>
+                    {% if ticket.status == 'QA_PASSED' %}
+                    <span class="badge bg-success text-white font-monospace" style="font-size: 0.7rem;">QA PASSED</span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark font-monospace" style="font-size: 0.7rem;">AWAITING QA</span>
+                    {% endif %}
+                </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             
@@ -172,7 +194,7 @@
                     {% if ticket.remarks %}
                     <div class="col-12 mt-2">
                         <div class="p-2 rounded bg-dark border border-warning border-opacity-50 text-warning small">
-                            <div class="fw-bold mb-1"><i class="fas fa-history me-1"></i> Previous Bounce / Transition Notes:</div>
+                            <div class="fw-bold mb-1"><i class="fas fa-history me-1"></i> Previous Transition Notes:</div>
                             <div class="text-white small font-monospace" style="white-space: pre-line; max-height: 100px; overflow-y: auto;">{{ ticket.remarks }}</div>
                         </div>
                     </div>
@@ -186,8 +208,8 @@
                     <input type="hidden" name="action" id="action{{ ticket.id }}" value="approve">
                     
                     <div class="mb-3">
-                        <label class="form-label text-muted small fw-bold">QA Notes (Required if bouncing back)</label>
-                        <textarea name="qa_notes" class="form-control bg-dark text-white border-secondary" rows="3" placeholder="e.g. Customer happy. Signal is good."></textarea>
+                        <label class="form-label text-muted small fw-bold">QA / Approval Notes</label>
+                        <textarea name="qa_notes" class="form-control bg-dark text-white border-secondary" rows="3" placeholder="e.g. Customer happy. Signal verified OK. Ready for activation."></textarea>
                     </div>
                 </form>
             </div>
@@ -195,9 +217,17 @@
                 <button type="button" class="btn btn-outline-danger fw-bold" onclick="document.getElementById('action{{ ticket.id }}').value='bounce_back'; document.getElementById('qaForm{{ ticket.id }}').submit();">
                     <i class="fas fa-undo-alt me-2"></i> Bounce Back to Tech
                 </button>
-                <button type="button" class="btn btn-success fw-bold" onclick="document.getElementById('action{{ ticket.id }}').value='approve'; document.getElementById('qaForm{{ ticket.id }}').submit();">
-                    Submit to Admin <i class="fas fa-arrow-right ms-2"></i>
-                </button>
+                <div class="d-flex gap-2">
+                    {% if ticket.status == 'QA_PASSED' %}
+                    <button type="button" class="btn btn-primary fw-bold" onclick="document.getElementById('action{{ ticket.id }}').value='final_approve'; document.getElementById('qaForm{{ ticket.id }}').submit();">
+                        <i class="fas fa-check-double me-1"></i> Final Sign-off &amp; Activate Customer
+                    </button>
+                    {% else %}
+                    <button type="button" class="btn btn-success fw-bold" onclick="document.getElementById('action{{ ticket.id }}').value='approve'; document.getElementById('qaForm{{ ticket.id }}').submit();">
+                        Pass QA &amp; Submit to Admin <i class="fas fa-arrow-right ms-2"></i>
+                    </button>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>

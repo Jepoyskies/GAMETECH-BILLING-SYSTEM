@@ -23,6 +23,7 @@
 | **ERR-040** | Blinding Yellow Row for Expired Customers, Unreadable Text, and Stacked Status Column Bloat | `customer_list/_styles.html`, `_table.html`, `_scripts.html`, `_hero.html` | Frontend (CSS/UI) |
 | **ERR-043** | System-Wide Tab Lag, Freezes, and 499 Timeouts on Customers Directory & Profiles | `network_manager/services/base.py`, `billing/views/api/network.py`, `billing/views/customers/list.py` | Hardware API / Caching |
 | **ERR-044** | Installed Customer Displayed as Active / Connected Without Payment or Expiration Date | `billing/views/customers/crud.py`, `billing/views/customers/list.py`, `billing/models.py`, `add_customer.html` | Billing / Security |
+| **ERR-057** | Dispatch Queue Tab Count Mismatch, Missing Tab 4 Records, and Inactive QA Approval Queue | `dispatch/views.py`, `pipeline_views.py`, `_queue_tabs.html`, `4_qa.html` | Queue / Pipeline |
 
 ---
 
@@ -1025,8 +1026,22 @@
   * `dispatch/templates/dispatch/pipeline/1_verification.html` (Replaced modal trigger with direct link `<a href="{% url 'add_customer' %}?next={% url 'dispatch_verification' %}">` and removed redundant 70-line modal)
   * `billing/views/customers/crud.py` (Added `next` redirect handler in `add_customer`)
   * `billing/templates/billing/add_customer.html` (Added hidden `next` input and dynamic Cancel link)
+### ERR-057: Dispatch Queue Tab Count Mismatch, Missing Tab 4 Records, and Inactive QA Approval Queue
+* **Symptoms**:
+  * Tab "Completed (1)" badge displays 1, but tab body shows "No Completed Records Yet".
+  * Tab "All Records (4)" badge displays 4, but table displays "Showing 1–1 of 1 records".
+  * Stage 3 QA Review (`/dispatch/pipeline/4-qa/`) displays "No tickets awaiting QA review" even when jobs are completed.
+* **Root Causes**:
+  * `dispatch_monitoring_view` added `records.count()` blindly to `completed_count` and omitted `completed_records` from template context.
+  * `_queue_tabs.html` Tab 4 (`#tab-all`) only iterated `{% for record in records %}`, omitting `{% for t in job_tickets %}`.
+  * `dispatch_qa` in `pipeline_views.py` filtered `JobTicket.objects.filter(status='COMPLETED', customer__status='pending')`, permanently hiding tickets for active subscribers, and `4_qa.html` checked non-existent `completed_at` instead of `done_at`.
+* **Exact Target Files**:
+  * `dispatch/views.py` (Fixed disjoint record partitioning and passed `completed_records` to context)
+  * `dispatch/pipeline_views.py` (Removed `customer__status='pending'` filter, supported both `COMPLETED` and `QA_PASSED` tickets, unified QA & Super Admin final sign-off)
+  * `dispatch/templates/dispatch/pipeline/4_qa.html` (Fixed `ticket.done_at`, status pills, action buttons, and modal loop)
+  * `dispatch/templates/dispatch/_queue_tabs.html` & `dispatch/templates/dispatch/tabs/` (Modularized into `<100` line sub-partials and included both `job_tickets` and `records` in Tab 4)
 * **1-Step Fix**:
-  * Convert "Intake Walk-in" button into an anchor tag pointing to `{% url 'add_customer' %}?next={% url 'dispatch_verification' %}` and support `next` redirect in `add_customer`.
+  * Partition records disjointly, loop both `job_tickets` and `records` in Tab 4, and remove `customer__status='pending'` from `dispatch_qa`.
 
 ---
 

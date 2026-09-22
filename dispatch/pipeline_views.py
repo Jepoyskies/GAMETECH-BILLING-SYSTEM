@@ -260,22 +260,46 @@ def dispatch_qa(request):
         ticket = get_object_or_404(JobTicket, id=ticket_id)
         
         action = request.POST.get("action")
-        qa_notes = request.POST.get("qa_notes")
-        
-        if action == 'approve':
-            ticket.qa_notes = qa_notes
-            ticket.qa_completed_at = timezone.now()
-            ticket.status = 'QA_PASSED'
-            ticket.save()
-            JobTicketHistory.objects.create(
-                job_ticket=ticket,
-                actor=request.user,
-                from_status='COMPLETED',
-                to_status='QA_PASSED',
-                note=f"QA Check Passed: {qa_notes or 'Customer satisfied and specs verified.'}"
-            )
-            messages.success(request, f"Ticket {ticket.ticket_number} passed QA and sent to Admin.")
+        if action in ['final_approve', 'approve']:
+            if ticket.status == 'QA_PASSED' or action == 'final_approve':
+                customer = ticket.customer
+                if customer:
+                    customer.status = 'active'
+                    customer.installation_status = 'installed'
+                    if not customer.installed_at:
+                        customer.installed_at = timezone.now()
+                    if customer.agent:
+                        customer.agent_lock_until = timezone.now() + timezone.timedelta(days=60)
+                    customer.save()
+                prev_status = ticket.status
+                ticket.status = 'COMPLETED_AND_VERIFIED'
+                if not ticket.done_at:
+                    ticket.done_at = timezone.now()
+                ticket.save()
+                JobTicketHistory.objects.create(
+                    job_ticket=ticket,
+                    actor=request.user,
+                    from_status=prev_status,
+                    to_status='COMPLETED_AND_VERIFIED',
+                    note="Super Admin Final Sign-Off & Activation Approved."
+                )
+                messages.success(request, f"Ticket {ticket.ticket_number} successfully verified and closed.")
+            else:
+                qa_notes = request.POST.get("qa_notes", "QA verification call confirmed OK.")
+                timestamp_str = timezone.now().strftime("%b %d, %I:%M %p")
+                ticket.remarks = f"[{timestamp_str}] QA PASSED by {request.user.username}: {qa_notes}\n" + (ticket.remarks or "")
+                ticket.status = 'QA_PASSED'
+                ticket.save()
+                JobTicketHistory.objects.create(
+                    job_ticket=ticket,
+                    actor=request.user,
+                    from_status='COMPLETED',
+                    to_status='QA_PASSED',
+                    note=f"QA Check Passed: {qa_notes or 'Customer satisfied and specs verified.'}"
+                )
+                messages.success(request, f"Ticket {ticket.ticket_number} passed QA review and is ready for final sign-off.")
         elif action == 'bounce_back':
+            qa_notes = request.POST.get("qa_notes", "Bounced back to technician.")
             timestamp_str = timezone.now().strftime("%b %d, %I:%M %p")
             ticket.remarks = f"[{timestamp_str}] QA BOUNCED TO TECH by {request.user.username}: {qa_notes}\n" + (ticket.remarks or "")
             ticket.status = 'IN_PROGRESS'  # Send back to Tech
@@ -291,10 +315,13 @@ def dispatch_qa(request):
             
         return redirect('dispatch_qa')
 
-    qa_tickets = JobTicket.objects.filter(status='COMPLETED', customer__status='pending')
+    qa_tickets = JobTicket.objects.filter(
+        status__in=['COMPLETED', 'QA_PASSED']
+    ).select_related('customer', 'team').prefetch_related('technicians').order_by('-updated_at')
     
     return render(request, "dispatch/pipeline/4_qa.html", {
-        "tickets": qa_tickets
+        "tickets": qa_tickets,
+        "qa_tickets": qa_tickets,
     })
 
 @login_required

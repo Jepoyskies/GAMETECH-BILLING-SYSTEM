@@ -1,0 +1,138 @@
+<!-- ══════════════ TAB 4: ALL RECORDS (FULL DATATABLE) ══════════════ -->
+<div class="tab-pane fade p-3" id="tab-all" role="tabpanel" aria-labelledby="all-tab">
+  <div class="table-responsive">
+    <table class="dispatch-table datatable" style="width: 100%;">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Client Name</th>
+          <th>Address</th>
+          <th>Concern</th>
+          <th>Teams</th>
+          <th>Status</th>
+          <th class="text-end pe-4">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- 1. All Job Tickets -->
+        {% for t in job_tickets %}
+        <tr>
+          <td><span style="font-size: 0.82rem; color: #64748b;">{{ t.created_at|date:"M d, Y" }}</span></td>
+          <td>
+            <span style="font-weight: 700; color: #e2e8f0; font-size: 0.86rem;">{{ t.client_name }}</span>
+            <div class="font-monospace text-info" style="font-size: 0.72rem;">{{ t.ticket_number }}</div>
+          </td>
+          <td><span style="font-size: 0.81rem; color: #64748b;">{{ t.address|truncatechars:32 }}</span></td>
+          <td>
+            <span style="font-size: 0.81rem; color: #94a3b8;">
+              {% if t.concern %}{{ t.concern|truncatechars:30 }}{% elif t.plan_package %}{{ t.plan_package }}{% else %}-{% endif %}
+            </span>
+          </td>
+          <td>
+            {% if t.team %}
+              <span style="display:inline-flex; align-items:center; gap:4px; font-size:0.72rem; font-weight:700; background:rgba(6,182,212,0.1); color:#22d3ee; border:1px solid rgba(6,182,212,0.25); border-radius:6px; padding:2px 8px;">
+                <i class="fas fa-users" style="font-size:0.6rem;"></i> {{ t.team.name }}
+              </span>
+            {% else %}
+              <span style="font-size:0.8rem; color:#475569; font-style:italic;">Unassigned</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if t.status == 'PENDING' %}
+              <span class="status-badge status-pending">Pending</span>
+            {% elif t.status == 'ASSIGNED' %}
+              <span class="status-badge" style="background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3);">Assigned</span>
+            {% elif t.status == 'IN_PROGRESS' %}
+              <span class="status-badge status-ongoing">Ongoing</span>
+            {% elif t.status == 'COMPLETED' or t.status == 'QA_PASSED' or t.status == 'COMPLETED_AND_VERIFIED' %}
+              <span class="status-badge status-done">Done</span>
+            {% elif t.status == 'CANCELLED' %}
+              <span class="status-badge status-cancelled">Cancelled</span>
+            {% else %}
+              <span class="status-badge status-pending">{{ t.get_status_display }}</span>
+            {% endif %}
+          </td>
+          <td class="text-end pe-3">
+            <div class="d-flex justify-content-end gap-2">
+              <button type="button" class="dispatch-action-btn dispatch-action-btn-ghost btn-copy-brief"
+                      data-client="{{ t.client_name }}" data-phone="{{ t.contact_number }}" data-addr="{{ t.address }}" data-concern="{{ t.concern|default:t.plan_package }}" data-num="{{ t.ticket_number }}"
+                      title="Copy Brief">
+                <i class="fas fa-copy"></i>
+              </button>
+              {% if t.status == 'PENDING' %}
+                <button type="button" class="dispatch-action-btn dispatch-action-btn-blue btn-open-assign"
+                        data-id="{{ t.id }}" data-ticket="{{ t.ticket_number }}" data-name="{{ t.client_name }}"
+                        data-type="{{ t.get_ticket_type_display }}" data-concern="{{ t.concern|default:t.plan_package }}"
+                        title="Dispatch">
+                  <i class="fas fa-paper-plane"></i>
+                </button>
+              {% elif t.status == 'IN_PROGRESS' or t.status == 'ASSIGNED' %}
+                <button type="button" class="dispatch-action-btn dispatch-action-btn-green btn-open-complete"
+                        data-id="{{ t.id }}" data-ticket="{{ t.ticket_number }}" data-name="{{ t.client_name }}"
+                        title="Complete Job">
+                  <i class="fas fa-check"></i>
+                </button>
+              {% else %}
+                <span class="badge" style="background: rgba(16,185,129,0.1); color: #34d399; border: 1px solid rgba(16,185,129,0.2); padding: 5px 8px; font-size: 0.72rem;">
+                  <i class="fas fa-check-double me-1"></i> Closed
+                </span>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+
+        <!-- 2. All Monitoring Records -->
+        {% for record in records %}
+        <tr>
+          <td><span style="font-size: 0.82rem; color: #64748b;">{{ record.date|date:"M d, Y" }}</span></td>
+          <td>
+            <span style="font-weight: 700; color: #e2e8f0; font-size: 0.86rem;">{{ record.client_name }}</span>
+            <div class="text-muted" style="font-size: 0.7rem;">REC-{{ record.id }}</div>
+          </td>
+          <td><span style="font-size: 0.81rem; color: #64748b;">{{ record.address|truncatechars:32 }}</span></td>
+          <td><span style="font-size: 0.81rem; color: #94a3b8;">{{ record.concern|truncatechars:30 }}</span></td>
+          <td>
+            {% for team in record.teams.all %}
+              <span style="display:inline-flex; align-items:center; gap:4px; font-size:0.72rem; font-weight:700; background:rgba(6,182,212,0.1); color:#22d3ee; border:1px solid rgba(6,182,212,0.25); border-radius:6px; padding:2px 8px; margin-right:3px;">
+                <i class="fas fa-users" style="font-size:0.6rem;"></i> {{ team.name }}
+              </span>
+            {% empty %}
+              <span style="font-size:0.8rem; color:#475569; font-style:italic;">Unassigned</span>
+            {% endfor %}
+          </td>
+          <td>
+            {% if record.status_option %}
+              <span class="status-badge" style="background-color: {{ record.status_option.color }}22; color: {{ record.status_option.color }}; border: 1px solid {{ record.status_option.color }}44;">
+                {{ record.status_option.label }}
+              </span>
+            {% elif record.done_at %}
+              <span class="status-badge status-done">Done</span>
+            {% else %}
+              <span class="status-badge status-pending">Pending</span>
+            {% endif %}
+          </td>
+          <td class="text-end pe-3">
+            <div class="d-flex justify-content-end gap-2">
+              <button type="button" class="dispatch-action-btn dispatch-action-btn-ghost btn-copy-brief"
+                      data-client="{{ record.client_name }}" data-phone="{{ record.contact_number }}" data-addr="{{ record.address }}" data-concern="{{ record.concern }}" data-num="REC-{{ record.id }}"
+                      title="Copy Brief">
+                <i class="fas fa-copy"></i>
+              </button>
+              {% if record.done_at or record.status_option and 'Done' in record.status_option.label %}
+                <a href="{% url 'complete_job' record.id %}" class="dispatch-action-btn dispatch-action-btn-ghost" title="View Details">
+                  <i class="fas fa-eye"></i>
+                </a>
+              {% else %}
+                <a href="{% url 'complete_job' record.id %}" class="dispatch-action-btn dispatch-action-btn-green" title="Mark Done">
+                  <i class="fas fa-check"></i>
+                </a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -604,19 +604,26 @@ def dispatch_monitoring_view(request):
     else:
         form = DispatchRecordForm(initial={'date': timezone.now().date()})
     
-    records = DispatchRecord.objects.all().order_by('-date')
+    records = MonitoringRecord.objects.all().select_related('status_option', 'customer').prefetch_related('teams').order_by('-date')
     job_tickets = JobTicket.objects.all().select_related('customer', 'team').prefetch_related('technicians').order_by('-created_at')
 
     pending_tickets = job_tickets.filter(status='PENDING')
     ongoing_tickets = job_tickets.filter(status__in=['ASSIGNED', 'IN_PROGRESS'])
-    completed_tickets = job_tickets.filter(status__in=['COMPLETED', 'QA_PASSED'])
+    completed_tickets = job_tickets.filter(status__in=['COMPLETED', 'QA_PASSED', 'COMPLETED_AND_VERIFIED'])
     cancelled_tickets = job_tickets.filter(status='CANCELLED')
 
-    pending_count = pending_tickets.count()
-    ongoing_count = ongoing_tickets.count()
-    completed_count = completed_tickets.count() + records.count()
-    cancelled_count = cancelled_tickets.count()
-    total_count = job_tickets.count() + records.count()
+    completed_records = records.filter(Q(status_option__label__icontains='Done') | Q(status_option__label__icontains='Completed') | Q(done_at__isnull=False))
+    cancelled_records = records.filter(status_option__label__icontains='Cancelled')
+    ongoing_records = records.exclude(id__in=completed_records).exclude(id__in=cancelled_records).filter(
+        Q(status_option__label__icontains='Ongoing') | Q(status_option__label__icontains='Progress') | Q(time_start__isnull=False)
+    )
+    pending_records = records.exclude(id__in=completed_records).exclude(id__in=cancelled_records).exclude(id__in=ongoing_records)
+
+    pending_count = pending_tickets.count() + pending_records.count()
+    ongoing_count = ongoing_tickets.count() + ongoing_records.count()
+    completed_count = completed_tickets.count() + completed_records.count()
+    cancelled_count = cancelled_tickets.count() + cancelled_records.count()
+    total_count = records.count() + job_tickets.count()
 
     teams = Team.objects.all()
     technicians = Technician.objects.all()
@@ -627,6 +634,11 @@ def dispatch_monitoring_view(request):
         'pending_tickets': pending_tickets,
         'ongoing_tickets': ongoing_tickets,
         'completed_tickets': completed_tickets,
+        'cancelled_tickets': cancelled_tickets,
+        'pending_records': pending_records,
+        'ongoing_records': ongoing_records,
+        'completed_records': completed_records,
+        'cancelled_records': cancelled_records,
         'pending_count': pending_count,
         'ongoing_count': ongoing_count,
         'completed_count': completed_count,
@@ -663,13 +675,15 @@ def _handle_monitoring_view(request, tab_type, template_name):
     # PDF Page 10: Pending (not yet dispatched) vs Ongoing (currently being worked on)
     pending_tickets = job_tickets.filter(status='PENDING')
     ongoing_tickets = job_tickets.filter(status__in=['ASSIGNED', 'IN_PROGRESS'])
-    completed_tickets = job_tickets.filter(status__in=['COMPLETED', 'QA_PASSED'])
+    completed_tickets = job_tickets.filter(status__in=['COMPLETED', 'QA_PASSED', 'COMPLETED_AND_VERIFIED'])
     cancelled_tickets = job_tickets.filter(status='CANCELLED')
 
-    pending_records = records.filter(Q(status_option__label__icontains='Pending') | Q(status_option__isnull=True, done_at__isnull=True))
-    ongoing_records = records.filter(Q(status_option__label__icontains='Ongoing') | Q(status_option__label__icontains='Progress') | Q(time_start__isnull=False, done_at__isnull=True))
-    completed_records = records.filter(Q(status_option__label__icontains='Done') | Q(done_at__isnull=False))
+    completed_records = records.filter(Q(status_option__label__icontains='Done') | Q(status_option__label__icontains='Completed') | Q(done_at__isnull=False))
     cancelled_records = records.filter(status_option__label__icontains='Cancelled')
+    ongoing_records = records.exclude(id__in=completed_records).exclude(id__in=cancelled_records).filter(
+        Q(status_option__label__icontains='Ongoing') | Q(status_option__label__icontains='Progress') | Q(time_start__isnull=False)
+    )
+    pending_records = records.exclude(id__in=completed_records).exclude(id__in=cancelled_records).exclude(id__in=ongoing_records)
 
     pending_count = pending_tickets.count() + pending_records.count()
     ongoing_count = ongoing_tickets.count() + ongoing_records.count()
