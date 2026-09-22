@@ -88,13 +88,19 @@
                             {% for ticket in tickets %}
                             <tr>
                                 <td class="ps-3 border-secondary text-white">
-                                    <div class="mb-1">
+                                    <div class="mb-1 d-flex align-items-center gap-1 flex-wrap">
                                         <span class="badge bg-dark border border-secondary text-info font-monospace px-2 py-1">{{ ticket.ticket_number }}</span>
+                                        {% include "dispatch/_ticket_type_badge.html" with ticket=ticket %}
                                         {% if ticket.completed_at %}
                                         <span class="badge bg-dark border border-secondary text-muted ms-1 fw-normal"><i class="fas fa-clock"></i> {{ ticket.completed_at|timesince }} ago</span>
                                         {% endif %}
                                     </div>
-                                    <small class="text-muted fw-bold">{{ ticket.client_name }} <a href="tel:{{ ticket.contact_number }}" class="text-primary"><i class="fas fa-phone"></i></a></small>
+                                    <div class="fw-bold text-white">{{ ticket.client_name }} <a href="tel:{{ ticket.contact_number }}" class="text-primary ms-1"><i class="fas fa-phone"></i></a></div>
+                                    {% if ticket.concern %}
+                                    <small class="text-warning d-block mt-1"><i class="fas fa-info-circle me-1"></i>{{ ticket.concern|truncatechars:55 }}</small>
+                                    {% elif ticket.plan_package %}
+                                    <small class="text-info d-block mt-1"><i class="fas fa-box me-1"></i>{{ ticket.plan_package }}</small>
+                                    {% endif %}
                                 </td>
                                 <td class="border-secondary text-muted small">
                                     {{ ticket.team.name|default:"-" }}<br>
