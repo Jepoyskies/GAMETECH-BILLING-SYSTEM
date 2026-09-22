@@ -943,6 +943,29 @@
 
 ---
 
+### ERR-052: Sales Agents UI Clutter, Native confirm() Popups & Disjointed Navigation
+* **Symptoms**:
+  * Deleting sales agents in `/agents/` displayed native browser popups (`143.198.207.144 says: Delete this agent profile?`).
+  * Deleting agents or logging out triggered unstyled native alerts.
+  * Registering a new agent required leaving the directory and navigating to `/billing/add-agent/`, confusing non-technical staff.
+  * The directory table had separate confusing "Qualified" (1/5) and "Cashout Status" columns that created visual clutter.
+* **Root Causes**:
+  * `billing/templates/billing/agents/_table.html` had inline `onsubmit="return confirm(...)"` on both mobile cards and desktop table action buttons.
+  * `_sidebar.html` and `_topbar.html` logout forms used native `return confirm(...)`.
+  * No in-page modal was provided for fast agent creation, forcing full page navigation.
+* **Exact Target Files**:
+  * `billing/templates/billing/agents/_table.html` (Replaced `confirm` with `data-confirm-delete`, merged payout status)
+  * `billing/templates/billing/agents/_stats.html` (Simplified headers, wired in-page modal button)
+  * `billing/templates/billing/agents/_scripts.html` (Updated DataTable column definitions to target 5)
+  * `billing/templates/billing/agents/_add_agent_modal.html` (New in-page agent registration modal)
+  * `billing/templates/billing/base/_sidebar.html` & `_topbar.html` (Replaced logout `confirm` with `data-confirm`)
+* **1-Step Fix**:
+  * Replace native confirms with `data-confirm-delete` and `data-confirm` attributes intercepted by `window.gametechConfirm`.
+  * Add `_add_agent_modal.html` and include it in `agents.html` so staff register agents in 1 click without leaving the page.
+  * Consolidate table columns into a readable 6-column layout with a combined "Payout Status" indicator.
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 1. Assign a new `ERR-XXX` identifier.
