@@ -240,88 +240,90 @@
         // ─────────────────────────────────────────────
         
         // Open Assign Modal
-        document.addEventListener('click', function(e) {
-            const btn = e.target.closest('.btn-open-assign');
-            if (btn) {
-                const ticketId = btn.dataset.id;
-                const ticketNum = btn.dataset.ticket;
-                const clientName = btn.dataset.name;
-                const ticketType = btn.dataset.type || 'Job Order';
-                const ticketConcern = btn.dataset.concern || '';
+        if (!window._dispatchModalScriptsLoaded) {
+            document.addEventListener('click', function(e) {
+                const btn = e.target.closest('.btn-open-assign');
+                if (btn) {
+                    const ticketId = btn.dataset.id;
+                    const ticketNum = btn.dataset.ticket;
+                    const clientName = btn.dataset.name;
+                    const ticketType = btn.dataset.type || 'Job Order';
+                    const ticketConcern = btn.dataset.concern || '';
 
-                document.getElementById('assign-ticket-id').value = ticketId;
-                document.getElementById('assign-ticket-number').innerText = ticketNum;
-                document.getElementById('assign-client-name').innerText = clientName;
-                const typeEl = document.getElementById('assign-ticket-type');
-                if (typeEl) typeEl.innerText = ticketType;
-                const concernEl = document.getElementById('assign-ticket-concern');
-                if (concernEl) {
-                    concernEl.innerText = ticketConcern;
-                    concernEl.style.display = ticketConcern ? 'block' : 'none';
+                    document.getElementById('assign-ticket-id').value = ticketId;
+                    document.getElementById('assign-ticket-number').innerText = ticketNum;
+                    document.getElementById('assign-client-name').innerText = clientName;
+                    const typeEl = document.getElementById('assign-ticket-type');
+                    if (typeEl) typeEl.innerText = ticketType;
+                    const concernEl = document.getElementById('assign-ticket-concern');
+                    if (concernEl) {
+                        concernEl.innerText = ticketConcern;
+                        concernEl.style.display = ticketConcern ? 'block' : 'none';
+                    }
+
+                    // Preload existing details
+                    fetch(`/dispatch/api/tickets/${ticketId}/`)
+                        .then(r => r.json())
+                        .then(res => {
+                            if (res.success && res.ticket) {
+                                const t = res.ticket;
+                                if (t.team_id) document.getElementById('assign-team-id').value = t.team_id;
+                                if (t.scheduled_date) document.getElementById('assign-scheduled-date').value = t.scheduled_date;
+                                if (t.scheduled_time) document.getElementById('assign-scheduled-time').value = t.scheduled_time;
+                                if (t.remarks) document.getElementById('assign-remarks').value = t.remarks;
+
+                                // Check tech boxes
+                                document.querySelectorAll('.assign-tech-checkbox').forEach(chk => {
+                                    chk.checked = t.technician_ids && t.technician_ids.includes(parseInt(chk.value));
+                                });
+                            }
+                        });
+
+                    const modal = new bootstrap.Modal(document.getElementById('modal-assign-ticket'));
+                    modal.show();
                 }
+            });
 
-                // Preload existing details
-                fetch(`/dispatch/api/tickets/${ticketId}/`)
+            // Submit Assign Form
+            const formAssign = document.getElementById('form-assign-ticket');
+            if (formAssign) {
+                formAssign.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const ticketId = document.getElementById('assign-ticket-id').value;
+                    const teamId = document.getElementById('assign-team-id').value;
+                    const techIds = Array.from(document.querySelectorAll('.assign-tech-checkbox:checked')).map(c => parseInt(c.value));
+                    const schedDate = document.getElementById('assign-scheduled-date').value;
+                    const schedTime = document.getElementById('assign-scheduled-time').value;
+                    const remarks = document.getElementById('assign-remarks').value;
+                    const startNow = document.getElementById('assign-start-now').checked;
+
+                    fetch(`/dispatch/api/tickets/${ticketId}/assign/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrftoken
+                        },
+                        body: JSON.stringify({
+                            team_id: teamId || null,
+                            technician_ids: techIds,
+                            scheduled_date: schedDate || null,
+                            scheduled_time: schedTime,
+                            remarks: remarks,
+                            start_now: startNow
+                        })
+                    })
                     .then(r => r.json())
-                    .then(res => {
-                        if (res.success && res.ticket) {
-                            const t = res.ticket;
-                            if (t.team_id) document.getElementById('assign-team-id').value = t.team_id;
-                            if (t.scheduled_date) document.getElementById('assign-scheduled-date').value = t.scheduled_date;
-                            if (t.scheduled_time) document.getElementById('assign-scheduled-time').value = t.scheduled_time;
-                            if (t.remarks) document.getElementById('assign-remarks').value = t.remarks;
-
-                            // Check tech boxes
-                            document.querySelectorAll('.assign-tech-checkbox').forEach(chk => {
-                                chk.checked = t.technician_ids && t.technician_ids.includes(parseInt(chk.value));
-                            });
+                    .then(data => {
+                        if (data.success) {
+                            const modalEl = document.getElementById('modal-assign-ticket');
+                            bootstrap.Modal.getInstance(modalEl).hide();
+                            window.location.reload();
+                        } else {
+                            alert('Error assigning ticket: ' + (data.error || 'Unknown error'));
                         }
                     });
-
-                const modal = new bootstrap.Modal(document.getElementById('modal-assign-ticket'));
-                modal.show();
-            }
-        });
-
-        // Submit Assign Form
-        const formAssign = document.getElementById('form-assign-ticket');
-        if (formAssign) {
-            formAssign.addEventListener('submit', function(e) {
-                e.preventDefault();
-                const ticketId = document.getElementById('assign-ticket-id').value;
-                const teamId = document.getElementById('assign-team-id').value;
-                const techIds = Array.from(document.querySelectorAll('.assign-tech-checkbox:checked')).map(c => parseInt(c.value));
-                const schedDate = document.getElementById('assign-scheduled-date').value;
-                const schedTime = document.getElementById('assign-scheduled-time').value;
-                const remarks = document.getElementById('assign-remarks').value;
-                const startNow = document.getElementById('assign-start-now').checked;
-
-                fetch(`/dispatch/api/tickets/${ticketId}/assign/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify({
-                        team_id: teamId || null,
-                        technician_ids: techIds,
-                        scheduled_date: schedDate || null,
-                        scheduled_time: schedTime,
-                        remarks: remarks,
-                        start_now: startNow
-                    })
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        const modalEl = document.getElementById('modal-assign-ticket');
-                        bootstrap.Modal.getInstance(modalEl).hide();
-                        window.location.reload();
-                    } else {
-                        alert('Error assigning ticket: ' + (data.error || 'Unknown error'));
-                    }
                 });
-            });
+            }
         }
 
         // Open Complete Job Modal

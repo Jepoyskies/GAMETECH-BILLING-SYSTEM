@@ -1,0 +1,233 @@
+<script>
+(function() {
+    if (window._dispatchModalScriptsLoaded) return;
+    window._dispatchModalScriptsLoaded = true;
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function getCsrfToken() {
+        return getCookie('csrftoken') || document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    }
+
+    // 1. Open Assign & Schedule Modal
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-open-assign');
+        if (!btn) return;
+        e.preventDefault();
+
+        const ticketId = btn.dataset.id;
+        const ticketNum = btn.dataset.ticket;
+        const clientName = btn.dataset.name;
+        const ticketType = btn.dataset.type || 'Job Order';
+        const ticketConcern = btn.dataset.concern || '';
+
+        const idEl = document.getElementById('assign-ticket-id');
+        if (idEl) idEl.value = ticketId;
+        const numEl = document.getElementById('assign-ticket-number');
+        if (numEl) numEl.innerText = ticketNum;
+        const nameEl = document.getElementById('assign-client-name');
+        if (nameEl) nameEl.innerText = clientName;
+        const typeEl = document.getElementById('assign-ticket-type');
+        if (typeEl) typeEl.innerText = ticketType;
+        const concernEl = document.getElementById('assign-ticket-concern');
+        if (concernEl) {
+            concernEl.innerText = ticketConcern;
+            concernEl.style.display = ticketConcern ? 'block' : 'none';
+        }
+
+        // Preload existing details
+        if (ticketId) {
+            fetch('/dispatch/api/tickets/' + ticketId + '/')
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success && res.ticket) {
+                        const t = res.ticket;
+                        const teamEl = document.getElementById('assign-team-id');
+                        if (teamEl && t.team_id) teamEl.value = t.team_id;
+                        const dateEl = document.getElementById('assign-scheduled-date');
+                        if (dateEl && t.scheduled_date) dateEl.value = t.scheduled_date;
+                        const timeEl = document.getElementById('assign-scheduled-time');
+                        if (timeEl && t.scheduled_time) timeEl.value = t.scheduled_time;
+                        const remarksEl = document.getElementById('assign-remarks');
+                        if (remarksEl && t.remarks) remarksEl.value = t.remarks;
+
+                        // Check tech boxes
+                        document.querySelectorAll('.assign-tech-checkbox').forEach(chk => {
+                            chk.checked = t.technician_ids && t.technician_ids.includes(parseInt(chk.value));
+                        });
+                    }
+                })
+                .catch(err => console.warn('Could not preload ticket details:', err));
+        }
+
+        const modalEl = document.getElementById('modal-assign-ticket');
+        if (modalEl && typeof bootstrap !== 'undefined') {
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+        }
+    });
+
+    // 2. Submit Assign Form
+    document.addEventListener('submit', function(e) {
+        if (e.target && e.target.id === 'form-assign-ticket') {
+            e.preventDefault();
+            const ticketId = document.getElementById('assign-ticket-id')?.value;
+            if (!ticketId) return;
+
+            const teamId = document.getElementById('assign-team-id')?.value || null;
+            const techIds = Array.from(document.querySelectorAll('.assign-tech-checkbox:checked')).map(c => parseInt(c.value));
+            const schedDate = document.getElementById('assign-scheduled-date')?.value || null;
+            const schedTime = document.getElementById('assign-scheduled-time')?.value || '';
+            const remarks = document.getElementById('assign-remarks')?.value || '';
+            const startNow = document.getElementById('assign-start-now')?.checked || false;
+
+            fetch('/dispatch/api/tickets/' + ticketId + '/assign/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    team_id: teamId || null,
+                    technician_ids: techIds,
+                    scheduled_date: schedDate || null,
+                    scheduled_time: schedTime,
+                    remarks: remarks,
+                    start_now: startNow
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const modalEl = document.getElementById('modal-assign-ticket');
+                    if (modalEl && typeof bootstrap !== 'undefined') {
+                        const inst = bootstrap.Modal.getInstance(modalEl);
+                        if (inst) inst.hide();
+                    }
+                    window.location.reload();
+                } else {
+                    alert('Error assigning ticket: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(err => alert('Network error: ' + String(err)));
+        }
+    });
+
+    // 3. Submit Create Ticket Form
+    document.addEventListener('submit', function(e) {
+        if (e.target && e.target.id === 'form-create-ticket') {
+            e.preventDefault();
+            const custId = document.getElementById('create-customer-id')?.value || '';
+            if (!custId) {
+                const confirmFn = window.gametechConfirm || function(opts) { alert(opts.text || opts.title); return Promise.resolve({}); };
+                confirmFn({
+                    title: 'Customer Required',
+                    text: 'A registered CRM customer must be selected. Please search and select an active customer from the dropdown to create this job order.',
+                    icon: 'warning',
+                    confirmButtonText: 'Select Customer',
+                    confirmButtonColor: '#f59e0b'
+                });
+                document.getElementById('create-client-name')?.focus();
+                return;
+            }
+
+            const payload = {
+                customer_id: custId,
+                client_name: document.getElementById('create-client-name')?.value || '',
+                contact_number: document.getElementById('create-contact-number')?.value || '',
+                address: document.getElementById('create-address')?.value || '',
+                barangay: document.getElementById('create-barangay')?.value || '',
+                ticket_type: document.getElementById('create-ticket-type')?.value || 'INSTALLATION',
+                priority: document.getElementById('create-priority')?.value || 'MEDIUM',
+                plan_package: document.getElementById('create-plan-package')?.value || '',
+                mikrotik_device_id: document.getElementById('create-mikrotik-device')?.value || null,
+                latitude: document.getElementById('create-latitude')?.value || null,
+                longitude: document.getElementById('create-longitude')?.value || null,
+                concern: document.getElementById('create-concern')?.value || '',
+            };
+
+            fetch('/dispatch/api/tickets/create/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const modalEl = document.getElementById('modal-create-ticket');
+                    if (modalEl && typeof bootstrap !== 'undefined') {
+                        const inst = bootstrap.Modal.getInstance(modalEl);
+                        if (inst) inst.hide();
+                    }
+                    window.location.reload();
+                } else {
+                    const confirmFn = window.gametechConfirm || function(opts) { alert(opts.text || opts.title); };
+                    confirmFn({
+                        title: 'Cannot Create Ticket',
+                        text: data.error || 'Unknown error occurred.',
+                        icon: 'error',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#ef4444'
+                    });
+                }
+            })
+            .catch(err => alert('Network error: ' + String(err)));
+        }
+    });
+
+    // 4. Delete Ticket Listener
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-delete-ticket');
+        if (!btn) return;
+        e.preventDefault();
+        const ticketId = btn.dataset.id;
+        const ticketNum = btn.dataset.number || ('#' + ticketId);
+        
+        const confirmFn = window.gametechConfirm || function(opts) {
+            return Promise.resolve({ isConfirmed: confirm(opts.text || opts.title) });
+        };
+
+        confirmFn({
+            title: 'Delete Ticket?',
+            text: `Are you sure you want to permanently delete ticket ${ticketNum}? This cannot be undone.`,
+            icon: 'warning',
+            confirmButtonText: 'Yes, Delete',
+            confirmButtonColor: '#ef4444'
+        }).then(res => {
+            if (!res.isConfirmed) return;
+            fetch('/dispatch/api/tickets/' + ticketId + '/delete/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert('Failed to delete ticket: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(err => alert('Network error: ' + String(err)));
+        });
+    });
+})();
+</script>
