@@ -120,7 +120,7 @@ def dispatch_assignment(request):
         team_id = request.POST.get("team_id")
         scheduled_date = request.POST.get("scheduled_date")
         scheduled_time = request.POST.get("scheduled_time")
-        tech_ids = request.POST.getlist("tech_ids")
+        tech_ids = request.POST.getlist("tech_ids") or request.POST.getlist("technician_ids")
         
         ticket = get_object_or_404(JobTicket, id=ticket_id)
         team = get_object_or_404(Team, id=team_id) if team_id else None

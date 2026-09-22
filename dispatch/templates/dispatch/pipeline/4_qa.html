@@ -113,78 +113,6 @@
                                     </button>
                                 </td>
                             </tr>
-                            
-                            <!-- QA Modal -->
-                            <div class="modal fade" id="qaModal{{ ticket.id }}" tabindex="-1" aria-hidden="true">
-                                <div class="modal-dialog modal-dialog-centered modal-lg">
-                                    <div class="modal-content bg-dark border-secondary">
-                                        <div class="modal-header border-secondary">
-                                            <h5 class="modal-title text-white fw-bold">QA Check: {{ ticket.ticket_number }}</h5>
-                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        
-                                        <div class="modal-body">
-                                            <div class="row mb-4">
-                                                <div class="col-md-6 border-end border-secondary">
-                                                    <h6 class="text-info small fw-bold text-uppercase mb-3">Job Order Data (From Tech)</h6>
-                                                    <table class="table table-sm table-borderless text-white small">
-                                                        <tr><td class="text-muted">Cable Length:</td><td>{{ ticket.cable_length|default:"-" }} m</td></tr>
-                                                        <tr><td class="text-muted">Signal Level:</td><td>{{ ticket.signal_level|default:"-" }} dBm</td></tr>
-                                                        <tr><td class="text-muted">NAP Port:</td><td>{{ ticket.nap_port|default:"-" }}</td></tr>
-                                                        <tr><td class="text-muted">Pole Number:</td><td>{{ ticket.pole_number|default:"-" }}</td></tr>
-                                                        <tr><td class="text-muted">NAP Reading:</td><td>{{ ticket.nap_reading|default:"-" }} dBm</td></tr>
-                                                        <tr><td class="text-muted">House Reading:</td><td>{{ ticket.house_reading|default:"-" }} dBm</td></tr>
-                                                        <tr><td class="text-muted">ONU / Modem SN:</td><td class="font-monospace text-cyan">{{ ticket.ont_modem_sn|default:"-" }}</td></tr>
-                                                        <tr><td class="text-muted">Started:</td><td>{{ ticket.time_start|time:"g:i A"|default:"-" }}</td></tr>
-                                                        <tr><td class="text-muted">Completed:</td><td>{% if ticket.time_accomplish %}{{ ticket.time_accomplish|time:"g:i A" }}{% elif ticket.done_at %}{{ ticket.done_at|time:"g:i A" }}{% else %}-{% endif %}</td></tr>
-                                                        {% if ticket.technician_remarks %}
-                                                        <tr><td class="text-muted">Tech Remarks:</td><td>{{ ticket.technician_remarks }}</td></tr>
-                                                        {% endif %}
-                                                    </table>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <h6 class="text-warning small fw-bold text-uppercase mb-3">Customer Verification Call</h6>
-                                                    <p class="small text-muted mb-2"><i class="fas fa-phone-alt me-2 text-success"></i> Call customer at <strong>{{ ticket.contact_number }}</strong> to verify:</p>
-                                                    <ul class="small text-muted mb-0">
-                                                        <li>Is the internet working well?</li>
-                                                        <li>Was the technician professional?</li>
-                                                        <li>Confirm payment method ({{ ticket.payment_collected|upper }})</li>
-                                                    </ul>
-                                                </div>
-                                                
-                                                {% if ticket.remarks %}
-                                                <div class="col-12 mt-2">
-                                                    <div class="p-2 rounded bg-dark border border-warning border-opacity-50 text-warning small">
-                                                        <div class="fw-bold mb-1"><i class="fas fa-history me-1"></i> Previous Bounce / Transition Notes:</div>
-                                                        <div class="text-white small font-monospace" style="white-space: pre-line; max-height: 100px; overflow-y: auto;">{{ ticket.remarks }}</div>
-                                                    </div>
-                                                </div>
-                                                {% endif %}
-                                            </div>
-                                            
-                                            <!-- Form to Submit to Admin -->
-                                            <form action="{% url 'dispatch_qa' %}" method="POST" id="qaForm{{ ticket.id }}">
-                                                {% csrf_token %}
-                                                <input type="hidden" name="ticket_id" value="{{ ticket.id }}">
-                                                <input type="hidden" name="action" id="action{{ ticket.id }}" value="approve">
-                                                
-                                                <div class="mb-3">
-                                                    <label class="form-label text-muted small fw-bold">QA Notes (Required if bouncing back)</label>
-                                                    <textarea name="qa_notes" class="form-control bg-dark text-white border-secondary" rows="3" placeholder="e.g. Customer happy. Signal is good."></textarea>
-                                                </div>
-                                            </form>
-                                        </div>
-                                        <div class="modal-footer border-secondary justify-content-between">
-                                            <button type="button" class="btn btn-outline-danger fw-bold" onclick="document.getElementById('action{{ ticket.id }}').value='bounce_back'; document.getElementById('qaForm{{ ticket.id }}').submit();">
-                                                <i class="fas fa-undo-alt me-2"></i> Bounce Back to Tech
-                                            </button>
-                                            <button type="button" class="btn btn-success fw-bold" onclick="document.getElementById('action{{ ticket.id }}').value='approve'; document.getElementById('qaForm{{ ticket.id }}').submit();">
-                                                Submit to Admin <i class="fas fa-arrow-right ms-2"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
                             {% empty %}
                             <tr>
                                 <td colspan="4" class="text-center py-5">
@@ -203,4 +131,78 @@
         </div>
     </div>
 </div>
+
+<!-- QA Modals outside table and card -->
+{% for ticket in qa_tickets %}
+<div class="modal fade" id="qaModal{{ ticket.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white fw-bold">QA Check: {{ ticket.ticket_number }}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="row mb-4">
+                    <div class="col-md-6 border-end border-secondary">
+                        <h6 class="text-info small fw-bold text-uppercase mb-3">Job Order Data (From Tech)</h6>
+                        <table class="table table-sm table-borderless text-white small">
+                            <tr><td class="text-muted">Cable Length:</td><td>{{ ticket.cable_length|default:"-" }} m</td></tr>
+                            <tr><td class="text-muted">Signal Level:</td><td>{{ ticket.signal_level|default:"-" }} dBm</td></tr>
+                            <tr><td class="text-muted">NAP Port:</td><td>{{ ticket.nap_port|default:"-" }}</td></tr>
+                            <tr><td class="text-muted">Pole Number:</td><td>{{ ticket.pole_number|default:"-" }}</td></tr>
+                            <tr><td class="text-muted">NAP Reading:</td><td>{{ ticket.nap_reading|default:"-" }} dBm</td></tr>
+                            <tr><td class="text-muted">House Reading:</td><td>{{ ticket.house_reading|default:"-" }} dBm</td></tr>
+                            <tr><td class="text-muted">ONU / Modem SN:</td><td class="font-monospace text-cyan">{{ ticket.ont_modem_sn|default:"-" }}</td></tr>
+                            <tr><td class="text-muted">Started:</td><td>{{ ticket.time_start|time:"g:i A"|default:"-" }}</td></tr>
+                            <tr><td class="text-muted">Completed:</td><td>{% if ticket.time_accomplish %}{{ ticket.time_accomplish|time:"g:i A" }}{% elif ticket.done_at %}{{ ticket.done_at|time:"g:i A" }}{% else %}-{% endif %}</td></tr>
+                            {% if ticket.technician_remarks %}
+                            <tr><td class="text-muted">Tech Remarks:</td><td>{{ ticket.technician_remarks }}</td></tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-warning small fw-bold text-uppercase mb-3">Customer Verification Call</h6>
+                        <p class="small text-muted mb-2"><i class="fas fa-phone-alt me-2 text-success"></i> Call customer at <strong>{{ ticket.contact_number }}</strong> to verify:</p>
+                        <ul class="small text-muted mb-0">
+                            <li>Is the internet working well?</li>
+                            <li>Was the technician professional?</li>
+                            <li>Confirm payment method ({{ ticket.payment_collected|upper }})</li>
+                        </ul>
+                    </div>
+                    
+                    {% if ticket.remarks %}
+                    <div class="col-12 mt-2">
+                        <div class="p-2 rounded bg-dark border border-warning border-opacity-50 text-warning small">
+                            <div class="fw-bold mb-1"><i class="fas fa-history me-1"></i> Previous Bounce / Transition Notes:</div>
+                            <div class="text-white small font-monospace" style="white-space: pre-line; max-height: 100px; overflow-y: auto;">{{ ticket.remarks }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Form to Submit to Admin -->
+                <form action="{% url 'dispatch_qa' %}" method="POST" id="qaForm{{ ticket.id }}">
+                    {% csrf_token %}
+                    <input type="hidden" name="ticket_id" value="{{ ticket.id }}">
+                    <input type="hidden" name="action" id="action{{ ticket.id }}" value="approve">
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">QA Notes (Required if bouncing back)</label>
+                        <textarea name="qa_notes" class="form-control bg-dark text-white border-secondary" rows="3" placeholder="e.g. Customer happy. Signal is good."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-secondary justify-content-between">
+                <button type="button" class="btn btn-outline-danger fw-bold" onclick="document.getElementById('action{{ ticket.id }}').value='bounce_back'; document.getElementById('qaForm{{ ticket.id }}').submit();">
+                    <i class="fas fa-undo-alt me-2"></i> Bounce Back to Tech
+                </button>
+                <button type="button" class="btn btn-success fw-bold" onclick="document.getElementById('action{{ ticket.id }}').value='approve'; document.getElementById('qaForm{{ ticket.id }}').submit();">
+                    Submit to Admin <i class="fas fa-arrow-right ms-2"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
 {% endblock %}

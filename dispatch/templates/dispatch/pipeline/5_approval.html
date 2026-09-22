@@ -116,122 +116,6 @@
                                     </button>
                                 </td>
                             </tr>
-
-                            <!-- Approval Modal -->
-                            <div class="modal fade" id="approvalModal{{ ticket.id }}" tabindex="-1" aria-hidden="true">
-                                <div class="modal-dialog modal-dialog-centered modal-xl">
-                                    <div class="modal-content" style="background: rgba(15,23,42,0.97); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
-                                        <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.07); padding: 1.25rem 1.5rem;">
-                                            <div>
-                                                <h5 class="modal-title text-white fw-bold mb-0">
-                                                    <i class="fas fa-shield-check text-danger me-2"></i>Admin Review: {{ ticket.ticket_number }}
-                                                </h5>
-                                                <div class="text-muted" style="font-size: 0.75rem; margin-top: 3px;">{{ ticket.client_name }} &bull; Final Approval Stage</div>
-                                            </div>
-                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                        </div>
-
-                                        <div class="modal-body p-4">
-                                            <!-- Full Operation Summary -->
-                                            <div class="row g-3 mb-4">
-                                                <!-- Client / Agent -->
-                                                <div class="col-md-4">
-                                                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 1rem;">
-                                                        <div class="fw-semibold mb-3" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: #60a5fa;"><i class="fas fa-user me-1"></i> Client &amp; Agent</div>
-                                                        <div style="font-size: 0.82rem; line-height: 1.9;">
-                                                            <div><span style="color:#475569;">Name:</span> <span class="text-white">{{ ticket.client_name }}</span></div>
-                                                            <div><span style="color:#475569;">Contact:</span> <span class="text-white">{{ ticket.contact_number }}</span></div>
-                                                            <div><span style="color:#475569;">Plan:</span> <span class="text-white">{{ ticket.plan_package }}</span></div>
-                                                            <div><span style="color:#475569;">PPPoE:</span> <span class="font-monospace" style="color:#67e8f9;">{{ ticket.account_no }}</span></div>
-                                                            <div class="pt-2 mt-2" style="border-top: 1px solid rgba(255,255,255,0.06);">
-                                                                <span style="color:#475569;">Agent:</span>
-                                                                {% if ticket.customer.agent %}<span class="fw-semibold" style="color:#fbbf24;">{{ ticket.customer.agent.name }}</span>{% else %}<span style="color:#475569;">Walk-in</span>{% endif %}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <!-- JO Data -->
-                                                <div class="col-md-4">
-                                                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 1rem;">
-                                                        <div class="fw-semibold mb-3" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: #34d399;"><i class="fas fa-clipboard-list me-1"></i> Tech JO Data</div>
-                                                        <div style="font-size: 0.82rem; line-height: 1.9;">
-                                                            <div><span style="color:#475569;">Techs:</span> <span class="text-white">{% for t in ticket.technicians.all %}{{ t.name }}{% if not forloop.last %}, {% endif %}{% empty %}Unassigned{% endfor %}</span></div>
-                                                            <div><span style="color:#475569;">Cable:</span> <span class="text-white">{{ ticket.cable_length|default:"&mdash;" }} m</span></div>
-                                                            <div><span style="color:#475569;">Signal:</span> <span class="fw-semibold" style="color:#34d399;">{{ ticket.signal_level|default:"&mdash;" }} dBm</span></div>
-                                                            <div><span style="color:#475569;">NAP Port:</span> <span class="text-white">{{ ticket.nap_port|default:"&mdash;" }} {% if ticket.pole_number %}(Pole: {{ ticket.pole_number }}){% endif %}</span></div>
-                                                            <div><span style="color:#475569;">Readings:</span> <span class="font-monospace text-white" style="font-size:0.78rem;">{{ ticket.nap_reading|default:"&mdash;" }} / {{ ticket.house_reading|default:"&mdash;" }} dBm</span></div>
-                                                            <div><span style="color:#475569;">Modem SN:</span> <span class="font-monospace" style="color:#67e8f9;">{{ ticket.ont_modem_sn|default:"&mdash;" }}</span></div>
-                                                            <div><span style="color:#475569;">Payment:</span> <span class="fw-semibold" style="color:#fbbf24;">{{ ticket.payment_collected|default:"None"|upper }}</span></div>
-                                                            {% if ticket.acknowledged_by %}<div><span style="color:#475569;">Ack By:</span> <span class="text-white">{{ ticket.acknowledged_by }}</span></div>{% endif %}
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <!-- Dispatch QA -->
-                                                <div class="col-md-4">
-                                                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 1rem; height: 100%;">
-                                                        <div class="fw-semibold mb-3" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: #22d3ee;"><i class="fas fa-headset me-1"></i> Dispatch QA Notes</div>
-                                                        <div style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.6; min-height: 80px;">{{ ticket.qa_notes|default:"No QA notes provided." }}</div>
-                                                        <div class="mt-2" style="font-size: 0.72rem; color: #475569;">QA Completed: {{ ticket.qa_completed_at|date:"M d, g:i A"|default:"&mdash;" }}</div>
-                                                    </div>
-                                                </div>
-
-                                                {% if ticket.remarks %}
-                                                <div class="col-12">
-                                                    <div style="background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); border-radius: 10px; padding: 1rem;">
-                                                        <div class="fw-semibold mb-2" style="font-size: 0.75rem; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.05em;"><i class="fas fa-history me-1"></i> Bounce / Feedback Trail</div>
-                                                        <div class="font-monospace" style="font-size: 0.78rem; color: #e2e8f0; white-space: pre-line; max-height: 120px; overflow-y: auto;">{{ ticket.remarks }}</div>
-                                                    </div>
-                                                </div>
-                                                {% endif %}
-                                            </div>
-
-                                            <!-- Action Form -->
-                                            <form action="{% url 'dispatch_approval' %}" method="POST" id="approvalForm{{ ticket.id }}">
-                                                {% csrf_token %}
-                                                <input type="hidden" name="ticket_id" value="{{ ticket.id }}">
-                                                <input type="hidden" name="action" id="adminAction{{ ticket.id }}" value="approve">
-                                                <div class="mb-3">
-                                                    <label class="form-label" style="font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Admin Feedback (sent to Dispatch/Tech if bounced)</label>
-                                                    <textarea name="admin_notes" class="form-control" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); color: #f8fafc; border-radius: 10px; font-size: 0.85rem;" rows="2" placeholder="e.g. Signal is too high, send tech back."></textarea>
-                                                </div>
-                                            </form>
-                                        </div>
-                                        <div class="modal-footer" style="border-top: 1px solid rgba(255,255,255,0.07); padding: 1rem 1.5rem; flex-direction: column; align-items: stretch; gap: 0.75rem;">
-                                            <div class="d-flex justify-content-between align-items-center w-100">
-                                                <div class="d-flex gap-2 align-items-center">
-                                                    {% if ticket.ticket_type == 'INSTALLATION' and ticket.customer and ticket.customer.phone %}
-                                                    <button type="button" class="btn btn-sm fw-semibold px-3 btn-send-welcome-sms"
-                                                            data-id="{{ ticket.id }}"
-                                                            data-client="{{ ticket.client_name }}"
-                                                            style="background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); color: #4ade80; border-radius: 8px;"
-                                                            title="Send portal login credentials via SMS to customer">
-                                                        <i class="fas fa-sms me-1"></i> Send Welcome SMS
-                                                    </button>
-                                                    {% endif %}
-                                                    <button type="button" class="btn btn-sm fw-semibold px-3" style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); color: #fbbf24; border-radius: 8px;" onclick="document.getElementById('adminAction{{ ticket.id }}').value='bounce_dispatch'; document.getElementById('approvalForm{{ ticket.id }}').submit();">
-                                                        <i class="fas fa-undo-alt me-1"></i> Bounce to Dispatch
-                                                    </button>
-                                                    <button type="button" class="btn btn-sm fw-semibold px-3" style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #f87171; border-radius: 8px;" onclick="document.getElementById('adminAction{{ ticket.id }}').value='bounce_tech'; document.getElementById('approvalForm{{ ticket.id }}').submit();">
-                                                        <i class="fas fa-undo-alt me-1"></i> Bounce to Tech
-                                                    </button>
-                                                </div>
-                                                <span class="text-muted" style="font-size: 0.72rem;"><i class="fas fa-shield-alt text-danger me-1"></i> Slide to activate</span>
-                                            </div>
-                                            <div class="w-100">
-                                                <div data-slide-confirm
-                                                     class="variant-danger"
-                                                     data-label="Slide to Final Approve &amp; Activate"
-                                                     data-confirmed-label="Activating Subscriber..."
-                                                     data-target-form="#approvalForm{{ ticket.id }}"
-                                                     id="slideApprove{{ ticket.id }}">
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
                             {% empty %}
                             <tr>
                                 <td colspan="4" class="border-0 p-0">
@@ -250,6 +134,125 @@
         </div>
     </div>
 </div>
+
+<!-- Approval Modals outside table and card -->
+{% for ticket in approval_tickets %}
+<div class="modal fade" id="approvalModal{{ ticket.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content" style="background: rgba(15,23,42,0.97); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
+            <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.07); padding: 1.25rem 1.5rem;">
+                <div>
+                    <h5 class="modal-title text-white fw-bold mb-0">
+                        <i class="fas fa-shield-check text-danger me-2"></i>Admin Review: {{ ticket.ticket_number }}
+                    </h5>
+                    <div class="text-muted" style="font-size: 0.75rem; margin-top: 3px;">{{ ticket.client_name }} &bull; Final Approval Stage</div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body p-4">
+                <!-- Full Operation Summary -->
+                <div class="row g-3 mb-4">
+                    <!-- Client / Agent -->
+                    <div class="col-md-4">
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 1rem;">
+                            <div class="fw-semibold mb-3" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: #60a5fa;"><i class="fas fa-user me-1"></i> Client &amp; Agent</div>
+                            <div style="font-size: 0.82rem; line-height: 1.9;">
+                                <div><span style="color:#475569;">Name:</span> <span class="text-white">{{ ticket.client_name }}</span></div>
+                                <div><span style="color:#475569;">Contact:</span> <span class="text-white">{{ ticket.contact_number }}</span></div>
+                                <div><span style="color:#475569;">Plan:</span> <span class="text-white">{{ ticket.plan_package }}</span></div>
+                                <div><span style="color:#475569;">PPPoE:</span> <span class="font-monospace" style="color:#67e8f9;">{{ ticket.account_no }}</span></div>
+                                <div class="pt-2 mt-2" style="border-top: 1px solid rgba(255,255,255,0.06);">
+                                    <span style="color:#475569;">Agent:</span>
+                                    {% if ticket.customer.agent %}<span class="fw-semibold" style="color:#fbbf24;">{{ ticket.customer.agent.name }}</span>{% else %}<span style="color:#475569;">Walk-in</span>{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- JO Data -->
+                    <div class="col-md-4">
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 1rem;">
+                            <div class="fw-semibold mb-3" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: #34d399;"><i class="fas fa-clipboard-list me-1"></i> Tech JO Data</div>
+                            <div style="font-size: 0.82rem; line-height: 1.9;">
+                                <div><span style="color:#475569;">Techs:</span> <span class="text-white">{% for t in ticket.technicians.all %}{{ t.name }}{% if not forloop.last %}, {% endif %}{% empty %}Unassigned{% endfor %}</span></div>
+                                <div><span style="color:#475569;">Cable:</span> <span class="text-white">{{ ticket.cable_length|default:"&mdash;" }} m</span></div>
+                                <div><span style="color:#475569;">Signal:</span> <span class="fw-semibold" style="color:#34d399;">{{ ticket.signal_level|default:"&mdash;" }} dBm</span></div>
+                                <div><span style="color:#475569;">NAP Port:</span> <span class="text-white">{{ ticket.nap_port|default:"&mdash;" }} {% if ticket.pole_number %}(Pole: {{ ticket.pole_number }}){% endif %}</span></div>
+                                <div><span style="color:#475569;">Readings:</span> <span class="font-monospace text-white" style="font-size:0.78rem;">{{ ticket.nap_reading|default:"&mdash;" }} / {{ ticket.house_reading|default:"&mdash;" }} dBm</span></div>
+                                <div><span style="color:#475569;">Modem SN:</span> <span class="font-monospace" style="color:#67e8f9;">{{ ticket.ont_modem_sn|default:"&mdash;" }}</span></div>
+                                <div><span style="color:#475569;">Payment:</span> <span class="fw-semibold" style="color:#fbbf24;">{{ ticket.payment_collected|default:"None"|upper }}</span></div>
+                                {% if ticket.acknowledged_by %}<div><span style="color:#475569;">Ack By:</span> <span class="text-white">{{ ticket.acknowledged_by }}</span></div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dispatch QA -->
+                    <div class="col-md-4">
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 1rem; height: 100%;">
+                            <div class="fw-semibold mb-3" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: #22d3ee;"><i class="fas fa-headset me-1"></i> Dispatch QA Notes</div>
+                            <div style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.6; min-height: 80px;">{{ ticket.qa_notes|default:"No QA notes provided." }}</div>
+                            <div class="mt-2" style="font-size: 0.72rem; color: #475569;">QA Completed: {{ ticket.qa_completed_at|date:"M d, g:i A"|default:"&mdash;" }}</div>
+                        </div>
+                    </div>
+
+                    {% if ticket.remarks %}
+                    <div class="col-12">
+                        <div style="background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); border-radius: 10px; padding: 1rem;">
+                            <div class="fw-semibold mb-2" style="font-size: 0.75rem; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.05em;"><i class="fas fa-history me-1"></i> Bounce / Feedback Trail</div>
+                            <div class="font-monospace" style="font-size: 0.78rem; color: #e2e8f0; white-space: pre-line; max-height: 120px; overflow-y: auto;">{{ ticket.remarks }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Action Form -->
+                <form action="{% url 'dispatch_approval' %}" method="POST" id="approvalForm{{ ticket.id }}">
+                    {% csrf_token %}
+                    <input type="hidden" name="ticket_id" value="{{ ticket.id }}">
+                    <input type="hidden" name="action" id="adminAction{{ ticket.id }}" value="approve">
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Admin Feedback (sent to Dispatch/Tech if bounced)</label>
+                        <textarea name="admin_notes" class="form-control" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); color: #f8fafc; border-radius: 10px; font-size: 0.85rem;" rows="2" placeholder="e.g. Signal is too high, send tech back."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid rgba(255,255,255,0.07); padding: 1rem 1.5rem; flex-direction: column; align-items: stretch; gap: 0.75rem;">
+                <div class="d-flex justify-content-between align-items-center w-100">
+                    <div class="d-flex gap-2 align-items-center">
+                        {% if ticket.ticket_type == 'INSTALLATION' and ticket.customer and ticket.customer.phone %}
+                        <button type="button" class="btn btn-sm fw-semibold px-3 btn-send-welcome-sms"
+                                data-id="{{ ticket.id }}"
+                                data-client="{{ ticket.client_name }}"
+                                style="background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); color: #4ade80; border-radius: 8px;"
+                                title="Send portal login credentials via SMS to customer">
+                            <i class="fas fa-sms me-1"></i> Send Welcome SMS
+                        </button>
+                        {% endif %}
+                        <button type="button" class="btn btn-sm fw-semibold px-3" style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); color: #fbbf24; border-radius: 8px;" onclick="document.getElementById('adminAction{{ ticket.id }}').value='bounce_dispatch'; document.getElementById('approvalForm{{ ticket.id }}').submit();">
+                            <i class="fas fa-undo-alt me-1"></i> Bounce to Dispatch
+                        </button>
+                        <button type="button" class="btn btn-sm fw-semibold px-3" style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #f87171; border-radius: 8px;" onclick="document.getElementById('adminAction{{ ticket.id }}').value='bounce_tech'; document.getElementById('approvalForm{{ ticket.id }}').submit();">
+                            <i class="fas fa-undo-alt me-1"></i> Bounce to Tech
+                        </button>
+                    </div>
+                    <span class="text-muted" style="font-size: 0.72rem;"><i class="fas fa-shield-alt text-danger me-1"></i> Slide to activate</span>
+                </div>
+                <div class="w-100">
+                    <div data-slide-confirm
+                         class="variant-danger"
+                         data-label="Slide to Final Approve &amp; Activate"
+                         data-confirmed-label="Activating Subscriber..."
+                         data-target-form="#approvalForm{{ ticket.id }}"
+                         id="slideApprove{{ ticket.id }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
 {% include "dispatch/_slide_to_confirm.html" %}
 {% include "dispatch/_scripts.html" %}
 {% endblock %}

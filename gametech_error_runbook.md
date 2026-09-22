@@ -819,6 +819,24 @@
   * Use `Team.objects.prefetch_related('members')` in Python views and `{{ team.members.count }}` in templates.
   * Use non-namespaced `{% url 'dashboard' %}` across all core billing templates.
 
+### ERR-046: Dispatch Pipeline Modal Ghosting & Instant Disappearing Under Backdrop Overlay
+* **Symptoms**:
+  * On `/dispatch/pipeline/2-assignment/`, `/dispatch/pipeline/4-qa/`, or `/dispatch/pipeline/5-approval/`, clicking "Assign Techs", "Conduct QA", or "Review & Decide" opens a dimmed/ghosted modal dialog that immediately disappears whenever clicked.
+  * Form inputs, dropdowns, and checkboxes inside the modal cannot be clicked or focused.
+* **Root Causes**:
+  * Bootstrap `.modal` elements were rendered directly inside `<tbody>...</tbody>` within `<div class="table-responsive">` or cards.
+  * In HTML, `<div>` elements inside `<tbody>` are foster-parented or trapped in the table container's local stacking context.
+  * Bootstrap attaches `.modal-backdrop` directly to `<body>` at `z-index: 1050`. Because the parent container has a lower stacking context, the backdrop renders *in front of* the modal dialog, intercepting user clicks and triggering Bootstrap's backdrop click-to-dismiss behavior.
+* **Exact Target Files**:
+  * `dispatch/templates/dispatch/pipeline/2_assignment.html`
+  * `dispatch/templates/dispatch/pipeline/4_qa.html`
+  * `dispatch/templates/dispatch/pipeline/5_approval.html`
+  * `dispatch/pipeline_views.py` (`dispatch_assignment`)
+* **1-Step Fix**:
+  * Move all modal definitions completely outside `<tbody>`, `<table>`, and card wrappers to the page container level right before `{% endblock %}`.
+  * Provide an explicit submit button in modal footers to guarantee clean submission without depending on missing slider classes.
+  * Support both `tech_ids` and `technician_ids` in `pipeline_views.py`.
+
 ---
 
 ## 📝 How to Add a New Error Entry
