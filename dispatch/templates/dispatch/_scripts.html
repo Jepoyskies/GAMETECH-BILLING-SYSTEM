@@ -246,10 +246,19 @@
                 const ticketId = btn.dataset.id;
                 const ticketNum = btn.dataset.ticket;
                 const clientName = btn.dataset.name;
+                const ticketType = btn.dataset.type || 'Job Order';
+                const ticketConcern = btn.dataset.concern || '';
 
                 document.getElementById('assign-ticket-id').value = ticketId;
                 document.getElementById('assign-ticket-number').innerText = ticketNum;
                 document.getElementById('assign-client-name').innerText = clientName;
+                const typeEl = document.getElementById('assign-ticket-type');
+                if (typeEl) typeEl.innerText = ticketType;
+                const concernEl = document.getElementById('assign-ticket-concern');
+                if (concernEl) {
+                    concernEl.innerText = ticketConcern;
+                    concernEl.style.display = ticketConcern ? 'block' : 'none';
+                }
 
                 // Preload existing details
                 fetch(`/dispatch/api/tickets/${ticketId}/`)

@@ -983,6 +983,20 @@
   * Add the green `Complete` button (`.btn-open-complete`) to Ongoing rows in `2_assignment.html` to invoke the `#modal-complete-job` technical completion popup.
   * Render `ticket.concern` or `ticket.plan_package` under the client name in Ongoing/Pending tables and assignment modals so dispatchers immediately understand job requirements.
 
+### ERR-054: Redundant Page Redirection on Dispatch Button Bouncing Users into Stage 2 Pipeline
+* **Symptoms**:
+  * Staff clicking the blue "Dispatch" button on pending ticket rows in the Central Dispatch HQ Console (`/dispatch/monitoring/`, `/dispatch/internet-install/`, `/dispatch/cignal-install/`, `/dispatch/client-concerns/`) were redirected to a completely separate page (`/dispatch/pipeline/2-assignment/?q=...`).
+  * The destination page presented an identical pending queue table with duplicate tabs, confusing staff who were just trying to assign field units to a ticket.
+* **Root Causes**:
+  * In `dispatch/templates/dispatch/_queue_tabs.html`, the Dispatch button was coded as a hyperlink `<a href="{% url 'dispatch_assignment' %}?q=...">` rather than an in-place modal trigger.
+  * An in-place assignment modal (`#modal-assign-ticket`) and AJAX submission endpoint (`/dispatch/api/tickets/<id>/assign/`) already existed in `_modals.html` and `_scripts.html` but were bypassed by this link.
+* **Exact Target Files**:
+  * `dispatch/templates/dispatch/_queue_tabs.html` (Converted `<a>` redirect into `<button class="btn-open-assign">` modal trigger with ticket type and concern data attributes)
+  * `dispatch/templates/dispatch/_modals.html` (Enhanced `#modal-assign-ticket` header card to display ticket type and concern)
+  * `dispatch/templates/dispatch/_scripts.html` (Wired `.btn-open-assign` to populate ticket type and concern in modal)
+* **1-Step Fix**:
+  * Replace the `<a href="{% url 'dispatch_assignment' %}">` redirect with `<button class="btn-open-assign">` so clicking "Dispatch" opens the crew assignment modal directly inside the console without page hopping.
+
 ---
 
 ## 📝 How to Add a New Error Entry
