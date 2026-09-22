@@ -20,7 +20,11 @@ function setFormColor(formEl, color) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    // 1. Add Option Handler
+    const csrfToken = getCookie('csrftoken');
+
+    // -------------------------------------------------------------
+    // 1. Dropdown Option Handlers
+    // -------------------------------------------------------------
     const formAdd = document.getElementById('form-add-config-option');
     if (formAdd) {
         formAdd.addEventListener('submit', function(e) {
@@ -35,15 +39,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
             fetch("{% url 'api_dispatch_config_options_create' %}", {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
                 body: JSON.stringify(data)
             })
             .then(res => res.json())
             .then(res => {
-                if (res.status === 'success') {
+                if (res.status === 'success' || res.success) {
                     location.reload();
                 } else {
                     alert('Error creating option: ' + (res.error || 'Unknown error'));
@@ -53,36 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 2. Open Edit Option Modal
-    document.querySelectorAll('.btn-edit-config').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const id = this.dataset.id;
-            const mod = this.dataset.module;
-            const ltype = this.dataset.listType;
-            const label = this.dataset.label;
-            const color = this.dataset.color;
-            const active = this.dataset.active === '1';
-            const locked = this.dataset.locked === '1';
-
-            document.getElementById('edit-option-id').value = id;
-            document.getElementById('edit-option-module').value = mod;
-            document.getElementById('edit-option-list-type').value = ltype;
-            const labelInput = document.getElementById('edit-option-label');
-            labelInput.value = label;
-            labelInput.readOnly = locked;
-
-            const lockedMsg = document.getElementById('edit-option-locked-msg');
-            if (lockedMsg) lockedMsg.style.display = locked ? 'block' : 'none';
-
-            document.getElementById('edit-option-color').value = color;
-            document.getElementById('edit-option-active').checked = active;
-
-            const modal = new bootstrap.Modal(document.getElementById('modal-edit-config-option'));
-            modal.show();
-        });
-    });
-
-    // 3. Submit Edit Option
+    // Submit Edit Option
     const formEdit = document.getElementById('form-edit-config-option');
     if (formEdit) {
         formEdit.addEventListener('submit', function(e) {
@@ -96,15 +68,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
             fetch(`/dispatch/api/config-options/${id}/update/`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
                 body: JSON.stringify(data)
             })
             .then(res => res.json())
             .then(res => {
-                if (res.status === 'success') {
+                if (res.status === 'success' || res.success) {
                     location.reload();
                 } else {
                     alert('Error updating option: ' + (res.error || 'Unknown error'));
@@ -113,8 +82,222 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(err => alert('Network error: ' + err));
         });
     }
+
+    // -------------------------------------------------------------
+    // 2. Team Handlers
+    // -------------------------------------------------------------
+    const formAddTeam = document.getElementById('form-add-team');
+    if (formAddTeam) {
+        formAddTeam.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const name = formAddTeam.name.value.trim();
+            if (!name) return;
+
+            fetch("{% url 'api_dispatch_team_create' %}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ name: name })
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.success) {
+                    location.reload();
+                } else {
+                    alert('Error creating team: ' + (res.error || 'Unknown error'));
+                }
+            })
+            .catch(err => alert('Network error: ' + err));
+        });
+    }
+
+    const formEditTeam = document.getElementById('form-edit-team');
+    if (formEditTeam) {
+        formEditTeam.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit-team-id').value;
+            const name = document.getElementById('edit-team-name').value.trim();
+            if (!name) return;
+
+            fetch(`/dispatch/api/teams/${id}/update/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ name: name })
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.success) {
+                    location.reload();
+                } else {
+                    alert('Error updating team: ' + (res.error || 'Unknown error'));
+                }
+            })
+            .catch(err => alert('Network error: ' + err));
+        });
+    }
+
+    // -------------------------------------------------------------
+    // 3. Technician Handlers
+    // -------------------------------------------------------------
+    const formAddTech = document.getElementById('form-add-tech');
+    if (formAddTech) {
+        formAddTech.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const data = {
+                name: formAddTech.name.value.trim(),
+                contact_number: formAddTech.contact_number.value.trim(),
+                team_id: formAddTech.team_id.value || null,
+                user_id: formAddTech.user_id.value || null,
+                target_per_day: formAddTech.target_per_day.value || 5,
+                target_per_month: formAddTech.target_per_month.value || 100
+            };
+
+            fetch("{% url 'api_dispatch_technician_create' %}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.success) {
+                    location.reload();
+                } else {
+                    alert('Error adding technician: ' + (res.error || 'Unknown error'));
+                }
+            })
+            .catch(err => alert('Network error: ' + err));
+        });
+    }
+
+    const formEditTech = document.getElementById('form-edit-tech');
+    if (formEditTech) {
+        formEditTech.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit-tech-id').value;
+            const data = {
+                name: document.getElementById('edit-tech-name').value.trim(),
+                contact_number: document.getElementById('edit-tech-contact').value.trim(),
+                team_id: document.getElementById('edit-tech-team').value || null,
+                user_id: document.getElementById('edit-tech-user').value || null,
+                target_per_day: document.getElementById('edit-tech-daily').value || 5,
+                target_per_month: document.getElementById('edit-tech-monthly').value || 100
+            };
+
+            fetch(`/dispatch/api/technicians/${id}/update/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.success) {
+                    location.reload();
+                } else {
+                    alert('Error updating technician: ' + (res.error || 'Unknown error'));
+                }
+            })
+            .catch(err => alert('Network error: ' + err));
+        });
+    }
+
+    // -------------------------------------------------------------
+    // 4. Target Quota Handlers
+    // -------------------------------------------------------------
+    const formEditTarget = document.getElementById('form-edit-target');
+    if (formEditTarget) {
+        formEditTarget.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const id = document.getElementById('target-tech-id').value;
+            const data = {
+                target_per_day: document.getElementById('target-daily-input').value,
+                target_per_month: document.getElementById('target-monthly-input').value
+            };
+
+            fetch(`/dispatch/api/technicians/${id}/targets/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.success) {
+                    location.reload();
+                } else {
+                    alert('Error saving targets: ' + (res.error || 'Unknown error'));
+                }
+            })
+            .catch(err => alert('Network error: ' + err));
+        });
+    }
+
+    // -------------------------------------------------------------
+    // 5. Delegated Click Handlers for Modals (Rule #20)
+    // -------------------------------------------------------------
+    document.addEventListener('click', function(e) {
+        // Edit Config Option Modal
+        const btnConfig = e.target.closest('.btn-edit-config');
+        if (btnConfig) {
+            const id = btnConfig.dataset.id;
+            document.getElementById('edit-option-id').value = id;
+            document.getElementById('edit-option-module').value = btnConfig.dataset.module;
+            document.getElementById('edit-option-list-type').value = btnConfig.dataset.listType;
+            const labelInput = document.getElementById('edit-option-label');
+            labelInput.value = btnConfig.dataset.label;
+            const locked = btnConfig.dataset.locked === '1';
+            labelInput.readOnly = locked;
+
+            const lockedMsg = document.getElementById('edit-option-locked-msg');
+            if (lockedMsg) lockedMsg.style.display = locked ? 'block' : 'none';
+
+            document.getElementById('edit-option-color').value = btnConfig.dataset.color;
+            document.getElementById('edit-option-active').checked = btnConfig.dataset.active === '1';
+
+            const modal = new bootstrap.Modal(document.getElementById('modal-edit-config-option'));
+            modal.show();
+            return;
+        }
+
+        // Edit Team Modal
+        const btnTeam = e.target.closest('.btn-edit-team');
+        if (btnTeam) {
+            document.getElementById('edit-team-id').value = btnTeam.dataset.id;
+            document.getElementById('edit-team-name').value = btnTeam.dataset.name;
+            const modal = new bootstrap.Modal(document.getElementById('modal-edit-team'));
+            modal.show();
+            return;
+        }
+
+        // Edit Technician Modal
+        const btnTech = e.target.closest('.btn-edit-tech');
+        if (btnTech) {
+            document.getElementById('edit-tech-id').value = btnTech.dataset.id;
+            document.getElementById('edit-tech-name').value = btnTech.dataset.name;
+            document.getElementById('edit-tech-contact').value = btnTech.dataset.contact || '';
+            document.getElementById('edit-tech-team').value = btnTech.dataset.team || '';
+            document.getElementById('edit-tech-user').value = btnTech.dataset.user || '';
+            document.getElementById('edit-tech-daily').value = btnTech.dataset.daily || '5';
+            document.getElementById('edit-tech-monthly').value = btnTech.dataset.monthly || '100';
+            const modal = new bootstrap.Modal(document.getElementById('modal-edit-tech'));
+            modal.show();
+            return;
+        }
+
+        // Edit Targets Modal
+        const btnTarget = e.target.closest('.btn-edit-target');
+        if (btnTarget) {
+            document.getElementById('target-tech-id').value = btnTarget.dataset.id;
+            document.getElementById('target-tech-name').value = btnTarget.dataset.name;
+            document.getElementById('target-daily-input').value = btnTarget.dataset.daily || '5';
+            document.getElementById('target-monthly-input').value = btnTarget.dataset.monthly || '100';
+            const modal = new bootstrap.Modal(document.getElementById('modal-edit-target'));
+            modal.show();
+            return;
+        }
+    });
 });
 
+// -----------------------------------------------------------------
+// 6. Delete Functions with Confirmation Prompts
+// -----------------------------------------------------------------
 function deleteConfigOption(id, label) {
     if (!confirm(`Are you sure you want to delete the option "${label}"?`)) return;
 
@@ -127,11 +310,55 @@ function deleteConfigOption(id, label) {
     })
     .then(res => res.json())
     .then(res => {
-        if (res.status === 'success') {
+        if (res.status === 'success' || res.success) {
             const row = document.getElementById(`config-row-${id}`);
             if (row) row.remove();
         } else {
             alert('Error deleting option: ' + (res.error || 'Unknown error'));
+        }
+    })
+    .catch(err => alert('Network error: ' + err));
+}
+
+function deleteTeam(id, name) {
+    if (!confirm(`Are you sure you want to delete team "${name}"? Technicians belonging to this team will become unassigned.`)) return;
+
+    fetch(`/dispatch/api/teams/${id}/delete/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(res => res.json())
+    .then(res => {
+        if (res.success) {
+            const row = document.getElementById(`team-row-${id}`);
+            if (row) row.remove();
+        } else {
+            alert('Error deleting team: ' + (res.error || 'Unknown error'));
+        }
+    })
+    .catch(err => alert('Network error: ' + err));
+}
+
+function deleteTechnician(id, name) {
+    if (!confirm(`Are you sure you want to delete technician "${name}"? This action cannot be undone.`)) return;
+
+    fetch(`/dispatch/api/technicians/${id}/delete/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(res => res.json())
+    .then(res => {
+        if (res.success) {
+            const row = document.getElementById(`tech-row-${id}`);
+            if (row) row.remove();
+        } else {
+            alert('Error deleting technician: ' + (res.error || 'Unknown error'));
         }
     })
     .catch(err => alert('Network error: ' + err));

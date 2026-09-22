@@ -20,6 +20,7 @@ from .analytics import (
     get_operational_overview_stats, get_overview_kpis_and_chart,
     get_monitoring_summary, get_monthly_targets_data
 )
+from .views_management import *
 
 logger = logging.getLogger(__name__)
 
@@ -786,56 +787,6 @@ def audit_log_view(request):
 
 
 @login_required
-def management_view(request):
-    from django.contrib.auth import get_user_model
-    User = get_user_model()
-
-    teams = Team.objects.prefetch_related('members').all()
-    technicians = Technician.objects.select_related('team').all()
-    accounts = User.objects.filter(is_active=True).order_by('-date_joined')
-
-    # Aggregate target statistics
-    total_daily_target = sum(t.target_per_day or 5 for t in technicians)
-    total_monthly_target = sum(t.target_per_month or 100 for t in technicians)
-
-    # Auto-seed baseline options if table is empty
-    if not ConfigOption.objects.filter(module='DISPATCH').exists():
-        defaults = [
-            ('DISPATCH', 'STATUS', 'Pending', '#f59e0b', 1, True),
-            ('DISPATCH', 'STATUS', 'Assigned', '#3b82f6', 2, False),
-            ('DISPATCH', 'STATUS', 'In Progress', '#06b6d4', 3, False),
-            ('DISPATCH', 'STATUS', 'Done', '#10b981', 4, True),
-            ('DISPATCH', 'STATUS', 'Cancelled', '#ef4444', 5, True),
-            ('DISPATCH', 'TYPE', 'Installation', '#10b981', 1, True),
-            ('DISPATCH', 'TYPE', 'Repair', '#ef4444', 2, True),
-            ('DISPATCH', 'TYPE', 'Cignal', '#a855f7', 3, False),
-            ('DISPATCH', 'TYPE', 'Migration', '#06b6d4', 4, False),
-            ('MONITORING', 'CHAT_TYPE', 'Inquiry', '#3b82f6', 1, True),
-            ('MONITORING', 'CHAT_TYPE', 'Concern', '#f59e0b', 2, True),
-            ('MONITORING', 'CHAT_TYPE', 'Follow-up', '#6366f1', 3, False),
-        ]
-        for mod, ltype, lbl, clr, sorder, hcode in defaults:
-            ConfigOption.objects.get_or_create(
-                module=mod, list_type=ltype, label=lbl,
-                defaults={'color': clr, 'sort_order': sorder, 'active': True, 'hardcoded': hcode}
-            )
-
-    config_options = ConfigOption.objects.all().order_by('module', 'list_type', 'sort_order')
-    locked_labels = {'done', 'cancelled', 'pending', 'installation', 'repair', 'concern', 'inquiry'}
-    for opt in config_options:
-        opt.is_locked = opt.hardcoded or (opt.label.strip().lower() in locked_labels)
-
-    return render(request, 'dispatch/management.html', {
-        'teams': teams,
-        'technicians': technicians,
-        'accounts': accounts,
-        'total_daily_target': total_daily_target,
-        'total_monthly_target': total_monthly_target,
-        'config_options': config_options,
-    })
-
-
-@login_required
 def export_tickets_csv(request):
     """
     Export Dispatch tickets to CSV matching legacy DMS columns:
@@ -996,112 +947,6 @@ def api_customer_check_name(request):
         'phone': existing.phone if existing else '',
         'address': existing.address if existing else ''
     })
-
-
-# --- Phase 3 APIs: Dynamic Dropdown Config Manager ---
-
-LOCKED_SYSTEM_LABELS = {'done', 'cancelled', 'pending', 'installation', 'repair', 'concern', 'inquiry'}
-
-@login_required
-@require_POST
-def api_config_options_create(request):
-    if not (request.user.is_staff or request.user.is_superuser):
-        return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
-
-    data = json.loads(request.body.decode('utf-8')) if request.body else request.POST
-    label = data.get('label', '').strip()
-    module = data.get('module', 'MONITORING').strip().upper()
-    list_type = data.get('list_type', 'STATUS').strip().upper()
-    color = data.get('color', '#6b7280').strip()
-    active = data.get('active', True)
-    if isinstance(active, str):
-        active = active.lower() in ('true', '1', 'yes')
-
-    if not label:
-        return JsonResponse({'success': False, 'error': 'Label is required.'}, status=400)
-    if module not in ['DISPATCH', 'MONITORING']:
-        return JsonResponse({'success': False, 'error': 'Invalid module.'}, status=400)
-    if list_type not in ['STATUS', 'TYPE', 'CHAT_TYPE']:
-        return JsonResponse({'success': False, 'error': 'Invalid list type.'}, status=400)
-
-    if ConfigOption.objects.filter(module=module, list_type=list_type, label__iexact=label).exists():
-        return JsonResponse({'success': False, 'error': f'An option with label "{label}" already exists in {module} {list_type}.'}, status=400)
-
-    max_order = ConfigOption.objects.filter(module=module, list_type=list_type).aggregate(Max('sort_order'))['sort_order__max'] or 0
-    opt = ConfigOption.objects.create(
-        module=module,
-        list_type=list_type,
-        label=label,
-        color=color,
-        sort_order=max_order + 1,
-        active=active,
-        hardcoded=False
-    )
-    log_audit('CREATE', 'ConfigOption', opt.id, request.user, summary=f"Created {module} {list_type} option: {label}", after={'label': label, 'color': color, 'active': active})
-    return JsonResponse({
-        'success': True,
-        'option': {
-            'id': opt.id, 'module': opt.module, 'list_type': opt.list_type,
-            'label': opt.label, 'color': opt.color, 'active': opt.active, 'hardcoded': opt.hardcoded
-        }
-    })
-
-
-@login_required
-@require_POST
-def api_config_options_update(request, option_id):
-    if not (request.user.is_staff or request.user.is_superuser):
-        return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
-
-    opt = get_object_or_404(ConfigOption, id=option_id)
-    data = json.loads(request.body.decode('utf-8')) if request.body else request.POST
-
-    is_locked = opt.hardcoded or (opt.label.strip().lower() in LOCKED_SYSTEM_LABELS)
-    before_data = {'label': opt.label, 'color': opt.color, 'active': opt.active}
-
-    new_label = data.get('label', '').strip()
-    if new_label and not is_locked:
-        if ConfigOption.objects.filter(module=opt.module, list_type=opt.list_type, label__iexact=new_label).exclude(id=opt.id).exists():
-            return JsonResponse({'success': False, 'error': f'An option with label "{new_label}" already exists.'}, status=400)
-        opt.label = new_label
-
-    if 'color' in data:
-        opt.color = str(data['color']).strip()
-
-    if 'active' in data:
-        val = data['active']
-        if isinstance(val, str):
-            opt.active = val.lower() in ('true', '1', 'yes')
-        else:
-            opt.active = bool(val)
-
-    opt.save()
-    after_data = {'label': opt.label, 'color': opt.color, 'active': opt.active}
-    log_audit('UPDATE', 'ConfigOption', opt.id, request.user, summary=f"Updated config option #{opt.id} ({opt.label})", before=before_data, after=after_data)
-
-    return JsonResponse({
-        'success': True,
-        'option': {
-            'id': opt.id, 'module': opt.module, 'list_type': opt.list_type,
-            'label': opt.label, 'color': opt.color, 'active': opt.active, 'hardcoded': is_locked
-        }
-    })
-
-
-@login_required
-@require_POST
-def api_config_options_delete(request, option_id):
-    if not (request.user.is_staff or request.user.is_superuser):
-        return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
-
-    opt = get_object_or_404(ConfigOption, id=option_id)
-    if opt.hardcoded or (opt.label.strip().lower() in LOCKED_SYSTEM_LABELS):
-        return JsonResponse({'success': False, 'error': f'"{opt.label}" is a system-critical option and cannot be deleted. You can recolor it or toggle active.'}, status=400)
-
-    label = opt.label
-    opt.delete()
-    log_audit('DELETE', 'ConfigOption', option_id, request.user, summary=f"Deleted custom config option: {label}")
-    return JsonResponse({'success': True, 'message': f'Option "{label}" deleted successfully.'})
 
 
 # ---------------------------------------------------------------------------

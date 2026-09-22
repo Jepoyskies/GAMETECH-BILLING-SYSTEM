@@ -76,12 +76,12 @@
                             <span class="text-muted text-xs fst-italic">Unassigned</span>
                             {% endif %}
                         </td>
-                        <td class="text-center">
+                        <td class="text-center" id="target-daily-cell-{{ tech.id }}">
                             <span class="badge rounded-pill bg-primary bg-opacity-15 text-primary border border-primary border-opacity-25 text-xs px-3 py-1">
                                 {{ tech.target_per_day|default:"5" }} jobs / day
                             </span>
                         </td>
-                        <td class="text-center">
+                        <td class="text-center" id="target-monthly-cell-{{ tech.id }}">
                             <span class="badge rounded-pill bg-success bg-opacity-15 text-success border border-success border-opacity-25 text-xs px-3 py-1">
                                 {{ tech.target_per_month|default:"100" }} installs / mo
                             </span>
@@ -92,9 +92,15 @@
                             </span>
                         </td>
                         <td class="text-end pe-3">
-                            <a href="/admin/dispatch/technician/{{ tech.id }}/change/" target="_blank" class="btn btn-outline-secondary btn-xs" style="padding: 2px 8px; border-radius: 6px;">
+                            <button type="button" class="btn btn-outline-info btn-xs btn-edit-target" 
+                                    data-id="{{ tech.id }}" 
+                                    data-name="{{ tech.name }}" 
+                                    data-daily="{{ tech.target_per_day|default:5 }}" 
+                                    data-monthly="{{ tech.target_per_month|default:100 }}" 
+                                    style="padding: 2px 8px; border-radius: 6px;" 
+                                    title="Configure Installation Targets">
                                 <i class="fas fa-sliders-h"></i>
-                            </a>
+                            </button>
                         </td>
                     </tr>
                     {% empty %}

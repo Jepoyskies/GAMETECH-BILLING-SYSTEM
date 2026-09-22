@@ -44,5 +44,14 @@ urlpatterns = [
     path('api/config-options/<int:option_id>/update/', views.api_config_options_update, name='api_dispatch_config_options_update'),
     path('api/config-options/<int:option_id>/delete/', views.api_config_options_delete, name='api_dispatch_config_options_delete'),
 
+    # Phase 4: Management APIs (Teams, Technicians, Targets)
+    path('api/teams/create/', views.api_team_create, name='api_dispatch_team_create'),
+    path('api/teams/<int:team_id>/update/', views.api_team_update, name='api_dispatch_team_update'),
+    path('api/teams/<int:team_id>/delete/', views.api_team_delete, name='api_dispatch_team_delete'),
+    path('api/technicians/create/', views.api_technician_create, name='api_dispatch_technician_create'),
+    path('api/technicians/<int:tech_id>/update/', views.api_technician_update, name='api_dispatch_technician_update'),
+    path('api/technicians/<int:tech_id>/delete/', views.api_technician_delete, name='api_dispatch_technician_delete'),
+    path('api/technicians/<int:tech_id>/targets/', views.api_technician_targets_update, name='api_dispatch_technician_targets_update'),
+
     path('export/tickets/', views.export_tickets_csv, name='dispatch_export_tickets'),
 ]

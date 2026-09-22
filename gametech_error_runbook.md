@@ -870,6 +870,29 @@
 
 ---
 
+### ERR-049: Field Unit Management Django Admin Redirects & Missing CRUD/Deletion Actions
+* **Symptoms**:
+  * On `/dispatch/management/`, clicking "Add Account" or "Edit" on staff accounts redirected users out of Gametech into raw `/admin/auth/user/` Django admin panels.
+  * Adding or editing Teams and Technicians in Tab 2 and configuring installation quotas in Tab 3 redirected to `/admin/dispatch/team/` and `/admin/dispatch/technician/`.
+  * Users could not delete staff accounts, teams, or technicians on the management console.
+* **Root Causes**:
+  * Action buttons in `_management_accounts.html`, `_management_teams_techs.html`, and `_management_targets.html` were hardcoded with raw `href="/admin/..."` links without native modal forms or API endpoints.
+  * No backend CRUD endpoints existed for `Team` and `Technician` operations in `dispatch/`.
+* **Exact Target Files**:
+  * `dispatch/views_management.py` (Created: handles `management_view`, `api_team_*`, `api_technician_*`, `api_technician_targets_update`, `api_config_options_*`)
+  * `dispatch/views.py` (Import `views_management`, removed redundant code)
+  * `dispatch/urls.py` (Mapped management API routes)
+  * `dispatch/templates/dispatch/_management_accounts.html`
+  * `dispatch/templates/dispatch/_management_teams_techs.html`
+  * `dispatch/templates/dispatch/_management_targets.html`
+  * `dispatch/templates/dispatch/_management_modals.html`
+  * `dispatch/templates/dispatch/_management_scripts.html`
+* **1-Step Fix**:
+  * Replace `/admin/` links in Accounts tab with native Gametech `add_staff`, `edit_staff`, and `delete_staff` routes.
+  * Add native Bootstrap modals (`#modal-add-team`, `#modal-edit-team`, `#modal-add-tech`, `#modal-edit-tech`, `#modal-edit-target`) and wire them up with REST API endpoints in `views_management.py` with full audit logging and confirmation prompts for deletions.
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 1. Assign a new `ERR-XXX` identifier.
