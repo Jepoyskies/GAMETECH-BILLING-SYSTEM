@@ -25,6 +25,7 @@
 | **ERR-044** | Installed Customer Displayed as Active / Connected Without Payment or Expiration Date | `billing/views/customers/crud.py`, `billing/views/customers/list.py`, `billing/models.py`, `add_customer.html` | Billing / Security |
 | **ERR-057** | Dispatch Queue Tab Count Mismatch, Missing Tab 4 Records, and Inactive QA Approval Queue | `dispatch/views.py`, `pipeline_views.py`, `_queue_tabs.html`, `4_qa.html` | Queue / Pipeline |
 | **ERR-058** | Dispatch Trash Can Delete Buttons Inactive and 403 Forbidden for Non-Staff CSR Accounts | `dispatch/_modal_scripts.html`, `dispatch/views.py`, `dispatch/urls.py` | Queue / API |
+| **ERR-059** | Disconnected Operations Pipeline: Missing Repair Intake, Missing Tech Confirmation Guard, and Duplicate Dispatch Job Tickets | `dispatch/views.py`, `pipeline_views.py`, `_modal_scripts.html`, `view_customer.html` | Operations / Dispatch |
 
 ---
 
@@ -1059,6 +1060,25 @@
   * `billing/templates/billing/base/_scripts.html` (Added `showCancelButton: true` to `window.gametechConfirm` defaultOpts)
 * **1-Step Fix**:
   * Include delegated event listeners in `_modal_scripts.html` (loaded universally via `_modals.html`), expose `api_delete_record`, and authorize authenticated operators via `@login_required`.
+
+### ERR-059: Disconnected Operations Pipeline: Missing Repair Intake, Missing Tech Confirmation Guard, and Duplicate Dispatch Job Tickets
+* **Symptoms**:
+  * Repair, relocation, or reconnection tickets filed via API land in `INTERNET_INSTALL` queue instead of `CLIENT_CONCERNS`.
+  * Dispatchers can click "Complete Job" without warning even when technicians on site haven't submitted reports or optical signal levels.
+  * Approving customer in `/dispatch/pipeline/1-verification/` duplicates existing `JobTicket` records.
+  * Customer profile lacks visibility into the 6-stage operational pipeline (`Agent -> Customer -> Dispatch -> Tech -> Dispatch QA -> Admin`).
+* **Root Causes**:
+  * `api_create_ticket` in `dispatch/views.py` defaulted `source_tab='INTERNET_INSTALL'` for all tickets unless explicitly passed.
+  * `#modal-complete-job` modal had no verification checking `ticket.time_accomplish` or technician confirmation flag before submission.
+  * `dispatch_verification` blindly called `JobTicket.objects.create()` on verification approval without checking `customer.job_tickets.filter(status__in=['PENDING', 'ASSIGNED'])`.
+  * Lack of a dedicated repair intake modal accessible directly from Customer Detail and Customer List views.
+* **Exact Target Files**:
+  * `dispatch/views.py` (Auto-routed `source_tab` based on `ticket_type`, added `tech_confirmed` to `api_ticket_detail`)
+  * `dispatch/pipeline_views.py` (Added ticket re-use/de-duplication logic in `dispatch_verification`, allowed staff preview in `technician_mobile_ui`)
+  * `dispatch/templates/dispatch/_modal_scripts.html` (Integrated SweetAlert2 technician report completion confirmation guard)
+  * `billing/templates/billing/view_customer/_lifecycle_tracker.html` & `_modal_customer_repair.html` (Created visual 6-stage lifecycle stepper and repair ticket modal)
+* **1-Step Fix**:
+  * Auto-map `source_tab` to `CLIENT_CONCERNS` for non-install types, query existing open tickets in verification, and intercept `#modal-complete-job` trigger with `tech_confirmed` prompt.
 
 ---
 
