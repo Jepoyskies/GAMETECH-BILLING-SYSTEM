@@ -180,6 +180,9 @@ def add_customer(request):
             new_data=f"Name: {customer.full_name}\nPhone: {customer.phone}\nStatus: {customer.status}\nInstallation: {customer.installation_status}",
         )
         messages.success(request, "Customer added successfully!")
+        next_url = request.POST.get("next") or request.GET.get("next")
+        if next_url:
+            return redirect(next_url)
         return redirect("customer_list")
     context = {
         "categorized_plans": get_categorized_plans(),

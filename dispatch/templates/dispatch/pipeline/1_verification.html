@@ -70,10 +70,10 @@
                         <div class="dispatch-section-title"><i class="fas fa-user-clock" style="color: #fbbf24;"></i> Pending Prospects</div>
                         <div class="dispatch-section-subtitle">Awaiting router assignment and PPPoE generation</div>
                     </div>
-                    <button class="btn btn-sm fw-semibold px-3 py-2" data-bs-toggle="modal" data-bs-target="#intakeWalkinModal"
+                    <a href="{% url 'add_customer' %}?next={% url 'dispatch_verification' %}" class="btn btn-sm fw-semibold px-3 py-2"
                             style="background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.25); color: #22d3ee; border-radius: 9px; font-size: 0.82rem;">
                         <i class="fas fa-user-plus me-1"></i> Intake Walk-in
-                    </button>
+                    </a>
                 </div>
                 <div class="table-responsive">
                     <table class="dispatch-table">
@@ -348,75 +348,6 @@
         </div>
     </div>
 </div>
-
-<!-- Walk-in Intake Modal -->
-<div class="modal fade" id="intakeWalkinModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content bg-dark border-secondary shadow-lg">
-            <div class="modal-header border-secondary bg-dark-subtle">
-                <h5 class="modal-title text-white fw-bold"><i class="fas fa-user-plus text-info me-2"></i>Intake Walk-in Applicant</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="{% url 'agent_add_prospect' %}" method="POST">
-                {% csrf_token %}
-                <div class="modal-body p-4">
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small fw-bold">Full Name <span class="text-danger">*</span></label>
-                            <input type="text" name="full_name" class="form-control bg-dark text-white border-secondary" required placeholder="e.g. Juan dela Cruz" data-customer-autocomplete data-submit-button="#btn-intake-submit">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small fw-bold">Contact Number <span class="text-danger">*</span></label>
-                            <input type="text" name="phone" class="form-control bg-dark text-white border-secondary" required placeholder="09123456789">
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label text-muted small fw-bold">Address / Street <span class="text-danger">*</span></label>
-                        <input type="text" name="address" class="form-control bg-dark text-white border-secondary" required placeholder="House #, Street, Zone">
-                    </div>
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small fw-bold">Barangay <span class="text-danger">*</span></label>
-                            <select name="barangay" class="form-select bg-dark text-white border-secondary" required>
-                                <option value="" selected disabled>Select Barangay</option>
-                                {% for brgy in barangays %}
-                                    <option value="{{ brgy.id }}">{{ brgy.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small fw-bold">Subscription Plan</label>
-                            <select name="plan_id" class="form-select bg-dark text-white border-secondary">
-                                <option value="" selected>Choose a Plan...</option>
-                                {% for p in plans %}
-                                    <option value="{{ p.id }}">{{ p.name }} - ₱{{ p.price }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small fw-bold">Installation Date</label>
-                            <input type="date" name="preferred_installation_date" class="form-control bg-dark text-white border-secondary" value="{{ today }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small fw-bold">Payment Method</label>
-                            <select name="preferred_payment_method" class="form-select bg-dark text-white border-secondary">
-                                <option value="cash" selected>Cash on Hand</option>
-                                <option value="gcash">Direct GCash</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer border-secondary">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-info fw-bold" id="btn-intake-submit"><i class="fas fa-save me-1"></i> Register Walk-in</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% include "dispatch/_customer_autocomplete.html" %}
 {% endblock %}
 
 {% block extra_js %}

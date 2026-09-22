@@ -36,6 +36,7 @@
 
         <form method="post" autocomplete="off" id="add-customer-form" novalidate>
             {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.GET.next|default:'' }}">
 
             <div class="form-section-label"><i class="fas fa-id-card me-1"></i> Basic Information</div>
 
@@ -271,7 +272,7 @@
             {% endif %}
 
             <div class="d-flex align-items-center justify-content-between gap-2 mt-4">
-                <a href="{% url 'customer_list' %}" class="btn-cancel text-nowrap text-center">Cancel</a>
+                <a href="{% if request.GET.next %}{{ request.GET.next }}{% else %}{% url 'customer_list' %}{% endif %}" class="btn-cancel text-nowrap text-center">Cancel</a>
                 <button type="submit" class="btn-submit text-nowrap"><i class="fas fa-save me-2"></i>Save Customer</button>
             </div>
         </form>

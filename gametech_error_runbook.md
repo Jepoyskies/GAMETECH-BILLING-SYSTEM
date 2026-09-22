@@ -1013,6 +1013,21 @@
 * **1-Step Fix**:
   * Remove `data-confirm` and native `confirm(...)` barriers from routine reversible actions like undispatching, enabling instant 1-click execution with dynamic loading spinners.
 
+### ERR-056: Redundant Walk-in Intake Modal in Stage 1 Verification Instead of Canonical Customer Form
+* **Symptoms**:
+  * Staff clicking "Intake Walk-in" on Stage 1 Verification (`/dispatch/pipeline/1-verification/`) were presented with a separate in-page modal (`#intakeWalkinModal`) that duplicated applicant registration fields.
+  * Submitting the modal failed for non-agent staff because the form action posted to `agent_add_prospect`, expecting an `agent_profile`.
+  * Non-technical users expected walk-in applicants to be processed through the unified CRM Customer Registration system (`/customers/add/`) rather than maintaining fragmented, competing applicant intake modals.
+* **Root Causes**:
+  * `1_verification.html` embedded an inline modal `#intakeWalkinModal` posting to `agent_add_prospect` instead of linking to the canonical `add_customer` view (`/customers/add/`).
+  * `add_customer` did not respect a `next` query/post parameter to return staff back to Stage 1 Verification after registration.
+* **Exact Target Files**:
+  * `dispatch/templates/dispatch/pipeline/1_verification.html` (Replaced modal trigger with direct link `<a href="{% url 'add_customer' %}?next={% url 'dispatch_verification' %}">` and removed redundant 70-line modal)
+  * `billing/views/customers/crud.py` (Added `next` redirect handler in `add_customer`)
+  * `billing/templates/billing/add_customer.html` (Added hidden `next` input and dynamic Cancel link)
+* **1-Step Fix**:
+  * Convert "Intake Walk-in" button into an anchor tag pointing to `{% url 'add_customer' %}?next={% url 'dispatch_verification' %}` and support `next` redirect in `add_customer`.
+
 ---
 
 ## 📝 How to Add a New Error Entry
