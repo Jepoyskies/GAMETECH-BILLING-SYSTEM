@@ -573,39 +573,35 @@
             }
         });
 
-        // Undispatch Action Handler
+        // Undispatch Action Handler (Immediate execution without confirmation popup)
         document.addEventListener('click', function(e) {
             const btn = e.target.closest('.btn-undispatch');
             if (btn) {
                 e.preventDefault();
                 const ticketId = btn.dataset.id;
-                const ticketNum = btn.dataset.number || ('#' + ticketId);
-                window.gametechConfirm({
-                    title: 'Undispatch Ticket?',
-                    text: `Are you sure you want to undispatch ${ticketNum}? It will be removed from its team and returned to Pending assignment.`,
-                    icon: 'warning',
-                    confirmButtonText: 'Yes, Undispatch',
-                    confirmButtonColor: '#f59e0b'
-                }).then(res => {
-                    if (!res.isConfirmed) return;
-                    fetch(`/dispatch/api/tickets/${ticketId}/undispatch/`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': csrftoken
-                        }
-                    })
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.success) {
-                            window.location.reload();
-                        } else {
-                            window.gametechConfirm({ title: 'Error', text: data.error || 'Failed to undispatch ticket.', icon: 'error', confirmButtonText: 'OK', confirmButtonColor: '#ef4444' });
-                        }
-                    })
-                    .catch(err => {
-                        window.gametechConfirm({ title: 'Network Error', text: String(err), icon: 'error', confirmButtonText: 'OK', confirmButtonColor: '#ef4444' });
-                    });
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Undispatching...';
+                fetch(`/dispatch/api/tickets/${ticketId}/undispatch/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-undo me-1"></i> Undispatch';
+                        alert('Error: ' + (data.error || 'Failed to undispatch ticket.'));
+                    }
+                })
+                .catch(err => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-undo me-1"></i> Undispatch';
+                    alert('Network Error: ' + String(err));
                 });
             }
         });
@@ -660,9 +656,6 @@
                 const currentCount = parseInt(btn.dataset.count || '0', 10);
                 if (currentCount >= 3) {
                     alert(`Maximum 3 contact attempts have already been logged for ${ticketNo}. Dispatcher can now mark client unreachable.`);
-                    return;
-                }
-                if (!confirm(`Log failed contact attempt for ${ticketNo}? (Attempt ${currentCount + 1} of 3)`)) {
                     return;
                 }
                 btn.disabled = true;
@@ -794,10 +787,6 @@
                 e.preventDefault();
                 const ticketId = btn.dataset.id;
                 const client = btn.dataset.client || 'customer';
-
-                if (!confirm(`Send portal login credentials via SMS to ${client}?`)) {
-                    return;
-                }
 
                 btn.disabled = true;
                 const originalHtml = btn.innerHTML;

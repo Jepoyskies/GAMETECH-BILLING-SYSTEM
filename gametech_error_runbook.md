@@ -997,6 +997,22 @@
 * **1-Step Fix**:
   * Replace the `<a href="{% url 'dispatch_assignment' %}">` redirect with `<button class="btn-open-assign">` so clicking "Dispatch" opens the crew assignment modal directly inside the console without page hopping.
 
+### ERR-055: Annoying Browser Confirmation Popups on Undispatch and Dispatch Operations
+* **Symptoms**:
+  * Staff clicking "Undispatch" on assigned/ongoing tickets received an annoying native browser confirmation prompt: `143.198.207.144 says: Undispatch ticket TKT-... and return to Pending assignment queue? [OK] [Cancel]`.
+  * Actions like logging failed calls ("No Answer") or sending welcome SMS triggered native browser `confirm(...)` modals, creating repetitive friction during high-volume operations.
+* **Root Causes**:
+  * `dispatch/templates/dispatch/pipeline/2_assignment.html` had `data-confirm="..."` on the undispatch form, which invoked `window.gametechConfirm`. When SweetAlert2 was unavailable or fallback triggered, it defaulted to native `window.confirm(...)`.
+  * `dispatch/templates/dispatch/_scripts.html` wrapped undispatch and contact attempts in `gametechConfirm` and `confirm(...)`.
+  * `dispatch_monitoring.html`, `internet_install.html`, `client_concerns.html`, `cignal_install.html`, and `3_tech_mobile.html` had inline `if (!confirm(...)) return;` checks.
+* **Exact Target Files**:
+  * `dispatch/templates/dispatch/pipeline/2_assignment.html` (Removed `data-confirm` on undispatch form)
+  * `dispatch/templates/dispatch/_scripts.html` (Converted undispatch, contact attempt, and welcome SMS to instant execution with button spinners)
+  * `dispatch/templates/dispatch/dispatch_monitoring.html`, `internet_install.html`, `client_concerns.html`, `cignal_install.html` (Removed `if (!confirm(...))` from undispatch clicks)
+  * `dispatch/templates/dispatch/pipeline/3_tech_mobile.html` (Removed `if (!confirm(...))` on No Answer)
+* **1-Step Fix**:
+  * Remove `data-confirm` and native `confirm(...)` barriers from routine reversible actions like undispatching, enabling instant 1-click execution with dynamic loading spinners.
+
 ---
 
 ## 📝 How to Add a New Error Entry
