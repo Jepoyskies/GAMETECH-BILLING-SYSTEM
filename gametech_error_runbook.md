@@ -964,20 +964,23 @@
   * Add `_add_agent_modal.html` and include it in `agents.html` so staff register agents in 1 click without leaving the page.
   * Consolidate table columns into a readable 6-column layout with a combined "Payout Status" indicator.
 
-### ERR-053: Missing Job Type Badges & Concern/Plan Context in Dispatch Pipeline (Pending & Ongoing Queues)
+### ERR-053: Missing Job Type Badges & Missing Complete Button in Stage 2 Ongoing Queue
 * **Symptoms**:
   * Staff viewing the Pending Queue or Ongoing / Dispatched Jobs in Stage 2 Crew Assignment (`/dispatch/pipeline/2-assignment/`), QA (`/dispatch/pipeline/4-qa/`), or Approval (`/dispatch/pipeline/5-approval/`) could not tell what type of pending/ongoing job a ticket was (Internet Install, Repair/Concern, Cignal Box, Relocation, Migration, Pull Out).
   * Ongoing ticket rows in Stage 2 only showed the customer name and address, completely omitting the package/plan or specific client concern.
+  * Staff had no button or action to mark an ongoing dispatched job as completed/finished from the Stage 2 table (only `Brief` and `Undispatch` were present).
 * **Root Causes**:
   * `2_assignment.html`, `4_qa.html`, and `5_approval.html` only rendered `ticket.ticket_number`, client name, and address, omitting `ticket.ticket_type` badges and `ticket.concern` / `ticket.plan_package`.
+  * `2_assignment.html` ongoing actions omitted the `.btn-open-complete` button wired to `#modal-complete-job`.
   * Inline badge duplication in `_queue_tabs.html` bloated the template over 400 lines without a reusable component.
 * **Exact Target Files**:
   * `dispatch/templates/dispatch/_ticket_type_badge.html` (Created canonical, DRY job type badge partial)
-  * `dispatch/templates/dispatch/pipeline/2_assignment.html` & `_assign_modals.html` (Added badge and concern/plan display to Tab 1 & Tab 2, modularized modals)
+  * `dispatch/templates/dispatch/pipeline/2_assignment.html` & `_assign_modals.html` (Added badge, concern/plan display, and `.btn-open-complete` action button, modularized modals)
   * `dispatch/templates/dispatch/pipeline/4_qa.html` & `5_approval.html` (Added badge and concern/plan display)
   * `dispatch/templates/dispatch/_queue_tabs.html` & `_tab_ticket_table.html` (Unified to use `_ticket_type_badge.html`)
 * **1-Step Fix**:
   * Create `_ticket_type_badge.html` and include it alongside `ticket.ticket_number` in all pipeline and queue templates.
+  * Add the green `Complete` button (`.btn-open-complete`) to Ongoing rows in `2_assignment.html` to invoke the `#modal-complete-job` technical completion popup.
   * Render `ticket.concern` or `ticket.plan_package` under the client name in Ongoing/Pending tables and assignment modals so dispatchers immediately understand job requirements.
 
 ---

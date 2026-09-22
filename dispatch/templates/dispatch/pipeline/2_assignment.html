@@ -251,6 +251,13 @@
                                         <i class="fas fa-phone me-1"></i>{{ ticket.contact_attempt_count }}/3
                                     </span>
                                     {% endif %}
+                                    <button type="button" class="btn btn-sm btn-success fw-bold btn-open-complete me-1 shadow-sm"
+                                            data-id="{{ ticket.id }}"
+                                            data-ticket="{{ ticket.ticket_number }}"
+                                            data-name="{{ ticket.client_name }}"
+                                            title="Mark Job Order as Finished / Completed">
+                                        <i class="fas fa-check-circle me-1"></i> Complete
+                                    </button>
                                     <button type="button" class="btn btn-sm btn-outline-info me-1" title="Copy Dispatch Brief for Techs / Group Chat" onclick="copyTicketBrief(this)"
                                         data-type="{{ ticket.get_ticket_type_display }}"
                                         data-client="{{ ticket.client_name }}"
@@ -265,7 +272,7 @@
                                         data-remarks="{% if ticket.special_instruction %}{{ ticket.special_instruction }}{% elif ticket.remarks %}{{ ticket.remarks }}{% endif %}">
                                         <i class="fas fa-copy me-1"></i> Brief
                                     </button>
-                                    <form action="{% url 'dispatch_undispatch' ticket.id %}" method="POST" class="d-inline" onsubmit="return confirm('Undispatch ticket {{ ticket.ticket_number }} and return to Pending assignment queue?');">
+                                    <form action="{% url 'dispatch_undispatch' ticket.id %}" method="POST" class="d-inline" data-confirm="Undispatch ticket {{ ticket.ticket_number }} and return to Pending assignment queue?">
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-sm btn-outline-warning" title="Undispatch (Return to Pending Queue)">
                                             <i class="fas fa-undo me-1"></i> Undispatch
