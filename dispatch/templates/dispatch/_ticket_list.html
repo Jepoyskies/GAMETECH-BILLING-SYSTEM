@@ -79,6 +79,16 @@
                         {% endfor %}
                     </select>
                 </div>
+                <div class="col-6 col-md-3">
+                    <label class="text-xs fw-semibold mb-1 d-block" style="color: #475569; text-transform: uppercase; letter-spacing: 0.06em;">Cancel Reason</label>
+                    <select name="cancellation_reason" class="form-select form-select-sm dispatch-filter-select" onchange="this.form.submit()">
+                        <option value="ALL" {% if cancellation_reason_filter == 'ALL' or not cancellation_reason_filter %}selected{% endif %}>All Reasons</option>
+                        <option value="no_contact" {% if cancellation_reason_filter == 'no_contact' %}selected{% endif %}>No Contact (Unreachable)</option>
+                        <option value="change_of_mind" {% if cancellation_reason_filter == 'change_of_mind' %}selected{% endif %}>Change of Mind</option>
+                        <option value="undecided" {% if cancellation_reason_filter == 'undecided' %}selected{% endif %}>Undecided</option>
+                        <option value="other" {% if cancellation_reason_filter == 'other' %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
                 <div class="col-6 col-md-3 d-flex align-items-end">
                     <a href="{% url 'dispatch_dashboard' %}" class="btn btn-sm w-100"
                        style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: #64748b; border-radius: 9px; font-size: 0.8rem;">
@@ -246,8 +256,10 @@
                                     <li><a class="dropdown-item text-warning btn-undispatch" href="#" data-id="{{ t.id }}" data-number="{{ t.ticket_number }}" style="font-size: 0.82rem;"><i class="fas fa-rotate-left me-2"></i>Undispatch</a></li>
                                     <li><hr class="dropdown-divider border-secondary my-1"></li>
                                     {% endif %}
+                                    {% if t.status != 'CANCELLED' %}
                                     <li><a class="dropdown-item btn-quick-status" href="#" data-id="{{ t.id }}" data-status="PENDING" style="font-size: 0.82rem;"><i class="fas fa-clock me-2" style="color: #22d3ee;"></i>Set Pending</a></li>
                                     <li><a class="dropdown-item btn-quick-status" href="#" data-id="{{ t.id }}" data-status="IN_PROGRESS" style="font-size: 0.82rem;"><i class="fas fa-spinner me-2" style="color: #60a5fa;"></i>Set In Progress</a></li>
+                                    {% endif %}
                                     <li><a class="dropdown-item btn-set-location" href="#" data-id="{{ t.id }}" data-name="{{ t.client_name }}" style="font-size: 0.82rem;"><i class="fas fa-location-dot me-2" style="color: #fbbf24;"></i>Update GPS Location</a></li>
                                     {% if t.ticket_type == 'INSTALLATION' %}
                                     <li><hr class="dropdown-divider border-secondary my-1"></li>

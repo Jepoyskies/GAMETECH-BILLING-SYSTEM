@@ -65,6 +65,7 @@ def dashboard_view(request):
     type_filter = request.GET.get('type', 'ALL')
     source_tab_filter = request.GET.get('source_tab', 'ALL')
     team_filter = request.GET.get('team', 'ALL')
+    cancellation_reason_filter = request.GET.get('cancellation_reason', 'ALL')
     search_q = request.GET.get('q', '').strip()
     date_filter = request.GET.get('date_range', 'all')
     date_from = request.GET.get('date_from', '').strip()
@@ -110,6 +111,8 @@ def dashboard_view(request):
             tickets_qs = tickets_qs.filter(source_tab=source_tab_filter)
     if team_filter != 'ALL' and team_filter.isdigit():
         tickets_qs = tickets_qs.filter(team_id=int(team_filter))
+    if cancellation_reason_filter != 'ALL':
+        tickets_qs = tickets_qs.filter(cancellation_reason=cancellation_reason_filter)
     if search_q:
         tickets_qs = tickets_qs.filter(
             Q(ticket_number__icontains=search_q) |
@@ -173,6 +176,7 @@ def dashboard_view(request):
         'type_filter': type_filter,
         'source_tab_filter': source_tab_filter,
         'team_filter': team_filter,
+        'cancellation_reason_filter': cancellation_reason_filter,
         'search_q': search_q,
         'date_filter': date_filter,
         'date_from': date_from,
@@ -419,6 +423,12 @@ def api_update_status(request, ticket_id):
         new_status = data.get('status')
         if new_status not in dict(JobTicket.STATUS_CHOICES):
             return JsonResponse({'success': False, 'error': 'Invalid status'}, status=400)
+            
+        if ticket.status == 'CANCELLED' and new_status != 'CANCELLED':
+            return JsonResponse({
+                'success': False,
+                'error': 'Cancelled tickets cannot be re-opened per dispatch policy. Please create a new ticket if the client returns.'
+            }, status=400)
             
         old_status = ticket.status
         ticket.status = new_status

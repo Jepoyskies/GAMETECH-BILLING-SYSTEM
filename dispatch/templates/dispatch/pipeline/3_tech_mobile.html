@@ -38,9 +38,32 @@
 
     <!-- Client Info Stacked Card -->
     <div class="gt-cl-card">
-        <h6 class="fw-bold text-info mb-3"><i class="fas fa-user-circle me-2"></i> Client Details</h6>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold text-info mb-0"><i class="fas fa-user-circle me-2"></i> Client Details</h6>
+            {% if ticket.ticket_type == 'INSTALLATION' %}
+            <span class="badge {% if ticket.contact_attempt_count >= 3 %}bg-danger{% elif ticket.contact_attempt_count > 0 %}bg-warning text-dark{% else %}bg-secondary{% endif %}" id="mobile-contact-badge">
+                <i class="fas fa-phone me-1"></i>{{ ticket.contact_attempt_count }}/3 Attempts
+            </span>
+            {% endif %}
+        </div>
         <div class="mb-3"><div class="text-muted small fw-bold text-uppercase">Name</div> <div class="fs-5">{{ ticket.client_name }}</div></div>
-        <div class="mb-3"><div class="text-muted small fw-bold text-uppercase">Contact</div> <a href="tel:{{ ticket.contact_number }}" class="fs-5 text-primary fw-bold text-decoration-none"><i class="fas fa-phone-alt me-2"></i>{{ ticket.contact_number }}</a></div>
+        <div class="mb-3">
+            <div class="text-muted small fw-bold text-uppercase">Contact</div>
+            <div class="d-flex gap-2 align-items-center mt-1">
+                <a href="tel:{{ ticket.contact_number }}" class="fs-5 text-primary fw-bold text-decoration-none flex-grow-1"><i class="fas fa-phone-alt me-2"></i>{{ ticket.contact_number|default:"No Phone" }}</a>
+                {% if ticket.ticket_type == 'INSTALLATION' and ticket.status != 'COMPLETED' and ticket.status != 'CANCELLED' and ticket.status != 'CLOSED' %}
+                <button type="button" class="btn btn-sm btn-outline-danger px-3 py-2 fw-bold" id="btn-mobile-no-answer"
+                        {% if ticket.contact_attempt_count >= 3 %}disabled{% endif %}>
+                    <i class="fas fa-phone-slash me-1"></i> {% if ticket.contact_attempt_count >= 3 %}Max 3/3{% else %}No Answer{% endif %}
+                </button>
+                {% endif %}
+            </div>
+            {% if ticket.ticket_type == 'INSTALLATION' and ticket.contact_attempt_count >= 3 %}
+            <div class="alert alert-danger py-2 px-3 mt-2 mb-0 small" id="mobile-unreachable-alert" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239,68,68,0.3);">
+                <i class="fas fa-exclamation-circle me-1"></i> <strong>Client Unreachable:</strong> 3 attempts reached. Please inform Dispatcher to mark unreachable.
+            </div>
+            {% endif %}
+        </div>
         <div class="mb-0"><div class="text-muted small fw-bold text-uppercase">Address</div> <div>{{ ticket.address }}</div></div>
     </div>
 
@@ -174,6 +197,68 @@ function copyPPPoE() {
             btn.innerHTML = '<i class="far fa-copy"></i> Copy';
             btn.classList.remove('text-success');
         }, 2000);
+    });
+}
+
+// Log failed contact attempt from mobile tech screen
+const btnNoAnswer = document.getElementById('btn-mobile-no-answer');
+if (btnNoAnswer) {
+    btnNoAnswer.addEventListener('click', function() {
+        if (!confirm("Log failed call to client? (Client did not answer)")) return;
+        btnNoAnswer.disabled = true;
+        btnNoAnswer.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Logging...';
+        
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        fetch('/dispatch/api/tickets/{{ ticket.id }}/contact-attempt/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const badge = document.getElementById('mobile-contact-badge');
+                if (badge) {
+                    badge.innerHTML = `<i class="fas fa-phone me-1"></i>${data.count}/3 Attempts`;
+                    badge.className = `badge ${data.count >= 3 ? 'bg-danger' : 'bg-warning text-dark'}`;
+                }
+                if (data.count >= 3) {
+                    btnNoAnswer.disabled = true;
+                    btnNoAnswer.innerHTML = '<i class="fas fa-phone-slash me-1"></i> Max 3/3';
+                    alert("3 attempts reached! Client is unreachable. Please notify the dispatcher.");
+                    window.location.reload();
+                } else {
+                    btnNoAnswer.disabled = false;
+                    btnNoAnswer.innerHTML = `<i class="fas fa-phone-slash me-1"></i> No Answer (${data.count}/3)`;
+                    alert(`Attempt ${data.count}/3 logged.`);
+                }
+            } else {
+                btnNoAnswer.disabled = false;
+                btnNoAnswer.innerHTML = '<i class="fas fa-phone-slash me-1"></i> No Answer';
+                alert(data.error || 'Failed to log attempt');
+            }
+        })
+        .catch(err => {
+            btnNoAnswer.disabled = false;
+            btnNoAnswer.innerHTML = '<i class="fas fa-phone-slash me-1"></i> No Answer';
+            alert('Error: ' + err);
+        });
     });
 }
 </script>

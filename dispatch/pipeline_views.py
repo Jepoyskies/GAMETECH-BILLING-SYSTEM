@@ -145,7 +145,7 @@ def dispatch_assignment(request):
         pass
 
     pending_tickets = JobTicket.objects.filter(status='PENDING').select_related('customer', 'team').prefetch_related('technicians').order_by('-created_at')
-    ongoing_tickets = JobTicket.objects.filter(status__in=['ASSIGNED', 'IN_PROGRESS']).select_related('customer', 'team').prefetch_related('technicians').order_by('-created_at')
+    ongoing_tickets = JobTicket.objects.filter(status__in=['ASSIGNED', 'IN_PROGRESS']).select_related('customer', 'team').prefetch_related('technicians').order_by('-contact_attempt_count', '-created_at')
     teams = Team.objects.all()
     technicians = Technician.objects.all()
     active_tab = request.GET.get('tab', 'pending')
