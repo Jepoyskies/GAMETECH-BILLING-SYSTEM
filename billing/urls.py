@@ -160,6 +160,7 @@ urlpatterns = [
     path("staff/roles/", views.manage_roles, name="manage_roles"),
     path("staff/add/", views.add_staff, name="add_staff"),
     path("staff/edit/<int:pk>/", views.edit_staff, name="edit_staff"),
+    path("staff/delete/<int:pk>/", views.delete_staff, name="delete_staff"),
     # Core UI & Placeholders
     path("profile/", views.profile_view, name="profile"),
     path("settings/", views.settings_view, name="settings"),

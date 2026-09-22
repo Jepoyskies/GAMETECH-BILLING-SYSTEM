@@ -112,9 +112,19 @@
             <td><span class="text-muted" style="font-size:0.82rem;">{{ staff.created_at|date:"M d, Y" }}</span></td>
             {% if request.user.role != 'Viewer' %}
             <td class="text-center">
-              <a href="{% url 'edit_staff' staff.id %}" class="btn-premium btn-p-primary" style="padding:6px 12px; font-size:0.8rem;" title="Edit Staff">
-                <i class="fas fa-edit"></i> Edit
-              </a>
+              <div class="d-flex justify-content-center align-items-center gap-1">
+                <a href="{% url 'edit_staff' staff.id %}" class="btn-premium btn-p-primary" style="padding:6px 12px; font-size:0.8rem;" title="Edit Staff">
+                  <i class="fas fa-edit"></i> Edit
+                </a>
+                {% if request.user.role == 'Admin' and staff.username != request.user.username %}
+                <form method="post" action="{% url 'delete_staff' staff.id %}" onsubmit="return confirm('Are you sure you want to delete staff member {{ staff.full_name }} ({{ staff.username }})? This action cannot be undone.');" style="display:inline;">
+                  {% csrf_token %}
+                  <button type="submit" class="btn-premium btn-p-danger" style="padding:6px 12px; font-size:0.8rem;" title="Delete Staff">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </form>
+                {% endif %}
+              </div>
             </td>
             {% endif %}
           </tr>

@@ -236,9 +236,21 @@
 
             <div class="d-flex align-items-center justify-content-between gap-2">
                 <a href="{% url 'staff_list' %}" class="btn-cancel">Cancel</a>
-                <button type="submit" class="btn-submit"><i class="fas fa-save me-2"></i>Save Changes</button>
+                <div class="d-flex align-items-center gap-2">
+                    {% if request.user.role == 'Admin' and staff.username != request.user.username %}
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="if(confirm('Are you sure you want to delete staff member {{ staff.full_name }} ({{ staff.username }})? This action cannot be undone.')) { document.getElementById('deleteStaffForm').submit(); }">
+                        <i class="fas fa-trash-alt me-1"></i> Delete Account
+                    </button>
+                    {% endif %}
+                    <button type="submit" class="btn-submit"><i class="fas fa-save me-2"></i>Save Changes</button>
+                </div>
             </div>
         </form>
+        {% if request.user.role == 'Admin' and staff.username != request.user.username %}
+        <form id="deleteStaffForm" method="post" action="{% url 'delete_staff' staff.id %}" style="display:none;">
+            {% csrf_token %}
+        </form>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

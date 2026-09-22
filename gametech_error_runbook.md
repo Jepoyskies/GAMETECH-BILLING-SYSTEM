@@ -852,6 +852,22 @@
   * Remove `{% empty %} <tr><td colspan="7">...</td></tr>` from inside the DataTables `<tbody>`.
   * Configure DataTables `language.emptyTable` and `language.zeroRecords` to render the empty state dynamically across all columns without DOM count mismatches.
 
+### ERR-048: Missing Staff Deletion Endpoint & Resurrect Bug
+* **Symptoms**:
+  * On `/staff/` (Staff & Admins directory), administrators were unable to delete staff accounts because only an "Edit" button was rendered.
+  * No `delete_staff` endpoint or view existed in the system.
+* **Root Causes**:
+  * The system previously only implemented `add_staff` and `edit_staff` without a deletion handler or delete button.
+  * In `staff_list`, Django `auth_user` records with `is_staff=True` or `is_superuser=True` are auto-synced into `SystemAdmin` records. Any deletion of `SystemAdmin` alone would cause the record to immediately reappear on the next page load if the underlying `auth_user` was not also deleted or stripped of `is_staff`.
+* **Exact Target Files**:
+  * `billing/views/staff.py` (`delete_staff`)
+  * `billing/urls.py` (`staff/delete/<int:pk>/`)
+  * `billing/templates/billing/staff_and_admins.html`
+  * `billing/templates/billing/edit_staff.html`
+* **1-Step Fix**:
+  * Implement `delete_staff` with self-deletion protection, atomic deletion of both `SystemAdmin` and `User` (or deactivation/staff revocation if restricted by immutable dispatch foreign keys), and session cache invalidation.
+  * Add confirmation-guarded Delete buttons in `staff_and_admins.html` actions column and `edit_staff.html` footer.
+
 ---
 
 ## 📝 How to Add a New Error Entry
