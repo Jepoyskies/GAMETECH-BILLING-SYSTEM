@@ -49,32 +49,56 @@ def dispatch_verification(request):
             customer.preferred_payment_method = payment_method
         customer.save()
         
-        # Create Job Ticket with Agent Handoff Snapshot
+        # Link existing ticket or create new Job Ticket
         pay_display = customer.get_preferred_payment_method_display()
         ticket_pay_method = (customer.preferred_payment_method or 'CASH').upper()
         if ticket_pay_method not in ['CASH', 'GCASH', 'BANK_TRANSFER', 'OTHER']:
             ticket_pay_method = 'CASH'
         
-        ticket = JobTicket.objects.create(
+        existing_ticket = JobTicket.objects.filter(
             customer=customer,
-            client_name=customer.full_name,
-            address=customer.address,
-            contact_number=customer.phone,
-            account_no=customer.pppoe_username,
-            plan_package=plan.name,
-            payment_method=ticket_pay_method,
-            mikrotik_device=mikrotik,
-            sales_agent=customer.agent,
-            is_test_data=getattr(customer, 'is_test_data', False),
-            scheduled_date=scheduled_date if scheduled_date else None,
-            scheduled_time=scheduled_time if scheduled_time else None,
             ticket_type='INSTALLATION',
-            status='PENDING',
-            source_tab='INTERNET_INSTALL',
-            remarks=f"Verified 6 Policy Guarantees. Scheduled: {scheduled_date or 'TBD'} ({scheduled_time or 'Anytime'}). Payment: {pay_display}.",
-            special_instruction=f"Payment Preference: {pay_display} | ID: {customer.id_type or 'None'} ({customer.masked_id_number or 'None'})",
-            created_by=request.user
-        )
+            status__in=['PENDING', 'ASSIGNED', 'IN_PROGRESS']
+        ).first()
+
+        if existing_ticket:
+            ticket = existing_ticket
+            ticket.client_name = customer.full_name
+            ticket.address = customer.address
+            ticket.contact_number = customer.phone
+            ticket.account_no = customer.pppoe_username
+            ticket.plan_package = plan.name
+            ticket.payment_method = ticket_pay_method
+            ticket.mikrotik_device = mikrotik
+            ticket.sales_agent = customer.agent
+            if scheduled_date:
+                ticket.scheduled_date = scheduled_date
+            if scheduled_time:
+                ticket.scheduled_time = scheduled_time
+            ticket.remarks = f"Verified 6 Policy Guarantees. Scheduled: {scheduled_date or 'TBD'} ({scheduled_time or 'Anytime'}). Payment: {pay_display}."
+            ticket.special_instruction = f"Payment Preference: {pay_display} | ID: {customer.id_type or 'None'} ({customer.masked_id_number or 'None'})"
+            ticket.save()
+        else:
+            ticket = JobTicket.objects.create(
+                customer=customer,
+                client_name=customer.full_name,
+                address=customer.address,
+                contact_number=customer.phone,
+                account_no=customer.pppoe_username,
+                plan_package=plan.name,
+                payment_method=ticket_pay_method,
+                mikrotik_device=mikrotik,
+                sales_agent=customer.agent,
+                is_test_data=getattr(customer, 'is_test_data', False),
+                scheduled_date=scheduled_date if scheduled_date else None,
+                scheduled_time=scheduled_time if scheduled_time else None,
+                ticket_type='INSTALLATION',
+                status='PENDING',
+                source_tab='INTERNET_INSTALL',
+                remarks=f"Verified 6 Policy Guarantees. Scheduled: {scheduled_date or 'TBD'} ({scheduled_time or 'Anytime'}). Payment: {pay_display}.",
+                special_instruction=f"Payment Preference: {pay_display} | ID: {customer.id_type or 'None'} ({customer.masked_id_number or 'None'})",
+                created_by=request.user
+            )
         
         # Log History transition
         JobTicketHistory.objects.create(
@@ -195,11 +219,17 @@ def technician_mobile_ui(request):
     Step 3: Mobile UI for Technicians to see jobs, start timer, 
     and fill physical form specs.
     """
-    try:
-        tech = request.user.technician
-    except:
-        messages.error(request, "You are not registered as a Technician.")
-        return redirect("dashboard")
+    tech = getattr(request.user, 'technician', None)
+    if not tech:
+        if request.user.is_staff or request.user.is_superuser:
+            tech_id = request.GET.get('tech_id')
+            if tech_id:
+                tech = Technician.objects.filter(id=tech_id).first()
+            if not tech:
+                tech = Technician.objects.first()
+        if not tech:
+            messages.error(request, "You are not registered as a Technician.")
+            return redirect("dispatch_dashboard")
         
     assigned_tickets = tech.job_tickets.filter(status__in=['ASSIGNED', 'IN_PROGRESS'])
     

@@ -728,12 +728,81 @@ def view_customer(request, customer_id):
     cignal_jobs_count = sum(1 for t in ticket_history if t.get("ticket_type") == 'CIGNAL')
     migration_jobs_count = sum(1 for t in ticket_history if t.get("ticket_type") == 'MIGRATION')
 
+    active_ticket = raw_tickets.filter(status__in=['PENDING', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'QA_PASSED']).first()
+    if not active_ticket and raw_tickets.exists():
+        active_ticket = raw_tickets.first()
+
+    agent_obj = customer.agent or (active_ticket.sales_agent if active_ticket else None)
+    has_agent = bool(agent_obj)
+    t_status = active_ticket.status if active_ticket else None
+
+    # Step states: 'pending', 'active', 'completed', or 'walkin' for agent
+    step1_status = 'completed' if has_agent else 'walkin'
+    step2_status = 'completed'  # Customer profile exists
+
+    if not active_ticket:
+        if customer.installation_status == 'installed':
+            step3_status = 'completed'
+            step4_status = 'completed'
+            step5_status = 'completed'
+            step6_status = 'completed' if customer.status == 'active' else 'active'
+        else:
+            step3_status = 'active'
+            step4_status = 'pending'
+            step5_status = 'pending'
+            step6_status = 'pending'
+    else:
+        if t_status == 'PENDING':
+            step3_status = 'active'
+            step4_status = 'pending'
+            step5_status = 'pending'
+            step6_status = 'pending'
+        elif t_status in ['ASSIGNED', 'IN_PROGRESS']:
+            step3_status = 'completed'
+            step4_status = 'active'
+            step5_status = 'pending'
+            step6_status = 'pending'
+        elif t_status == 'COMPLETED':
+            step3_status = 'completed'
+            step4_status = 'completed'
+            step5_status = 'active'
+            step6_status = 'pending'
+        elif t_status == 'QA_PASSED':
+            step3_status = 'completed'
+            step4_status = 'completed'
+            step5_status = 'completed'
+            step6_status = 'active'
+        elif t_status == 'COMPLETED_AND_VERIFIED':
+            step3_status = 'completed'
+            step4_status = 'completed'
+            step5_status = 'completed'
+            step6_status = 'completed'
+        else:
+            step3_status = 'completed'
+            step4_status = 'pending'
+            step5_status = 'pending'
+            step6_status = 'pending'
+
+    lifecycle_tracker = {
+        'has_agent': has_agent,
+        'agent_name': agent_obj.name if agent_obj else None,
+        'step1': step1_status,
+        'step2': step2_status,
+        'step3': step3_status,
+        'step4': step4_status,
+        'step5': step5_status,
+        'step6': step6_status,
+        'ticket': active_ticket,
+    }
+
     context = {
         "customer": customer,
         "plans": SubscriptionPlan.objects.all().order_by("price"),
         "payments": payments,
         "all_logs": all_logs,
         "ticket_history": ticket_history,
+        "active_ticket": active_ticket,
+        "lifecycle_tracker": lifecycle_tracker,
         "repair_count": repair_count,
         "total_tickets_count": len(ticket_history),
         "jobs_done_count": jobs_done_count,

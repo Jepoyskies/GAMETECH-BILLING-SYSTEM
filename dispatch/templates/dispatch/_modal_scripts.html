@@ -356,5 +356,156 @@
             executeDeleteRecord();
         }
     });
+
+    // 6. Open Complete Job Order Modal with Technician Confirmation Guard
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-open-complete');
+        if (!btn) return;
+        e.preventDefault();
+
+        const ticketId = btn.dataset.id;
+        const ticketNum = btn.dataset.ticket || ('#' + ticketId);
+        const clientName = btn.dataset.name || '';
+
+        const openModalFn = function(ticketData) {
+            const idEl = document.getElementById('complete-ticket-id');
+            if (idEl) idEl.value = ticketId;
+            const numEl = document.getElementById('complete-ticket-number');
+            if (numEl) numEl.innerText = ticketNum;
+            const nameEl = document.getElementById('complete-client-name');
+            if (nameEl) nameEl.innerText = clientName;
+
+            if (ticketData) {
+                const setVal = (id, val) => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = val || '';
+                };
+                setVal('comp-nap-port', ticketData.nap_port);
+                setVal('comp-pole-number', ticketData.pole_number);
+                setVal('comp-cable-length', ticketData.cable_length);
+                setVal('comp-nap-reading', ticketData.nap_reading);
+                setVal('comp-house-reading', ticketData.house_reading);
+                setVal('comp-signal-level', ticketData.signal_level);
+                setVal('comp-facility', ticketData.facility);
+                setVal('comp-ont-sn', ticketData.ont_modem_sn);
+                setVal('comp-acknowledged', ticketData.acknowledged_by);
+                setVal('comp-remarks', ticketData.technician_remarks);
+            }
+
+            const modalEl = document.getElementById('modal-complete-job');
+            if (modalEl && typeof bootstrap !== 'undefined') {
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+            }
+        };
+
+        // Fetch ticket details to check technician confirmation status
+        fetch('/dispatch/api/tickets/' + ticketId + '/')
+            .then(r => r.json())
+            .then(res => {
+                const ticketData = res.success ? res.ticket : null;
+                const isTechConfirmed = ticketData ? Boolean(ticketData.tech_confirmed) : false;
+
+                if (!isTechConfirmed) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            title: 'Technician Report Pending',
+                            html: `<p class="mb-2">Assigned field technicians have <strong>not yet submitted their completion report</strong> or optical signal readings for ticket <strong>${ticketNum}</strong>.</p><p class="text-xs text-muted mb-0">Are you sure you want to bypass technician confirmation and manually complete this job order?</p>`,
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonText: 'Yes, Override & Complete',
+                            cancelButtonText: 'Wait for Tech',
+                            confirmButtonColor: '#f59e0b',
+                            cancelButtonColor: '#475569',
+                            background: '#0f172a',
+                            color: '#f8fafc',
+                            customClass: {
+                                popup: 'border border-warning shadow-lg rounded-4'
+                            }
+                        }).then(result => {
+                            if (result.isConfirmed) {
+                                openModalFn(ticketData);
+                            }
+                        });
+                    } else if (confirm(`Field technicians have not yet confirmed completion for ticket ${ticketNum}. Are you sure you want to bypass and manually complete?`)) {
+                        openModalFn(ticketData);
+                    }
+                } else {
+                    openModalFn(ticketData);
+                }
+            })
+            .catch(err => {
+                console.warn('Error fetching ticket info:', err);
+                openModalFn(null);
+            });
+    });
+
+    // 7. Submit Complete Form
+    document.addEventListener('submit', function(e) {
+        if (e.target && e.target.id === 'form-complete-job') {
+            e.preventDefault();
+            const ticketId = document.getElementById('complete-ticket-id')?.value;
+            if (!ticketId) return;
+
+            const payload = {
+                nap_port: document.getElementById('comp-nap-port')?.value || '',
+                pole_number: document.getElementById('comp-pole-number')?.value || '',
+                cable_length: document.getElementById('comp-cable-length')?.value || '',
+                nap_reading: document.getElementById('comp-nap-reading')?.value || '',
+                house_reading: document.getElementById('comp-house-reading')?.value || '',
+                signal_level: document.getElementById('comp-signal-level')?.value || '',
+                facility: document.getElementById('comp-facility')?.value || '',
+                ont_modem_sn: document.getElementById('comp-ont-sn')?.value || '',
+                acknowledged_by: document.getElementById('comp-acknowledged')?.value || '',
+                technician_remarks: document.getElementById('comp-remarks')?.value || ''
+            };
+
+            fetch('/dispatch/api/tickets/' + ticketId + '/complete/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const modalEl = document.getElementById('modal-complete-job');
+                    if (modalEl && typeof bootstrap !== 'undefined') {
+                        const inst = bootstrap.Modal.getInstance(modalEl);
+                        if (inst) inst.hide();
+                    }
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            title: 'Job Completed!',
+                            text: data.message || 'Job order successfully submitted to QA Review.',
+                            icon: 'success',
+                            timer: 1800,
+                            showConfirmButton: false,
+                            background: '#0f172a',
+                            color: '#f8fafc'
+                        }).then(() => window.location.reload());
+                    } else {
+                        window.location.reload();
+                    }
+                } else {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            title: 'Error',
+                            text: data.error || 'Failed to complete job order.',
+                            icon: 'error',
+                            confirmButtonColor: '#ef4444',
+                            background: '#0f172a',
+                            color: '#f8fafc'
+                        });
+                    } else {
+                        alert('Error: ' + (data.error || 'Unknown error'));
+                    }
+                }
+            })
+            .catch(err => alert('Network error: ' + String(err)));
+        }
+    });
 })();
 </script>

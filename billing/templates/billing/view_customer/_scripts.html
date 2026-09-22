@@ -450,4 +450,99 @@ function cancelCustomerCignalAddon(requestId, addonType, isFromModal) {
         }
     });
 }
+
+// ─── Submit Quick Customer Repair Ticket ───
+document.addEventListener('submit', function(e) {
+    if (e.target && e.target.id === 'form-customer-repair') {
+        e.preventDefault();
+        const submitBtn = document.getElementById('btn-submit-customer-repair');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Submitting to Dispatch...';
+        }
+
+        const payload = {
+            customer_id: document.getElementById('cr-customer-id')?.value,
+            client_name: document.getElementById('cr-client-name')?.value,
+            contact_number: document.getElementById('cr-contact-number')?.value,
+            address: document.getElementById('cr-address')?.value,
+            barangay: document.getElementById('cr-barangay')?.value,
+            account_no: document.getElementById('cr-account-no')?.value,
+            plan_package: document.getElementById('cr-plan-package')?.value,
+            mikrotik_device_id: document.getElementById('cr-mikrotik-id')?.value || null,
+            latitude: document.getElementById('cr-latitude')?.value || null,
+            longitude: document.getElementById('cr-longitude')?.value || null,
+            ticket_type: document.getElementById('cr-ticket-type')?.value || 'REPAIR',
+            source_tab: 'CLIENT_CONCERNS',
+            priority: document.getElementById('cr-priority')?.value || 'NORMAL',
+            concern: document.getElementById('cr-concern')?.value || '',
+            remarks: document.getElementById('cr-remarks')?.value || '',
+        };
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken') || document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
+
+        fetch('/dispatch/api/tickets/create/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const modalEl = document.getElementById('modal-customer-repair');
+                if (modalEl && typeof bootstrap !== 'undefined') {
+                    const inst = bootstrap.Modal.getInstance(modalEl);
+                    if (inst) inst.hide();
+                }
+                Swal.fire({
+                    title: 'Ticket Dispatched!',
+                    text: `Job Order ${data.ticket_number} created and routed to Client Concerns queue.`,
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                    background: '#0f172a',
+                    color: '#f8fafc'
+                }).then(() => {
+                    window.location.reload();
+                });
+            } else {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Send to Dispatch Queue';
+                }
+                Swal.fire({
+                    title: 'Failed to Create Ticket',
+                    text: data.error || 'Unknown error occurred.',
+                    icon: 'error',
+                    background: '#0f172a',
+                    color: '#f8fafc'
+                });
+            }
+        })
+        .catch(err => {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Send to Dispatch Queue';
+            }
+            Swal.fire({ title: 'Network Error', text: String(err), icon: 'error' });
+        });
+    }
+});
 </script>

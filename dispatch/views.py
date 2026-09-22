@@ -307,6 +307,10 @@ def api_ticket_detail(request, ticket_id):
             'house_reading': ticket.house_reading,
             'technician_remarks': ticket.technician_remarks,
             'acknowledged_by': ticket.acknowledged_by,
+            'time_start': ticket.time_start.strftime('%b %d, %Y %I:%M %p') if ticket.time_start else None,
+            'time_accomplish': ticket.time_accomplish.strftime('%b %d, %Y %I:%M %p') if ticket.time_accomplish else None,
+            'done_at': ticket.done_at.strftime('%b %d, %Y %I:%M %p') if ticket.done_at else None,
+            'tech_confirmed': bool(ticket.time_accomplish or ticket.status in ['COMPLETED', 'QA_PASSED', 'COMPLETED_AND_VERIFIED'] or ticket.ont_modem_sn or ticket.nap_reading),
             # Customer & Mikrotik Links
             'customer_id': ticket.customer_id,
             'customer_name': ticket.customer.full_name if ticket.customer else None,
@@ -326,8 +330,6 @@ def api_create_ticket(request):
     try:
         data = json.loads(request.body.decode('utf-8')) if request.body else request.POST
         client_name = data.get('client_name', '').strip()
-        if not client_name:
-            return JsonResponse({'success': False, 'error': 'Client name is required.'}, status=400)
             
         agent_obj = None
         sales_agent_val = data.get('sales_agent')
@@ -355,6 +357,9 @@ def api_create_ticket(request):
                 'error': 'The selected customer could not be found in the database. Please select a valid customer.'
             }, status=400)
 
+        if not client_name:
+            client_name = cust.full_name
+
         is_test = getattr(cust, 'is_test_data', False)
         if not agent_obj and cust.agent:
             agent_obj = cust.agent
@@ -365,27 +370,46 @@ def api_create_ticket(request):
         if raw_pay_method not in ['CASH', 'GCASH', 'BANK_TRANSFER', 'OTHER']:
             raw_pay_method = 'CASH'
 
+        raw_ticket_type = data.get('ticket_type', 'INSTALLATION').upper()
+        # Automatically resolve source_tab based on ticket_type if not explicitly supplied
+        source_tab = data.get('source_tab')
+        if not source_tab:
+            if raw_ticket_type in ['REPAIR', 'RELOCATION', 'RECONNECTION', 'DISCONNECTION']:
+                source_tab = 'CLIENT_CONCERNS'
+            elif raw_ticket_type == 'CIGNAL':
+                source_tab = 'CIGNAL_PLAY'
+            else:
+                source_tab = 'INTERNET_INSTALL'
+
+        lat_val = data.get('latitude')
+        if not lat_val and cust.latitude:
+            lat_val = cust.latitude
+        lng_val = data.get('longitude')
+        if not lng_val and cust.longitude:
+            lng_val = cust.longitude
+
         ticket = JobTicket.objects.create(
             client_name=client_name,
-            address=data.get('address', '').strip(),
-            barangay=data.get('barangay', '').strip(),
-            contact_number=data.get('contact_number', '').strip(),
-            account_no=data.get('account_no', '').strip(),
+            address=data.get('address', '').strip() or (cust.address or ''),
+            barangay=data.get('barangay', '').strip() or (cust.barangay.name if cust.barangay else ''),
+            contact_number=data.get('contact_number', '').strip() or (cust.phone or ''),
+            account_no=data.get('account_no', '').strip() or (cust.pppoe_username or ''),
             sales_agent=agent_obj,
             is_test_data=is_test,
-            plan_package=data.get('plan_package', '').strip(),
+            plan_package=data.get('plan_package', '').strip() or (cust.plan.name if cust.plan else ''),
             payment_method=raw_pay_method,
-            ticket_type=data.get('ticket_type', 'INSTALLATION'),
+            ticket_type=raw_ticket_type,
+            source_tab=source_tab,
             priority=data.get('priority', 'NORMAL'),
             status='PENDING',
             concern=data.get('concern', '').strip(),
             remarks=data.get('remarks', '').strip(),
             special_instruction=data.get('special_instruction', '').strip(),
             created_by=request.user,
-            latitude=float(data.get('latitude')) if data.get('latitude') else None,
-            longitude=float(data.get('longitude')) if data.get('longitude') else None,
-            mikrotik_device_id=data.get('mikrotik_device_id') or None,
-            customer_id=data.get('customer_id') or None,
+            latitude=float(lat_val) if lat_val else None,
+            longitude=float(lng_val) if lng_val else None,
+            mikrotik_device_id=data.get('mikrotik_device_id') or cust.mikrotik_device_id,
+            customer_id=cust.id,
         )
         log_audit('CREATE', 'JobTicket', ticket.id, request.user, summary=f"Created {ticket.get_ticket_type_display()} ticket {ticket.ticket_number}")
         return JsonResponse({'success': True, 'ticket_id': ticket.id, 'ticket_number': ticket.ticket_number})
