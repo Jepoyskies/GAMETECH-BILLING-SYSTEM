@@ -116,6 +116,11 @@
                         {% elif t.sla_badge_level == 'amber' %}
                             <div class="mt-1"><span class="badge fw-bold" style="background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); font-size: 0.65rem;"><i class="fas fa-triangle-exclamation me-1"></i>24h+ SLA</span></div>
                         {% endif %}
+                        {% if t.status == 'CANCELLED' and t.cancellation_reason %}
+                            <div class="mt-1"><span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle" style="font-size: 0.62rem;">
+                                <i class="fas fa-ban me-1"></i>{{ t.get_cancellation_reason_display }}
+                            </span></div>
+                        {% endif %}
                     </td>
 
                     <!-- 2. Ticket # -->
@@ -244,6 +249,18 @@
                                     <li><a class="dropdown-item btn-quick-status" href="#" data-id="{{ t.id }}" data-status="PENDING" style="font-size: 0.82rem;"><i class="fas fa-clock me-2" style="color: #22d3ee;"></i>Set Pending</a></li>
                                     <li><a class="dropdown-item btn-quick-status" href="#" data-id="{{ t.id }}" data-status="IN_PROGRESS" style="font-size: 0.82rem;"><i class="fas fa-spinner me-2" style="color: #60a5fa;"></i>Set In Progress</a></li>
                                     <li><a class="dropdown-item btn-set-location" href="#" data-id="{{ t.id }}" data-name="{{ t.client_name }}" style="font-size: 0.82rem;"><i class="fas fa-location-dot me-2" style="color: #fbbf24;"></i>Update GPS Location</a></li>
+                                    {% if t.ticket_type == 'INSTALLATION' %}
+                                    <li><hr class="dropdown-divider border-secondary my-1"></li>
+                                    {% if t.status != 'CANCELLED' and t.status != 'COMPLETED' and t.status != 'CLOSED' %}
+                                    <li><a class="dropdown-item text-warning btn-log-contact-attempt" href="#" data-id="{{ t.id }}" data-ticket="{{ t.ticket_number }}" data-count="{{ t.contact_attempt_count }}" style="font-size: 0.82rem;"><i class="fas fa-phone-slash me-2"></i>No Answer ({{ t.contact_attempt_count }}/3)</a></li>
+                                    {% if t.contact_attempt_count >= 3 %}
+                                    <li><a class="dropdown-item text-danger btn-open-unreachable" href="#" data-id="{{ t.id }}" data-ticket="{{ t.ticket_number }}" data-client="{{ t.client_name }}" style="font-size: 0.82rem;"><i class="fas fa-ban me-2"></i>Mark Unreachable</a></li>
+                                    {% endif %}
+                                    {% endif %}
+                                    {% if t.customer and t.customer.phone %}
+                                    <li><a class="dropdown-item text-success btn-send-welcome-sms" href="#" data-id="{{ t.id }}" data-client="{{ t.client_name }}" style="font-size: 0.82rem;"><i class="fas fa-sms me-2"></i>Send Welcome SMS</a></li>
+                                    {% endif %}
+                                    {% endif %}
                                     <li><hr class="dropdown-divider border-secondary my-1"></li>
                                     <li><a class="dropdown-item text-danger btn-quick-status" href="#" data-id="{{ t.id }}" data-status="CANCELLED" style="font-size: 0.82rem;"><i class="fas fa-ban me-2"></i>Cancel Ticket</a></li>
                                     <li><a class="dropdown-item text-danger btn-delete-ticket" href="#" data-id="{{ t.id }}" data-number="{{ t.ticket_number }}" style="font-size: 0.82rem;"><i class="fas fa-trash-alt me-2"></i>Delete Ticket</a></li>

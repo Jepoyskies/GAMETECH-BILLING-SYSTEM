@@ -102,7 +102,15 @@
                                 <td style="max-width: 250px;">
                                     <div class="text-truncate" style="font-size: 0.78rem; color: #94a3b8;">{{ ticket.qa_notes|default:"No QA notes provided." }}</div>
                                 </td>
-                                <td class="text-end pe-3">
+                                <td class="text-end pe-3 text-nowrap">
+                                    {% if ticket.ticket_type == 'INSTALLATION' and ticket.customer and ticket.customer.phone %}
+                                    <button type="button" class="btn btn-sm btn-outline-success btn-send-welcome-sms me-2"
+                                            data-id="{{ ticket.id }}"
+                                            data-client="{{ ticket.client_name }}"
+                                            title="Send portal login credentials via SMS to customer">
+                                        <i class="fas fa-sms me-1"></i> Send Welcome SMS
+                                    </button>
+                                    {% endif %}
                                     <button class="btn btn-sm fw-semibold px-3" style="background: linear-gradient(135deg,#dc2626,#b91c1c); color: #fff; border: none; border-radius: 9px; font-size: 0.8rem;" data-bs-toggle="modal" data-bs-target="#approvalModal{{ ticket.id }}">
                                         <i class="fas fa-gavel me-1"></i> Review &amp; Decide
                                     </button>
@@ -192,7 +200,16 @@
                                         </div>
                                         <div class="modal-footer" style="border-top: 1px solid rgba(255,255,255,0.07); padding: 1rem 1.5rem; flex-direction: column; align-items: stretch; gap: 0.75rem;">
                                             <div class="d-flex justify-content-between align-items-center w-100">
-                                                <div class="d-flex gap-2">
+                                                <div class="d-flex gap-2 align-items-center">
+                                                    {% if ticket.ticket_type == 'INSTALLATION' and ticket.customer and ticket.customer.phone %}
+                                                    <button type="button" class="btn btn-sm fw-semibold px-3 btn-send-welcome-sms"
+                                                            data-id="{{ ticket.id }}"
+                                                            data-client="{{ ticket.client_name }}"
+                                                            style="background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); color: #4ade80; border-radius: 8px;"
+                                                            title="Send portal login credentials via SMS to customer">
+                                                        <i class="fas fa-sms me-1"></i> Send Welcome SMS
+                                                    </button>
+                                                    {% endif %}
                                                     <button type="button" class="btn btn-sm fw-semibold px-3" style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); color: #fbbf24; border-radius: 8px;" onclick="document.getElementById('adminAction{{ ticket.id }}').value='bounce_dispatch'; document.getElementById('approvalForm{{ ticket.id }}').submit();">
                                                         <i class="fas fa-undo-alt me-1"></i> Bounce to Dispatch
                                                     </button>
@@ -234,4 +251,5 @@
     </div>
 </div>
 {% include "dispatch/_slide_to_confirm.html" %}
+{% include "dispatch/_scripts.html" %}
 {% endblock %}

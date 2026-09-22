@@ -588,6 +588,190 @@
                 .catch(err => alert('Network error: ' + err));
             }
         });
+
+        // -------------------------------------------------------------
+        // FEATURE: No-Contact Escalation Workflow
+        // -------------------------------------------------------------
+        // 1. Log Contact Attempt (No Answer)
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.btn-log-contact-attempt');
+            if (btn) {
+                e.preventDefault();
+                const ticketId = btn.dataset.id;
+                const ticketNo = btn.dataset.ticket || ('#' + ticketId);
+                const currentCount = parseInt(btn.dataset.count || '0', 10);
+                if (currentCount >= 3) {
+                    alert(`Maximum 3 contact attempts have already been logged for ${ticketNo}. Dispatcher can now mark client unreachable.`);
+                    return;
+                }
+                if (!confirm(`Log failed contact attempt for ${ticketNo}? (Attempt ${currentCount + 1} of 3)`)) {
+                    return;
+                }
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Logging...';
+
+                fetch(`/dispatch/api/tickets/${ticketId}/contact-attempt/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        btn.dataset.count = data.count;
+                        const row = btn.closest('tr');
+                        if (row) {
+                            const badge = row.querySelector('[title="Contact attempts logged"]');
+                            if (badge) {
+                                badge.innerHTML = `<i class="fas fa-phone me-1"></i>${data.count}/3`;
+                                badge.className = `badge ${data.count >= 3 ? 'bg-danger' : 'bg-warning text-dark'} me-1`;
+                            }
+                        }
+                        if (data.count >= 3) {
+                            btn.disabled = true;
+                            btn.className = 'btn btn-sm btn-outline-danger ms-1 disabled';
+                            btn.innerHTML = '<i class="fas fa-phone-slash me-1"></i> 3 Attempts';
+                            showBriefToast(`Attempt 3/3 logged for ${ticketNo}. Client can now be marked unreachable.`);
+                            setTimeout(() => { window.location.reload(); }, 1200);
+                        } else {
+                            btn.disabled = false;
+                            btn.innerHTML = `<i class="fas fa-phone-slash me-1"></i> No Answer (${data.count}/3)`;
+                            showBriefToast(`Contact attempt ${data.count}/3 logged for ${ticketNo}.`);
+                        }
+                    } else {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-phone-slash me-1"></i> No Answer';
+                        alert('Error logging contact attempt: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(err => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-phone-slash me-1"></i> No Answer';
+                    alert('Network error: ' + err);
+                });
+            }
+        });
+
+        // 2. Open Mark Unreachable Modal
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.btn-open-unreachable');
+            if (btn) {
+                e.preventDefault();
+                const ticketId = btn.dataset.id;
+                const ticketNo = btn.dataset.ticket || ('#' + ticketId);
+                const clientName = btn.dataset.client || 'Subscriber';
+
+                const idInput = document.getElementById('unreachable-ticket-id');
+                const noSpan = document.getElementById('unreachable-ticket-number');
+                const nameSpan = document.getElementById('unreachable-client-name');
+                const reasonSelect = document.getElementById('unreachable-reason');
+
+                if (idInput) idInput.value = ticketId;
+                if (noSpan) noSpan.textContent = ticketNo;
+                if (nameSpan) nameSpan.textContent = clientName;
+                if (reasonSelect) reasonSelect.value = 'no_contact';
+
+                const modalEl = document.getElementById('modal-mark-unreachable');
+                if (modalEl) {
+                    const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                    modal.show();
+                }
+            }
+        });
+
+        // 3. Confirm Mark Unreachable
+        const btnConfirmUnreachable = document.getElementById('btn-confirm-unreachable');
+        if (btnConfirmUnreachable) {
+            btnConfirmUnreachable.addEventListener('click', function() {
+                const idInput = document.getElementById('unreachable-ticket-id');
+                const reasonSelect = document.getElementById('unreachable-reason');
+                if (!idInput || !idInput.value) return;
+
+                const ticketId = idInput.value;
+                const reason = reasonSelect ? reasonSelect.value : 'no_contact';
+
+                btnConfirmUnreachable.disabled = true;
+                btnConfirmUnreachable.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Closing...';
+
+                fetch(`/dispatch/api/tickets/${ticketId}/mark-unreachable/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({ reason: reason })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    btnConfirmUnreachable.disabled = false;
+                    btnConfirmUnreachable.innerHTML = '<i class="fas fa-ban me-1"></i> Close Ticket';
+                    if (data.success) {
+                        const modalEl = document.getElementById('modal-mark-unreachable');
+                        if (modalEl) {
+                            const modal = bootstrap.Modal.getInstance(modalEl);
+                            if (modal) modal.hide();
+                        }
+                        showBriefToast('Ticket cancelled: ' + data.reason_display);
+                        setTimeout(() => { window.location.reload(); }, 800);
+                    } else {
+                        alert('Error: ' + (data.error || 'Failed to mark ticket unreachable.'));
+                    }
+                })
+                .catch(err => {
+                    btnConfirmUnreachable.disabled = false;
+                    btnConfirmUnreachable.innerHTML = '<i class="fas fa-ban me-1"></i> Close Ticket';
+                    alert('Network error: ' + err);
+                });
+            });
+        }
+
+        // -------------------------------------------------------------
+        // FEATURE: Post-Installation Welcome SMS
+        // -------------------------------------------------------------
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.btn-send-welcome-sms');
+            if (btn) {
+                e.preventDefault();
+                const ticketId = btn.dataset.id;
+                const client = btn.dataset.client || 'customer';
+
+                if (!confirm(`Send portal login credentials via SMS to ${client}?`)) {
+                    return;
+                }
+
+                btn.disabled = true;
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Sending...';
+
+                fetch(`/dispatch/api/tickets/${ticketId}/send-welcome-sms/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        btn.disabled = true;
+                        btn.className = btn.className.replace('btn-outline-success', 'btn-success').replace('btn-primary', 'btn-success');
+                        btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Welcome SMS Sent';
+                        showBriefToast('Welcome SMS sent successfully to ' + client + '!');
+                    } else {
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtml;
+                        alert('SMS failed: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(err => {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                    alert('Network error: ' + err);
+                });
+            }
+        });
     });
 
     // ─────────────────────────────────────────────

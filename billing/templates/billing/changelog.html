@@ -40,8 +40,11 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush" id="list-tab" role="tablist" style="border-radius: 0 0 16px 16px; overflow: hidden; max-height: 70vh; overflow-y: auto;">
-                        <a class="list-group-item list-group-item-action active py-3 fw-semibold border-0" id="list-sep21-list" data-bs-toggle="list" href="#list-sep21" role="tab" style="font-size: 0.9rem;">
-                            September 21, 2026 <br><small class="text-white-50">Dispatch System Glass Overhaul, 4-Queue Parity, KPI Hero Cards</small>
+                        <a class="list-group-item list-group-item-action active py-3 fw-semibold border-0" id="list-sep22-list" data-bs-toggle="list" href="#list-sep22" role="tab" style="font-size: 0.9rem;">
+                            September 22, 2026 <br><small class="text-white-50">No-Contact Escalation, Unreachable Close &amp; Post-Install Welcome SMS</small>
+                        </a>
+                        <a class="list-group-item list-group-item-action py-3 fw-semibold border-0" id="list-sep21-list" data-bs-toggle="list" href="#list-sep21" role="tab" style="font-size: 0.9rem;">
+                            September 21, 2026 <br><small class="text-muted">Dispatch System Glass Overhaul, 4-Queue Parity, KPI Hero Cards</small>
                         </a>
                         <a class="list-group-item list-group-item-action py-3 fw-semibold border-0" id="list-sep19-list" data-bs-toggle="list" href="#list-sep19" role="tab" style="font-size: 0.9rem;">
                             September 19, 2026 <br><small class="text-muted">Zero-Latency Router Circuit Breaker, Speed Optimization, Seed Purge</small>
@@ -120,11 +123,80 @@
                 <div class="card-body p-4 p-lg-5">
                     <div class="tab-content" id="nav-tabContent">
                         
+                        <!-- SEPTEMBER 22 -->
+                        <div class="tab-pane fade show active" id="list-sep22" role="tabpanel" aria-labelledby="list-sep22-list">
+                            <h3 class="fw-bold mb-4 border-bottom pb-3" style="color: #1e3a8a;">
+                                September 22, 2026: No-Contact Escalation Protocol, Unreachable Close &amp; Post-Installation Welcome SMS
+                                <span class="badge bg-success ms-2 fs-6 align-middle" style="border-radius: 8px;">Latest Build</span>
+                            </h3>
+
+                            <p class="lead text-muted mb-4">Completed Sir Rogelio's dispatch workflow upgrades: formalizing technician-to-dispatcher client contact escalation for installation work orders with a 3-attempt limit and reason tracking, alongside 1-click customer portal credential dispatching via SMS complying with NTC no-link SMS regulations.</p>
+
+                            <div class="cl-dual-content">
+                                <!-- Tech View -->
+                                <div class="tech-content">
+                                    <div class="card border-0 mb-4" style="background:#f5f3ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#6d28d9;"><i class="fas fa-phone-slash me-2"></i> No-Contact Escalation Protocol</h5>
+                                            <ul class="mb-0">
+                                                <li><strong>JobTicket Schema Extension:</strong> Added <code>contact_attempt_count</code> (PositiveSmallIntegerField default 0) and <code>cancellation_reason</code> (CharField choices) to <code>JobTicket</code> with migration <code>0010</code>.</li>
+                                                <li><strong>Incremental Attempt Counter:</strong> Exposed <code>/dispatch/api/tickets/&lt;id&gt;/contact-attempt/</code> with max-3 guardrail and audit history logging each failed contact call.</li>
+                                                <li><strong>Reactive UI Counter Badge:</strong> Real-time <code>📞 X/3</code> badge (grey at 0, yellow at 1-2, red at 3) with dynamic DOM updates upon successful log.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <div class="card border-0 mb-4" style="background:#eff6ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#1d4ed8;"><i class="fas fa-ban me-2"></i> Unreachable Ticket Cancellation Modal</h5>
+                                            <ul class="mb-0">
+                                                <li><strong>Conditional Dispatcher Action:</strong> When attempts reach 3, the "Unreachable" action unlocks, opening <code>#modal-mark-unreachable</code>.</li>
+                                                <li><strong>Standardized Cancellation Reasons:</strong> Dispatchers choose from <code>no_contact</code> (Client Unreachable), <code>change_of_mind</code>, <code>undecided</code>, or <code>other</code>.</li>
+                                                <li><strong>Enforced Re-entry Rule:</strong> Clear notification that canceled tickets cannot be re-opened; a new ticket must be created by sales/dispatch if the client resurfaces.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <div class="card border-0 mb-4" style="background:#ecfdf5; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#047857;"><i class="fas fa-sms me-2"></i> Post-Installation Welcome SMS</h5>
+                                            <ul class="mb-0">
+                                                <li><strong>Credential SMS Delivery:</strong> Dispatcher/Admin triggers <code>/dispatch/api/tickets/&lt;id&gt;/send-welcome-sms/</code> directly from Stage 5 Approval or ticket tables.</li>
+                                                <li><strong>NTC Link-Free Compliance:</strong> SMS message body strictly avoids clickable HTTP/HTTPS links (which are filtered by Philippine telcos) and uses plain text instruction: <em>"type gametech.com.ph in your browser"</em>.</li>
+                                                <li><strong>Automatic Account Fallbacks:</strong> Automatically provisions PPPoE username, account number, and plain-text portal password to customer's mobile number via Semaphore.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Staff View -->
+                                <div class="staff-content" style="display: none;">
+                                    <div class="card border-0 mb-4" style="background:#fdf4ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3 text-primary"><i class="fas fa-phone-slash me-2"></i> 3-Attempt Contact Tracking for Techs</h5>
+                                            <p class="mb-0">When technicians arrive on-site and the client is not answering, they can simply tap "No Answer" up to 3 times. The ticket displays how many calls were made, keeping the dispatch team informed without back-and-forth messaging.</p>
+                                        </div>
+                                    </div>
+                                    <div class="card border-0 mb-4" style="background:#fef2f2; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3 text-danger"><i class="fas fa-ban me-2"></i> Clean Cancellation for Stalled Installs</h5>
+                                            <p class="mb-0">Once 3 failed attempts are reached, dispatchers can officially cancel the ticket with a specific reason (unreachable, undecided, or client changed their mind). If the client contacts support later, agents simply file a fresh ticket.</p>
+                                        </div>
+                                    </div>
+                                    <div class="card border-0 mb-4" style="background:#f0fdf4; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3 text-success"><i class="fas fa-sms me-2"></i> 1-Click Welcome SMS with Portal Credentials</h5>
+                                            <p class="mb-0">On final approval of newly installed subscribers, dispatchers can click "Send Welcome SMS" to immediately text the customer their portal username and password so they can view their bills and pay online right away.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- SEPTEMBER 21 -->
-                        <div class="tab-pane fade show active" id="list-sep21" role="tabpanel" aria-labelledby="list-sep21-list">
+                        <div class="tab-pane fade" id="list-sep21" role="tabpanel" aria-labelledby="list-sep21-list">
                             <h3 class="fw-bold mb-4 border-bottom pb-3" style="color: #1e3a8a;">
                                 September 21, 2026: Dispatch System Glass Overhaul, 4-Queue Parity &amp; High-Impact KPI Hero Cards
-                                <span class="badge bg-success ms-2 fs-6 align-middle" style="border-radius: 8px;">Latest Build</span>
                             </h3>
 
                             <p class="lead text-muted mb-4">Comprehensive dispatch architecture and visual overhaul: elevating the dispatch monitoring and queue sub-tabs into a unified glassmorphic operational suite. Standardized glass panel headers with pulsing realtime chips, unified 4-queue layout parity across Master Log, Internet Install, Cignal Play, and Client Concerns, high-impact KPI hero cards with colored progress bars and circular icon badges, and event-delegated ticket deletion handling.</p>

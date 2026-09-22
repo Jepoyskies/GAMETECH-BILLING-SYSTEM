@@ -1094,3 +1094,127 @@ def api_config_options_delete(request, option_id):
     return JsonResponse({'success': True, 'message': f'Option "{label}" deleted successfully.'})
 
 
+# ---------------------------------------------------------------------------
+# Feature: No-Contact Escalation Workflow
+# ---------------------------------------------------------------------------
+
+@login_required
+def api_log_contact_attempt(request, ticket_id):
+    """
+    POST /dispatch/api/tickets/<id>/contact-attempt/
+    Increments the contact_attempt_count (max 3) and writes a history note.
+    Available to technicians and dispatchers on the pipeline view.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+
+    ticket = get_object_or_404(JobTicket, id=ticket_id)
+    if ticket.contact_attempt_count >= 3:
+        return JsonResponse({'success': False, 'error': 'Maximum 3 contact attempts already logged.', 'count': 3})
+
+    ticket.contact_attempt_count = ticket.contact_attempt_count + 1
+    ticket.save(update_fields=['contact_attempt_count', 'updated_at'])
+
+    JobTicketHistory.objects.create(
+        job_ticket=ticket,
+        actor=request.user,
+        from_status=ticket.status,
+        to_status=ticket.status,
+        note=f"Contact attempt #{ticket.contact_attempt_count} logged by {request.user.get_full_name() or request.user.username}. Client did not respond."
+    )
+    log_audit('UPDATE', 'JobTicket', ticket.id, request.user,
+              summary=f"Contact attempt #{ticket.contact_attempt_count} logged for {ticket.ticket_number}")
+    return JsonResponse({'success': True, 'count': ticket.contact_attempt_count})
+
+
+@login_required
+def api_mark_unreachable(request, ticket_id):
+    """
+    POST /dispatch/api/tickets/<id>/mark-unreachable/
+    Cancels the ticket with a specified reason (no_contact, change_of_mind, undecided, other).
+    Intended for dispatchers after technician escalates a no-contact situation.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except (json.JSONDecodeError, Exception):
+        data = request.POST
+
+    reason = data.get('reason', 'no_contact')
+    valid_reasons = dict(JobTicket.CANCELLATION_REASON_CHOICES)
+    if reason not in valid_reasons:
+        return JsonResponse({'success': False, 'error': 'Invalid cancellation reason.'}, status=400)
+
+    ticket = get_object_or_404(JobTicket, id=ticket_id)
+    old_status = ticket.status
+    ticket.status = 'CANCELLED'
+    ticket.cancellation_reason = reason
+    ticket.save(update_fields=['status', 'cancellation_reason', 'updated_at'])
+
+    JobTicketHistory.objects.create(
+        job_ticket=ticket,
+        actor=request.user,
+        from_status=old_status,
+        to_status='CANCELLED',
+        note=f"Closed by dispatcher ({request.user.get_full_name() or request.user.username}): {valid_reasons[reason]}"
+    )
+    log_audit('UPDATE', 'JobTicket', ticket.id, request.user,
+              summary=f"Ticket {ticket.ticket_number} marked unreachable — {valid_reasons[reason]}")
+    return JsonResponse({'success': True, 'reason_display': valid_reasons[reason]})
+
+
+# ---------------------------------------------------------------------------
+# Feature: Post-Installation Welcome SMS
+# ---------------------------------------------------------------------------
+
+def _send_installation_welcome_sms(ticket):
+    """
+    Sends portal login credentials via SMS to the customer linked to the ticket.
+    No URL links included per NTC regulations (URLs are blocked in PH SMS).
+    """
+    customer = ticket.customer
+    if not customer or not customer.phone:
+        return False, "No customer or phone linked to this ticket."
+
+    login_id = customer.pppoe_username or customer.account_no or customer.phone
+    portal_pw = customer.portal_password or "(see dispatcher)"
+
+    msg = (
+        f"Welcome to Gametech Unli Fiber! "
+        f"For easy payment, billing statement, etc, access your portal online account.\n\n"
+        f"Your account info:\n"
+        f"Login: {login_id}\n"
+        f"Password: {portal_pw}\n"
+        f"Access site: type gametech.com.ph in your browser"
+    )
+    from billing.views import send_semaphore_sms
+    _, success = send_semaphore_sms(customer.phone, msg)
+    return success, msg
+
+
+@login_required
+def api_send_welcome_sms(request, ticket_id):
+    """
+    POST /dispatch/api/tickets/<id>/send-welcome-sms/
+    Manually triggered by dispatcher on Stage 5 Approval to send portal credentials SMS.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+
+    ticket = get_object_or_404(JobTicket, id=ticket_id)
+    success, result = _send_installation_welcome_sms(ticket)
+    if not success:
+        return JsonResponse({'success': False, 'error': result})
+
+    log_audit('ACTION', 'JobTicket', ticket.id, request.user,
+              summary=f"Welcome SMS sent to customer for ticket {ticket.ticket_number}")
+    JobTicketHistory.objects.create(
+        job_ticket=ticket,
+        actor=request.user,
+        from_status=ticket.status,
+        to_status=ticket.status,
+        note=f"Portal welcome SMS sent to {ticket.customer.phone} by {request.user.get_full_name() or request.user.username}"
+    )
+    return JsonResponse({'success': True, 'message': 'Welcome SMS sent successfully.'})

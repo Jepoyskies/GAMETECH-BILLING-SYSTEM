@@ -316,6 +316,12 @@ class JobTicket(models.Model):
         ('BANK_TRANSFER', 'Bank Transfer'),
         ('OTHER', 'Other'),
     )
+    CANCELLATION_REASON_CHOICES = (
+        ('no_contact', 'Client Unreachable (No Contact)'),
+        ('change_of_mind', 'Change of Mind'),
+        ('undecided', 'Undecided'),
+        ('other', 'Other'),
+    )
 
     ticket_number = models.CharField(max_length=50, unique=True, blank=True)
     ticket_type = models.CharField(max_length=30, choices=TICKET_TYPE_CHOICES, default='INSTALLATION')
@@ -381,6 +387,10 @@ class JobTicket(models.Model):
     payment_collected = models.CharField(max_length=50, blank=True, null=True)
     qa_notes = models.TextField(blank=True, null=True)
     qa_completed_at = models.DateTimeField(null=True, blank=True)
+
+    # No-Contact Escalation Workflow
+    contact_attempt_count = models.PositiveSmallIntegerField(default=0, help_text="Number of times technician tried to reach client (max 3)")
+    cancellation_reason = models.CharField(max_length=20, choices=CANCELLATION_REASON_CHOICES, null=True, blank=True)
 
     # Audit & Dispatcher Tracking
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='dispatched_tickets')

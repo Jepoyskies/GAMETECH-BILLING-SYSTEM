@@ -299,6 +299,13 @@
                                     {% endif %}
                                 </td>
                                 <td class="border-secondary text-end pe-3 text-nowrap">
+                                    {# Contact Attempt Counter Badge #}
+                                    {% if ticket.ticket_type == 'INSTALLATION' %}
+                                    <span class="badge {% if ticket.contact_attempt_count >= 3 %}bg-danger{% elif ticket.contact_attempt_count > 0 %}bg-warning text-dark{% else %}bg-secondary{% endif %} me-1"
+                                          title="Contact attempts logged">
+                                        <i class="fas fa-phone me-1"></i>{{ ticket.contact_attempt_count }}/3
+                                    </span>
+                                    {% endif %}
                                     <button type="button" class="btn btn-sm btn-outline-info me-1" title="Copy Dispatch Brief for Techs / Group Chat" onclick="copyTicketBrief(this)"
                                         data-type="{{ ticket.get_ticket_type_display }}"
                                         data-client="{{ ticket.client_name }}"
@@ -319,6 +326,24 @@
                                             <i class="fas fa-undo me-1"></i> Undispatch
                                         </button>
                                     </form>
+                                    {% if ticket.ticket_type == 'INSTALLATION' %}
+                                    <button type="button" class="btn btn-sm btn-outline-danger ms-1 btn-log-contact-attempt"
+                                            data-id="{{ ticket.id }}"
+                                            data-ticket="{{ ticket.ticket_number }}"
+                                            data-count="{{ ticket.contact_attempt_count }}"
+                                            title="Log a failed contact attempt (max 3 before escalating to dispatcher)">
+                                        <i class="fas fa-phone-slash me-1"></i> No Answer
+                                    </button>
+                                    {% if ticket.contact_attempt_count >= 3 %}
+                                    <button type="button" class="btn btn-sm btn-danger ms-1 btn-open-unreachable"
+                                            data-id="{{ ticket.id }}"
+                                            data-ticket="{{ ticket.ticket_number }}"
+                                            data-client="{{ ticket.client_name }}"
+                                            title="Mark client as unreachable and close ticket">
+                                        <i class="fas fa-ban me-1"></i> Unreachable
+                                    </button>
+                                    {% endif %}
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% empty %}
@@ -340,6 +365,7 @@
     </div>
 </div>
 
+{% include "dispatch/_modals.html" %}
 {% include "dispatch/_scripts.html" %}
 
 <script>
