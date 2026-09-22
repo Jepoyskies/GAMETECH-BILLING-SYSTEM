@@ -70,9 +70,37 @@
             </div>
             {% endif %}
           </div>
-          <div style="min-width: 140px; flex-shrink: 0;">
-            <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: #475569;">Concern / Package</div>
-            <div style="font-size: 0.8rem; color: #cbd5e1;">{{ t.concern|default:t.plan_package|default:"Standard Installation"|truncatechars:26 }}</div>
+          <div style="min-width: 150px; flex-shrink: 0;">
+            {% if t.ticket_type == 'INSTALLATION' %}
+            <span style="display:inline-flex; align-items:center; gap:5px; font-size:0.75rem; font-weight:700; background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3); border-radius:6px; padding:2px 8px;">
+              <i class="fas fa-network-wired" style="font-size:0.7rem;"></i> Internet Install
+            </span>
+            {% elif t.ticket_type == 'REPAIR' %}
+            <span style="display:inline-flex; align-items:center; gap:5px; font-size:0.75rem; font-weight:700; background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.3); border-radius:6px; padding:2px 8px;">
+              <i class="fas fa-tools" style="font-size:0.7rem;"></i> Repair / Concern
+            </span>
+            {% elif t.ticket_type == 'CIGNAL' %}
+            <span style="display:inline-flex; align-items:center; gap:5px; font-size:0.75rem; font-weight:700; background:rgba(168,85,247,0.15); color:#c084fc; border:1px solid rgba(168,85,247,0.3); border-radius:6px; padding:2px 8px;">
+              <i class="fas fa-satellite-dish" style="font-size:0.7rem;"></i> Cignal Box
+            </span>
+            {% elif t.ticket_type == 'RELOCATION' %}
+            <span style="display:inline-flex; align-items:center; gap:5px; font-size:0.75rem; font-weight:700; background:rgba(99,102,241,0.15); color:#818cf8; border:1px solid rgba(99,102,241,0.3); border-radius:6px; padding:2px 8px;">
+              <i class="fas fa-map-marker-alt" style="font-size:0.7rem;"></i> Relocation
+            </span>
+            {% elif t.ticket_type == 'MIGRATION' %}
+            <span style="display:inline-flex; align-items:center; gap:5px; font-size:0.75rem; font-weight:700; background:rgba(6,182,212,0.15); color:#22d3ee; border:1px solid rgba(6,182,212,0.3); border-radius:6px; padding:2px 8px;">
+              <i class="fas fa-bolt" style="font-size:0.7rem;"></i> Migration
+            </span>
+            {% elif t.ticket_type == 'PULL_OUT' %}
+            <span style="display:inline-flex; align-items:center; gap:5px; font-size:0.75rem; font-weight:700; background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3); border-radius:6px; padding:2px 8px;">
+              <i class="fas fa-plug" style="font-size:0.7rem;"></i> Pull Out
+            </span>
+            {% else %}
+            <span style="display:inline-flex; align-items:center; gap:5px; font-size:0.75rem; font-weight:700; background:rgba(100,116,139,0.15); color:#94a3b8; border:1px solid rgba(100,116,139,0.3); border-radius:6px; padding:2px 8px;">
+              <i class="fas fa-tag" style="font-size:0.7rem;"></i> {{ t.get_ticket_type_display|default:"Standard" }}
+            </span>
+            {% endif %}
+            <div style="font-size: 0.78rem; color: #cbd5e1; margin-top:2px;">{{ t.concern|default:t.plan_package|default:"Standard Request"|truncatechars:26 }}</div>
           </div>
           <div style="min-width: 110px; flex-shrink: 0;">
             <span class="status-badge status-pending">Pending Dispatch</span>
@@ -160,11 +188,44 @@
             <div class="fw-bold font-monospace" style="font-size: 0.8rem; color: #38bdf8;">{{ t.ticket_number }}</div>
             <span class="status-badge" style="background: rgba(6,182,212,0.12); color: #22d3ee; border: 1px solid rgba(6,182,212,0.25);">{{ t.get_status_display }}</span>
           </div>
-          <div style="flex: 1 1 220px; min-width: 180px;">
+          <div style="flex: 1 1 200px; min-width: 170px;">
             <div class="fw-bold" style="font-size: 0.88rem; color: #f1f5f9;">{{ t.client_name }}</div>
             <div style="font-size: 0.76rem; color: #64748b;">{{ t.address|truncatechars:38 }}</div>
           </div>
-          <div style="min-width: 130px; flex-shrink: 0;">
+          <!-- Clear Job Type Badge -->
+          <div style="min-width: 150px; flex-shrink: 0;">
+            {% if t.ticket_type == 'INSTALLATION' %}
+            <span style="display:inline-flex; align-items:center; gap:5px; font-size:0.75rem; font-weight:700; background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3); border-radius:6px; padding:2px 8px;">
+              <i class="fas fa-network-wired" style="font-size:0.7rem;"></i> Internet Install
+            </span>
+            {% elif t.ticket_type == 'REPAIR' %}
+            <span style="display:inline-flex; align-items:center; gap:5px; font-size:0.75rem; font-weight:700; background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.3); border-radius:6px; padding:2px 8px;">
+              <i class="fas fa-tools" style="font-size:0.7rem;"></i> Repair / Concern
+            </span>
+            {% elif t.ticket_type == 'CIGNAL' %}
+            <span style="display:inline-flex; align-items:center; gap:5px; font-size:0.75rem; font-weight:700; background:rgba(168,85,247,0.15); color:#c084fc; border:1px solid rgba(168,85,247,0.3); border-radius:6px; padding:2px 8px;">
+              <i class="fas fa-satellite-dish" style="font-size:0.7rem;"></i> Cignal Box
+            </span>
+            {% elif t.ticket_type == 'RELOCATION' %}
+            <span style="display:inline-flex; align-items:center; gap:5px; font-size:0.75rem; font-weight:700; background:rgba(99,102,241,0.15); color:#818cf8; border:1px solid rgba(99,102,241,0.3); border-radius:6px; padding:2px 8px;">
+              <i class="fas fa-map-marker-alt" style="font-size:0.7rem;"></i> Relocation
+            </span>
+            {% elif t.ticket_type == 'MIGRATION' %}
+            <span style="display:inline-flex; align-items:center; gap:5px; font-size:0.75rem; font-weight:700; background:rgba(6,182,212,0.15); color:#22d3ee; border:1px solid rgba(6,182,212,0.3); border-radius:6px; padding:2px 8px;">
+              <i class="fas fa-bolt" style="font-size:0.7rem;"></i> Migration
+            </span>
+            {% elif t.ticket_type == 'PULL_OUT' %}
+            <span style="display:inline-flex; align-items:center; gap:5px; font-size:0.75rem; font-weight:700; background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3); border-radius:6px; padding:2px 8px;">
+              <i class="fas fa-plug" style="font-size:0.7rem;"></i> Pull Out
+            </span>
+            {% else %}
+            <span style="display:inline-flex; align-items:center; gap:5px; font-size:0.75rem; font-weight:700; background:rgba(100,116,139,0.15); color:#94a3b8; border:1px solid rgba(100,116,139,0.3); border-radius:6px; padding:2px 8px;">
+              <i class="fas fa-tag" style="font-size:0.7rem;"></i> {{ t.get_ticket_type_display|default:"Standard" }}
+            </span>
+            {% endif %}
+            <div style="font-size:0.74rem; color:#94a3b8; margin-top:2px;">{{ t.concern|default:t.plan_package|truncatechars:24 }}</div>
+          </div>
+          <div style="min-width: 120px; flex-shrink: 0;">
             <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: #475569;">Assigned Unit</div>
             {% if t.team %}
             <span style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; font-weight:700; background:rgba(59,130,246,0.1); color:#60a5fa; border:1px solid rgba(59,130,246,0.25); border-radius:6px; padding:2px 8px;">
@@ -184,9 +245,11 @@
                     data-id="{{ t.id }}" data-number="{{ t.ticket_number }}" title="Undispatch (Return to Pending Queue)">
               <i class="fas fa-undo"></i> Undispatch
             </button>
-            <a href="{% url 'dispatch_qa' %}?q={{ t.ticket_number }}" class="dispatch-action-btn dispatch-action-btn-green" title="Complete & QA">
+            <button type="button" class="dispatch-action-btn dispatch-action-btn-green btn-open-complete"
+                    data-id="{{ t.id }}" data-ticket="{{ t.ticket_number }}" data-name="{{ t.client_name }}"
+                    title="Complete Job Order">
               <i class="fas fa-check-circle"></i> Complete
-            </a>
+            </button>
           </div>
         </div>
         {% endfor %}
@@ -197,9 +260,15 @@
             <div style="font-size: 0.78rem; color: #64748b;">{{ r.date|date:"M d, Y" }}</div>
             <span class="status-badge" style="background: rgba(6,182,212,0.12); color: #22d3ee; border: 1px solid rgba(6,182,212,0.25);">Ongoing</span>
           </div>
-          <div style="flex: 1 1 220px; min-width: 180px;">
+          <div style="flex: 1 1 200px; min-width: 170px;">
             <div class="fw-bold" style="font-size: 0.88rem; color: #f1f5f9;">{{ r.client_name }}</div>
             <div style="font-size: 0.76rem; color: #64748b;">{{ r.address|truncatechars:38 }}</div>
+          </div>
+          <div style="min-width: 140px; flex-shrink: 0;">
+            <span style="display:inline-flex; align-items:center; gap:4px; font-size:0.72rem; font-weight:700; background:rgba(59,130,246,0.12); color:#60a5fa; border:1px solid rgba(59,130,246,0.25); border-radius:6px; padding:2px 8px;">
+              <i class="fas fa-clipboard-list" style="font-size:0.65rem;"></i> {{ r.get_tab_type_display|default:"Direct Log" }}
+            </span>
+            <div style="font-size:0.74rem; color:#94a3b8; margin-top:2px;">{{ r.concern|truncatechars:24 }}</div>
           </div>
           <div style="min-width: 130px; flex-shrink: 0;">
             <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: #475569;">Teams</div>

@@ -222,10 +222,30 @@
             <form id="form-create-ticket">
                 <div class="modal-body">
                     <input type="hidden" name="customer_id" id="create-customer-id">
+
+                    <!-- Customer Connection Status -->
+                    <div id="customer-link-status" class="p-3 mb-3 rounded-3" style="background: rgba(30,41,59,0.7); border: 1px dashed #64748b;">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge rounded-circle p-2" id="cust-link-badge" style="background: rgba(239,68,68,0.2); color: #f87171;">
+                                    <i class="fas fa-user-times" id="cust-link-icon"></i>
+                                </span>
+                                <div>
+                                    <div class="fw-bold" id="cust-link-title" style="font-size: 0.88rem; color: #f87171;">No Customer Linked</div>
+                                    <div class="text-muted" id="cust-link-sub" style="font-size: 0.76rem;">Search and click a registered customer below. All details will autofill automatically.</div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="cust-link-clear-btn" style="display: none; font-size: 0.75rem;">
+                                <i class="fas fa-sync-alt me-1"></i> Change
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label class="form-label text-sm fw-bold">Client / Subscriber Name *</label>
-                            <input type="text" class="form-control bg-dark border-secondary text-white" id="create-client-name" name="client_name" required placeholder="Full Name" data-customer-autocomplete data-submit-button="#btn-create-ticket-submit">
+                            <input type="text" class="form-control bg-dark border-secondary text-white" id="create-client-name" name="client_name" required placeholder="Search customer name or phone..." data-customer-autocomplete data-submit-button="#btn-create-ticket-submit" autocomplete="off">
+                            <div class="text-xs text-info mt-1"><i class="fas fa-info-circle me-1"></i>Start typing to search existing customer accounts</div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label text-sm fw-bold">Contact Phone *</label>
@@ -236,18 +256,18 @@
                     <div class="row g-3 mb-3">
                         <div class="col-md-8">
                             <label class="form-label text-sm fw-bold">Address / Street *</label>
-                            <input type="text" class="form-control bg-dark border-secondary text-white" id="create-address" required placeholder="House #, Street, Zone">
+                            <input type="text" class="form-control bg-dark border-secondary text-white" id="create-address" name="address" required placeholder="House #, Street, Zone">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label text-sm fw-bold">Barangay</label>
-                            <input type="text" class="form-control bg-dark border-secondary text-white" id="create-barangay" placeholder="e.g. Carmen">
+                            <input type="text" class="form-control bg-dark border-secondary text-white" id="create-barangay" name="barangay" placeholder="e.g. Carmen">
                         </div>
                     </div>
 
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
                             <label class="form-label text-sm fw-bold">Ticket Type</label>
-                            <select class="form-select bg-dark border-secondary text-white" id="create-ticket-type">
+                            <select class="form-select bg-dark border-secondary text-white" id="create-ticket-type" name="ticket_type">
                                 <option value="INSTALLATION">New Installation</option>
                                 <option value="REPAIR">Repair / Concern</option>
                                 <option value="CIGNAL">Cignal Play / Box</option>
@@ -258,7 +278,7 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label text-sm fw-bold">Priority</label>
-                            <select class="form-select bg-dark border-secondary text-white" id="create-priority">
+                            <select class="form-select bg-dark border-secondary text-white" id="create-priority" name="priority">
                                 <option value="NORMAL" selected>Normal</option>
                                 <option value="HIGH">High</option>
                                 <option value="URGENT">Urgent (Outage / SLA)</option>
@@ -267,14 +287,14 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label text-sm fw-bold">Plan Package</label>
-                            <input type="text" class="form-control bg-dark border-secondary text-white" id="create-plan-package" placeholder="e.g. Fiber Unli 1499">
+                            <input type="text" class="form-control bg-dark border-secondary text-white" id="create-plan-package" name="plan_package" placeholder="e.g. Fiber Unli 1499">
                         </div>
                     </div>
 
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label class="form-label text-sm fw-bold">MikroTik Router</label>
-                            <select class="form-select bg-dark border-secondary text-white" id="create-mikrotik-device">
+                            <select class="form-select bg-dark border-secondary text-white" id="create-mikrotik-device" name="mikrotik_device_id">
                                 <option value="">-- None / Unassigned --</option>
                                 {% for dev in mikrotik_devices %}
                                 <option value="{{ dev.id }}">{{ dev.device_name }} ({{ dev.ip_address }})</option>
@@ -283,22 +303,24 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label text-sm fw-bold">Latitude</label>
-                            <input type="number" step="any" class="form-control bg-dark border-secondary text-white font-monospace" id="create-latitude" placeholder="8.4822">
+                            <input type="number" step="any" class="form-control bg-dark border-secondary text-white font-monospace" id="create-latitude" name="latitude" placeholder="8.4822">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label text-sm fw-bold">Longitude</label>
-                            <input type="number" step="any" class="form-control bg-dark border-secondary text-white font-monospace" id="create-longitude" placeholder="124.6472">
+                            <input type="number" step="any" class="form-control bg-dark border-secondary text-white font-monospace" id="create-longitude" name="longitude" placeholder="124.6472">
                         </div>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label text-sm fw-bold">Concern / Job Description</label>
-                        <textarea class="form-control bg-dark border-secondary text-white" id="create-concern" rows="2" placeholder="Describe the installation requirements or reported technical concern..."></textarea>
+                        <textarea class="form-control bg-dark border-secondary text-white" id="create-concern" name="concern" rows="2" placeholder="Describe the installation requirements or reported technical concern..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer border-secondary">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary" id="btn-create-ticket-submit"><i class="fas fa-plus-circle me-1"></i> Create Ticket</button>
+                    <button type="submit" class="btn btn-primary" id="btn-create-ticket-submit" disabled title="Please search and select a customer first">
+                        <i class="fas fa-plus-circle me-1"></i> Create Ticket
+                    </button>
                 </div>
             </form>
         </div>

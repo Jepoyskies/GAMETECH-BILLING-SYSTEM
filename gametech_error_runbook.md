@@ -908,11 +908,40 @@
 
 ---
 
+### ERR-051: Staff Edit 404 on User ID, Native confirm() Browser Popups, and Dispatch Pipeline Redirect
+* **Symptoms**:
+  * Clicking "Edit" on staff accounts in `/dispatch/management/` returned 404 Not Found (`/staff/edit/11/`).
+  * Deleting staff members, tickets, or teams showed ugly native browser alert windows (`143.198.207.144 says: Are you sure...?`).
+  * Staff looking at Ongoing and Pending dispatch ticket rows could not tell what type of job was ongoing (Repair, Install, Cignal, Relocation).
+  * Clicking "Complete" on an ongoing ticket row navigated away from the monitoring console to a duplicate-looking pipeline stage (`pipeline/4-qa/?q=TKT-...`).
+  * Creating a job ticket allowed unlinked entries or failed to autofill customer details upon selection.
+* **Root Causes**:
+  * `edit_staff` queried `SystemAdmin` by `pk=pk` without falling back to `User` ID, causing 404s when editing users whose `SystemAdmin` record was missing or keyed by a different ID.
+  * Native JavaScript `confirm(...)` was used inline across templates instead of the project's SweetAlert2 design system.
+  * In `_queue_tabs.html`, the "Complete" button was linked via `href="{% url 'dispatch_qa' %}?q=..."` rather than opening the in-page completion modal (`.btn-open-complete`).
+  * Input elements in `#form-create-ticket` lacked `name` attributes matching autocomplete target selectors, preventing automatic population.
+* **Exact Target Files**:
+  * `billing/views/staff.py` (`edit_staff`, `delete_staff` dual ID resolution)
+  * `billing/templates/billing/base/_scripts.html` (Added `window.gametechConfirm` helper & form interceptor)
+  * `billing/templates/billing/staff_and_admins.html` & `billing/templates/billing/edit_staff.html`
+  * `dispatch/templates/dispatch/_management_accounts.html` & `_management_scripts.html`
+  * `dispatch/templates/dispatch/_queue_tabs.html` (Added Job Type badges, wired Complete button to in-place modal)
+  * `dispatch/templates/dispatch/_modals.html` & `_customer_autocomplete.html` (Full customer autofill & mandatory linking)
+  * `dispatch/views.py` (`api_create_ticket` customer validation)
+* **1-Step Fix**:
+  * Update `edit_staff` to resolve by `SystemAdmin.id` or `User.id` and auto-sync missing records.
+  * Replace all `confirm(...)` calls with `window.gametechConfirm` SweetAlert2 dialogs.
+  * Replace the pipeline redirect on the Complete button with in-page modal invocation (`.btn-open-complete`).
+  * Ensure full customer selection autofill (phone, address, barangay, plan, router, GPS) and block job order creation without selecting a valid CRM customer.
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 1. Assign a new `ERR-XXX` identifier.
 2. Fill in: **Symptoms**, **Root Causes**, **Exact Target Files**, and **1-Step Fix**.
 3. Keep entries short, actionable, and sniper-focused.
+
 
 
 

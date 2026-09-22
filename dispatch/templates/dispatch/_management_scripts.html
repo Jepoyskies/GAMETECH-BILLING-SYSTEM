@@ -299,68 +299,95 @@ document.addEventListener('DOMContentLoaded', function() {
 // 6. Delete Functions with Confirmation Prompts
 // -----------------------------------------------------------------
 function deleteConfigOption(id, label) {
-    if (!confirm(`Are you sure you want to delete the option "${label}"?`)) return;
-
-    fetch(`/dispatch/api/config-options/${id}/delete/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        }
-    })
-    .then(res => res.json())
-    .then(res => {
-        if (res.status === 'success' || res.success) {
-            const row = document.getElementById(`config-row-${id}`);
-            if (row) row.remove();
-        } else {
-            alert('Error deleting option: ' + (res.error || 'Unknown error'));
-        }
-    })
-    .catch(err => alert('Network error: ' + err));
+    window.gametechConfirm({
+        title: 'Delete Option?',
+        text: `Are you sure you want to delete the option "${label}"?`,
+        icon: 'warning',
+        confirmButtonText: 'Yes, Delete',
+        confirmButtonColor: '#ef4444'
+    }).then(res => {
+        if (!res.isConfirmed) return;
+        fetch(`/dispatch/api/config-options/${id}/delete/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.status === 'success' || res.success) {
+                const row = document.getElementById(`config-row-${id}`);
+                if (row) row.remove();
+            } else {
+                window.gametechConfirm({ title: 'Error', text: res.error || 'Failed to delete option.', icon: 'error', confirmButtonText: 'OK', confirmButtonColor: '#ef4444' });
+            }
+        })
+        .catch(err => {
+            window.gametechConfirm({ title: 'Network Error', text: String(err), icon: 'error', confirmButtonText: 'OK', confirmButtonColor: '#ef4444' });
+        });
+    });
 }
 
 function deleteTeam(id, name) {
-    if (!confirm(`Are you sure you want to delete team "${name}"? Technicians belonging to this team will become unassigned.`)) return;
-
-    fetch(`/dispatch/api/teams/${id}/delete/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        }
-    })
-    .then(res => res.json())
-    .then(res => {
-        if (res.success) {
-            const row = document.getElementById(`team-row-${id}`);
-            if (row) row.remove();
-        } else {
-            alert('Error deleting team: ' + (res.error || 'Unknown error'));
-        }
-    })
-    .catch(err => alert('Network error: ' + err));
+    window.gametechConfirm({
+        title: 'Delete Team?',
+        text: `Are you sure you want to delete team "${name}"? Technicians belonging to this team will become unassigned.`,
+        icon: 'warning',
+        confirmButtonText: 'Yes, Delete',
+        confirmButtonColor: '#ef4444'
+    }).then(res => {
+        if (!res.isConfirmed) return;
+        fetch(`/dispatch/api/teams/${id}/delete/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.success) {
+                const row = document.getElementById(`team-row-${id}`);
+                if (row) row.remove();
+            } else {
+                window.gametechConfirm({ title: 'Error', text: res.error || 'Failed to delete team.', icon: 'error', confirmButtonText: 'OK', confirmButtonColor: '#ef4444' });
+            }
+        })
+        .catch(err => {
+            window.gametechConfirm({ title: 'Network Error', text: String(err), icon: 'error', confirmButtonText: 'OK', confirmButtonColor: '#ef4444' });
+        });
+    });
 }
 
 function deleteTechnician(id, name) {
-    if (!confirm(`Are you sure you want to delete technician "${name}"? This action cannot be undone.`)) return;
-
-    fetch(`/dispatch/api/technicians/${id}/delete/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        }
-    })
-    .then(res => res.json())
-    .then(res => {
-        if (res.success) {
-            const row = document.getElementById(`tech-row-${id}`);
-            if (row) row.remove();
-        } else {
-            alert('Error deleting technician: ' + (res.error || 'Unknown error'));
-        }
-    })
-    .catch(err => alert('Network error: ' + err));
+    window.gametechConfirm({
+        title: 'Delete Technician?',
+        text: `Are you sure you want to delete technician "${name}"? This action cannot be undone.`,
+        icon: 'warning',
+        confirmButtonText: 'Yes, Delete',
+        confirmButtonColor: '#ef4444'
+    }).then(res => {
+        if (!res.isConfirmed) return;
+        fetch(`/dispatch/api/technicians/${id}/delete/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.success) {
+                const row = document.getElementById(`tech-row-${id}`);
+                if (row) row.remove();
+            } else {
+                window.gametechConfirm({ title: 'Error', text: res.error || 'Failed to delete technician.', icon: 'error', confirmButtonText: 'OK', confirmButtonColor: '#ef4444' });
+            }
+        })
+        .catch(err => {
+            window.gametechConfirm({ title: 'Network Error', text: String(err), icon: 'error', confirmButtonText: 'OK', confirmButtonColor: '#ef4444' });
+        });
+    });
 }
 </script>

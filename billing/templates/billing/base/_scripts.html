@@ -652,4 +652,52 @@ if (impBtn) {
     impBtn.addEventListener('mouseenter', () => impBtn.style.transform = 'scale(1.05)');
     impBtn.addEventListener('mouseleave', () => impBtn.style.transform = 'scale(1)');
 }
+
+// Gametech Universal Sleek Confirmation Modal (replaces ugly browser alert/confirm popups)
+window.gametechConfirm = function(options) {
+    const defaultOpts = {
+        title: 'Confirm Action',
+        text: 'Are you sure you want to proceed?',
+        icon: 'warning',
+        confirmButtonText: 'Yes, proceed',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#475569',
+        background: '#0f172a',
+        color: '#f8fafc',
+        customClass: {
+            popup: 'border border-secondary shadow-lg rounded-4'
+        }
+    };
+    const finalOpts = Object.assign({}, defaultOpts, options);
+    if (typeof Swal !== 'undefined') {
+        return Swal.fire(finalOpts);
+    } else {
+        return Promise.resolve({ isConfirmed: window.confirm(finalOpts.text || finalOpts.title) });
+    }
+};
+
+// Global interceptor for forms with data-confirm
+document.addEventListener('submit', function(e) {
+    const form = e.target;
+    if (!form || typeof form.getAttribute !== 'function') return;
+    const confirmMsg = form.getAttribute('data-confirm') || form.getAttribute('data-confirm-delete');
+    if (confirmMsg && !form._confirmed) {
+        e.preventDefault();
+        const title = form.getAttribute('data-confirm-title') || 'Are you sure?';
+        const isDelete = form.hasAttribute('data-confirm-delete') || /delete|remove|undispatch/i.test(confirmMsg);
+        window.gametechConfirm({
+            title: title,
+            text: confirmMsg,
+            icon: isDelete ? 'warning' : 'question',
+            confirmButtonText: isDelete ? 'Yes, proceed' : 'Confirm',
+            confirmButtonColor: isDelete ? '#ef4444' : '#3b82f6'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                form._confirmed = true;
+                form.submit();
+            }
+        });
+    }
+});
 </script>

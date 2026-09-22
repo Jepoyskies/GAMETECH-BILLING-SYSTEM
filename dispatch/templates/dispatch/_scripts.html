@@ -469,7 +469,22 @@
         if (formCreate) {
             formCreate.addEventListener('submit', function(e) {
                 e.preventDefault();
+                const custId = document.getElementById('create-customer-id') ? document.getElementById('create-customer-id').value : '';
+                if (!custId) {
+                    window.gametechConfirm({
+                        title: 'Customer Required',
+                        text: 'A registered CRM customer must be selected. Please search and select an active customer from the dropdown to create this job order.',
+                        icon: 'warning',
+                        confirmButtonText: 'Select Customer',
+                        confirmButtonColor: '#f59e0b'
+                    });
+                    const nameInput = document.getElementById('create-client-name');
+                    if (nameInput) nameInput.focus();
+                    return;
+                }
+
                 const payload = {
+                    customer_id: custId,
                     client_name: document.getElementById('create-client-name').value,
                     contact_number: document.getElementById('create-contact-number').value,
                     address: document.getElementById('create-address').value,
@@ -495,11 +510,29 @@
                 .then(data => {
                     if (data.success) {
                         const modalEl = document.getElementById('modal-create-ticket');
-                        bootstrap.Modal.getInstance(modalEl).hide();
+                        if (modalEl) {
+                            const inst = bootstrap.Modal.getInstance(modalEl);
+                            if (inst) inst.hide();
+                        }
                         window.location.reload();
                     } else {
-                        alert('Error creating ticket: ' + (data.error || 'Unknown error'));
+                        window.gametechConfirm({
+                            title: 'Cannot Create Ticket',
+                            text: data.error || 'Unknown error occurred.',
+                            icon: 'error',
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#ef4444'
+                        });
                     }
+                })
+                .catch(err => {
+                    window.gametechConfirm({
+                        title: 'Network Error',
+                        text: String(err),
+                        icon: 'error',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#ef4444'
+                    });
                 });
             });
         }
@@ -538,25 +571,33 @@
                 e.preventDefault();
                 const ticketId = btn.dataset.id;
                 const ticketNum = btn.dataset.number || ('#' + ticketId);
-                if (!confirm(`Are you sure you want to undispatch ${ticketNum}? It will be removed from its team and returned to Pending assignment.`)) {
-                    return;
-                }
-                fetch(`/dispatch/api/tickets/${ticketId}/undispatch/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    }
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        window.location.reload();
-                    } else {
-                        alert('Error undispatching ticket: ' + (data.error || 'Unknown error'));
-                    }
-                })
-                .catch(err => alert('Network error: ' + err));
+                window.gametechConfirm({
+                    title: 'Undispatch Ticket?',
+                    text: `Are you sure you want to undispatch ${ticketNum}? It will be removed from its team and returned to Pending assignment.`,
+                    icon: 'warning',
+                    confirmButtonText: 'Yes, Undispatch',
+                    confirmButtonColor: '#f59e0b'
+                }).then(res => {
+                    if (!res.isConfirmed) return;
+                    fetch(`/dispatch/api/tickets/${ticketId}/undispatch/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrftoken
+                        }
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            window.location.reload();
+                        } else {
+                            window.gametechConfirm({ title: 'Error', text: data.error || 'Failed to undispatch ticket.', icon: 'error', confirmButtonText: 'OK', confirmButtonColor: '#ef4444' });
+                        }
+                    })
+                    .catch(err => {
+                        window.gametechConfirm({ title: 'Network Error', text: String(err), icon: 'error', confirmButtonText: 'OK', confirmButtonColor: '#ef4444' });
+                    });
+                });
             }
         });
 
@@ -567,25 +608,33 @@
                 e.preventDefault();
                 const ticketId = btn.dataset.id;
                 const ticketNum = btn.dataset.number || ('#' + ticketId);
-                if (!confirm(`Are you sure you want to permanently delete ticket ${ticketNum}? This cannot be undone.`)) {
-                    return;
-                }
-                fetch(`/dispatch/api/tickets/${ticketId}/delete/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    }
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        window.location.reload();
-                    } else {
-                        alert('Error deleting ticket: ' + (data.error || 'Unknown error'));
-                    }
-                })
-                .catch(err => alert('Network error: ' + err));
+                window.gametechConfirm({
+                    title: 'Delete Ticket?',
+                    text: `Are you sure you want to permanently delete ticket ${ticketNum}? This cannot be undone.`,
+                    icon: 'warning',
+                    confirmButtonText: 'Yes, Delete',
+                    confirmButtonColor: '#ef4444'
+                }).then(res => {
+                    if (!res.isConfirmed) return;
+                    fetch(`/dispatch/api/tickets/${ticketId}/delete/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrftoken
+                        }
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            window.location.reload();
+                        } else {
+                            window.gametechConfirm({ title: 'Error', text: data.error || 'Failed to delete ticket.', icon: 'error', confirmButtonText: 'OK', confirmButtonColor: '#ef4444' });
+                        }
+                    })
+                    .catch(err => {
+                        window.gametechConfirm({ title: 'Network Error', text: String(err), icon: 'error', confirmButtonText: 'OK', confirmButtonColor: '#ef4444' });
+                    });
+                });
             }
         });
 

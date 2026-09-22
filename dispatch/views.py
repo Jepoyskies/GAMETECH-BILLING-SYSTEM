@@ -341,15 +341,23 @@ def api_create_ticket(request):
                     agent_obj = Agent.objects.filter(name__iexact=val_clean).first()
         
         cust_id = data.get('customer_id') or None
-        is_test = False
-        if cust_id:
-            from billing.models import Customer
-            cust = Customer.objects.filter(id=cust_id).first()
-            if cust:
-                if not agent_obj and cust.agent:
-                    agent_obj = cust.agent
-                if getattr(cust, 'is_test_data', False):
-                    is_test = True
+        if not cust_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'A registered CRM customer is required. Dispatch job orders can only be created for existing customers.'
+            }, status=400)
+
+        from billing.models import Customer
+        cust = Customer.objects.filter(id=cust_id).first()
+        if not cust:
+            return JsonResponse({
+                'success': False,
+                'error': 'The selected customer could not be found in the database. Please select a valid customer.'
+            }, status=400)
+
+        is_test = getattr(cust, 'is_test_data', False)
+        if not agent_obj and cust.agent:
+            agent_obj = cust.agent
         if agent_obj and getattr(agent_obj, 'is_test_data', False):
             is_test = True
 
@@ -913,7 +921,7 @@ def api_customer_search(request):
         Q(phone__icontains=q) |
         Q(address__icontains=q) |
         Q(pppoe_username__icontains=q)
-    ).select_related('barangay', 'plan')[:limit]
+    ).select_related('barangay', 'plan', 'mikrotik_device')[:limit]
 
     results = []
     for c in customers:
@@ -930,6 +938,8 @@ def api_customer_search(request):
             'latitude': c.latitude,
             'longitude': c.longitude,
             'account_no': getattr(c, 'account_number', c.pppoe_username or ''),
+            'mikrotik_device_id': c.mikrotik_device_id or '',
+            'mikrotik_name': c.mikrotik_device.device_name if c.mikrotik_device else '',
         })
     return JsonResponse({'success': True, 'customers': results})
 

@@ -238,7 +238,7 @@
                 <a href="{% url 'staff_list' %}" class="btn-cancel">Cancel</a>
                 <div class="d-flex align-items-center gap-2">
                     {% if request.user.role == 'Admin' and staff.username != request.user.username %}
-                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="if(confirm('Are you sure you want to delete staff member {{ staff.full_name }} ({{ staff.username }})? This action cannot be undone.')) { document.getElementById('deleteStaffForm').submit(); }">
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="window.gametechConfirm({ title: 'Delete Staff Member?', text: 'Are you sure you want to delete staff member {{ staff.full_name|escapejs }} ({{ staff.username|escapejs }})? This action cannot be undone.', icon: 'warning', confirmButtonText: 'Yes, Delete', confirmButtonColor: '#ef4444' }).then(res => { if(res.isConfirmed) document.getElementById('deleteStaffForm').submit(); });">
                         <i class="fas fa-trash-alt me-1"></i> Delete Account
                     </button>
                     {% endif %}

@@ -162,7 +162,23 @@ def edit_staff(request, pk):
         )
         return redirect("staff_list")
 
-    staff = get_object_or_404(SystemAdmin, pk=pk)
+    staff = SystemAdmin.objects.filter(pk=pk).first()
+    if not staff:
+        # Fallback: check if pk is User.id
+        user_match = User.objects.filter(pk=pk).first()
+        if user_match:
+            staff = SystemAdmin.objects.filter(username=user_match.username).first()
+            if not staff:
+                # Auto-sync missing SystemAdmin profile for this User
+                staff = SystemAdmin.objects.create(
+                    username=user_match.username,
+                    full_name=user_match.get_full_name() or user_match.username,
+                    email=user_match.email or "",
+                    role="Admin" if user_match.is_superuser else "Standard",
+                    status="Active" if user_match.is_active else "Inactive",
+                )
+    if not staff:
+        raise Http404("Staff account not found.")
     if request.method == "POST":
         username = request.POST.get("username", "").strip()
         full_name = request.POST.get("full_name", "").strip()
@@ -241,9 +257,17 @@ def delete_staff(request, pk):
     Guards against self-deletion and gracefully handles restricted foreign keys.
     """
     if request.method == "POST":
-        staff = get_object_or_404(SystemAdmin, pk=pk)
+        staff = SystemAdmin.objects.filter(pk=pk).first()
+        user = None
+        if not staff:
+            user = User.objects.filter(pk=pk).first()
+            if user:
+                staff = SystemAdmin.objects.filter(username=user.username).first()
+        if not staff and not user:
+            raise Http404("Staff account not found.")
 
-        if staff.username == request.user.username:
+        target_username = staff.username if staff else user.username
+        if target_username == request.user.username:
             messages.error(request, "You cannot delete your own logged-in account.")
             return redirect("staff_list")
 

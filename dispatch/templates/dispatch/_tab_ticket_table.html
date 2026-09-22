@@ -108,40 +108,48 @@ if (!window._deleteTicketListenerAttached) {
             e.preventDefault();
             const ticketId = btn.dataset.id;
             const ticketNum = btn.dataset.number || ('#' + ticketId);
-            if (!confirm(`Are you sure you want to permanently delete ticket ${ticketNum}? This cannot be undone.`)) {
-                return;
-            }
-            function getCookie(name) {
-                let cookieValue = null;
-                if (document.cookie && document.cookie !== '') {
-                    const cookies = document.cookie.split(';');
-                    for (let i = 0; i < cookies.length; i++) {
-                        const cookie = cookies[i].trim();
-                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                            break;
+            window.gametechConfirm({
+                title: 'Delete Ticket?',
+                text: `Are you sure you want to permanently delete ticket ${ticketNum}? This cannot be undone.`,
+                icon: 'warning',
+                confirmButtonText: 'Yes, Delete',
+                confirmButtonColor: '#ef4444'
+            }).then(res => {
+                if (!res.isConfirmed) return;
+                function getCookie(name) {
+                    let cookieValue = null;
+                    if (document.cookie && document.cookie !== '') {
+                        const cookies = document.cookie.split(';');
+                        for (let i = 0; i < cookies.length; i++) {
+                            const cookie = cookies[i].trim();
+                            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                break;
+                            }
                         }
                     }
+                    return cookieValue;
                 }
-                return cookieValue;
-            }
-            const csrftoken = getCookie('csrftoken') || document.querySelector('[name=csrfmiddlewaretoken]')?.value;
-            fetch(`/dispatch/api/tickets/${ticketId}/delete/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrftoken
-                }
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    window.location.reload();
-                } else {
-                    alert('Error deleting ticket: ' + (data.error || 'Unknown error'));
-                }
-            })
-            .catch(err => alert('Network error: ' + err));
+                const csrftoken = getCookie('csrftoken') || document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                fetch(`/dispatch/api/tickets/${ticketId}/delete/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        window.gametechConfirm({ title: 'Error', text: data.error || 'Unknown error', icon: 'error', confirmButtonText: 'OK', confirmButtonColor: '#ef4444' });
+                    }
+                })
+                .catch(err => {
+                    window.gametechConfirm({ title: 'Network Error', text: String(err), icon: 'error', confirmButtonText: 'OK', confirmButtonColor: '#ef4444' });
+                });
+            });
         }
     });
 }

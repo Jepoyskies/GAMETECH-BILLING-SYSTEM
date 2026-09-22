@@ -53,14 +53,15 @@ class CustomerAutocomplete {
             checkNameUrl: '/dispatch/api/customers/check-name/',
             submitButton: null,
             fields: {
-                customerId: 'input[name="customer_id"]',
-                phone: 'input[name="contact_number"], input[name="phone"]',
-                address: 'textarea[name="address"], input[name="address"]',
-                barangay: 'input[name="barangay"], select[name="barangay_id"]',
-                plan: 'input[name="plan_package"], select[name="plan_id"]',
-                accountNo: 'input[name="account_no"]',
-                lat: 'input[name="latitude"]',
-                lng: 'input[name="longitude"]'
+                customerId: '#create-customer-id, input[name="customer_id"]',
+                phone: '#create-contact-number, input[name="contact_number"], input[name="phone"]',
+                address: '#create-address, textarea[name="address"], input[name="address"]',
+                barangay: '#create-barangay, input[name="barangay"], select[name="barangay_id"]',
+                plan: '#create-plan-package, input[name="plan_package"], select[name="plan_id"]',
+                router: '#create-mikrotik-device, select[name="mikrotik_device_id"], select[name="mikrotik_device"]',
+                accountNo: '#create-account-no, input[name="account_no"]',
+                lat: '#create-latitude, input[name="latitude"]',
+                lng: '#create-longitude, input[name="longitude"]'
             }
         }, options);
 
@@ -86,13 +87,16 @@ class CustomerAutocomplete {
         // Duplicate warning message container
         this.warningMsg = document.createElement('div');
         this.warningMsg.className = 'duplicate-lockout-msg';
-        this.warningMsg.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> <strong>Duplicate Customer Detected:</strong> An active customer with this exact name already exists. Please select them from suggestions to link or confirm spelling.';
+        this.warningMsg.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> <strong>Duplicate Customer Detected:</strong> An active customer with this exact name already exists. Please select them from suggestions to link.';
         this.wrapper.appendChild(this.warningMsg);
     }
 
     bindEvents() {
         this.input.addEventListener('input', () => {
             this.selectedFromSuggestion = false;
+            // Clear customer_id if user types manually
+            this.setFieldValue(this.options.fields.customerId, '');
+            this.updateConnectionStatus(null);
             clearTimeout(this.debounceTimer);
             const val = this.input.value.trim();
             if (val.length >= 2) {
@@ -104,11 +108,10 @@ class CustomerAutocomplete {
         });
 
         this.input.addEventListener('blur', () => {
-            // Small delay to allow click on suggestion
             setTimeout(() => {
                 this.hideSuggestions();
                 this.checkDuplicate();
-            }, 200);
+            }, 250);
         });
 
         document.addEventListener('click', (e) => {
@@ -116,6 +119,12 @@ class CustomerAutocomplete {
                 this.hideSuggestions();
             }
         });
+
+        // Listen for Change Customer button
+        const clearBtn = document.getElementById('cust-link-clear-btn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => this.clearCustomer());
+        }
     }
 
     async search(query) {
@@ -163,7 +172,7 @@ class CustomerAutocomplete {
         this.hideSuggestions();
         this.clearLockout();
 
-        // Populate fields
+        // Populate all fields
         this.setFieldValue(this.options.fields.customerId, c.id);
         this.setFieldValue(this.options.fields.phone, c.phone);
         this.setFieldValue(this.options.fields.address, c.address);
@@ -183,11 +192,81 @@ class CustomerAutocomplete {
             this.setFieldValue(this.options.fields.plan, c.plan_name);
         }
 
+        if (c.mikrotik_device_id) {
+            this.setFieldValue(this.options.fields.router, c.mikrotik_device_id);
+        }
+
         // Trigger change events
-        ['phone', 'address', 'accountNo', 'barangay', 'plan'].forEach(fKey => {
+        ['phone', 'address', 'accountNo', 'barangay', 'plan', 'router'].forEach(fKey => {
             const el = document.querySelector(this.options.fields[fKey]);
             if (el) el.dispatchEvent(new Event('change', { bubbles: true }));
         });
+
+        // Update connection status card & enable submit
+        this.updateConnectionStatus(c);
+    }
+
+    updateConnectionStatus(c) {
+        const statusCard = document.getElementById('customer-link-status');
+        const submitBtn = this.options.submitButton ? (typeof this.options.submitButton === 'string' ? document.querySelector(this.options.submitButton) : this.options.submitButton) : null;
+
+        if (c) {
+            if (statusCard) {
+                statusCard.style.borderColor = '#10b981';
+                statusCard.style.background = 'rgba(16, 185, 129, 0.12)';
+                const b = document.getElementById('cust-link-badge');
+                if (b) { b.style.background = 'rgba(16, 185, 129, 0.25)'; b.style.color = '#34d399'; }
+                const icon = document.getElementById('cust-link-icon');
+                if (icon) icon.className = 'fas fa-user-check';
+                const title = document.getElementById('cust-link-title');
+                if (title) { title.style.color = '#34d399'; title.innerHTML = `✓ Connected Customer: <strong>${c.name}</strong>`; }
+                const sub = document.getElementById('cust-link-sub');
+                if (sub) { sub.textContent = `Account: ${c.account_no || 'N/A'} • Plan: ${c.plan_name || 'Standard'} • Barangay: ${c.barangay || 'N/A'}`; }
+                const clearBtn = document.getElementById('cust-link-clear-btn');
+                if (clearBtn) clearBtn.style.display = 'inline-block';
+            }
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('disabled');
+                submitBtn.removeAttribute('title');
+            }
+        } else {
+            if (statusCard) {
+                statusCard.style.borderColor = '#64748b';
+                statusCard.style.background = 'rgba(30,41,59,0.7)';
+                const b = document.getElementById('cust-link-badge');
+                if (b) { b.style.background = 'rgba(239,68,68,0.2)'; b.style.color = '#f87171'; }
+                const icon = document.getElementById('cust-link-icon');
+                if (icon) icon.className = 'fas fa-user-times';
+                const title = document.getElementById('cust-link-title');
+                if (title) { title.style.color = '#f87171'; title.textContent = 'No Customer Linked'; }
+                const sub = document.getElementById('cust-link-sub');
+                if (sub) { sub.textContent = 'Search and click a registered customer below. All details will autofill automatically.'; }
+                const clearBtn = document.getElementById('cust-link-clear-btn');
+                if (clearBtn) clearBtn.style.display = 'none';
+            }
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.classList.add('disabled');
+                submitBtn.title = 'Please select a registered customer first';
+            }
+        }
+    }
+
+    clearCustomer() {
+        this.selectedFromSuggestion = false;
+        this.input.value = '';
+        this.setFieldValue(this.options.fields.customerId, '');
+        this.setFieldValue(this.options.fields.phone, '');
+        this.setFieldValue(this.options.fields.address, '');
+        this.setFieldValue(this.options.fields.barangay, '');
+        this.setFieldValue(this.options.fields.plan, '');
+        this.setFieldValue(this.options.fields.router, '');
+        this.setFieldValue(this.options.fields.accountNo, '');
+        this.setFieldValue(this.options.fields.lat, '');
+        this.setFieldValue(this.options.fields.lng, '');
+        this.updateConnectionStatus(null);
+        this.input.focus();
     }
 
     setFieldValue(selector, val) {
@@ -233,7 +312,8 @@ class CustomerAutocomplete {
     clearLockout() {
         this.input.classList.remove('input-duplicate-locked');
         this.warningMsg.style.display = 'none';
-        if (this.options.submitButton) {
+        const custId = document.querySelector(this.options.fields.customerId)?.value;
+        if (this.options.submitButton && custId) {
             const btn = typeof this.options.submitButton === 'string' ? document.querySelector(this.options.submitButton) : this.options.submitButton;
             if (btn) {
                 btn.disabled = false;
