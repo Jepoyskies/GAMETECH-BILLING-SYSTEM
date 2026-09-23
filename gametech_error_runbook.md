@@ -1140,6 +1140,26 @@
 
 ---
 
+### ERR-064: Dispatch Log Row Click & Missing 9-Section Comprehensive Dispatch Modal
+* **Symptoms**:
+  * Clicking a row in the Dispatch Log (`/dispatch/dashboard/`, `/dispatch/monitoring/`, `/dispatch/dispatches/`) did not open the comprehensive 9-section Job Info, Subscriber Info, Location, Issue, Scheduling, Work Timeline, Service Details, Sign Off, and Technician modal present in the live system (`http://192.168.200.29:5502/dispatches`).
+* **Root Causes**:
+  * Table rows lacked click event handlers bound to a master detail modal; `api_ticket_detail` only returned a subset of fields without `all_teams` or technician lists; no `POST` update handler existed to persist field updates.
+* **Exact Target Files**:
+  * `dispatch/views.py` (`api_ticket_detail` GET & POST handlers supporting `JobTicket` and `MonitoringRecord`)
+  * `dispatch/urls.py` (added `/dispatch/dispatches/` alias)
+  * `dispatch/templates/dispatch/_modal_dispatch_detail.html`
+  * `dispatch/templates/dispatch/_modal_dispatch_detail_script.html`
+  * `dispatch/templates/dispatch/styles/_modal_dispatch_detail_styles.html`
+  * `dispatch/templates/dispatch/_ticket_list.html`
+  * `dispatch/templates/dispatch/tabs/_tab_all.html`, `_tab_pending.html`, `_tab_ongoing.html`, `_tab_completed.html`
+* **1-Step Fix**:
+  * Implement `_modal_dispatch_detail.html` (<250 lines) with all 9 sections and dynamic Team technician checkboxes with "Select all".
+  * Wire row click handlers with `openDispatchDetailModal(id)` across all tables and `stopPropagation` on row action buttons.
+  * Upgrade `api_ticket_detail` to serialize comprehensive data and accept `POST` updates with SweetAlert confirmation.
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 
