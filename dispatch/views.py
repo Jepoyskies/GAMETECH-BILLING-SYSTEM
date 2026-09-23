@@ -980,6 +980,9 @@ def export_tickets_csv(request):
 @require_POST
 def api_delete_ticket(request, ticket_id):
     ticket = get_object_or_404(JobTicket, id=ticket_id)
+    if ticket.status in ['COMPLETED', 'QA_PASSED', 'COMPLETED_AND_VERIFIED']:
+        if not (request.user.is_staff or request.user.is_superuser):
+            return JsonResponse({'success': False, 'error': 'Only administrators are authorized to delete completed Job Orders.'}, status=403)
     ticket_num = ticket.ticket_number
     ticket.delete()
     log_audit('DELETE', 'JobTicket', ticket_id, request.user, summary=f"Deleted ticket {ticket_num}")
@@ -990,6 +993,9 @@ def api_delete_ticket(request, ticket_id):
 @require_POST
 def api_delete_record(request, record_id):
     record = get_object_or_404(MonitoringRecord, id=record_id)
+    if record.done_at or (record.status_option and 'Done' in getattr(record.status_option, 'label', '')):
+        if not (request.user.is_staff or request.user.is_superuser):
+            return JsonResponse({'success': False, 'error': 'Only administrators are authorized to delete completed records.'}, status=403)
     client_name = record.client_name
     record.delete()
     log_audit('DELETE', 'MonitoringRecord', record_id, request.user, summary=f"Deleted monitoring record #{record_id} for {client_name}")
@@ -1191,3 +1197,119 @@ def api_send_welcome_sms(request, ticket_id):
         note=f"Portal welcome SMS sent to {ticket.customer.phone} by {request.user.get_full_name() or request.user.username}"
     )
     return JsonResponse({'success': True, 'message': 'Welcome SMS sent successfully.'})
+
+
+@login_required
+def job_order_print_view(request, ticket_id=None):
+    """
+    Renders the official Gametech ISP Job Order Form (Installation / Repair Service)
+    formatted for standard Letter/A4 printing and PDF generation.
+    If ticket_id is None or 0, renders a blank printable copy.
+    """
+    ticket = None
+    is_installation = False
+    is_repair = False
+    team_and_techs = ""
+    tech_signatures = ""
+    customer_email = ""
+    prepared_by_name = ""
+    finish_time = None
+
+    if ticket_id and int(ticket_id) > 0:
+        ticket = get_object_or_404(
+            JobTicket.objects.select_related('customer', 'team', 'created_by').prefetch_related('technicians'),
+            id=ticket_id
+        )
+        is_installation = ticket.ticket_type == 'INSTALLATION'
+        is_repair = ticket.ticket_type in ['REPAIR', 'CLIENT_CONCERNS']
+
+        # Format Assigned Crew & Technicians
+        tech_list = [t.name for t in ticket.technicians.all()]
+        crew_parts = []
+        if ticket.team:
+            crew_parts.append(ticket.team.name)
+        if tech_list:
+            crew_parts.append(", ".join(tech_list))
+        team_and_techs = " - ".join(crew_parts) if crew_parts else ""
+        tech_signatures = ", ".join(tech_list) if tech_list else (ticket.team.name if ticket.team else "")
+
+        # Customer Email resolution
+        if ticket.customer and ticket.customer.email:
+            customer_email = ticket.customer.email
+
+        # Prepared By
+        if ticket.created_by:
+            prepared_by_name = ticket.created_by.get_full_name() or ticket.created_by.username
+
+        # Finish time
+        finish_time = ticket.time_accomplish or ticket.done_at
+
+    return render(request, "dispatch/job_order_print.html", {
+        "ticket": ticket,
+        "is_installation": is_installation,
+        "is_repair": is_repair,
+        "team_and_techs": team_and_techs,
+        "tech_signatures": tech_signatures,
+        "customer_email": customer_email,
+        "prepared_by_name": prepared_by_name,
+        "finish_time": finish_time,
+    })
+
+
+@login_required
+def job_order_print_record_view(request, record_id):
+    """
+    Fallback printable view for legacy MonitoringRecord entries.
+    """
+    record = get_object_or_404(MonitoringRecord.objects.select_related('customer').prefetch_related('teams'), id=record_id)
+    detail = getattr(record, 'job_detail', None)
+
+    is_installation = record.tab_type == 'INTERNET_INSTALL'
+    is_repair = record.tab_type == 'CLIENT_CONCERNS'
+    team_names = ", ".join([t.name for t in record.teams.all()])
+
+    class LegacyRecordAdapter:
+        ticket_number = detail.job_order if detail and detail.job_order else f"REC-{record.id}"
+        created_at = record.created_at if hasattr(record, 'created_at') else timezone.now()
+        ticket_type = 'INSTALLATION' if is_installation else 'REPAIR'
+        client_name = record.client_name
+        account_no = detail.account_no if detail and detail.account_no else (record.customer.pppoe_username if record.customer else "")
+        contact_number = record.contact_number
+        address = record.address
+        barangay = detail.barangay_city if detail and detail.barangay_city else (record.customer.barangay.name if record.customer and record.customer.barangay else "")
+        scheduled_date = detail.schedule_date if detail else None
+        scheduled_time = detail.schedule_time if detail else None
+        plan_package = detail.plan_package if detail and detail.plan_package else (record.customer.plan.name if record.customer and record.customer.plan else "")
+        nap_port = detail.nap_port if detail else ""
+        ont_modem_sn = detail.ont_modem_sn if detail else ""
+        cable_length = detail.cable_length if detail else ""
+        signal_level = detail.signal_level if detail else ""
+        latitude = getattr(record.customer, 'latitude', None) if record.customer else None
+        longitude = getattr(record.customer, 'longitude', None) if record.customer else None
+        facility = detail.facility if detail else ""
+        nap_reading = detail.nap_reading if detail else ""
+        house_reading = detail.house_reading if detail else ""
+        pole_number = detail.pole_number if detail else ""
+        concern = record.concern
+        actions_taken = record.remarks or ""
+        special_instruction = detail.special_instruction if detail else ""
+        time_start = None
+        time_accomplish = record.done_at
+        done_at = record.done_at
+        technician_remarks = detail.technician_remarks if detail else ""
+        acknowledged_by = detail.acknowledged_by if detail else ""
+
+    ticket_adapter = LegacyRecordAdapter()
+    customer_email = detail.email_address if detail and detail.email_address else (record.customer.email if record.customer else "")
+
+    return render(request, "dispatch/job_order_print.html", {
+        "ticket": ticket_adapter,
+        "is_installation": is_installation,
+        "is_repair": is_repair,
+        "team_and_techs": team_names,
+        "tech_signatures": team_names,
+        "customer_email": customer_email,
+        "prepared_by_name": request.user.get_full_name() or request.user.username,
+        "finish_time": record.done_at,
+    })
+

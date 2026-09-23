@@ -59,6 +59,10 @@
                       title="Copy Brief">
                 <i class="fas fa-copy"></i>
               </button>
+              <a href="{% url 'dispatch_job_order_print' t.id %}" target="_blank"
+                 class="dispatch-action-btn dispatch-action-btn-ghost" title="Print Official ISP Job Order Form">
+                <i class="fas fa-print"></i>
+              </a>
               {% if t.status == 'PENDING' %}
                 <button type="button" class="dispatch-action-btn dispatch-action-btn-blue btn-open-assign"
                         data-id="{{ t.id }}" data-ticket="{{ t.ticket_number }}" data-name="{{ t.client_name }}"
@@ -79,6 +83,11 @@
                 <span class="badge" style="background: rgba(16,185,129,0.1); color: #34d399; border: 1px solid rgba(16,185,129,0.2); padding: 5px 8px; font-size: 0.72rem;">
                   <i class="fas fa-check-double me-1"></i> Closed
                 </span>
+                {% if user.is_staff or user.is_superuser %}
+                <button type="button" class="dispatch-action-btn dispatch-action-btn-red btn-delete-ticket" data-id="{{ t.id }}" data-number="{{ t.ticket_number }}" title="Delete Ticket (Admin Only)">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+                {% endif %}
               {% endif %}
             </div>
           </td>
@@ -122,6 +131,10 @@
                       title="Copy Brief">
                 <i class="fas fa-copy"></i>
               </button>
+              <a href="{% url 'dispatch_job_order_print_record' record.id %}" target="_blank"
+                 class="dispatch-action-btn dispatch-action-btn-ghost" title="Print Official ISP Job Order Form">
+                <i class="fas fa-print"></i>
+              </a>
               {% if record.done_at or record.status_option and 'Done' in record.status_option.label %}
                 <a href="{% url 'complete_job' record.id %}" class="dispatch-action-btn dispatch-action-btn-ghost" title="View Details">
                   <i class="fas fa-eye"></i>

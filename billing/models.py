@@ -136,9 +136,53 @@ class StaffRole(models.Model):
     can_access_cignal_play = models.BooleanField(default=False)
     can_access_dispatch = models.BooleanField(default=False)
     can_access_administration = models.BooleanField(default=False)
+    subtab_permissions = models.JSONField(default=dict, blank=True)
 
     def __str__(self):
         return self.name
+
+    def has_subtab_perm(self, module, subtab):
+        if self.name.lower() == "admin":
+            return True
+        module_perm_map = {
+            "billing": self.can_access_billing,
+            "network_ops": self.can_access_network_ops,
+            "cignal_play": self.can_access_cignal_play,
+            "dispatch": self.can_access_dispatch,
+            "administration": self.can_access_administration,
+        }
+        if not module_perm_map.get(module, False):
+            return False
+        if isinstance(self.subtab_permissions, dict):
+            module_subtabs = self.subtab_permissions.get(module)
+            if isinstance(module_subtabs, dict) and subtab in module_subtabs:
+                return bool(module_subtabs[subtab])
+            if isinstance(module_subtabs, list):
+                return subtab in module_subtabs
+        return True
+
+    @property
+    def subtabs(self):
+        class SubtabMap(dict):
+            def __getattr__(self, item):
+                return self.get(item, False)
+
+        res = SubtabMap()
+        subtab_specs = {
+            "billing": ["dashboard", "customers", "subscriptions", "plans", "payments", "payment_logs"],
+            "network_ops": ["live_monitoring", "devices", "active_users", "geomap", "winbox", "downdetector", "speedtest"],
+            "dispatch": ["dispatch_dashboard", "dispatch_operation", "dispatch_monitoring", "internet_install", "client_concerns", "agents", "management", "audit_log"],
+            "cignal_play": ["cignal_dashboard", "cignal_applications", "cignal_logs"],
+            "administration": ["logs", "settings", "admin_panel", "improvement_requests"],
+        }
+        for mod, subs in subtab_specs.items():
+            mod_map = SubtabMap()
+            for s in subs:
+                allowed = self.has_subtab_perm(mod, s)
+                mod_map[s] = allowed
+                res[f"{mod}_{s}"] = allowed
+            res[mod] = mod_map
+        return res
 
 
 class SystemAdmin(models.Model):

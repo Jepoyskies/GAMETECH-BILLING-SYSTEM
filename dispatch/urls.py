@@ -55,4 +55,9 @@ urlpatterns = [
     path('api/technicians/<int:tech_id>/targets/', views.api_technician_targets_update, name='api_dispatch_technician_targets_update'),
 
     path('export/tickets/', views.export_tickets_csv, name='dispatch_export_tickets'),
+
+    # Official Printable ISP Job Order Form (Installation / Repair Service)
+    path('tickets/<int:ticket_id>/job-order/', views.job_order_print_view, name='dispatch_job_order_print'),
+    path('job-order/blank/', views.job_order_print_view, name='dispatch_job_order_blank'),
+    path('records/<int:record_id>/job-order/', views.job_order_print_record_view, name='dispatch_job_order_print_record'),
 ]

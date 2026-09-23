@@ -26,6 +26,22 @@ class BillingConfig(AppConfig):
                 return "Viewer"
 
         def get_role_perms(self):
+            class AllSubtabsMap(dict):
+                def __getitem__(self, item):
+                    return True
+                def __getattr__(self, item):
+                    return True
+                def get(self, item, default=True):
+                    return True
+
+            class NoneSubtabsMap(dict):
+                def __getitem__(self, item):
+                    return False
+                def __getattr__(self, item):
+                    return False
+                def get(self, item, default=False):
+                    return False
+
             class AllPerms:
                 can_access_billing = True
                 can_access_network_ops = True
@@ -33,12 +49,26 @@ class BillingConfig(AppConfig):
                 can_access_dispatch = True
                 can_access_administration = True
 
+                def has_subtab_perm(self, module, subtab):
+                    return True
+
+                @property
+                def subtabs(self):
+                    return AllSubtabsMap()
+
             class DefaultPerms:
                 can_access_billing = False
                 can_access_network_ops = False
                 can_access_cignal_play = False
                 can_access_dispatch = False
                 can_access_administration = False
+
+                def has_subtab_perm(self, module, subtab):
+                    return False
+
+                @property
+                def subtabs(self):
+                    return NoneSubtabsMap()
 
             if hasattr(self, "agent_profile") and not self.is_staff:
                 return DefaultPerms()

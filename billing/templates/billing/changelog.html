@@ -40,8 +40,11 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush" id="list-tab" role="tablist" style="border-radius: 0 0 16px 16px; overflow: hidden; max-height: 70vh; overflow-y: auto;">
-                        <a class="list-group-item list-group-item-action active py-3 fw-semibold border-0" id="list-sep22-list" data-bs-toggle="list" href="#list-sep22" role="tab" style="font-size: 0.9rem;">
-                            September 22, 2026 <br><small class="text-white-50">No-Contact Escalation, Unreachable Close &amp; Post-Install Welcome SMS</small>
+                        <a class="list-group-item list-group-item-action active py-3 fw-semibold border-0" id="list-sep23-list" data-bs-toggle="list" href="#list-sep23" role="tab" style="font-size: 0.9rem;">
+                            September 23, 2026 <br><small class="text-white-50">ISP Job Order Form, Granular Subtab Roles, Accounts Sync, Admin Delete</small>
+                        </a>
+                        <a class="list-group-item list-group-item-action py-3 fw-semibold border-0" id="list-sep22-list" data-bs-toggle="list" href="#list-sep22" role="tab" style="font-size: 0.9rem;">
+                            September 22, 2026 <br><small class="text-muted">No-Contact Escalation, Unreachable Close &amp; Post-Install Welcome SMS</small>
                         </a>
                         <a class="list-group-item list-group-item-action py-3 fw-semibold border-0" id="list-sep21-list" data-bs-toggle="list" href="#list-sep21" role="tab" style="font-size: 0.9rem;">
                             September 21, 2026 <br><small class="text-muted">Dispatch System Glass Overhaul, 4-Queue Parity, KPI Hero Cards</small>
@@ -123,11 +126,112 @@
                 <div class="card-body p-4 p-lg-5">
                     <div class="tab-content" id="nav-tabContent">
                         
+                        <!-- SEPTEMBER 23 -->
+                        <div class="tab-pane fade show active" id="list-sep23" role="tabpanel" aria-labelledby="list-sep23-list">
+                            <h3 class="fw-bold mb-4 border-bottom pb-3" style="color: #1e3a8a;">
+                                September 23, 2026: Official ISP Job Order Form, Granular Subtab Roles, Accounts Sync &amp; Admin Records Purge
+                                <span class="badge bg-success ms-2 fs-6 align-middle" style="border-radius: 8px;">Latest Build</span>
+                            </h3>
+
+                            <p class="lead text-muted mb-4">Implemented full print and digital support for Gametech's official ISP Job Order Form, added granular per-module subtab permissions for custom staff roles, unified the dispatch accounts management interface with central Staff &amp; Admins, role-guarded deletion of completed records to administrators only, and reconciled operational closed statistics with high-capacity Google Maps tiles.</p>
+
+                            <div class="cl-dual-content">
+                                <!-- Tech View -->
+                                <div class="tech-content">
+                                    <div class="card border-0 mb-4" style="background:#eff6ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#1d4ed8;"><i class="fas fa-file-invoice me-2"></i> Official ISP Job Order Form (Installation / Repair Service)</h5>
+                                            <ul class="mb-0">
+                                                <li><strong>Pixel-Perfect Paper Replication:</strong> Built <code>dispatch/templates/dispatch/job_order_print.html</code> exactly matching Gametech's physical blue-banded paper document: header with branding, client &amp; technical metadata, detailed check-box installation work scope, equipment tracking table, and 3-party signature blocks (Prepared by Dispatch, Received/Installed by Tech, Accepted by Subscriber).</li>
+                                                <li><strong>Automated Pre-filling:</strong> Dynamically populates subscriber details, account number, PPPoE credentials, contact numbers, address, plan package, static/assigned IP, ONU serial, patch cord lengths, and assigned technicians from <code>JobTicket</code> or <code>MonitoringRecord</code>.</li>
+                                                <li><strong>Universal Availability &amp; Blank Mode:</strong> Accessible via <code>/dispatch/tickets/&lt;id&gt;/job-order/</code>, <code>/dispatch/records/&lt;id&gt;/job-order/</code>, and <code>/dispatch/job-order/blank/</code> for field technician clipboards.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <div class="card border-0 mb-4" style="background:#f5f3ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#6d28d9;"><i class="fas fa-user-lock me-2"></i> Granular Subtab-Level Permissions Architecture</h5>
+                                            <ul class="mb-0">
+                                                <li><strong>StaffRole Schema Extension:</strong> Added <code>subtab_permissions = models.JSONField(default=dict, blank=True)</code> with migration <code>0053_staffrole_subtab_permissions.py</code>.</li>
+                                                <li><strong>Unified Permission Evaluator:</strong> Implemented <code>StaffRole.has_subtab_perm(module, subtab)</code> and property <code>subtabs</code> with dot-lookup access (<code>request.user.role_perms.subtabs.module_subtab</code>) and default-allow fallbacks for full backward compatibility.</li>
+                                                <li><strong>Interactive Role Management UI:</strong> Upgraded <code>manage_roles.html</code> and <code>billing/views/staff.py</code> with responsive subtab grids in both Create and Edit modals, displaying permitted subtab count badges on each role card.</li>
+                                                <li><strong>Sidebar Integration:</strong> Wrapped every sub-menu link in <code>_sidebar.html</code> with granular subtab checks.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <div class="card border-0 mb-4" style="background:#ecfdf5; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#047857;"><i class="fas fa-users-cog me-2"></i> Dispatch Accounts UI Harmonization</h5>
+                                            <ul class="mb-0">
+                                                <li><strong>Design Alignment:</strong> Replaced disconnected generic badges in <code>dispatch/_management_accounts.html</code> with canonical role badges matching <code>staff_and_admins.html</code> (Admin, Editor, CSR, Technician, custom roles).</li>
+                                                <li><strong>Unified Directory Banner:</strong> Added informative synchronization notice with 1-click shortcut to central Staff &amp; Admins management.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <div class="card border-0 mb-4" style="background:#fef2f2; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#b91c1c;"><i class="fas fa-trash-alt me-2"></i> Admin-Only Completed Records Deletion Guard</h5>
+                                            <ul class="mb-0">
+                                                <li><strong>Strict Role Enforcement:</strong> Added backend guards in <code>api_delete_ticket</code> and <code>api_delete_record</code> in <code>dispatch/views.py</code> ensuring only staff or superusers can delete completed items.</li>
+                                                <li><strong>Template Parity:</strong> Rendered delete buttons in <code>tabs/_tab_completed.html</code> and <code>tabs/_tab_all.html</code> conditionally guarded by <code>{% if user.is_staff or user.is_superuser %}</code>.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <div class="card border-0 mb-4" style="background:#f0f9ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#0284c7;"><i class="fas fa-chart-line me-2"></i> Analytics Reconcile &amp; Google Maps Tile Fix (ERR-023)</h5>
+                                            <ul class="mb-0">
+                                                <li><strong>Closed Counter Accuracy:</strong> Updated <code>get_operational_overview_stats()</code> in <code>dispatch/analytics.py</code> to aggregate both <code>JobTicket</code> and <code>MonitoringRecord</code> completions.</li>
+                                                <li><strong>Tile Layer Resilience:</strong> Switched Leaflet map tile URL in <code>dispatch/_scripts.html</code> from blocked OpenStreetMap tile servers to Google Maps tiles (<code>mt{s}.google.com</code>).</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Staff View -->
+                                <div class="staff-content" style="display: none;">
+                                    <div class="card border-0 mb-4" style="background:#eff6ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#1d4ed8;"><i class="fas fa-print me-2"></i> Official Printable Job Order Form</h5>
+                                            <p class="mb-0">You can now view and print the official Gametech ISP Job Order Form directly from any job ticket or dispatch table. It automatically fills in subscriber info, PPPoE logins, addresses, and materials used, complete with signature lines for the tech and subscriber!</p>
+                                        </div>
+                                    </div>
+                                    <div class="card border-0 mb-4" style="background:#f5f3ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#6d28d9;"><i class="fas fa-sliders-h me-2"></i> Fine-Grained Role Subtabs</h5>
+                                            <p class="mb-0">Admins can now select exactly which subpages each role can access under Billing, Network Ops, Dispatch, Cignal Play, and Administration.</p>
+                                        </div>
+                                    </div>
+                                    <div class="card border-0 mb-4" style="background:#ecfdf5; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#047857;"><i class="fas fa-users me-2"></i> Synchronized Accounts View</h5>
+                                            <p class="mb-0">The Accounts tab under Dispatch Management now matches the main Staff &amp; Admins interface with colorful role badges, active status pills, and direct shortcuts.</p>
+                                        </div>
+                                    </div>
+                                    <div class="card border-0 mb-4" style="background:#fef2f2; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#b91c1c;"><i class="fas fa-trash-alt me-2"></i> Admin Delete for Completed Records</h5>
+                                            <p class="mb-0">Administrators can now delete old completed tickets and records directly from the Completed and All Records tabs.</p>
+                                        </div>
+                                    </div>
+                                    <div class="card border-0 mb-4" style="background:#f0f9ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#0284c7;"><i class="fas fa-map-marked-alt me-2"></i> Synchronized Counters &amp; Map Fix</h5>
+                                            <p class="mb-0">Fixed the closed jobs counter so all overview cards display matching totals, and fixed the dispatch map view so satellite/street maps load reliably without access blocks.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- SEPTEMBER 22 -->
-                        <div class="tab-pane fade show active" id="list-sep22" role="tabpanel" aria-labelledby="list-sep22-list">
+                        <div class="tab-pane fade" id="list-sep22" role="tabpanel" aria-labelledby="list-sep22-list">
                             <h3 class="fw-bold mb-4 border-bottom pb-3" style="color: #1e3a8a;">
                                 September 22, 2026: No-Contact Escalation Protocol, Unreachable Close &amp; Post-Installation Welcome SMS
-                                <span class="badge bg-success ms-2 fs-6 align-middle" style="border-radius: 8px;">Latest Build</span>
                             </h3>
 
                             <p class="lead text-muted mb-4">Completed Sir Rogelio's dispatch workflow upgrades: formalizing technician-to-dispatcher client contact escalation for installation work orders with a 3-attempt limit and reason tracking, alongside 1-click customer portal credential dispatching via SMS complying with NTC no-link SMS regulations.</p>

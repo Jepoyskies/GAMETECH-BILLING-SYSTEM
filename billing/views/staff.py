@@ -36,7 +36,78 @@ def staff_list(request):
     )
 
 
-@role_required(["Admin"])
+ROLE_MODULE_SPECS = [
+    {
+        "key": "billing",
+        "name": "Billing & CRM",
+        "icon": "fa-users",
+        "flag": "can_access_billing",
+        "subtabs": [
+            ("dashboard", "Dashboard", "fa-chart-pie"),
+            ("customers", "Customers", "fa-user-friends"),
+            ("subscriptions", "Subscriptions", "fa-file-invoice-dollar"),
+            ("plans", "Internet Plans", "fa-wifi"),
+            ("payments", "Payments", "fa-money-bill-wave"),
+            ("payment_logs", "Payment Logs", "fa-receipt"),
+        ]
+    },
+    {
+        "key": "network_ops",
+        "name": "Network Operations",
+        "icon": "fa-network-wired",
+        "flag": "can_access_network_ops",
+        "subtabs": [
+            ("live_monitoring", "Live Monitoring", "fa-heartbeat"),
+            ("devices", "Mikrotik Devices", "fa-server"),
+            ("active_users", "Active Users", "fa-users-cog"),
+            ("geomap", "GeoMap", "fa-map-marked-alt"),
+            ("winbox", "Winbox Dashboard", "fa-desktop"),
+            ("downdetector", "Downdetector", "fa-bolt"),
+            ("speedtest", "Speedtest", "fa-tachometer-alt"),
+        ]
+    },
+    {
+        "key": "dispatch",
+        "name": "Dispatch System",
+        "icon": "fa-truck-fast",
+        "flag": "can_access_dispatch",
+        "subtabs": [
+            ("dispatch_dashboard", "Dashboard", "fa-gauge-high"),
+            ("dispatch_operation", "Dispatch Operation / Pipeline", "fa-route"),
+            ("dispatch_monitoring", "Master Log", "fa-clipboard-list"),
+            ("internet_install", "Internet Install", "fa-plug"),
+            ("client_concerns", "Client Concerns", "fa-headset"),
+            ("agents", "Agents", "fa-user-tie"),
+            ("management", "Management", "fa-sliders"),
+            ("audit_log", "Audit Log", "fa-history"),
+        ]
+    },
+    {
+        "key": "cignal_play",
+        "name": "Cignal Play",
+        "icon": "fa-tv",
+        "flag": "can_access_cignal_play",
+        "subtabs": [
+            ("cignal_dashboard", "Dashboard", "fa-tv"),
+            ("cignal_applications", "Applications", "fa-file-alt"),
+            ("cignal_logs", "Activity Logs", "fa-list-check"),
+        ]
+    },
+    {
+        "key": "administration",
+        "name": "Administration / Settings",
+        "icon": "fa-cogs",
+        "flag": "can_access_administration",
+        "subtabs": [
+            ("logs", "Logs", "fa-scroll"),
+            ("settings", "Settings", "fa-cog"),
+            ("admin_panel", "Admin Panel", "fa-toolbox"),
+            ("improvement_requests", "Improvement Requests", "fa-lightbulb"),
+        ]
+    },
+]
+
+
 @login_required
 def manage_roles(request):
     if request.method == "POST":
@@ -49,6 +120,39 @@ def manage_roles(request):
         can_access_dispatch = "can_access_dispatch" in request.POST
         can_access_administration = "can_access_administration" in request.POST
 
+        def parse_subtabs(post_data, can_bill, can_net, can_cig, can_disp, can_adm):
+            module_flags = {
+                "billing": can_bill,
+                "network_ops": can_net,
+                "cignal_play": can_cig,
+                "dispatch": can_disp,
+                "administration": can_adm,
+            }
+            res = {}
+            for mod in ROLE_MODULE_SPECS:
+                m_key = mod["key"]
+                res[m_key] = {}
+                is_mod_active = module_flags.get(m_key, False)
+                has_subtab_inputs = any(f"subtab_{m_key}_{s[0]}" in post_data for s in mod["subtabs"])
+                for s in mod["subtabs"]:
+                    s_key = s[0]
+                    if not is_mod_active:
+                        res[m_key][s_key] = False
+                    elif has_subtab_inputs:
+                        res[m_key][s_key] = f"subtab_{m_key}_{s_key}" in post_data
+                    else:
+                        res[m_key][s_key] = True
+            return res
+
+        subtab_perms = parse_subtabs(
+            request.POST,
+            can_access_billing,
+            can_access_network_ops,
+            can_access_cignal_play,
+            can_access_dispatch,
+            can_access_administration
+        )
+
         if action == "delete" and role_id:
             role = StaffRole.objects.filter(id=role_id).first()
             if role:
@@ -58,7 +162,7 @@ def manage_roles(request):
                     role.delete()
                     messages.success(request, f"Role '{role.name}' deleted successfully.")
         elif name:
-            if action == "create":
+            if action in ("create", "add"):
                 if StaffRole.objects.filter(name__iexact=name).exists():
                     messages.error(request, f"A role named '{name}' already exists.")
                 else:
@@ -68,7 +172,8 @@ def manage_roles(request):
                         can_access_network_ops=can_access_network_ops,
                         can_access_cignal_play=can_access_cignal_play,
                         can_access_dispatch=can_access_dispatch,
-                        can_access_administration=can_access_administration
+                        can_access_administration=can_access_administration,
+                        subtab_permissions=subtab_perms
                     )
                     messages.success(request, f"Role '{name}' created successfully.")
             elif action == "edit" and role_id:
@@ -83,12 +188,42 @@ def manage_roles(request):
                         role.can_access_cignal_play = can_access_cignal_play
                         role.can_access_dispatch = can_access_dispatch
                         role.can_access_administration = can_access_administration
+                        role.subtab_permissions = subtab_perms
                         role.save()
                         messages.success(request, f"Role '{name}' updated successfully.")
         return redirect("manage_roles")
 
     roles = StaffRole.objects.all().order_by("name")
-    return render(request, "billing/manage_roles.html", {"roles": roles})
+    for r in roles:
+        r.subtabs_data = []
+        for mod in ROLE_MODULE_SPECS:
+            m_key = mod["key"]
+            is_active = getattr(r, mod["flag"], False)
+            subs = []
+            for s_key, s_name, s_icon in mod["subtabs"]:
+                allowed = r.has_subtab_perm(m_key, s_key)
+                subs.append({
+                    "key": s_key,
+                    "name": s_name,
+                    "icon": s_icon,
+                    "allowed": allowed,
+                    "field_name": f"subtab_{m_key}_{s_key}",
+                })
+            r.subtabs_data.append({
+                "key": m_key,
+                "name": mod["name"],
+                "icon": mod["icon"],
+                "flag": mod["flag"],
+                "is_active": is_active,
+                "subtabs": subs,
+                "active_subs_count": sum(1 for s in subs if s["allowed"]),
+                "total_subs_count": len(subs),
+            })
+
+    return render(request, "billing/manage_roles.html", {
+        "roles": roles,
+        "module_specs": ROLE_MODULE_SPECS,
+    })
 
 
 @role_required(["Admin"])

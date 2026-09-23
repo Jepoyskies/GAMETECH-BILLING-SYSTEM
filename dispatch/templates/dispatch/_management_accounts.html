@@ -1,4 +1,4 @@
-<!-- TAB 1: ACCOUNTS (PDF Page 13 Standard) -->
+<!-- TAB 1: ACCOUNTS (Harmonized with Central Staff & Admins) -->
 <div class="tab-pane fade show active" id="tab-accounts" role="tabpanel" aria-labelledby="accounts-tab">
     <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-25 flex-wrap gap-2">
         <div>
@@ -6,8 +6,26 @@
             <span class="text-muted text-xs">Active operators, administrators, CSRs, and field technicians</span>
         </div>
         <div class="d-flex gap-2">
+            <a href="{% url 'manage_roles' %}" class="btn btn-sm btn-outline-secondary" style="border-radius: 8px; font-size: 0.82rem;">
+                <i class="fas fa-shield-alt me-1"></i> Roles & Permissions
+            </a>
             <a href="{% url 'add_staff' %}" class="btn btn-sm btn-primary" style="border-radius: 8px; font-size: 0.82rem;">
                 <i class="fas fa-user-plus me-1"></i> Add Account
+            </a>
+        </div>
+    </div>
+
+    <div class="px-3 pt-3">
+        <div class="d-flex align-items-center justify-content-between p-3 rounded-3 flex-wrap gap-2" style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.2);">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fas fa-sync-alt text-info"></i>
+                <div>
+                    <span class="text-white text-xs fw-bold d-block">Synchronized Account Directory</span>
+                    <span class="text-muted" style="font-size: 0.75rem;">User accounts here represent the system operators and staff. Advanced role assignments, permissions, and status controls are centrally synchronized with Staff & Admins.</span>
+                </div>
+            </div>
+            <a href="{% url 'staff_list' %}" class="btn btn-sm btn-outline-info" style="border-radius: 8px; font-size: 0.78rem;">
+                <i class="fas fa-external-link-alt me-1"></i> Open Staff & Admins
             </a>
         </div>
     </div>
@@ -19,7 +37,8 @@
                     <th class="ps-3" style="width: 220px;">Operator / Username</th>
                     <th>Full Name</th>
                     <th>Email Address</th>
-                    <th style="width: 140px;">Role & Access</th>
+                    <th style="width: 150px;">Role & Access</th>
+                    <th style="width: 100px;">Status</th>
                     <th style="width: 150px;">Last Login</th>
                     <th class="text-end pe-3" style="width: 120px;">Actions</th>
                 </tr>
@@ -30,7 +49,7 @@
                     <td class="ps-3">
                         <div class="d-flex align-items-center gap-2">
                             <div class="rounded-circle d-inline-flex align-items-center justify-content-center text-white fw-bold"
-                                 style="width: 32px; height: 32px; font-size: 0.8rem; background: linear-gradient(135deg, #3b82f6, #6366f1);">
+                                 style="width: 32px; height: 32px; font-size: 0.8rem; {% if acc.role == 'Admin' or acc.is_superuser %}background: linear-gradient(135deg, #ef4444, #b91c1c);{% elif acc.role == 'Editor' %}background: linear-gradient(135deg, #3b82f6, #2563eb);{% elif acc.role == 'CSR' %}background: linear-gradient(135deg, #10b981, #059669);{% elif acc.role == 'Technician' %}background: linear-gradient(135deg, #f59e0b, #d97706);{% else %}background: #64748b;{% endif %}">
                                 {{ acc.username|make_list|first|upper }}
                             </div>
                             <div>
@@ -48,17 +67,36 @@
                         <span class="text-muted text-xs font-monospace">{{ acc.email|default:"—" }}</span>
                     </td>
                     <td>
-                        {% if acc.is_superuser %}
-                        <span class="badge bg-danger bg-opacity-20 text-danger border border-danger border-opacity-30 text-xs">
-                            <i class="fas fa-crown me-1"></i>Super Admin
+                        {% if acc.role == 'Admin' or acc.is_superuser %}
+                        <span class="pill" style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); font-size: 0.72rem; padding: 2px 8px; border-radius: 20px;">
+                            <i class="fas fa-user-shield me-1"></i> Admin
                         </span>
-                        {% elif acc.is_staff %}
-                        <span class="badge bg-primary bg-opacity-20 text-primary border border-primary border-opacity-30 text-xs">
-                            <i class="fas fa-shield-alt me-1"></i>Staff / CSR
+                        {% elif acc.role == 'Editor' %}
+                        <span class="pill" style="background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.3); font-size: 0.72rem; padding: 2px 8px; border-radius: 20px;">
+                            <i class="fas fa-edit me-1"></i> Editor
+                        </span>
+                        {% elif acc.role == 'CSR' %}
+                        <span class="pill" style="background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3); font-size: 0.72rem; padding: 2px 8px; border-radius: 20px;">
+                            <i class="fas fa-headset me-1"></i> CSR
+                        </span>
+                        {% elif acc.role == 'Technician' %}
+                        <span class="pill" style="background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.3); font-size: 0.72rem; padding: 2px 8px; border-radius: 20px;">
+                            <i class="fas fa-tools me-1"></i> Technician
+                        </span>
+                        {% else %}
+                        <span class="pill" style="background:rgba(148,163,184,0.15); color:#cbd5e1; border:1px solid rgba(148,163,184,0.3); font-size: 0.72rem; padding: 2px 8px; border-radius: 20px;">
+                            <i class="fas fa-user me-1"></i> {{ acc.role|default:"Standard" }}
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if acc.is_active %}
+                        <span class="badge bg-success bg-opacity-20 text-success border border-success border-opacity-30 text-xs">
+                            <i class="fas fa-check-circle me-1"></i>Active
                         </span>
                         {% else %}
                         <span class="badge bg-secondary bg-opacity-20 text-muted border border-secondary border-opacity-30 text-xs">
-                            Standard
+                            Inactive
                         </span>
                         {% endif %}
                     </td>
@@ -89,7 +127,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="text-center py-4 text-muted fst-italic">No active user accounts found.</td>
+                    <td colspan="7" class="text-center py-4 text-muted fst-italic">No active user accounts found.</td>
                 </tr>
                 {% endfor %}
             </tbody>

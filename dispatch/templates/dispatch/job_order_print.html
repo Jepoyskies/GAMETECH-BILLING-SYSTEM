@@ -1,0 +1,782 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISP Job Order Form - {{ ticket.ticket_number|default:"Blank" }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* ═══════════════════════════════════════════════════════════
+           GAMETECH UNLI FIBER — ISP JOB ORDER FORM
+           Pixel-perfect print template matching physical form
+        ═══════════════════════════════════════════════════════════ */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #0b1120;
+            color: #1e293b;
+            font-size: 11px;
+            line-height: 1.35;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ─── Screen View Toolbar ─────────────────────────────── */
+        .toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .toolbar-left, .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .toolbar-title {
+            color: #f8fafc;
+            font-weight: 700;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-tool {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .btn-tool-primary {
+            background: #0b4ec7;
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(11, 78, 199, 0.4);
+        }
+        .btn-tool-primary:hover {
+            background: #093da0;
+            color: #ffffff;
+        }
+
+        .btn-tool-ghost {
+            background: rgba(255, 255, 255, 0.08);
+            color: #cbd5e1;
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+        .btn-tool-ghost:hover {
+            background: rgba(255, 255, 255, 0.16);
+            color: #ffffff;
+        }
+
+        /* ─── Printable Page Wrapper ──────────────────────────── */
+        .page-container {
+            width: 816px; /* 8.5in at 96dpi */
+            min-height: 1056px; /* 11in */
+            margin: 24px auto 48px auto;
+            background: #ffffff;
+            padding: 28px 36px 24px 36px;
+            border-radius: 4px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* ─── Header ─────────────────────────────────────────── */
+        .form-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .brand-logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-logo-img {
+            max-height: 48px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        .brand-logo-fallback {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f97316, #ea580c);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 22px;
+            font-weight: 900;
+            box-shadow: 0 2px 8px rgba(249, 115, 22, 0.4);
+        }
+
+        .brand-name-group {
+            line-height: 1.1;
+        }
+
+        .brand-name-main {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: #0b4ec7;
+        }
+
+        .brand-name-sub {
+            font-size: 13px;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+            color: #f97316;
+            margin-top: 1px;
+        }
+
+        .header-title-box {
+            background: #0b4ec7;
+            color: #ffffff;
+            padding: 8px 18px;
+            border-radius: 4px;
+            text-align: right;
+            box-shadow: 0 2px 6px rgba(11, 78, 199, 0.25);
+        }
+
+        .header-title-main {
+            font-size: 15px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .header-title-sub {
+            font-size: 9.5px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            opacity: 0.95;
+            margin-top: 1px;
+            text-transform: uppercase;
+        }
+
+        /* ─── Grid Form Fields ───────────────────────────────── */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            column-gap: 20px;
+            row-gap: 5px;
+            margin-bottom: 12px;
+        }
+
+        .field-row {
+            display: flex;
+            align-items: center;
+            min-height: 22px;
+        }
+
+        .field-label {
+            width: 125px;
+            flex-shrink: 0;
+            font-size: 10.5px;
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .field-box {
+            flex-grow: 1;
+            background: #eef2f6;
+            border: 1px solid #cbd5e1;
+            border-radius: 3px;
+            min-height: 21px;
+            padding: 2px 8px;
+            font-size: 11px;
+            color: #0f172a;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .field-box.font-mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11.5px;
+            color: #0b4ec7;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 10.5px;
+            font-weight: 600;
+            color: #1e293b;
+            flex-grow: 1;
+        }
+
+        .cb-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .cb-square {
+            width: 13px;
+            height: 13px;
+            border: 1.5px solid #475569;
+            border-radius: 2px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 800;
+            color: #0b4ec7;
+            background: #ffffff;
+            line-height: 1;
+        }
+
+        .cb-square.checked {
+            background: #eef2f6;
+            border-color: #0b4ec7;
+        }
+
+        /* ─── Section Divider Banners ────────────────────────── */
+        .section-header-bar {
+            margin: 10px 0 8px 0;
+            border-bottom: 2px solid #0b4ec7;
+            padding-bottom: 2px;
+        }
+
+        .section-header-text {
+            font-size: 12.5px;
+            font-weight: 800;
+            color: #0b4ec7;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        /* ─── Large Text Areas ───────────────────────────────── */
+        .text-areas-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            column-gap: 20px;
+            margin-top: 6px;
+            margin-bottom: 6px;
+        }
+
+        .textarea-block {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .textarea-label {
+            font-size: 10.5px;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 3px;
+        }
+
+        .textarea-box {
+            background: #eef2f6;
+            border: 1px solid #cbd5e1;
+            border-radius: 3px;
+            min-height: 48px;
+            padding: 6px 8px;
+            font-size: 10.5px;
+            color: #0f172a;
+            font-weight: 500;
+            line-height: 1.3;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .full-width-block {
+            margin-top: 5px;
+            margin-bottom: 8px;
+        }
+
+        .full-width-block .textarea-box {
+            min-height: 38px;
+        }
+
+        /* ─── Work Completion ────────────────────────────────── */
+        .completion-dates-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            column-gap: 20px;
+            margin-bottom: 6px;
+        }
+
+        .ack-row {
+            display: grid;
+            grid-template-columns: 1.1fr 1fr;
+            column-gap: 20px;
+            margin-top: 8px;
+            margin-bottom: 12px;
+            font-size: 10.5px;
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .underline-field {
+            display: inline-block;
+            border-bottom: 1px solid #1e293b;
+            min-width: 140px;
+            padding: 0 6px;
+            color: #0f172a;
+            font-weight: 700;
+        }
+
+        /* ─── Signatures ─────────────────────────────────────── */
+        .signatures-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            column-gap: 24px;
+            margin-top: 14px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .sig-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .sig-role {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #334155;
+            align-self: flex-start;
+            margin-bottom: 30px;
+        }
+
+        .sig-line {
+            width: 100%;
+            border-bottom: 1px solid #1e293b;
+            margin-bottom: 4px;
+            height: 0;
+        }
+
+        .sig-name-text {
+            font-size: 11px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 1px;
+            min-height: 15px;
+        }
+
+        .sig-caption {
+            font-size: 9.5px;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        /* ─── Footer Disclaimer ──────────────────────────────── */
+        .form-footer-note {
+            text-align: center;
+            font-size: 9.5px;
+            font-style: italic;
+            font-weight: 600;
+            color: #0b4ec7;
+            margin-top: 8px;
+            padding-top: 4px;
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           PRINT OPTIMIZATIONS (@media print)
+        ═══════════════════════════════════════════════════════ */
+        @media print {
+            body {
+                background: #ffffff !important;
+                color: #000000 !important;
+            }
+
+            .toolbar {
+                display: none !important;
+            }
+
+            .page-container {
+                width: 100% !important;
+                min-height: auto !important;
+                margin: 0 !important;
+                padding: 10mm 12mm !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+            }
+
+            @page {
+                size: portrait;
+                margin: 8mm 10mm;
+            }
+
+            .field-box, .textarea-box {
+                background: #f1f5f9 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                border: 1px solid #94a3b8 !important;
+            }
+
+            .header-title-box {
+                background: #0b4ec7 !important;
+                color: #ffffff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .brand-name-main, .section-header-text, .form-footer-note {
+                color: #0b4ec7 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .brand-name-sub {
+                color: #ea580c !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ─── Screen View Toolbar ─────────────────────────────── -->
+    <div class="toolbar">
+        <div class="toolbar-left">
+            <span class="toolbar-title">
+                <i class="fas fa-file-invoice text-primary"></i>
+                Official ISP Job Order Form
+                {% if ticket %}
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #38bdf8;">{{ ticket.ticket_number }}</span>
+                {% else %}
+                <span class="badge bg-secondary" style="font-size: 11px;">Blank Form</span>
+                {% endif %}
+            </span>
+        </div>
+        <div class="toolbar-right">
+            {% if ticket %}
+            <a href="{% url 'dispatch_job_order_blank' %}" target="_blank" class="btn-tool btn-tool-ghost" title="Open empty blank form for printing physical sheets">
+                <i class="fas fa-file"></i> Print Blank Copy
+            </a>
+            {% endif %}
+            <button onclick="window.print()" class="btn-tool btn-tool-primary" title="Print this Job Order or Save as PDF">
+                <i class="fas fa-print"></i> Print / Save as PDF
+            </button>
+            <a href="javascript:window.close()" class="btn-tool btn-tool-ghost" id="btnCloseTab" style="display: none;">
+                <i class="fas fa-times"></i> Close Tab
+            </a>
+            <a href="{% url 'dispatch_dashboard' %}" class="btn-tool btn-tool-ghost" id="btnBackDashboard">
+                <i class="fas fa-arrow-left"></i> Back to Dispatch
+            </a>
+        </div>
+    </div>
+
+    <!-- ─── Printable Page Container ───────────────────────── -->
+    <div class="page-container">
+
+        <div>
+            <!-- Header with Gametech Brand and Title Banner -->
+            <div class="form-header">
+                <div class="brand-logo-area">
+                    <img src="{% static 'assets/images/logo_black.png' %}" alt="Gametech Logo" class="brand-logo-img" onerror="this.style.display='none'; document.getElementById('fallbackLogo').style.display='flex';">
+                    <div id="fallbackLogo" class="brand-logo-fallback" style="display: none;">G</div>
+                    <div class="brand-name-group">
+                        <div class="brand-name-main">gametech</div>
+                        <div class="brand-name-sub">UNLI FIBER</div>
+                    </div>
+                </div>
+                <div class="header-title-box">
+                    <div class="header-title-main">| ISP JOB ORDER FORM</div>
+                    <div class="header-title-sub">INSTALLATION / REPAIR SERVICE</div>
+                </div>
+            </div>
+
+            <!-- Top Details Meta Grid -->
+            <div class="info-grid">
+                <!-- Left Column -->
+                <div class="field-row">
+                    <span class="field-label">Job Order No.</span>
+                    <div class="field-box font-mono">{{ ticket.ticket_number|default:"" }}</div>
+                </div>
+                <!-- Right Column -->
+                <div class="field-row">
+                    <span class="field-label">Job Order Date</span>
+                    <div class="field-box">{{ ticket.created_at|date:"F d, Y"|default:"" }}</div>
+                </div>
+
+                <!-- Left Column -->
+                <div class="field-row">
+                    <span class="field-label">Job Status</span>
+                    <div class="checkbox-group">
+                        <span class="cb-item">
+                            <span class="cb-square {% if is_installation %}checked{% endif %}">{% if is_installation %}&#10003;{% endif %}</span>
+                            For Installation
+                        </span>
+                        <span class="cb-item">
+                            <span class="cb-square {% if is_repair %}checked{% endif %}">{% if is_repair %}&#10003;{% endif %}</span>
+                            For Repair
+                        </span>
+                    </div>
+                </div>
+                <!-- Right Column -->
+                <div class="field-row">
+                    <span class="field-label">Assigned Crew</span>
+                    <div class="field-box">{{ team_and_techs|default:"" }}</div>
+                </div>
+
+                <!-- Left Column -->
+                <div class="field-row">
+                    <span class="field-label">Subscriber Name</span>
+                    <div class="field-box" style="font-weight: 700;">{{ ticket.client_name|default:"" }}</div>
+                </div>
+                <!-- Right Column -->
+                <div class="field-row">
+                    <span class="field-label">Account No.</span>
+                    <div class="field-box font-mono">{{ ticket.account_no|default:"" }}</div>
+                </div>
+
+                <!-- Left Column -->
+                <div class="field-row">
+                    <span class="field-label">Contact Number</span>
+                    <div class="field-box">{{ ticket.contact_number|default:"" }}</div>
+                </div>
+                <!-- Right Column -->
+                <div class="field-row">
+                    <span class="field-label">Email Address</span>
+                    <div class="field-box">{{ customer_email|default:"" }}</div>
+                </div>
+
+                <!-- Left Column -->
+                <div class="field-row">
+                    <span class="field-label">Service Address</span>
+                    <div class="field-box">{{ ticket.address|default:"" }}</div>
+                </div>
+                <!-- Right Column -->
+                <div class="field-row">
+                    <span class="field-label">Barangay/City</span>
+                    <div class="field-box">{{ ticket.barangay|default:"" }}</div>
+                </div>
+
+                <!-- Left Column -->
+                <div class="field-row">
+                    <span class="field-label">Scheduled Date</span>
+                    <div class="field-box">{% if ticket.scheduled_date %}{{ ticket.scheduled_date|date:"F d, Y" }}{% endif %}</div>
+                </div>
+                <!-- Right Column -->
+                <div class="field-row">
+                    <span class="field-label">Scheduled Time</span>
+                    <div class="field-box">{{ ticket.scheduled_time|default:"" }}</div>
+                </div>
+            </div>
+
+            <!-- ─── SERVICE DETAILS SECTION ──────────────────────── -->
+            <div class="section-header-bar">
+                <span class="section-header-text">SERVICE DETAILS</span>
+            </div>
+
+            <div class="info-grid">
+                <!-- Left Column -->
+                <div class="field-row">
+                    <span class="field-label">Service Type</span>
+                    <div class="checkbox-group">
+                        <span class="cb-item">
+                            <span class="cb-square {% if is_installation %}checked{% endif %}">{% if is_installation %}&#10003;{% endif %}</span>
+                            Installation
+                        </span>
+                        <span class="cb-item">
+                            <span class="cb-square {% if is_repair %}checked{% endif %}">{% if is_repair %}&#10003;{% endif %}</span>
+                            Repair
+                        </span>
+                    </div>
+                </div>
+                <!-- Right Column -->
+                <div class="field-row">
+                    <span class="field-label">Plan/Package</span>
+                    <div class="field-box" style="font-weight: 700;">{{ ticket.plan_package|default:"" }}</div>
+                </div>
+
+                <!-- Left Column -->
+                <div class="field-row">
+                    <span class="field-label">NAP / Port</span>
+                    <div class="field-box">{{ ticket.nap_port|default:"" }}</div>
+                </div>
+                <!-- Right Column -->
+                <div class="field-row">
+                    <span class="field-label">ONT/Modem SN</span>
+                    <div class="field-box font-mono">{{ ticket.ont_modem_sn|default:"" }}</div>
+                </div>
+
+                <!-- Left Column -->
+                <div class="field-row">
+                    <span class="field-label">Cable Length Used</span>
+                    <div class="field-box">{{ ticket.cable_length|default:"" }}</div>
+                </div>
+                <!-- Right Column -->
+                <div class="field-row">
+                    <span class="field-label">Signal Level</span>
+                    <div class="field-box">{{ ticket.signal_level|default:"" }}</div>
+                </div>
+
+                <!-- Left Column -->
+                <div class="field-row">
+                    <span class="field-label">Longlat</span>
+                    <div class="field-box font-mono">{% if ticket.latitude and ticket.longitude %}{{ ticket.latitude }}, {{ ticket.longitude }}{% endif %}</div>
+                </div>
+                <!-- Right Column -->
+                <div class="field-row">
+                    <span class="field-label">Facility</span>
+                    <div class="field-box">{{ ticket.facility|default:"" }}</div>
+                </div>
+
+                <!-- Left Column -->
+                <div class="field-row">
+                    <span class="field-label">Nap Reading</span>
+                    <div class="field-box">{{ ticket.nap_reading|default:"" }}</div>
+                </div>
+                <!-- Right Column -->
+                <div class="field-row">
+                    <span class="field-label">House Reading</span>
+                    <div class="field-box">{{ ticket.house_reading|default:"" }}</div>
+                </div>
+
+                <!-- Left Column -->
+                <div class="field-row">
+                    <span class="field-label">Pole Number</span>
+                    <div class="field-box">{{ ticket.pole_number|default:"" }}</div>
+                </div>
+                <!-- Right Column -->
+                <div class="field-row">
+                    <span class="field-label" style="opacity: 0.4;">&nbsp;</span>
+                    <div class="field-box" style="visibility: hidden;"></div>
+                </div>
+            </div>
+
+            <!-- Problem Reported & Action Taken (Side-by-side textareas) -->
+            <div class="text-areas-grid">
+                <div class="textarea-block">
+                    <span class="textarea-label">Problem Reported <span style="font-weight: 400; font-size: 9.5px; color: #64748b;">(for repair)</span></span>
+                    <div class="textarea-box">{{ ticket.concern|default:"" }}</div>
+                </div>
+                <div class="textarea-block">
+                    <span class="textarea-label">Action Taken</span>
+                    <div class="textarea-box">{{ ticket.actions_taken|default:"" }}</div>
+                </div>
+            </div>
+
+            <!-- Special Instructions (Full Width) -->
+            <div class="full-width-block">
+                <span class="textarea-label">Special Instructions</span>
+                <div class="textarea-box">{{ ticket.special_instruction|default:"" }}</div>
+            </div>
+
+            <!-- ─── WORK COMPLETION SECTION ──────────────────────── -->
+            <div class="section-header-bar">
+                <span class="section-header-text">WORK COMPLETION</span>
+            </div>
+
+            <div class="completion-dates-grid">
+                <div class="field-row">
+                    <span class="field-label">Date Time Started</span>
+                    <div class="field-box">{% if ticket.time_start %}{{ ticket.time_start|date:"M d, Y h:i A" }}{% endif %}</div>
+                </div>
+                <div class="field-row">
+                    <span class="field-label">Date Time Finished</span>
+                    <div class="field-box">{% if finish_time %}{{ finish_time|date:"M d, Y h:i A" }}{% endif %}</div>
+                </div>
+            </div>
+
+            <div class="full-width-block" style="margin-top: 4px;">
+                <span class="textarea-label">Technician Remarks</span>
+                <div class="textarea-box">{{ ticket.technician_remarks|default:"" }}</div>
+            </div>
+
+            <div class="ack-row">
+                <div>
+                    Acknowledged by: 
+                    <span class="underline-field">{{ ticket.acknowledged_by|default:"" }}</span>
+                </div>
+                <div>
+                    Service Completed and Tested Date: 
+                    <span class="underline-field">{% if finish_time %}{{ finish_time|date:"F d, Y" }}{% endif %}</span>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <!-- ─── SIGNATURES ───────────────────────────────────── -->
+            <div class="signatures-grid">
+                <div class="sig-block">
+                    <span class="sig-role">Prepared by:</span>
+                    <div class="sig-name-text">{{ prepared_by_name|default:"" }}</div>
+                    <div class="sig-line"></div>
+                    <span class="sig-caption">Name and Signature</span>
+                </div>
+                <div class="sig-block">
+                    <span class="sig-role">Technician:</span>
+                    <div class="sig-name-text">{{ tech_signatures|default:"" }}</div>
+                    <div class="sig-line"></div>
+                    <span class="sig-caption">Name and Signature</span>
+                </div>
+                <div class="sig-block">
+                    <span class="sig-role">Subscriber / Customer:</span>
+                    <div class="sig-name-text">{{ ticket.client_name|default:"" }}</div>
+                    <div class="sig-line"></div>
+                    <span class="sig-caption">Name and Signature</span>
+                </div>
+            </div>
+
+            <!-- Footer Notice -->
+            <div class="form-footer-note">
+                NOTE: This job order is limited to Installation and Repair services only.
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Check if opened as popup or standalone tab
+        if (window.opener && !window.opener.closed) {
+            const closeBtn = document.getElementById('btnCloseTab');
+            if (closeBtn) closeBtn.style.display = 'inline-flex';
+        }
+
+        // Auto-print support if URL has ?autoprint=1
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('autoprint') === '1') {
+            window.addEventListener('load', function() {
+                setTimeout(function() {
+                    window.print();
+                }, 300);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -16,6 +16,10 @@
         <div style="font-size: 0.78rem; color: #94a3b8;">{{ t.team.name|default:"Field Staff" }}</div>
       </div>
       <div class="ms-auto d-flex gap-2 flex-shrink-0 align-items-center">
+        <a href="{% url 'dispatch_job_order_print' t.id %}" target="_blank"
+           class="dispatch-action-btn dispatch-action-btn-ghost" title="Print Official ISP Job Order Form">
+          <i class="fas fa-print"></i> Form
+        </a>
         {% if t.status == 'QA_PASSED' %}
         <span class="badge" style="background: rgba(14,165,233,0.15); color: #38bdf8; border: 1px solid rgba(14,165,233,0.3); padding: 5px 10px; font-size: 0.75rem;">
           <i class="fas fa-clipboard-check me-1"></i> QA Passed
@@ -28,6 +32,12 @@
         <a href="{% url 'dispatch_qa' %}" class="dispatch-action-btn dispatch-action-btn-ghost" title="Review in QA Pipeline" style="font-size: 0.75rem; padding: 4px 10px;">
           <i class="fas fa-clipboard-check text-cyan me-1"></i> In QA Review
         </a>
+        {% endif %}
+        {% if user.is_staff or user.is_superuser %}
+        <button type="button" class="dispatch-action-btn dispatch-action-btn-red btn-delete-ticket"
+                data-id="{{ t.id }}" data-number="{{ t.ticket_number }}" title="Delete Ticket (Admin Only)">
+          <i class="fas fa-trash-alt"></i>
+        </button>
         {% endif %}
       </div>
     </div>
@@ -47,10 +57,20 @@
         <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: #475569;">Status</div>
         <span style="font-size:0.75rem; color:#34d399;">Completed</span>
       </div>
-      <div class="ms-auto d-flex gap-2 flex-shrink-0">
+      <div class="ms-auto d-flex gap-2 flex-shrink-0 align-items-center">
+        <a href="{% url 'dispatch_job_order_print_record' r.id %}" target="_blank"
+           class="dispatch-action-btn dispatch-action-btn-ghost" title="Print Official ISP Job Order Form">
+          <i class="fas fa-print"></i> Form
+        </a>
         <a href="{% url 'complete_job' r.id %}" class="dispatch-action-btn dispatch-action-btn-ghost" title="View Job Details">
           <i class="fas fa-eye"></i> Details
         </a>
+        {% if user.is_staff or user.is_superuser %}
+        <button type="button" class="dispatch-action-btn dispatch-action-btn-red btn-delete-record"
+                data-id="{{ r.id }}" data-number="REC-{{ r.id }}" title="Delete Record (Admin Only)">
+          <i class="fas fa-trash-alt"></i>
+        </button>
+        {% endif %}
       </div>
     </div>
     {% endfor %}

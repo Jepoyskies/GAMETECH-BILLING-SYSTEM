@@ -2,41 +2,52 @@ import json
 from datetime import datetime
 from django.utils import timezone
 from django.db.models import Q
-from .models import JobTicket
+from .models import JobTicket, MonitoringRecord
 
 
 def get_operational_overview_stats():
     """
     Section 1: Operational Overview (4 Colored Cards - ALWAYS LIVE)
     For Dispatch, Ongoing, Total Closed, Total Cancelled.
-    Each with an Install / Repair breakdown underneath.
-    Bypasses date filters per Phase 1 rule.
+    Synchronized across both JobTicket and legacy MonitoringRecord.
+    Bypasses date filters per Phase 1 live-reality rule.
     """
-    pending = JobTicket.objects.filter(status='PENDING')
-    ongoing = JobTicket.objects.filter(status__in=['ASSIGNED', 'IN_PROGRESS'])
-    closed = JobTicket.objects.filter(status__in=['COMPLETED', 'QA_PASSED'])
-    cancelled = JobTicket.objects.filter(status='CANCELLED')
+    # 1. Job Tickets
+    pending_t = JobTicket.objects.filter(status='PENDING')
+    ongoing_t = JobTicket.objects.filter(status__in=['ASSIGNED', 'IN_PROGRESS'])
+    closed_t = JobTicket.objects.filter(status__in=['COMPLETED', 'QA_PASSED', 'COMPLETED_AND_VERIFIED'])
+    cancelled_t = JobTicket.objects.filter(status='CANCELLED')
 
+    # 2. Monitoring Records
+    records = MonitoringRecord.objects.all().select_related('status_option')
+    closed_r = records.filter(Q(status_option__label__icontains='Done') | Q(status_option__label__icontains='Completed') | Q(done_at__isnull=False))
+    cancelled_r = records.filter(status_option__label__icontains='Cancelled')
+    ongoing_r = records.exclude(id__in=closed_r).exclude(id__in=cancelled_r).filter(
+        Q(status_option__label__icontains='Ongoing') | Q(status_option__label__icontains='Progress') | Q(time_start__isnull=False)
+    )
+    pending_r = records.exclude(id__in=closed_r).exclude(id__in=cancelled_r).exclude(id__in=ongoing_r)
+
+    # 3. Synchronized totals
     return {
         'for_dispatch': {
-            'total': pending.count(),
-            'installs': pending.exclude(ticket_type='REPAIR').count(),
-            'repairs': pending.filter(ticket_type='REPAIR').count(),
+            'total': pending_t.count() + pending_r.count(),
+            'installs': pending_t.exclude(ticket_type='REPAIR').count() + pending_r.filter(tab_type='INTERNET_INSTALL').count(),
+            'repairs': pending_t.filter(ticket_type='REPAIR').count() + pending_r.filter(tab_type='CLIENT_CONCERNS').count(),
         },
         'ongoing': {
-            'total': ongoing.count(),
-            'installs': ongoing.exclude(ticket_type='REPAIR').count(),
-            'repairs': ongoing.filter(ticket_type='REPAIR').count(),
+            'total': ongoing_t.count() + ongoing_r.count(),
+            'installs': ongoing_t.exclude(ticket_type='REPAIR').count() + ongoing_r.filter(tab_type='INTERNET_INSTALL').count(),
+            'repairs': ongoing_t.filter(ticket_type='REPAIR').count() + ongoing_r.filter(tab_type='CLIENT_CONCERNS').count(),
         },
         'closed': {
-            'total': closed.count(),
-            'installs': closed.exclude(ticket_type='REPAIR').count(),
-            'repairs': closed.filter(ticket_type='REPAIR').count(),
+            'total': closed_t.count() + closed_r.count(),
+            'installs': closed_t.exclude(ticket_type='REPAIR').count() + closed_r.filter(tab_type='INTERNET_INSTALL').count(),
+            'repairs': closed_t.filter(ticket_type='REPAIR').count() + closed_r.filter(tab_type='CLIENT_CONCERNS').count(),
         },
         'cancelled': {
-            'total': cancelled.count(),
-            'installs': cancelled.exclude(ticket_type='REPAIR').count(),
-            'repairs': cancelled.filter(ticket_type='REPAIR').count(),
+            'total': cancelled_t.count() + cancelled_r.count(),
+            'installs': cancelled_t.exclude(ticket_type='REPAIR').count() + cancelled_r.filter(tab_type='INTERNET_INSTALL').count(),
+            'repairs': cancelled_t.filter(ticket_type='REPAIR').count() + cancelled_r.filter(tab_type='CLIENT_CONCERNS').count(),
         }
     }
 
