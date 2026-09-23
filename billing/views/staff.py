@@ -436,33 +436,37 @@ def delete_staff(request, pk):
         target_username = staff.username if staff else user.username
         if target_username == request.user.username:
             messages.error(request, "You cannot delete your own logged-in account.")
-            return redirect("staff_list")
+            referer = request.META.get('HTTP_REFERER')
+            return redirect(referer if referer else "staff_list")
 
         from dispatch.models import Technician
 
         try:
             with transaction.atomic():
-                user = User.objects.filter(username=staff.username).first()
-                if user:
+                user_obj = User.objects.filter(username=target_username).first()
+                if user_obj:
                     # Detach technician FK if linked
-                    Technician.objects.filter(user=user).update(user=None)
+                    Technician.objects.filter(user=user_obj).update(user=None)
 
                     # Invalidate session cache
-                    cache.delete(f"seen_user_{user.id}")
+                    cache.delete(f"seen_user_{user_obj.id}")
 
                     # Attempt deleting Django User
                     try:
-                        user.delete()
+                        user_obj.delete()
                     except (ProtectedError, RestrictedError):
                         # If referenced by dispatch/monitoring FKs (RESTRICT), revoke staff privileges
-                        user.is_staff = False
-                        user.is_active = False
-                        user.save(update_fields=["is_staff", "is_active"])
+                        user_obj.is_staff = False
+                        user_obj.is_active = False
+                        user_obj.save(update_fields=["is_staff", "is_active"])
 
-                staff.delete()
+                if staff:
+                    staff.delete()
 
-            messages.success(request, f"Staff member '{staff.full_name}' ({staff.username}) was deleted successfully.")
+            display_name = staff.full_name if (staff and staff.full_name) else target_username
+            messages.success(request, f"User account '{display_name}' ({target_username}) was deleted successfully.")
         except Exception as e:
-            messages.error(request, f"Error deleting staff member: {str(e)}")
+            messages.error(request, f"Error deleting user account: {str(e)}")
 
-    return redirect("staff_list")
+    referer = request.META.get('HTTP_REFERER')
+    return redirect(referer if referer else "staff_list")
