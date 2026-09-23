@@ -1,0 +1,305 @@
+<script>
+    /* ═══════════════════════════════════════════════════════════
+       DISPATCH DETAIL & EDIT MODAL CONTROLLER (1:1 LIVE PARITY)
+    ═══════════════════════════════════════════════════════════ */
+    let dtIsEditing = false;
+    let dtCurrentTicketId = null;
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function openDispatchDetailModal(ticketId) {
+        dtCurrentTicketId = ticketId;
+        dtIsEditing = false;
+        document.getElementById('dispatch-detail-title').textContent = `Dispatch #${ticketId}`;
+        document.getElementById('dt-ticket-id').value = ticketId;
+        
+        // Reset Edit Button UI
+        const editBtn = document.getElementById('dt-btn-edit');
+        editBtn.className = 'btn btn-primary px-4 py-2';
+        editBtn.innerHTML = '<i class="fas fa-edit me-1"></i> Edit';
+
+        // Fetch ticket data
+        fetch(`/dispatch/api/tickets/${ticketId}/`)
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success || !data.ticket) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'Failed to load ticket details' });
+                    } else {
+                        alert(data.error || 'Failed to load ticket details');
+                    }
+                    return;
+                }
+
+                const t = data.ticket;
+                // 1. Job Info
+                document.getElementById('dt-date-created').value = t.created_at || '';
+                document.getElementById('dt-date-completed').value = t.completed_at || '';
+                setSelectValue('dt-ticket-type', t.ticket_type || t.ticket_type_display);
+                setSelectValue('dt-chat-type', t.chat_type);
+                setSelectValue('dt-status', t.status_display || t.status);
+                setSelectValue('dt-source-tab', t.source_tab_display || t.source_tab);
+                document.getElementById('dt-csr').value = t.csr || '';
+                document.getElementById('dt-sales-agent').value = t.sales_agent || '';
+
+                // 2. Subscriber Info
+                document.getElementById('dt-client-name').value = t.client_name || '';
+                document.getElementById('dt-contact-number').value = t.contact_number || '';
+                document.getElementById('dt-account-no').value = t.account_no || '';
+                document.getElementById('dt-email-address').value = t.email_address || '';
+
+                // 3. Location
+                document.getElementById('dt-address').value = t.address || '';
+                document.getElementById('dt-barangay-city').value = t.barangay || '';
+
+                // 4. Issue
+                document.getElementById('dt-concern').value = t.concern || '';
+
+                // 5. Scheduling
+                document.getElementById('dt-schedule-date').value = t.scheduled_date || '';
+                document.getElementById('dt-schedule-time').value = t.scheduled_time || '';
+
+                // 6. Work Timeline
+                document.getElementById('dt-service-start').value = t.time_start || '';
+                document.getElementById('dt-service-end').value = t.time_accomplish || t.completed_at || '';
+                document.getElementById('dt-service-duration').value = t.duration || '';
+                document.getElementById('dt-turnaround').value = t.turnaround_display || '';
+
+                // 7. Service Details
+                document.getElementById('dt-job-order-no').value = t.job_order_no || '';
+                document.getElementById('dt-nap-port').value = t.nap_port || '';
+                document.getElementById('dt-nap-reading').value = t.nap_reading || '';
+                document.getElementById('dt-house-reading').value = t.house_reading || '';
+                document.getElementById('dt-pole-number').value = t.pole_number || '';
+                document.getElementById('dt-cable-length').value = t.cable_length || '';
+                document.getElementById('dt-signal-level').value = t.signal_level || '';
+                document.getElementById('dt-facility').value = t.facility || '';
+                document.getElementById('dt-ont-sn').value = t.ont_modem_sn || '';
+
+                // 8. Sign Off
+                document.getElementById('dt-special-instruction').value = t.special_instruction || '';
+                document.getElementById('dt-technician-remarks').value = t.technician_remarks || '';
+                document.getElementById('dt-remarks').value = t.remarks || '';
+                document.getElementById('dt-acknowledged-by').value = t.acknowledged_by || '';
+                document.getElementById('dt-actions-taken').value = t.actions_taken || '';
+                document.getElementById('dt-ticket-number').value = t.ticket_number || '';
+
+                // 9. Technicians & Teams
+                renderTechnicians(data.teams || [], t.technician_ids || []);
+
+                // Lock fields initially
+                setFormEditState(false);
+
+                // Show modal
+                const modalEl = document.getElementById('modal-dispatch-detail');
+                const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modalInstance.show();
+            })
+            .catch(err => {
+                console.error("Error opening dispatch modal:", err);
+            });
+    }
+
+    function setSelectValue(selectId, value) {
+        const sel = document.getElementById(selectId);
+        if (!sel || !value) return;
+        const valLower = String(value).toLowerCase().replace(/_/g, ' ');
+        let matched = false;
+        for (let i = 0; i < sel.options.length; i++) {
+            const optVal = sel.options[i].value.toLowerCase().replace(/_/g, ' ');
+            const optTxt = sel.options[i].text.toLowerCase().replace(/_/g, ' ');
+            if (optVal === valLower || optTxt === valLower || optVal.includes(valLower) || valLower.includes(optVal)) {
+                sel.selectedIndex = i;
+                matched = true;
+                break;
+            }
+        }
+        if (!matched && value) {
+            const newOpt = document.createElement('option');
+            newOpt.value = value;
+            newOpt.text = value;
+            newOpt.selected = true;
+            sel.appendChild(newOpt);
+        }
+    }
+
+    function renderTechnicians(teams, activeIds) {
+        const container = document.getElementById('dt-technicians-container');
+        container.innerHTML = '';
+        if (!teams || teams.length === 0) {
+            container.innerHTML = '<div class="text-muted text-xs p-2">No field teams configured.</div>';
+            return;
+        }
+
+        teams.forEach(team => {
+            const teamId = team.id || '0';
+            const teamDiv = document.createElement('div');
+            teamDiv.className = 'dispatch-team-group';
+            
+            let techCheckboxesHtml = '';
+            team.members.forEach(member => {
+                const isChecked = activeIds.includes(member.id) ? 'checked' : '';
+                techCheckboxesHtml += `
+                    <label class="dispatch-tech-item">
+                        <input type="checkbox" class="form-check-input dt-tech-checkbox dt-team-${teamId}" value="${member.id}" ${isChecked} disabled>
+                        <span>${member.name}</span>
+                    </label>
+                `;
+            });
+
+            teamDiv.innerHTML = `
+                <div class="dispatch-team-header">
+                    <span class="dispatch-team-title">${team.name}</span>
+                    <button type="button" class="dispatch-select-all-btn" onclick="toggleSelectAllTeam('${teamId}')" disabled id="dt-btn-select-all-${teamId}">Select all</button>
+                </div>
+                <div class="dispatch-tech-grid">
+                    ${techCheckboxesHtml}
+                </div>
+            `;
+            container.appendChild(teamDiv);
+        });
+    }
+
+    function toggleSelectAllTeam(teamId) {
+        if (!dtIsEditing) return;
+        const checkboxes = document.querySelectorAll(`.dt-team-${teamId}`);
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        checkboxes.forEach(cb => cb.checked = !allChecked);
+    }
+
+    function setFormEditState(isEditing) {
+        const form = document.getElementById('form-dispatch-detail');
+        const inputs = form.querySelectorAll('input:not(#dt-ticket-id):not(#dt-date-created):not(#dt-date-completed):not(#dt-service-duration):not(#dt-turnaround):not([type="checkbox"])');
+        const textareas = form.querySelectorAll('textarea');
+        const selects = form.querySelectorAll('select');
+        const checkboxes = form.querySelectorAll('.dt-tech-checkbox');
+        const selectAllBtns = form.querySelectorAll('.dispatch-select-all-btn');
+
+        inputs.forEach(el => {
+            el.readOnly = !isEditing;
+        });
+        textareas.forEach(el => {
+            el.readOnly = !isEditing;
+        });
+        selects.forEach(el => {
+            el.disabled = !isEditing;
+        });
+        checkboxes.forEach(el => {
+            el.disabled = !isEditing;
+        });
+        selectAllBtns.forEach(btn => {
+            btn.disabled = !isEditing;
+            btn.style.opacity = isEditing ? '1' : '0.5';
+        });
+    }
+
+    function toggleDispatchDetailEdit() {
+        if (!dtIsEditing) {
+            // Enter edit mode
+            dtIsEditing = true;
+            setFormEditState(true);
+            const editBtn = document.getElementById('dt-btn-edit');
+            editBtn.className = 'btn btn-success px-4 py-2';
+            editBtn.innerHTML = '<i class="fas fa-save me-1"></i> Save Changes';
+        } else {
+            // Save Changes
+            saveDispatchDetail();
+        }
+    }
+
+    function saveDispatchDetail() {
+        if (!dtCurrentTicketId) return;
+        const editBtn = document.getElementById('dt-btn-edit');
+        editBtn.disabled = true;
+        editBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
+
+        const checkedTechs = Array.from(document.querySelectorAll('.dt-tech-checkbox:checked')).map(cb => parseInt(cb.value));
+
+        const payload = {
+            ticket_type: document.getElementById('dt-ticket-type').value,
+            chat_type: document.getElementById('dt-chat-type').value,
+            status: document.getElementById('dt-status').value,
+            source_tab: document.getElementById('dt-source-tab').value,
+            client_name: document.getElementById('dt-client-name').value,
+            contact_number: document.getElementById('dt-contact-number').value,
+            account_no: document.getElementById('dt-account-no').value,
+            email_address: document.getElementById('dt-email-address').value,
+            address: document.getElementById('dt-address').value,
+            barangay: document.getElementById('dt-barangay-city').value,
+            concern: document.getElementById('dt-concern').value,
+            scheduled_date: document.getElementById('dt-schedule-date').value,
+            scheduled_time: document.getElementById('dt-schedule-time').value,
+            nap_port: document.getElementById('dt-nap-port').value,
+            nap_reading: document.getElementById('dt-nap-reading').value,
+            house_reading: document.getElementById('dt-house-reading').value,
+            pole_number: document.getElementById('dt-pole-number').value,
+            cable_length: document.getElementById('dt-cable-length').value,
+            signal_level: document.getElementById('dt-signal-level').value,
+            facility: document.getElementById('dt-facility').value,
+            ont_modem_sn: document.getElementById('dt-ont-sn').value,
+            special_instruction: document.getElementById('dt-special-instruction').value,
+            technician_remarks: document.getElementById('dt-technician-remarks').value,
+            remarks: document.getElementById('dt-remarks').value,
+            acknowledged_by: document.getElementById('dt-acknowledged-by').value,
+            actions_taken: document.getElementById('dt-actions-taken').value,
+            ticket_number: document.getElementById('dt-ticket-number').value,
+            technician_ids: checkedTechs,
+        };
+
+        fetch(`/dispatch/api/tickets/${dtCurrentTicketId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken') || ''
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+            editBtn.disabled = false;
+            if (data.success) {
+                dtIsEditing = false;
+                setFormEditState(false);
+                editBtn.className = 'btn btn-primary px-4 py-2';
+                editBtn.innerHTML = '<i class="fas fa-edit me-1"></i> Edit';
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Saved!',
+                        text: `Dispatch #${dtCurrentTicketId} updated successfully.`,
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                }
+            } else {
+                editBtn.className = 'btn btn-success px-4 py-2';
+                editBtn.innerHTML = '<i class="fas fa-save me-1"></i> Save Changes';
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({ icon: 'error', title: 'Save Failed', text: data.error || 'Failed to save changes.' });
+                } else {
+                    alert(data.error || 'Failed to save changes.');
+                }
+            }
+        })
+        .catch(err => {
+            console.error("Error saving dispatch details:", err);
+            editBtn.disabled = false;
+            editBtn.className = 'btn btn-success px-4 py-2';
+            editBtn.innerHTML = '<i class="fas fa-save me-1"></i> Save Changes';
+            alert('A network or server error occurred while saving.');
+        });
+    }
+</script>

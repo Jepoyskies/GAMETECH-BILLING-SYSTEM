@@ -1,0 +1,261 @@
+<!-- ══════════════ DISPATCH DETAIL & EDIT MODAL (1:1 LIVE PARITY) ══════════════ -->
+<div class="modal fade" id="modal-dispatch-detail" tabindex="-1" aria-labelledby="dispatch-detail-title" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+    <div class="modal-content dispatch-detail-modal-content">
+      <!-- Modal Header -->
+      <div class="modal-header border-0 pb-0 px-4 pt-4">
+        <h4 class="modal-title fw-bold" id="dispatch-detail-title" style="color: var(--d-text-heading, #1e293b);">Dispatch #---</h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="modal-body px-4 py-3">
+        <form id="form-dispatch-detail" onsubmit="event.preventDefault(); saveDispatchDetail();">
+          <input type="hidden" id="dt-ticket-id" value="">
+
+          <!-- 1. JOB INFO -->
+          <div class="dispatch-modal-section">
+            <div class="dispatch-modal-section-title">Job Info</div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Date Created</label>
+                <input type="text" class="form-control dispatch-modal-input" id="dt-date-created" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Date Completed</label>
+                <input type="text" class="form-control dispatch-modal-input" id="dt-date-completed" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Type</label>
+                <select class="form-select dispatch-modal-input" id="dt-ticket-type" disabled>
+                  <option value="Repair">Repair</option>
+                  <option value="Installation">Installation</option>
+                  <option value="Transition">Transition</option>
+                  <option value="Mainline Repair">Mainline Repair</option>
+                  <option value="OSP">OSP</option>
+                  <option value="PULL_OUT">PULL_OUT</option>
+                  <option value="Configuration">Configuration</option>
+                  <option value="Technical Support">Technical Support</option>
+                  <option value="Cignal Play">Cignal Play</option>
+                  <option value="Migration">Migration</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Chat Type</label>
+                <select class="form-select dispatch-modal-input" id="dt-chat-type" disabled>
+                  <option value="Concern">Concern</option>
+                  <option value="For Installation">For Installation</option>
+                  <option value="Inquiry">Inquiry</option>
+                  <option value="Follow Up">Follow Up</option>
+                  <option value="Walk-In / Direct">Walk-In / Direct</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Status</label>
+                <select class="form-select dispatch-modal-input" id="dt-status" disabled>
+                  <option value="Done">Done</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Cancelled">Cancelled</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Ongoing">Ongoing</option>
+                  <option value="Assigned">Assigned</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Source</label>
+                <select class="form-select dispatch-modal-input" id="dt-source-tab" disabled>
+                  <option value="Client Concerns">Client Concerns</option>
+                  <option value="Internet Install">Internet Install</option>
+                  <option value="Cignal Play">Cignal Play</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">CSR</label>
+                <input type="text" class="form-control dispatch-modal-input" id="dt-csr" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Sales Agent</label>
+                <input type="text" class="form-control dispatch-modal-input" id="dt-sales-agent" readonly>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. SUBSCRIBER INFO -->
+          <div class="dispatch-modal-section">
+            <div class="dispatch-modal-section-title">Subscriber Info</div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Client</label>
+                <input type="text" class="form-control dispatch-modal-input" id="dt-client-name" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Contact Number</label>
+                <input type="text" class="form-control dispatch-modal-input" id="dt-contact-number" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Account No.</label>
+                <input type="text" class="form-control dispatch-modal-input" id="dt-account-no" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Email Address</label>
+                <input type="text" class="form-control dispatch-modal-input" id="dt-email-address" readonly>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. LOCATION -->
+          <div class="dispatch-modal-section">
+            <div class="dispatch-modal-section-title">Location</div>
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="dispatch-modal-label">Address</label>
+                <textarea class="form-control dispatch-modal-input" id="dt-address" rows="2" readonly></textarea>
+              </div>
+              <div class="col-12">
+                <label class="dispatch-modal-label">Barangay/City</label>
+                <input type="text" class="form-control dispatch-modal-input" id="dt-barangay-city" readonly>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. ISSUE -->
+          <div class="dispatch-modal-section">
+            <div class="dispatch-modal-section-title">Issue</div>
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="dispatch-modal-label">Concern</label>
+                <textarea class="form-control dispatch-modal-input" id="dt-concern" rows="2" readonly></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. SCHEDULING -->
+          <div class="dispatch-modal-section">
+            <div class="dispatch-modal-section-title">Scheduling</div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Schedule Date</label>
+                <input type="date" class="form-control dispatch-modal-input" id="dt-schedule-date" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Schedule Time</label>
+                <input type="text" class="form-control dispatch-modal-input" id="dt-schedule-time" placeholder="--:-- --" readonly>
+              </div>
+            </div>
+          </div>
+
+          <!-- 6. WORK TIMELINE -->
+          <div class="dispatch-modal-section">
+            <div class="dispatch-modal-section-title">Work Timeline</div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Service Start</label>
+                <input type="text" class="form-control dispatch-modal-input" id="dt-service-start" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Service End</label>
+                <input type="text" class="form-control dispatch-modal-input" id="dt-service-end" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Service Duration</label>
+                <input type="text" class="form-control dispatch-modal-input" id="dt-service-duration" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Turnaround</label>
+                <input type="text" class="form-control dispatch-modal-input" id="dt-turnaround" readonly>
+              </div>
+            </div>
+          </div>
+
+          <!-- 7. SERVICE DETAILS -->
+          <div class="dispatch-modal-section">
+            <div class="dispatch-modal-section-title">Service Details</div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Job Order No.</label>
+                <input type="text" class="form-control dispatch-modal-input" id="dt-job-order-no" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">NAP/Port</label>
+                <input type="text" class="form-control dispatch-modal-input" id="dt-nap-port" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">NAP Reading</label>
+                <input type="text" class="form-control dispatch-modal-input" id="dt-nap-reading" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">House Reading</label>
+                <input type="text" class="form-control dispatch-modal-input" id="dt-house-reading" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Pole Number</label>
+                <input type="text" class="form-control dispatch-modal-input" id="dt-pole-number" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Cable Length Used</label>
+                <input type="text" class="form-control dispatch-modal-input" id="dt-cable-length" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Signal Level</label>
+                <input type="text" class="form-control dispatch-modal-input" id="dt-signal-level" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Facility</label>
+                <input type="text" class="form-control dispatch-modal-input" id="dt-facility" readonly>
+              </div>
+              <div class="col-12">
+                <label class="dispatch-modal-label">ONT/Modem SN</label>
+                <input type="text" class="form-control dispatch-modal-input font-monospace" id="dt-ont-sn" readonly>
+              </div>
+            </div>
+          </div>
+
+          <!-- 8. SIGN OFF -->
+          <div class="dispatch-modal-section">
+            <div class="dispatch-modal-section-title">Sign Off</div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Special Instruction</label>
+                <textarea class="form-control dispatch-modal-input" id="dt-special-instruction" rows="2" readonly></textarea>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Technician Remarks</label>
+                <textarea class="form-control dispatch-modal-input" id="dt-technician-remarks" rows="2" readonly></textarea>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Remarks</label>
+                <textarea class="form-control dispatch-modal-input" id="dt-remarks" rows="2" readonly></textarea>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Acknowledged By</label>
+                <input type="text" class="form-control dispatch-modal-input" id="dt-acknowledged-by" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Actions Taken</label>
+                <textarea class="form-control dispatch-modal-input" id="dt-actions-taken" rows="2" readonly></textarea>
+              </div>
+              <div class="col-md-6">
+                <label class="dispatch-modal-label">Ticket No.</label>
+                <input type="text" class="form-control dispatch-modal-input font-monospace" id="dt-ticket-number" readonly>
+              </div>
+            </div>
+          </div>
+
+          <!-- 9. TECHNICIANS -->
+          <div class="dispatch-modal-section">
+            <div class="dispatch-modal-section-title">Technicians</div>
+            <div id="dt-technicians-container" class="mt-2">
+              <!-- Dynamically populated teams & checkboxes with Select All -->
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer border-0 px-4 pb-4 pt-2 d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-secondary px-4 py-2" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary px-4 py-2" id="dt-btn-edit" onclick="toggleDispatchDetailEdit()"><i class="fas fa-edit me-1"></i> Edit</button>
+      </div>
+    </div>
+  </div>
+</div>

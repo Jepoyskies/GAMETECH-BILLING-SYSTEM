@@ -3,7 +3,7 @@
   {% if pending_tickets or pending_records %}
     <!-- Pending Job Tickets -->
     {% for t in pending_tickets %}
-    <div class="dispatch-ticket-row {{ t.priority|lower }} d-flex flex-wrap align-items-center gap-3 mb-2" style="padding-left: 1.4rem;">
+    <div class="dispatch-ticket-row {{ t.priority|lower }} d-flex flex-wrap align-items-center gap-3 mb-2" onclick="openDispatchDetailModal({{ t.id }})" style="padding-left: 1.4rem; cursor: pointer;">
       <div style="min-width: 130px; flex-shrink: 0;">
         <div class="fw-bold font-monospace" style="font-size: 0.8rem; color: #60a5fa;">{{ t.ticket_number }}</div>
         <span class="priority-pill {{ t.priority|lower }} mt-1 d-inline-block">{{ t.get_priority_display }}</span>
@@ -28,7 +28,7 @@
       <div style="min-width: 110px; flex-shrink: 0;">
         <span class="status-badge status-pending">Pending Dispatch</span>
       </div>
-      <div class="ms-auto d-flex gap-2 flex-shrink-0">
+      <div class="ms-auto d-flex gap-2 flex-shrink-0" onclick="event.stopPropagation()">
         <button type="button" class="dispatch-action-btn dispatch-action-btn-ghost btn-copy-brief"
                 data-client="{{ t.client_name }}" data-phone="{{ t.contact_number }}" data-addr="{{ t.address }}" data-concern="{{ t.concern|default:t.plan_package }}" data-num="{{ t.ticket_number }}"
                 title="Copy Brief to Clipboard">
@@ -53,7 +53,7 @@
 
     <!-- Pending Monitoring Records -->
     {% for r in pending_records %}
-    <div class="dispatch-ticket-row normal d-flex flex-wrap align-items-center gap-3 mb-2" style="padding-left: 1.4rem;">
+    <div class="dispatch-ticket-row normal d-flex flex-wrap align-items-center gap-3 mb-2" onclick="openDispatchDetailModal({{ r.id }})" style="padding-left: 1.4rem; cursor: pointer;">
       <div style="min-width: 130px; flex-shrink: 0;">
         <div style="font-size: 0.78rem; color: #64748b;">{{ r.date|date:"M d, Y" }}</div>
         <span class="badge" style="background: rgba(100,116,139,0.15); color: #94a3b8; font-size: 0.65rem;">Direct Record</span>
@@ -74,7 +74,7 @@
       <div style="min-width: 110px; flex-shrink: 0;">
         <span class="status-badge status-pending">Pending</span>
       </div>
-      <div class="ms-auto d-flex gap-2 flex-shrink-0">
+      <div class="ms-auto d-flex gap-2 flex-shrink-0" onclick="event.stopPropagation()">
         <button type="button" class="dispatch-action-btn dispatch-action-btn-ghost btn-copy-brief"
                 data-client="{{ r.client_name }}" data-phone="{{ r.contact_number }}" data-addr="{{ r.address }}" data-concern="{{ r.concern }}" data-num="REC-{{ r.id }}"
                 title="Copy Brief to Clipboard">

@@ -2,7 +2,7 @@
 <div class="tab-pane fade p-3" id="tab-completed" role="tabpanel" aria-labelledby="completed-tab">
   {% if completed_tickets or completed_records %}
     {% for t in completed_tickets %}
-    <div class="dispatch-ticket-row low d-flex flex-wrap align-items-center gap-3 mb-2" style="padding-left: 1.4rem;">
+    <div class="dispatch-ticket-row low d-flex flex-wrap align-items-center gap-3 mb-2" onclick="openDispatchDetailModal({{ t.id }})" style="padding-left: 1.4rem; cursor: pointer;">
       <div style="min-width: 130px; flex-shrink: 0;">
         <div class="fw-bold font-monospace" style="font-size: 0.8rem; color: #34d399;">{{ t.ticket_number }}</div>
         <span class="status-badge" style="background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.25);">Done</span>
@@ -15,7 +15,7 @@
         <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: #475569;">Accomplished By</div>
         <div style="font-size: 0.78rem; color: #94a3b8;">{{ t.team.name|default:"Field Staff" }}</div>
       </div>
-      <div class="ms-auto d-flex gap-2 flex-shrink-0 align-items-center">
+      <div class="ms-auto d-flex gap-2 flex-shrink-0 align-items-center" onclick="event.stopPropagation()">
         <a href="{% url 'dispatch_job_order_print' t.id %}" target="_blank"
            class="dispatch-action-btn dispatch-action-btn-ghost" title="Print Official ISP Job Order Form">
           <i class="fas fa-print"></i> Form
@@ -44,7 +44,7 @@
     {% endfor %}
 
     {% for r in completed_records %}
-    <div class="dispatch-ticket-row low d-flex flex-wrap align-items-center gap-3 mb-2" style="padding-left: 1.4rem;">
+    <div class="dispatch-ticket-row low d-flex flex-wrap align-items-center gap-3 mb-2" onclick="openDispatchDetailModal({{ r.id }})" style="padding-left: 1.4rem; cursor: pointer;">
       <div style="min-width: 130px; flex-shrink: 0;">
         <div style="font-size: 0.78rem; color: #64748b;">{{ r.date|date:"M d, Y" }}</div>
         <span class="status-badge" style="background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.25);">Done</span>
@@ -57,7 +57,7 @@
         <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: #475569;">Status</div>
         <span style="font-size:0.75rem; color:#34d399;">Completed</span>
       </div>
-      <div class="ms-auto d-flex gap-2 flex-shrink-0 align-items-center">
+      <div class="ms-auto d-flex gap-2 flex-shrink-0 align-items-center" onclick="event.stopPropagation()">
         <a href="{% url 'dispatch_job_order_print_record' r.id %}" target="_blank"
            class="dispatch-action-btn dispatch-action-btn-ghost" title="Print Official ISP Job Order Form">
           <i class="fas fa-print"></i> Form

@@ -264,61 +264,250 @@ def api_tickets_list(request):
 
 @login_required
 def api_ticket_detail(request, ticket_id):
-    ticket = get_object_or_404(JobTicket.objects.select_related('customer', 'team', 'mikrotik_device'), id=ticket_id)
-    return JsonResponse({
-        'success': True,
-        'ticket': {
+    ticket = JobTicket.objects.select_related('customer', 'team', 'mikrotik_device', 'created_by', 'sales_agent').filter(id=ticket_id).first()
+    record = None
+    if not ticket:
+        record = MonitoringRecord.objects.select_related('customer', 'status_option', 'type_option', 'chat_type_option', 'sales_agent', 'csr').prefetch_related('teams').filter(id=ticket_id).first()
+        if not record:
+            return JsonResponse({'success': False, 'error': f'Dispatch ticket #{ticket_id} not found.'}, status=404)
+
+    if request.method == 'POST':
+        import json
+        from django.utils.dateparse import parse_date
+        from django.utils import timezone
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            data = request.POST
+
+        if ticket:
+            if 'client_name' in data and data['client_name']:
+                ticket.client_name = data['client_name'].strip()
+            if 'contact_number' in data:
+                ticket.contact_number = data['contact_number'].strip()
+            if 'account_no' in data:
+                ticket.account_no = data['account_no'].strip()
+            if 'address' in data:
+                ticket.address = data['address'].strip()
+            if 'barangay' in data:
+                ticket.barangay = data['barangay'].strip()
+            if 'concern' in data:
+                ticket.concern = data['concern'].strip()
+            if 'ticket_type' in data and data['ticket_type']:
+                ticket.ticket_type = data['ticket_type']
+            if 'chat_type' in data:
+                ticket.chat_type = data['chat_type']
+            if 'status' in data and data['status']:
+                ticket.status = data['status']
+                if ticket.status in ['COMPLETED', 'QA_PASSED', 'COMPLETED_AND_VERIFIED'] and not ticket.done_at:
+                    ticket.done_at = timezone.now()
+            if 'source_tab' in data and data['source_tab']:
+                ticket.source_tab = data['source_tab']
+            if 'scheduled_date' in data and data['scheduled_date']:
+                ticket.scheduled_date = parse_date(data['scheduled_date'])
+            elif 'scheduled_date' in data and not data['scheduled_date']:
+                ticket.scheduled_date = None
+            if 'scheduled_time' in data:
+                ticket.scheduled_time = data['scheduled_time']
+            if 'nap_port' in data:
+                ticket.nap_port = data['nap_port']
+            if 'cable_length' in data:
+                ticket.cable_length = data['cable_length']
+            if 'nap_reading' in data:
+                ticket.nap_reading = data['nap_reading']
+            if 'pole_number' in data:
+                ticket.pole_number = data['pole_number']
+            if 'ont_modem_sn' in data:
+                ticket.ont_modem_sn = data['ont_modem_sn']
+            if 'signal_level' in data:
+                ticket.signal_level = data['signal_level']
+            if 'facility' in data:
+                ticket.facility = data['facility']
+            if 'house_reading' in data:
+                ticket.house_reading = data['house_reading']
+            if 'special_instruction' in data:
+                ticket.special_instruction = data['special_instruction']
+            if 'technician_remarks' in data:
+                ticket.technician_remarks = data['technician_remarks']
+            if 'remarks' in data:
+                ticket.remarks = data['remarks']
+            if 'acknowledged_by' in data:
+                ticket.acknowledged_by = data['acknowledged_by']
+            if 'actions_taken' in data:
+                ticket.actions_taken = data['actions_taken']
+            if 'ticket_number' in data and data['ticket_number']:
+                ticket.ticket_number = data['ticket_number'].strip()
+            ticket.save()
+
+            if 'technician_ids' in data:
+                ticket.technicians.set(data['technician_ids'])
+
+            if 'email_address' in data and ticket.customer:
+                email_val = data['email_address'].strip()
+                if email_val != ticket.customer.email:
+                    ticket.customer.email = email_val
+                    ticket.customer.save(update_fields=['email'])
+
+            log_audit('UPDATE', 'JobTicket', ticket.id, request.user, summary=f"Updated Dispatch #{ticket.id} ({ticket.client_name})")
+            return JsonResponse({'success': True, 'message': 'Ticket updated successfully!'})
+        elif record:
+            if 'client_name' in data and data['client_name']:
+                record.client_name = data['client_name'].strip()
+            if 'contact_number' in data:
+                record.contact_number = data['contact_number'].strip()
+            if 'address' in data:
+                record.address = data['address'].strip()
+            if 'concern' in data:
+                record.concern = data['concern'].strip()
+            if 'actions_taken' in data:
+                record.actions_taken = data['actions_taken']
+            if 'remarks' in data:
+                record.remarks = data['remarks']
+            record.save()
+
+            if 'technician_ids' in data:
+                record.teams.set(data['technician_ids'])
+
+            job_detail, _ = JobDetail.objects.get_or_create(record=record)
+            for fld in ['nap_port', 'cable_length', 'nap_reading', 'pole_number', 'ont_modem_sn',
+                        'signal_level', 'facility', 'house_reading', 'special_instruction',
+                        'technician_remarks', 'acknowledged_by', 'account_no', 'email_address']:
+                if fld in data:
+                    setattr(job_detail, fld, data[fld])
+            if 'barangay' in data:
+                job_detail.barangay_city = data['barangay']
+            if 'scheduled_date' in data and data['scheduled_date']:
+                job_detail.schedule_date = parse_date(data['scheduled_date'])
+            if 'scheduled_time' in data:
+                job_detail.schedule_time = data['scheduled_time']
+            job_detail.save()
+
+            log_audit('UPDATE', 'MonitoringRecord', record.id, request.user, summary=f"Updated Dispatch #{record.id} ({record.client_name})")
+            return JsonResponse({'success': True, 'message': 'Record updated successfully!'})
+
+    teams_data = []
+    for tm in Team.objects.prefetch_related('members').order_by('name'):
+        members_list = [{'id': m.id, 'name': m.name} for m in tm.members.filter(is_available=True).order_by('name')]
+        if members_list:
+            teams_data.append({
+                'id': tm.id,
+                'name': tm.name,
+                'members': members_list
+            })
+    unassigned = Technician.objects.filter(team__isnull=True, is_available=True).order_by('name')
+    if unassigned.exists():
+        teams_data.append({
+            'id': 0,
+            'name': 'Other Technicians',
+            'members': [{'id': m.id, 'name': m.name} for m in unassigned]
+        })
+
+    if ticket:
+        ticket_data = {
             'id': ticket.id,
             'ticket_number': ticket.ticket_number,
             'client_name': ticket.client_name,
-            'address': ticket.address,
-            'barangay': ticket.barangay,
-            'contact_number': ticket.contact_number,
-            'alternate_contact': ticket.alternate_contact,
-            'facebook_account': ticket.facebook_account,
-            'account_no': ticket.account_no,
-            'sales_agent': ticket.sales_agent,
-            'plan_package': ticket.plan_package,
-            'concern': ticket.concern,
-            'remarks': ticket.remarks,
-            'special_instruction': ticket.special_instruction,
-            'actions_taken': ticket.actions_taken,
+            'address': ticket.address or '',
+            'barangay': ticket.barangay or '',
+            'contact_number': ticket.contact_number or '',
+            'alternate_contact': ticket.alternate_contact or '',
+            'account_no': ticket.account_no or '',
+            'email_address': ticket.customer.email if ticket.customer and ticket.customer.email else '',
+            'sales_agent': ticket.sales_agent.name if ticket.sales_agent else '',
+            'csr': (ticket.created_by.get_full_name() or ticket.created_by.username) if ticket.created_by else 'Joseph Alberto',
+            'concern': ticket.concern or '',
+            'remarks': ticket.remarks or '',
+            'special_instruction': ticket.special_instruction or '',
+            'actions_taken': ticket.actions_taken or '',
             'ticket_type': ticket.ticket_type,
             'ticket_type_display': ticket.get_ticket_type_display(),
+            'chat_type': ticket.chat_type or 'Concern',
             'status': ticket.status,
             'status_display': ticket.get_status_display(),
+            'source_tab': ticket.source_tab,
+            'source_tab_display': ticket.get_source_tab_display(),
             'priority': ticket.priority,
             'team_id': ticket.team_id,
             'team_name': ticket.team.name if ticket.team else None,
             'technician_ids': list(ticket.technicians.values_list('id', flat=True)),
             'technicians': [tech.name for tech in ticket.technicians.all()],
-            'scheduled_date': ticket.scheduled_date.isoformat() if ticket.scheduled_date else None,
-            'scheduled_time': ticket.scheduled_time,
-            'latitude': ticket.latitude,
-            'longitude': ticket.longitude,
-            # Technical Specs
-            'nap_port': ticket.nap_port,
-            'cable_length': ticket.cable_length,
-            'nap_reading': ticket.nap_reading,
-            'pole_number': ticket.pole_number,
-            'ont_modem_sn': ticket.ont_modem_sn,
-            'signal_level': ticket.signal_level,
-            'facility': ticket.facility,
-            'house_reading': ticket.house_reading,
-            'technician_remarks': ticket.technician_remarks,
-            'acknowledged_by': ticket.acknowledged_by,
-            'time_start': ticket.time_start.strftime('%b %d, %Y %I:%M %p') if ticket.time_start else None,
-            'time_accomplish': ticket.time_accomplish.strftime('%b %d, %Y %I:%M %p') if ticket.time_accomplish else None,
-            'done_at': ticket.done_at.strftime('%b %d, %Y %I:%M %p') if ticket.done_at else None,
-            'tech_confirmed': bool(ticket.time_accomplish or ticket.status in ['COMPLETED', 'QA_PASSED', 'COMPLETED_AND_VERIFIED'] or ticket.ont_modem_sn or ticket.nap_reading),
-            # Customer & Mikrotik Links
-            'customer_id': ticket.customer_id,
-            'customer_name': ticket.customer.full_name if ticket.customer else None,
-            'mikrotik_device_id': ticket.mikrotik_device_id,
-            'mikrotik_name': ticket.mikrotik_device.device_name if ticket.mikrotik_device else None,
-            'created_at': ticket.created_at.strftime('%b %d, %Y %I:%M %p'),
-            'updated_at': ticket.updated_at.strftime('%b %d, %Y %I:%M %p'),
+            'scheduled_date': ticket.scheduled_date.isoformat() if ticket.scheduled_date else '',
+            'scheduled_time': ticket.scheduled_time or '',
+            'nap_port': ticket.nap_port or '',
+            'cable_length': ticket.cable_length or '',
+            'nap_reading': ticket.nap_reading or '',
+            'pole_number': ticket.pole_number or '',
+            'ont_modem_sn': ticket.ont_modem_sn or '',
+            'signal_level': ticket.signal_level or '',
+            'facility': ticket.facility or '',
+            'house_reading': ticket.house_reading or '',
+            'technician_remarks': ticket.technician_remarks or '',
+            'acknowledged_by': ticket.acknowledged_by or '',
+            'time_start': ticket.time_start.strftime('%m/%d/%Y %I:%M %p') if ticket.time_start else '',
+            'time_accomplish': ticket.time_accomplish.strftime('%m/%d/%Y %I:%M %p') if ticket.time_accomplish else '',
+            'done_at': ticket.done_at.strftime('%m/%d/%Y %I:%M %p') if ticket.done_at else '',
+            'duration': f"{ticket.duration}m" if ticket.duration else '',
+            'turnaround_display': ticket.turnaround_display,
+            'job_order_no': ticket.ticket_number,
+            'created_at': ticket.created_at.strftime('%m/%d/%Y %I:%M %p'),
+            'completed_at': (ticket.done_at or ticket.time_accomplish).strftime('%m/%d/%Y %I:%M %p') if (ticket.done_at or ticket.time_accomplish) else '',
         }
+    else:
+        jd = getattr(record, 'job_detail', None)
+        ticket_data = {
+            'id': record.id,
+            'ticket_number': record.ticket_number or f"GPT-{record.id:07d}",
+            'client_name': record.client_name,
+            'address': record.address or '',
+            'barangay': jd.barangay_city if jd and jd.barangay_city else '',
+            'contact_number': record.contact_number or '',
+            'alternate_contact': record.alternate_contact or '',
+            'account_no': jd.account_no if jd and jd.account_no else '',
+            'email_address': jd.email_address if jd and jd.email_address else (record.customer.email if record.customer and record.customer.email else ''),
+            'sales_agent': record.sales_agent.name if record.sales_agent else '',
+            'csr': (record.csr.get_full_name() or record.csr.username) if record.csr else 'Joseph Alberto',
+            'concern': record.concern or '',
+            'remarks': record.remarks or '',
+            'special_instruction': jd.special_instruction if jd and jd.special_instruction else '',
+            'actions_taken': record.actions_taken or '',
+            'ticket_type': record.type_option.label if record.type_option else 'Repair',
+            'ticket_type_display': record.type_option.label if record.type_option else 'Repair',
+            'chat_type': record.chat_type_option.label if record.chat_type_option else 'Concern',
+            'status': record.status_option.label if record.status_option else 'Done',
+            'status_display': record.status_option.label if record.status_option else 'Done',
+            'source_tab': record.source_tab or 'CLIENT_CONCERNS',
+            'source_tab_display': record.get_source_tab_display() if hasattr(record, 'get_source_tab_display') else (record.source_tab or 'CLIENT_CONCERNS'),
+            'priority': 'NORMAL',
+            'team_id': None,
+            'team_name': None,
+            'technician_ids': list(record.teams.values_list('id', flat=True)),
+            'technicians': [tech.name for tech in record.teams.all()],
+            'scheduled_date': jd.schedule_date.isoformat() if jd and jd.schedule_date else '',
+            'scheduled_time': jd.schedule_time if jd and jd.schedule_time else '',
+            'nap_port': jd.nap_port if jd and jd.nap_port else '',
+            'cable_length': jd.cable_length if jd and jd.cable_length else '',
+            'nap_reading': jd.nap_reading if jd and jd.nap_reading else '',
+            'pole_number': jd.pole_number if jd and jd.pole_number else '',
+            'ont_modem_sn': jd.ont_modem_sn if jd and jd.ont_modem_sn else '',
+            'signal_level': jd.signal_level if jd and jd.signal_level else '',
+            'facility': jd.facility if jd and jd.facility else '',
+            'house_reading': jd.house_reading if jd and jd.house_reading else '',
+            'technician_remarks': jd.technician_remarks if jd and jd.technician_remarks else '',
+            'acknowledged_by': jd.acknowledged_by if jd and jd.acknowledged_by else '',
+            'time_start': record.time_start.strftime('%m/%d/%Y %I:%M %p') if record.time_start else '',
+            'time_accomplish': record.time_accomplish.strftime('%m/%d/%Y %I:%M %p') if record.time_accomplish else '',
+            'done_at': record.done_at.strftime('%m/%d/%Y %I:%M %p') if record.done_at else '',
+            'duration': f"{record.duration}m" if record.duration else '',
+            'turnaround_display': f"{record.duration}m" if record.duration else '-',
+            'job_order_no': jd.job_order if jd and jd.job_order else (record.ticket_number or f"GPT-{record.id:07d}"),
+            'created_at': record.date.strftime('%m/%d/%Y %I:%M %p') if hasattr(record, 'date') and hasattr(record.date, 'strftime') else '',
+            'completed_at': (record.done_at or record.time_accomplish).strftime('%m/%d/%Y %I:%M %p') if (record.done_at or record.time_accomplish) else '',
+        }
+
+    return JsonResponse({
+        'success': True,
+        'ticket': ticket_data,
+        'teams': teams_data,
     })
 
 
