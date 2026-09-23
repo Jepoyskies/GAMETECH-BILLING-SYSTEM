@@ -387,14 +387,13 @@ def api_ticket_detail(request, ticket_id):
 
     teams_data = []
     for tm in Team.objects.prefetch_related('members').order_by('name'):
-        members_list = [{'id': m.id, 'name': m.name} for m in tm.members.filter(is_available=True).order_by('name')]
-        if members_list:
-            teams_data.append({
-                'id': tm.id,
-                'name': tm.name,
-                'members': members_list
-            })
-    unassigned = Technician.objects.filter(team__isnull=True, is_available=True).order_by('name')
+        members_list = [{'id': m.id, 'name': m.name} for m in tm.members.all().order_by('name')]
+        teams_data.append({
+            'id': tm.id,
+            'name': tm.name,
+            'members': members_list
+        })
+    unassigned = Technician.objects.filter(team__isnull=True).order_by('name')
     if unassigned.exists():
         teams_data.append({
             'id': 0,

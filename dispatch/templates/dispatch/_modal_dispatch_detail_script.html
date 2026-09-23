@@ -150,15 +150,19 @@
             teamDiv.className = 'dispatch-team-group';
             
             let techCheckboxesHtml = '';
-            team.members.forEach(member => {
-                const isChecked = activeIds.includes(member.id) ? 'checked' : '';
-                techCheckboxesHtml += `
-                    <label class="dispatch-tech-item">
-                        <input type="checkbox" class="form-check-input dt-tech-checkbox dt-team-${teamId}" value="${member.id}" ${isChecked} disabled>
-                        <span>${member.name}</span>
-                    </label>
-                `;
-            });
+            if (team.members && team.members.length > 0) {
+                team.members.forEach(member => {
+                    const isChecked = activeIds.includes(member.id) ? 'checked' : '';
+                    techCheckboxesHtml += `
+                        <label class="dispatch-tech-item">
+                            <input type="checkbox" class="form-check-input dt-tech-checkbox dt-team-${teamId}" value="${member.id}" ${isChecked} disabled>
+                            <span>${member.name}</span>
+                        </label>
+                    `;
+                });
+            } else {
+                techCheckboxesHtml = '<span class="text-muted" style="font-size: 0.75rem; font-style: italic;">No technicians registered in this team</span>';
+            }
 
             teamDiv.innerHTML = `
                 <div class="dispatch-team-header">
