@@ -61,4 +61,9 @@ urlpatterns = [
     path('tickets/<int:ticket_id>/job-order/', views.job_order_print_view, name='dispatch_job_order_print'),
     path('job-order/blank/', views.job_order_print_view, name='dispatch_job_order_blank'),
     path('records/<int:record_id>/job-order/', views.job_order_print_record_view, name='dispatch_job_order_print_record'),
+
+    # Monitoring Quick-Action APIs (Dispatch / Undispatch / Done)
+    path('api/monitoring/<int:record_id>/dispatch/', views.api_monitoring_dispatch, name='api_monitoring_dispatch'),
+    path('api/monitoring/<int:record_id>/undispatch/', views.api_monitoring_undispatch, name='api_monitoring_undispatch'),
+    path('api/monitoring/<int:record_id>/done/', views.api_monitoring_done, name='api_monitoring_done'),
 ]

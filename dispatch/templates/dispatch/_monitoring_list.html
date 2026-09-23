@@ -1,0 +1,116 @@
+﻿{% comment %}
+  _monitoring_list.html — 14-column monitoring table matching the original dispatch system.
+  Expected context vars:
+    - records_list : queryset of MonitoringRecord for this tab (pending OR ongoing)
+    - tab_label    : "pending" or "ongoing"
+{% endcomment %}
+<div class="table-responsive">
+  <table class="monitoring-table w-100" style="border-collapse: collapse; font-size: 0.82rem; font-family: '"'"'Inter'"'"', sans-serif;">
+    <thead>
+      <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+        <th class="monitoring-th" style="width: 110px;">Actions</th>
+        <th class="monitoring-th" style="width: 100px;">Status</th>
+        <th class="monitoring-th" style="width: 130px;">Date Created</th>
+        <th class="monitoring-th" style="width: 120px;">Ticket No.</th>
+        <th class="monitoring-th">Client</th>
+        <th class="monitoring-th">Concern</th>
+        <th class="monitoring-th" style="width: 80px;">Type</th>
+        <th class="monitoring-th" style="width: 130px;">CSR</th>
+        <th class="monitoring-th">Actions Taken</th>
+        <th class="monitoring-th">Address</th>
+        <th class="monitoring-th" style="width: 115px;">Contact</th>
+        <th class="monitoring-th" style="width: 105px;">Schedule Date</th>
+        <th class="monitoring-th" style="width: 90px;">Schedule Time</th>
+        <th class="monitoring-th">Remarks</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in records_list %}
+      <tr class="monitoring-row" onclick="openMonitoringDetailModal({{ r.id }})" style="cursor: pointer; border-bottom: 1px solid #e9eef4; transition: background 0.15s;">
+        <td class="monitoring-td" onclick="event.stopPropagation()">
+          {% if tab_label == "pending" %}
+            <button type="button" class="btn-mon-dispatch"
+                    data-id="{{ r.id }}"
+                    data-client="{{ r.client_name|escapejs }}"
+                    data-ticket="{{ r.ticket_number|default:"-" }}"
+                    data-bs-toggle="modal" data-bs-target="#modal-quick-dispatch"
+                    title="Dispatch">
+              <i class="fas fa-paper-plane me-1"></i>Dispatch
+            </button>
+          {% else %}
+            <div class="d-flex flex-column gap-1">
+              <button type="button" class="btn-mon-undispatch btn-mon-undispatch-rec" data-id="{{ r.id }}" title="Return to Pending">
+                <i class="fas fa-rotate-left me-1"></i>Undispatch
+              </button>
+              <button type="button" class="btn-mon-done btn-mon-done-rec" data-id="{{ r.id }}" data-client="{{ r.client_name|escapejs }}" title="Mark Done">
+                <i class="fas fa-check me-1"></i>Done
+              </button>
+            </div>
+          {% endif %}
+        </td>
+        <td class="monitoring-td">
+          {% if r.status_option %}
+            <span class="mon-status-badge mon-status-{{ r.status_option.label|lower|slugify }}">{{ r.status_option.label }}</span>
+          {% else %}
+            <span class="mon-status-badge mon-status-pending">Pending</span>
+          {% endif %}
+        </td>
+        <td class="monitoring-td" style="white-space: nowrap; color: #475569;">
+          {{ r.created_at|date:"n/j/Y" }}<br>
+          <small style="color: #94a3b8;">{{ r.created_at|date:"g:i A" }}</small>
+        </td>
+        <td class="monitoring-td">
+          <span style="font-family: monospace; font-weight: 700; color: #1e293b; font-size: 0.79rem;">{{ r.ticket_number|default:"-" }}</span>
+        </td>
+        <td class="monitoring-td">
+          <div style="font-weight: 600; color: #1e293b; font-size: 0.83rem;">{{ r.client_name }}</div>
+          {% if r.customer %}
+            <a href="{% url "view_customer" r.customer.id %}" target="_blank"
+               class="text-decoration-none" style="font-size: 0.71rem; color: #3b82f6;" title="CRM">
+              <i class="fas fa-arrow-up-right-from-square me-1"></i>CRM
+            </a>
+          {% endif %}
+        </td>
+        <td class="monitoring-td" style="max-width: 160px;">
+          <div class="text-truncate" title="{{ r.concern }}" style="color: #334155;">{{ r.concern|default:"-" }}</div>
+        </td>
+        <td class="monitoring-td">
+          {% if r.type_option %}
+            <span style="font-size: 0.74rem; color: #3b82f6; font-weight: 600;">{{ r.type_option.label }}</span>
+          {% else %}<span style="color: #94a3b8;">-</span>{% endif %}
+        </td>
+        <td class="monitoring-td" style="white-space: nowrap; font-size: 0.78rem; color: #334155; font-weight: 600;">
+          {% if r.csr %}{{ r.csr.get_full_name|default:r.csr.username|upper }}{% else %}-{% endif %}
+        </td>
+        <td class="monitoring-td" style="max-width: 150px;">
+          <div class="text-truncate" title="{{ r.actions_taken }}" style="color: #475569; font-size: 0.77rem;">{{ r.actions_taken|default:"-" }}</div>
+        </td>
+        <td class="monitoring-td" style="max-width: 180px;">
+          <div class="text-truncate" title="{{ r.address }}" style="color: #475569; font-size: 0.77rem;">{{ r.address|default:"-" }}</div>
+        </td>
+        <td class="monitoring-td" style="white-space: nowrap;">
+          {% if r.contact_number %}
+            <a href="tel:{{ r.contact_number }}" class="text-decoration-none" style="color: #3b82f6; font-size: 0.78rem; font-weight: 500;">{{ r.contact_number }}</a>
+          {% else %}<span style="color: #94a3b8;">-</span>{% endif %}
+        </td>
+        <td class="monitoring-td" style="white-space: nowrap; color: #475569; font-size: 0.77rem;">
+          {% if r.job_detail and r.job_detail.schedule_date %}{{ r.job_detail.schedule_date|date:"n/j/Y" }}{% else %}<span style="color: #94a3b8;">-</span>{% endif %}
+        </td>
+        <td class="monitoring-td" style="white-space: nowrap; color: #475569; font-size: 0.77rem;">
+          {% if r.job_detail and r.job_detail.schedule_time %}{{ r.job_detail.schedule_time }}{% else %}<span style="color: #94a3b8;">-</span>{% endif %}
+        </td>
+        <td class="monitoring-td" style="max-width: 160px;">
+          <div class="text-truncate" title="{{ r.remarks }}" style="color: #475569; font-size: 0.77rem;">{{ r.remarks|default:"-" }}</div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="14" style="text-align: center; padding: 3rem 1rem; color: #94a3b8;">
+          <i class="fas fa-inbox mb-2" style="font-size: 2rem; display: block; color: #cbd5e1;"></i>
+          No records found
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

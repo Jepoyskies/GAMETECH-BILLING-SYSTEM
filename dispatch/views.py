@@ -892,8 +892,23 @@ def _handle_monitoring_view(request, tab_type, template_name):
     else:
         form = MonitoringRecordForm(initial={'tab_type': tab_type, 'date': timezone.now().date()})
     
-    records = MonitoringRecord.objects.filter(tab_type=tab_type).select_related('status_option', 'customer').prefetch_related('teams').order_by('-date')
+    records = MonitoringRecord.objects.filter(tab_type=tab_type).select_related(
+        'status_option', 'customer', 'csr', 'type_option', 'job_detail'
+    ).prefetch_related('teams').order_by('-date', '-created_at')
     job_tickets = JobTicket.objects.filter(source_tab=tab_type).select_related('customer', 'team').prefetch_related('technicians').order_by('-created_at')
+
+    # --- Filter: CSR ---
+    csr_filter = request.GET.get('csr', 'ALL')
+    if csr_filter and csr_filter != 'ALL':
+        try:
+            records = records.filter(csr__id=int(csr_filter))
+        except (ValueError, TypeError):
+            pass
+
+    # --- Filter: Status (matches ConfigOption label) ---
+    status_filter = request.GET.get('status', 'ALL')
+    if status_filter and status_filter != 'ALL':
+        records = records.filter(status_option__label__iexact=status_filter)
 
     # PDF Page 10: Pending (not yet dispatched) vs Ongoing (currently being worked on)
     pending_tickets = job_tickets.filter(status='PENDING')
@@ -916,6 +931,13 @@ def _handle_monitoring_view(request, tab_type, template_name):
 
     teams = Team.objects.all()
     technicians = Technician.objects.all()
+
+    # CSRs who have records in this tab (for filter dropdown)
+    csr_ids = MonitoringRecord.objects.filter(tab_type=tab_type).values_list('csr_id', flat=True).distinct()
+    csrs = User.objects.filter(id__in=csr_ids).order_by('first_name', 'last_name', 'username')
+
+    # Status options for filter dropdown (MONITORING module)
+    status_options = ConfigOption.objects.filter(list_type='STATUS', module='MONITORING', active=True).order_by('sort_order', 'label')
 
     queue_labels = {
         'INTERNET_INSTALL': 'Internet Installation Queue',
@@ -942,6 +964,10 @@ def _handle_monitoring_view(request, tab_type, template_name):
         'form': form,
         'tab_type': tab_type,
         'queue_name': queue_labels.get(tab_type, 'Dispatch Queue'),
+        'csrs': csrs,
+        'status_options': status_options,
+        'csr_filter': csr_filter,
+        'status_filter': status_filter,
     })
 
 
@@ -1501,3 +1527,80 @@ def job_order_print_record_view(request, record_id):
         "finish_time": record.done_at,
     })
 
+
+# ─── Monitoring Record Quick-Action APIs ───────────────────────────────────────
+
+@login_required
+@require_POST
+def api_monitoring_dispatch(request, record_id):
+    """Assign a team + schedule to a MonitoringRecord → moves it to Ongoing tab."""
+    record = get_object_or_404(MonitoringRecord, id=record_id)
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        data = {}
+    team_id = data.get('team_id')
+    schedule_date = data.get('schedule_date') or None
+    schedule_time = data.get('schedule_time') or None
+
+    if team_id:
+        try:
+            tech = Technician.objects.get(id=int(team_id))
+            record.teams.set([tech])
+        except (Technician.DoesNotExist, ValueError):
+            pass
+
+    ongoing_opt = ConfigOption.objects.filter(list_type='STATUS', module='MONITORING', label__icontains='Ongoing').first()
+    if ongoing_opt:
+        record.status_option = ongoing_opt
+    record.time_start = timezone.now()
+    record.save()
+
+    job_detail, _ = JobDetail.objects.get_or_create(record=record)
+    if schedule_date:
+        try:
+            from datetime import date as _date
+            job_detail.schedule_date = _date.fromisoformat(schedule_date)
+        except ValueError:
+            pass
+    if schedule_time:
+        job_detail.schedule_time = schedule_time
+    job_detail.save()
+
+    log_audit('UPDATE', 'MonitoringRecord', record.id, request.user, summary=f"Dispatched {record.client_name}")
+    return JsonResponse({'success': True})
+
+
+@login_required
+@require_POST
+def api_monitoring_undispatch(request, record_id):
+    """Return a MonitoringRecord to Pending status."""
+    record = get_object_or_404(MonitoringRecord, id=record_id)
+    pending_opt = ConfigOption.objects.filter(list_type='STATUS', module='MONITORING', label__icontains='Pending').first()
+    if pending_opt:
+        record.status_option = pending_opt
+    record.time_start = None
+    record.save()
+    log_audit('UPDATE', 'MonitoringRecord', record.id, request.user, summary=f"Undispatched {record.client_name}")
+    return JsonResponse({'success': True})
+
+
+@login_required
+@require_POST
+def api_monitoring_done(request, record_id):
+    """Mark a MonitoringRecord as Done + sync CRM if internet install."""
+    record = get_object_or_404(MonitoringRecord, id=record_id)
+    done_opt = ConfigOption.objects.filter(list_type='STATUS', module='MONITORING', label__icontains='Done').first()
+    if done_opt:
+        record.status_option = done_opt
+    record.done_at = timezone.now()
+    record.save()
+
+    if record.customer and record.tab_type == 'INTERNET_INSTALL':
+        cust = record.customer
+        cust.installation_status = 'installed'
+        cust.status = 'active'
+        cust.save()
+
+    log_audit('UPDATE', 'MonitoringRecord', record.id, request.user, summary=f"Marked Done: {record.client_name}")
+    return JsonResponse({'success': True})

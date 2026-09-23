@@ -1,154 +1,179 @@
-{% extends "billing/base.html" %}
+﻿{% extends "billing/base.html" %}
 {% load static %}
 
-{% block title %}Internet Install Monitoring | Gametech{% endblock %}
+{% block title %}Internet Install | Gametech Dispatch{% endblock %}
 
 {% block extra_css %}
-<link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-{% include "dispatch/_styles.html" %}
+<style>
+.monitoring-page-wrap { padding: 1.5rem 1.75rem; }
+.monitoring-header-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem; }
+.monitoring-title { display: flex; align-items: center; gap: 0.65rem; }
+.monitoring-title-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: #cffafe; color: #0e7490; font-size: 1.1rem; }
+.monitoring-title h1 { font-size: 1.35rem; font-weight: 800; color: #1e293b; margin: 0; letter-spacing: -0.02em; font-family: '"'"'Inter'"'"', sans-serif; }
+.btn-add-record { background: #0e7490; color: #fff; border: none; border-radius: 8px; padding: 0.5rem 1.1rem; font-size: 0.84rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; transition: background 0.18s; }
+.btn-add-record:hover { background: #0c6475; }
+.monitoring-filter-bar { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.monitoring-filter-bar select { border: 1px solid #e2e8f0; background: #fff; color: #334155; border-radius: 7px; padding: 0.38rem 0.75rem; font-size: 0.82rem; font-family: '"'"'Inter'"'"', sans-serif; cursor: pointer; min-width: 130px; }
+.monitoring-filter-bar select:focus { outline: none; border-color: #06b6d4; }
+.btn-filter-reset { background: #f1f5f9; border: 1px solid #e2e8f0; color: #475569; border-radius: 7px; padding: 0.38rem 0.85rem; font-size: 0.82rem; cursor: pointer; font-weight: 500; }
+.monitoring-tabs { display: flex; border-bottom: 2px solid #e2e8f0; margin-bottom: 0; background: #fff; }
+.monitoring-tab-btn { padding: 0.65rem 1.3rem; border: none; background: none; font-size: 0.85rem; font-weight: 600; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; display: inline-flex; align-items: center; gap: 0.5rem; font-family: '"'"'Inter'"'"', sans-serif; }
+.monitoring-tab-btn.active { color: #0e7490; border-bottom-color: #0e7490; }
+.mon-tab-count { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 20px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; padding: 0 5px; }
+.mon-tab-count.amber { background: #fef3c7; color: #92400e; }
+.mon-tab-count.blue  { background: #cffafe; color: #164e63; }
+.monitoring-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.05); margin-bottom: 1.5rem; }
+.monitoring-table { width: 100%; border-collapse: collapse; }
+.monitoring-th { padding: 0.6rem 0.75rem; text-align: left; font-size: 0.76rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; background: #f8fafc; white-space: nowrap; }
+.monitoring-td { padding: 0.6rem 0.75rem; vertical-align: middle; color: #334155; border-bottom: 1px solid #f1f5f9; }
+.monitoring-row:hover td { background: #f0fdfe; }
+.mon-status-badge { display: inline-block; padding: 0.2rem 0.65rem; border-radius: 20px; font-size: 0.73rem; font-weight: 600; white-space: nowrap; border: 1px solid transparent; }
+.mon-status-pending { background: #fef9c3; color: #854d0e; border-color: #fde68a; }
+.mon-status-resched { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
+.mon-status-ongoing { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
+.mon-status-closed  { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
+.mon-status-for-follow-up { background: #fce7f3; color: #9d174d; border-color: #fbcfe8; }
+.mon-status-transition { background: #ede9fe; color: #5b21b6; border-color: #ddd6fe; }
+.btn-mon-dispatch { background: #0e7490; color: #fff; border: none; border-radius: 6px; padding: 0.3rem 0.7rem; font-size: 0.77rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.btn-mon-dispatch:hover { background: #0c6475; }
+.btn-mon-undispatch { background: #f59e0b; color: #fff; border: none; border-radius: 6px; padding: 0.28rem 0.6rem; font-size: 0.75rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.btn-mon-done { background: #16a34a; color: #fff; border: none; border-radius: 6px; padding: 0.28rem 0.6rem; font-size: 0.75rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+</style>
 {% endblock %}
 
 {% block content %}
-<main class="content px-3 px-md-4 py-4">
-
-  <!-- Page Header -->
-  <div class="dispatch-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 fade-in-up">
-    <div class="d-flex align-items-center gap-3">
-      <div class="metric-hero-icon cyan" style="width: 52px; height: 52px; min-width: 52px; border-radius: 16px; font-size: 1.35rem;">
-        <i class="fas fa-network-wired"></i>
-      </div>
-      <div>
-        <div class="d-flex align-items-center gap-2 mb-1">
-          <span class="badge rounded-pill" style="background: rgba(6,182,212,0.12); color: #22d3ee; border: 1px solid rgba(6,182,212,0.25); font-size: 0.65rem; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 10px; font-weight: 700;">
-            <i class="fas fa-network-wired me-1"></i> Fiber Install Queue
-          </span>
-          <span class="d-realtime-chip">Live Queue</span>
-        </div>
-        <h1 style="font-size: 1.55rem; font-weight: 900; color: #f8fafc; margin: 0; letter-spacing: -0.03em; font-family: 'Inter', sans-serif;">Internet Install Monitoring</h1>
-        <p style="font-size: 0.8rem; color: #475569; margin: 0.15rem 0 0; font-family: 'Inter', sans-serif;">Active subscriber installation orders, field unit assignments, and completion logs</p>
-      </div>
+<div class="monitoring-page-wrap">
+  <div class="monitoring-header-bar">
+    <div class="monitoring-title">
+      <div class="monitoring-title-icon"><i class="fas fa-wifi"></i></div>
+      <div><h1>Internet Install</h1></div>
     </div>
-    <div class="d-flex gap-2 align-items-center flex-wrap">
-      <a href="{% url 'dispatch_dashboard' %}?type=INSTALLATION" class="btn-dispatch-cockpit">
-        <i class="fas fa-map-marked-alt"></i> View on Map
-      </a>
-      <button class="btn-dispatch-add" data-bs-toggle="modal" data-bs-target="#modal-create-ticket">
-        <i class="fas fa-plus-circle me-1"></i> New Job Ticket
-      </button>
-    </div>
+    <button class="btn-add-record" data-bs-toggle="modal" data-bs-target="#modal-add-monitoring-record">
+      <i class="fas fa-plus"></i> New Record
+    </button>
   </div>
 
-  <!-- 1. Operational Overview (PDF Manual Page 4) -->
-  {% include "dispatch/_queue_kpi_cards.html" %}
+  <form method="GET" action="" id="monitoring-filter-form">
+    <div class="monitoring-filter-bar">
+      <select name="date_range" onchange="this.form.submit()">
+        <option value="all" {% if not request.GET.date_range or request.GET.date_range == "all" %}selected{% endif %}>All Records</option>
+        <option value="today" {% if request.GET.date_range == "today" %}selected{% endif %}>Today</option>
+        <option value="this_month" {% if request.GET.date_range == "this_month" %}selected{% endif %}>This Month</option>
+      </select>
+      <select name="csr" onchange="this.form.submit()">
+        <option value="ALL" {% if csr_filter == "ALL" %}selected{% endif %}>All CSRs</option>
+        {% for c in csrs %}
+        <option value="{{ c.id }}" {% if csr_filter == c.id|stringformat:"s" %}selected{% endif %}>{{ c.get_full_name|default:c.username|upper }}</option>
+        {% endfor %}
+      </select>
+      <select name="status" onchange="this.form.submit()">
+        <option value="ALL" {% if status_filter == "ALL" %}selected{% endif %}>All Statuses</option>
+        {% for opt in status_options %}
+        <option value="{{ opt.label }}" {% if status_filter == opt.label %}selected{% endif %}>{{ opt.label }}</option>
+        {% endfor %}
+        {% if not status_options %}
+        <option value="Pending" {% if status_filter == "Pending" %}selected{% endif %}>Pending</option>
+        <option value="Resched" {% if status_filter == "Resched" %}selected{% endif %}>Resched</option>
+        <option value="Transition" {% if status_filter == "Transition" %}selected{% endif %}>Transition</option>
+        <option value="Incorrect Number" {% if status_filter == "Incorrect Number" %}selected{% endif %}>Incorrect Number</option>
+        <option value="Prospect" {% if status_filter == "Prospect" %}selected{% endif %}>Prospect</option>
+        <option value="For Follow Up" {% if status_filter == "For Follow Up" %}selected{% endif %}>For Follow Up</option>
+        <option value="No action yet" {% if status_filter == "No action yet" %}selected{% endif %}>No action yet</option>
+        <option value="Closed" {% if status_filter == "Closed" %}selected{% endif %}>Closed</option>
+        {% endif %}
+      </select>
+      {% if csr_filter != "ALL" or status_filter != "ALL" %}
+      <a href="?" class="btn-filter-reset"><i class="fas fa-rotate-left me-1"></i>Reset</a>
+      {% endif %}
+    </div>
+  </form>
 
-  <!-- 2. Dual Workflow Tabs: Pending vs Ongoing vs Completed (PDF Manual Page 10) -->
-  {% include "dispatch/_queue_tabs.html" %}
+  <div style="margin-bottom: 0.85rem; display: flex; gap: 1rem;">
+    <span style="font-size: 0.83rem; color: #64748b; font-weight: 500;">Pending <strong style="color: #92400e;">{{ pending_count }}</strong></span>
+    <span style="font-size: 0.83rem; color: #64748b; font-weight: 500;">Ongoing <strong style="color: #164e63;">{{ ongoing_count }}</strong></span>
+  </div>
 
-</main>
+  <div class="monitoring-card">
+    <div class="monitoring-tabs">
+      <button class="monitoring-tab-btn active" id="btn-tab-pending" type="button" onclick="switchMonTab('"'"'pending'"'"')">
+        <i class="fas fa-hourglass-half" style="color: #f59e0b;"></i> Pending
+        <span class="mon-tab-count amber">{{ pending_count }}</span>
+      </button>
+      <button class="monitoring-tab-btn" id="btn-tab-ongoing" type="button" onclick="switchMonTab('"'"'ongoing'"'"')">
+        <i class="fas fa-truck-fast" style="color: #0e7490;"></i> Ongoing
+        <span class="mon-tab-count blue">{{ ongoing_count }}</span>
+      </button>
+    </div>
+    <div id="mon-panel-pending">
+      {% with records_list=pending_records tab_label="pending" %}{% include "dispatch/_monitoring_list.html" %}{% endwith %}
+    </div>
+    <div id="mon-panel-ongoing" style="display:none;">
+      {% with records_list=ongoing_records tab_label="ongoing" %}{% include "dispatch/_monitoring_list.html" %}{% endwith %}
+    </div>
+  </div>
+</div>
 
 {% include "dispatch/_modals.html" %}
 
+<div class="modal fade" id="modal-quick-dispatch" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius: 14px;">
+      <div class="modal-header"><h5 class="modal-title" style="font-size: 1rem; font-weight: 700;"><i class="fas fa-paper-plane me-2 text-primary"></i>Quick Dispatch</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <p id="qdispatch-client-info" style="font-size: 0.85rem; color: #475569;"></p>
+        <div class="mb-3"><label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 0.4rem;">Assign Team</label>
+          <select id="qdispatch-team-select" class="form-select form-select-sm">
+            <option value="">-- Select Team --</option>{% for tm in teams %}<option value="{{ tm.id }}">{{ tm.name }}</option>{% endfor %}
+          </select></div>
+        <div class="mb-3"><label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 0.4rem;">Schedule Date</label><input type="date" id="qdispatch-date" class="form-control form-control-sm"></div>
+        <div class="mb-3"><label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 0.4rem;">Schedule Time</label><input type="text" id="qdispatch-time" class="form-control form-control-sm" placeholder="e.g. 8:00 AM"></div>
+      </div>
+      <div class="modal-footer gap-2"><button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-sm btn-primary" id="btn-qdispatch-confirm"><i class="fas fa-paper-plane me-1"></i>Dispatch</button></div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
-<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
 <script>
-$(document).ready(function() {
-    // Initialize DataTables on the All Records tab
-    $('.datatable').DataTable({
-        "order": [[ 0, "desc" ]],
-        "pageLength": 25,
-        "language": {
-            "search": "",
-            "searchPlaceholder": "Search all records...",
-            "lengthMenu": "Show _MENU_ records",
-            "info": "Showing _START_–_END_ of _TOTAL_ records",
-            "paginate": { "previous": "← Prev", "next": "Next →" }
-        }
-    });
-    $('.dataTables_filter input').addClass('dispatch-search-input').css({'min-width': '220px'});
-    $('.dataTables_filter label').addClass('d-flex align-items-center gap-2').css('color','#475569');
-    $('.dataTables_length select').addClass('dispatch-filter-select').css({'padding': '0.35rem 0.6rem'});
-
-    // 📋 Toast helper for clipboard copy (PDF Manual Page 10)
-    function showCopyToast(msg) {
-        var toast = $('#dispatch-copy-toast');
-        $('#dispatch-copy-toast-msg').text(msg);
-        toast.stop(true, true).fadeIn(200).delay(2200).fadeOut(300);
-    }
-
-    $(document).on('click', '.btn-copy-brief', function(e) {
-        e.preventDefault();
-        var client = $(this).data('client') || 'Customer';
-        var phone = $(this).data('phone') || 'N/A';
-        var addr = $(this).data('addr') || 'N/A';
-        var concern = $(this).data('concern') || 'Installation';
-        var num = $(this).data('num') || '';
-        var text = '📋 [GAMETECH DISPATCH BRIEF]\nOrder/Ticket: ' + num + '\nClient: ' + client + '\nPhone: ' + phone + '\nAddress: ' + addr + '\nPackage: ' + concern;
-        if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(text).then(function() {
-                showCopyToast('Copied brief for ' + client + ' to clipboard!');
-            }).catch(function() {
-                fallbackCopy(text, client);
-            });
-        } else {
-            fallbackCopy(text, client);
-        }
-    });
-
-    function fallbackCopy(text, client) {
-        var $temp = $('<textarea>');
-        $('body').append($temp);
-        $temp.val(text).select();
-        document.execCommand('copy');
-        $temp.remove();
-        showCopyToast('Copied brief for ' + client + ' to clipboard!');
-    }
-
-    // ↩️ Undispatch Action: Single click button or double-click row (PDF Manual Page 11)
-    $(document).on('click', '.btn-undispatch', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        var ticketId = $(this).data('id');
-        
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-        var csrftoken = getCookie('csrftoken') || $('[name=csrfmiddlewaretoken]').val();
-        fetch('/dispatch/api/tickets/' + ticketId + '/undispatch/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken }
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            if (data.success) {
-                window.location.reload();
-            } else {
-                alert('Error: ' + (data.error || 'Failed to undispatch'));
-            }
-        });
-    });
-
-    // Double-click row on Ongoing tab moves to Pending (PDF Page 11)
-    $(document).on('dblclick', '#tab-ongoing .dispatch-ticket-row', function(e) {
-        var btn = $(this).find('.btn-undispatch');
-        if (btn.length) {
-            btn.trigger('click');
-        }
-    });
+function switchMonTab(tab) {
+  document.getElementById("mon-panel-pending").style.display = (tab === "pending") ? "" : "none";
+  document.getElementById("mon-panel-ongoing").style.display = (tab === "ongoing") ? "" : "none";
+  document.getElementById("btn-tab-pending").classList.toggle("active", tab === "pending");
+  document.getElementById("btn-tab-ongoing").classList.toggle("active", tab === "ongoing");
+}
+let _qdispatch_record_id = null;
+$(document).on("show.bs.modal", "#modal-quick-dispatch", function(e) {
+  var btn = $(e.relatedTarget);
+  _qdispatch_record_id = btn.data("id");
+  $("#qdispatch-client-info").text("Dispatching: " + (btn.data("client") || "") + " (" + (btn.data("ticket") || "-") + ")");
 });
+function getCookie(n) { let v=null; document.cookie.split(";").forEach(function(c){c=c.trim();if(c.startsWith(n+"="))v=decodeURIComponent(c.slice(n.length+1));}); return v; }
+$("#btn-qdispatch-confirm").on("click", function() {
+  if (!_qdispatch_record_id) return;
+  var csrftoken = $("[name=csrfmiddlewaretoken]").val() || getCookie("csrftoken");
+  $.ajax({ url: "/dispatch/api/monitoring/" + _qdispatch_record_id + "/dispatch/", method: "POST",
+    contentType: "application/json", headers: { "X-CSRFToken": csrftoken },
+    data: JSON.stringify({ team_id: $("#qdispatch-team-select").val(), schedule_date: $("#qdispatch-date").val(), schedule_time: $("#qdispatch-time").val() }),
+    success: function(d) { if (d.success) location.reload(); else alert(d.error || "Failed"); }
+  });
+});
+$(document).on("click", ".btn-mon-undispatch-rec", function(e) {
+  e.stopPropagation();
+  var id = $(this).data("id");
+  var csrftoken = $("[name=csrfmiddlewaretoken]").val() || getCookie("csrftoken");
+  if (!confirm("Return to Pending?")) return;
+  $.ajax({ url: "/dispatch/api/monitoring/" + id + "/undispatch/", method: "POST", headers: { "X-CSRFToken": csrftoken }, success: function(d) { if (d.success) location.reload(); else alert(d.error || "Failed"); } });
+});
+$(document).on("click", ".btn-mon-done-rec", function(e) {
+  e.stopPropagation();
+  var id = $(this).data("id");
+  var client = $(this).data("client");
+  var csrftoken = $("[name=csrfmiddlewaretoken]").val() || getCookie("csrftoken");
+  if (!confirm("Mark \"" + client + "\" as Done?")) return;
+  $.ajax({ url: "/dispatch/api/monitoring/" + id + "/done/", method: "POST", headers: { "X-CSRFToken": csrftoken }, success: function(d) { if (d.success) location.reload(); else alert(d.error || "Failed"); } });
+});
+function openMonitoringDetailModal(id) { if (typeof openDispatchDetailModal === "function") openDispatchDetailModal(id); }
 </script>
+{% include "dispatch/_modal_scripts.html" %}
 {% endblock %}
