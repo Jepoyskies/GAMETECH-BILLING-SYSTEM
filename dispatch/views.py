@@ -3,6 +3,7 @@ import json
 import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.models import User
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse, HttpResponse
 from django.contrib import messages
@@ -10,6 +11,7 @@ from django.utils import timezone
 from django.db.models import Q, Max
 from billing.models import Customer
 from network_manager.models import MikrotikDevice
+
 from .models import (
     JobTicket, JobTicketHistory, DispatchRecord, MonitoringRecord, JobDetail,
     ConfigOption, Technician, Team, AuditLog
