@@ -1,0 +1,149 @@
+﻿{% comment %}
+  _modal_add_monitoring_record.html
+  "New Concern / New Record" modal for Client Concerns, Internet Install, Cignal Play.
+  ID: modal-add-monitoring-record
+  Relies on: {{ form }} (MonitoringRecordForm) and {{ tab_type }} from context.
+{% endcomment %}
+<div class="modal fade" id="modal-add-monitoring-record" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content" style="border-radius: 14px; border: 1px solid #e2e8f0; box-shadow: 0 20px 60px rgba(0,0,0,0.12);">
+
+      <!-- Header -->
+      <div class="modal-header" style="border-bottom: 1px solid #e9eef4; padding: 1.1rem 1.5rem;">
+        <h5 class="modal-title" style="font-size: 1rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 0.5rem;">
+          {% if tab_type == "CLIENT_CONCERNS" %}
+            <i class="fas fa-headset" style="color: #f59e0b;"></i> New Concern
+          {% elif tab_type == "INTERNET_INSTALL" %}
+            <i class="fas fa-wifi" style="color: #0e7490;"></i> New Internet Install Record
+          {% elif tab_type == "CIGNAL_PLAY" %}
+            <i class="fas fa-tv" style="color: #7c3aed;"></i> New Cignal Play Record
+          {% else %}
+            <i class="fas fa-plus-circle" style="color: #3b82f6;"></i> New Record
+          {% endif %}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <!-- Form -->
+      <form method="POST" action="" id="add-monitoring-record-form">
+        {% csrf_token %}
+        {% if form.tab_type %}{{ form.tab_type }}{% endif %}
+
+        <div class="modal-body" style="padding: 1.3rem 1.5rem;">
+
+          <!-- Row 1: Date + Ticket Number -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-5">
+              <label class="mon-form-label">Date</label>
+              {{ form.date }}
+              {% if form.date.errors %}<div class="invalid-feedback d-block">{{ form.date.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-7">
+              <label class="mon-form-label">Ticket Number <span style="color: #94a3b8; font-weight: 400;">(leave blank to auto-generate)</span></label>
+              {{ form.ticket_number }}
+            </div>
+          </div>
+
+          <!-- Row 2: Client Name + Contact -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-7">
+              <label class="mon-form-label">Client Name <span class="text-danger">*</span></label>
+              {{ form.client_name }}
+              {% if form.client_name.errors %}<div class="invalid-feedback d-block">{{ form.client_name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-5">
+              <label class="mon-form-label">Contact Number <span class="text-danger">*</span></label>
+              {{ form.contact_number }}
+              {% if form.contact_number.errors %}<div class="invalid-feedback d-block">{{ form.contact_number.errors.0 }}</div>{% endif %}
+            </div>
+          </div>
+
+          <!-- Row 3: Address (full width) -->
+          <div class="mb-3">
+            <label class="mon-form-label">Address <span class="text-danger">*</span></label>
+            {{ form.address }}
+            {% if form.address.errors %}<div class="invalid-feedback d-block">{{ form.address.errors.0 }}</div>{% endif %}
+          </div>
+
+          <!-- Row 4: Concern (full width) -->
+          <div class="mb-3">
+            <label class="mon-form-label">
+              {% if tab_type == "CLIENT_CONCERNS" %}Concern / Issue{% else %}Package / Plan Requested{% endif %}
+              <span class="text-danger">*</span>
+            </label>
+            {{ form.concern }}
+            {% if form.concern.errors %}<div class="invalid-feedback d-block">{{ form.concern.errors.0 }}</div>{% endif %}
+          </div>
+
+          <!-- Row 5: Type + Status + Chat Type -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              <label class="mon-form-label">Type</label>
+              {{ form.type_option }}
+            </div>
+            <div class="col-md-4">
+              <label class="mon-form-label">Status</label>
+              {{ form.status_option }}
+            </div>
+            <div class="col-md-4">
+              <label class="mon-form-label">Chat Type</label>
+              {{ form.chat_type_option }}
+            </div>
+          </div>
+
+          <!-- Row 6: Sales Agent -->
+          <div class="mb-3">
+            <label class="mon-form-label">Sales Agent</label>
+            {{ form.sales_agent }}
+          </div>
+
+          <!-- Row 7: Remarks -->
+          <div class="mb-1">
+            <label class="mon-form-label">Remarks / Notes</label>
+            {{ form.remarks }}
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer" style="border-top: 1px solid #e9eef4; padding: 0.9rem 1.5rem; gap: 0.5rem;">
+          <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal" style="border-radius: 8px; padding: 0.45rem 1rem;">Cancel</button>
+          <button type="submit" class="btn btn-sm btn-primary" style="border-radius: 8px; padding: 0.45rem 1.2rem; font-weight: 600;">
+            <i class="fas fa-save me-1"></i> Save Record
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+
+<style>
+.mon-form-label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.3rem;
+  font-family: "Inter", sans-serif;
+}
+#modal-add-monitoring-record .form-control,
+#modal-add-monitoring-record .form-select {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: #334155;
+  background: #fff;
+  padding: 0.42rem 0.75rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  font-family: "Inter", sans-serif;
+}
+#modal-add-monitoring-record .form-control:focus,
+#modal-add-monitoring-record .form-select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+  outline: none;
+}
+#modal-add-monitoring-record textarea.form-control { resize: vertical; min-height: 60px; }
+</style>

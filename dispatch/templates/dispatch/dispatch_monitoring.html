@@ -1,153 +1,318 @@
-{% extends "billing/base.html" %}
+﻿{% extends "billing/base.html" %}
 {% load static %}
 
-{% block title %}Master Dispatch Log | Gametech{% endblock %}
+{% block title %}Dispatch Log | Gametech{% endblock %}
 
 {% block extra_css %}
-<link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-{% include "dispatch/_styles.html" %}
+<style>
+/* ========================================
+   DISPATCH LOG — Matching original DispatchMonitoring.tsx
+   ======================================== */
+.dispatch-log-wrap { padding: 1.25rem 1.5rem; }
+
+/* Header */
+.dispatch-log-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1.1rem; flex-wrap: wrap; gap: 0.75rem;
+}
+.dispatch-log-title { display: flex; align-items: center; gap: 0.6rem; }
+.dispatch-log-title h1 {
+  font-size: 1.3rem; font-weight: 800; color: #1e293b;
+  margin: 0; font-family: '"'"'Inter'"'"', sans-serif;
+}
+.dispatch-log-header-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+
+/* Filter bar — matches original top bar */
+.dispatch-log-filters {
+  display: flex; align-items: center; gap: 0.5rem;
+  flex-wrap: wrap; margin-bottom: 1rem;
+  padding: 0.65rem 1rem;
+  background: #fff; border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+.dispatch-log-filters select,
+.dispatch-log-filters input[type=text] {
+  border: 1px solid #e2e8f0; background: #fff; color: #334155;
+  border-radius: 7px; padding: 0.35rem 0.7rem;
+  font-size: 0.81rem; font-family: '"'"'Inter'"'"', sans-serif;
+  cursor: pointer; min-width: 120px;
+}
+.dispatch-log-filters select:focus,
+.dispatch-log-filters input:focus { outline: none; border-color: #3b82f6; }
+.dispatch-log-filters .filter-label {
+  font-size: 0.76rem; color: #64748b; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.btn-dispatch-export {
+  background: #ecfdf5; border: 1px solid #6ee7b7;
+  color: #065f46; border-radius: 7px; padding: 0.35rem 0.9rem;
+  font-size: 0.8rem; font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  text-decoration: none; transition: background 0.15s;
+}
+.btn-dispatch-export:hover { background: #d1fae5; color: #065f46; }
+.btn-filter-reset {
+  background: #f8fafc; border: 1px solid #e2e8f0; color: #64748b;
+  border-radius: 7px; padding: 0.35rem 0.75rem;
+  font-size: 0.8rem; font-weight: 500; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  text-decoration: none; transition: background 0.15s;
+}
+.btn-filter-reset:hover { background: #e2e8f0; color: #334155; }
+
+/* Card */
+.dispatch-log-card {
+  background: #fff; border: 1px solid #e2e8f0;
+  border-radius: 12px; overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05); margin-bottom: 1.5rem;
+}
+
+/* Table */
+.dispatch-log-table { width: 100%; border-collapse: collapse; }
+.dispatch-log-th {
+  padding: 0.55rem 0.7rem; text-align: left; font-size: 0.74rem;
+  font-weight: 700; color: #475569; text-transform: uppercase;
+  letter-spacing: 0.04em; background: #f8fafc; white-space: nowrap;
+  border-bottom: 2px solid #e2e8f0;
+}
+.dispatch-log-td {
+  padding: 0.55rem 0.7rem; vertical-align: middle; color: #334155;
+  font-size: 0.81rem; border-bottom: 1px solid #f1f5f9;
+}
+.dispatch-log-row:hover td { background: #f8faff; cursor: pointer; }
+
+/* Status badges */
+.dlog-status {
+  display: inline-block; padding: 0.18rem 0.6rem;
+  border-radius: 20px; font-size: 0.72rem; font-weight: 700;
+  white-space: nowrap; border: 1px solid transparent;
+}
+.dlog-status-done      { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
+.dlog-status-pending   { background: #fef9c3; color: #854d0e; border-color: #fde68a; }
+.dlog-status-ongoing   { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
+.dlog-status-cancelled { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+.dlog-status-default   { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
+
+/* Turnaround pill */
+.dlog-turnaround {
+  font-family: monospace; font-size: 0.74rem; color: #0e7490;
+  background: #ecfeff; border: 1px solid #a5f3fc;
+  border-radius: 5px; padding: 0.12rem 0.45rem; white-space: nowrap;
+}
+
+/* New ticket button */
+.btn-new-ticket {
+  background: #2563eb; color: #fff; border: none;
+  border-radius: 8px; padding: 0.45rem 1rem;
+  font-size: 0.83rem; font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 0.4rem;
+}
+.btn-new-ticket:hover { background: #1d4ed8; }
+</style>
 {% endblock %}
 
 {% block content %}
-<main class="content px-3 px-md-4 py-4">
+<div class="dispatch-log-wrap">
 
-  <!-- Page Header -->
-  <div class="dispatch-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 fade-in-up">
-    <div class="d-flex align-items-center gap-3">
-      <div class="metric-hero-icon purple" style="border-radius: 16px; width: 52px; height: 52px; font-size: 1.35rem;">
-        <i class="fas fa-clipboard-list"></i>
-      </div>
-      <div>
-        <div class="d-flex align-items-center gap-2 mb-1">
-          <span class="badge rounded-pill" style="background: rgba(139,92,246,0.12); color: #a78bfa; border: 1px solid rgba(139,92,246,0.25); font-size: 0.65rem; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 10px; font-weight: 700;">
-            <i class="fas fa-satellite me-1"></i> Central Dispatch HQ
-          </span>
-          <span class="d-realtime-chip">Live Master Queue</span>
-        </div>
-        <h1 style="font-size: 1.55rem; font-weight: 900; color: #f8fafc; margin: 0; letter-spacing: -0.03em; font-family: 'Inter', sans-serif;">Master Dispatch &amp; Operations Log</h1>
-        <p style="font-size: 0.8rem; color: #475569; margin: 0.15rem 0 0; font-family: 'Inter', sans-serif;">Consolidated operational view of active job tickets, technician dispatches, and field records</p>
-      </div>
+  <!-- Header -->
+  <div class="dispatch-log-header">
+    <div class="dispatch-log-title">
+      <i class="fas fa-clipboard-list" style="font-size: 1.2rem; color: #3b82f6;"></i>
+      <h1>Dispatch Log</h1>
     </div>
-    <div class="d-flex gap-2 align-items-center flex-wrap">
-      <a href="{% url 'dispatch_dashboard' %}" class="btn-dispatch-cockpit">
-        <i class="fas fa-desktop"></i> Operations Cockpit
+    <div class="dispatch-log-header-actions">
+      <a href="{% url 'dispatch_export_tickets' %}?date_range={{ request.GET.date_range }}&type={{ request.GET.type }}&status={{ request.GET.status }}&source_tab={{ request.GET.source_tab }}&q={{ request.GET.q }}"
+         class="btn-dispatch-export" title="Export matching records as CSV">
+        <i class="fas fa-file-csv"></i> Export
       </a>
-      <button class="btn-dispatch-add" data-bs-toggle="modal" data-bs-target="#modal-create-ticket">
-        <i class="fas fa-plus-circle me-1"></i> New Job Ticket
-      </button>
     </div>
   </div>
 
-  <!-- 1. Operational Overview (PDF Manual Page 4) -->
-  {% include "dispatch/_queue_kpi_cards.html" %}
+  <!-- Filter Bar — matching original DispatchMonitoring sort + filter controls -->
+  <form method="GET" action="" id="dispatch-log-filter-form">
+    <div class="dispatch-log-filters">
+      <span class="filter-label d-none d-md-inline">Sort:</span>
+      <select name="sort" onchange="this.form.submit()">
+        <option value="date_created" {% if request.GET.sort == "date_created" or not request.GET.sort %}selected{% endif %}>Sort: Date Created</option>
+        <option value="date_completed" {% if request.GET.sort == "date_completed" %}selected{% endif %}>Sort: Date Completed</option>
+      </select>
 
-  <!-- 2. Dual Workflow Tabs: Pending vs Ongoing vs Completed (PDF Manual Page 10) -->
-  {% include "dispatch/_queue_tabs.html" %}
+      <select name="date_range" onchange="this.form.submit()">
+        <option value="all" {% if not request.GET.date_range or request.GET.date_range == "all" %}selected{% endif %}>All Records</option>
+        <option value="today" {% if request.GET.date_range == "today" %}selected{% endif %}>Today</option>
+        <option value="this_month" {% if request.GET.date_range == "this_month" %}selected{% endif %}>This Month</option>
+      </select>
 
-</main>
+      <select name="type" onchange="this.form.submit()">
+        <option value="ALL" {% if not request.GET.type or request.GET.type == "ALL" %}selected{% endif %}>All Types</option>
+        <option value="REPAIR" {% if request.GET.type == "REPAIR" %}selected{% endif %}>Repair</option>
+        <option value="INSTALLATION" {% if request.GET.type == "INSTALLATION" %}selected{% endif %}>Installation</option>
+        <option value="CIGNAL" {% if request.GET.type == "CIGNAL" %}selected{% endif %}>Cignal Play</option>
+        <option value="MIGRATION" {% if request.GET.type == "MIGRATION" %}selected{% endif %}>Transition</option>
+      </select>
+
+      <select name="source_tab" onchange="this.form.submit()">
+        <option value="ALL" {% if not request.GET.source_tab or request.GET.source_tab == "ALL" %}selected{% endif %}>All Sources</option>
+        <option value="INTERNET_INSTALL" {% if request.GET.source_tab == "INTERNET_INSTALL" %}selected{% endif %}>Internet Install</option>
+        <option value="CIGNAL_PLAY" {% if request.GET.source_tab == "CIGNAL_PLAY" %}selected{% endif %}>Cignal Play</option>
+        <option value="CLIENT_CONCERNS" {% if request.GET.source_tab == "CLIENT_CONCERNS" %}selected{% endif %}>Client Concerns</option>
+      </select>
+
+      <input type="text" name="q" placeholder="Search client, ticket..." value="{{ request.GET.q }}" style="min-width: 180px;">
+
+      <button type="submit" class="btn-new-ticket" style="background: #3b82f6; padding: 0.35rem 0.8rem; font-size: 0.8rem;">
+        <i class="fas fa-search"></i> Search
+      </button>
+
+      {% if request.GET.q or request.GET.type and request.GET.type != "ALL" or request.GET.source_tab and request.GET.source_tab != "ALL" %}
+      <a href="{% url 'dispatch_dispatches' %}" class="btn-filter-reset">
+        <i class="fas fa-rotate-left"></i> Reset
+      </a>
+      {% endif %}
+    </div>
+  </form>
+
+  <!-- Stats row -->
+  <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1rem; font-size: 0.82rem; color: #64748b; font-weight: 500;">
+    <span>Total: <strong style="color: #1e293b;">{{ total_count }}</strong></span>
+    <span>Pending: <strong style="color: #92400e;">{{ pending_count }}</strong></span>
+    <span>Ongoing: <strong style="color: #1e40af;">{{ ongoing_count }}</strong></span>
+    <span>Done: <strong style="color: #065f46;">{{ completed_count }}</strong></span>
+  </div>
+
+  <!-- Master table (All records - matches original 21-column DispatchMonitoring) -->
+  <div class="dispatch-log-card">
+    <div class="table-responsive">
+      <table class="dispatch-log-table">
+        <thead>
+          <tr>
+            <th class="dispatch-log-th" style="width: 80px;">Status</th>
+            <th class="dispatch-log-th" style="width: 125px;">Date Created</th>
+            <th class="dispatch-log-th" style="width: 125px;">Date Completed</th>
+            <th class="dispatch-log-th" style="width: 85px;">Turnaround</th>
+            <th class="dispatch-log-th">Client</th>
+            <th class="dispatch-log-th">Concern</th>
+            <th class="dispatch-log-th" style="width: 115px;">Ticket No.</th>
+            <th class="dispatch-log-th" style="width: 80px;">Type</th>
+            <th class="dispatch-log-th" style="width: 70px;">Chat</th>
+            <th class="dispatch-log-th" style="width: 90px;">Source</th>
+            <th class="dispatch-log-th" style="width: 90px;">Team</th>
+            <th class="dispatch-log-th" style="width: 115px;">CSR</th>
+            <th class="dispatch-log-th" style="width: 115px;">Sales Agent</th>
+            <th class="dispatch-log-th">Address</th>
+            <th class="dispatch-log-th" style="width: 100px;">Contact</th>
+            <th class="dispatch-log-th">Actions Taken</th>
+            <th class="dispatch-log-th">Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in records %}
+          <tr class="dispatch-log-row" onclick="openMonitoringDetailModal({{ r.id }})">
+            <td class="dispatch-log-td">
+              {% if r.status_option %}
+                {% with label=r.status_option.label|lower %}
+                <span class="dlog-status {% if 'done' in label or 'complet' in label %}dlog-status-done{% elif 'pending' in label %}dlog-status-pending{% elif 'cancel' in label %}dlog-status-cancelled{% elif 'ongoing' in label or 'progress' in label %}dlog-status-ongoing{% else %}dlog-status-default{% endif %}">
+                  {{ r.status_option.label }}
+                </span>
+                {% endwith %}
+              {% else %}
+                <span class="dlog-status dlog-status-pending">Pending</span>
+              {% endif %}
+            </td>
+            <td class="dispatch-log-td" style="white-space: nowrap; color: #475569;">
+              {{ r.created_at|date:"n/j/Y" }}<br>
+              <small style="color: #94a3b8;">{{ r.created_at|date:"g:i A" }}</small>
+            </td>
+            <td class="dispatch-log-td" style="white-space: nowrap; color: #475569;">
+              {% if r.done_at %}{{ r.done_at|date:"n/j/Y" }}<br><small style="color: #94a3b8;">{{ r.done_at|date:"g:i A" }}</small>{% else %}<span style="color: #cbd5e1;">—</span>{% endif %}
+            </td>
+            <td class="dispatch-log-td">
+              {% if r.done_at and r.created_at %}
+                {% with delta_secs=r.done_at|timeuntil:r.created_at %}
+                <span class="dlog-turnaround">{{ delta_secs }}</span>
+                {% endwith %}
+              {% else %}<span style="color: #cbd5e1;">—</span>{% endif %}
+            </td>
+            <td class="dispatch-log-td">
+              <div style="font-weight: 600; color: #1e293b;">{{ r.client_name }}</div>
+              {% if r.customer %}
+              <a href="{% url 'view_customer' r.customer.id %}" target="_blank" style="font-size: 0.72rem; color: #3b82f6;" class="text-decoration-none">
+                <i class="fas fa-arrow-up-right-from-square me-1"></i>CRM
+              </a>
+              {% endif %}
+            </td>
+            <td class="dispatch-log-td" style="max-width: 200px;">
+              <div class="text-truncate" title="{{ r.concern }}" style="color: #334155;">{{ r.concern|default:"—" }}</div>
+            </td>
+            <td class="dispatch-log-td">
+              <span style="font-family: monospace; font-weight: 700; font-size: 0.79rem; color: #1e293b;">{{ r.ticket_number|default:"—" }}</span>
+            </td>
+            <td class="dispatch-log-td" style="font-size: 0.78rem; color: #3b82f6; font-weight: 600;">
+              {{ r.type_option.label|default:"—" }}
+            </td>
+            <td class="dispatch-log-td" style="font-size: 0.77rem; color: #64748b;">
+              {{ r.chat_type_option.label|default:"—" }}
+            </td>
+            <td class="dispatch-log-td" style="font-size: 0.77rem; color: #64748b;">
+              {% if r.tab_type == "INTERNET_INSTALL" %}
+                <span style="color: #0e7490;"><i class="fas fa-wifi me-1"></i>Install</span>
+              {% elif r.tab_type == "CIGNAL_PLAY" %}
+                <span style="color: #7c3aed;"><i class="fas fa-tv me-1"></i>Cignal</span>
+              {% elif r.tab_type == "CLIENT_CONCERNS" %}
+                <span style="color: #f59e0b;"><i class="fas fa-headset me-1"></i>Concern</span>
+              {% else %}{{ r.tab_type|default:"—" }}{% endif %}
+            </td>
+            <td class="dispatch-log-td" style="font-size: 0.77rem;">
+              {% with team_list=r.teams.all %}
+              {% if team_list %}
+                {% for t in team_list %}<span style="background: #eff6ff; color: #1e40af; border-radius: 5px; padding: 0.1rem 0.4rem; font-size: 0.71rem; margin-right: 2px; white-space: nowrap;">{{ t.name }}</span>{% endfor %}
+              {% else %}<span style="color: #cbd5e1;">—</span>{% endif %}
+              {% endwith %}
+            </td>
+            <td class="dispatch-log-td" style="font-size: 0.78rem; color: #334155; font-weight: 600; white-space: nowrap;">
+              {% if r.csr %}{{ r.csr.get_full_name|default:r.csr.username|upper }}{% else %}—{% endif %}
+            </td>
+            <td class="dispatch-log-td" style="font-size: 0.77rem; color: #64748b; white-space: nowrap;">
+              {{ r.sales_agent.name|default:"—" }}
+            </td>
+            <td class="dispatch-log-td" style="max-width: 180px;">
+              <div class="text-truncate" title="{{ r.address }}" style="font-size: 0.78rem; color: #475569;">{{ r.address|default:"—" }}</div>
+            </td>
+            <td class="dispatch-log-td" style="white-space: nowrap;">
+              {% if r.contact_number %}
+              <a href="tel:{{ r.contact_number }}" class="text-decoration-none" style="color: #3b82f6; font-size: 0.78rem;">{{ r.contact_number }}</a>
+              {% else %}<span style="color: #cbd5e1;">—</span>{% endif %}
+            </td>
+            <td class="dispatch-log-td" style="max-width: 160px;">
+              <div class="text-truncate" title="{{ r.actions_taken }}" style="font-size: 0.77rem; color: #475569;">{{ r.actions_taken|default:"—" }}</div>
+            </td>
+            <td class="dispatch-log-td" style="max-width: 160px;">
+              <div class="text-truncate" title="{{ r.remarks }}" style="font-size: 0.77rem; color: #475569;">{{ r.remarks|default:"—" }}</div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="17" style="text-align: center; padding: 3rem 1rem; color: #94a3b8;">
+              <i class="fas fa-inbox mb-2" style="font-size: 2rem; display: block; color: #cbd5e1;"></i>
+              No dispatch records found
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
 
 {% include "dispatch/_modals.html" %}
-
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
-<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
 <script>
-$(document).ready(function() {
-    $('.datatable').DataTable({
-        "order": [[ 0, "desc" ]],
-        "pageLength": 25,
-        "language": {
-            "search": "",
-            "searchPlaceholder": "Search master records...",
-            "lengthMenu": "Show _MENU_ records",
-            "info": "Showing _START_–_END_ of _TOTAL_ records",
-            "paginate": { "previous": "← Prev", "next": "Next →" }
-        }
-    });
-    $('.dataTables_filter input').addClass('dispatch-search-input').css({'min-width': '220px'});
-    $('.dataTables_filter label').addClass('d-flex align-items-center gap-2').css('color','#475569');
-    $('.dataTables_length select').addClass('dispatch-filter-select').css({'padding': '0.35rem 0.6rem'});
-
-    // 📋 Toast helper for clipboard copy (PDF Manual Page 10)
-    function showCopyToast(msg) {
-        var toast = $('#dispatch-copy-toast');
-        $('#dispatch-copy-toast-msg').text(msg);
-        toast.stop(true, true).fadeIn(200).delay(2200).fadeOut(300);
-    }
-
-    $(document).on('click', '.btn-copy-brief', function(e) {
-        e.preventDefault();
-        var client = $(this).data('client') || 'Customer';
-        var phone = $(this).data('phone') || 'N/A';
-        var addr = $(this).data('addr') || 'N/A';
-        var concern = $(this).data('concern') || 'Dispatch';
-        var num = $(this).data('num') || '';
-        var text = '📋 [GAMETECH DISPATCH BRIEF]\nOrder/Ticket: ' + num + '\nClient: ' + client + '\nPhone: ' + phone + '\nAddress: ' + addr + '\nDetails: ' + concern;
-        if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(text).then(function() {
-                showCopyToast('Copied brief for ' + client + ' to clipboard!');
-            }).catch(function() {
-                fallbackCopy(text, client);
-            });
-        } else {
-            fallbackCopy(text, client);
-        }
-    });
-
-    function fallbackCopy(text, client) {
-        var $temp = $('<textarea>');
-        $('body').append($temp);
-        $temp.val(text).select();
-        document.execCommand('copy');
-        $temp.remove();
-        showCopyToast('Copied brief for ' + client + ' to clipboard!');
-    }
-
-    // ↩️ Undispatch Action: Single click or double-click row (PDF Manual Page 11)
-    $(document).on('click', '.btn-undispatch', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        var ticketId = $(this).data('id');
-        
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-        var csrftoken = getCookie('csrftoken') || $('[name=csrfmiddlewaretoken]').val();
-        fetch('/dispatch/api/tickets/' + ticketId + '/undispatch/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken }
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            if (data.success) {
-                window.location.reload();
-            } else {
-                alert('Error: ' + (data.error || 'Failed to undispatch'));
-            }
-        });
-    });
-
-    // Double-click row on Ongoing tab moves to Pending (PDF Page 11)
-    $(document).on('dblclick', '#tab-ongoing .dispatch-ticket-row', function(e) {
-        var btn = $(this).find('.btn-undispatch');
-        if (btn.length) {
-            btn.trigger('click');
-        }
-    });
-});
+function openMonitoringDetailModal(id) {
+  if (typeof openDispatchDetailModal === "function") openDispatchDetailModal(id);
+}
 </script>
+{% include "dispatch/_modal_scripts.html" %}
 {% endblock %}

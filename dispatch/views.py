@@ -829,7 +829,24 @@ def dispatch_monitoring_view(request):
     else:
         form = DispatchRecordForm(initial={'date': timezone.now().date()})
     
-    records = MonitoringRecord.objects.all().select_related('status_option', 'customer').prefetch_related('teams').order_by('-date')
+    records = MonitoringRecord.objects.all().select_related(
+        'status_option', 'customer', 'csr', 'type_option', 'chat_type_option', 'sales_agent'
+    ).prefetch_related('teams').order_by('-created_at')
+
+    # --- Filters ---
+    q = request.GET.get('q', '').strip()
+    if q:
+        records = records.filter(
+            Q(client_name__icontains=q) | Q(ticket_number__icontains=q) |
+            Q(concern__icontains=q) | Q(address__icontains=q)
+        )
+    source_tab_f = request.GET.get('source_tab', 'ALL')
+    if source_tab_f and source_tab_f != 'ALL':
+        records = records.filter(tab_type=source_tab_f)
+    type_f = request.GET.get('type', 'ALL')
+    if type_f and type_f != 'ALL':
+        records = records.filter(type_option__label__icontains=type_f)
+
     job_tickets = JobTicket.objects.all().select_related('customer', 'team').prefetch_related('technicians').order_by('-created_at')
 
     pending_tickets = job_tickets.filter(status='PENDING')
