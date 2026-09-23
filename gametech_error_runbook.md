@@ -1107,7 +1107,23 @@
   * `dispatch/templates/dispatch/_scripts.html` (Switched tile layer from `tile.openstreetmap.org` to Google Maps tiles `https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}` with dark styling)
   * `dispatch/analytics.py` (Updated `get_operational_overview_stats()` to query both `JobTicket` and `MonitoringRecord` for total closed jobs)
 * **1-Step Fix**:
-  * Replace OSM tile URL with Google Maps `mt{s}.google.com` tiles in Leaflet layer init, and aggregate both `JobTicket` and `MonitoringRecord` in `analytics.py`.
+### ERR-062: Hero Banner CSS Pseudo-Element Click Interception & Staff Modal Disconnect
+* **Symptoms**:
+  * On `/staff/`, clicking the "Add Staff" button in the hero banner fails to respond or is hard to click in certain screen regions.
+  * Adding staff redirected away or threw permission denied for non-superuser administrators; standalone page form wiped out input on validation errors.
+  * Custom staff roles defined in Manage Roles were missing from the Add Staff role dropdown.
+* **Root Causes**:
+  * `.page-hero::before` decorative pseudo-element was positioned at `top: -60px; right: -60px; width: 220px; height: 220px;` without `pointer-events: none;`, physically overlaying and intercepting pointer clicks on the hero action buttons.
+  * `@role_required(["Admin"])` did not check `can_access_administration` or `admin_panel` subtab permissions from `user.role_perms`.
+  * Lack of an inline modal popup (`#addStaffModal`) consistent with `/agents/` and `/staff/roles/` forced users onto a detached `/staff/add/` page with hardcoded static `<select>` options.
+* **Exact Target Files**:
+  * `static/css/theme/layout_and_darkmode.css` (Added `pointer-events: none;` to `.page-hero::before` and `.page-hero::after`)
+  * `billing/decorators.py` (Added `can_access_administration` subtab permission and AJAX JSON 401/403 support to `role_required`)
+  * `billing/views/staff.py` (Added AJAX JSON support, case-insensitive uniqueness checks, and passed `available_roles` to `staff_list`)
+  * `billing/templates/billing/partials/_modal_add_staff.html` (Created modern glassmorphic Add Staff modal partial)
+  * `billing/templates/billing/staff_and_admins.html` & `dispatch/templates/dispatch/_management_accounts.html` (Wired up `data-bs-target="#addStaffModal"`)
+* **1-Step Fix**:
+  * Add `pointer-events: none;` to `.page-hero::before/::after`, include `_modal_add_staff.html` in `staff_and_admins.html`, and support AJAX in `add_staff` view.
 
 ---
 
