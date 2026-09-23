@@ -15,6 +15,7 @@ urlpatterns = [
     path('management/', views.management_view, name='dispatch_management'),
     path('staff/', views.management_view, name='dispatch_staff'),
     path('customers/', views.dispatch_customers_view, name='dispatch_customers'),
+    path('customers/<int:customer_id>/', views.dispatch_customer_detail_view, name='dispatch_customer_detail'),
     
     # 5-Stage ERP Pipeline
     path('pipeline/1-verification/', pipeline_views.dispatch_verification, name='dispatch_verification'),

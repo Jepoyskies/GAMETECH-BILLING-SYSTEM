@@ -1168,6 +1168,100 @@ def dispatch_customers_view(request):
     })
 
 
+
+@login_required
+def dispatch_customer_detail_view(request, customer_id):
+    """Per-customer detail page replicating CustomerDashboard.tsx: info, stats, job history."""
+    if hasattr(request.user, "agent_profile") and not request.user.is_staff:
+        return redirect("agent_dashboard")
+
+    import datetime as dt
+
+    customer = get_object_or_404(Customer, pk=customer_id)
+
+    MODULE_MAP = {
+        "DISPATCH_LOG":     "Dispatch Log",
+        "INTERNET_INSTALL": "Internet Install",
+        "CIGNAL_PLAY":      "Cignal Play",
+        "CLIENT_CONCERNS":  "Client Concerns",
+    }
+
+    def _turnaround(diff_minutes):
+        if diff_minutes < 0:
+            return "-"
+        days  = diff_minutes // (60 * 24)
+        hours = (diff_minutes % (60 * 24)) // 60
+        mins  = diff_minutes % 60
+        parts = []
+        if days:  parts.append(f"{days}d")
+        if hours: parts.append(f"{hours}h")
+        if mins or not parts: parts.append(f"{mins}m")
+        return " ".join(parts)
+
+    jobs = []
+
+    for t in JobTicket.objects.filter(customer=customer).select_related("team"):
+        ta = "-"
+        if t.completed_at and t.created_at:
+            diff = int((t.completed_at - t.created_at).total_seconds() / 60)
+            ta = _turnaround(diff)
+        jobs.append({
+            "source":        "TICKET",
+            "id":            t.id,
+            "date":          t.created_at,
+            "done_at":       t.completed_at,
+            "turnaround":    ta,
+            "module":        MODULE_MAP.get(t.source_tab or "DISPATCH_LOG", "Dispatch Log"),
+            "type":          t.job_type or "Unassigned",
+            "status":        t.status,
+            "concern":       t.concern or "-",
+            "ticket_number": t.ticket_number or "-",
+        })
+
+    for r in MonitoringRecord.objects.filter(customer=customer):
+        ta = "-"
+        if r.date and r.time_start and r.time_end:
+            s = timezone.make_aware(dt.datetime.combine(r.date, r.time_start))
+            e = timezone.make_aware(dt.datetime.combine(r.date, r.time_end))
+            ta = _turnaround(int((e - s).total_seconds() / 60))
+        if r.date and r.time_start:
+            record_dt = timezone.make_aware(dt.datetime.combine(r.date, r.time_start))
+        elif r.date:
+            record_dt = timezone.make_aware(dt.datetime.combine(r.date, dt.time()))
+        else:
+            record_dt = None
+        status_label = "Done" if r.time_end else ("Ongoing" if r.time_start else (r.status or "Pending"))
+        jobs.append({
+            "source":        "MONITORING",
+            "id":            r.id,
+            "date":          record_dt,
+            "done_at":       None,
+            "turnaround":    ta,
+            "module":        "Dispatch Log",
+            "type":          r.job_type or "Unassigned",
+            "status":        status_label,
+            "concern":       r.concern or "-",
+            "ticket_number": "-",
+        })
+
+    jobs.sort(key=lambda j: j["date"] or timezone.datetime.min.replace(tzinfo=dt.timezone.utc), reverse=True)
+
+    by_status, by_type = {}, {}
+    for j in jobs:
+        by_status[j["status"]] = by_status.get(j["status"], 0) + 1
+        by_type[j["type"]]     = by_type.get(j["type"], 0) + 1
+    stats = {"total_jobs": len(jobs), "by_status": by_status, "by_type": by_type}
+
+    paginator = Paginator(jobs, 20)
+    page_obj  = paginator.get_page(request.GET.get("page", 1))
+
+    return render(request, "dispatch/customer_detail.html", {
+        "customer": customer,
+        "stats":    stats,
+        "page_obj": page_obj,
+        "jobs":     page_obj.object_list,
+    })
+
 @login_required
 def export_tickets_csv(request):
     """
