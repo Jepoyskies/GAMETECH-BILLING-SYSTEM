@@ -15,10 +15,20 @@
         <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: #475569;">Accomplished By</div>
         <div style="font-size: 0.78rem; color: #94a3b8;">{{ t.team.name|default:"Field Staff" }}</div>
       </div>
-      <div class="ms-auto d-flex gap-2 flex-shrink-0">
-        <span class="badge" style="background: rgba(16,185,129,0.1); color: #34d399; border: 1px solid rgba(16,185,129,0.2); padding: 5px 10px;">
-          <i class="fas fa-check-double me-1"></i> Closed
+      <div class="ms-auto d-flex gap-2 flex-shrink-0 align-items-center">
+        {% if t.status == 'QA_PASSED' %}
+        <span class="badge" style="background: rgba(14,165,233,0.15); color: #38bdf8; border: 1px solid rgba(14,165,233,0.3); padding: 5px 10px; font-size: 0.75rem;">
+          <i class="fas fa-clipboard-check me-1"></i> QA Passed
         </span>
+        {% elif t.status == 'COMPLETED_AND_VERIFIED' %}
+        <span class="badge" style="background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); padding: 5px 10px; font-size: 0.75rem;">
+          <i class="fas fa-shield-alt me-1"></i> Verified & Activated
+        </span>
+        {% else %}
+        <a href="{% url 'dispatch_qa' %}" class="dispatch-action-btn dispatch-action-btn-ghost" title="Review in QA Pipeline" style="font-size: 0.75rem; padding: 4px 10px;">
+          <i class="fas fa-clipboard-check text-cyan me-1"></i> In QA Review
+        </a>
+        {% endif %}
       </div>
     </div>
     {% endfor %}

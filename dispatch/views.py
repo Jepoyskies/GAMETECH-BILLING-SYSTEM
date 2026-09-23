@@ -600,6 +600,17 @@ def api_complete_job(request, ticket_id):
             cust.save(update_fields=['installation_status', 'status', 'mac_address'])
             logger.info(f"[DISPATCH] Promoted Customer {cust.full_name} (ID: {cust.id}) to Active / Installed upon ticket completion.")
             
+        # Synchronize any matching open MonitoringRecords for this customer
+        if ticket.customer:
+            done_opt = ConfigOption.objects.filter(list_type='STATUS', label__icontains='Done').first()
+            MonitoringRecord.objects.filter(
+                customer=ticket.customer,
+                done_at__isnull=True
+            ).update(
+                done_at=timezone.now(),
+                status_option=done_opt
+            )
+
         log_audit('UPDATE', 'JobTicket', ticket.id, request.user, summary=f"Completed Job Ticket {ticket.ticket_number}")
         return JsonResponse({'success': True, 'ticket_number': ticket.ticket_number, 'status': 'COMPLETED'})
     except Exception as e:
@@ -770,22 +781,61 @@ def complete_job_view(request, record_id):
         form = JobDetailForm(request.POST, instance=job_detail)
         if form.is_valid():
             form.save()
-            done_option = ConfigOption.objects.filter(module='MONITORING', list_type='STATUS', label__icontains='Done').first()
+            done_option = ConfigOption.objects.filter(list_type='STATUS', label__icontains='Done').first()
             if done_option:
                 record.status_option = done_option
-                record.save()
+            record.done_at = timezone.now()
+            record.save()
                 
             # Smart CRM promotion hook
-            if record.customer and record.tab_type == 'INTERNET_INSTALL':
+            if record.customer:
                 cust = record.customer
-                cust.installation_status = 'installed'
-                cust.status = 'active'
+                if record.tab_type == 'INTERNET_INSTALL':
+                    cust.installation_status = 'installed'
+                    cust.status = 'active'
                 if job_detail.ont_modem_sn and not cust.mac_address:
                     cust.mac_address = job_detail.ont_modem_sn
-                cust.save(update_fields=['installation_status', 'status', 'mac_address'])
+                cust.save()
+
+                # Sync any open JobTicket for this customer so the entire pipeline advances
+                open_ticket = JobTicket.objects.filter(
+                    customer=cust,
+                    status__in=['PENDING', 'ASSIGNED', 'IN_PROGRESS']
+                ).first()
+                if open_ticket:
+                    open_ticket.status = 'COMPLETED'
+                    open_ticket.done_at = timezone.now()
+                    if job_detail.ont_modem_sn:
+                        open_ticket.ont_modem_sn = job_detail.ont_modem_sn
+                    if job_detail.signal_level:
+                        open_ticket.signal_level = job_detail.signal_level
+                    if job_detail.nap_port:
+                        open_ticket.nap_port = job_detail.nap_port
+                    if job_detail.cable_length:
+                        open_ticket.cable_length = job_detail.cable_length
+                    if job_detail.pole_number:
+                        open_ticket.pole_number = job_detail.pole_number
+                    if job_detail.nap_reading:
+                        open_ticket.nap_reading = job_detail.nap_reading
+                    if job_detail.house_reading:
+                        open_ticket.house_reading = job_detail.house_reading
+                    if job_detail.facility:
+                        open_ticket.facility = job_detail.facility
+                    if job_detail.technician_remarks:
+                        open_ticket.technician_remarks = job_detail.technician_remarks
+                    if job_detail.acknowledged_by:
+                        open_ticket.acknowledged_by = job_detail.acknowledged_by
+                    open_ticket.save()
+                    JobTicketHistory.objects.create(
+                        job_ticket=open_ticket,
+                        actor=request.user,
+                        from_status='IN_PROGRESS',
+                        to_status='COMPLETED',
+                        note=f"Completed via Monitoring Record #{record.id}. Ready for QA."
+                    )
                 
             log_audit('UPDATE', 'JobDetail', job_detail.id, request.user, summary=f"Completed Job for {record.client_name}")
-            messages.success(request, 'Job details saved and marked as Done.')
+            messages.success(request, f"Job details for {record.client_name} saved and marked as Done.")
             if record.tab_type == 'INTERNET_INSTALL':
                 return redirect('internet_install')
             elif record.tab_type == 'CIGNAL_PLAY':
