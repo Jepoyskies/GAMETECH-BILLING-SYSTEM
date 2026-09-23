@@ -1,0 +1,220 @@
+{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}Customers | Gametech Dispatch{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ========================================================
+   CUSTOMERS DIRECTORY — Matching Original Port 5502 Style
+   ======================================================== */
+.customers-page-wrap { padding: 1.5rem 1.75rem; }
+.customers-header-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;
+}
+.customers-title-area {
+  display: flex; align-items: center; gap: 0.75rem;
+}
+.customers-title-icon {
+  width: 42px; height: 42px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: #ede9fe; color: #6366f1; font-size: 1.15rem;
+}
+.customers-title-area h1 {
+  font-size: 1.35rem; font-weight: 800; color: #1e293b;
+  margin: 0; letter-spacing: -0.02em; font-family: 'Inter', sans-serif;
+}
+.customers-title-area p {
+  margin: 0; font-size: 0.8rem; color: #64748b;
+}
+
+/* Filter bar */
+.customers-filter-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.2rem;
+}
+.customers-search-box {
+  position: relative; flex: 1; max-width: 400px; min-width: 250px;
+}
+.customers-search-box i {
+  position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%);
+  color: #94a3b8; font-size: 0.85rem;
+}
+.customers-search-input {
+  width: 100%; padding: 0.48rem 0.85rem 0.48rem 2.2rem;
+  background: #fff; border: 1px solid #cbd5e1; border-radius: 8px;
+  font-size: 0.84rem; color: #1e293b; font-family: 'Inter', sans-serif;
+}
+.customers-search-input:focus { outline: none; border-color: #3533cd; box-shadow: 0 0 0 3px rgba(53,51,205,0.12); }
+.customers-sort-select {
+  padding: 0.48rem 0.85rem; background: #fff; border: 1px solid #cbd5e1;
+  border-radius: 8px; font-size: 0.84rem; color: #334155;
+  font-family: 'Inter', sans-serif; cursor: pointer;
+}
+
+/* Card & Table */
+.customers-table-card {
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+  overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.customers-table { width: 100%; border-collapse: collapse; }
+.customers-th {
+  padding: 0.65rem 0.85rem; text-align: left; font-size: 0.76rem;
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  color: #64748b; background: #f8fafc; border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+.customers-td {
+  padding: 0.72rem 0.85rem; font-size: 0.82rem; color: #334155;
+  border-bottom: 1px solid #f1f5f9; vertical-align: middle;
+}
+.customers-tr:hover { background: #f8fafc; }
+.customer-id-badge {
+  display: inline-block; padding: 0.2rem 0.5rem; border-radius: 6px;
+  font-size: 0.74rem; font-weight: 700; background: #f1f5f9; color: #475569;
+  font-family: monospace;
+}
+.customer-name-link {
+  font-weight: 600; color: #1e293b; text-decoration: none;
+}
+.customer-name-link:hover { color: #3533cd; text-decoration: underline; }
+.customer-contact-text {
+  font-family: monospace; font-size: 0.8rem; color: #475569;
+}
+.customer-badge-active {
+  display: inline-block; padding: 0.18rem 0.5rem; border-radius: 5px;
+  font-size: 0.72rem; font-weight: 600; background: #dcfce7; color: #15803d;
+}
+.customer-badge-inactive {
+  display: inline-block; padding: 0.18rem 0.5rem; border-radius: 5px;
+  font-size: 0.72rem; font-weight: 600; background: #fee2e2; color: #b91c1c;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="customers-page-wrap">
+  {% include "dispatch/_nav_tabs.html" %}
+
+  <div class="customers-header-bar">
+    <div class="customers-title-area">
+      <div class="customers-title-icon">
+        <i class="fas fa-address-book"></i>
+      </div>
+      <div>
+        <h1>Customer Directory</h1>
+        <p>Subscriber records, contact information, and service locations ({{ total_customers }} total)</p>
+      </div>
+    </div>
+    <div>
+      <a href="{% url 'customer_create' %}" class="btn btn-sm btn-primary fw-semibold px-3 py-2" style="border-radius:8px; background:#3533cd; border-color:#3533cd;">
+        <i class="fas fa-user-plus me-1"></i> New Customer
+      </a>
+    </div>
+  </div>
+
+  <!-- Filter & Search Bar -->
+  <form method="GET" class="customers-filter-bar">
+    <div class="customers-search-box">
+      <i class="fas fa-search"></i>
+      <input type="text" name="q" value="{{ search_q }}" class="customers-search-input" placeholder="Search by name, account #, contact, address..." autocomplete="off">
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <select name="sort" class="customers-sort-select" onchange="this.form.submit()">
+        <option value="created_desc" {% if sort == 'created_desc' %}selected{% endif %}>Sort: Recently Created</option>
+        <option value="name_asc" {% if sort == 'name_asc' %}selected{% endif %}>Sort: Name (A-Z)</option>
+      </select>
+      {% if search_q %}
+        <a href="{% url 'dispatch_customers' %}" class="btn btn-sm btn-light border px-3" style="border-radius:8px;">Reset</a>
+      {% endif %}
+    </div>
+  </form>
+
+  <!-- Table Card -->
+  <div class="customers-table-card">
+    <div class="table-responsive">
+      <table class="customers-table">
+        <thead>
+          <tr>
+            <th class="customers-th" style="width: 65px;">ID</th>
+            <th class="customers-th">Name</th>
+            <th class="customers-th">Account #</th>
+            <th class="customers-th">Email</th>
+            <th class="customers-th">Address</th>
+            <th class="customers-th">Barangay / City</th>
+            <th class="customers-th">Contact</th>
+            <th class="customers-th">Status</th>
+            <th class="customers-th" style="width: 80px; text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cust in customers %}
+            <tr class="customers-tr">
+              <td class="customers-td">
+                <span class="customer-id-badge">#{{ cust.id }}</span>
+              </td>
+              <td class="customers-td">
+                <a href="{% url 'customer_detail' cust.id %}" class="customer-name-link">
+                  {{ cust.first_name }} {{ cust.last_name }}
+                </a>
+              </td>
+              <td class="customers-td font-monospace" style="font-size:0.8rem;">
+                {{ cust.account_number|default:"—" }}
+              </td>
+              <td class="customers-td" style="color:#64748b;">
+                {{ cust.email|default:"—" }}
+              </td>
+              <td class="customers-td" style="max-width:240px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                {{ cust.address|default:"—" }}
+              </td>
+              <td class="customers-td">
+                {{ cust.barangay.name|default:"—" }}
+              </td>
+              <td class="customers-td customer-contact-text">
+                {{ cust.contact_number|default:"—" }}
+              </td>
+              <td class="customers-td">
+                {% if cust.status == 'active' %}
+                  <span class="customer-badge-active">Active</span>
+                {% else %}
+                  <span class="customer-badge-inactive">{{ cust.status|title }}</span>
+                {% endif %}
+              </td>
+              <td class="customers-td text-end">
+                <a href="{% url 'customer_detail' cust.id %}" class="btn btn-sm btn-light border py-1 px-2" style="border-radius:6px; font-size:0.75rem;" title="View CRM Profile & Dispatches">
+                  <i class="fas fa-external-link-alt"></i>
+                </a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="9" class="text-center py-5 text-muted" style="font-size:0.88rem;">
+                <i class="fas fa-users-slash d-block mb-2" style="font-size:1.8rem; opacity:0.4;"></i>
+                No customers found matching your criteria.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+      <div class="d-flex justify-content-between align-items-center px-3 py-3 border-top bg-light" style="font-size:0.82rem;">
+        <span class="text-muted">
+          Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+        </span>
+        <div class="d-flex gap-1">
+          {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% if search_q %}&q={{ search_q }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}" class="btn btn-sm btn-white border px-3">Previous</a>
+          {% endif %}
+          {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if search_q %}&q={{ search_q }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}" class="btn btn-sm btn-white border px-3">Next</a>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

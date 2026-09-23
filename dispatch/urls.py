@@ -13,6 +13,8 @@ urlpatterns = [
     path('complete-job/<int:record_id>/', views.complete_job_view, name='complete_job'),
     path('audit-log/', views.audit_log_view, name='audit_log'),
     path('management/', views.management_view, name='dispatch_management'),
+    path('staff/', views.management_view, name='dispatch_staff'),
+    path('customers/', views.dispatch_customers_view, name='dispatch_customers'),
     
     # 5-Stage ERP Pipeline
     path('pipeline/1-verification/', pipeline_views.dispatch_verification, name='dispatch_verification'),

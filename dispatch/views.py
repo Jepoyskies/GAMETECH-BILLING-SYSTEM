@@ -9,6 +9,7 @@ from django.http import JsonResponse, HttpResponse
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Q, Max
+from django.core.paginator import Paginator
 from billing.models import Customer
 from network_manager.models import MikrotikDevice
 
@@ -1124,6 +1125,46 @@ def audit_log_view(request):
         'updates_count': updates_count,
         'deletes_count': deletes_count,
         'available_entities': available_entities,
+    })
+
+
+@login_required
+def dispatch_customers_view(request):
+    if hasattr(request.user, "agent_profile") and not request.user.is_staff:
+        return redirect('agent_dashboard')
+
+    search_q = request.GET.get('q', '').strip()
+    sort = request.GET.get('sort', 'created_desc')
+
+    customers_qs = Customer.objects.select_related('barangay', 'plan').all()
+
+    if search_q:
+        customers_qs = customers_qs.filter(
+            Q(first_name__icontains=search_q) |
+            Q(last_name__icontains=search_q) |
+            Q(account_number__icontains=search_q) |
+            Q(contact_number__icontains=search_q) |
+            Q(email__icontains=search_q) |
+            Q(address__icontains=search_q) |
+            Q(barangay__name__icontains=search_q)
+        )
+
+    if sort == 'name_asc':
+        customers_qs = customers_qs.order_by('first_name', 'last_name')
+    else:
+        customers_qs = customers_qs.order_by('-created_at')
+
+    total_customers = customers_qs.count()
+    paginator = Paginator(customers_qs, 50)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'dispatch/customers.html', {
+        'page_obj': page_obj,
+        'customers': page_obj.object_list,
+        'search_q': search_q,
+        'sort': sort,
+        'total_customers': total_customers,
     })
 
 
