@@ -7,6 +7,7 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth import get_user_model
 from django.db.models import Max
 from .models import Team, Technician, ConfigOption, AuditLog
+from billing.models import StaffRole
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +74,7 @@ def management_view(request):
         'total_daily_target': total_daily_target,
         'total_monthly_target': total_monthly_target,
         'config_options': config_options,
+        'available_roles': StaffRole.objects.all().order_by('name'),
     })
 
 

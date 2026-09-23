@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse, Http404
 from django.contrib.auth.decorators import login_required
 from billing.decorators import role_required
 from django.contrib import messages
@@ -31,8 +32,12 @@ def staff_list(request):
             sys_admin.save(update_fields=["role"])
 
     staff_members = SystemAdmin.objects.all().order_by("-created_at")
+    available_roles = StaffRole.objects.all().order_by('name')
     return render(
-        request, "billing/staff_and_admins.html", {"staff_members": staff_members}
+        request, "billing/staff_and_admins.html", {
+            "staff_members": staff_members,
+            "available_roles": available_roles,
+        }
     )
 
 
@@ -229,33 +234,55 @@ def manage_roles(request):
 @role_required(["Admin"])
 @login_required
 def add_staff(request):
+    is_ajax = request.headers.get("x-requested-with") == "XMLHttpRequest" or request.POST.get("is_ajax") == "true"
+    available_roles = StaffRole.objects.all().order_by('name')
+
     if request.method == "POST":
         username = request.POST.get("username", "").strip()
         full_name = request.POST.get("full_name", "").strip()
         email = request.POST.get("email", "").strip()
-        role_name = request.POST.get("role")
-        status = request.POST.get("status", "Active")
-        raw_password = request.POST.get("password")
+        role_name = request.POST.get("role", "").strip()
+        status = request.POST.get("status", "Active").strip()
+        raw_password = request.POST.get("password", "")
+
+        if not username or not full_name or not email or not role_name or not raw_password:
+            err_msg = "Please fill in all required fields."
+            if is_ajax:
+                return JsonResponse({"status": "error", "message": err_msg}, status=400)
+            messages.error(request, err_msg)
+            return render(request, "billing/add_staff.html", {"available_roles": available_roles, "form_data": request.POST})
 
         if (
-            User.objects.filter(username=username).exists()
-            or SystemAdmin.objects.filter(username=username).exists()
+            User.objects.filter(username__iexact=username).exists()
+            or SystemAdmin.objects.filter(username__iexact=username).exists()
         ):
-            messages.error(request, "That username is already taken.")
-            return redirect("add_staff")
+            err_msg = "That username is already taken."
+            if is_ajax:
+                return JsonResponse({"status": "error", "message": err_msg}, status=400)
+            messages.error(request, err_msg)
+            return render(request, "billing/add_staff.html", {"available_roles": available_roles, "form_data": request.POST})
 
         if (
-            User.objects.filter(email=email).exists()
-            or SystemAdmin.objects.filter(email=email).exists()
+            User.objects.filter(email__iexact=email).exists()
+            or SystemAdmin.objects.filter(email__iexact=email).exists()
         ):
-            messages.error(request, "That email is already registered.")
-            return redirect("add_staff")
+            err_msg = "That email is already registered."
+            if is_ajax:
+                return JsonResponse({"status": "error", "message": err_msg}, status=400)
+            messages.error(request, err_msg)
+            return render(request, "billing/add_staff.html", {"available_roles": available_roles, "form_data": request.POST})
 
         try:
             with transaction.atomic():
+                parts = full_name.split()
+                first_name = parts[0] if parts else ""
+                last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
+
                 user = User(
                     username=username,
                     email=email,
+                    first_name=first_name,
+                    last_name=last_name,
                     is_staff=True,
                     is_active=(status == "Active"),
                 )
@@ -264,8 +291,8 @@ def add_staff(request):
                 user.set_password(raw_password)
                 user.save()
 
-                group = Group.objects.filter(name=role_name).first()
-                if group:
+                if role_name:
+                    group, _ = Group.objects.get_or_create(name=role_name)
                     user.groups.add(group)
 
                 SystemAdmin.objects.create(
@@ -277,13 +304,18 @@ def add_staff(request):
                     password_hash=make_password(raw_password),
                 )
 
-            messages.success(request, f"Staff member '{full_name}' added successfully!")
+            success_msg = f"Staff member '{full_name}' added successfully!"
+            if is_ajax:
+                return JsonResponse({"status": "success", "message": success_msg})
+            messages.success(request, success_msg)
             return redirect("staff_list")
         except Exception as e:
-            messages.error(request, f"Error creating staff member: {str(e)}")
-            return redirect("add_staff")
+            err_msg = f"Error creating staff member: {str(e)}"
+            if is_ajax:
+                return JsonResponse({"status": "error", "message": err_msg}, status=400)
+            messages.error(request, err_msg)
+            return render(request, "billing/add_staff.html", {"available_roles": available_roles, "form_data": request.POST})
 
-    available_roles = StaffRole.objects.all().order_by('name')
     return render(request, "billing/add_staff.html", {"available_roles": available_roles})
 
 

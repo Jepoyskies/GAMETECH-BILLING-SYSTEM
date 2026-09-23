@@ -1,0 +1,186 @@
+<!-- Add Staff Member Modal -->
+<div class="modal fade" id="addStaffModal" tabindex="-1" aria-labelledby="addStaffModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0 shadow-lg" style="background: #1e293b; color: #f8fafc; border: 1px solid rgba(255,255,255,0.1);">
+      
+      <!-- Modal Header -->
+      <div class="modal-header border-bottom border-secondary border-opacity-25 px-4 py-3" style="background: linear-gradient(135deg, rgba(30,41,59,0.9), rgba(15,23,42,0.9));">
+        <div class="d-flex align-items-center gap-3">
+          <div class="rounded-circle d-flex align-items-center justify-content-center" 
+               style="width: 42px; height: 42px; background: linear-gradient(135deg, #2563eb, #3b82f6); color: #fff; box-shadow: 0 4px 12px rgba(37,99,235,0.35);">
+            <i class="fas fa-user-plus"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-bold mb-0 text-white" id="addStaffModalLabel" style="font-size: 1.1rem;">Add Staff Member</h5>
+            <span class="text-muted" style="font-size: 0.78rem;">Create a new operator account and assign system access role</span>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <!-- Modal Body / Form -->
+      <form id="addStaffModalForm" method="post" action="{% url 'add_staff' %}" autocomplete="off">
+        {% csrf_token %}
+        <div class="modal-body px-4 py-3">
+          
+          <!-- Inline Error Notification -->
+          <div id="addStaffModalError" class="alert alert-danger py-2 px-3 rounded-3 d-none mb-3 align-items-center gap-2" style="font-size: 0.85rem;">
+            <i class="fas fa-exclamation-circle flex-shrink-0"></i>
+            <span id="addStaffModalErrorText">An error occurred while creating staff.</span>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label text-xs text-muted text-uppercase fw-semibold mb-1">Username <span class="text-danger">*</span></label>
+              <input type="text" name="username" class="form-control bg-dark text-white border-secondary border-opacity-50 rounded-3" 
+                     placeholder="e.g. jdelacruz" required autocomplete="off" style="font-size: 0.9rem;">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label text-xs text-muted text-uppercase fw-semibold mb-1">Full Name <span class="text-danger">*</span></label>
+              <input type="text" name="full_name" class="form-control bg-dark text-white border-secondary border-opacity-50 rounded-3" 
+                     placeholder="e.g. Juan Dela Cruz" required style="font-size: 0.9rem;">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label text-xs text-muted text-uppercase fw-semibold mb-1">Email Address <span class="text-danger">*</span></label>
+            <input type="email" name="email" class="form-control bg-dark text-white border-secondary border-opacity-50 rounded-3" 
+                   placeholder="name@gametech.com" required style="font-size: 0.9rem;">
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label text-xs text-muted text-uppercase fw-semibold mb-1">Role <span class="text-danger">*</span></label>
+              <select name="role" class="form-select bg-dark text-white border-secondary border-opacity-50 rounded-3" required style="font-size: 0.9rem;">
+                <option value="" disabled selected>Select Role...</option>
+                {% for r in available_roles %}
+                <option value="{{ r.name }}">{{ r.name }}</option>
+                {% empty %}
+                <option value="Admin">Admin</option>
+                <option value="CSR">CSR</option>
+                <option value="Technician">Technician</option>
+                <option value="Agent">Agent</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label text-xs text-muted text-uppercase fw-semibold mb-1">Status <span class="text-danger">*</span></label>
+              <select name="status" class="form-select bg-dark text-white border-secondary border-opacity-50 rounded-3" required style="font-size: 0.9rem;">
+                <option value="Active" selected>Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label text-xs text-muted text-uppercase fw-semibold mb-1">Password <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <input type="password" name="password" id="addStaffModalPassword" class="form-control bg-dark text-white border-secondary border-opacity-50 rounded-start-3" 
+                     placeholder="Create secure password" required autocomplete="new-password" style="font-size: 0.9rem;">
+              <button class="btn btn-outline-secondary border-opacity-50 rounded-end-3" type="button" id="toggleStaffPasswordBtn" style="color: #94a3b8;">
+                <i class="fas fa-eye" id="toggleStaffPasswordIcon"></i>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="modal-footer border-top border-secondary border-opacity-25 px-4 py-3 justify-content-between">
+          <button type="button" class="btn btn-sm btn-outline-secondary px-3 py-2 rounded-3 text-white" data-bs-dismiss="modal" style="font-size: 0.85rem;">
+            Cancel
+          </button>
+          <button type="submit" id="addStaffModalSubmitBtn" class="btn-premium btn-p-primary px-4 py-2" style="font-size: 0.88rem;">
+            <i class="fas fa-user-plus me-1" id="addStaffBtnIcon"></i> <span id="addStaffBtnText">Add Staff</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // Password Visibility Toggle
+  const toggleBtn = document.getElementById('toggleStaffPasswordBtn');
+  const passInput = document.getElementById('addStaffModalPassword');
+  const passIcon = document.getElementById('toggleStaffPasswordIcon');
+
+  if (toggleBtn && passInput && passIcon) {
+    toggleBtn.addEventListener('click', function() {
+      const isPass = passInput.getAttribute('type') === 'password';
+      passInput.setAttribute('type', isPass ? 'text' : 'password');
+      passIcon.classList.toggle('fa-eye', !isPass);
+      passIcon.classList.toggle('fa-eye-slash', isPass);
+    });
+  }
+
+  // AJAX Form Handler for Add Staff Modal
+  const form = document.getElementById('addStaffModalForm');
+  const errorBox = document.getElementById('addStaffModalError');
+  const errorText = document.getElementById('addStaffModalErrorText');
+  const submitBtn = document.getElementById('addStaffModalSubmitBtn');
+  const btnIcon = document.getElementById('addStaffBtnIcon');
+  const btnText = document.getElementById('addStaffBtnText');
+
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      if (errorBox) {
+        errorBox.classList.add('d-none');
+        errorBox.classList.remove('d-flex');
+      }
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        if (btnIcon) btnIcon.className = 'fas fa-spinner fa-spin me-1';
+        if (btnText) btnText.textContent = 'Saving...';
+      }
+
+      const formData = new FormData(form);
+
+      fetch(form.action, {
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+      })
+      .then(async function(response) {
+        const data = await response.json().catch(function() { return {}; });
+        if (response.ok && data.status === 'success') {
+          // Success! Reload page to display new staff member
+          window.location.reload();
+        } else {
+          const errMsg = data.message || 'Error creating staff member. Please check input.';
+          if (errorBox && errorText) {
+            errorText.textContent = errMsg;
+            errorBox.classList.remove('d-none');
+            errorBox.classList.add('d-flex');
+          } else {
+            alert(errMsg);
+          }
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            if (btnIcon) btnIcon.className = 'fas fa-user-plus me-1';
+            if (btnText) btnText.textContent = 'Add Staff';
+          }
+        }
+      })
+      .catch(function(err) {
+        if (errorBox && errorText) {
+          errorText.textContent = 'Network or server error. Please try again.';
+          errorBox.classList.remove('d-none');
+          errorBox.classList.add('d-flex');
+        }
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          if (btnIcon) btnIcon.className = 'fas fa-user-plus me-1';
+          if (btnText) btnText.textContent = 'Add Staff';
+        }
+      });
+    });
+  }
+})();
+</script>

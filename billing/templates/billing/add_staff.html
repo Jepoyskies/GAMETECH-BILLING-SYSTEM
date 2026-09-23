@@ -190,37 +190,40 @@
             <div class="row g-3 mb-3">
                 <div class="col-md-6">
                     <label class="plan-form-label">Username <span class="req">*</span></label>
-                    <input type="text" name="username" class="plan-form-control" required placeholder="Enter username" autocomplete="off">
+                    <input type="text" name="username" class="plan-form-control" required placeholder="Enter username" autocomplete="off" value="{{ form_data.username|default:'' }}">
                 </div>
                 <div class="col-md-6">
                     <label class="plan-form-label">Full Name <span class="req">*</span></label>
                     <input type="text" name="full_name" class="plan-form-control" required
-                        placeholder="e.g. Juan Dela Cruz">
+                        placeholder="e.g. Juan Dela Cruz" value="{{ form_data.full_name|default:'' }}">
                 </div>
             </div>
 
             <div class="mb-3">
                 <label class="plan-form-label">Email Address <span class="req">*</span></label>
-                <input type="email" name="email" class="plan-form-control" required placeholder="name@gametech.com">
+                <input type="email" name="email" class="plan-form-control" required placeholder="name@gametech.com" value="{{ form_data.email|default:'' }}">
             </div>
 
             <div class="row g-3 mb-3">
                 <div class="col-md-6">
                     <label class="plan-form-label">Role <span class="req">*</span></label>
                     <select name="role" class="form-select" required>
-                        <option value="" disabled selected>Select a Role...</option>
+                        <option value="" disabled {% if not form_data.role %}selected{% endif %}>Select a Role...</option>
+                        {% for r in available_roles %}
+                        <option value="{{ r.name }}" {% if form_data.role == r.name %}selected{% endif %}>{{ r.name }}</option>
+                        {% empty %}
                         <option value="Admin">Admin</option>
+                        <option value="CSR">CSR</option>
                         <option value="Technician">Technician</option>
                         <option value="Agent">Agent</option>
-                        <option value="CSR">CSR</option>
+                        {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-6">
                     <label class="plan-form-label">Status <span class="req">*</span></label>
                     <select name="status" class="form-select" required>
-                        <option value="" disabled selected>Select Status...</option>
-                        <option value="Active">Active</option>
-                        <option value="Inactive">Inactive</option>
+                        <option value="Active" {% if not form_data or form_data.status == 'Active' %}selected{% endif %}>Active</option>
+                        <option value="Inactive" {% if form_data.status == 'Inactive' %}selected{% endif %}>Inactive</option>
                     </select>
                 </div>
             </div>

@@ -21,16 +21,14 @@
         <div class="hero-sub">Manage system users, roles, and access levels</div>
       </div>
     </div>
-        {% if request.user.role != 'Viewer' %}
-    <div class="d-flex gap-2">
-      {% if request.user.role == 'Admin' %}
+        {% if request.user.role == 'Admin' or request.user.role_perms.can_access_administration %}
+    <div class="d-flex gap-2 position-relative" style="z-index: 5;">
       <a href="{% url 'manage_roles' %}" class="btn-premium" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">
         <i class="fas fa-shield-alt"></i> Manage Roles
       </a>
-      {% endif %}
-      <a href="{% url 'add_staff' %}" class="btn-premium btn-p-primary">
+      <button type="button" class="btn-premium btn-p-primary" data-bs-toggle="modal" data-bs-target="#addStaffModal">
         <i class="fas fa-user-plus"></i> Add Staff
-      </a>
+      </button>
     </div>
     {% endif %}
   </div>
@@ -134,6 +132,8 @@
     </div>
   </div>
 </div>
+
+{% include "billing/partials/_modal_add_staff.html" %}
 {% endblock %}
 
 {% block extra_js %}
