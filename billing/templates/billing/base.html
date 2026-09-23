@@ -37,6 +37,18 @@
     {% include "billing/base/_topbar.html" %}
 
     <main class="content-wrapper p-3">
+        {% if messages %}
+        <div class="messages-container mb-3">
+            {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags %}{{ message.tags }}{% else %}info{% endif %} alert-dismissible fade show shadow-sm" role="alert">
+                {% if message.tags == 'success' %}<i class="fas fa-check-circle me-2"></i>{% elif message.tags == 'error' or message.tags == 'danger' %}<i class="fas fa-exclamation-triangle me-2"></i>{% elif message.tags == 'warning' %}<i class="fas fa-exclamation-circle me-2"></i>{% else %}<i class="fas fa-info-circle me-2"></i>{% endif %}
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         {% block content %}
         {% endblock %}
     </main>

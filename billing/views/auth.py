@@ -429,6 +429,15 @@ def custom_logout_view(request):
         except Exception:
             pass
 
+    # Flush any unconsumed internal session messages so operational notices don't bleed into the login screen
+    try:
+        from django.contrib.messages import get_messages
+        storage = get_messages(request)
+        for _ in storage:
+            pass
+    except Exception:
+        pass
+
     logout(request)
     return redirect("login")
 

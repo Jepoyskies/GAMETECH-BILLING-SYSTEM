@@ -262,6 +262,18 @@
             text-align: center;
         }
 
+        .login-success {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #16a34a;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+        }
+
         /* Mobile specific elements */
         .mobile-login-trigger {
             display: none;
@@ -460,10 +472,13 @@
 
                 {% if messages %}
                 {% for message in messages %}
-                <div class="login-error">{{ message }}</div>
+                <div class="{% if message.tags == 'success' %}login-success{% else %}login-error{% endif %}">
+                    {% if message.tags == 'success' %}<i class="fa-solid fa-check-circle me-1"></i>{% else %}<i class="fa-solid fa-circle-exclamation me-1"></i>{% endif %}
+                    {{ message }}
+                </div>
                 {% endfor %}
                 {% elif form.errors or error %}
-                <div class="login-error">Invalid username or password.</div>
+                <div class="login-error"><i class="fa-solid fa-circle-exclamation me-1"></i> Invalid username or password.</div>
                 {% endif %}
 
                 <form method="post" action="">

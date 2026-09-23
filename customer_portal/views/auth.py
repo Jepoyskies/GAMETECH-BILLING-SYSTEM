@@ -56,6 +56,14 @@ def portal_logout(request):
                     pass
         except Exception:
             pass
+
+    try:
+        from django.contrib.messages import get_messages
+        storage = get_messages(request)
+        for _ in storage:
+            pass
+    except Exception:
+        pass
     request.session.flush()
     return redirect('customer_portal:portal_login')
 
