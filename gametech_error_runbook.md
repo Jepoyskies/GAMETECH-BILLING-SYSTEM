@@ -26,6 +26,7 @@
 | **ERR-057** | Dispatch Queue Tab Count Mismatch, Missing Tab 4 Records, and Inactive QA Approval Queue | `dispatch/views.py`, `pipeline_views.py`, `_queue_tabs.html`, `4_qa.html` | Queue / Pipeline |
 | **ERR-058** | Dispatch Trash Can Delete Buttons Inactive and 403 Forbidden for Non-Staff CSR Accounts | `dispatch/_modal_scripts.html`, `dispatch/views.py`, `dispatch/urls.py` | Queue / API |
 | **ERR-059** | Disconnected Operations Pipeline: Missing Repair Intake, Missing Tech Confirmation Guard, and Duplicate Dispatch Job Tickets | `dispatch/views.py`, `pipeline_views.py`, `_modal_scripts.html`, `view_customer.html` | Operations / Dispatch |
+| **ERR-060** | Unconsumed Internal Flash Messages Leaking to Public Login Screen Styled as Alarming Red Error Banners | `billing/templates/billing/base.html`, `login.html`, `billing/views/auth.py`, `customer_portal/views/auth.py` | Auth / Messages |
 
 ---
 
@@ -1079,6 +1080,21 @@
   * `billing/templates/billing/view_customer/_lifecycle_tracker.html` & `_modal_customer_repair.html` (Created visual 6-stage lifecycle stepper and repair ticket modal)
 * **1-Step Fix**:
   * Auto-map `source_tab` to `CLIENT_CONCERNS` for non-install types, query existing open tickets in verification, and intercept `#modal-complete-job` trigger with `tech_confirmed` prompt.
+
+### ERR-060: Unconsumed Internal Flash Messages Leaking to Public Login Screen Styled as Alarming Red Error Banners
+* **Symptoms**:
+  * Logging out or navigating to `/login/` presents multiple red warning boxes displaying internal operational success notices (e.g. *"Job details saved and marked as Done."*).
+* **Root Causes**:
+  * `billing/base.html` lacked a `{% if messages %}` block inside `<main class="content-wrapper">`. Operational messages produced during views (like job completion) were never rendered and consumed on dispatch/monitoring pages, remaining trapped in session/cookie storage.
+  * `login.html` hardcoded `<div class="login-error">{{ message }}</div>` for all messages regardless of tag (`success` vs `error`), rendering success messages in alarming pink/red boxes.
+  * `custom_logout_view` and `portal_logout` did not purge internal session messages on logout, causing unconsumed messages to bleed onto the public login page.
+* **Exact Target Files**:
+  * `billing/templates/billing/base.html` (Added universal message rendering, picked up automatically by `_scripts.html` toast converted)
+  * `billing/templates/billing/login.html` (Added `.login-success` CSS and conditional tag classes)
+  * `billing/views/auth.py` & `customer_portal/views/auth.py` (Purged message storage upon logout)
+  * `dispatch/templates/dispatch/complete_job.html` (Added button submit loading protection to prevent multiple clicks)
+* **1-Step Fix**:
+  * Add universal messages to `base.html`, flush message storage in `custom_logout_view` with `storage.used = True; storage._queued_messages = []`, and style `.login-success` in `login.html`.
 
 ---
 
