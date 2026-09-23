@@ -435,6 +435,8 @@ def custom_logout_view(request):
         storage = get_messages(request)
         for _ in storage:
             pass
+        storage.used = True
+        storage._queued_messages = []
     except Exception:
         pass
 
