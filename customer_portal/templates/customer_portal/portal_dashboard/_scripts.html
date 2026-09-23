@@ -1,7 +1,5 @@
 {% load static %}
 <!-- Base Partial: Scripts -->
-<!-- Bootstrap + Scripts -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 
 {% if messages %}
@@ -78,7 +76,7 @@ function applyForAddon(addonType) {
         iconContainer.style.boxShadow = '0 10px 25px rgba(245,158,11,0.35)';
         icon.className = 'fas fa-hdd text-white';
     }
-    new bootstrap.Modal(document.getElementById('addonModal')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('addonModal')).show();
 }
 
 function submitAddonRequest() {
@@ -198,7 +196,7 @@ function handlePaymentClick() {
     // If account is suspended, expired, or disconnected, never show Advance Payment popup!
     // Directly open payment modal to let customer pay and reactivate.
     if (isSuspendedOrExpired || !dueDate) {
-        new bootstrap.Modal(document.getElementById('mockPaymentModal')).show();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('mockPaymentModal')).show();
         return;
     }
 
@@ -214,18 +212,14 @@ function handlePaymentClick() {
             confirmButtonColor: '#facc15',
             cancelButtonColor: '#64748b',
             confirmButtonText: 'Yes, extend!',
-        }).then(r => { if (r.isConfirmed) new bootstrap.Modal(document.getElementById('mockPaymentModal')).show(); });
+        }).then(r => { if (r.isConfirmed) bootstrap.Modal.getOrCreateInstance(document.getElementById('mockPaymentModal')).show(); });
     } else {
-        new bootstrap.Modal(document.getElementById('mockPaymentModal')).show();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('mockPaymentModal')).show();
     }
 }
 
 function handleUpgradeClick() {
-    new bootstrap.Modal(document.getElementById('mockPaymentModal')).show();
-    setTimeout(() => {
-        const sel = document.getElementById('plan-select-btn');
-        if (sel) { sel.click(); }
-    }, 400);
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('planModal')).show();
 }
 
 /* ============================================================
@@ -379,6 +373,41 @@ document.addEventListener('DOMContentLoaded', function() {
             const activeBtn = document.querySelector('.q-btn.active');
             if (activeBtn && activeBtn.id !== 'btn-custom') activeBtn.click();
         });
+    });
+
+    // Navigation tracking between payment modal and plan selection
+    let openedPlanFromPayment = false;
+
+    document.getElementById('plan-select-btn')?.addEventListener('click', function() {
+        openedPlanFromPayment = true;
+    });
+
+    document.getElementById('planModalCloseBtn')?.addEventListener('click', function(e) {
+        if (!openedPlanFromPayment) {
+            e.preventDefault();
+            e.stopPropagation();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('planModal')).hide();
+        }
+    });
+
+    document.getElementById('mockPaymentModal')?.addEventListener('hidden.bs.modal', function() {
+        setTimeout(() => {
+            if (!document.getElementById('planModal')?.classList.contains('show')) {
+                openedPlanFromPayment = false;
+            }
+        }, 300);
+    });
+
+    // Failsafe: purge orphaned backdrops and restore scrolling if all modals are closed
+    document.addEventListener('hidden.bs.modal', function () {
+        setTimeout(function() {
+            if (!document.querySelector('.modal.show')) {
+                document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+                document.body.classList.remove('modal-open');
+                document.body.style.removeProperty('overflow');
+                document.body.style.removeProperty('padding-right');
+            }
+        }, 150);
     });
 
     // Form submit loading state

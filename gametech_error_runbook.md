@@ -27,6 +27,7 @@
 | **ERR-058** | Dispatch Trash Can Delete Buttons Inactive and 403 Forbidden for Non-Staff CSR Accounts | `dispatch/_modal_scripts.html`, `dispatch/views.py`, `dispatch/urls.py` | Queue / API |
 | **ERR-059** | Disconnected Operations Pipeline: Missing Repair Intake, Missing Tech Confirmation Guard, and Duplicate Dispatch Job Tickets | `dispatch/views.py`, `pipeline_views.py`, `_modal_scripts.html`, `view_customer.html` | Operations / Dispatch |
 | **ERR-060** | Unconsumed Internal Flash Messages Leaking to Public Login Screen Styled as Alarming Red Error Banners | `billing/templates/billing/base.html`, `login.html`, `billing/views/auth.py`, `customer_portal/views/auth.py` | Auth / Messages |
+| **ERR-063** | Customer Portal Modal Backdrop Freeze on Plan Selection & Close | `_modals.html`, `plan_card.html`, `portal_dashboard.html`, `_scripts.html` | Frontend (Modals) |
 
 ---
 
@@ -1122,8 +1123,20 @@
   * `billing/views/staff.py` (Added AJAX JSON support, case-insensitive uniqueness checks, and passed `available_roles` to `staff_list`)
   * `billing/templates/billing/partials/_modal_add_staff.html` (Created modern glassmorphic Add Staff modal partial)
   * `billing/templates/billing/staff_and_admins.html` & `dispatch/templates/dispatch/_management_accounts.html` (Wired up `data-bs-target="#addStaffModal"`)
+### ERR-063: Customer Portal Modal Backdrop Freeze on Plan Selection & Close
+* **Symptoms**:
+  * On `/portal/dashboard/`, clicking "Select Plan" or the "X" close button inside the Choose Service Plan modal (`#planModal`) leaves the dashboard covered in an unclickable dark grey screen (`.modal-backdrop` stuck with `modal-open` and `overflow: hidden` on `<body>`).
+* **Root Causes**:
+  * Combining `data-bs-target="#mockPaymentModal" data-bs-toggle="modal"` with `data-bs-dismiss="modal"` on the exact same button creates a race condition in Bootstrap 5's modal transition listener (`hidden.bs.modal` vs `shown.bs.modal`), destroying or orphaning the backdrop.
+  * Duplicate loading of Bootstrap JS bundles (`bootstrap@5.3.0` in `portal_dashboard.html` and `bootstrap@5.3.2` in `_scripts.html`) bound duplicate click data-api handlers on `document`, causing multi-modal triggers to fire twice simultaneously.
+  * Extraneous closing `</div>` tag at the end of `#planModal` in `_modals.html` (opens: 60, closes: 61).
+* **Exact Target Files**:
+  * `customer_portal/templates/customer_portal/portal_dashboard/_modals.html` (Removed `data-bs-dismiss="modal"` from `#plan-select-btn` and `custom-close-btn`; removed extra `</div>`)
+  * `customer_portal/templates/customer_portal/partials/plan_card.html` (Removed `data-bs-dismiss="modal"` from `.select-plan-btn`)
+  * `customer_portal/templates/customer_portal/portal_dashboard.html` (Consolidated to single `bootstrap@5.3.2` bundle in head/scripts)
+  * `customer_portal/templates/customer_portal/portal_dashboard/_scripts.html` (Removed duplicate script import, used `getOrCreateInstance`, and added global `hidden.bs.modal` backdrop cleanup guard)
 * **1-Step Fix**:
-  * Add `pointer-events: none;` to `.page-hero::before/::after`, include `_modal_add_staff.html` in `staff_and_admins.html`, and support AJAX in `add_staff` view.
+  * Remove `data-bs-dismiss="modal"` from multi-modal toggle buttons, remove duplicate Bootstrap JS bundle, and add failsafe `hidden.bs.modal` cleanup guard for orphaned backdrops.
 
 ---
 
