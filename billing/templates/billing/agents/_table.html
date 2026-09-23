@@ -1,188 +1,75 @@
-<!-- Mobile View: Responsive Cards -->
-<div class="row g-3 d-md-none mb-4">
-  {% for agent in agents %}
-  <div class="col-12">
-    <div class="dashboard-card p-3 rounded-4" style="background: rgba(15,23,42,0.7); border: 1px solid rgba(255,255,255,0.08);">
-      <div class="d-flex align-items-center justify-content-between mb-3">
-        <div class="d-flex align-items-center gap-2">
-          <div class="agent-avatar">{{ agent.name|make_list|first|upper }}</div>
-          <div>
-            <div class="fw-bold text-white fs-6">{{ agent.name }}</div>
-            <div class="text-muted" style="font-size:0.75rem;">{{ agent.email }}</div>
-          </div>
-        </div>
-        {% if agent.is_cashout_eligible %}
-        <span class="badge bg-success bg-opacity-20 text-success border border-success border-opacity-25" style="font-size: 0.68rem;">
-          <i class="fas fa-check-circle me-1"></i>Cashout Ready
-        </span>
-        {% else %}
-        <span class="badge bg-secondary bg-opacity-20 text-muted border border-secondary border-opacity-25" style="font-size: 0.68rem;">
-          {{ agent.qualified_customers_count }}/5 Qualified
-        </span>
-        {% endif %}
-      </div>
-
-      <div class="d-flex justify-content-between py-2 border-top border-secondary border-opacity-25 text-xs text-muted">
-        <span>Phone:</span>
-        <span class="text-white">{{ agent.phone|default:"—" }}</span>
-      </div>
-      <div class="d-flex justify-content-between py-2 border-top border-secondary border-opacity-25 text-xs text-muted">
-        <span>Subscribers Referred:</span>
-        <span class="badge bg-primary bg-opacity-20 text-primary">{{ agent.customer_count|default:0 }} subs</span>
-      </div>
-      <div class="d-flex justify-content-between py-2 border-top border-secondary border-opacity-25 text-xs text-muted mb-3">
-        <span>Claimable Commission:</span>
-        <span class="fw-bold text-warning">₱{{ agent.claimable_commission|floatformat:2 }}</span>
-      </div>
-
-      <div class="d-flex gap-2">
-        <a href="{% url 'view_agent' agent.id %}" class="btn btn-sm btn-outline-primary flex-fill" style="border-radius: 8px; font-size: 0.8rem;">
-          <i class="fas fa-eye me-1"></i> View
-        </a>
-        <a href="{% url 'edit_agent' agent.id %}" class="btn btn-sm btn-outline-secondary flex-fill" style="border-radius: 8px; font-size: 0.8rem;">
-          <i class="fas fa-edit me-1"></i> Edit
-        </a>
-        <form method="post" action="{% url 'delete_agent' agent.id %}" data-confirm-delete="Delete agent {{ agent.name }}?" style="display:inline;">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-sm btn-outline-danger" style="border-radius: 8px; font-size: 0.8rem;">
-            <i class="fas fa-trash"></i>
-          </button>
-        </form>
-      </div>
-    </div>
+<!-- Agents Table Card (Harmonized with Staff & Admins) -->
+<div class="dashboard-card animate-fade-in animate-delay-1" style="overflow:hidden;">
+  <div class="section-header section-header-purple" style="background: linear-gradient(135deg, #1e1b4b 0%, #3730a3 100%);">
+    <h6><i class="fas fa-handshake sh-icon"></i> Sales Partners</h6>
+    <small>{{ agents|length }} accounts • ₱{{ total_commission|floatformat:2 }} claimable</small>
   </div>
-  {% empty %}
-  <div class="col-12">
-    <div class="text-center py-5 text-muted">
-      <i class="fas fa-user-friends fa-3x mb-3 text-secondary opacity-50"></i>
-      <p class="mb-0">No sales agents registered yet.</p>
-    </div>
-  </div>
-  {% endfor %}
-</div>
-
-<!-- Desktop Table Card -->
-<div class="dashboard-card d-none d-md-block rounded-4 overflow-hidden"
-     style="background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px);">
-  
-  <!-- Table Filter Header -->
-  <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-25 flex-wrap gap-2">
-    <div class="d-flex align-items-center gap-2">
-      <i class="fas fa-users-cog text-primary"></i>
-      <h6 class="fw-bold mb-0 text-white">Agent Directory</h6>
-      <span class="badge bg-secondary bg-opacity-20 text-muted border border-secondary border-opacity-25 text-xs ms-1">
-        {{ total_agents }} Entries
-      </span>
-    </div>
-    <div class="d-flex gap-2 align-items-center">
-      <div class="input-group input-group-sm" style="width: 240px;">
-        <span class="input-group-text bg-dark border-secondary text-muted"><i class="fas fa-search"></i></span>
-        <input type="text" id="agents-search" class="form-control bg-dark border-secondary text-white" placeholder="Search name, phone, email..." autocomplete="off">
-      </div>
-      <select id="agents-length" class="form-select form-select-sm bg-dark border-secondary text-muted" style="width: 130px;">
-        <option value="10">10 per page</option>
-        <option value="25" selected>25 per page</option>
-        <option value="50">50 per page</option>
-        <option value="-1">All records</option>
-      </select>
-    </div>
-  </div>
-
   <div class="table-responsive">
-    <table id="agentsDataTable" class="table table-hover align-middle mb-0 text-sm" style="width: 100%; background: transparent;">
+    <table id="agentsTable" class="table table-premium table-hover align-middle dt-responsive nowrap mb-0" style="width:100%">
       <thead>
-        <tr class="text-muted text-uppercase border-secondary border-opacity-25" style="font-size: 0.72rem; letter-spacing: 0.05em;">
-          <th class="ps-3" style="width: 250px;">Agent</th>
-          <th>Contact</th>
-          <th class="text-center" style="width: 140px;">Customers</th>
-          <th class="text-center" style="width: 180px;">Payout Status</th>
-          <th class="text-center" style="width: 150px;">Commission</th>
-          <th class="text-end pe-3" style="width: 130px;">Actions</th>
+        <tr>
+          <th>Agent Name</th>
+          <th>Contact Details</th>
+          <th>Customers Referred</th>
+          <th>Payout Status</th>
+          <th>Claimable Commission</th>
+          <th class="text-center">Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for agent in agents %}
-        <tr class="border-secondary border-opacity-25">
-          <!-- Profile -->
-          <td class="ps-3">
-            <div class="d-flex align-items-center gap-3">
-              <div class="agent-avatar">{{ agent.name|make_list|first|upper }}</div>
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="av av-sm av-blue">{{ agent.name|make_list|first|upper }}</div>
               <div>
-                <div class="fw-bold text-white fs-6">{{ agent.name }}</div>
+                <span class="fw-bold" style="font-size:0.88rem;">{{ agent.name }}</span>
                 {% if agent.user %}
-                <span class="badge bg-primary bg-opacity-15 text-primary border border-primary border-opacity-25" style="font-size: 0.65rem;">
-                  <i class="fas fa-shield-alt me-1"></i>{{ agent.user.username }}
-                </span>
-                {% else %}
-                <span class="text-muted" style="font-size: 0.72rem;">Referral Agent</span>
+                <span class="badge bg-primary bg-opacity-20 text-primary ms-1" style="font-size:0.68rem;">{{ agent.user.username }}</span>
                 {% endif %}
               </div>
             </div>
           </td>
-
-          <!-- Contact Details -->
           <td>
-            <div class="d-flex flex-column gap-1">
-              <div class="d-flex align-items-center gap-2 text-white-50 text-xs">
-                <i class="fas fa-envelope opacity-50" style="width: 14px;"></i>
-                <span>{{ agent.email }}</span>
-                <i class="fas fa-copy copy-btn text-muted" onclick="copyText('{{ agent.email }}')" title="Copy email"></i>
-              </div>
+            <div class="d-flex flex-column" style="font-size:0.84rem;">
+              <span class="text-white"><i class="fas fa-envelope text-muted me-1" style="font-size:0.75rem;"></i>{{ agent.email }}</span>
               {% if agent.phone %}
-              <div class="d-flex align-items-center gap-2 text-white-50 text-xs">
-                <i class="fas fa-phone opacity-50" style="width: 14px;"></i>
-                <span>{{ agent.phone }}</span>
-                <i class="fas fa-copy copy-btn text-muted" onclick="copyText('{{ agent.phone }}')" title="Copy phone"></i>
-              </div>
-              {% else %}
-              <div class="text-muted text-xs font-monospace">— No phone</div>
+              <span class="text-muted"><i class="fas fa-phone text-muted me-1" style="font-size:0.75rem;"></i>{{ agent.phone }}</span>
               {% endif %}
             </div>
           </td>
-
-          <!-- Customers Referred -->
-          <td class="text-center">
+          <td>
             {% if agent.customer_count %}
-            <span class="badge rounded-pill px-3 py-1.5 fw-semibold" style="background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); font-size: 0.78rem;">
-              <i class="fas fa-users me-1"></i>{{ agent.customer_count }} Customers
+            <span class="pill" style="background:rgba(59,130,246,0.12); color:#2563eb; border:1px solid rgba(59,130,246,0.3);">
+              <i class="fas fa-users" style="font-size:0.65rem;"></i> {{ agent.customer_count }} Customers
             </span>
             {% else %}
-            <span class="text-muted text-xs">0 Customers</span>
+            <span class="pill pill-inactive"><span class="pill-dot"></span>0 Customers</span>
             {% endif %}
           </td>
-
-          <!-- Payout Status -->
-          <td class="text-center">
+          <td>
             {% if agent.is_cashout_eligible %}
-            <span class="badge rounded-pill px-3 py-1.5 fw-semibold" style="background: rgba(16,185,129,0.2); color: #34d399; border: 1px solid rgba(16,185,129,0.3); font-size: 0.74rem;">
-              <i class="fas fa-check-circle me-1"></i> Cashout Ready (5/5)
-            </span>
+              <span class="pill pill-active"><span class="pill-dot"></span>Cashout Ready (5/5)</span>
             {% else %}
-            <span class="badge rounded-pill px-3 py-1.5" style="background: rgba(255,255,255,0.06); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.1); font-size: 0.74rem;">
-              <i class="fas fa-clock me-1 text-muted"></i> {{ agent.qualified_customers_count }}/5 Towards Cashout
-            </span>
+              <span class="pill pill-pending"><span class="pill-dot"></span>{{ agent.qualified_customers_count }}/5 Towards Cashout</span>
             {% endif %}
           </td>
-
-          <!-- Claimable Commission -->
-          <td class="text-center">
-            <div class="fw-bold text-warning" style="font-size: 0.95rem;">
+          <td>
+            <span class="fw-bold text-warning" style="font-size:0.92rem;">
               ₱{{ agent.claimable_commission|floatformat:2 }}
-            </div>
+            </span>
           </td>
-
-          <!-- Actions -->
-          <td class="text-end pe-3">
-            <div class="btn-group btn-group-sm">
-              <a href="{% url 'view_agent' agent.id %}" class="btn btn-outline-info btn-xs" title="View details" style="padding: 4px 8px; border-radius: 6px 0 0 6px;">
-                <i class="fas fa-eye"></i>
+          <td class="text-center">
+            <div class="d-flex justify-content-center align-items-center gap-1">
+              <a href="{% url 'view_agent' agent.id %}" class="btn-premium btn-p-ghost" style="padding:6px 12px; font-size:0.8rem;" title="View Agent">
+                <i class="fas fa-eye"></i> View
               </a>
-              <a href="{% url 'edit_agent' agent.id %}" class="btn btn-outline-secondary btn-xs" title="Edit agent" style="padding: 4px 8px;">
-                <i class="fas fa-edit"></i>
+              <a href="{% url 'edit_agent' agent.id %}" class="btn-premium btn-p-primary" style="padding:6px 12px; font-size:0.8rem;" title="Edit Agent">
+                <i class="fas fa-edit"></i> Edit
               </a>
-              <form method="post" action="{% url 'delete_agent' agent.id %}" data-confirm-delete="Delete agent {{ agent.name }}?" style="display:inline-block;">
+              <form method="post" action="{% url 'delete_agent' agent.id %}" data-confirm-delete="Are you sure you want to delete agent {{ agent.name }}? This action cannot be undone." data-confirm-title="Delete Sales Agent?" style="display:inline;">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-outline-danger btn-xs" title="Delete agent" style="padding: 4px 8px; border-radius: 0 6px 6px 0;">
+                <button type="submit" class="btn-premium btn-p-danger" style="padding:6px 12px; font-size:0.8rem;" title="Delete Agent">
                   <i class="fas fa-trash-alt"></i>
                 </button>
               </form>
@@ -192,11 +79,5 @@
         {% endfor %}
       </tbody>
     </table>
-  </div>
-
-  <!-- Table Footer Info -->
-  <div class="d-flex justify-content-between align-items-center p-3 border-top border-secondary border-opacity-25 text-xs text-muted">
-    <span id="agents-info">Showing all active records</span>
-    <span class="font-monospace">Commission Tier: ₱500 / 2-pay qualifying subscriber</span>
   </div>
 </div>
