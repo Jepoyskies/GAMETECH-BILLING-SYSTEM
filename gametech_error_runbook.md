@@ -1096,9 +1096,23 @@
 * **1-Step Fix**:
   * Add universal messages to `base.html`, flush message storage in `custom_logout_view` with `storage.used = True; storage._queued_messages = []`, and style `.login-success` in `login.html`.
 
+### ERR-061: OpenStreetMap 403 Forbidden Access Block on Dispatch Map & Operational Closed Counter Discrepancy
+* **Symptoms**:
+  * The Field Operations Map in `/dispatch/dashboard/` fails to render tiles, showing grey/blank grid boxes with `403 Access blocked` errors in the browser console from `tile.openstreetmap.org`.
+  * Overview KPI statistics cards show a counter mismatch (e.g. `Total Closed: 1` on overview card vs `2` in Completed queue tab).
+* **Root Causes**:
+  * OpenStreetMap foundation volunteer servers enforce strict User-Agent headers and rate-limits that block generic browser web apps, as recognized in runbook pattern `ERR-023`.
+  * `get_operational_overview_stats()` in `dispatch/analytics.py` only queried `JobTicket` objects and ignored `MonitoringRecord` entries, whereas `dashboard_view` and `dispatch_monitoring_view` aggregate both schemas.
+* **Exact Target Files**:
+  * `dispatch/templates/dispatch/_scripts.html` (Switched tile layer from `tile.openstreetmap.org` to Google Maps tiles `https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}` with dark styling)
+  * `dispatch/analytics.py` (Updated `get_operational_overview_stats()` to query both `JobTicket` and `MonitoringRecord` for total closed jobs)
+* **1-Step Fix**:
+  * Replace OSM tile URL with Google Maps `mt{s}.google.com` tiles in Leaflet layer init, and aggregate both `JobTicket` and `MonitoringRecord` in `analytics.py`.
+
 ---
 
 ## 📝 How to Add a New Error Entry
+
 
 1. Assign a new `ERR-XXX` identifier.
 2. Fill in: **Symptoms**, **Root Causes**, **Exact Target Files**, and **1-Step Fix**.
