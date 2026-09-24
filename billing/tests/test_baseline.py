@@ -78,7 +78,7 @@ class BaselineWorkflowTestCase(TestCase):
             "/dispatch/",
         ]
         for endpoint in endpoints:
-            response = self.client.get(endpoint)
+            response = self.client.get(endpoint, follow=True)
             self.assertEqual(
                 response.status_code,
                 200,
