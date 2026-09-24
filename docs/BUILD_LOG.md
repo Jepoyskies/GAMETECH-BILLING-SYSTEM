@@ -267,6 +267,58 @@ A comprehensive audit of every customer creation path across the repository was 
 ### 10. Developer Placeholders Removed
 - Removed `[Phase 5 Placeholder: Live commission wallet]` and incentive placeholders from `billing/templates/billing/agent_portal/dashboard.html` and `billing/templates/billing/view_agent.html`.
 
+---
 
+## Phase 3.2: Router Safety Engine, Guard Loopholes & Rollback Verification
 
+### 1. Router Safety Architecture (`ROUTER_MODE`)
+- **Tri-State Modes:** `ROUTER_MODE = 'dry_run' | 'read_only' | 'live'`.
+- **Enforcement Layer:** Single gateway inside `MikrotikBase._get_api()` (`network_manager/services/base.py`) and `SyncMikrotikAPI._get_api_connection()` (`network_manager/sync_services.py`).
+- **Read-Only Interception:** `ReadOnlyApiWrapper` wraps RouterOS API client resources with `ReadOnlyResourceWrapper`. Allows safe read operations (`.get()`, `monitor-traffic`, `ping`, `print`). Intercepts and blocks all write operations (`.add()`, `.set()`, `.remove()`, custom modifying `.call()`).
+- **Blocked Write Auditing:** Every blocked write logs warning to Python logger and records an entry in `SystemLog` (`table_name="MikrotikRouter"`, `action="BLOCKED_WRITE"`, `target_name="ROUTER_MODE=read_only"`).
+- **Environment Persistence:** `ROUTER_MODE=read_only` configured in `docker-compose.yml` for `web`, `celery`, and `celery-beat` services; active in running container environment (`os.environ["ROUTER_MODE"] == "read_only"`) and persists across container restarts. Defaults to `dry_run` during automated tests.
+- **Celery / Background Tasks & Views Audit:**
+  - `auto_suspend_task` (hourly cron): queries expired subscribers and attempts cut-off; in `read_only`, all secret disable/disconnect commands are blocked.
+  - `auto_reconcile_routers_task` (every 30 min): reconciles secrets; pushes/updates are blocked.
+  - `fetch_live_monitoring_data_task` (every 10s): only executes traffic/resource reads (permitted in `read_only`).
+  - `auto_sync_failed_task` (every 5 min): retries failed syncs; writes blocked.
+  - **No Dual-System Collision:** The legacy WAMP billing system and Django system do not conflict or double-cut routers; all socket write attempts from Django are intercepted and rejected at the wrapper level.
 
+### 2. Guard Loophole Closures
+- **Model Bypasses Removed:** `is_test_data` and `_checklist_verified` flags completely removed as bypass mechanisms from `Customer.save()`.
+- **Scoped Test Context Manager:** `test_seeding_bypass_checklist` (`billing/security.py`) enables test runners and seeder commands to bypass the checklist guard. Strictly fails with `PermissionError` when `settings.DEBUG=False` in production.
+- **Audited Admin Bypass:** `permission_gated_customer_bypass` (`billing/security.py`) requires `billing.bypass_customer_checklist` permission or superuser; logs actor, reason, and timestamp to `SystemLog`.
+- **Creation-Only Guard:** Enforced `Customer.save()` checklist check ONLY on record creation or when transitioning into `pending` installation status. Existing pending customers can be edited, updated by payments, and updated by dispatch signals without validation errors.
+- **Router Sync & Recovery Protection:**
+  - Added dedicated permission `billing.import_router_subscribers` to `Customer.Meta.permissions`.
+  - Added `source` CharField (default `manual`) to `Customer` model (migration `0058_phase3_2_guards_and_source.py`).
+  - Router imports (`sync_device_users`, `apply_device_sync_staging`, `recover_from_mikrotik`) tag imported subscribers with `source='router_sync'`, set `installation_status='installed'`, enforce permission check, prevent duplicate accounts by matching on `pppoe_username`, and write summary `SystemLog` entries with created/skipped counts.
+
+### 3. Corrected Rollback Standard & Scratch Database Proof
+- **Container Names from `docker compose ps`:**
+  - `gametech-billing-system-web-1`
+  - `gametech-billing-system-celery-1`
+  - `gametech-billing-system-celery-beat-1`
+  - `gametech-billing-system-db-1`
+- **Verified Rollback Command to Phase 3.1 (commit `209fcb8`):**
+  ```bash
+  ssh root@143.198.207.144 "cd /root/GAMETECH-BILLING-SYSTEM && git checkout 209fcb8 && docker stop gametech-billing-system-web-1 gametech-billing-system-celery-1 gametech-billing-system-celery-beat-1 && docker exec -i gametech-billing-system-db-1 psql -U gametech_user -d gametech_db < /root/backups/gametech_phase3_1_backup_20260924.sql && docker start gametech-billing-system-web-1 gametech-billing-system-celery-1 gametech-billing-system-celery-beat-1"
+  ```
+- **Verified Rollback Command to Phase 3.2 (commit `4520af1`):**
+  ```bash
+  ssh root@143.198.207.144 "cd /root/GAMETECH-BILLING-SYSTEM && git checkout 4520af1 && docker stop gametech-billing-system-web-1 gametech-billing-system-celery-1 gametech-billing-system-celery-beat-1 && docker exec -i gametech-billing-system-db-1 psql -U gametech_user -d gametech_db < /root/backups/gametech_phase3_2_backup_20260924.sql && docker start gametech-billing-system-web-1 gametech-billing-system-celery-1 gametech-billing-system-celery-beat-1"
+  ```
+- **Restoration Proof:**
+  - Created temporary database `scratch_restore_verify_db` on `gametech-billing-system-db-1`.
+  - Restored `/root/backups/gametech_phase3_1_backup_20260924.sql` into `scratch_restore_verify_db`.
+  - Audited table count: exactly 56 tables restored with 0 errors.
+  - Successfully dropped `scratch_restore_verify_db`.
+  - Created pre-cutover Phase 3.2 database backup `/root/backups/gametech_phase3_2_backup_20260924.sql` (277KB).
+
+### 4. Test Suite Execution & Coverage Verification
+All tests passing across small batches:
+- `billing.tests.test_phase3_onboarding`: 18 tests (Pass)
+- `billing.tests.test_phase3_2_guards`: 7 tests (Pass)
+- `billing.tests` (`test_baseline`, `test_phase1_security`, `test_phase2_foundation`, `test_router_dry_run`): 27 tests (Pass)
+- `network_manager.tests.test_router_modes`: 3 tests (Pass)
+- **Total Suite:** 55 tests passing across all active modules.
