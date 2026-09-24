@@ -565,7 +565,7 @@ def api_create_ticket(request):
         # Automatically resolve source_tab based on ticket_type if not explicitly supplied
         source_tab = data.get('source_tab')
         if not source_tab:
-            if raw_ticket_type in ['REPAIR', 'RELOCATION', 'RECONNECTION', 'DISCONNECTION']:
+            if raw_ticket_type in ['REPAIR', 'RELOCATION', 'RECONNECTION', 'DISCONNECTION', 'SITE_VISIT']:
                 source_tab = 'CLIENT_CONCERNS'
             elif raw_ticket_type == 'CIGNAL':
                 source_tab = 'CIGNAL_PLAY'

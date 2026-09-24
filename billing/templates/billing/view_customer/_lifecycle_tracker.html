@@ -35,6 +35,25 @@
                 </div>
             </div>
 
+            <!-- Repeated Bounce & Audit Alerts -->
+            {% if lifecycle_tracker.repeated_bounce_alert %}
+            <div class="alert alert-danger py-2 px-3 mb-3 d-flex align-items-center gap-2" style="font-size: 0.8rem; border-radius: 8px;">
+                <i class="fas fa-triangle-exclamation"></i>
+                <span><strong>Repeated Bounce Alert:</strong> This job has been bounced {{ lifecycle_tracker.bounce_count }} times. Please review quality history.</span>
+            </div>
+            {% elif lifecycle_tracker.bounce_count > 0 %}
+            <div class="alert alert-warning py-2 px-3 mb-3 d-flex align-items-center gap-2" style="font-size: 0.8rem; border-radius: 8px;">
+                <i class="fas fa-rotate-left"></i>
+                <span><strong>Job Bounced ({{ lifecycle_tracker.bounce_count }}x):</strong> Ticket was returned for revision.</span>
+            </div>
+            {% endif %}
+            {% if lifecycle_tracker.same_person_flag %}
+            <div class="alert alert-info py-2 px-3 mb-3 d-flex align-items-center gap-2" style="font-size: 0.8rem; border-radius: 8px;">
+                <i class="fas fa-user-shield"></i>
+                <span><strong>Same-Person Rule Audit Flag:</strong> Multiple pipeline stages were executed by the same team member.</span>
+            </div>
+            {% endif %}
+
             <!-- 6-Stage Stepper Grid -->
             <div class="row g-2 g-md-3 text-center align-items-stretch mt-1">
                 

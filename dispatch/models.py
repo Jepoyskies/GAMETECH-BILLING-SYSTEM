@@ -414,6 +414,7 @@ class JobTicket(models.Model):
     same_person_stages = models.JSONField(default=list, blank=True, help_text="List of stage names handled by the same person")
     bounce_count = models.PositiveIntegerField(default=0, help_text="Number of times this ticket has been bounced back")
     repeated_bounce_alert = models.BooleanField(default=False, help_text="Flagged when ticket bounces 2 or more times")
+    is_flagged = models.BooleanField(default=False, help_text="Flagged for manual administrative review")
 
     def can_transition_to(self, target_status):
         """
@@ -427,8 +428,8 @@ class JobTicket(models.Model):
             'PENDING': ['ASSIGNED', 'CANCELLED'],
             'ASSIGNED': ['IN_PROGRESS', 'PENDING', 'CANCELLED'],
             'IN_PROGRESS': ['COMPLETED', 'ASSIGNED', 'CANCELLED'],
-            'COMPLETED': ['QA_PASSED', 'APPROVED', 'ASSIGNED', 'CANCELLED'],
-            'QA_PASSED': ['APPROVED', 'COMPLETED', 'ASSIGNED', 'CANCELLED'],
+            'COMPLETED': ['QA_PASSED', 'APPROVED', 'ASSIGNED', 'IN_PROGRESS', 'CANCELLED'],
+            'QA_PASSED': ['APPROVED', 'COMPLETED', 'ASSIGNED', 'IN_PROGRESS', 'CANCELLED'],
             'APPROVED': ['CANCELLED'],
             'CANCELLED': ['PENDING'],
         }
@@ -572,6 +573,7 @@ class TicketBounceHistory(models.Model):
     BOUNCE_TYPE_CHOICES = (
         ('revisit', 'Revisit with new timer'),
         ('correct_report', 'Correct the report'),
+        ('admin_to_dispatch', 'Admin returned to Dispatch QA'),
     )
     ticket = models.ForeignKey(JobTicket, on_delete=models.CASCADE, related_name='bounces')
     from_stage = models.CharField(max_length=50)

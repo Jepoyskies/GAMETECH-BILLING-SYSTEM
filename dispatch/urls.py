@@ -4,6 +4,7 @@ from . import views
 from . import pipeline_views
 from . import views_queue
 from . import views_tech
+from . import views_approval
 
 urlpatterns = [
     path('', views.dispatch_index_view, name='dispatch_index'),
@@ -20,7 +21,7 @@ urlpatterns = [
     path('customers/', views.dispatch_customers_view, name='dispatch_customers'),
     path('customers/<int:customer_id>/', views.dispatch_customer_detail_view, name='dispatch_customer_detail'),
     
-    # Phase 4A Unified Dispatch Queue & Mobile Tech View
+    # Phase 4A & 4B Unified Dispatch Queue, QA, Approval & Admin Summary
     path('queue/', views_queue.dispatch_queue_view, name='dispatch_queue'),
     path('pipeline/queue/', views_queue.dispatch_queue_view, name='dispatch_pipeline_queue'),
     path('pipeline/1-verification/', RedirectView.as_view(pattern_name='dispatch_queue', permanent=False), name='dispatch_verification'),
@@ -28,8 +29,10 @@ urlpatterns = [
     path('pipeline/2-assignment/undispatch/<int:ticket_id>/', views_queue.api_undispatch_ticket, name='dispatch_undispatch'),
     path('pipeline/3-mobile-tech/', views_tech.technician_mobile_view, name='technician_mobile_ui'),
     path('my-jobs/', views_tech.technician_mobile_view, name='technician_my_jobs'),
-    path('pipeline/4-qa/', pipeline_views.dispatch_qa, name='dispatch_qa'),
-    path('pipeline/5-approval/', pipeline_views.dispatch_approval, name='dispatch_approval'),
+    path('pipeline/4-qa/', views_approval.dispatch_qa, name='dispatch_qa'),
+    path('pipeline/5-approval/', views_approval.dispatch_approval, name='dispatch_approval'),
+    path('admin-summary/', views_approval.dispatch_admin_summary, name='dispatch_admin_summary'),
+    path('bounce-summary/', views_approval.dispatch_admin_summary, name='dispatch_bounce_summary'),
 
     # REST APIs for dynamic interactions & mobile tech view
     path('api/tickets/', views.api_tickets_list, name='api_dispatch_tickets'),
@@ -48,8 +51,11 @@ urlpatterns = [
     path('api/records/<int:record_id>/delete/', views.api_delete_record, name='api_dispatch_delete_record'),
     path('api/tickets/<int:ticket_id>/contact-attempt/', views_tech.api_log_call_attempt, name='api_dispatch_contact_attempt'),
     path('api/tickets/<int:ticket_id>/return-to-dispatch/', views_tech.api_return_to_dispatch, name='api_dispatch_return_to_dispatch'),
-    path('api/tickets/<int:ticket_id>/mark-unreachable/', views_tech.api_return_to_dispatch, name='api_dispatch_mark_unreachable'),
     path('api/tickets/<int:ticket_id>/send-welcome-sms/', views.api_send_welcome_sms, name='api_dispatch_send_welcome_sms'),
+    path('api/tickets/<int:ticket_id>/qa-review/', views_approval.api_qa_review, name='api_dispatch_qa_review'),
+    path('api/tickets/<int:ticket_id>/admin-approve/', views_approval.api_admin_approve, name='api_dispatch_admin_approve'),
+    path('api/tickets/<int:ticket_id>/close-unreachable/', views_approval.api_close_unreachable, name='api_dispatch_close_unreachable'),
+    path('api/customers/<int:customer_id>/reopen-onboarding/', views_approval.api_reopen_onboarding, name='api_dispatch_reopen_onboarding'),
     
     # Phase 3: Customer search & duplicate check APIs
     path('api/customers/search/', views.api_customer_search, name='api_dispatch_customer_search'),

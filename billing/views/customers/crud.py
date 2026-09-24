@@ -953,7 +953,7 @@ def view_customer(request, customer_id):
             step5_status = 'pending'
             step6_status = 'pending'
     else:
-        if t_status == 'PENDING':
+        if t_status in ['PENDING', 'UNASSIGNED']:
             step3_status = 'active'
             step4_status = 'pending'
             step5_status = 'pending'
@@ -973,11 +973,16 @@ def view_customer(request, customer_id):
             step4_status = 'completed'
             step5_status = 'completed'
             step6_status = 'active'
-        elif t_status == 'COMPLETED_AND_VERIFIED':
+        elif t_status in ['APPROVED', 'COMPLETED_AND_VERIFIED']:
             step3_status = 'completed'
             step4_status = 'completed'
             step5_status = 'completed'
             step6_status = 'completed'
+        elif t_status == 'CANCELLED':
+            step3_status = 'completed'
+            step4_status = 'cancelled'
+            step5_status = 'cancelled'
+            step6_status = 'cancelled'
         else:
             step3_status = 'completed'
             step4_status = 'pending'
@@ -994,6 +999,9 @@ def view_customer(request, customer_id):
         'step5': step5_status,
         'step6': step6_status,
         'ticket': active_ticket,
+        'bounce_count': getattr(active_ticket, 'bounce_count', 0) if active_ticket else 0,
+        'repeated_bounce_alert': getattr(active_ticket, 'repeated_bounce_alert', False) if active_ticket else False,
+        'same_person_flag': getattr(active_ticket, 'same_person_flag', False) if active_ticket else False,
     }
 
     context = {

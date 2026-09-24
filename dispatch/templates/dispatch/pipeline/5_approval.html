@@ -91,6 +91,17 @@
                                     <div class="d-flex align-items-center gap-1 flex-wrap mb-1">
                                         <div class="fw-semibold font-monospace" style="color: #60a5fa; font-size: 0.85rem;">{{ ticket.ticket_number }}</div>
                                         {% include "dispatch/_ticket_type_badge.html" with ticket=ticket %}
+                                        {% if ticket.repeated_bounce_alert %}
+                                        <span class="badge bg-danger text-white"><i class="fas fa-triangle-exclamation me-1"></i>{{ ticket.bounce_count }} Bounces</span>
+                                        {% elif ticket.bounce_count > 0 %}
+                                        <span class="badge bg-warning text-dark"><i class="fas fa-rotate-left me-1"></i>{{ ticket.bounce_count }}x Bounced</span>
+                                        {% endif %}
+                                        {% if ticket.same_person_flag %}
+                                        <span class="badge bg-warning text-dark"><i class="fas fa-user-shield me-1"></i>Same-Person</span>
+                                        {% endif %}
+                                        {% if ticket.is_flagged %}
+                                        <span class="badge bg-danger text-white"><i class="fas fa-flag me-1"></i>Flagged</span>
+                                        {% endif %}
                                     </div>
                                     <div class="fw-bold" style="font-size: 0.85rem; color: #f1f5f9;">{{ ticket.client_name }}</div>
                                     {% if ticket.concern %}
@@ -140,7 +151,7 @@
 </div>
 
 <!-- Approval Modals outside table and card -->
-{% for ticket in approval_tickets %}
+{% for ticket in tickets %}
 <div class="modal fade" id="approvalModal{{ ticket.id }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content" style="background: rgba(15,23,42,0.97); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
@@ -155,6 +166,20 @@
             </div>
 
             <div class="modal-body p-4">
+                <!-- Alerts Banner if Repeated Bounces or Same Person -->
+                {% if ticket.repeated_bounce_alert %}
+                <div class="alert alert-danger py-2 px-3 mb-3 d-flex align-items-center gap-2" style="font-size: 0.8rem; border-radius: 8px;">
+                    <i class="fas fa-triangle-exclamation"></i>
+                    <span><strong>Repeated Bounce Alert:</strong> This job ticket has bounced {{ ticket.bounce_count }} times. Please inspect the feedback trail.</span>
+                </div>
+                {% endif %}
+                {% if ticket.same_person_flag %}
+                <div class="alert alert-warning py-2 px-3 mb-3 d-flex align-items-center gap-2" style="font-size: 0.8rem; border-radius: 8px;">
+                    <i class="fas fa-user-shield"></i>
+                    <span><strong>Same-Person Rule Audit Flag:</strong> Multiple stages were executed by the same person: {% for s in ticket.same_person_stages %}<span class="badge bg-light text-dark ms-1">{{ s }}</span>{% endfor %}</span>
+                </div>
+                {% endif %}
+
                 <!-- Full Operation Summary -->
                 <div class="row g-3 mb-4">
                     <!-- Client / Agent -->
@@ -186,7 +211,7 @@
                                 <div><span style="color:#475569;">Readings:</span> <span class="font-monospace text-white" style="font-size:0.78rem;">{{ ticket.nap_reading|default:"&mdash;" }} / {{ ticket.house_reading|default:"&mdash;" }} dBm</span></div>
                                 <div><span style="color:#475569;">Modem SN:</span> <span class="font-monospace" style="color:#67e8f9;">{{ ticket.ont_modem_sn|default:"&mdash;" }}</span></div>
                                 <div><span style="color:#475569;">Payment:</span> <span class="fw-semibold" style="color:#fbbf24;">{{ ticket.payment_collected|default:"None"|upper }}</span></div>
-                                {% if ticket.acknowledged_by %}<div><span style="color:#475569;">Ack By:</span> <span class="text-white">{{ ticket.acknowledged_by }}</span></div>{% endif %}
+                                {% if ticket.technician_report %}<div><span style="color:#475569;">Report:</span> <span class="text-white">{{ ticket.technician_report }}</span></div>{% endif %}
                             </div>
                         </div>
                     </div>
@@ -195,67 +220,103 @@
                     <div class="col-md-4">
                         <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 1rem; height: 100%;">
                             <div class="fw-semibold mb-3" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: #22d3ee;"><i class="fas fa-headset me-1"></i> Dispatch QA Notes</div>
-                            <div style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.6; min-height: 80px;">{{ ticket.qa_notes|default:"No QA notes provided." }}</div>
-                            <div class="mt-2" style="font-size: 0.72rem; color: #475569;">QA Completed: {{ ticket.qa_completed_at|date:"M d, g:i A"|default:"&mdash;" }}</div>
+                            <div style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.6; min-height: 60px;">{{ ticket.qa_notes|default:"No QA notes provided." }}</div>
+                            <div class="mt-2" style="font-size: 0.72rem; color: #475569;">
+                                QA Reviewer: {{ ticket.qa_by.username|default:"Staff" }}<br>
+                                Client Called: {% if ticket.client_called_by_qa %}<span class="text-success"><i class="fas fa-check"></i> Yes</span>{% else %}<span class="text-muted">Unverified</span>{% endif %}
+                            </div>
                         </div>
                     </div>
+
+                    <!-- Quality Bounce History per Job -->
+                    {% if ticket.bounces.all %}
+                    <div class="col-12">
+                        <div style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); border-radius: 10px; padding: 1rem;">
+                            <div class="fw-semibold mb-2 text-danger" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;"><i class="fas fa-rotate-left me-1"></i> Quality Bounce History ({{ ticket.bounce_count }}x)</div>
+                            <div class="small" style="max-height: 100px; overflow-y: auto;">
+                                {% for b in ticket.bounces.all %}
+                                <div class="mb-1 pb-1 border-bottom border-secondary text-muted">
+                                    <span class="badge bg-secondary">{{ b.bounce_type|title }}</span>
+                                    <span class="text-white">{{ b.reason }}</span>
+                                    <span class="text-muted" style="font-size: 0.7rem;">&mdash; {{ b.bounced_by.username|default:"Staff" }} ({{ b.created_at|date:"M d, g:i A" }})</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
 
                     {% if ticket.remarks %}
                     <div class="col-12">
                         <div style="background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); border-radius: 10px; padding: 1rem;">
-                            <div class="fw-semibold mb-2" style="font-size: 0.75rem; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.05em;"><i class="fas fa-history me-1"></i> Bounce / Feedback Trail</div>
-                            <div class="font-monospace" style="font-size: 0.78rem; color: #e2e8f0; white-space: pre-line; max-height: 120px; overflow-y: auto;">{{ ticket.remarks }}</div>
+                            <div class="fw-semibold mb-2" style="font-size: 0.75rem; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.05em;"><i class="fas fa-history me-1"></i> Previous Transition Notes</div>
+                            <div class="font-monospace" style="font-size: 0.78rem; color: #e2e8f0; white-space: pre-line; max-height: 80px; overflow-y: auto;">{{ ticket.remarks }}</div>
                         </div>
                     </div>
                     {% endif %}
                 </div>
 
                 <!-- Action Form -->
-                <form action="{% url 'dispatch_approval' %}" method="POST" id="approvalForm{{ ticket.id }}">
+                <form id="approvalForm{{ ticket.id }}">
                     {% csrf_token %}
                     <input type="hidden" name="ticket_id" value="{{ ticket.id }}">
-                    <input type="hidden" name="action" id="adminAction{{ ticket.id }}" value="approve">
                     <div class="mb-3">
-                        <label class="form-label" style="font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Admin Feedback (sent to Dispatch/Tech if bounced)</label>
-                        <textarea name="admin_notes" class="form-control" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); color: #f8fafc; border-radius: 10px; font-size: 0.85rem;" rows="2" placeholder="e.g. Signal is too high, send tech back."></textarea>
+                        <label class="form-label" style="font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Admin Notes / Required Bounce Reason</label>
+                        <textarea id="adminNotes{{ ticket.id }}" name="admin_notes" class="form-control" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); color: #f8fafc; border-radius: 10px; font-size: 0.85rem;" rows="2" placeholder="Mandatory if bouncing back to Dispatch QA: state reason."></textarea>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer" style="border-top: 1px solid rgba(255,255,255,0.07); padding: 1rem 1.5rem; flex-direction: column; align-items: stretch; gap: 0.75rem;">
-                <div class="d-flex justify-content-between align-items-center w-100">
-                    <div class="d-flex gap-2 align-items-center">
-                        {% if ticket.ticket_type == 'INSTALLATION' and ticket.customer and ticket.customer.phone %}
-                        <button type="button" class="btn btn-sm fw-semibold px-3 btn-send-welcome-sms"
-                                data-id="{{ ticket.id }}"
-                                data-client="{{ ticket.client_name }}"
-                                style="background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); color: #4ade80; border-radius: 8px;"
-                                title="Send portal login credentials via SMS to customer">
-                            <i class="fas fa-sms me-1"></i> Send Welcome SMS
-                        </button>
-                        {% endif %}
-                        <button type="button" class="btn btn-sm fw-semibold px-3" style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); color: #fbbf24; border-radius: 8px;" onclick="document.getElementById('adminAction{{ ticket.id }}').value='bounce_dispatch'; document.getElementById('approvalForm{{ ticket.id }}').submit();">
-                            <i class="fas fa-undo-alt me-1"></i> Bounce to Dispatch
-                        </button>
-                        <button type="button" class="btn btn-sm fw-semibold px-3" style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #f87171; border-radius: 8px;" onclick="document.getElementById('adminAction{{ ticket.id }}').value='bounce_tech'; document.getElementById('approvalForm{{ ticket.id }}').submit();">
-                            <i class="fas fa-undo-alt me-1"></i> Bounce to Tech
-                        </button>
-                    </div>
-                    <span class="text-muted" style="font-size: 0.72rem;"><i class="fas fa-shield-alt text-danger me-1"></i> Slide to activate</span>
+            <div class="modal-footer" style="border-top: 1px solid rgba(255,255,255,0.07); padding: 1rem 1.5rem; justify-content: space-between; align-items: center;">
+                <div>
+                    <button type="button" class="btn btn-sm fw-semibold px-3" style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); color: #fbbf24; border-radius: 8px;" onclick="submitAdminDecision('{{ ticket.id }}', 'bounce')">
+                        <i class="fas fa-undo-alt me-1"></i> Bounce to Dispatch QA
+                    </button>
                 </div>
-                <div class="w-100">
-                    <div data-slide-confirm
-                         class="variant-danger"
-                         data-label="Slide to Final Approve &amp; Activate"
-                         data-confirmed-label="Activating Subscriber..."
-                         data-target-form="#approvalForm{{ ticket.id }}"
-                         id="slideApprove{{ ticket.id }}">
-                    </div>
+                <div>
+                    <button type="button" class="btn btn-sm btn-danger fw-bold px-4 py-2" style="border-radius: 8px;" onclick="submitAdminDecision('{{ ticket.id }}', 'approve')">
+                        <i class="fas fa-check-double me-1"></i> Approve &amp; Activate Customer
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 </div>
 {% endfor %}
+
+<script>
+function submitAdminDecision(ticketId, action) {
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+    const notes = document.getElementById(`adminNotes${ticketId}`)?.value.trim();
+
+    if (action === 'bounce' && !notes) {
+        alert('A mandatory reason is required to bounce this ticket back to Dispatch QA.');
+        return;
+    }
+
+    fetch(`/dispatch/api/tickets/${ticketId}/admin-approve/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify({
+            action: action,
+            reason: notes,
+            admin_notes: notes
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message || 'Admin decision applied.');
+            window.location.reload();
+        } else {
+            alert(data.error || 'Failed to submit admin decision.');
+        }
+    })
+    .catch(err => alert('Network error: ' + err));
+}
+</script>
 
 {% include "dispatch/_slide_to_confirm.html" %}
 {% include "dispatch/_scripts.html" %}

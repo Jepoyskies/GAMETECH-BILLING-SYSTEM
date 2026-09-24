@@ -87,6 +87,17 @@
                                     <div class="mb-1 d-flex align-items-center gap-1 flex-wrap">
                                         <span class="badge bg-dark border border-secondary text-info font-monospace px-2 py-1">{{ ticket.ticket_number }}</span>
                                         {% include "dispatch/_ticket_type_badge.html" with ticket=ticket %}
+                                        {% if ticket.repeated_bounce_alert %}
+                                        <span class="badge bg-danger text-white"><i class="fas fa-triangle-exclamation me-1"></i>{{ ticket.bounce_count }} Bounces</span>
+                                        {% elif ticket.bounce_count > 0 %}
+                                        <span class="badge bg-warning text-dark"><i class="fas fa-rotate-left me-1"></i>{{ ticket.bounce_count }}x Bounced</span>
+                                        {% endif %}
+                                        {% if ticket.same_person_flag %}
+                                        <span class="badge bg-warning text-dark"><i class="fas fa-user-shield me-1"></i>Same-Person</span>
+                                        {% endif %}
+                                        {% if ticket.is_flagged %}
+                                        <span class="badge bg-danger text-white"><i class="fas fa-flag me-1"></i>Flagged</span>
+                                        {% endif %}
                                         {% if ticket.status == 'QA_PASSED' %}
                                         <span class="badge rounded-pill" style="background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); font-size: 0.68rem;">
                                             <i class="fas fa-check-circle me-1"></i> QA Passed
@@ -194,47 +205,154 @@
                             <li>Confirm payment method ({{ ticket.payment_collected|upper }})</li>
                         </ul>
                     </div>
+
+                    <!-- Bounce History per job -->
+                    {% if ticket.bounces.all %}
+                    <div class="col-12 mt-2">
+                        <div class="p-2 rounded bg-dark border border-danger border-opacity-50 small">
+                            <div class="fw-bold mb-1 text-danger"><i class="fas fa-rotate-left me-1"></i> Quality Bounce History ({{ ticket.bounce_count }}x):</div>
+                            <div class="small" style="max-height: 90px; overflow-y: auto;">
+                                {% for b in ticket.bounces.all %}
+                                <div class="mb-1 pb-1 border-bottom border-secondary text-muted">
+                                    <span class="badge bg-secondary">{{ b.bounce_type|title }}</span>
+                                    <span class="text-white">{{ b.reason }}</span>
+                                    <span class="text-muted" style="font-size: 0.7rem;">&mdash; {{ b.bounced_by.username|default:"Staff" }} ({{ b.created_at|date:"M d, g:i A" }})</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                     
                     {% if ticket.remarks %}
                     <div class="col-12 mt-2">
                         <div class="p-2 rounded bg-dark border border-warning border-opacity-50 text-warning small">
                             <div class="fw-bold mb-1"><i class="fas fa-history me-1"></i> Previous Transition Notes:</div>
-                            <div class="text-white small font-monospace" style="white-space: pre-line; max-height: 100px; overflow-y: auto;">{{ ticket.remarks }}</div>
+                            <div class="text-white small font-monospace" style="white-space: pre-line; max-height: 80px; overflow-y: auto;">{{ ticket.remarks }}</div>
                         </div>
                     </div>
                     {% endif %}
                 </div>
                 
                 <!-- Form to Submit to Admin -->
-                <form action="{% url 'dispatch_qa' %}" method="POST" id="qaForm{{ ticket.id }}">
+                <form id="qaForm{{ ticket.id }}">
                     {% csrf_token %}
                     <input type="hidden" name="ticket_id" value="{{ ticket.id }}">
-                    <input type="hidden" name="action" id="action{{ ticket.id }}" value="approve">
                     
+                    <!-- Call Confirmation Required Checkbox -->
+                    <div class="form-check p-3 mb-3 rounded-2" style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3);">
+                        <input class="form-check-input ms-0 me-2" type="checkbox" name="client_called" id="clientCalled{{ ticket.id }}" value="true" {% if ticket.client_called_by_qa %}checked{% endif %}>
+                        <label class="form-check-label fw-bold text-white small" for="clientCalled{{ ticket.id }}">
+                            <i class="fas fa-phone-volume me-1 text-success"></i> I confirm that I called the client at {{ ticket.contact_number }} and confirmed service satisfaction.
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="is_flagged" id="flagReview{{ ticket.id }}" value="true" {% if ticket.is_flagged %}checked{% endif %}>
+                        <label class="form-check-label text-warning small" for="flagReview{{ ticket.id }}">
+                            <i class="fas fa-flag me-1"></i> Flag for manual Administrative review (forces Admin sign-off for repairs).
+                        </label>
+                    </div>
+
                     <div class="mb-3">
-                        <label class="form-label text-muted small fw-bold">QA / Approval Notes</label>
-                        <textarea name="qa_notes" class="form-control bg-dark text-white border-secondary" rows="3" placeholder="e.g. Customer happy. Signal verified OK. Ready for activation."></textarea>
+                        <label class="form-label text-muted small fw-bold">QA Notes / Comments</label>
+                        <textarea name="qa_notes" id="qaNotes{{ ticket.id }}" class="form-control bg-dark text-white border-secondary" rows="2" placeholder="e.g. Customer happy. Signal verified OK. Ready for activation."></textarea>
+                    </div>
+
+                    <!-- Bounce Back Section -->
+                    <div id="bounceSection{{ ticket.id }}" class="d-none p-3 mb-3 rounded-2" style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);">
+                        <h6 class="text-danger small fw-bold mb-2"><i class="fas fa-undo-alt me-1"></i> Bounce Back to Field Technician</h6>
+                        <div class="mb-2">
+                            <label class="form-label text-white small fw-semibold">Bounce Type <span class="text-danger">*</span></label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="bounce_type{{ ticket.id }}" id="btCorrect{{ ticket.id }}" value="correct_report" checked>
+                                    <label class="form-check-label text-white small" for="btCorrect{{ ticket.id }}">
+                                        Correct report (Tech edits report)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="bounce_type{{ ticket.id }}" id="btRevisit{{ ticket.id }}" value="revisit">
+                                    <label class="form-check-label text-white small" for="btRevisit{{ ticket.id }}">
+                                        Revisit on site (Resets timer)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label text-white small fw-semibold">Required Reason <span class="text-danger">*</span></label>
+                            <textarea id="bounceReason{{ ticket.id }}" class="form-control bg-dark text-white border-danger" rows="2" placeholder="State specific reason: e.g. Customer reported signal drop; re-splice required."></textarea>
+                        </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer border-secondary justify-content-between">
-                <button type="button" class="btn btn-outline-danger fw-bold" onclick="document.getElementById('action{{ ticket.id }}').value='bounce_back'; document.getElementById('qaForm{{ ticket.id }}').submit();">
+                <button type="button" class="btn btn-outline-danger fw-bold" onclick="toggleBounceSection('{{ ticket.id }}')">
                     <i class="fas fa-undo-alt me-2"></i> Bounce Back to Tech
                 </button>
                 <div class="d-flex gap-2">
-                    {% if ticket.status == 'QA_PASSED' %}
-                    <button type="button" class="btn btn-primary fw-bold" onclick="document.getElementById('action{{ ticket.id }}').value='final_approve'; document.getElementById('qaForm{{ ticket.id }}').submit();">
-                        <i class="fas fa-check-double me-1"></i> Final Sign-off &amp; Activate Customer
+                    <button type="button" class="btn btn-success fw-bold" onclick="submitQaReview('{{ ticket.id }}', 'pass')">
+                        Pass QA &amp; Submit <i class="fas fa-arrow-right ms-2"></i>
                     </button>
-                    {% else %}
-                    <button type="button" class="btn btn-success fw-bold" onclick="document.getElementById('action{{ ticket.id }}').value='approve'; document.getElementById('qaForm{{ ticket.id }}').submit();">
-                        Pass QA &amp; Submit to Admin <i class="fas fa-arrow-right ms-2"></i>
-                    </button>
-                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </div>
 {% endfor %}
+
+<script>
+function toggleBounceSection(ticketId) {
+    const sec = document.getElementById(`bounceSection${ticketId}`);
+    if (sec.classList.contains('d-none')) {
+        sec.classList.remove('d-none');
+    } else {
+        submitQaReview(ticketId, 'bounce');
+    }
+}
+
+function submitQaReview(ticketId, action) {
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+    let payload = { action: action };
+
+    if (action === 'pass') {
+        const called = document.getElementById(`clientCalled${ticketId}`)?.checked;
+        if (!called) {
+            alert('Confirmation that the client was called is required before passing QA.');
+            return;
+        }
+        payload.client_called = true;
+        payload.qa_notes = document.getElementById(`qaNotes${ticketId}`)?.value;
+        payload.is_flagged = document.getElementById(`flagReview${ticketId}`)?.checked;
+    } else if (action === 'bounce') {
+        const reason = document.getElementById(`bounceReason${ticketId}`)?.value.trim();
+        if (!reason) {
+            alert('A mandatory reason is required to bounce the ticket.');
+            return;
+        }
+        const revisitChecked = document.getElementById(`btRevisit${ticketId}`)?.checked;
+        payload.reason = reason;
+        payload.bounce_type = revisitChecked ? 'revisit' : 'correct_report';
+    }
+
+    fetch(`/dispatch/api/tickets/${ticketId}/qa-review/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message || 'QA Review recorded successfully.');
+            window.location.reload();
+        } else {
+            alert(data.error || 'Failed to submit QA action.');
+        }
+    })
+    .catch(err => alert('Network error: ' + err));
+}
+</script>
 {% endblock %}
