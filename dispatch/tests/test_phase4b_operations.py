@@ -46,10 +46,10 @@ class Phase4BOperationsTestCase(TestCase):
             password="TechPassword123!",
         )
 
-        self.team = Team.objects.create(name="Team Alpha 4B", leader="Juan Leader")
+        self.team = Team.objects.create(name="Team Alpha 4B")
         self.technician = Technician.objects.create(
             name="Pedro Field Tech 4B",
-            phone="09181112222",
+            contact_number="09181112222",
             user=self.tech_user,
             team=self.team,
             is_available=True,
