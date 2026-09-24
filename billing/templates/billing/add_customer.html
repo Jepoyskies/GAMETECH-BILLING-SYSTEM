@@ -74,7 +74,6 @@
                         <select name="checklist_method" id="checklist_method" class="plan-form-control">
                             <option value="in_person" selected>In-Person (Walk-In)</option>
                             <option value="phone">Phone Call</option>
-                            <option value="chat">Online Chat</option>
                         </select>
                     </div>
                     <div class="col-md-6 d-flex align-items-end">
@@ -90,8 +89,7 @@
                         <div class="form-check p-3 border rounded bg-dark border-secondary h-100 policy-check-box">
                             <input class="form-check-input ms-0 me-2 policy-item-checkbox" type="checkbox" name="item_free_install" id="item_free_install" value="true">
                             <label class="form-check-label text-white small" for="item_free_install" style="cursor: pointer;">
-                                <strong class="d-block text-info">1. Free Standard Installation</strong>
-                                Free standard installation inclusive of fiber drop cable and optical equipment.
+                                <strong class="d-block text-info">Free installation</strong>
                             </label>
                         </div>
                     </div>
@@ -99,8 +97,7 @@
                         <div class="form-check p-3 border rounded bg-dark border-secondary h-100 policy-check-box">
                             <input class="form-check-input ms-0 me-2 policy-item-checkbox" type="checkbox" name="item_specific_plan" id="item_specific_plan" value="true">
                             <label class="form-check-label text-white small" for="item_specific_plan" style="cursor: pointer;">
-                                <strong class="d-block text-info">2. Agreed Plan & Monthly Rate</strong>
-                                Specific package speed, monthly subscription fee, and billing cut-off cycle agreed.
+                                <strong class="d-block text-info" id="checklist_plan_display">Their plan: <span id="checklist_plan_name">{% if prospect and prospect.plan %}{{ prospect.plan.name }}{% else %}Select Plan{% endif %}</span> (<span id="checklist_plan_price">{% if prospect and prospect.plan %}₱{{ prospect.plan.price }}{% else %}₱0.00{% endif %}</span>/month)</strong>
                             </label>
                         </div>
                     </div>
@@ -108,8 +105,7 @@
                         <div class="form-check p-3 border rounded bg-dark border-secondary h-100 policy-check-box">
                             <input class="form-check-input ms-0 me-2 policy-item-checkbox" type="checkbox" name="item_no_lockin" id="item_no_lockin" value="true">
                             <label class="form-check-label text-white small" for="item_no_lockin" style="cursor: pointer;">
-                                <strong class="d-block text-info">3. No 24-Month Lock-in Period</strong>
-                                No mandatory 24-month contract lock; subscriber may cancel anytime without lock-in penalties.
+                                <strong class="d-block text-info">No lock-in period</strong>
                             </label>
                         </div>
                     </div>
@@ -117,8 +113,7 @@
                         <div class="form-check p-3 border rounded bg-dark border-secondary h-100 policy-check-box">
                             <input class="form-check-input ms-0 me-2 policy-item-checkbox" type="checkbox" name="item_staggered_lock" id="item_staggered_lock" value="true">
                             <label class="form-check-label text-white small" for="item_staggered_lock" style="cursor: pointer;">
-                                <strong class="d-block text-info">4. 60-Day Initial Lock for Staggered Terms</strong>
-                                60-day commitment applies when choosing staggered installation or promotional balance terms.
+                                <strong class="d-block text-info">Staggered payments (3-day, 15-day payments): <span id="checklist_staggered_status">{% if prospect or prefill_agent_id %}Not available for 60 days from your first payment{% else %}Available{% endif %}</span></strong>
                             </label>
                         </div>
                     </div>
@@ -126,8 +121,7 @@
                         <div class="form-check p-3 border rounded bg-dark border-secondary h-100 policy-check-box">
                             <input class="form-check-input ms-0 me-2 policy-item-checkbox" type="checkbox" name="item_same_day_repair" id="item_same_day_repair" value="true">
                             <label class="form-check-label text-white small" for="item_same_day_repair" style="cursor: pointer;">
-                                <strong class="d-block text-info">5. Same-Day Field Repair SLA</strong>
-                                Same-day on-site restoration commitment for service trouble tickets filed before 2:00 PM.
+                                <strong class="d-block text-info">Repair within the day</strong>
                             </label>
                         </div>
                     </div>
@@ -135,8 +129,7 @@
                         <div class="form-check p-3 border rounded bg-dark border-secondary h-100 policy-check-box">
                             <input class="form-check-input ms-0 me-2 policy-item-checkbox" type="checkbox" name="item_rebates_24h" id="item_rebates_24h" value="true">
                             <label class="form-check-label text-white small" for="item_rebates_24h" style="cursor: pointer;">
-                                <strong class="d-block text-info">6. Automated Outage Rebates (24h+)</strong>
-                                Automatic pro-rated billing rebate credited on next cycle for continuous outages exceeding 24 hours.
+                                <strong class="d-block text-info">Rebates within 24 hours</strong>
                             </label>
                         </div>
                     </div>
@@ -672,6 +665,42 @@
             cb.addEventListener('change', updateChecklistCounter);
         });
         updateChecklistCounter();
+
+        // Dynamic plan & staggered policy text updates
+        function updateDynamicChecklistText() {
+            const planSelect = document.getElementById('plan_id');
+            const planNameSpan = document.getElementById('checklist_plan_name');
+            const planPriceSpan = document.getElementById('checklist_plan_price');
+            if (planSelect && planNameSpan && planPriceSpan) {
+                const opt = planSelect.options[planSelect.selectedIndex];
+                if (opt && opt.value) {
+                    const text = opt.textContent || '';
+                    const parts = text.split(' - ');
+                    planNameSpan.textContent = parts[0].trim();
+                    if (parts.length > 1) {
+                        planPriceSpan.textContent = parts[1].trim();
+                    }
+                }
+            }
+
+            const agentSelect = document.getElementById('agent_id');
+            const staggeredStatus = document.getElementById('checklist_staggered_status');
+            const hasProspect = {% if prospect %}true{% else %}false{% endif %};
+            if (staggeredStatus) {
+                const hasAgent = (agentSelect && agentSelect.value) || hasProspect;
+                if (hasAgent) {
+                    staggeredStatus.textContent = 'Not available for 60 days from your first payment';
+                } else {
+                    staggeredStatus.textContent = 'Available';
+                }
+            }
+        }
+
+        const planSelectEl = document.getElementById('plan_id');
+        if (planSelectEl) planSelectEl.addEventListener('change', updateDynamicChecklistText);
+        const agentSelectEl = document.getElementById('agent_id');
+        if (agentSelectEl) agentSelectEl.addEventListener('change', updateDynamicChecklistText);
+        updateDynamicChecklistText();
 
         // Sync modal fields on open
         window.openWalkinDeclineModal = function() {

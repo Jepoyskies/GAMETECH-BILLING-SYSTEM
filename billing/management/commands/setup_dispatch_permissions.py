@@ -13,8 +13,10 @@ DISPATCH_PERMISSIONS = {
     "run_checklist": ("Can execute onboarding policy checklist", Prospect),
     "create_customer": ("Can convert prospect and create customer", Prospect),
     "change_agent": ("Can change customer assigned sales agent", Customer),
+    "change_customer_agent": ("Can change customer assigned sales agent", Customer),
     "mark_payout_paid": ("Can approve and mark agent payout batches as paid", Customer),
     "manage_message_templates": ("Can configure SMS and notification templates", Customer),
+    "add_existing_subscriber": ("Can add installed/existing subscriber with manual override", Customer),
     # dispatch / job ticket permissions
     "assign_technicians": ("Can assign technicians to job tickets", JobTicket),
     "technician_job_actions": ("Can execute field technician mobile job actions", JobTicket),
@@ -44,6 +46,7 @@ ROLE_PERMISSION_MATRIX = {
         "run_checklist",
         "create_customer",
         "change_agent",
+        "change_customer_agent",
         "manage_message_templates",
     ],
     "CSR": [
@@ -51,6 +54,7 @@ ROLE_PERMISSION_MATRIX = {
         "run_checklist",
         "create_customer",
         "change_agent",
+        "change_customer_agent",
         "manage_message_templates",
     ],
     "Admin": list(DISPATCH_PERMISSIONS.keys()),

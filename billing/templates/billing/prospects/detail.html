@@ -195,9 +195,45 @@
                             <i class="fas fa-times me-1"></i> Decline Application
                         </button>
                     </div>
+                    {% elif prospect.status == 'declined' %}
+                    <div class="d-grid mt-2">
+                        <button type="button" class="btn btn-warning fw-bold py-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#reopenModal">
+                            <i class="fas fa-undo me-1"></i> Reopen Application for Onboarding
+                        </button>
+                    </div>
                     {% endif %}
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reopen Modal -->
+<div class="modal fade" id="reopenModal" tabindex="-1" aria-labelledby="reopenModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-white border border-warning">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-warning fw-bold" id="reopenModalLabel">
+                    <i class="fas fa-undo me-2"></i> Reopen Declined Application
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{% url 'prospect_reopen' prospect.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p class="small text-muted mb-3">
+                        Reopening this application will transition its status back to <strong>Under Review</strong>, allowing staff to run the policy checklist and create a subscriber account. A logged reason is mandatory.
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Reason for Reopening <span class="text-danger">*</span></label>
+                        <textarea name="reopen_reason" class="form-control bg-dark text-white border-secondary" rows="3" placeholder="e.g. Customer clarified address, reconsideration approved by supervisor..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning fw-bold text-dark">Confirm Reopen</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -223,7 +259,6 @@
                         <select name="method" class="form-select bg-dark text-white border-secondary">
                             <option value="phone" selected>Phone Call</option>
                             <option value="in_person">In-Person (Walk-In)</option>
-                            <option value="chat">Online Chat</option>
                         </select>
                     </div>
                     <div class="mb-3">

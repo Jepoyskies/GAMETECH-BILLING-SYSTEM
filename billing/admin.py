@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import AccountType, Customer, Agent, Barangay, Payment, JobOrder, AddonPlan
+from .models import AccountType, Customer, Agent, Barangay, Payment, JobOrder, AddonPlan, ChecklistPolicySetting
 
 
 # Helpers for RBAC
@@ -55,6 +55,36 @@ class CustomerAdmin(admin.ModelAdmin):
         if not request.user.is_superuser:
             return False  # Nobody except Admin can delete customers
         return super().has_delete_permission(request, obj)
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            if obj.installation_status == "installed":
+                if not (request.user.has_perm("billing.add_existing_subscriber") or request.user.is_superuser):
+                    from django.core.exceptions import PermissionDenied
+                    raise PermissionDenied("Permission denied: 'billing.add_existing_subscriber' required for manual override.")
+                obj._checklist_verified = True
+                super().save_model(request, obj, form, change)
+                from billing.models import SystemLog
+                try:
+                    SystemLog.objects.create(
+                        table_name="Customer",
+                        record_id=str(obj.id),
+                        action="MANUAL_OVERRIDE_ADMIN",
+                        changed_by=request.user.username,
+                        target_name=obj.full_name,
+                        old_data="",
+                        new_data=f"Created via Django Admin with override. Status: {obj.status}, Installation: {obj.installation_status}",
+                    )
+                except Exception:
+                    pass
+                return
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(ChecklistPolicySetting)
+class ChecklistPolicySettingAdmin(admin.ModelAdmin):
+    list_display = ("version", "item_free_install_text", "item_no_lockin_text", "item_same_day_repair_text", "item_rebates_24h_text", "updated_at")
+    ordering = ("-version",)
 
 
 @admin.register(Payment)

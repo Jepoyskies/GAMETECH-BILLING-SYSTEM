@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Q
 from billing.models import Agent, Customer, Prospect, Barangay, SubscriptionPlan, Notification, SystemLog
-from billing.validators import normalize_ph_phone
+from billing.validators import normalize_ph_phone, check_customer_or_prospect_duplicate
 
 
 @login_required
@@ -81,21 +81,13 @@ def agent_add_prospect(request):
         barangay = get_object_or_404(Barangay, id=barangay_id)
         plan = SubscriptionPlan.objects.filter(id=plan_id).first() if plan_id else None
 
-        # Duplicate detection check
-        duplicate_flag = False
-        duplicate_notes_list = []
-        duplicate_of = None
-
-        existing_cust = Customer.objects.filter(Q(phone=phone) | Q(full_name__iexact=full_name)).first()
-        if existing_cust:
-            duplicate_flag = True
-            duplicate_notes_list.append(f"Matches existing subscriber: {existing_cust.full_name} ({existing_cust.phone})")
-
-        existing_prospect = Prospect.objects.filter(Q(phone=phone) | Q(full_name__iexact=full_name)).exclude(status="declined").first()
-        if existing_prospect:
-            duplicate_flag = True
-            duplicate_notes_list.append(f"Matches existing referral lead: {existing_prospect.full_name} ({existing_prospect.phone})")
-            duplicate_of = existing_prospect
+        # Duplicate detection check using centralized validator (phone OR normalized name + address)
+        is_dup, dup_reason, dup_obj = check_customer_or_prospect_duplicate(
+            phone=phone, full_name=full_name, address=address
+        )
+        duplicate_flag = is_dup
+        duplicate_notes = dup_reason
+        duplicate_of = dup_obj if isinstance(dup_obj, Prospect) else None
 
         prospect = Prospect.objects.create(
             agent=agent,
@@ -113,7 +105,7 @@ def agent_add_prospect(request):
             notes=notes,
             status="submitted",
             duplicate_flag=duplicate_flag,
-            duplicate_notes="; ".join(duplicate_notes_list) if duplicate_notes_list else None,
+            duplicate_notes=duplicate_notes,
             duplicate_of=duplicate_of,
         )
 
@@ -272,3 +264,29 @@ def agent_request_cashout(request):
         return redirect("agent_dashboard")
 
     return redirect("agent_dashboard")
+
+
+@login_required
+def staff_add_customer_for_agent(request, agent_id):
+    """
+    Staff action: 'Add Customer to this Agent' creates a Prospect (source='staff_on_behalf')
+    that flows through the checklist -> customer form -> converted.
+    """
+    if hasattr(request.user, "agent_profile") and not request.user.is_staff:
+        messages.error(request, "Access restricted.")
+        return redirect("agent_dashboard")
+
+    agent = get_object_or_404(Agent, id=agent_id)
+
+    prospect = Prospect.objects.create(
+        agent=agent,
+        submitted_by=request.user,
+        full_name=f"Applicant for {agent.name}",
+        phone="",
+        source="staff_on_behalf",
+        status="under_review",
+        opened_by_staff_at=timezone.now(),
+        opened_by_staff_user=request.user,
+    )
+    messages.info(request, f"Onboarding referral initiated for Agent {agent.name}. Please complete the policy checklist and customer details.")
+    return redirect(f"/customers/add/?prospect_id={prospect.id}&agent_id={agent.id}")

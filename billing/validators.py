@@ -144,3 +144,92 @@ def normalize_ph_phone(phone, required=True):
 
     return cleaned
 
+
+def normalize_text_key(text):
+    """
+    Normalizes a text string (name or address) for duplicate detection:
+    Lowercases, strips all punctuation, and collapses multiple whitespace characters.
+    """
+    if not text:
+        return ""
+    cleaned = re.sub(r"[^\w\s]", "", str(text).lower())
+    return " ".join(cleaned.split())
+
+
+def check_customer_or_prospect_duplicate(
+    phone=None,
+    full_name=None,
+    address=None,
+    exclude_prospect_id=None,
+    exclude_customer_id=None,
+):
+    """
+    Detects duplicate records across Customer and Prospect tables:
+    1. Exact Philippine phone match
+    2. Case, spacing, and punctuation-insensitive normalized Name + Address match
+    Returns: (is_duplicate: bool, reason_or_match_text: str or None, matched_obj: object or None)
+    """
+    from billing.models import Customer, Prospect
+
+    # 1. Check Phone
+    if phone:
+        norm_phone = normalize_ph_phone(phone, required=False) or str(phone).strip()
+        if norm_phone:
+            # Check existing customers
+            cust_qs = Customer.objects.filter(phone=norm_phone)
+            if exclude_customer_id:
+                cust_qs = cust_qs.exclude(id=exclude_customer_id)
+            match_cust = cust_qs.first()
+            if match_cust:
+                return (
+                    True,
+                    f"Duplicate phone '{norm_phone}' matches active subscriber: {match_cust.full_name} (ID #{match_cust.id})",
+                    match_cust,
+                )
+
+            # Check existing prospects
+            prosp_qs = Prospect.objects.filter(phone=norm_phone).exclude(status__in=["declined", "converted"])
+            if exclude_prospect_id:
+                prosp_qs = prosp_qs.exclude(id=exclude_prospect_id)
+            match_prosp = prosp_qs.first()
+            if match_prosp:
+                agent_name = match_prosp.agent.name if match_prosp.agent else "Direct"
+                return (
+                    True,
+                    f"Duplicate phone '{norm_phone}' matches referral lead: {match_prosp.full_name} (Agent: {agent_name}, Status: {match_prosp.get_status_display()})",
+                    match_prosp,
+                )
+
+    # 2. Check Normalized Name + Address
+    if full_name and address:
+        target_name_key = normalize_text_key(full_name)
+        target_addr_key = normalize_text_key(address)
+
+        if target_name_key and target_addr_key:
+            # Check customers
+            cust_qs = Customer.objects.all()
+            if exclude_customer_id:
+                cust_qs = cust_qs.exclude(id=exclude_customer_id)
+            for c in cust_qs.only("id", "full_name", "address"):
+                if normalize_text_key(c.full_name) == target_name_key and normalize_text_key(c.address) == target_addr_key:
+                    return (
+                        True,
+                        f"Duplicate name and address matches existing subscriber: {c.full_name} at {c.address} (ID #{c.id})",
+                        c,
+                    )
+
+            # Check prospects
+            prosp_qs = Prospect.objects.exclude(status__in=["declined", "converted"])
+            if exclude_prospect_id:
+                prosp_qs = prosp_qs.exclude(id=exclude_prospect_id)
+            for p in prosp_qs.only("id", "full_name", "address", "agent"):
+                if normalize_text_key(p.full_name) == target_name_key and normalize_text_key(p.address) == target_addr_key:
+                    agent_name = p.agent.name if p.agent else "Direct"
+                    return (
+                        True,
+                        f"Duplicate name and address matches referral lead: {p.full_name} at {p.address} (Agent: {agent_name})",
+                        p,
+                    )
+
+    return False, None, None
+

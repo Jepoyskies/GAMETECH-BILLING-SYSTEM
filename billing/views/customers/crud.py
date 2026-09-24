@@ -36,6 +36,7 @@ from billing.models import (
     ImprovementRequest,
     Prospect,
     ChecklistConfirmation,
+    ChecklistPolicySetting,
 )
 import requests
 from network_manager.models import MikrotikDevice, NapBox
@@ -55,6 +56,7 @@ def _get_add_customer_context(request, prefill_username="", prospect=None, prefi
         "prefill_username": prefill_username,
         "prospect": prospect,
         "prefill_agent_id": prefill_agent_id or (prospect.agent_id if prospect else None),
+        "checklist_policy": ChecklistPolicySetting.get_active(),
     }
 
 
@@ -81,12 +83,16 @@ def add_customer(request):
             applicant_phone = (request.POST.get("phone") or request.POST.get("applicant_phone") or "").strip()
             decline_reason = (request.POST.get("decline_reason") or "Declined at policy checklist stage.").strip()
             checklist_method = request.POST.get("checklist_method", "in_person")
+            if checklist_method not in ["in_person", "phone"]:
+                checklist_method = "in_person"
 
+            policy_setting = ChecklistPolicySetting.get_active()
             ChecklistConfirmation.objects.create(
                 prospect=prospect,
                 confirmed_by=request.user,
                 method=checklist_method,
                 outcome="declined",
+                policy_version=policy_setting.version,
                 decline_reason=decline_reason,
                 applicant_name=applicant_name or (prospect.full_name if prospect else "Walk-in Applicant"),
                 applicant_phone=applicant_phone or (prospect.phone if prospect else ""),
@@ -164,16 +170,11 @@ def add_customer(request):
 
         # Check Branch: Installed / Existing Subscriber Manual Override vs For Installation
         if installation_status == "installed":
-            # Exception 2: Manual override requires permission & audit log, skips checklist & install ticket
-            is_authorized = (
-                request.user.is_staff
-                or request.user.is_superuser
-                or request.user.has_perm("billing.create_customer")
-            )
-            if not is_authorized:
+            # Exception 2: Manual override requires dedicated billing.add_existing_subscriber permission & audit log
+            if not request.user.has_perm("billing.add_existing_subscriber"):
                 messages.error(
                     request,
-                    "Permission denied: Manual override for existing installed subscribers requires authorization.",
+                    "Permission denied: Manual override for existing installed subscribers requires the 'billing.add_existing_subscriber' permission.",
                 )
                 context = _get_add_customer_context(request, pppoe_username, prospect, agent_id_param)
                 return render(request, "billing/add_customer.html", context)
@@ -183,7 +184,7 @@ def add_customer(request):
                 cust_status = "expired"
 
             with transaction.atomic():
-                customer = Customer.objects.create(
+                customer = Customer(
                     full_name=request.POST.get("full_name"),
                     email=email or None,
                     phone=phone,
@@ -208,6 +209,7 @@ def add_customer(request):
                     cignalbox_date=request.POST.get("cignalbox_date") or None,
                     created_form_by=request.user.username,
                 )
+                customer.save()
 
                 SystemLog.objects.create(
                     table_name="Customer",
@@ -235,6 +237,11 @@ def add_customer(request):
             item_rebates_24h = request.POST.get("item_rebates_24h") in ["true", "True", "on", "1", True]
             checklist_method = request.POST.get("checklist_method", "in_person")
 
+            if checklist_method not in ["in_person", "phone"]:
+                messages.error(request, "Invalid confirmation method. Only In-Person or Phone Call is permitted.")
+                context = _get_add_customer_context(request, pppoe_username, prospect, agent_id_param)
+                return render(request, "billing/add_customer.html", context)
+
             all_checked = all([
                 item_free_install, item_specific_plan, item_no_lockin,
                 item_staggered_lock, item_same_day_repair, item_rebates_24h
@@ -248,18 +255,32 @@ def add_customer(request):
                 context = _get_add_customer_context(request, pppoe_username, prospect, agent_id_param)
                 return render(request, "billing/add_customer.html", context)
 
-            policy_snapshot = {
-                "item_free_install": "Free installation inclusive of standard fiber drop cable and optical equipment.",
-                "item_specific_plan": "Agreed monthly subscription rate, package speed, and monthly billing cut-off cycle.",
-                "item_no_lockin": "No mandatory 24-month lock-in contract; subscriber may cancel anytime without pre-termination fees.",
-                "item_staggered_lock": "60-day initial payment lock applies when choosing staggered installation or promotional balance terms.",
-                "item_same_day_repair": "Same-day on-site restoration SLA commitment for network fault tickets logged before 2:00 PM.",
-                "item_rebates_24h": "Automatic, pro-rated billing rebate credited on the next cycle for continuous outages exceeding 24 hours.",
-            }
+            policy_setting = ChecklistPolicySetting.get_active()
+            plan_obj = SubscriptionPlan.objects.filter(id=request.POST.get("plan_id")).first()
+            agent_id = request.POST.get("agent_id") or (prospect.agent_id if prospect else None)
+            is_agent_referred = bool(agent_id or (prospect and prospect.agent_id))
+
+            policy_snapshot = policy_setting.generate_policy_snapshot(
+                plan_name=plan_obj.name if plan_obj else "Standard Plan",
+                price=str(plan_obj.price) if plan_obj else "0.00",
+                is_agent_referred=is_agent_referred,
+            )
 
             with transaction.atomic():
-                agent_id = request.POST.get("agent_id") or None
-                customer = Customer.objects.create(
+                # Item 7: Prospect rules - row locking & double submit prevention
+                if prospect_id:
+                    prospect = Prospect.objects.select_for_update().filter(id=prospect_id).first()
+                    if prospect:
+                        if prospect.status == "converted":
+                            messages.error(request, "This prospect has already been converted into a customer.")
+                            context = _get_add_customer_context(request, pppoe_username, prospect, agent_id_param)
+                            return render(request, "billing/add_customer.html", context)
+                        if prospect.status == "declined" and not prospect.reopened_at:
+                            messages.error(request, "A declined prospect cannot be converted to a customer unless reopened by staff.")
+                            context = _get_add_customer_context(request, pppoe_username, prospect, agent_id_param)
+                            return render(request, "billing/add_customer.html", context)
+
+                customer = Customer(
                     full_name=request.POST.get("full_name"),
                     email=email or None,
                     phone=phone,
@@ -284,6 +305,8 @@ def add_customer(request):
                     cignalbox_date=request.POST.get("cignalbox_date") or None,
                     created_form_by=request.user.username,
                 )
+                customer._checklist_verified = True
+                customer.save()
 
                 ChecklistConfirmation.objects.create(
                     customer=customer,
@@ -291,6 +314,7 @@ def add_customer(request):
                     confirmed_by=request.user,
                     method=checklist_method,
                     outcome="agreed",
+                    policy_version=policy_setting.version,
                     item_free_install=True,
                     item_specific_plan=True,
                     item_no_lockin=True,
@@ -314,7 +338,7 @@ def add_customer(request):
                     changed_by=request.user.username,
                     target_name=customer.full_name,
                     old_data="",
-                    new_data=f"Name: {customer.full_name}\nPhone: {customer.phone}\nStatus: {customer.status}\nInstallation: {customer.installation_status}\nChecklist: Confirmed 6/6 by {request.user.username}",
+                    new_data=f"Name: {customer.full_name}\nPhone: {customer.phone}\nStatus: {customer.status}\nInstallation: {customer.installation_status}\nChecklist: Confirmed 6/6 (v{policy_setting.version}) by {request.user.username}",
                 )
 
             messages.success(
@@ -509,16 +533,54 @@ def edit_customer(request, customer_id):
 
         agent_id = request.POST.get("agent_id")
         if str(customer.agent_id or "") != str(agent_id or ""):
-            old_agent_name = customer.agent.name if customer.agent else "None"
-            new_agent_name = (
-                Agent.objects.filter(pk=agent_id).values_list("name", flat=True).first()
-                or "None"
-                if agent_id
-                else "None"
+            # User Directive 5: Reassigning an existing customer to a new agent requires change_customer_agent permission, a reason, and audit trail.
+            has_reassign_perm = (
+                request.user.has_perm("billing.change_customer_agent")
+                or request.user.has_perm("billing.change_agent")
+                or request.user.is_superuser
             )
+            if not has_reassign_perm:
+                messages.error(request, "Permission denied: You do not have permission to reassign this customer's sales agent.")
+                context = {
+                    "customer": customer,
+                    "categorized_plans": get_categorized_plans(),
+                    "devices": MikrotikDevice.objects.all(),
+                    "agents": Agent.objects.all(),
+                    "barangays": Barangay.objects.all(),
+                    "account_types": AccountType.objects.all(),
+                }
+                return render(request, "billing/edit_customer.html", context)
+
+            old_agent = customer.agent
+            new_agent = Agent.objects.filter(pk=agent_id).first() if agent_id else None
+            old_agent_name = old_agent.name if old_agent else "None"
+            new_agent_name = new_agent.name if new_agent else "None"
+            reassign_reason = request.POST.get("agent_reassign_reason", "").strip()
+
+            if old_agent and new_agent and old_agent.id != new_agent.id and not reassign_reason:
+                messages.error(request, "A reason is mandatory when reassigning a customer to a new sales agent.")
+                context = {
+                    "customer": customer,
+                    "categorized_plans": get_categorized_plans(),
+                    "devices": MikrotikDevice.objects.all(),
+                    "agents": Agent.objects.all(),
+                    "barangays": Barangay.objects.all(),
+                    "account_types": AccountType.objects.all(),
+                }
+                return render(request, "billing/edit_customer.html", context)
+
             old_data.append(f"Agent: {old_agent_name}")
-            new_data.append(f"Agent: {new_agent_name}")
-        customer.agent_id = agent_id if agent_id else None
+            new_data.append(f"Agent: {new_agent_name}" + (f" (Reason: {reassign_reason})" if reassign_reason else ""))
+
+            from billing.models import CustomerAgentHistory
+            CustomerAgentHistory.objects.create(
+                customer=customer,
+                from_agent=old_agent,
+                to_agent=new_agent,
+                changed_by=request.user,
+                reason=reassign_reason or "Staff assignment",
+            )
+            customer.agent = new_agent
 
         if request.user.role == "Agent":
             barangay_name = request.POST.get("barangay_name")

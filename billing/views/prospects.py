@@ -160,3 +160,54 @@ def prospect_decline(request, prospect_id):
         return redirect("prospects_inbox")
 
     return redirect("prospect_detail", prospect_id=prospect.id)
+
+
+@login_required
+def prospect_reopen(request, prospect_id):
+    """
+    Reopens a declined prospect so it can proceed to onboarding.
+    Requires staff with billing.manage_prospects permission.
+    Logs the action in SystemLog with the mandatory reason.
+    """
+    if hasattr(request.user, "agent_profile") and not request.user.is_staff:
+        messages.error(request, "Access restricted.")
+        return redirect("agent_dashboard")
+
+    if not (request.user.has_perm("billing.manage_prospects") or request.user.is_superuser or request.user.is_staff):
+        messages.error(request, "Permission denied: You do not have permission to reopen declined prospects.")
+        return redirect("prospects_inbox")
+
+    prospect = get_object_or_404(Prospect, id=prospect_id)
+    if prospect.status != "declined":
+        messages.warning(request, f"Prospect {prospect.full_name} is not declined (current status: {prospect.get_status_display()}).")
+        return redirect("prospect_detail", prospect_id=prospect.id)
+
+    if request.method == "POST":
+        reopen_reason = request.POST.get("reopen_reason", "").strip()
+        if not reopen_reason:
+            messages.error(request, "A reason for reopening the prospect is required.")
+            return redirect("prospect_detail", prospect_id=prospect.id)
+
+        prospect.status = "under_review"
+        prospect.reopened_at = timezone.now()
+        prospect.reopened_by = request.user
+        prospect.reopen_reason = reopen_reason
+        prospect.save(update_fields=["status", "reopened_at", "reopened_by", "reopen_reason", "updated_at"])
+
+        try:
+            SystemLog.objects.create(
+                table_name="Prospect",
+                record_id=str(prospect.id),
+                action="REOPEN",
+                changed_by=request.user.username,
+                target_name=prospect.full_name,
+                old_data="status=declined",
+                new_data=f"status=under_review\nreopen_reason={reopen_reason}",
+            )
+        except Exception:
+            pass
+
+        messages.success(request, f"Prospect {prospect.full_name} has been reopened and can now proceed to onboarding.")
+        return redirect("prospect_detail", prospect_id=prospect.id)
+
+    return redirect("prospect_detail", prospect_id=prospect.id)

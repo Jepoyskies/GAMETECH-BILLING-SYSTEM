@@ -184,5 +184,89 @@ The codebase interacts with live MikroTik routers across the following functiona
   git checkout main; git pull origin main; cat /root/backups/gametech_phase0_backup_20260924.sql | ssh root@143.198.207.144 "docker exec -i 28514b2a5c9a psql -U gametech_user gametech_db"; ssh root@143.198.207.144 "docker restart gametech-billing-system-web-1"
   ```
 
+---
+
+## Phase 3.1: Strict Onboarding Refinement & Security Hardening (COMPLETED & VERIFIED)
+
+### 1. Pre-Fix Safety Backup & Proven Rollback
+- **Droplet Snapshot:** `/root/backups/gametech_phase3_1_backup_20260924.sql` (305 KB) created with `pg_dump --clean --if-exists`.
+- **Restoration Proof:**
+  - Created temporary database `scratch_test_db` on PostgreSQL container `28514b2a5c9a_gametech-billing-system-db-1`.
+  - Restored `/root/backups/gametech_phase3_1_backup_20260924.sql` into `scratch_test_db`.
+  - Audited all tables and row counts: 56 tables, 1,132 rows in `gametech_db` exactly matched 56 tables, 1,132 rows in `scratch_test_db` (0 mismatches).
+  - Dropped `scratch_test_db`.
+- **Verified Working Rollback Command:**
+  ```bash
+  ssh root@143.198.207.144 "cd /root/GAMETECH-BILLING-SYSTEM && git checkout 209fcb8 && docker exec -i 28514b2a5c9a_gametech-billing-system-db-1 psql -U gametech_user -d gametech_db < /root/backups/gametech_phase3_1_backup_20260924.sql && docker restart gametech-billing-system-web-1"
+  ```
+
+### 2. Exact Policy Wording & Versioned Admin Policy Setting
+- **Model:** `ChecklistPolicySetting` (`billing/models.py`, migration `0057_phase3_1_updates.py`).
+- **Policy Items:**
+  1. Free installation
+  2. Their plan: `{plan_name} (₱{price}/month)` (dynamically formatted from chosen plan)
+  3. No lock-in period
+  4. Staggered payments (3-day, 15-day payments):
+     - For agent referrals: `Not available for 60 days from your first payment`
+     - For walk-ins: `Available`
+  5. Repair within the day
+  6. Rebates within 24 hours
+- **Removed Speculative Caveats:** Removed "24-month", "drop cable & ONU", "weather & fiber availability", and "outage".
+- **Confirmation Methods:** Restricted strictly to `in_person` and `phone` only (`chat` completely eliminated).
+- **Snapshot Storage:** `ChecklistConfirmation.policy_snapshot` stores the immutable version and rendered text presented to the subscriber.
+
+### 3. Customer Creation Paths & Model Guard Audit
+A comprehensive audit of every customer creation path across the repository was conducted:
+
+| # | File & Line | Method / Context | Installation Status | Checklist Enforcement Mechanism |
+|---|---|---|---|---|
+| 1 | `billing/views/customers/crud.py:283` | `add_customer()` (Standard New Install) | `pending` | Server-side validation requiring all 6 checkboxes + model guard `customer._checklist_verified = True` |
+| 2 | `billing/views/customers/crud.py:187` | `add_customer()` (Manual Override) | `installed` | Requires dedicated permission `billing.add_existing_subscriber`; logs `MANUAL_OVERRIDE_ADD` in `SystemLog` |
+| 3 | `billing/admin.py:60` | `CustomerAdmin.save_model()` (Django Admin) | `installed` or `pending` | If `installed`: enforces `billing.add_existing_subscriber` + `MANUAL_OVERRIDE_ADMIN` log. If `pending`: enforced by model guard. |
+| 4 | `network_manager/views/devices.py:382` | `sync_device_to_database()` | `installed` | Router import; existing active subscriber imported with `installation_status='installed'` |
+| 5 | `network_manager/views/sync.py:145` | `apply_device_sync_staging()` | `installed` | Router bulk import; existing active subscriber imported with `installation_status='installed'` |
+| 6 | `billing/management/commands/recover_from_mikrotik.py:75` | Router recovery script | `installed` | Disaster recovery of live subscribers from RouterOS; sets `installation_status='installed'` |
+| 7 | `billing/management/commands/seed_dispatch_test_data.py:80` | Test data seeder | `pending` | Bypassed via model guard test flag `is_test_data=True` |
+
+- **Shared Model-Level Guard (`Customer.save()` in `billing/models.py`):**
+  Intercepts every customer creation and save. If `installation_status == 'pending'` or `status == 'pending'`, and not `is_test_data=True` and not `_checklist_verified=True`, it validates that an agreed `ChecklistConfirmation` exists. If not found, raises `django.core.exceptions.ValidationError`.
+
+### 4. Dedicated Override Permission
+- Dedicated permission `billing.add_existing_subscriber` created on `Customer.Meta.permissions`.
+- Seeded into `Admin` role by default in `setup_dispatch_permissions`.
+- Tested that staff with only normal `add_customer` permission are rejected with HTTP 403.
+
+### 5. Agent Portal Privacy Enforcement
+- In `billing/templates/billing/agent_portal/dashboard.html`, referral table displays strictly:
+  1. Applicant / Customer Full Name
+  2. Application Status Badge (`Submitted`, `Under Review`, `Checklist Completed`, `Installed`, `Declined`)
+  3. Payment Progress Indicator
+  4. Due Date
+- **Strictly Removed:** Contact phone number, installation address, and customer contact details before and after conversion.
+
+### 6. Duplicate Detection & Agent Reassignment Guard
+- Centralized in `billing/validators.py`: `check_customer_or_prospect_duplicate()`.
+- Detects matches on **phone** OR **normalized name + address** (case, space, and punctuation-insensitive) against both active customers and open prospects.
+- **Credit Preservation:** First submitting agent retains full attribution credit. Second submission flags `duplicate_flag=True` and links `duplicate_of` to the first record.
+- **Reassignment Guard:** In `billing/views/customers/crud.py` (`edit_customer`), changing a customer's assigned sales agent requires `billing.change_customer_agent` permission, a mandatory logged reason, and records permanent history in `CustomerAgentHistory`.
+
+### 7. Prospect Single-Conversion & Decline Rules
+- `prospect_id` conversion in `add_customer()` uses `select_for_update()` row locking. If already `converted`, second submission is rejected.
+- Declined prospects cannot convert unless explicitly reopened by staff with `manage_prospects` permission via `prospect_reopen()` view with a logged reason in `SystemLog`.
+
+### 8. Staff On Agent's Behalf
+- "Add Customer to this Agent" CTA on `view_agent.html` triggers `staff_add_customer_for_agent()` view (`billing/views/agents.py`), creating a `Prospect(source='staff_on_behalf', status='under_review')` and redirecting to the checklist and customer creation flow.
+
+### 9. Production State Audit (Report Only)
+- `ROUTER_DRY_RUN`: Currently evaluates to `False` in running container (only defaults to `True` during tests).
+- Active Git Commit: `209fcb8` on branch `feature/dispatch-operation`.
+- Database Migrations: All migrations through `0056` applied (`[X]`). Migration `0057` staged.
+- Router Live Behavior: If a MikroTik router device and PPPoE username are specified when creating a customer in the UI, `sync_customer_to_mikrotik` executes a live socket command.
+- **Recommendation:** Keep `ROUTER_DRY_RUN=True` for test execution. On production, only execute router sync when physical routers are intended to be provisioned.
+
+### 10. Developer Placeholders Removed
+- Removed `[Phase 5 Placeholder: Live commission wallet]` and incentive placeholders from `billing/templates/billing/agent_portal/dashboard.html` and `billing/templates/billing/view_agent.html`.
+
+
 
 

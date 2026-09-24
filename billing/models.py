@@ -580,6 +580,24 @@ class Customer(models.Model):
         secret_comment = "".join(c for c in secret_comment if c.isprintable())
         return secret_comment
 
+    class Meta:
+        permissions = [
+            ("add_existing_subscriber", "Can add installed/existing subscriber with manual override"),
+            ("change_customer_agent", "Can change customer assigned sales agent"),
+        ]
+
+    def save(self, *args, **kwargs):
+        # Shared Model-Level Guard: New-install customers require completed ChecklistConfirmation
+        if (self.installation_status == "pending" or self.status == "pending") and not getattr(self, "is_test_data", False):
+            if not getattr(self, "_checklist_verified", False):
+                has_confirmed = self.pk and self.checklist_confirmations.filter(outcome="agreed").exists()
+                if not has_confirmed:
+                    from django.core.exceptions import ValidationError
+                    raise ValidationError(
+                        "Cannot create or save a 'Pending Installation' customer without a completed, agreed ChecklistConfirmation."
+                    )
+        super().save(*args, **kwargs)
+
 
 class Payment(models.Model):
     customer = models.ForeignKey(
@@ -1311,6 +1329,24 @@ class Prospect(models.Model):
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name="opened_prospects"
     )
     decline_reason = models.TextField(blank=True, null=True)
+    source = models.CharField(
+        max_length=50,
+        default="agent_portal",
+        choices=[
+            ("agent_portal", "Agent Portal"),
+            ("staff_on_behalf", "Staff on Agent Behalf"),
+            ("direct", "Direct"),
+        ],
+    )
+    reopened_at = models.DateTimeField(null=True, blank=True)
+    reopened_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="reopened_prospects",
+    )
+    reopen_reason = models.TextField(blank=True, null=True)
     converted_customer = models.ForeignKey(
         Customer,
         on_delete=models.SET_NULL,
@@ -1348,11 +1384,63 @@ class Prospect(models.Model):
         return f"{self.full_name} ({self.get_status_display()})"
 
 
+class ChecklistPolicySetting(models.Model):
+    version = models.PositiveIntegerField(default=1, help_text="Policy version number")
+    item_free_install_text = models.CharField(
+        max_length=255, default="Free installation"
+    )
+    item_specific_plan_template = models.CharField(
+        max_length=255,
+        default="Their plan: {plan_name} (₱{price}/month)",
+        help_text="Template for dynamic plan display",
+    )
+    item_no_lockin_text = models.CharField(
+        max_length=255, default="No lock-in period"
+    )
+    item_staggered_agent_text = models.CharField(
+        max_length=255,
+        default="Staggered payments (3-day, 15-day payments): Not available for 60 days from your first payment",
+    )
+    item_staggered_walkin_text = models.CharField(
+        max_length=255,
+        default="Staggered payments (3-day, 15-day payments): Available",
+    )
+    item_same_day_repair_text = models.CharField(
+        max_length=255, default="Repair within the day"
+    )
+    item_rebates_24h_text = models.CharField(
+        max_length=255, default="Rebates within 24 hours"
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-version"]
+
+    @classmethod
+    def get_active(cls):
+        setting = cls.objects.order_by("-version").first()
+        if not setting:
+            setting = cls.objects.create(version=1)
+        return setting
+
+    def generate_policy_snapshot(self, plan_name="Standard Plan", price="1500", is_agent_referred=False):
+        plan_text = self.item_specific_plan_template.format(plan_name=plan_name or "Standard Plan", price=price or "0.00")
+        staggered_text = self.item_staggered_agent_text if is_agent_referred else self.item_staggered_walkin_text
+        return {
+            "version": self.version,
+            "item_free_install": self.item_free_install_text,
+            "item_specific_plan": plan_text,
+            "item_no_lockin": self.item_no_lockin_text,
+            "item_staggered_lock": staggered_text,
+            "item_same_day_repair": self.item_same_day_repair_text,
+            "item_rebates_24h": self.item_rebates_24h_text,
+        }
+
+
 class ChecklistConfirmation(models.Model):
     METHOD_CHOICES = (
         ("in_person", "In-Person (Walk-In)"),
         ("phone", "Phone Call"),
-        ("chat", "Online Chat"),
     )
     OUTCOME_CHOICES = (
         ("agreed", "Agreed (Proceed)"),
@@ -1383,6 +1471,7 @@ class ChecklistConfirmation(models.Model):
     method = models.CharField(max_length=20, choices=METHOD_CHOICES, default="in_person")
     outcome = models.CharField(max_length=20, choices=OUTCOME_CHOICES, default="agreed")
     decline_reason = models.TextField(blank=True, null=True)
+    policy_version = models.PositiveIntegerField(default=1)
     policy_snapshot = models.JSONField(
         default=dict, blank=True, help_text="Snapshot of policies presented to the applicant"
     )

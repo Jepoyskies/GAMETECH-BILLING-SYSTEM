@@ -22,51 +22,6 @@
         </div>
     </div>
 
-    <!-- Incentive Engine & Payout Placeholders (Phase 5) -->
-    <div class="col-md-6">
-        <div class="agent-card p-4 h-100">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h6 class="fw-bold text-white mb-0">
-                    <i class="fas fa-chart-line text-warning me-2"></i> Progress Toward Next 5 Referrals
-                </h6>
-                <span class="badge bg-warning text-dark font-monospace" style="font-size: 0.65rem;">
-                    [Phase 5 Placeholder: Incentive Progress Engine]
-                </span>
-            </div>
-            <p class="text-muted small mb-3">Earn PHP 500.00 for every successfully qualified subscriber. Payouts trigger in batches of 5 (PHP 2,500.00).</p>
-            
-            <div class="d-flex justify-content-between small text-muted mb-1">
-                <span>Batch Qualification Target</span>
-                <strong class="text-warning">{{ qualified_count|default:"0" }} / 5 Qualified</strong>
-            </div>
-            <div class="progress bg-dark border border-secondary mb-3" style="height: 10px; border-radius: 8px;">
-                <div class="progress-bar bg-warning" role="progressbar" style="width: {{ progress_pct|default:'0' }}%;" aria-valuenow="{{ qualified_count|default:'0' }}" aria-valuemin="0" aria-valuemax="5"></div>
-            </div>
-            <div class="p-2 rounded bg-dark border border-secondary text-muted small">
-                <i class="fas fa-info-circle text-info me-1"></i> Full automatic batch locking, 60-day staggered lock, and 2nd-month qualification engine will activate in Phase 5.
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-6">
-        <div class="agent-card p-4 h-100">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h6 class="fw-bold text-white mb-0">
-                    <i class="fas fa-wallet text-success me-2"></i> Commission Payout History
-                </h6>
-                <span class="badge bg-secondary font-monospace" style="font-size: 0.65rem;">
-                    [Phase 5 Placeholder: Payout History Engine]
-                </span>
-            </div>
-            <p class="text-muted small mb-3">Disbursements and admin payment confirmations will be recorded here.</p>
-            
-            <div class="text-center py-3 text-muted">
-                <i class="fas fa-receipt fa-2x mb-2 text-secondary opacity-50"></i>
-                <div class="small">No payout batches disbursed yet. (Engine activating in Phase 5).</div>
-            </div>
-        </div>
-    </div>
-
     <!-- Referrals List -->
     <div class="col-12">
         <div class="agent-card p-4">
@@ -82,11 +37,9 @@
                     <thead class="bg-dark text-muted text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">
                         <tr>
                             <th class="ps-2 py-3">Applicant Name</th>
-                            <th class="py-3">Contact & Barangay</th>
-                            <th class="py-3">Plan</th>
-                            <th class="py-3">Date Submitted</th>
                             <th class="py-3">Application Status</th>
                             <th class="py-3">Payment Progress</th>
+                            <th class="py-3">Due Date</th>
                             <th class="text-end pe-2 py-3">Action</th>
                         </tr>
                     </thead>
@@ -100,20 +53,6 @@
                                         <i class="fas fa-flag me-1"></i> Flagged for Review
                                     </span>
                                 {% endif %}
-                            </td>
-                            <td class="py-3">
-                                <span class="d-block font-monospace text-info">{{ p.phone }}</span>
-                                <span class="text-muted small">{{ p.barangay.name|default:p.address|default:"Unassigned" }}</span>
-                            </td>
-                            <td class="py-3">
-                                {% if p.plan %}
-                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ p.plan.name }}</span>
-                                {% else %}
-                                    <span class="text-muted small">TBD</span>
-                                {% endif %}
-                            </td>
-                            <td class="py-3 text-muted small">
-                                {{ p.created_at|date:"M d, Y" }}
                             </td>
                             <td class="py-3">
                                 {% if p.status == 'submitted' %}
@@ -146,6 +85,13 @@
                                     <span class="text-muted small">—</span>
                                 {% endif %}
                             </td>
+                            <td class="py-3 text-muted small">
+                                {% if p.converted_customer and p.converted_customer.expires_at %}
+                                    {{ p.converted_customer.expires_at|date:"M d, Y" }}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
                             <td class="text-end pe-2 py-3">
                                 {% if not p.opened_by_staff_at and p.status == 'submitted' %}
                                     <a href="{% url 'agent_edit_prospect' p.id %}" class="btn btn-sm btn-outline-primary fw-semibold">
@@ -160,7 +106,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="7" class="text-center py-5 text-muted">
+                            <td colspan="5" class="text-center py-5 text-muted">
                                 <i class="fas fa-user-plus fa-3x mb-3 text-secondary opacity-50"></i>
                                 <p class="mb-2">You haven't submitted any referrals yet.</p>
                                 <a href="{% url 'agent_add_prospect' %}" class="btn btn-sm btn-primary-gt">Submit Your First Referral</a>
