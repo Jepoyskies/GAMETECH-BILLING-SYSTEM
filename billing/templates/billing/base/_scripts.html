@@ -155,6 +155,42 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
+    // Universal Chart.js theme synchronization
+    window.addEventListener('themeChanged', () => {
+        if (typeof Chart !== 'undefined' && Chart.instances) {
+            const isDark = document.documentElement.classList.contains('dark-mode');
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(15, 23, 42, 0.06)';
+            const tickColor = isDark ? '#94A3B8' : '#64748B';
+            const textColor = isDark ? '#F8FAFC' : '#0F172A';
+
+            Chart.defaults.color = tickColor;
+            if (Chart.defaults.scale && Chart.defaults.scale.grid) {
+                Chart.defaults.scale.grid.color = gridColor;
+            }
+
+            Object.values(Chart.instances).forEach(chart => {
+                if (!chart) return;
+                if (chart.options && chart.options.scales) {
+                    Object.values(chart.options.scales).forEach(scale => {
+                        if (scale.grid) scale.grid.color = gridColor;
+                        if (scale.ticks) scale.ticks.color = tickColor;
+                    });
+                }
+                if (chart.options && chart.options.plugins && chart.options.plugins.legend && chart.options.plugins.legend.labels) {
+                    chart.options.plugins.legend.labels.color = textColor;
+                }
+                if (chart.config && (chart.config.type === 'doughnut' || chart.config.type === 'pie')) {
+                    if (chart.data && chart.data.datasets) {
+                        chart.data.datasets.forEach(ds => {
+                            ds.borderColor = isDark ? '#1e293b' : '#ffffff';
+                        });
+                    }
+                }
+                try { chart.update('none'); } catch(e) {}
+            });
+        }
+    });
+
     // Global DataTables Placeholder & Icon Injector
     document.addEventListener("DOMContentLoaded", function() {
         const observer = new MutationObserver(function() {
