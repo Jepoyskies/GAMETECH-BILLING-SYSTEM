@@ -52,7 +52,13 @@ class BaselineWorkflowTestCase(TestCase):
 
     def test_core_views_require_authentication(self):
         """Verify that protected views redirect unauthenticated users to login."""
-        endpoints = ["/", "/customers/", "/subscriptions/", "/cignal/", "/dispatch/"]
+        endpoints = [
+            "/",
+            "/customers/",
+            "/subscriptions/",
+            "/cignal-dashboard/",
+            "/dispatch/",
+        ]
         for endpoint in endpoints:
             response = self.client.get(endpoint)
             self.assertEqual(
@@ -64,7 +70,13 @@ class BaselineWorkflowTestCase(TestCase):
     def test_core_views_render_for_admin(self):
         """Verify authenticated staff can access the main dashboards."""
         self.client.force_login(self.admin_user)
-        endpoints = ["/", "/customers/", "/subscriptions/", "/cignal/", "/dispatch/"]
+        endpoints = [
+            "/",
+            "/customers/",
+            "/subscriptions/",
+            "/cignal-dashboard/",
+            "/dispatch/",
+        ]
         for endpoint in endpoints:
             response = self.client.get(endpoint)
             self.assertEqual(
