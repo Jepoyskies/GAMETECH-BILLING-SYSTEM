@@ -47,6 +47,12 @@ class Command(BaseCommand):
                             f"[SUCCESS] Successfully synced {customer.full_name} to {customer.mikrotik_device.device_name}."
                         )
                     )
+                elif customer.sync_status == "Blocked":
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f"[BLOCKED] Sync blocked by ROUTER_MODE=read_only for {customer.full_name}."
+                        )
+                    )
                 else:
                     self.stdout.write(
                         self.style.ERROR(

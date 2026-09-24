@@ -93,6 +93,17 @@ class Command(BaseCommand):
                 # Initialize the new MikrotikAPI utility
                 mt = MikrotikAPI(customer.mikrotik_device)
 
+                if getattr(mt, "is_read_only", False):
+                    # ROUTER_MODE=read_only: Router write is blocked. Do not mark customer as suspended.
+                    customer.sync_status = "Blocked"
+                    customer.save(update_fields=["sync_status"])
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f"[BLOCKED] Router write blocked by ROUTER_MODE=read_only for {customer.pppoe_username}. Status remains {customer.status}."
+                        )
+                    )
+                    continue
+
                 # Suspend the user (handles MAC-level drop, secret disable, and active session kick)
                 success, message = mt.suspend_pppoe_user(customer.pppoe_username)
 
@@ -164,6 +175,18 @@ class Command(BaseCommand):
 
                 try:
                     mt = MikrotikAPI(customer.mikrotik_device)
+
+                    if getattr(mt, "is_read_only", False):
+                        # ROUTER_MODE=read_only: Router write is blocked. Do not mark customer as suspended.
+                        customer.sync_status = "Blocked"
+                        customer.save(update_fields=["sync_status"])
+                        self.stdout.write(
+                            self.style.WARNING(
+                                f"[BLOCKED] Router write blocked by ROUTER_MODE=read_only for rogue {customer.pppoe_username}."
+                            )
+                        )
+                        continue
+
                     # Suspend the user (kicks session, drops secret)
                     success, message = mt.suspend_pppoe_user(customer.pppoe_username)
 

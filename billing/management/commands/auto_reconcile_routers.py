@@ -75,6 +75,9 @@ class Command(BaseCommand):
                                 customer.sync_status = "Synced"
                                 customer.save(update_fields=["sync_status"])
                         else:
+                            if "read_only" in str(res.get("error", "")).lower():
+                                customer.sync_status = "Blocked"
+                                customer.save(update_fields=["sync_status"])
                             self.stdout.write(
                                 self.style.ERROR(
                                     f"[ERROR] Failed to push {uname}: {res.get('error')}"
@@ -111,6 +114,9 @@ class Command(BaseCommand):
                                     customer.sync_status = "Synced"
                                     customer.save(update_fields=["sync_status"])
                             else:
+                                if "read_only" in str(res.get("error", "")).lower():
+                                    customer.sync_status = "Blocked"
+                                    customer.save(update_fields=["sync_status"])
                                 self.stdout.write(
                                     self.style.ERROR(
                                         f"[ERROR] Failed to update {uname}: {res.get('error')}"

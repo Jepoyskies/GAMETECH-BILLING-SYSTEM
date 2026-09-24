@@ -245,6 +245,7 @@ class Customer(models.Model):
     SYNC_CHOICES = (
         ("Synced", "Synced"),
         ("Failed", "Failed"),
+        ("Blocked", "Blocked"),
     )
     sync_status = models.CharField(
         max_length=20, choices=SYNC_CHOICES, default="Synced"

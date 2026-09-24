@@ -357,23 +357,33 @@ def pay_customer_view(request, username):
                     # Use the was_suspended flag captured from the locked_customer inside the atomic block
                     _ws = locals().get("_was_suspended_for_mikrotik", was_suspended)
 
-                    if _ws:
-                        # 1. Enable the user (Removes bridge drop and enables secret)
-                        api.enable_pppoe_user(customer.pppoe_username)
-                        # 2. Update the profile back to their plan, or default if none
-                        target_profile = (
-                            customer.plan.name
-                            if customer.plan and customer.plan.name
-                            else "default"
-                        )
-                        api.set_user_pppoe_profile(
-                            customer.pppoe_username, target_profile
-                        )
-                        # 3. Kick them so they reconnect and get the new profile
-                        api.kick_active_user(customer.pppoe_username)
+                    if getattr(api, "is_read_only", False):
+                        # Router write blocked by read_only mode: do not mark router-dependent reactivation as done
+                        if _ws:
+                            Customer.objects.filter(pk=customer.pk).update(
+                                status="suspended",
+                                sync_status="Blocked",
+                            )
+                        else:
+                            Customer.objects.filter(pk=customer.pk).update(sync_status="Blocked")
                     else:
-                        # Even if not previously suspended, kick so router updates comment/profile
-                        api.kick_active_user(customer.pppoe_username)
+                        if _ws:
+                            # 1. Enable the user (Removes bridge drop and enables secret)
+                            api.enable_pppoe_user(customer.pppoe_username)
+                            # 2. Update the profile back to their plan, or default if none
+                            target_profile = (
+                                customer.plan.name
+                                if customer.plan and customer.plan.name
+                                else "default"
+                            )
+                            api.set_user_pppoe_profile(
+                                customer.pppoe_username, target_profile
+                            )
+                            # 3. Kick them so they reconnect and get the new profile
+                            api.kick_active_user(customer.pppoe_username)
+                        else:
+                            # Even if not previously suspended, kick so router updates comment/profile
+                            api.kick_active_user(customer.pppoe_username)
                 except Exception as e:
                     import logging
 

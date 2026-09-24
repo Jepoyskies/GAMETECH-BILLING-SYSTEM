@@ -107,6 +107,13 @@ def sync_customer_to_mikrotik(sender, instance, created, **kwargs):
     try:
         api = MikrotikAPI(instance.mikrotik_device)
 
+        if getattr(api, "is_read_only", False):
+            logger.info(
+                f"[ROUTER_MODE=read_only] Router write blocked for customer {instance.pppoe_username}. Marking sync_status='Blocked'."
+            )
+            Customer.objects.filter(pk=instance.pk).update(sync_status="Blocked")
+            return
+
         # --- NEW LOGIC: Handle Offboarding / Pull Out ---
         if instance.status == "pull out":
             api.delete_pppoe_user(instance.pppoe_username)
