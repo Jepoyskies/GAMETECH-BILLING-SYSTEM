@@ -290,6 +290,7 @@ class JobTicket(models.Model):
         ('MIGRATION', 'Plan / Line Migration'),
         ('RELOCATION', 'Relocation / Transfer'),
         ('PULL_OUT', 'Pull Out / Disconnection'),
+        ('SITE_VISIT', 'Site Visit'),
     )
     STATUS_CHOICES = (
         ('PENDING', 'Pending Dispatch'),
@@ -297,6 +298,7 @@ class JobTicket(models.Model):
         ('IN_PROGRESS', 'In Progress / On Site'),
         ('COMPLETED', 'Completed (Awaiting QA)'),
         ('QA_PASSED', 'QA Passed (Awaiting Approval)'),
+        ('APPROVED', 'Admin Approved / Closed'),
         ('CANCELLED', 'Cancelled'),
     )
     PRIORITY_CHOICES = (
@@ -392,6 +394,22 @@ class JobTicket(models.Model):
     contact_attempt_count = models.PositiveSmallIntegerField(default=0, help_text="Number of times technician tried to reach client (max 3)")
     cancellation_reason = models.CharField(max_length=20, choices=CANCELLATION_REASON_CHOICES, null=True, blank=True)
 
+    # Phase 2 Operational & Lifecycle Additions
+    arrived_at = models.DateTimeField(null=True, blank=True, help_text="When field technician clicked Arrived on site")
+    finished_at = models.DateTimeField(null=True, blank=True, help_text="When field technician clicked Done on site")
+    technician_report = models.TextField(null=True, blank=True, help_text="Work done report entered by technician")
+    qa_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='qa_reviewed_tickets')
+    client_called_by_qa = models.BooleanField(default=False, help_text="Checked if QA dispatcher called client for verification")
+    client_agent_informed = models.BooleanField(default=False, help_text="Checked by dispatch when informing client's agent of unreachable/cancellation")
+    admin_approved_at = models.DateTimeField(null=True, blank=True, help_text="When admin signed off on job completion")
+    admin_approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='admin_approved_tickets')
+    close_reason = models.CharField(max_length=50, blank=True, null=True, help_text="Undecided, Change of mind, Unreachable, Other")
+    close_reason_note = models.TextField(blank=True, null=True)
+    same_person_flag = models.BooleanField(default=False, db_index=True, help_text="Flagged if same actor handled multiple stages")
+    same_person_stages = models.JSONField(default=list, blank=True, help_text="List of stage names handled by the same person")
+    bounce_count = models.PositiveIntegerField(default=0, help_text="Number of times this ticket has been bounced back")
+    repeated_bounce_alert = models.BooleanField(default=False, help_text="Flagged when ticket bounces 2 or more times")
+
     # Audit & Dispatcher Tracking
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='dispatched_tickets')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -448,12 +466,19 @@ class JobTicket(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        permissions = [
+            ('assign_technicians', 'Can assign technicians to job tickets'),
+            ('technician_job_actions', 'Can execute field technician mobile job actions'),
+            ('correct_timers', 'Can adjust technician arrived/done timers'),
+            ('dispatch_qa', 'Can review field reports and QA job tickets'),
+            ('admin_approve', 'Can grant final admin sign-off on jobs'),
+            ('view_bounce_summary', 'Can view bounce-back summary and pattern metrics'),
+        ]
 
     def save(self, *args, **kwargs):
         if not self.ticket_number:
-            date_prefix = timezone.now().strftime("%Y%m%d")
-            today_count = JobTicket.objects.filter(created_at__date=timezone.now().date()).count() + 1
-            self.ticket_number = f"TICK-{date_prefix}-{today_count:04d}"
+            from dispatch.utils import generate_ticket_number
+            self.ticket_number = generate_ticket_number(self.ticket_type)
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -473,3 +498,47 @@ class JobTicketHistory(models.Model):
 
     def __str__(self):
         return f"{self.job_ticket.ticket_number} transitioned to {self.to_status} at {self.timestamp}"
+
+
+class TicketBounceHistory(models.Model):
+    BOUNCE_TYPE_CHOICES = (
+        ('revisit', 'Revisit with new timer'),
+        ('correct_report', 'Correct the report'),
+    )
+    ticket = models.ForeignKey(JobTicket, on_delete=models.CASCADE, related_name='bounces')
+    from_stage = models.CharField(max_length=50)
+    to_stage = models.CharField(max_length=50)
+    bounce_type = models.CharField(max_length=50, choices=BOUNCE_TYPE_CHOICES, default='correct_report')
+    reason = models.TextField(help_text="Mandatory reason for bouncing ticket back")
+    bounced_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='bounced_tickets')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Bounce on {self.ticket.ticket_number} ({self.from_stage} -> {self.to_stage}) by {self.bounced_by}"
+
+
+class CallAttemptLog(models.Model):
+    RESULT_CHOICES = (
+        ('unanswered', 'Unanswered'),
+        ('rejected', 'Rejected / Call Declined'),
+        ('busy', 'Line Busy'),
+        ('client_declined', 'Client Declined / Cancelled'),
+        ('other', 'Other'),
+    )
+    ticket = models.ForeignKey(JobTicket, on_delete=models.CASCADE, related_name='call_attempts')
+    technician = models.ForeignKey(Technician, on_delete=models.SET_NULL, null=True, blank=True, related_name='call_attempts')
+    attempt_number = models.PositiveSmallIntegerField(help_text="1st, 2nd, 3rd call attempt")
+    attempt_time = models.DateTimeField(default=timezone.now)
+    result = models.CharField(max_length=50, choices=RESULT_CHOICES, default='unanswered')
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['attempt_number', 'attempt_time']
+
+    def __str__(self):
+        return f"Attempt {self.attempt_number} for {self.ticket.ticket_number}: {self.get_result_display()}"
+

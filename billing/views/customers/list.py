@@ -57,13 +57,13 @@ def customer_list(request):
     seven_days_ago = now - timedelta(days=7)
 
     # Dynamic counts for Top Stat Pills
-    stats = Customer.objects.aggregate(
+    stats = Customer.objects.exclude(status="closed_not_installed").aggregate(
         total=Count("id"),
-        active=Count("id", filter=Q(expires_at__gt=seven_days_from_now, status="active")),
-        expiring=Count("id", filter=Q(expires_at__gt=now, expires_at__lte=seven_days_from_now, status="active")),
-        expired=Count("id", filter=Q(expires_at__lte=now, expires_at__gt=seven_days_ago) | Q(status="expired")),
-        inactive=Count("id", filter=Q(status__in=["suspended", "inactive", "pull out"]) | Q(expires_at__lte=seven_days_ago)),
-        offline=Count("id", filter=Q(status__in=["suspended", "inactive", "pull out", "expired"]) | Q(expires_at__lte=now) | Q(expires_at__isnull=True)),
+        active=Count("id", filter=Q(expires_at__gt=seven_days_from_now, status="active", installation_status="installed")),
+        expiring=Count("id", filter=Q(expires_at__gt=now, expires_at__lte=seven_days_from_now, status="active", installation_status="installed")),
+        expired=Count("id", filter=(Q(expires_at__lte=now, expires_at__gt=seven_days_ago) | Q(status="expired")) & Q(installation_status="installed") & ~Q(status="pending")),
+        inactive=Count("id", filter=(Q(status__in=["suspended", "inactive", "pull out"]) | Q(expires_at__lte=seven_days_ago)) & Q(installation_status="installed") & ~Q(status="pending")),
+        offline=Count("id", filter=(Q(status__in=["suspended", "inactive", "pull out", "expired"]) | (Q(expires_at__lte=now) & Q(installation_status="installed"))) & ~Q(status="pending")),
     )
 
     # MikroTik Live Connectivity for Paid but Offline metric
@@ -102,6 +102,7 @@ def customer_list(request):
         Customer.objects.filter(expires_at__gt=now, status="active")
         .exclude(expires_at__isnull=True)
         .exclude(installation_status="pending")
+        .exclude(status__in=["pending", "closed_not_installed"])
         .values("id", "pppoe_username")
     )
 
@@ -112,30 +113,36 @@ def customer_list(request):
     ]
     stats["paid_but_offline"] = len(paid_but_offline_ids)
 
-    customers = Customer.objects.select_related(
-        "plan", "agent", "barangay", "mikrotik_device"
-    ).all()
+    customers = (
+        Customer.objects.select_related(
+            "plan", "agent", "barangay", "mikrotik_device"
+        )
+        .exclude(status="closed_not_installed")
+        .all()
+    )
 
     filter_type = request.GET.get("filter", "all")
 
     if filter_type == "active":
         customers = customers.filter(
-            expires_at__gt=seven_days_from_now, status="active"
+            expires_at__gt=seven_days_from_now, status="active", installation_status="installed"
         )
     elif filter_type == "expiring":
         customers = customers.filter(
-            expires_at__gt=now, expires_at__lte=seven_days_from_now, status="active"
+            expires_at__gt=now, expires_at__lte=seven_days_from_now, status="active", installation_status="installed"
         )
     elif filter_type in ["paid_offline", "paid_but_offline"]:
         customers = customers.filter(id__in=paid_but_offline_ids)
     elif filter_type == "expired":
         customers = customers.filter(
-            Q(expires_at__lte=now, expires_at__gt=seven_days_ago) | Q(status="expired")
-        )
+            (Q(expires_at__lte=now, expires_at__gt=seven_days_ago) | Q(status="expired"))
+            & Q(installation_status="installed")
+        ).exclude(status="pending")
     elif filter_type == "inactive":
         customers = customers.filter(
-            Q(status__in=["suspended", "inactive", "pull out"]) | Q(expires_at__lte=seven_days_ago)
-        )
+            (Q(status__in=["suspended", "inactive", "pull out"]) | Q(expires_at__lte=seven_days_ago))
+            & Q(installation_status="installed")
+        ).exclude(status="pending")
 
     customers = customers.annotate(
         is_paid_offline=Case(
@@ -152,6 +159,7 @@ def customer_list(request):
             When(status="expired", then=Value(4)),
             When(status="inactive", then=Value(5)),
             When(status="pull out", then=Value(6)),
+            When(status="closed_not_installed", then=Value(8)),
             default=Value(7),
             output_field=IntegerField(),
         ),

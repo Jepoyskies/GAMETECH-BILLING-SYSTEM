@@ -696,7 +696,7 @@ def view_customer(request, customer_id):
 
     # Include tickets into all_logs
     for t in ticket_history:
-        tech_str = ", ".join(t["technicians"]) or t["team_name"] or "Tech Dispatch"
+        tech_str = ", ".join(t["technicians"]) or t["team_name"] or "Unassigned"
         all_logs.append({
             "type": "ticket",
             "date": t["created_at"],

@@ -239,6 +239,7 @@ class Customer(models.Model):
         ("pending", "Pending"),
         ("suspended", "Suspended"),
         ("pull out", "Pull Out"),
+        ("closed_not_installed", "Closed - Not Installed"),
     )
 
     SYNC_CHOICES = (
@@ -252,6 +253,19 @@ class Customer(models.Model):
     # --- THE SUPERPOWER: Foreign Keys tying the system together ---
     plan = models.ForeignKey("SubscriptionPlan", on_delete=models.SET_NULL, null=True)
     agent = models.ForeignKey("Agent", on_delete=models.SET_NULL, null=True)
+    original_agent = models.ForeignKey(
+        "Agent",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="originally_referred_customers",
+        help_text="Permanent original agent who first referred this customer",
+    )
+    first_payment_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Date of first payment recorded for this customer",
+    )
     agent_lock_until = models.DateTimeField(null=True, blank=True, help_text="Calculated 60 days from Stage 5 Admin Approval. Until this date, the customer cannot use staggered payments.")
     barangay = models.ForeignKey("Barangay", on_delete=models.SET_NULL, null=True)
     account_type = models.ForeignKey(
@@ -376,6 +390,7 @@ class Customer(models.Model):
     INSTALLATION_STATUS_CHOICES = (
         ("installed", "Installed"),
         ("pending", "Pending Installation"),
+        ("closed_not_installed", "Closed - Not Installed"),
     )
     installation_status = models.CharField(
         max_length=20,
@@ -420,6 +435,9 @@ class Customer(models.Model):
         return timezone.now() > self.temp_password_created_at + timedelta(days=max_days)
 
     def save(self, *args, **kwargs):
+        if not self.email:
+            self.email = None
+
         from django.contrib.auth.hashers import make_password
         # If legacy plaintext password exists and hash does not, hash it immediately
         if self.portal_password and not self.portal_password_hash:
@@ -1192,3 +1210,319 @@ def sync_superuser_to_systemadmin(sender, instance, created, **kwargs):
                 updated = True
             if updated:
                 sys_admin.save(update_fields=["role", "status"])
+
+
+# =====================================================================
+# PHASE 2: DISPATCH OPERATION & INCENTIVE FOUNDATION MODELS
+# =====================================================================
+
+class CustomerAgentHistory(models.Model):
+    customer = models.ForeignKey(
+        Customer, on_delete=models.CASCADE, related_name="agent_change_history"
+    )
+    from_agent = models.ForeignKey(
+        Agent,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="referrals_lost",
+    )
+    to_agent = models.ForeignKey(
+        Agent,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="referrals_gained",
+    )
+    reason = models.TextField(
+        help_text="Mandatory reason explaining why the agent assignment was changed"
+    )
+    changed_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Customer Agent History"
+        verbose_name_plural = "Customer Agent Histories"
+
+    def __str__(self):
+        return f"{self.customer.full_name}: {self.from_agent} -> {self.to_agent} at {self.created_at}"
+
+
+class Prospect(models.Model):
+    STATUS_CHOICES = (
+        ("submitted", "Submitted"),
+        ("under_review", "Under Review"),
+        ("checklist_completed", "Checklist Completed"),
+        ("converted", "Converted to Customer"),
+        ("declined", "Declined"),
+        ("closed", "Closed"),
+    )
+
+    agent = models.ForeignKey(
+        Agent,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="prospects",
+        help_text="Referring agent who submitted the prospect",
+    )
+    submitted_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="submitted_prospects",
+        help_text="User (staff or agent) who submitted the prospect form",
+    )
+    full_name = models.CharField(max_length=255)
+    phone = models.CharField(max_length=20, help_text="Canonical Philippine mobile: 09XXXXXXXXX")
+    email = models.EmailField(blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
+    barangay = models.ForeignKey(
+        Barangay, on_delete=models.SET_NULL, null=True, blank=True, related_name="prospects"
+    )
+    plan = models.ForeignKey(
+        "SubscriptionPlan", on_delete=models.SET_NULL, null=True, blank=True, related_name="prospects"
+    )
+    preferred_installation_date = models.DateField(null=True, blank=True)
+    preferred_payment_method = models.CharField(
+        max_length=20,
+        choices=[("cash", "Cash on Hand"), ("gcash", "Direct GCash")],
+        default="cash",
+    )
+    id_type = models.CharField(max_length=50, blank=True, null=True)
+    id_number = models.CharField(max_length=100, blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)
+    status = models.CharField(
+        max_length=30, choices=STATUS_CHOICES, default="submitted", db_index=True
+    )
+    duplicate_flag = models.BooleanField(
+        default=False, db_index=True, help_text="Flagged if phone or name matches existing customer or prospect"
+    )
+    duplicate_notes = models.TextField(blank=True, null=True)
+    duplicate_of = models.ForeignKey(
+        "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="duplicates"
+    )
+    opened_by_staff_at = models.DateTimeField(null=True, blank=True)
+    opened_by_staff_user = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="opened_prospects"
+    )
+    decline_reason = models.TextField(blank=True, null=True)
+    converted_customer = models.ForeignKey(
+        Customer,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="prospect_source",
+    )
+    is_test_data = models.BooleanField(default=False, help_text="Flags test prospect records")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        permissions = [
+            ("submit_prospect", "Can submit prospect referrals"),
+            ("view_own_referrals", "Can view own referral leads and progress"),
+            ("manage_prospects", "Can view and manage prospect inbox"),
+            ("run_checklist", "Can execute onboarding policy checklist"),
+            ("create_customer", "Can convert prospect and create customer"),
+            ("change_agent", "Can change customer assigned sales agent"),
+            ("mark_payout_paid", "Can approve and mark agent payout batches as paid"),
+            ("manage_message_templates", "Can configure SMS and notification templates"),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.phone:
+            from billing.validators import normalize_ph_phone
+            try:
+                self.phone = normalize_ph_phone(self.phone, required=False) or self.phone
+            except Exception:
+                pass
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.full_name} ({self.get_status_display()})"
+
+
+class ChecklistConfirmation(models.Model):
+    METHOD_CHOICES = (
+        ("in_person", "In-Person (Walk-In)"),
+        ("phone", "Phone Call"),
+        ("chat", "Online Chat"),
+    )
+    OUTCOME_CHOICES = (
+        ("agreed", "Agreed (Proceed)"),
+        ("declined", "Declined"),
+    )
+
+    prospect = models.ForeignKey(
+        Prospect,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="checklist_confirmations",
+    )
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="checklist_confirmations",
+    )
+    confirmed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="confirmed_checklists",
+    )
+    method = models.CharField(max_length=20, choices=METHOD_CHOICES, default="in_person")
+    outcome = models.CharField(max_length=20, choices=OUTCOME_CHOICES, default="agreed")
+    decline_reason = models.TextField(blank=True, null=True)
+    policy_snapshot = models.JSONField(
+        default=dict, blank=True, help_text="Snapshot of policies presented to the applicant"
+    )
+
+    # 6 Standard Policy Check Items (all 6 must be True for 'agreed')
+    item_free_install = models.BooleanField(default=False, help_text="Free installation with standard materials")
+    item_specific_plan = models.BooleanField(default=False, help_text="Specific plan speed, monthly fee, and billing cycle agreed")
+    item_no_lockin = models.BooleanField(default=False, help_text="No 24-month lock-in period")
+    item_staggered_lock = models.BooleanField(default=False, help_text="60-day initial lock on staggered/partial payments")
+    item_same_day_repair = models.BooleanField(default=False, help_text="Same-day repair SLA commitment for reports before 2 PM")
+    item_rebates_24h = models.BooleanField(default=False, help_text="Automated billing rebates for continuous outages exceeding 24 hours")
+
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        target = self.prospect.full_name if self.prospect else (self.customer.full_name if self.customer else "Unknown")
+        return f"Checklist for {target} ({self.get_outcome_display()}) by {self.confirmed_by}"
+
+
+class AgentPayoutBatch(models.Model):
+    STATUS_CHOICES = (
+        ("pending", "Pending Approval"),
+        ("paid", "Paid"),
+    )
+
+    batch_number = models.CharField(max_length=50, unique=True)
+    agent = models.ForeignKey(
+        Agent, on_delete=models.CASCADE, related_name="payout_batches"
+    )
+    amount = models.DecimalField(
+        max_digits=10, decimal_places=2, help_text="Total payout amount (e.g. 2,500.00)"
+    )
+    customer_count = models.PositiveIntegerField(
+        default=5, help_text="Number of qualified customers in batch (multiples of 5)"
+    )
+    customers = models.ManyToManyField(
+        Customer, related_name="payout_batches", blank=True
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    paid_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="approved_payout_batches",
+    )
+    paid_at = models.DateTimeField(null=True, blank=True)
+    reference_no = models.CharField(
+        max_length=100, blank=True, null=True, help_text="e.g. GCash Ref # or Bank Check #"
+    )
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Batch {self.batch_number} - {self.agent.name} (₱{self.amount:,}) [{self.get_status_display()}]"
+
+
+class AgentQualificationEvent(models.Model):
+    STATUS_CHOICES = (
+        ("qualified", "Qualified"),
+        ("revoked", "Revoked (Payment Rollback)"),
+        ("paid_out", "Paid Out"),
+    )
+
+    customer = models.ForeignKey(
+        Customer, on_delete=models.CASCADE, related_name="qualification_events"
+    )
+    agent = models.ForeignKey(
+        Agent, on_delete=models.CASCADE, related_name="qualification_events"
+    )
+    payment = models.ForeignKey(
+        "Payment",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="qualifying_events",
+        help_text="The payment that triggered qualification",
+    )
+    qualified_at = models.DateTimeField(auto_now_add=True)
+    qualifying_amount = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("500.00")
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="qualified")
+    revocation_reason = models.TextField(blank=True, null=True)
+    payout_batch = models.ForeignKey(
+        AgentPayoutBatch,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="events",
+    )
+    is_test_data = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["-qualified_at"]
+
+    def __str__(self):
+        return f"{self.agent.name} qualified on {self.customer.full_name} (₱{self.qualifying_amount}) [{self.get_status_display()}]"
+
+
+class IncentiveSetting(models.Model):
+    incentive_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("500.00"),
+        help_text="Incentive PHP per qualified customer (default 500.00)",
+    )
+    batch_size = models.PositiveIntegerField(
+        default=5,
+        help_text="Number of qualified customers required per payout batch (default 5)",
+    )
+    lock_days = models.PositiveIntegerField(
+        default=60,
+        help_text="Days staggered lock lasts from installation approval (default 60)",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Incentive Setting"
+        verbose_name_plural = "Incentive Settings"
+
+    def __str__(self):
+        return f"Incentive: ₱{self.incentive_amount} / cust | Batch: {self.batch_size} | Lock: {self.lock_days}d"
+
+    @classmethod
+    def get_settings(cls):
+        obj, _ = cls.objects.get_or_create(
+            id=1,
+            defaults={
+                "incentive_amount": Decimal("500.00"),
+                "batch_size": 5,
+                "lock_days": 60,
+            },
+        )
+        return obj
+

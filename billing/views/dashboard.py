@@ -64,8 +64,8 @@ def dashboard_view(request):
 
     if not stats:
         # KPIs
-        total_customers = Customer.objects.count()
-        new_customers_qs = Customer.objects.filter(
+        total_customers = Customer.objects.exclude(status="closed_not_installed").count()
+        new_customers_qs = Customer.objects.exclude(status="closed_not_installed").filter(
             created_at__month=today.month, created_at__year=today.year
         )
         new_customers_this_month = new_customers_qs.count()
@@ -159,6 +159,7 @@ def dashboard_view(request):
         # Collection Rate
         distinct_payers_this_month = (
             payments.filter(created_at__month=today.month, created_at__year=today.year)
+            .exclude(customer__status="closed_not_installed")
             .values("customer")
             .distinct()
             .count()

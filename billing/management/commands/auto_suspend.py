@@ -12,7 +12,9 @@ class Command(BaseCommand):
         now = timezone.now()
 
         # Fetch all customers where expiration date is in the past and status is active
-        due_customers = Customer.objects.filter(expires_at__lte=now, status="active")
+        due_customers = Customer.objects.filter(
+            expires_at__lte=now, status="active", installation_status="installed"
+        ).exclude(status__in=["pending", "closed_not_installed"])
 
         suspended_count = 0
         renewed_count = 0
@@ -134,7 +136,9 @@ class Command(BaseCommand):
         # -------------------------------------------------------------
         rogue_customers = [
             c
-            for c in Customer.objects.filter(status="active", is_verified=False)
+            for c in Customer.objects.filter(
+                status="active", is_verified=False, installation_status="installed"
+            ).exclude(status__in=["pending", "closed_not_installed"])
             if c.is_suspicious
         ]
 

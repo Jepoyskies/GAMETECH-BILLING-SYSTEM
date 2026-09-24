@@ -107,3 +107,40 @@ def is_temp_password_expired(temp_created_at, max_days=7):
     if not temp_created_at:
         return False
     return timezone.now() > temp_created_at + timedelta(days=max_days)
+
+
+def normalize_ph_phone(phone, required=True):
+    """
+    Validates and normalizes Philippine mobile numbers to the canonical 11-digit format: 09XXXXXXXXX.
+    Accepts:
+    - 09XXXXXXXXX (11 digits)
+    - +639XXXXXXXXX (13 chars)
+    - 639XXXXXXXXX (12 digits)
+    - 9XXXXXXXXX (10 digits)
+    Returns:
+    - Canonical string '09XXXXXXXXX'
+    Raises:
+    - ValidationError if format is invalid.
+    If required=False and input is empty/None, returns None.
+    """
+    if not phone:
+        if required:
+            raise ValidationError("Mobile phone number is required.")
+        return None
+
+    cleaned = re.sub(r"[\s\-\(\)\.]", "", str(phone))
+
+    if cleaned.startswith("+63"):
+        cleaned = "0" + cleaned[3:]
+    elif cleaned.startswith("63"):
+        cleaned = "0" + cleaned[2:]
+    elif cleaned.startswith("9") and len(cleaned) == 10:
+        cleaned = "0" + cleaned
+
+    if not re.match(r"^09\d{9}$", cleaned):
+        raise ValidationError(
+            f"Invalid Philippine mobile number '{phone}'. Expected format: 09XXXXXXXXX or +639XXXXXXXXX."
+        )
+
+    return cleaned
+
