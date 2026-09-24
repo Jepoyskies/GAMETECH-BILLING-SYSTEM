@@ -4,12 +4,24 @@ import routeros_api
 from network_manager.models import MikrotikDevice
 
 from django.core.cache import cache
+from django.conf import settings
+from .dry_run import DryRunConnectionPool
 
 logger = logging.getLogger(__name__)
 
 class MikrotikBase:
-        def __init__(self, device: MikrotikDevice):
+        def __init__(self, device: MikrotikDevice, dry_run: bool = None):
             self.device = device
+            if dry_run is None:
+                dry_run = getattr(settings, "ROUTER_DRY_RUN", False)
+            self.is_dry_run = dry_run
+
+            if self.is_dry_run:
+                dev_name = getattr(device, "device_name", str(getattr(device, "ip_address", "DryRunRouter")))
+                logger.info(f"[ROUTER_DRY_RUN] Stubbed MikrotikAPI initialized for {dev_name}")
+                self.connection = DryRunConnectionPool(dev_name)
+                self._connection_failed = False
+                return
 
             # Convert port to integer, fallback to standard API port 8728 if missing
             try:
@@ -39,6 +51,9 @@ class MikrotikBase:
 
         def _get_api(self):
             """Handles connection securely with timeouts and returns the API instance, with automatic fallback for older RouterOS versions."""
+            if getattr(self, "is_dry_run", False) or getattr(settings, "ROUTER_DRY_RUN", False):
+                return self.connection.get_api()
+
             dev_id = getattr(self.device, "id", None) or self.device.ip_address
             cache_key = f"router_unreachable_{dev_id}"
             if cache.get(cache_key):

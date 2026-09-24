@@ -1,6 +1,8 @@
 import logging
 import socket
 import routeros_api
+from django.conf import settings
+from network_manager.services.dry_run import DryRunConnectionPool
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +24,10 @@ class MikrotikAPI:
 
     def _get_api_connection(self):
         """Helper to get a fresh connection to the router."""
+        if getattr(settings, "ROUTER_DRY_RUN", False):
+            pool = DryRunConnectionPool(self.ip_address)
+            return pool, pool.get_api()
+
         old_timeout = socket.getdefaulttimeout()
         socket.setdefaulttimeout(5.0)
         try:

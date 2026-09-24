@@ -36,6 +36,13 @@ CSRF_TRUSTED_ORIGINS = ["http://143.198.207.144", "https://143.198.207.144"]
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "http")
 
+# Router Dry Run Guard: Stubs all MikroTik API calls to protect live hardware
+import sys
+ROUTER_DRY_RUN = env.bool(
+    "ROUTER_DRY_RUN",
+    default=("test" in sys.argv or any("pytest" in str(arg) for arg in sys.argv)),
+)
+
 # Application definition
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
