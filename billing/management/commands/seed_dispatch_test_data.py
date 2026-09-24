@@ -103,11 +103,11 @@ class Command(BaseCommand):
             tech_admin, _ = SystemAdmin.objects.get_or_create(
                 username=username,
                 defaults={
-                    "user": user,
                     "full_name": f"{full_name} {TEST_TAG}",
                     "email": f"{username}@gametech.local",
                     "role": "Technician",
                     "status": "Active",
+                    "password_hash": "dummy_hash_for_test",
                 },
             )
             created_techs.append(tech_admin)
