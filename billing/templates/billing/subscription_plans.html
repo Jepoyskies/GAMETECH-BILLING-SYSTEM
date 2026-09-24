@@ -6,137 +6,416 @@
 {% block extra_css %}
 <style>
 /* =========================================================
-   SUBSCRIPTIONS PAGE — Premium Redesign
+   CUSTOMER SUBSCRIPTIONS — Design System Harmonization
+   Section Accent: Blue (#3b82f6)
    ========================================================= */
-.subs-page-wrap { padding: 1.5rem 1.75rem; }
+:root {
+  --section-accent: #3b82f6;
+  --color-primary: #3533cd;
+}
 
-/* ── Header ── */
-.subs-header {
-  display: flex; align-items: center;
-  justify-content: space-between; flex-wrap: wrap; gap: 1rem;
-  margin-bottom: 1.5rem;
+.subs-page-wrap {
+  padding: 1.5rem 1.75rem;
 }
-.subs-header-left { display: flex; align-items: center; gap: 0.9rem; }
-.subs-icon-wrap {
-  width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
-  background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
-  display: flex; align-items: center; justify-content: center;
-  color: #fff; font-size: 1.15rem;
-  box-shadow: 0 4px 14px rgba(53,51,205,0.35);
+
+@media (max-width: 768px) {
+  .subs-page-wrap {
+    padding: 1rem 0.75rem;
+  }
 }
-.subs-header-left h1 {
-  margin: 0; font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em;
-  color: var(--text-primary); line-height: 1.2;
-}
-.subs-header-left p { margin: 0; font-size: 0.79rem; color: var(--text-muted); font-weight: 500; }
+
+/* ── Live Sync Badge ── */
 .badge-live-sync {
-  display: inline-flex; align-items: center; gap: 0.45rem;
-  background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3);
-  color: #10b981; border-radius: 20px; padding: 0.38rem 1rem;
-  font-size: 0.78rem; font-weight: 600; white-space: nowrap; flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  color: var(--text-muted);
+  border-radius: 20px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.76rem;
+  font-weight: 500;
+  white-space: nowrap;
 }
 .badge-live-sync .live-dot {
-  width: 7px; height: 7px; border-radius: 50%; background: #10b981;
-  animation: livePulse 1.6s infinite;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+  animation: livePulse 1.8s infinite ease-in-out;
 }
 @keyframes livePulse {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.45; transform: scale(0.65); }
+  50% { opacity: 0.4; transform: scale(0.7); }
 }
 
-/* ── Filter Bar ── */
-.subs-filter-bar {
-  display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
-  margin-bottom: 1.25rem;
+/* ── Responsive KPI Grid (Equal-width, min 150px, wraps to 2 col on mobile) ── */
+.subs-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  width: 100%;
+}
+@media (max-width: 576px) {
+  .subs-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.subs-kpi {
+  background: var(--surface-card) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  position: relative;
+  overflow: hidden;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+}
+.subs-kpi:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--section-accent) 40%, transparent) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+.subs-kpi.active-filter {
+  border-color: var(--kpi-accent, var(--section-accent)) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--kpi-accent, var(--section-accent)) 25%, transparent) !important;
+  background: var(--surface-subtle) !important;
+}
+
+/* Icon tile tinted ONLY by status — no bottom bars */
+.subs-kpi-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  margin-bottom: 0.65rem;
+  background: var(--kpi-icon-bg, rgba(59, 130, 246, 0.1));
+  color: var(--kpi-icon-color, #3b82f6);
+  border: 1px solid var(--kpi-icon-border, rgba(59, 130, 246, 0.2));
+  flex-shrink: 0;
+}
+.subs-kpi-val {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 0.2rem;
+}
+.subs-kpi-lbl {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 0.2rem;
+}
+.subs-kpi-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.25;
+}
+
+/* ── Table Card & Toolbar ── */
+.subs-table-card {
+  background: var(--surface-card) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: var(--shadow-card, 0 4px 18px rgba(0,0,0,0.06));
+}
+.subs-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.subs-table-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.subs-table-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.subs-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
 }
 .subs-search-wrap {
-  position: relative; flex: 1 1 200px; min-width: 160px; max-width: 320px;
+  position: relative;
+  flex: 1 1 320px;
+  min-width: 320px;
 }
 .subs-search-wrap .sico {
-  position: absolute; left: 0.75rem; top: 50%;
-  transform: translateY(-50%); color: var(--text-muted);
-  font-size: 0.78rem; pointer-events: none;
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  pointer-events: none;
 }
 .subs-search-wrap input {
-  width: 100%; padding: 0.47rem 0.85rem 0.47rem 2.1rem;
-  background: var(--card-bg); border: 1px solid var(--border-color);
-  border-radius: 8px; color: var(--text-primary);
-  font-size: 0.83rem; transition: border-color 0.15s;
+  width: 100%;
+  height: 40px;
+  padding: 0 1rem 0 2.3rem;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  transition: all 0.15s ease;
 }
-.subs-search-wrap input::placeholder { color: var(--text-muted); }
-.subs-search-wrap input:focus { outline: none; border-color: var(--theme-primary); box-shadow: 0 0 0 3px rgba(53,51,205,0.1); }
+.subs-search-wrap input:focus {
+  outline: none;
+  border-color: var(--section-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--section-accent) 20%, transparent);
+}
 .subs-sel {
-  background: var(--card-bg); border: 1px solid var(--border-color);
-  border-radius: 8px; color: var(--text-primary); padding: 0.47rem 0.85rem;
-  font-size: 0.83rem; cursor: pointer; flex: 0 0 auto; min-width: 130px;
-  transition: border-color 0.15s;
+  height: 40px;
+  padding: 0 2.2rem 0 0.85rem;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-width: 150px;
 }
-.subs-sel:focus { outline: none; border-color: var(--theme-primary); box-shadow: 0 0 0 3px rgba(53,51,205,0.1); }
+.subs-sel:focus {
+  outline: none;
+  border-color: var(--section-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--section-accent) 20%, transparent);
+}
 .btn-subs-reset {
-  background: var(--card-bg); border: 1px solid var(--border-color);
-  color: var(--text-muted); border-radius: 8px;
-  padding: 0.47rem 0.9rem; font-size: 0.82rem;
-  cursor: pointer; font-weight: 500; white-space: nowrap;
-  display: inline-flex; align-items: center; gap: 0.35rem;
-  transition: all 0.15s;
+  height: 40px;
+  padding: 0 1rem;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
-.btn-subs-reset:hover { border-color: var(--theme-primary); color: var(--text-primary); }
+.btn-subs-reset:hover {
+  color: var(--text-primary);
+  border-color: var(--section-accent);
+}
+
+/* ── Table Styling (16-20px vertical padding, 24px at edges) ── */
+.subs-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.subs-th {
+  padding: 0.75rem 12px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  background: var(--surface-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.subs-th a {
+  color: inherit;
+  text-decoration: none;
+}
+.subs-th a:hover {
+  color: var(--text-primary);
+}
+.subs-td {
+  padding: 18px 12px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 14px;
+}
+.subs-th:first-child, .subs-td:first-child {
+  padding-left: 24px;
+  width: 48px;
+  text-align: center;
+}
+.subs-th:last-child, .subs-td:last-child {
+  padding-right: 24px;
+  text-align: right;
+}
+.subs-row {
+  transition: background-color 0.12s ease;
+}
+.subs-row:hover td {
+  background-color: var(--surface-subtle);
+}
+
+/* ── Action Buttons ── */
+.btn-pay-outline {
+  height: 32px;
+  padding: 0 0.85rem;
+  border: 1px solid var(--color-primary, #3533cd);
+  color: var(--color-primary, #3533cd) !important;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  text-decoration: none !important;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.btn-pay-outline:hover {
+  background: var(--color-primary, #3533cd);
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+.subs-more-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-subtle);
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.subs-more-btn:hover {
+  border-color: var(--section-accent);
+  color: var(--text-primary);
+  background: var(--surface-hover);
+}
 
 /* ── Loading state ── */
 .subs-loading {
-  display: flex; align-items: center; justify-content: center;
-  gap: 0.75rem; padding: 4rem 0;
-  color: var(--text-muted); font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+@media (max-width: 768px) {
+  .subs-toolbar {
+    padding: 1rem;
+    gap: 12px;
+  }
+  .subs-search-wrap {
+    min-width: 100%;
+  }
+  .subs-sel {
+    flex: 1 1 calc(50% - 6px);
+    min-width: unset;
+  }
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="subs-page-wrap">
+<div class="subs-page-wrap" style="--section-accent: #3b82f6;">
 
-  <!-- Header -->
-  <div class="subs-header">
-    <div class="subs-header-left">
-      <div class="subs-icon-wrap"><i class="fas fa-users"></i></div>
+  <!-- 1. Page Header -->
+  <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <div class="gt-header-icon" style="background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.25); color: #3b82f6;">
+        <i class="fas fa-users"></i>
+      </div>
       <div>
-        <h1>Customer Subscriptions</h1>
-        <p>Live status of all subscriber accounts and Mikrotik connectivity</p>
+        <h1 class="gt-header-title">Customer Subscriptions</h1>
+        <p class="gt-header-sub">Live status of all subscriber accounts and Mikrotik connectivity</p>
       </div>
     </div>
-    <div class="badge-live-sync">
-      <span class="live-dot"></span> Live Router Sync
+    <div class="d-flex align-items-center gap-2">
+      <div class="badge-live-sync">
+        <span class="live-dot"></span> Live Router Sync
+      </div>
     </div>
   </div>
 
-  <!-- Filter Bar -->
-  <div class="subs-filter-bar">
-    <div class="subs-search-wrap">
-      <i class="fas fa-search sico"></i>
-      <input type="text" id="subs-search" placeholder="Search name, username, address…">
-    </div>
-    <select class="subs-sel" id="subs-status">
-      <option value="">All Statuses</option>
-      <option value="active">Active</option>
-      <option value="expiring">Expiring Soon</option>
-      <option value="paid_offline">Paid but Offline</option>
-      <option value="expired">Expired</option>
-      <option value="inactive">Inactive</option>
-    </select>
-    <select class="subs-sel" id="subs-connection">
-      <option value="">All Connections</option>
-      <option value="Connected">Connected</option>
-      <option value="Not Connected">Offline</option>
-    </select>
-    <button type="button" class="btn-subs-reset d-none" id="btn-subs-reset">
-      <i class="fas fa-rotate-left"></i> Reset
-    </button>
-  </div>
-
-  <!-- Async Data Container -->
-  <div id="async-data-container">
-    <div class="subs-loading">
+  <!-- 2. Async KPI Container -->
+  <div id="async-kpi-container">
+    <div class="subs-loading" style="padding: 2rem 0;">
       <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-      <span>Loading subscriber data &amp; Mikrotik status…</span>
+      <span>Loading subscriber metrics…</span>
+    </div>
+  </div>
+
+  <!-- 3. Table Card -->
+  <div class="subs-table-card">
+    <!-- Card Header -->
+    <div class="subs-table-header">
+      <div class="subs-table-title">
+        <i class="fas fa-list-ul" style="color: var(--section-accent);"></i>
+        <span>Subscriptions List</span>
+      </div>
+      <div class="subs-table-meta" id="subs-count-display">Loading count…</div>
+    </div>
+
+    <!-- Toolbar (16px gaps, all 40px tall, search wide >= 320px) -->
+    <div class="subs-toolbar">
+      <div class="subs-search-wrap">
+        <i class="fas fa-search sico"></i>
+        <input type="text" id="subs-search" placeholder="Search name, username, address…">
+      </div>
+      <select class="subs-sel" id="subs-status">
+        <option value="">All Statuses</option>
+        <option value="active">Active</option>
+        <option value="expiring">Expiring Soon</option>
+        <option value="paid_offline">Paid but Offline</option>
+        <option value="expired">Expired</option>
+        <option value="inactive">Inactive</option>
+      </select>
+      <select class="subs-sel" id="subs-connection">
+        <option value="">All Connections</option>
+        <option value="Connected">Connected</option>
+        <option value="Not Connected">Offline</option>
+      </select>
+      <button type="button" class="btn-subs-reset d-none" id="btn-subs-reset">
+        <i class="fas fa-rotate-left"></i> Reset
+      </button>
+    </div>
+
+    <!-- Async Table Container -->
+    <div id="async-table-container">
+      <div class="subs-loading">
+        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+        <span>Loading subscriber data &amp; Mikrotik status…</span>
+      </div>
     </div>
   </div>
 
@@ -163,15 +442,15 @@
   <!-- Bulk SMS Modal -->
   <div class="modal fade" id="bulkSmsModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content" style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;">
+      <div class="modal-content" style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:14px;">
         <div class="modal-header border-bottom-0">
           <h5 class="modal-title" style="font-size:1rem;font-weight:700;"><i class="fas fa-sms text-primary me-2"></i>Send Bulk SMS</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
           <label class="form-label text-muted" style="font-size:0.8rem;font-weight:600;">Message Content</label>
           <textarea id="bulkSmsMessage" class="form-control" rows="4"
-                    style="background:rgba(0,0,0,0.2);color:var(--text-primary);border:1px solid var(--border-color);border-radius:8px;"
+                    style="background:var(--surface-subtle);color:var(--text-primary);border:1px solid var(--border-subtle);border-radius:8px;"
                     placeholder="Type your SMS message here..."></textarea>
         </div>
         <div class="modal-footer border-top-0">
@@ -185,22 +464,22 @@
   <!-- Bulk Email Modal -->
   <div class="modal fade" id="bulkEmailModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content" style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;">
+      <div class="modal-content" style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:14px;">
         <div class="modal-header border-bottom-0">
           <h5 class="modal-title" style="font-size:1rem;font-weight:700;"><i class="fas fa-envelope text-info me-2"></i>Send Bulk Email</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
           <div class="mb-3">
             <label class="form-label text-muted" style="font-size:0.8rem;font-weight:600;">Subject</label>
             <input type="text" id="bulkEmailSubject" class="form-control"
-                   style="background:rgba(0,0,0,0.2);color:var(--text-primary);border:1px solid var(--border-color);border-radius:8px;"
+                   style="background:var(--surface-subtle);color:var(--text-primary);border:1px solid var(--border-subtle);border-radius:8px;"
                    placeholder="Important Notice">
           </div>
           <div>
             <label class="form-label text-muted" style="font-size:0.8rem;font-weight:600;">Message Content</label>
             <textarea id="bulkEmailMessage" class="form-control" rows="6"
-                      style="background:rgba(0,0,0,0.2);color:var(--text-primary);border:1px solid var(--border-color);border-radius:8px;"
+                      style="background:var(--surface-subtle);color:var(--text-primary);border:1px solid var(--border-subtle);border-radius:8px;"
                       placeholder="Type your email message here..."></textarea>
           </div>
         </div>
@@ -243,19 +522,46 @@ function buildQS() {
 }
 
 function loadSubs(qs) {
-  const c = document.getElementById('async-data-container');
-  c.innerHTML = `<div class="subs-loading">
-    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-    <span>Loading…</span>
-  </div>`;
+  const tableContainer = document.getElementById('async-table-container');
+  const kpiContainer = document.getElementById('async-kpi-container');
+  if (tableContainer) {
+    tableContainer.style.opacity = '0.5';
+  }
   fetch('/subscriptions/api/data/' + (qs ? '?' + qs : ''))
     .then(r => { if (!r.ok) throw 0; return r.text(); })
-    .then(html => { c.innerHTML = html; initCheckboxes(); })
+    .then(html => {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+
+      const newKpis = doc.getElementById('kpi-data-source');
+      if (newKpis && kpiContainer) {
+        kpiContainer.innerHTML = newKpis.innerHTML;
+      }
+
+      const newCount = doc.getElementById('meta-count-source');
+      const countDisplay = document.getElementById('subs-count-display');
+      if (newCount && countDisplay) {
+        countDisplay.textContent = newCount.textContent;
+      }
+
+      const newTable = doc.getElementById('table-data-source');
+      if (newTable && tableContainer) {
+        tableContainer.innerHTML = newTable.innerHTML;
+        tableContainer.style.opacity = '1';
+      } else if (document.getElementById('async-data-container')) {
+        document.getElementById('async-data-container').innerHTML = html;
+      }
+      initCheckboxes();
+    })
     .catch(() => {
-      c.innerHTML = `<div style="text-align:center;padding:3rem 0;color:var(--text-muted);">
-        <i class="fas fa-exclamation-triangle" style="font-size:2rem;color:#ef4444;display:block;margin-bottom:0.75rem;"></i>
-        Error loading data. Please refresh the page.
-      </div>`;
+      if (tableContainer) {
+        tableContainer.style.opacity = '1';
+        tableContainer.innerHTML = `<div class="gt-empty-state py-5 text-center">
+          <div class="gt-empty-icon text-danger mx-auto mb-3"><i class="fas fa-exclamation-triangle"></i></div>
+          <h6 class="fw-bold mb-1">Error Loading Subscriptions</h6>
+          <p class="text-muted small">Please refresh or check server connection.</p>
+        </div>`;
+      }
     });
 }
 
@@ -265,9 +571,31 @@ function onFilterChange() {
     const qs = buildQS();
     history.replaceState(null, '', qs ? '?' + qs : window.location.pathname);
     // Show/hide reset button
-    document.getElementById('btn-subs-reset').classList.toggle('d-none', !qs);
+    const hasFilter = !!(document.getElementById('subs-search')?.value || document.getElementById('subs-status')?.value || document.getElementById('subs-connection')?.value);
+    document.getElementById('btn-subs-reset')?.classList.toggle('d-none', !hasFilter);
     loadSubs(qs);
   }, 380);
+}
+
+// KPI card click filter handler
+function subsSetFilter(key, val) {
+  const stSelect = document.getElementById('subs-status');
+  const cnSelect = document.getElementById('subs-connection');
+
+  if (key === 'status') {
+    if (stSelect.value === val) {
+      stSelect.value = '';
+    } else {
+      stSelect.value = val;
+    }
+  } else if (key === 'connection') {
+    if (cnSelect.value === val) {
+      cnSelect.value = '';
+    } else {
+      cnSelect.value = val;
+    }
+  }
+  onFilterChange();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -287,8 +615,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Show reset if filters already active
-  if (window.location.search) {
-    document.getElementById('btn-subs-reset').classList.remove('d-none');
+  const initialParams = new URLSearchParams(window.location.search);
+  if (initialParams.get('search') || initialParams.get('status') || initialParams.get('connection')) {
+    document.getElementById('btn-subs-reset')?.classList.remove('d-none');
   }
 });
 
