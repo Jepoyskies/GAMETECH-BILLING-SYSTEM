@@ -23,7 +23,9 @@ class Command(BaseCommand):
             )
             return
 
-        semaphore_apikey = "a1be64e85146a946d40aeb1677d37a48"
+        from django.conf import settings
+        semaphore_apikey = getattr(settings, "SEMAPHORE_API_KEY", "")
+        sender_name = getattr(settings, "SEMAPHORE_SENDER_NAME", "SEMAPHORE")
         count = 0
 
         for customer in target_customers:
@@ -34,7 +36,7 @@ class Command(BaseCommand):
                 "apikey": semaphore_apikey,
                 "number": customer.phone,
                 "message": message,
-                "sendername": "SEMAPHORE",  # Change if Gametech has a registered sender name
+                "sendername": sender_name,
             }
 
             try:

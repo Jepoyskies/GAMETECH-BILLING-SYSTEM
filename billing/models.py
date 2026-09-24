@@ -273,7 +273,9 @@ class Customer(models.Model):
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default="active", db_index=True
     )
-    portal_password = models.CharField(max_length=50, blank=True, null=True)
+    portal_password = models.CharField(max_length=50, blank=True, null=True, help_text="Legacy field - blanked after migration to portal_password_hash")
+    portal_password_hash = models.CharField(max_length=255, blank=True, null=True, help_text="PBKDF2/Argon2 secure password hash for customer portal")
+    temp_password_created_at = models.DateTimeField(null=True, blank=True, help_text="Timestamp when temporary password was generated (valid 7 days)")
     must_change_password = models.BooleanField(default=True)
 
     # Audit & Testing
@@ -394,9 +396,43 @@ class Customer(models.Model):
     def get_status_display_badge(self):
         return f'<span class="badge badge-{self.status}">{self.get_status_display()}</span>'
 
+    def set_portal_password(self, raw_password):
+        """Hashes raw_password and stores only in portal_password_hash; blanks portal_password."""
+        from django.contrib.auth.hashers import make_password
+        self.portal_password_hash = make_password(raw_password)
+        self.portal_password = None
+
+    def check_portal_password(self, raw_password):
+        """Verifies raw_password against portal_password_hash."""
+        from django.contrib.auth.hashers import check_password
+        if not self.portal_password_hash:
+            # Fallback for unmigrated record
+            if self.portal_password:
+                return self.portal_password == raw_password
+            return False
+        return check_password(raw_password, self.portal_password_hash)
+
+    def is_temp_password_expired(self, max_days=7):
+        """Returns True if temporary password is older than max_days (default 7 days)."""
+        if not self.temp_password_created_at:
+            return False
+        from datetime import timedelta
+        return timezone.now() > self.temp_password_created_at + timedelta(days=max_days)
+
     def save(self, *args, **kwargs):
-        if not self.portal_password:
-            self.portal_password = generate_portal_password()
+        from django.contrib.auth.hashers import make_password
+        # If legacy plaintext password exists and hash does not, hash it immediately
+        if self.portal_password and not self.portal_password_hash:
+            self.portal_password_hash = make_password(self.portal_password)
+            self.portal_password = None
+        elif not self.portal_password_hash and not self.portal_password:
+            from billing.validators import generate_temp_password
+            temp_pw = generate_temp_password()
+            self.portal_password_hash = make_password(temp_pw)
+            self.temp_password_created_at = timezone.now()
+            self.must_change_password = True
+            self.portal_password = None
+
         if self.status == "suspended" and not getattr(self, "_preserve_expiration", False):
             self.expires_at = None
             if "update_fields" in kwargs and kwargs["update_fields"] is not None:

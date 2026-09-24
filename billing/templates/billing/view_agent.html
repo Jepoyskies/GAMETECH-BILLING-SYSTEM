@@ -34,6 +34,26 @@
 
 {% block content %}
 <main class="container py-4">
+    {% if temp_credentials %}
+    <div class="alert alert-warning border-2 d-flex align-items-center justify-content-between p-3 mb-4 shadow-sm rounded-3">
+        <div class="d-flex align-items-center gap-3">
+            <div class="fs-2 text-warning"><i class="fas fa-shield-halved"></i></div>
+            <div>
+                <h5 class="alert-heading mb-1 fw-bold text-dark">Agent Temporary Credentials (Shown ONCE)</h5>
+                <p class="mb-0 text-dark" style="font-size: 0.95rem;">
+                    Username: <strong class="font-monospace text-primary">{{ temp_credentials.username }}</strong> &nbsp;|&nbsp;
+                    Temp Password: <strong class="font-monospace text-danger bg-white px-2 py-1 border rounded">{{ temp_credentials.temp_password }}</strong>
+                    <span class="badge bg-secondary ms-2">Valid 7 Days</span>
+                </p>
+                <small class="text-muted">This temporary password is never logged and will not be displayed again. Please relay it to the agent securely.</small>
+            </div>
+        </div>
+        <button type="button" class="btn btn-outline-dark btn-sm font-monospace fw-bold" onclick="navigator.clipboard.writeText('Username: {{ temp_credentials.username|escapejs }}\nPassword: {{ temp_credentials.temp_password|escapejs }}'); alert('Credentials copied to clipboard!');">
+            <i class="far fa-copy me-1"></i>Copy Credentials
+        </button>
+    </div>
+    {% endif %}
+
     {% if agent %}
     <div class="row g-3 mb-4">
         <div class="col-lg-6">

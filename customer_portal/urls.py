@@ -6,7 +6,7 @@ app_name = 'customer_portal'
 from django.views.generic import RedirectView
 
 urlpatterns = [
-    path('login/', RedirectView.as_view(url='/login/', permanent=False), name='portal_login'),
+    path('login/', views.portal_login, name='portal_login'),
     path('dashboard/', views.portal_dashboard, name='portal_dashboard'),
     path('force-change-password/', views.force_change_password, name='force_change_password'),
     path('statement/', views.portal_statement_view, name='portal_statement'),

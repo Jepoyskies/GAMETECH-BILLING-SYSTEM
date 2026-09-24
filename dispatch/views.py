@@ -1526,18 +1526,42 @@ def _send_installation_welcome_sms(ticket):
         return False, "No customer or phone linked to this ticket."
 
     login_id = customer.pppoe_username or customer.account_no or customer.phone
-    portal_pw = customer.portal_password or "(see dispatcher)"
+    from billing.validators import generate_temp_password
+    from django.utils import timezone
+    from billing.models import SmsLog
+
+    temp_pw = generate_temp_password(10)
+    customer.set_portal_password(temp_pw)
+    customer.must_change_password = True
+    customer.temp_password_created_at = timezone.now()
+    customer.save(update_fields=[
+        "portal_password_hash",
+        "portal_password",
+        "must_change_password",
+        "temp_password_created_at",
+    ])
 
     msg = (
         f"Welcome to Gametech Unli Fiber! "
         f"For easy payment, billing statement, etc, access your portal online account.\n\n"
         f"Your account info:\n"
         f"Login: {login_id}\n"
-        f"Password: {portal_pw}\n"
+        f"Password: {temp_pw}\n"
         f"Access site: type gametech.com.ph in your browser"
     )
+    masked_msg = msg.replace(temp_pw, "[REDACTED]")
+
     from billing.views import send_semaphore_sms
-    _, success = send_semaphore_sms(customer.phone, msg)
+    response_text, success = send_semaphore_sms(customer.phone, msg)
+    try:
+        SmsLog.objects.create(
+            phone=customer.phone,
+            message=masked_msg,
+            status="Sent" if success else "Failed",
+            response=response_text[:255] if response_text else "",
+        )
+    except Exception:
+        pass
     return success, msg
 
 

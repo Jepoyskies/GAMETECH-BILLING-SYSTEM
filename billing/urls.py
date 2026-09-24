@@ -32,6 +32,11 @@ urlpatterns = [
         "customers/view/<int:customer_id>/", views.view_customer, name="view_customer"
     ),
     path(
+        "customers/<int:customer_id>/reset-portal-password/",
+        views.reset_customer_portal_password,
+        name="reset_customer_portal_password",
+    ),
+    path(
         "customers/<int:customer_id>/mark-installed/",
         views.mark_customer_installed,
         name="mark_customer_installed",

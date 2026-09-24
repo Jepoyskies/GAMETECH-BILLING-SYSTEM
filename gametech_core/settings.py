@@ -29,8 +29,21 @@ SECRET_KEY = "django-insecure-&#1lotwp@bi@r%8e25pr-41x=pux%otc3&u9jxx!r5=!i0y^aq
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env("DEBUG")
 
-ALLOWED_HOSTS = ["*"]
-CSRF_TRUSTED_ORIGINS = ["http://143.198.207.144", "https://143.198.207.144"]
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["*"])
+CSRF_TRUSTED_ORIGINS = env.list(
+    "CSRF_TRUSTED_ORIGINS",
+    default=["http://143.198.207.144", "https://143.198.207.144"],
+)
+
+# HTTPS / SSL Security Settings (environment-driven, default False until domain/SSL active)
+SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=False)
+CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=False)
+SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=False)
+SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=0)
+
+# Semaphore SMS Configuration (environment-driven)
+SEMAPHORE_API_KEY = env("SEMAPHORE_API_KEY", default="a1be64e85146a946d40aeb1677d37a48")
+SEMAPHORE_SENDER_NAME = env("SEMAPHORE_SENDER_NAME", default="SEMAPHORE")
 
 # Trust the Nginx Reverse Proxy Headers
 USE_X_FORWARDED_HOST = True
@@ -67,6 +80,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "billing.middleware.LoginRateLimitMiddleware",
     "billing.middleware.ThreadLocalUserMiddleware",
     "billing.middleware.ActiveUserMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",

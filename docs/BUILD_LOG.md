@@ -11,7 +11,8 @@
 
 | Phase | Timestamp | Backup Path | File Size | Description | Rollback Command |
 |---|---|---|---|---|---|
-| **Phase 0** | 2026-09-24 03:45 UTC | `/root/backups/gametech_phase0_backup_20260924.sql` | 231 KB | Pre-migration baseline backup before Dispatch Operation build | `cat /root/backups/gametech_phase0_backup_20260924.sql \| docker exec -i gametech-billing-system-db-1 psql -U gametech_user gametech_db` |
+| **Phase 0** | 2026-09-24 03:45 UTC | `/root/backups/gametech_phase0_backup_20260924.sql` | 231 KB | Pre-migration baseline backup before Dispatch Operation build | `cat /root/backups/gametech_phase0_backup_20260924.sql \| docker exec -i 28514b2a5c9a psql -U gametech_user gametech_db` |
+| **Phase 1** | 2026-09-24 04:35 UTC | `/root/backups/gametech_phase1_backup_20260924.sql` | 233 KB | Pre-migration backup before Customer password hashing migration 0054 | `cat /root/backups/gametech_phase1_backup_20260924.sql \| docker exec -i 28514b2a5c9a psql -U gametech_user gametech_db` |
 
 ---
 
@@ -56,10 +57,50 @@ The codebase interacts with live MikroTik routers across the following functiona
 
 ---
 
+## Phase 1: Security Hardening & Logins
+
+### 1. Architectural Decisions
+- **Customer Portal Password Hashing:**
+  - Implemented `portal_password_hash` (`CharField(max_length=255)`) on `Customer` model via migration `0054_customer_portal_password_hash.py`.
+  - Data migration hashes all existing plaintext passwords using Django's PBKDF2/SHA256 hasher and clears the legacy `portal_password` column.
+  - Model helpers `set_portal_password(raw)` and `check_portal_password(raw)` enforce that cleartext passwords are never persisted.
+- **Global Password Policy (`billing/validators.py`):**
+  - Minimum 10 characters, at least 1 letter, 1 number, 1 special character (`!@#$%^&*()-_=+[]{}|;:,.<>?`).
+  - Blacklist for common weak passwords.
+  - Passwords cannot contain username, subscriber full name, or phone number.
+  - Temporary passwords generated via `generate_temp_password(10)` with unambiguous characters (no `0/O`, `1/l/I`), forced first-login change, and 7-day expiration.
+  - PPPoE modem passwords left stored as-is behind the existing eye toggle (to avoid disconnecting physical modems).
+- **Authentication Hardening & Brute-Force Lockout (`billing/security.py`):**
+  - Removed customer full-name login across all endpoints.
+  - Removed login with PPPoE password. Subscribers authenticate strictly with PPPoE username or registered mobile + portal password.
+  - 5 consecutive failed attempts locks account and IP for 15 minutes (900 seconds) via Redis/Django cache.
+  - Throttled IP rate limiting via `LoginRateLimitMiddleware` (max 15 POST requests per minute on `/login/`, `/portal/login/`, and `/admin/login/`).
+  - Failed attempts logged to `SystemLog`.
+- **Customer Profile View ("Reset and resend"):**
+  - Removed cleartext portal password display and copy button from `_info_cards.html`.
+  - Replaced with secure "Reset and resend" button (`reset_customer_portal_password`). Generates a 10-char temporary password, hashes it, sets `must_change_password=True`, sends SMS via existing wrapper (masked in `SmsLog`), and displays the plaintext temporary password ONCE to staff on customer profile view.
+- **Agent Temporary Credentials Protection:**
+  - Agent temporary passwords removed from flash messages (`messages.success`) and system logs.
+  - Rendered once in a dismissible confirmation banner on `view_agent.html` and cleared from session immediately upon viewing.
+- **Semaphore SMS Configuration:**
+  - Hardcoded API key extracted to `settings.SEMAPHORE_API_KEY` with environment variable override (`env("SEMAPHORE_API_KEY", default="...")`).
+  - Added `settings.SEMAPHORE_SENDER_NAME`.
+  - `send_semaphore_sms` refactored to read from settings and execute without blocking payments or workflows.
+- **HTTPS & Domain Preparation:**
+  - Made `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`, `SECURE_SSL_REDIRECT`, and `SECURE_HSTS_SECONDS` environment-driven.
+  - Created `docs/HTTPS_SETUP.md` with complete registrar, Certbot, Nginx reverse proxy, and Django production directives.
+
+---
+
 ## Verification & Rollback Procedures
 
-### One-Line Emergency Rollback Command
-If any deployment needs to be completely undone:
-```bash
-git checkout main; git pull origin main; cat /root/backups/gametech_phase0_backup_20260924.sql | ssh root@143.198.207.144 "docker exec -i gametech-billing-system-db-1 psql -U gametech_user gametech_db"; ssh root@143.198.207.144 "docker restart gametech-billing-system-web-1"
-```
+### One-Line Emergency Rollback Commands
+- **Rollback Phase 1 (Return to Phase 0 baseline):**
+  ```bash
+  git checkout feature/dispatch-operation~1; cat /root/backups/gametech_phase1_backup_20260924.sql | ssh root@143.198.207.144 "docker exec -i 28514b2a5c9a psql -U gametech_user gametech_db"; ssh root@143.198.207.144 "docker restart gametech-billing-system-web-1"
+  ```
+- **Rollback Entire Feature (Return to main):**
+  ```bash
+  git checkout main; git pull origin main; cat /root/backups/gametech_phase0_backup_20260924.sql | ssh root@143.198.207.144 "docker exec -i 28514b2a5c9a psql -U gametech_user gametech_db"; ssh root@143.198.207.144 "docker restart gametech-billing-system-web-1"
+  ```
+

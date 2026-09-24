@@ -48,7 +48,7 @@ class BaselineWorkflowTestCase(TestCase):
         )
         self.assertIsNotNone(customer.id)
         self.assertEqual(customer.plan.name, "GTipid Fiber 1000")
-        self.assertIsNotNone(customer.portal_password)
+        self.assertTrue(customer.portal_password_hash or customer.portal_password)
 
     def test_core_views_require_authentication(self):
         """Verify that protected views redirect unauthenticated users to login."""

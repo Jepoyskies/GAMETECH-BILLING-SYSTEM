@@ -101,3 +101,33 @@ class ActiveUserMiddleware:
             pass
 
         return response
+
+
+class LoginRateLimitMiddleware:
+    """
+    IP rate limiting on authentication POST requests to prevent brute-force attacks.
+    Applies to /login/, /portal/login/, and /admin/login/.
+    """
+    RATE_LIMITED_PATHS = ("/login/", "/portal/login/", "/admin/login/", "/admin/")
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.method == "POST" and any(request.path.startswith(p) for p in self.RATE_LIMITED_PATHS):
+            from billing.security import get_client_ip, is_ip_rate_limited
+            from django.http import HttpResponse
+
+            ip = get_client_ip(request)
+            is_limited, retry_after = is_ip_rate_limited(ip, endpoint_name="auth_post", limit=15, window=60)
+            if is_limited:
+                resp = HttpResponse(
+                    f"Too many login attempts from your IP ({ip}). Please wait {retry_after} seconds.",
+                    status=429,
+                    content_type="text/plain",
+                )
+                resp["Retry-After"] = str(retry_after)
+                return resp
+
+        return self.get_response(request)
+

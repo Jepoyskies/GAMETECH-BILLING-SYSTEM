@@ -3,3 +3,4 @@ from .crud import *
 from .actions import *
 from .messaging import *
 from .tasks import *
+from .auth_actions import *

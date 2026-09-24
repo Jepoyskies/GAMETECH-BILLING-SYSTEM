@@ -1,5 +1,31 @@
 <!-- Base Partial: Info Cards -->
     <div class="row g-4">
+        {% if temp_password_info %}
+        <div class="col-12">
+            <div class="alert alert-warning border-2 d-flex align-items-center justify-content-between p-3 mb-2 shadow-sm rounded-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="fs-2 text-warning"><i class="fas fa-key"></i></div>
+                    <div>
+                        <h5 class="alert-heading mb-1 fw-bold text-dark">Temporary Password Generated (Shown ONCE)</h5>
+                        <p class="mb-0 text-dark" style="font-size: 0.9rem;">
+                            Username: <strong class="font-monospace text-primary">{{ temp_password_info.username }}</strong> &nbsp;|&nbsp;
+                            Temp Password: <strong class="font-monospace text-danger bg-white px-2 py-1 border rounded">{{ temp_password_info.temp_password }}</strong>
+                            <span class="badge bg-secondary ms-2">Valid 7 Days</span>
+                            {% if temp_password_info.sms_sent %}
+                                <span class="badge bg-success ms-1"><i class="fas fa-sms me-1"></i>SMS Dispatched</span>
+                            {% else %}
+                                <span class="badge bg-danger ms-1"><i class="fas fa-exclamation-triangle me-1"></i>SMS Failed (Relay Directly)</span>
+                            {% endif %}
+                        </p>
+                        <small class="text-muted">This temporary password is not stored in plain text and will not be displayed again.</small>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-outline-dark btn-sm font-monospace fw-bold" onclick="navigator.clipboard.writeText('{{ temp_password_info.temp_password|escapejs }}'); alert('Temporary password copied to clipboard!');">
+                    <i class="far fa-copy me-1"></i>Copy Password
+                </button>
+            </div>
+        </div>
+        {% endif %}
         <!-- Basic Info -->
         <div class="col-lg-4">
             <div class="info-card">
@@ -118,19 +144,15 @@
                         </span>
                     </li>
                     <li>
-                        <span class="info-label">Portal Password <i class="fas fa-lock text-primary ms-1" title="Customer Portal Login Password"></i></span>
+                        <span class="info-label">Portal Access <i class="fas fa-shield-alt text-primary ms-1" title="Customer Portal Login Security"></i></span>
                         <span class="info-value d-inline-flex align-items-center gap-2">
-                            {% if customer.portal_password %}
-                                <span class="password-masked font-monospace fw-bold text-primary" data-pw="{{ customer.portal_password|escapejs }}">••••••</span>
-                                <button type="button" class="btn btn-sm btn-link p-0 text-muted pw-toggle-btn" title="Show/Hide Password" onclick="togglePasswordVisibility(this)">
-                                    <i class="far fa-eye"></i>
+                            <span class="badge bg-secondary font-monospace" style="font-size:0.75rem;"><i class="fas fa-lock me-1"></i>Hashed</span>
+                            <form method="post" action="{% url 'reset_customer_portal_password' customer.id %}" class="d-inline m-0" onsubmit="return confirm('Generate a new 7-day temporary portal password and send via SMS to {{ customer.phone|default:'customer' }}?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:0.75rem;">
+                                    <i class="fas fa-key me-1"></i>Reset and resend
                                 </button>
-                                <button type="button" class="btn btn-sm btn-link p-0 text-muted" title="Copy Password" onclick="copyPasswordText('{{ customer.portal_password|escapejs }}', this)">
-                                    <i class="far fa-copy"></i>
-                                </button>
-                            {% else %}
-                                <span class="text-muted">—</span>
-                            {% endif %}
+                            </form>
                         </span>
                     </li>
                     <li id="live-mt-status-row" class="{% if customer.status == 'active' and mt_status != 'Connected' and mt_status != 'Loading...' %}active-offline-row-highlight{% endif %}" style="transition: all 0.3s ease;">

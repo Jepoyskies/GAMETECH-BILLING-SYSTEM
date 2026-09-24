@@ -819,6 +819,7 @@ def view_customer(request, customer_id):
         "uptime": uptime,
         "live_mac": live_mac,
         "last_logged_out": last_logged_out,
+        "temp_password_info": request.session.pop("customer_temp_password_display", None),
     }
     return render(request, "billing/view_customer.html", context)
 

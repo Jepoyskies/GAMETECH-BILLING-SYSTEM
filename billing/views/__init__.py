@@ -70,13 +70,15 @@ def calculate_new_expiration_date(
 
 
 def send_semaphore_sms(phone, message):
-    api_key = "a1be64e85146a946d40aeb1677d37a48"
+    from django.conf import settings
+    api_key = getattr(settings, "SEMAPHORE_API_KEY", "")
+    sender_name = getattr(settings, "SEMAPHORE_SENDER_NAME", "SEMAPHORE")
     url = "https://api.semaphore.co/api/v4/messages"
     payload = {
         "apikey": api_key,
         "number": phone,
         "message": message,
-        "sendername": "SEMAPHORE",
+        "sendername": sender_name,
     }
     try:
         response = requests.post(url, data=payload, timeout=10)

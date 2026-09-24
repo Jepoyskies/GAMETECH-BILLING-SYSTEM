@@ -132,13 +132,16 @@ def view_agent(request, agent_id):
                 username = re.sub(r"[^a-zA-Z0-9_]", "", agent.name.lower().replace(" ", "_"))
 
         if not temp_password:
-            import secrets
-            chars = "abcdefghjkmnpqrstuvwxyz23456789"
-            temp_password = "Gt-" + "".join(secrets.choice(chars) for _ in range(6)) + "!"
-
-        if len(temp_password) < 6:
-            messages.error(request, "Password must be at least 6 characters long.")
-            return redirect("view_agent", agent_id=agent.id)
+            from billing.validators import generate_temp_password
+            temp_password = generate_temp_password(10)
+        else:
+            from billing.validators import validate_password_policy
+            from django.core.exceptions import ValidationError
+            try:
+                validate_password_policy(temp_password, identifier=username)
+            except ValidationError as e:
+                messages.error(request, str(e.message))
+                return redirect("view_agent", agent_id=agent.id)
 
         # Check existing username conflicts
         existing_user = User.objects.filter(username__iexact=username).first()
@@ -189,11 +192,15 @@ def view_agent(request, agent_id):
         except Exception:
             pass
 
+        # Store in session to display once on confirmation view without printing secrets to flash/logs
+        request.session["agent_temp_credentials"] = {
+            "agent_id": agent.id,
+            "username": username,
+            "temp_password": temp_password,
+        }
         messages.success(
             request,
-            f"Portal credentials saved for {agent.name}! "
-            f"Username: {username} | Temporary Password: {temp_password} "
-            f"— Please relay these credentials to the agent via Phone or Messenger.",
+            f"Portal credentials saved for {agent.name}. Temporary credentials are displayed below.",
         )
         return redirect("view_agent", agent_id=agent.id)
 
@@ -227,9 +234,12 @@ def view_agent(request, agent_id):
         return redirect("view_agent", agent_id=agent.id)
 
     customers = Customer.objects.filter(agent=agent)
+    temp_credentials = request.session.pop("agent_temp_credentials", None)
 
     return render(
-        request, "billing/view_agent.html", {"agent": agent, "customers": customers}
+        request,
+        "billing/view_agent.html",
+        {"agent": agent, "customers": customers, "temp_credentials": temp_credentials},
     )
 
 
@@ -239,6 +249,14 @@ def profile_view(request):
 
 
 def unified_login_view(request):
+    from billing.security import (
+        get_client_ip,
+        is_account_or_ip_locked,
+        record_login_failure,
+        clear_login_failures,
+    )
+    import re
+
     if request.user.is_authenticated:
         if hasattr(request.user, "agent_profile") and not request.user.is_staff:
             return redirect("agent_dashboard")
@@ -247,12 +265,24 @@ def unified_login_view(request):
         return redirect("customer_portal:portal_dashboard")
 
     if request.method == "POST":
-        u = request.POST.get("username")
-        p = request.POST.get("password")
+        u = (request.POST.get("username") or "").strip()
+        p = request.POST.get("password") or ""
+        ip = get_client_ip(request)
+
+        # Check account & IP lockout
+        is_locked, remaining = is_account_or_ip_locked(u, ip)
+        if is_locked:
+            minutes = max(1, (remaining + 59) // 60)
+            messages.error(
+                request,
+                f"Account or IP temporarily locked due to multiple failed login attempts. Please try again in {minutes} minute(s)."
+            )
+            return render(request, "billing/login.html")
 
         # 1. Try standard Admin/Staff/Agent login
         user = authenticate(request, username=u, password=p)
         if user is not None:
+            clear_login_failures(u, ip)
             login(request, user)
             if hasattr(user, "agent_profile") and not user.is_staff:
                 next_url = request.POST.get("next") or request.GET.get("next")
@@ -260,36 +290,66 @@ def unified_login_view(request):
             next_url = request.POST.get("next") or request.GET.get("next")
             return redirect(next_url if next_url else "dashboard")
 
-        # 2. Try Customer Login
-        try:
-            from django.db.models import Q
+        # 2. Try Customer Login (username or phone ONLY; no full_name; check portal_password_hash)
+        clean_digits = re.sub(r"\D", "", u)
+        phone_candidates = [u]
+        if clean_digits:
+            phone_candidates.extend([
+                clean_digits,
+                "0" + clean_digits[-10:] if len(clean_digits) >= 10 else clean_digits,
+                "+63" + clean_digits[-10:] if len(clean_digits) >= 10 else clean_digits,
+                "63" + clean_digits[-10:] if len(clean_digits) >= 10 else clean_digits,
+            ])
 
-            customer = Customer.objects.filter(
-                Q(full_name__iexact=u, portal_password=p)
-                | Q(phone=u, portal_password=p)
-            ).first()
+        from django.db.models import Q
+        customer = Customer.objects.filter(
+            Q(pppoe_username__iexact=u) | Q(phone__in=phone_candidates)
+        ).first()
 
-            if customer:
-                request.session["customer_id"] = customer.id
-                request.session["customer_last_seen"] = timezone.now().isoformat()
-                try:
-                    from django.core.cache import cache
-                    now = timezone.now()
-                    cache.set(f"seen_customer_{customer.id}", now, 300)
-                    active = cache.get("active_portal_customers") or {}
-                    active[str(customer.id)] = now.isoformat()
-                    cache.set("active_portal_customers", active, 600)
-                except Exception:
-                    pass
-                next_url = request.POST.get("next") or request.GET.get("next")
-                return redirect(
-                    next_url if next_url else "customer_portal:portal_dashboard"
+        if customer and customer.check_portal_password(p):
+            clear_login_failures(u, ip)
+
+            # Check if temporary password expired (> 7 days)
+            if customer.is_temp_password_expired():
+                messages.error(
+                    request,
+                    "Your temporary password has expired (validity: 7 days). Please contact Gametech staff to reset your password."
                 )
-            else:
-                messages.error(request, "Invalid username or password.")
+                return render(request, "billing/login.html")
 
-        except Customer.DoesNotExist:
-            messages.error(request, "Invalid username or password.")
+            request.session["customer_id"] = customer.id
+            request.session["customer_last_seen"] = timezone.now().isoformat()
+            try:
+                from django.core.cache import cache
+                now = timezone.now()
+                cache.set(f"seen_customer_{customer.id}", now, 300)
+                active = cache.get("active_portal_customers") or {}
+                active[str(customer.id)] = now.isoformat()
+                cache.set("active_portal_customers", active, 600)
+            except Exception:
+                pass
+
+            if customer.must_change_password:
+                return redirect("customer_portal:force_change_password")
+
+            next_url = request.POST.get("next") or request.GET.get("next")
+            return redirect(
+                next_url if next_url else "customer_portal:portal_dashboard"
+            )
+
+        # Neither matched: record failure and increment counter
+        is_now_locked, attempts, lock_dur = record_login_failure(u, ip)
+        if is_now_locked:
+            messages.error(
+                request,
+                "Account has been locked for 15 minutes due to 5 consecutive failed login attempts."
+            )
+        else:
+            remaining_attempts = max(1, 5 - attempts)
+            messages.error(
+                request,
+                f"Invalid credentials. ({remaining_attempts} attempt{'s' if remaining_attempts != 1 else ''} remaining before lockout)"
+            )
 
     return render(request, "billing/login.html")
 
