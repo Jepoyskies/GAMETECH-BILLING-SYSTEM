@@ -16,6 +16,7 @@
 | **Phase 2** | 2026-09-24 05:16 UTC | `/root/backups/gametech_phase2_backup_20260924.sql` | 233 KB | Pre-migration backup before Phase 2 Dispatch Foundation migrations 0055 & 0011 | `cat /root/backups/gametech_phase2_backup_20260924.sql \| docker exec -i 28514b2a5c9a psql -U gametech_user gametech_db` |
 | **Phase 3.3** | 2026-09-24 09:30 UTC | `/root/backups/gametech_backup_phase3_3.sql` | 311 KB | Pre-migration backup before Phase 3.3 fixes and security validation | `cat /root/backups/gametech_backup_phase3_3.sql \| docker exec -i gametech-billing-system-db-1 psql -U gametech_user -d gametech_db` |
 | **Phase 4A** | 2026-09-24 11:20 UTC | `/root/backups/gametech_backup_pre_phase4a.sql` | 311 KB | Pre-migration backup before Phase 4A Dispatch Queue & Mobile Tech migration 0012 | `cat /root/backups/gametech_backup_pre_phase4a.sql \| docker exec -i gametech-billing-system-db-1 psql -U gametech_user -d gametech_db` |
+| **Phase 4B** | 2026-09-24 12:40 UTC | `/root/backups/gametech_backup_pre_phase4b.sql` | 313 KB | Pre-migration backup before Phase 4B Dispatch QA & Approval migration 0013 | `cat /root/backups/gametech_backup_pre_phase4b.sql \| docker exec -i gametech-billing-system-db-1 psql -U gametech_user -d gametech_db` |
 
 ---
 
@@ -468,6 +469,75 @@ All tests passing across small batches:
   7. `test_3_contact_attempt_rule_and_return_to_dispatch`: Verifies that return to dispatch is blocked before 3 attempts, unlocked after 3 attempts or client refusal, sets customer to `closed_not_installed`, and dispatches notification to staff.
 - **All 7 tests passed (0 failures, 0 errors).**
 - **Existing Regression Batches (Phase 1 Security, Portal Security, Router Dry Run, Concurrency) all passed (0 failures, 0 errors).**
+
+---
+
+## Phase 4B: Dispatch QA, Admin Final Approval, Bounce-Back History, & Customer Lifecycle Integration
+
+### 1. Architectural Decisions & Implementation Details
+- **Pre-Migration Safety Backup:**
+  - Dumped PostgreSQL database prior to running migration `0013`: `/root/backups/gametech_backup_pre_phase4b.sql` (313 KB).
+  - Droplet migration `dispatch.0013_jobticket_is_flagged_and_more` successfully applied.
+- **Dispatch QA Screen (`dispatch/views_approval.py` & `pipeline/4_qa.html`):**
+  - Allows Dispatch/QA staff to review technician time logs (arrival, accomplishment, duration), job dates, and customer/technician reported problems.
+  - **Client Verification Guard:** Passing QA strictly requires confirming that the client was called (`client_called_by_qa` checkbox). If unchecked, submission is rejected with HTTP 400.
+  - **QA Pass Flow:**
+    - Standard installs transition to `QA_PASSED` for final Admin sign-off.
+    - Repairs evaluate the **Repair Bypass Rule**: if clean (`bounce_count < 2`, not `repeated_bounce_alert`, not `is_flagged`, not `same_person_flag`), repairs bypass Admin approval and transition immediately to `APPROVED`.
+    - If a repair has bounced 2+ times or is flagged, it forwards to `QA_PASSED` requiring Admin sign-off.
+  - **QA Bounce Flow (`api_qa_review`):**
+    - Technicians receive bounced jobs with a mandatory explanation (`reason`).
+    - Two bounce types supported:
+      1. `correct_report`: Report correction needed without physical revisit. Ticket returns to `IN_PROGRESS` while keeping the original job timer.
+      2. `revisit`: Physical site revisit required (e.g., optical loss issue, high attenuation). Ticket returns to `ASSIGNED` and timer is reset for a fresh site visit timer.
+    - Every bounce creates an immutable `TicketBounceHistory` audit record with timestamps, bounced by, and reason.
+- **Admin Approval Screen (`dispatch/views_approval.py` & `pipeline/5_approval.html`):**
+  - Restricted strictly to staff/superusers with administrative permissions.
+  - **Approve Action (`api_admin_approve`):**
+    - Transitions ticket to `APPROVED`, records `admin_approved_by` and `admin_approved_at`.
+    - Activates customer subscription (`status='active'`, `installation_status='installed'`).
+    - Logs event to `SystemLog`.
+  - **Bounce to Dispatch Action (`api_admin_approve`):**
+    - Requires mandatory reason.
+    - Transitions ticket from `QA_PASSED` back to `COMPLETED` (returns to QA review queue).
+    - Increments `bounce_count`, logs `TicketBounceHistory` with `bounce_type='admin_to_dispatch'`.
+- **Alert After 2 Bounces on the Same Job:**
+  - Whenever `ticket.bounce_count >= 2`, system automatically sets `ticket.repeated_bounce_alert = True`.
+  - Dispatches immediate staff notification (`🚨 Repeated Bounce Alert: Job Ticket <ticket_number> has bounced <N> times`).
+  - Highlights ticket with persistent alert badge across Queue, QA, and Approval dashboards.
+- **Admin Summary Analytics Page (`dispatch/views_approval.py` & `admin_summary.html`):**
+  - Aggregates operational bounce patterns:
+    - Bounces grouped by user (technician / dispatcher), stage (QA vs Admin), and reason.
+    - Same-person audit flags (`same_person_flag = True` when the technician and QA reviewer share the same identity or credentials).
+    - Unreachable client returns shown strictly separately in an isolated table from quality/technical bounces.
+- **Unreachable Client Close & Reopen Lifecycle (`api_close_unreachable` & `api_reopen_onboarding`):**
+  - Close flow handles unreachable subscribers with standardized reasons (`no_contact`, `change_of_mind`, `undecided`, `other`).
+  - Mandatory confirmation that both client and agent were informed (`client_agent_informed` tick).
+  - Sets customer lifecycle state to `Closed - Not Installed` (`installation_status='closed_not_installed'`).
+  - Reopen flow (`api_reopen_onboarding`): Resets customer to `pending_installation` and returns redirect URL directly to onboarding checklist to issue a new job order.
+- **Customer View Six-Step Lifecycle Tracker Integration (`billing/views/customers/crud.py` & `_lifecycle_tracker.html`):**
+  - Updated tracker to dynamically reflect real job ticket statuses:
+    1. Application -> 2. Document Verification -> 3. Schedule Dispatch -> 4. Field Installation / In Progress -> 5. QA Review & Testing -> 6. Activated / Live.
+  - Displays dynamic badges for `In-Progress`, `QA Review`, `Repeated Bounce Alert`, `Audit Flag`, and `Closed - Not Installed`.
+- **Request Service Modal Unification (`_modal_customer_repair.html` & `dispatch/views.py`):**
+  - Updated Request Service modal on Customer View with choices for `INSTALLATION`, `REPAIR`, and `SITE_VISIT`.
+  - Submissions enter the unified dispatch queue directly with `status='PENDING'` and source tab routing.
+
+### 2. Automated Test Suite (`dispatch/tests/test_phase4b_operations.py`)
+- Created comprehensive test suite under `dispatch/tests/test_phase4b_operations.py`:
+  1. `test_qa_screen_pass_requires_client_called_confirmation`: Validates that passing QA strictly requires confirming the client was called; rejects uncalled submissions with HTTP 400.
+  2. `test_qa_bounce_to_technician_requires_reason_and_type`: Validates required bounce reason and correct handling of `revisit` (resets timer, status `ASSIGNED`) vs `correct_report` (preserves timer, status `IN_PROGRESS`).
+  3. `test_alert_after_2_bounces_on_same_job`: Validates that bouncing a job ticket twice sets `repeated_bounce_alert = True`.
+  4. `test_repairs_skip_admin_approval_unless_bounced_twice_or_flagged`: Validates that clean repairs transition directly from QA to `APPROVED`, while repairs with 2+ bounces or `is_flagged=True` transition to `QA_PASSED` requiring Admin approval.
+  5. `test_admin_approval_screen_and_bounce_to_dispatch`: Validates Admin approval activates customer, and Admin bounce to dispatch requires a reason and creates audit history.
+  6. `test_close_unreachable_flow_and_reopen_onboarding`: Validates that closing an unreachable subscriber requires the `client_agent_informed` tick, sets customer to `Closed - Not Installed`, and reopening resets to `pending_installation` with checklist redirect.
+  7. `test_request_service_modal_site_visit_enters_queue`: Validates that creating a `SITE_VISIT` via Request Service modal enters the unified queue as `PENDING` under `CLIENT_CONCERNS`.
+- **All 7 Phase 4B tests passed (0 failures, 0 errors in 24.1s).**
+- **All Regression Test Batches passed (0 failures, 0 errors):**
+  - `dispatch.tests.test_dispatch_operations` & `dispatch.tests.test_ticket_concurrency`: 9 tests passed.
+  - `billing.tests.test_phase1_security` & `customer_portal.tests.test_portal_security`: 16 tests passed.
+  - `billing.tests.test_router_dry_run`: 10 tests passed (`ROUTER_MODE=read_only` confirmed active and blocking writes).
+
 
 
 
