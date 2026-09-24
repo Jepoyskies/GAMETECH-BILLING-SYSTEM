@@ -22,7 +22,7 @@ class Command(BaseCommand):
         if options["cleanup"]:
             self.stdout.write("Cleaning up fake dispatch test data...")
             deleted_tickets = JobTicket.objects.filter(
-                issue_description__icontains=TEST_TAG
+                concern__icontains=TEST_TAG
             ).delete()[0]
             deleted_customers = Customer.objects.filter(
                 pppoe_username__startswith=TEST_PREFIX
@@ -80,7 +80,7 @@ class Command(BaseCommand):
             defaults={
                 "name": f"Maria Santos {TEST_TAG}",
                 "email": "maria_test@gametech.local",
-                "status": "Active",
+                "is_test_data": True,
             },
         )
 
@@ -155,6 +155,7 @@ class Command(BaseCommand):
                     "status": status,
                     "installation_status": install_status,
                     "pppoe_password": "testpppoepassword",
+                    "is_test_data": True,
                 },
             )
             created_customers.append(customer)
@@ -164,11 +165,16 @@ class Command(BaseCommand):
             customer=created_customers[1],
             ticket_type="INSTALLATION",
             defaults={
-                "title": f"New Fiber Installation - Bob Test {TEST_TAG}",
-                "issue_description": f"Standard install at Purok 1 Bulua. {TEST_TAG}",
-                "assigned_technician": created_techs[0],
+                "client_name": created_customers[1].full_name,
+                "account_no": created_customers[1].pppoe_username,
+                "contact_number": created_customers[1].phone,
+                "address": created_customers[1].address,
+                "barangay": barangay.name,
+                "plan_package": plan.name,
+                "concern": f"Standard install at Purok 1 Bulua. {TEST_TAG}",
                 "status": "ASSIGNED",
                 "source_tab": "INTERNET_INSTALL",
+                "is_test_data": True,
             },
         )
 
@@ -176,11 +182,16 @@ class Command(BaseCommand):
             customer=created_customers[0],
             ticket_type="REPAIR",
             defaults={
-                "title": f"LOS Red Light Reported - Alice Test {TEST_TAG}",
-                "issue_description": f"Subscriber reports fiber cut. {TEST_TAG}",
-                "assigned_technician": created_techs[1],
+                "client_name": created_customers[0].full_name,
+                "account_no": created_customers[0].pppoe_username,
+                "contact_number": created_customers[0].phone,
+                "address": created_customers[0].address,
+                "barangay": barangay.name,
+                "plan_package": plan.name,
+                "concern": f"Subscriber reports fiber cut. {TEST_TAG}",
                 "status": "IN_PROGRESS",
-                "source_tab": "REPAIR",
+                "source_tab": "CLIENT_CONCERNS",
+                "is_test_data": True,
             },
         )
 
