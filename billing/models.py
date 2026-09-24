@@ -386,7 +386,11 @@ class Customer(models.Model):
     referral_received = models.CharField(
         max_length=50, null=True, blank=True, default="0"
     )
-    adjusted_by_referral = models.CharField(max_length=100, null=True, blank=True)
+    source = models.CharField(
+        max_length=50,
+        default="manual",
+        help_text="Origin of subscriber record (e.g. manual, agent, router_sync, recovery)",
+    )
     INSTALLATION_STATUS_CHOICES = (
         ("installed", "Installed"),
         ("pending", "Pending Installation"),
@@ -435,15 +439,30 @@ class Customer(models.Model):
         return timezone.now() > self.temp_password_created_at + timedelta(days=max_days)
 
     def save(self, *args, **kwargs):
-        # Shared Model-Level Guard: New-install customers require completed ChecklistConfirmation
-        if (self.installation_status == "pending" or self.status == "pending") and not getattr(self, "is_test_data", False):
-            if not getattr(self, "_checklist_verified", False):
-                has_confirmed = self.pk and self.checklist_confirmations.filter(outcome="agreed").exists()
-                if not has_confirmed:
-                    from django.core.exceptions import ValidationError
-                    raise ValidationError(
-                        "Cannot create or save a 'Pending Installation' customer without a completed, agreed ChecklistConfirmation."
-                    )
+        # Shared Model-Level Guard: Enforce checklist ONLY when creating or first entering pending install
+        is_new = self._state.adding or not self.pk
+        entering_pending = False
+
+        if is_new:
+            entering_pending = (self.installation_status == "pending" or self.status == "pending")
+        else:
+            orig = Customer.objects.filter(pk=self.pk).values("installation_status", "status").first()
+            if orig:
+                was_pending = (orig.get("installation_status") == "pending" or orig.get("status") == "pending")
+                is_pending_now = (self.installation_status == "pending" or self.status == "pending")
+                entering_pending = (not was_pending) and is_pending_now
+            else:
+                entering_pending = (self.installation_status == "pending" or self.status == "pending")
+
+        from billing.security import is_checklist_bypass_active
+
+        if entering_pending and not is_checklist_bypass_active():
+            has_confirmed = self.pk and self.checklist_confirmations.filter(outcome="agreed").exists()
+            if not has_confirmed:
+                from django.core.exceptions import ValidationError
+                raise ValidationError(
+                    "Cannot create or move customer to 'Pending Installation' without a completed, agreed ChecklistConfirmation."
+                )
 
         if not self.email:
             self.email = None
@@ -594,6 +613,8 @@ class Customer(models.Model):
         permissions = [
             ("add_existing_subscriber", "Can add installed/existing subscriber with manual override"),
             ("change_customer_agent", "Can change customer assigned sales agent"),
+            ("import_router_subscribers", "Can import subscribers from router sync or recovery"),
+            ("bypass_customer_checklist", "Can bypass customer onboarding checklist"),
         ]
 
 

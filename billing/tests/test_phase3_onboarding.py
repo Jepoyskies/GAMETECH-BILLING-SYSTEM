@@ -169,15 +169,16 @@ class Phase3OnboardingAndChecklistTests(TestCase):
         """
         Rule 6: Saving the pending customer multiple times must NOT duplicate installation tickets.
         """
-        customer = Customer.objects.create(
-            full_name="Idempotency Test User",
-            phone="09123450003",
-            status="pending",
-            installation_status="pending",
-            plan=self.plan,
-            barangay=self.barangay,
-            is_test_data=True,
-        )
+        from billing.security import test_seeding_bypass_checklist
+        with test_seeding_bypass_checklist("test_guarantee_exactly_one_install_ticket_per_customer"):
+            customer = Customer.objects.create(
+                full_name="Idempotency Test User",
+                phone="09123450003",
+                status="pending",
+                installation_status="pending",
+                plan=self.plan,
+                barangay=self.barangay,
+            )
         # First save triggered signal
         self.assertEqual(JobTicket.objects.filter(customer=customer, ticket_type="INSTALLATION").count(), 1)
 

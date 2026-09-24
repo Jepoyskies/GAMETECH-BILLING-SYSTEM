@@ -254,10 +254,10 @@ def sync_bulk_action(request, device_id):
             messages.success(request, f"Bulk Push: {success_count} pushed, {error_count} failed.")
 
         elif action == 'bulk_import':
-            # Note: The import action redirects to the add_customer page or creates them automatically?
-            # Creating them automatically requires default values (password, plan). 
-            # We'll just create them as inactive with a default plan if possible, or redirect to a mass import form.
-            # But "import to Django" usually needs manual fields. If they want Bulk Import, we'll auto-create them.
+            if not (request.user.is_superuser or request.user.has_perm("billing.import_router_subscribers")):
+                messages.error(request, "Permission denied: Requires 'billing.import_router_subscribers' permission.")
+                return redirect('sync_manager', device_id=device_id)
+
             # Let's fetch secrets to get passwords:
             all_users_res = api.get_all_pppoe_users()
             router_users_dict = {u['name']: u for u in all_users_res.get('data', [])} if all_users_res.get('success') else {}
@@ -273,6 +273,7 @@ def sync_bulk_action(request, device_id):
                         status='inactive',
                         installation_status='installed',
                         installed_at=timezone.now(),
+                        source='router_sync',
                         created_form_by='Bulk Import'
                     )
                     
@@ -290,6 +291,18 @@ def sync_bulk_action(request, device_id):
                     success_count += 1
                 else:
                     error_count += 1
+
+            from billing.models import SystemLog
+            SystemLog.objects.create(
+                table_name="Customer",
+                record_id="0",
+                action="ROUTER_SYNC_IMPORT",
+                changed_by=request.user.username if request.user.is_authenticated else "System",
+                target_name=device.device_name,
+                old_data="",
+                new_data=f"Bulk router import for {device.device_name}: {success_count} imported, {error_count} skipped (duplicates/errors)."
+            )
+
             messages.success(request, f"Bulk Import: {success_count} imported, {error_count} skipped/failed.")
 
         else:

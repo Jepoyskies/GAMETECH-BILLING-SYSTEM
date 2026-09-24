@@ -47,7 +47,9 @@ class Command(BaseCommand):
             secrets = result.get("data", [])
             self.stdout.write(f"Found {len(secrets)} PPP secrets on the router.")
 
-            success_count = 0
+            created_count = 0
+            updated_count = 0
+            skipped_count = 0
             for s in secrets:
                 username = s.get("name")
                 password = s.get("password", "")
@@ -56,12 +58,13 @@ class Command(BaseCommand):
 
                 # We skip empty usernames or default Mikrotik templates
                 if not username or username == "default":
+                    skipped_count += 1
                     continue
 
                 # Match Profile to SubscriptionPlan
                 plan = SubscriptionPlan.objects.filter(name__iexact=profile).first()
 
-                # Check if customer already exists
+                # Check if customer already exists by PPPoE username
                 customer, created = Customer.objects.get_or_create(
                     pppoe_username=username,
                     defaults={
@@ -71,22 +74,38 @@ class Command(BaseCommand):
                         "mikrotik_device": device,
                         "mac_address": caller_id,
                         "status": "active",
+                        "installation_status": "installed",
+                        "source": "router_sync",
+                        "created_form_by": "MikroTik Recovery",
                     },
                 )
 
                 if created:
-                    success_count += 1
+                    created_count += 1
                 else:
                     # Update existing just in case
                     if customer.pppoe_password != password or customer.plan != plan:
                         customer.pppoe_password = password
                         customer.plan = plan
                         customer.save(update_fields=["pppoe_password", "plan"])
-                        success_count += 1
+                        updated_count += 1
+                    else:
+                        skipped_count += 1
+
+            from billing.models import SystemLog
+            SystemLog.objects.create(
+                table_name="Customer",
+                record_id="0",
+                action="ROUTER_RECOVERY_IMPORT",
+                changed_by="recover_from_mikrotik",
+                target_name=device.device_name,
+                old_data="",
+                new_data=f"Emergency router recovery from {device.device_name}: {created_count} created, {updated_count} updated, {skipped_count} skipped.",
+            )
 
             self.stdout.write(
                 self.style.SUCCESS(
-                    f"\nEmergency Recovery Complete! Successfully restored/updated {success_count} customers from Mikrotik."
+                    f"\nEmergency Recovery Complete! Restored: {created_count} created, {updated_count} updated, {skipped_count} skipped from Mikrotik."
                 )
             )
 

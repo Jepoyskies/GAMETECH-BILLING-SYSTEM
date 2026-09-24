@@ -96,56 +96,76 @@ def test_device_connection(request, device_id):
 @login_required
 def sync_device_users(request, device_id):
     if request.method == 'POST':
+        if not (request.user.is_superuser or request.user.has_perm("billing.import_router_subscribers")):
+            return JsonResponse({'status': 'error', 'message': 'Permission denied: Requires billing.import_router_subscribers permission.'}, status=403)
+
         device = get_object_or_404(MikrotikDevice, id=device_id)
 
         try:
             from network_manager.services import MikrotikAPI
-            from billing.models import Customer, SubscriptionPlan
+            from billing.models import Customer, SubscriptionPlan, SystemLog
             
             api = MikrotikAPI(device)
             secrets = api.get_ppp_secrets()
             
             added = 0
+            skipped = 0
             for secret in secrets:
                 name = secret.get('name')
-                if name and not Customer.objects.filter(pppoe_username=name).exists():
-                    status = 'inactive' if secret.get('disabled') == 'true' else 'active'
-                    
-                    # Extract full name from comment if available
-                    comment = secret.get('comment', '').strip()
-                    full_name = comment if comment else name
-                    
-                    # Try to map profile to SubscriptionPlan
-                    profile_name = secret.get('profile', '')
-                    plan = SubscriptionPlan.objects.filter(name__iexact=profile_name).first()
-                    
-                    new_cust = Customer.objects.create(
-                        full_name=full_name,
-                        pppoe_username=name,
-                        pppoe_password=secret.get('password', ''),
-                        mac_address=secret.get('caller-id', ''),
-                        mikrotik_device=device,
-                        plan=plan,
-                        status=status,
-                        installation_status='installed',
-                        installed_at=timezone.now(),
-                        created_form_by='MikroTik Sync'
-                    )
-                    
-                    from billing.models import SystemLog
-                    SystemLog.objects.create(
-                        table_name="Customer",
-                        record_id=str(new_cust.id),
-                        action="ADD",
-                        changed_by=request.user.username if request.user.is_authenticated else "System",
-                        target_name=new_cust.full_name,
-                        old_data="",
-                        new_data=f"Imported from {device.device_name} (MikroTik Sync)\nUsername: {name}\nStatus: {status}"
-                    )
-                    
-                    added += 1
+                if not name:
+                    continue
+                if Customer.objects.filter(pppoe_username=name).exists():
+                    skipped += 1
+                    continue
+
+                status = 'inactive' if secret.get('disabled') == 'true' else 'active'
+                
+                # Extract full name from comment if available
+                comment = secret.get('comment', '').strip()
+                full_name = comment if comment else name
+                
+                # Try to map profile to SubscriptionPlan
+                profile_name = secret.get('profile', '')
+                plan = SubscriptionPlan.objects.filter(name__iexact=profile_name).first()
+                
+                new_cust = Customer.objects.create(
+                    full_name=full_name,
+                    pppoe_username=name,
+                    pppoe_password=secret.get('password', ''),
+                    mac_address=secret.get('caller-id', ''),
+                    mikrotik_device=device,
+                    plan=plan,
+                    status=status,
+                    installation_status='installed',
+                    installed_at=timezone.now(),
+                    source='router_sync',
+                    created_form_by='MikroTik Sync'
+                )
+                
+                SystemLog.objects.create(
+                    table_name="Customer",
+                    record_id=str(new_cust.id),
+                    action="ADD",
+                    changed_by=request.user.username if request.user.is_authenticated else "System",
+                    target_name=new_cust.full_name,
+                    old_data="",
+                    new_data=f"Imported from {device.device_name} (MikroTik Sync)\nUsername: {name}\nStatus: {status}"
+                )
+                
+                added += 1
+
+            # Summary log for import run
+            SystemLog.objects.create(
+                table_name="Customer",
+                record_id="0",
+                action="ROUTER_SYNC_IMPORT",
+                changed_by=request.user.username if request.user.is_authenticated else "System",
+                target_name=device.device_name,
+                old_data="",
+                new_data=f"Router sync run completed: {added} imported, {skipped} skipped (duplicates/existing)."
+            )
             
-            return JsonResponse({'status': 'success', 'message': f'Synced successfully. Imported {added} new customers from {device.device_name}.'})
+            return JsonResponse({'status': 'success', 'message': f'Synced successfully. Imported {added} new customers from {device.device_name} ({skipped} duplicates skipped).'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': f'Sync failed: {e}'})
 

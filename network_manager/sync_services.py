@@ -24,7 +24,8 @@ class MikrotikAPI:
 
     def _get_api_connection(self):
         """Helper to get a fresh connection to the router."""
-        if getattr(settings, "ROUTER_DRY_RUN", False):
+        mode = getattr(settings, "ROUTER_MODE", "read_only").lower().strip()
+        if mode == "dry_run" or getattr(settings, "ROUTER_DRY_RUN", False):
             pool = DryRunConnectionPool(self.ip_address)
             return pool, pool.get_api()
 
@@ -40,6 +41,9 @@ class MikrotikAPI:
                 use_ssl=False
             )
             api = connection.get_api()
+            if mode == "read_only":
+                from network_manager.services.read_only import ReadOnlyApiWrapper
+                api = ReadOnlyApiWrapper(api, self.ip_address)
             return connection, api
         except routeros_api.exceptions.RouterOsApiCommunicationError:
             # Fallback for legacy authentication
@@ -53,6 +57,9 @@ class MikrotikAPI:
                     use_ssl=False
                 )
                 api = connection.get_api()
+                if mode == "read_only":
+                    from network_manager.services.read_only import ReadOnlyApiWrapper
+                    api = ReadOnlyApiWrapper(api, self.ip_address)
                 return connection, api
             except Exception as e:
                 raise ConnectionError(f"Authentication failed: {str(e)}")
@@ -140,6 +147,12 @@ class MikrotikAPI:
         """
         Push User (For Export): Creates or updates a user on the router.
         """
+        mode = getattr(settings, "ROUTER_MODE", "read_only").lower().strip()
+        if mode == "read_only":
+            from network_manager.services.read_only import log_blocked_write
+            log_blocked_write(f"Blocked sync_services.add_pppoe_user for {name} on {self.ip_address}")
+            return {"success": False, "error": "Blocked by read_only mode"}
+
         # Ensure comment is safe for Mikrotik API
         if comment:
             comment = str(comment).replace('\n', ' ').replace('\r', ' ')
@@ -188,6 +201,12 @@ class MikrotikAPI:
         """
         Delete User (For Cleanup): Finds and removes an orphaned user from the router.
         """
+        mode = getattr(settings, "ROUTER_MODE", "read_only").lower().strip()
+        if mode == "read_only":
+            from network_manager.services.read_only import log_blocked_write
+            log_blocked_write(f"Blocked sync_services.delete_pppoe_user for {name} on {self.ip_address}")
+            return {"success": False, "error": "Blocked by read_only mode"}
+
         try:
             connection, api = self._get_api_connection()
             secrets_api = api.get_resource('/ppp/secret')

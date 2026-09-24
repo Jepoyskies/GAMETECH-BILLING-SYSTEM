@@ -49,12 +49,18 @@ SEMAPHORE_SENDER_NAME = env("SEMAPHORE_SENDER_NAME", default="SEMAPHORE")
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "http")
 
-# Router Dry Run Guard: Stubs all MikroTik API calls to protect live hardware
+# Router Mode: 'dry_run' | 'read_only' | 'live'
+# dry_run: Stubs all RouterOS calls via in-memory mock pool (default in tests)
+# read_only: Allows real router socket reads (live status, uptime), blocks all writes (default on droplet)
+# live: Full read & write to real hardware (set only by administrator at cutover)
 import sys
-ROUTER_DRY_RUN = env.bool(
-    "ROUTER_DRY_RUN",
-    default=("test" in sys.argv or any("pytest" in str(arg) for arg in sys.argv)),
-)
+_is_testing = "test" in sys.argv or any("pytest" in str(arg) for arg in sys.argv)
+ROUTER_MODE = env.str("ROUTER_MODE", default="dry_run" if _is_testing else "read_only").lower().strip()
+if ROUTER_MODE not in ("dry_run", "read_only", "live"):
+    ROUTER_MODE = "read_only"
+
+# Backward-compatibility alias
+ROUTER_DRY_RUN = (ROUTER_MODE == "dry_run")
 
 # Application definition
 
