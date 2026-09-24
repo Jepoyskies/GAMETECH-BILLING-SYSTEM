@@ -177,6 +177,8 @@ def auto_process_sla_rebates():
                                         status="Sent",
                                         api_response="Sent via SLA Task",
                                     )
+                                else:
+                                    logger.warning("Semaphore SMS not configured: SEMAPHORE_API_KEY is empty. Skipping SLA SMS dispatch.")
                             except Exception as e:
                                 logger.error(
                                     f"Failed to send SLA SMS to {customer.phone}: {e}"

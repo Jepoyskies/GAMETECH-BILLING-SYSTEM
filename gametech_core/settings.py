@@ -42,7 +42,7 @@ SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=False)
 SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=0)
 
 # Semaphore SMS Configuration (environment-driven)
-SEMAPHORE_API_KEY = env("SEMAPHORE_API_KEY", default="a1be64e85146a946d40aeb1677d37a48")
+SEMAPHORE_API_KEY = env("SEMAPHORE_API_KEY", default="")
 SEMAPHORE_SENDER_NAME = env("SEMAPHORE_SENDER_NAME", default="SEMAPHORE")
 
 # Trust the Nginx Reverse Proxy Headers
