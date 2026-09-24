@@ -17,7 +17,7 @@ class BaselineWorkflowTestCase(TestCase):
             password="adminpassword123!",
             email="admin@gametech.local",
         )
-        self.barangay = Barangay.objects.create(name="Carmen", code="CRM")
+        self.barangay = Barangay.objects.create(name="Carmen")
         self.plan = SubscriptionPlan.objects.create(
             name="GTipid Fiber 1000",
             speed_up="35 Mbps",

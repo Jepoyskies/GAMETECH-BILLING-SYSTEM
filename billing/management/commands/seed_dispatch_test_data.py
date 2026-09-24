@@ -52,9 +52,7 @@ class Command(BaseCommand):
         self.stdout.write("Seeding fake dispatch test data (ROUTER_DRY_RUN safe)...")
 
         # 1. Test Barangay & Plan
-        barangay, _ = Barangay.objects.get_or_create(
-            name="Bulua Test Zone", defaults={"code": "BLU"}
-        )
+        barangay, _ = Barangay.objects.get_or_create(name="Bulua Test Zone")
         plan, _ = SubscriptionPlan.objects.get_or_create(
             name="GTipid Fiber 1000",
             defaults={
