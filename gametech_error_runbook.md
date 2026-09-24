@@ -29,6 +29,7 @@
 | **ERR-060** | Unconsumed Internal Flash Messages Leaking to Public Login Screen Styled as Alarming Red Error Banners | `billing/templates/billing/base.html`, `login.html`, `billing/views/auth.py`, `customer_portal/views/auth.py` | Auth / Messages |
 | **ERR-063** | Customer Portal Modal Backdrop Freeze on Plan Selection & Close | `_modals.html`, `plan_card.html`, `portal_dashboard.html`, `_scripts.html` | Frontend (Modals) |
 | **ERR-065** | Blinding White Cards on Dispatch Dashboard in Dark Mode & Table Contrast Degradation | `dispatch/dashboard.html`, `_monitoring_page_styles.html`, `_gt_design_system.html` | Frontend (Theme/CSS) |
+| **ERR-066** | Broken Light Theme, Overlapping Badges, Solid Blue Router Pill, and Unsynced Runtime Charts | `_gt_design_system.html`, `customer_list/_table.html`, `_scripts.html`, `tokens_and_base.css` | Frontend (Theme/CSS) |
 
 ---
 
@@ -1177,6 +1178,32 @@
   * Add scoped `html.dark-mode` overrides for `.dash-kpi-card`, `.overview-layout`, `.overview-mini-card`, `.monitoring-card-box`, `.leaderboard-card`, and SVG tracks.
   * Include `_theme.html` inside `_monitoring_page_styles.html`.
   * Set `--bs-table-color` explicitly to `#334155` (light) and `#cbd5e1` (dark) with `#1e293b` solid dark card surfaces in `_gt_design_system.html`.
+
+---
+
+### ERR-066: Broken Light Theme on Customer Directory, Overlapping Badges, Solid Blue Router Pill, and Unsynced Runtime Charts
+* **Symptoms**:
+  * In light mode on `/customers/`, the router column is rendered as an unreadable solid blue pill with invisible text.
+  * The "Active" and "Connected" badges overlap horizontally; due date appears with yellow text on white.
+  * Inputs and dropdowns lack visible borders in light mode; filter pill active state is solid fill conflicting with the primary CTA.
+  * Charts across Dashboard and Dispatch fail to update colors dynamically on theme toggle without reloading.
+* **Root Causes**:
+  * Router pill used `bg-primary bg-opacity-15 text-primary` which collapsed to solid `#0d6efd` in Bootstrap 5 without opacity CSS variables.
+  * Status badges used inline flex without vertical spacing, causing horizontal collision with connection status dots.
+  * Incomplete token sets in `:root` and `.dark-mode`; Chart.js instances lacked a reactive listener for `themeChanged`.
+* **Exact Target Files**:
+  * `billing/templates/billing/partials/_gt_design_system.html`
+  * `static/css/theme/tokens_and_base.css`
+  * `billing/templates/billing/customer_list/_hero.html`
+  * `billing/templates/billing/customer_list/_table.html`
+  * `billing/templates/billing/customer_list/_scripts.html`
+  * `billing/templates/billing/base/_scripts.html`
+  * `dispatch/templates/dispatch/styles/_dashboard_styles.html`
+* **1-Step Fix**:
+  * Implement unified Stage 1 tokens at `:root` (light) and `.dark-mode` (dark) with WCAG AA >= 4.5:1 text contrast.
+  * Change router column to plain text `--text-primary`; stack status badges vertically with `gap: 6px` and muted due date.
+  * Normalize inputs and selects to 40px height with `--input-border` (`#C3CCDB` in light); style active filter pills with soft accent tint.
+  * Add universal `Chart.instances` updater on `themeChanged` in `base/_scripts.html` to update grids, ticks, legends, and donut segment borders without reload.
 
 ---
 
