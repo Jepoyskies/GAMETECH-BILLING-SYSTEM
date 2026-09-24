@@ -13,6 +13,7 @@
 |---|---|---|---|---|---|
 | **Phase 0** | 2026-09-24 03:45 UTC | `/root/backups/gametech_phase0_backup_20260924.sql` | 231 KB | Pre-migration baseline backup before Dispatch Operation build | `cat /root/backups/gametech_phase0_backup_20260924.sql \| docker exec -i 28514b2a5c9a psql -U gametech_user gametech_db` |
 | **Phase 1** | 2026-09-24 04:35 UTC | `/root/backups/gametech_phase1_backup_20260924.sql` | 233 KB | Pre-migration backup before Customer password hashing migration 0054 | `cat /root/backups/gametech_phase1_backup_20260924.sql \| docker exec -i 28514b2a5c9a psql -U gametech_user gametech_db` |
+| **Phase 2** | 2026-09-24 05:16 UTC | `/root/backups/gametech_phase2_backup_20260924.sql` | 233 KB | Pre-migration backup before Phase 2 Dispatch Foundation migrations 0055 & 0011 | `cat /root/backups/gametech_phase2_backup_20260924.sql \| docker exec -i 28514b2a5c9a psql -U gametech_user gametech_db` |
 
 ---
 
@@ -92,15 +93,56 @@ The codebase interacts with live MikroTik routers across the following functiona
 
 ---
 
+## Phase 2: Foundation (Models, Migrations & Permissions)
+
+### 1. Architectural Decisions
+- **Prospect & Onboarding Lifecycle:**
+  - Added `Prospect` model in `billing/models.py` with full duplicate detection fields, agent linkages, review timestamps, decline reasons, and test flags.
+  - Added `ChecklistConfirmation` model recording all 6 policy commitments (free install, plan rate, no lock-in, 60-day staggered lock, same-day repair, 24h+ outage rebates) along with policy snapshots and verification methods (`in_person`, `phone`, `chat`).
+- **Permanent Agent Attribution & History:**
+  - Added permanent `Customer.original_agent` (ForeignKey to `Agent`) preserving the originating sales agent forever.
+  - Added `CustomerAgentHistory` tracking historical agent reassignments with mandatory staff reasons and actor audit trails.
+- **Agent Referral Incentive & Payout Engine:**
+  - Added `IncentiveSetting` (singleton) providing configurable incentive parameters (PHP 500.00/qualified customer, 5 customer payout batch size, 60-day staggered lock).
+  - Added `AgentQualificationEvent` logging permanent qualification events upon 2nd month payment completion or cumulative payment thresholds, with payment rollback revocation support.
+  - Added `AgentPayoutBatch` supporting batch creation in multiples of 5, reference numbers, and admin payment confirmation.
+- **JobTicket Operational & QA Additions:**
+  - Added `SITE_VISIT` ticket type to `TICKET_TYPE_CHOICES` and `APPROVED` status to `STATUS_CHOICES`.
+  - Added field operational timers: `arrived_at`, `finished_at`, `technician_report`.
+  - Added QA review fields: `qa_by`, `client_called_by_qa`, and `client_agent_informed` before closing.
+  - Added same-person workflow detection: `same_person_flag` and `same_person_stages`.
+  - Added `TicketBounceHistory` recording bounce reasons, stage transitions, bounce types (`revisit` vs `correct_report`), and actor logging.
+  - Added `CallAttemptLog` tracking the 3-attempt unreachable contact workflow (`unanswered`, `rejected`, `busy`, `client_declined`, `other`).
+- **Central Ticket Number Generator (`dispatch/utils.py`):**
+  - Created `generate_ticket_number()` delivering sequential `GT-YYYYMMDD-XXXX` ticket numbers shared across staff and portal requests, leaving legacy ticket numbers untouched.
+- **Customer Status Exclusions Audit:**
+  - Added `closed_not_installed` status choice to `Customer.STATUS_CHOICES` and `Customer.INSTALLATION_STATUS_CHOICES`.
+  - Audited and updated `billing/views/customers/list.py`, `billing/views/dashboard.py`, and `billing/management/commands/auto_suspend.py`.
+  - Pending install and `closed_not_installed` customers are strictly excluded from billing overdue queries, router cutoff loops, and active dashboard KPI counters.
+- **Named Permissions & RBAC Matrix (`setup_dispatch_permissions`):**
+  - Registered 14 named permissions covering prospects, checklist execution, customer conversion, technician assignment, field job actions, timer corrections, dispatch QA, admin approval, bounce summaries, agent changes, and payout confirmation.
+  - Seeded permission matrices across the 5 personas (`Agent`, `Technician`, `Dispatch`, `Staff`, `Admin`).
+- **Small Ergonomic Fixes:**
+  - Added `normalize_ph_phone(phone)` in `billing/validators.py` standardizing Philippine mobile numbers to `09XXXXXXXXX`.
+  - Updated Leaflet map center defaults in `add_customer.html` and `edit_customer.html` to Cagayan de Oro (`8.4542, 124.6319`, zoom 13).
+  - Unified customer ticket history technician attribution fallback to `Unassigned` across all templates and views.
+
+---
+
 ## Verification & Rollback Procedures
 
 ### One-Line Emergency Rollback Commands
+- **Rollback Phase 2 (Return to Phase 1 baseline):**
+  ```bash
+  git checkout feature/dispatch-operation~2; cat /root/backups/gametech_phase2_backup_20260924.sql | ssh root@143.198.207.144 "docker exec -i 28514b2a5c9a psql -U gametech_user gametech_db"; ssh root@143.198.207.144 "docker restart gametech-billing-system-web-1"
+  ```
 - **Rollback Phase 1 (Return to Phase 0 baseline):**
   ```bash
-  git checkout feature/dispatch-operation~1; cat /root/backups/gametech_phase1_backup_20260924.sql | ssh root@143.198.207.144 "docker exec -i 28514b2a5c9a psql -U gametech_user gametech_db"; ssh root@143.198.207.144 "docker restart gametech-billing-system-web-1"
+  git checkout feature/dispatch-operation~3; cat /root/backups/gametech_phase1_backup_20260924.sql | ssh root@143.198.207.144 "docker exec -i 28514b2a5c9a psql -U gametech_user gametech_db"; ssh root@143.198.207.144 "docker restart gametech-billing-system-web-1"
   ```
 - **Rollback Entire Feature (Return to main):**
   ```bash
   git checkout main; git pull origin main; cat /root/backups/gametech_phase0_backup_20260924.sql | ssh root@143.198.207.144 "docker exec -i 28514b2a5c9a psql -U gametech_user gametech_db"; ssh root@143.198.207.144 "docker restart gametech-billing-system-web-1"
   ```
+
 
