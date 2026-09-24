@@ -376,3 +376,33 @@ All tests passing across small batches:
   ssh root@143.198.207.144 "docker stop gametech-billing-system-web-1 gametech-billing-system-celery-1 gametech-billing-system-celery-beat-1 && cd /root/GAMETECH-BILLING-SYSTEM && git checkout 445cb94 && docker exec -i gametech-billing-system-db-1 psql -U gametech_user -d gametech_db < /root/backups/gametech_backup_phase3_3.sql && docker start gametech-billing-system-web-1 gametech-billing-system-celery-1 gametech-billing-system-celery-beat-1"
   ```
 
+### 7. Customer Portal Security Tests & Active Protection Confirmation
+- **Portal Security Test Suite (`customer_portal/tests/test_portal_security.py`):**
+  1. `test_login_by_phone`: Authenticates successfully with 11-digit local mobile numbers (`0917...`) and international formats (`+63...`), establishing portal session and redirecting to portal dashboard.
+  2. `test_login_lockout_after_failed_attempts`: 5 consecutive failed login attempts trigger an immediate 15-minute account and IP lockout; subsequent attempts return `"Too many failed login attempts"` and reject authentication.
+  3. `test_forced_password_change_with_policy`: Directs `must_change_password=True` accounts to `/portal/force-change-password/`, validates `GametechPasswordPolicyValidator` (rejects short, common, or username-containing passwords), and updates credentials upon providing compliant password.
+  4. `test_temporary_password_expiry`: Accounts with temporary passwords older than 7 days (`is_temp_password_expired() == True`) are rejected upon login attempt with an expiry notice.
+  5. `test_reset_and_resend_never_logs_plaintext`: Staff reset action dispatches SMS with `[REDACTED]` masked body into `SmsLog`, logs audit event in `SystemLog` with no plaintext credentials, and never exposes plaintext password in application logs.
+- **Active Protection Confirmation in Running Application:**
+  - **IP Rate Limiting:**
+    - Active Middleware: `billing.middleware.LoginRateLimitMiddleware` (configured in `gametech_core/settings.py:MIDDLEWARE`).
+    - Monitored Paths: `RATE_LIMITED_PATHS = ("/login/", "/portal/login/", "/admin/login/", "/admin/")`.
+    - Thresholds: **15 requests per 60 seconds** per client IP. Returns HTTP 429 with `Retry-After` header.
+  - **Account / IP Brute-Force Lockout:**
+    - Active Engine: `billing.security.is_account_or_ip_locked` and `billing.security.record_login_failure`.
+    - Integrated Endpoints: `billing.views.auth.login_view` (`/login/`), `customer_portal.views.auth.portal_login` (`/portal/login/`).
+    - Thresholds: **5 consecutive failed attempts** triggers **900 seconds (15 minutes)** lockout across account and IP. Automatically creates `SystemLog` entry with `action="ACCOUNT_LOCKED"`.
+
+### Final Phase 3.3 Small-Batch Test Run Verification
+- Batch 1 (`billing.tests.test_phase1_security`): 11 tests (Pass)
+- Batch 2 (`billing.tests.test_router_dry_run`): 10 tests (Pass)
+- Batch 3 (`dispatch.tests.test_ticket_concurrency`): 2 tests (Pass)
+- Batch 4 (`customer_portal.tests.test_portal_security`): 5 tests (Pass)
+- Batch 5 (`billing.tests.test_phase3_onboarding`): 18 tests (Pass)
+- Batch 6 (`billing.tests.test_phase3_2_guards`): 7 tests (Pass)
+- Batch 7 (`billing.tests.test_baseline`): 3 tests (Pass)
+- Batch 8 (`billing.tests.test_phase2_foundation`): 9 tests (Pass)
+- Batch 9 (`network_manager.tests.test_router_modes`): 3 tests (Pass)
+- **Total Phase 3.3 Verified Test Suite:** **68 tests, 0 failures, 0 errors** across all active modules.
+
+
