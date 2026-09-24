@@ -197,6 +197,10 @@ class Phase3OnboardingAndChecklistTests(TestCase):
         """
         self.client.login(username="test_csr_staff", password="Password123!")
 
+        perm = Permission.objects.filter(codename="add_existing_subscriber").first()
+        if perm:
+            self.staff_user.user_permissions.add(perm)
+
         payload = {
             "full_name": "Legacy Existing Subscriber",
             "phone": "09123450004",
@@ -205,6 +209,7 @@ class Phase3OnboardingAndChecklistTests(TestCase):
             "barangay_id": self.barangay.id,
             "plan_id": self.plan.id,
             "installation_status": "installed",
+            "manual_override_type": "existing_subscriber",
             "status": "expired",
             # No checklist provided
         }
@@ -533,12 +538,12 @@ class Phase31RefinementTests(TestCase):
             "barangay_id": self.barangay.id,
             "plan_id": self.plan.id,
             "installation_status": "pending",
-            "checklist_free_install": "on",
-            "checklist_specific_plan": "on",
-            "checklist_no_lockin": "on",
-            "checklist_staggered_lock": "on",
-            "checklist_same_day_repair": "on",
-            "checklist_rebates_24h": "on",
+            "item_free_install": "on",
+            "item_specific_plan": "on",
+            "item_no_lockin": "on",
+            "item_staggered_lock": "on",
+            "item_same_day_repair": "on",
+            "item_rebates_24h": "on",
             "checklist_method": "chat",
         }
         resp = self.client.post("/customers/add/", payload_chat)
@@ -746,12 +751,12 @@ class Phase31RefinementTests(TestCase):
             "plan_id": self.plan.id,
             "prospect_id": prospect.id,
             "installation_status": "pending",
-            "checklist_free_install": "on",
-            "checklist_specific_plan": "on",
-            "checklist_no_lockin": "on",
-            "checklist_staggered_lock": "on",
-            "checklist_same_day_repair": "on",
-            "checklist_rebates_24h": "on",
+            "item_free_install": "on",
+            "item_specific_plan": "on",
+            "item_no_lockin": "on",
+            "item_staggered_lock": "on",
+            "item_same_day_repair": "on",
+            "item_rebates_24h": "on",
             "checklist_method": "in_person",
         }
         resp = self.client.post("/customers/add/", payload)

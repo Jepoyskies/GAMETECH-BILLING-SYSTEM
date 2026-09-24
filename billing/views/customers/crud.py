@@ -172,12 +172,10 @@ def add_customer(request):
         if installation_status == "installed":
             # Exception 2: Manual override requires dedicated billing.add_existing_subscriber permission & audit log
             if not request.user.has_perm("billing.add_existing_subscriber"):
-                messages.error(
-                    request,
-                    "Permission denied: Manual override for existing installed subscribers requires the 'billing.add_existing_subscriber' permission.",
+                from django.core.exceptions import PermissionDenied
+                raise PermissionDenied(
+                    "Permission denied: Manual override for existing installed subscribers requires the 'billing.add_existing_subscriber' permission."
                 )
-                context = _get_add_customer_context(request, pppoe_username, prospect, agent_id_param)
-                return render(request, "billing/add_customer.html", context)
 
             cust_status = request.POST.get("status")
             if not cust_status or (cust_status == "active" and not expires_at_val):

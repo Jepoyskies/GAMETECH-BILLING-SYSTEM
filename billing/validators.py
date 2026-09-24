@@ -148,11 +148,14 @@ def normalize_ph_phone(phone, required=True):
 def normalize_text_key(text):
     """
     Normalizes a text string (name or address) for duplicate detection:
-    Lowercases, strips all punctuation, and collapses multiple whitespace characters.
+    Replaces common punctuation delimiters with spaces, lowercases, strips other symbols,
+    and collapses multiple whitespace characters.
     """
     if not text:
         return ""
-    cleaned = re.sub(r"[^\w\s]", "", str(text).lower())
+    # Treat common address/name delimiters like hyphens, slashes, commas, and dots as word breaks
+    delimiters_spaced = re.sub(r"[-/,.]", " ", str(text).lower())
+    cleaned = re.sub(r"[^\w\s]", "", delimiters_spaced)
     return " ".join(cleaned.split())
 
 
@@ -183,7 +186,7 @@ def check_customer_or_prospect_duplicate(
             if match_cust:
                 return (
                     True,
-                    f"Duplicate phone '{norm_phone}' matches active subscriber: {match_cust.full_name} (ID #{match_cust.id})",
+                    f"Matches existing subscriber: {match_cust.full_name} ({match_cust.phone})",
                     match_cust,
                 )
 
