@@ -12,6 +12,7 @@ from billing.models import (
     ChecklistConfirmation,
     Notification,
     SystemLog,
+    SystemAdmin,
 )
 from dispatch.models import JobTicket
 
@@ -25,8 +26,13 @@ class Phase3OnboardingAndChecklistTests(TestCase):
             password="Password123!",
             is_staff=True,
         )
-        self.staff_user.role = "CSR"
-        self.staff_user.save()
+        SystemAdmin.objects.create(
+            username="test_csr_staff",
+            full_name="Test CSR Staff",
+            email="staff@gametech.local",
+            role="Admin",
+            status="Active",
+        )
 
         # Add add_customer and create_customer permissions
         perm_add_cust = Permission.objects.filter(codename="add_customer").first()
@@ -43,8 +49,6 @@ class Phase3OnboardingAndChecklistTests(TestCase):
             password="Password123!",
             is_staff=False,
         )
-        self.agent1_user.role = "Agent"
-        self.agent1_user.save()
         self.agent1 = Agent.objects.create(
             user=self.agent1_user,
             name="Agent Alpha",
@@ -59,8 +63,6 @@ class Phase3OnboardingAndChecklistTests(TestCase):
             password="Password123!",
             is_staff=False,
         )
-        self.agent2_user.role = "Agent"
-        self.agent2_user.save()
         self.agent2 = Agent.objects.create(
             user=self.agent2_user,
             name="Agent Bravo",
