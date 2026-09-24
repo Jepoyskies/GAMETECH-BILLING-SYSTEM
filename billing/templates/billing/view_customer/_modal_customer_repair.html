@@ -1,22 +1,22 @@
-<!-- Modal: Quick File Repair / Service Ticket for Customer -->
+<!-- Modal: Quick File Repair / Request Service Ticket for Customer -->
 <div class="modal fade" id="modal-customer-repair" tabindex="-1" aria-labelledby="modalCustomerRepairLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content bg-dark border-secondary text-white shadow-lg" style="border-radius: 16px;">
-            <div class="modal-header border-secondary" style="background: rgba(245,158,11,0.08);">
-                <div class="d-flex align-items-center gap-2">
-                    <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(245,158,11,0.2); display: flex; align-items: center; justify-content: center; color: #fbbf24;">
+        <div class="modal-content shadow-lg" style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 16px; color: var(--text-primary);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--border-subtle); padding: 18px 24px;">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width: 40px; height: 40px; border-radius: 10px; background: var(--section-accent-tint); display: flex; align-items: center; justify-content: center; color: var(--section-accent);">
                         <i class="fas fa-screwdriver-wrench"></i>
                     </div>
                     <div>
-                        <h5 class="modal-title fw-bold text-white mb-0" id="modalCustomerRepairLabel">
-                            File Repair &amp; Service Order
+                        <h5 class="modal-title fw-bold mb-0" id="modalCustomerRepairLabel" style="color: var(--text-primary); font-size: 1.1rem;">
+                            Request Service
                         </h5>
-                        <div class="text-muted" style="font-size: 0.75rem;">
-                            Direct CRM ➔ Dispatch Queue Integration (Client Concerns)
+                        <div class="text-muted" style="font-size: 0.78rem;">
+                            Dispatch Queue Integration &bull; Technical, Installation &amp; Field Concerns
                         </div>
                     </div>
                 </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
             <form id="form-customer-repair">
@@ -32,24 +32,43 @@
                     <input type="hidden" id="cr-latitude" value="{{ customer.latitude|default:'' }}">
                     <input type="hidden" id="cr-longitude" value="{{ customer.longitude|default:'' }}">
 
-                    <!-- Subscriber Snapshot Card -->
-                    <div class="p-3 mb-3 rounded-3 border border-secondary border-opacity-25" style="background: rgba(0,0,0,0.3);">
+                    <!-- Active Order Warning Banner -->
+                    {% if active_ticket %}
+                    <div class="p-3 mb-3 rounded-3 d-flex align-items-center justify-content-between flex-wrap gap-2" style="background: var(--badge-warning-bg); border: 1px solid var(--badge-warning-text); color: var(--badge-warning-text);">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span style="font-size: 0.85rem; font-weight: 500;">
+                                This customer already has an active order: <strong>{{ active_ticket.ticket_number }}</strong>
+                            </span>
+                        </div>
+                        <a href="{% url 'dispatch_dashboard' %}?q={{ active_ticket.ticket_number }}" target="_blank" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-1" style="font-size: 0.75rem; font-weight: 600;">
+                            View Active Order <i class="fas fa-arrow-up-right-from-square ms-1"></i>
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    <!-- Target Subscriber Summary Card -->
+                    <div class="p-3 mb-3 rounded-3" style="background: var(--surface-subtle); border: 1px solid var(--border-divider);">
                         <div class="row g-2 align-items-center">
                             <div class="col-12 col-md-6">
-                                <span class="text-xs text-muted text-uppercase fw-bold">Target Subscriber</span>
-                                <div class="fw-bold text-white fs-6">{{ customer.full_name }}</div>
-                                <div class="text-muted text-xs">PPPoE: <span class="text-info font-monospace">{{ customer.pppoe_username|default:"N/A" }}</span> &bull; Phone: {{ customer.phone|default:"No Contact" }}</div>
+                                <span class="text-uppercase fw-bold text-muted" style="font-size: 0.72rem; letter-spacing: 0.5px;">Target Subscriber</span>
+                                <div class="fw-bold" style="font-size: 1rem; color: var(--text-primary);">{{ customer.full_name }}</div>
+                                <div class="text-muted" style="font-size: 0.8rem;">
+                                    PPPoE: <span class="font-monospace text-primary fw-semibold">{{ customer.pppoe_username|default:"N/A" }}</span> &bull; Phone: {{ customer.phone|default:"No Contact" }}
+                                </div>
                             </div>
                             <div class="col-12 col-md-6 text-md-end">
-                                <span class="badge" style="background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3);">
-                                    Plan: {{ customer.plan.name|default:"Unassigned" }}
-                                </span>
-                                {% if customer.barangay %}
-                                <span class="badge ms-1" style="background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3);">
-                                    {{ customer.barangay.name }}
-                                </span>
-                                {% endif %}
-                                <div class="text-muted text-xs mt-1">{{ customer.address|truncatechars:40 }}</div>
+                                <div class="d-inline-flex align-items-center gap-1">
+                                    <span class="status-badge status-badge--neutral">
+                                        Plan: {{ customer.plan.name|default:"Unassigned" }}
+                                    </span>
+                                    {% if customer.barangay %}
+                                    <span class="status-badge status-badge--neutral">
+                                        {{ customer.barangay.name }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <div class="text-muted text-truncate mt-1" style="font-size: 0.8rem;">{{ customer.address|default:"No address" }}</div>
                             </div>
                         </div>
                     </div>
@@ -57,18 +76,18 @@
                     <!-- Ticket Classification & Urgency -->
                     <div class="row g-3 mb-3">
                         <div class="col-12 col-md-6">
-                            <label class="form-label text-xs fw-bold text-uppercase text-light">Order / Ticket Type <span class="text-danger">*</span></label>
-                            <select class="form-select bg-dark border-secondary text-white" id="cr-ticket-type" required>
+                            <label class="form-label text-uppercase fw-bold text-secondary" style="font-size: 12px;">Order / Ticket Type <span class="text-danger">*</span></label>
+                            <select class="form-select" id="cr-ticket-type" required style="height: 40px; border-radius: 8px; border: 1px solid var(--input-border); background-color: var(--input-bg); color: var(--text-primary);">
                                 <option value="REPAIR" selected>🔧 Repair / Technical Issue</option>
+                                <option value="INSTALLATION">⚡ New Installation</option>
                                 <option value="RELOCATION">🚚 Transfer / Relocation</option>
                                 <option value="RECONNECTION">🔌 Line Reconnection</option>
                                 <option value="DISCONNECTION">❌ Disconnection / Pull Out</option>
-                                <option value="INSTALLATION">⚡ Secondary Installation</option>
                             </select>
                         </div>
                         <div class="col-12 col-md-6">
-                            <label class="form-label text-xs fw-bold text-uppercase text-light">Priority / SLA <span class="text-danger">*</span></label>
-                            <select class="form-select bg-dark border-secondary text-white" id="cr-priority">
+                            <label class="form-label text-uppercase fw-bold text-secondary" style="font-size: 12px;">Priority / SLA <span class="text-danger">*</span></label>
+                            <select class="form-select" id="cr-priority" style="height: 40px; border-radius: 8px; border: 1px solid var(--input-border); background-color: var(--input-bg); color: var(--text-primary);">
                                 <option value="LOW">🔵 Low (Within 48 hours)</option>
                                 <option value="NORMAL" selected>🟡 Normal (Within 24 hours)</option>
                                 <option value="HIGH">🟠 High (Urgent / Same Day)</option>
@@ -79,22 +98,22 @@
 
                     <!-- Reported Concern -->
                     <div class="mb-3">
-                        <label class="form-label text-xs fw-bold text-uppercase text-light">
+                        <label class="form-label text-uppercase fw-bold text-secondary" style="font-size: 12px;">
                             Reported Issue / Customer Concern <span class="text-danger">*</span>
                         </label>
-                        <textarea class="form-control bg-dark border-secondary text-white" id="cr-concern" rows="3" required placeholder="e.g. Red LOS blinking on modem after storm, no internet connection since this morning."></textarea>
+                        <textarea class="form-control" id="cr-concern" rows="3" required placeholder="e.g. Red LOS blinking on modem after storm, no internet connection since this morning." style="border-radius: 8px; border: 1px solid var(--input-border); background-color: var(--input-bg); color: var(--text-primary);"></textarea>
                     </div>
 
                     <!-- Dispatch Instructions / Remarks -->
                     <div class="mb-2">
-                        <label class="form-label text-xs fw-bold text-uppercase text-light">Special Field Instructions (Optional)</label>
-                        <input type="text" class="form-control bg-dark border-secondary text-white" id="cr-remarks" placeholder="e.g. Bring extra fiber patch cord, subscriber is available after 1:00 PM.">
+                        <label class="form-label text-uppercase fw-bold text-secondary" style="font-size: 12px;">Special Field Instructions (Optional)</label>
+                        <input type="text" class="form-control" id="cr-remarks" placeholder="e.g. Bring extra fiber patch cord, subscriber is available after 1:00 PM." style="height: 40px; border-radius: 8px; border: 1px solid var(--input-border); background-color: var(--input-bg); color: var(--text-primary);">
                     </div>
                 </div>
 
-                <div class="modal-footer border-secondary d-flex justify-content-between">
-                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-warning px-4 fw-bold" id="btn-submit-customer-repair">
+                <div class="modal-footer d-flex justify-content-between" style="border-top: 1px solid var(--border-subtle); padding: 14px 24px;">
+                    <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal" style="border-radius: 8px; border: 1px solid var(--border-subtle); color: var(--text-secondary); background: transparent;">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold" id="btn-submit-customer-repair" style="border-radius: 8px; background: var(--color-primary); border: none; color: white;">
                         <i class="fas fa-paper-plane me-1"></i> Send to Dispatch Queue
                     </button>
                 </div>

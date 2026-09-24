@@ -1,118 +1,82 @@
 <!-- Base Partial: Ticket & Repair History with Repeat Repair Quality Alert -->
 <div class="row mt-4 mb-3">
     <div class="col-12">
-        <div class="dashboard-card animate-fade-in" style="overflow:hidden;">
-            <!-- Section Header -->
-            <div class="section-header section-header-blue d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="table-card animate-fade-in" style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg, 16px); overflow: hidden;">
+            <!-- Card Header -->
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 p-3 border-bottom" style="background: var(--surface-card); border-color: var(--border-subtle) !important;">
                 <div class="d-flex align-items-center gap-2">
-                    <h6><i class="fas fa-screwdriver-wrench sh-icon"></i> Repair &amp; Service Ticket History</h6>
-                    <span class="badge bg-light text-primary rounded-pill px-2 py-1" style="font-size:0.75rem; font-weight:700;">
+                    <h6 class="mb-0 fw-bold text-body"><i class="fas fa-screwdriver-wrench me-2 text-primary"></i>Repair &amp; Service Ticket History</h6>
+                    <span class="text-muted" style="font-size: 0.82rem;">
                         {{ repair_count }} Repair{{ repair_count|pluralize }} &bull; {{ total_tickets_count }} Total
                     </span>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="btn btn-sm btn-warning rounded-pill px-3 shadow-sm" style="font-size:0.8rem; font-weight:700;" data-bs-toggle="modal" data-bs-target="#modal-customer-repair">
-                        <i class="fas fa-plus-circle me-1"></i> New Repair Ticket
+                    <button type="button" class="btn btn-sm btn-outline-primary px-3 fw-semibold d-inline-flex align-items-center gap-1.5" style="border-radius: var(--radius-sm);" onclick="openRequestServiceModal('REPAIR')">
+                        <i class="fas fa-plus-circle"></i> New Repair Ticket
                     </button>
-                    <a href="{% url 'dispatch_dashboard' %}?search={{ customer.pppoe_username|default:customer.full_name }}" class="btn btn-sm btn-outline-light rounded-pill px-3" style="font-size:0.8rem;" target="_blank">
-                        <i class="fas fa-external-link-alt me-1"></i> Open Dispatch
+                    <a href="{% url 'dispatch_dashboard' %}?search={{ customer.pppoe_username|default:customer.full_name }}" class="btn btn-sm btn-outline-secondary px-3 fw-semibold d-inline-flex align-items-center gap-1.5" style="border-radius: var(--radius-sm);" target="_blank">
+                        <i class="fas fa-external-link-alt"></i> Open Dispatch
                     </a>
                 </div>
             </div>
 
             <div class="p-3 p-md-4">
-                <!-- Legacy-Style Per-Customer Dispatch Stats & Breakdown -->
-                <div class="p-3 mb-4 rounded-3 border border-secondary border-opacity-25 bg-dark bg-opacity-40">
-                    <div class="row g-3 align-items-center">
-                        <!-- Job Stats Counters -->
-                        <div class="col-12 col-md-5">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="p-2 rounded bg-dark border border-secondary text-center" style="min-width: 75px;">
-                                    <span class="text-xs text-muted d-block">Total Jobs</span>
-                                    <span class="h5 fw-bold text-white mb-0">{{ total_tickets_count|default:0 }}</span>
-                                </div>
-                                <div class="p-2 rounded bg-dark border border-success border-opacity-50 text-center" style="min-width: 75px;">
-                                    <span class="text-xs text-success d-block">Done</span>
-                                    <span class="h5 fw-bold text-success mb-0">{{ jobs_done_count|default:0 }}</span>
-                                </div>
-                                <div class="p-2 rounded bg-dark border border-warning border-opacity-50 text-center" style="min-width: 75px;">
-                                    <span class="text-xs text-warning d-block">Pending</span>
-                                    <span class="h5 fw-bold text-warning mb-0">{{ jobs_pending_count|default:0 }}</span>
-                                </div>
-                                {% if customer.latitude and customer.longitude %}
-                                <a href="https://www.google.com/maps?q={{ customer.latitude }},{{ customer.longitude }}" target="_blank" 
-                                   class="btn btn-sm btn-outline-info rounded-pill px-3 ms-auto" title="View Customer on Google Maps">
-                                    <i class="fas fa-location-dot me-1"></i> Map Pin
-                                </a>
-                                {% endif %}
-                            </div>
+                <!-- Per-Customer Dispatch Stats & Breakdown -->
+                <div class="p-3 mb-4 rounded-3 d-flex flex-wrap align-items-center justify-content-between gap-3" style="background: var(--surface-subtle); border: 1px solid var(--border-subtle);">
+                    <!-- Job Stats Counters as compact .kpi-card mini tiles -->
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <div class="kpi-card px-3 py-2 text-center" style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); min-width: 80px;">
+                            <span class="text-muted d-block text-uppercase" style="font-size: 0.7rem; font-weight: 600;">Total Jobs</span>
+                            <span class="h5 fw-bold text-body mb-0">{{ total_tickets_count|default:0 }}</span>
                         </div>
+                        <div class="kpi-card px-3 py-2 text-center" style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); min-width: 80px;">
+                            <span class="text-muted d-block text-uppercase" style="font-size: 0.7rem; font-weight: 600;">Done</span>
+                            <span class="h5 fw-bold text-success mb-0">{{ jobs_done_count|default:0 }}</span>
+                        </div>
+                        <div class="kpi-card px-3 py-2 text-center" style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); min-width: 80px;">
+                            <span class="text-muted d-block text-uppercase" style="font-size: 0.7rem; font-weight: 600;">Pending</span>
+                            <span class="h5 fw-bold text-warning mb-0">{{ jobs_pending_count|default:0 }}</span>
+                        </div>
+                    </div>
 
-                        <!-- "By Type" Breakdown Chips -->
-                        <div class="col-12 col-md-7">
-                            <div class="d-flex flex-wrap align-items-center gap-2 justify-content-md-end">
-                                <span class="text-xs text-muted fw-semibold me-1">By Type:</span>
-                                <span class="badge bg-primary bg-opacity-20 text-primary border border-primary border-opacity-30 px-2 py-1">
-                                    <i class="fas fa-plug me-1"></i>Installs: <strong>{{ install_jobs_count|default:0 }}</strong>
-                                </span>
-                                <span class="badge bg-danger bg-opacity-20 text-danger border border-danger border-opacity-30 px-2 py-1">
-                                    <i class="fas fa-tools me-1"></i>Repairs: <strong>{{ repair_jobs_count|default:0 }}</strong>
-                                </span>
-                                <span class="badge bg-purple bg-opacity-20 text-purple border border-purple border-opacity-30 px-2 py-1" style="color: #c084fc;">
-                                    <i class="fas fa-tv me-1"></i>Cignal: <strong>{{ cignal_jobs_count|default:0 }}</strong>
-                                </span>
-                                <span class="badge bg-secondary bg-opacity-20 text-light border border-secondary border-opacity-30 px-2 py-1">
-                                    <i class="fas fa-arrows-split-up-and-left me-1"></i>Migrations: <strong>{{ migration_jobs_count|default:0 }}</strong>
-                                </span>
-                            </div>
-                        </div>
+                    <!-- "By Type" neutral chips with counts (same color, one style) -->
+                    <div class="d-flex flex-wrap align-items-center gap-1.5">
+                        <span class="text-muted fw-semibold me-1" style="font-size: 0.75rem;">By Type:</span>
+                        <span class="status-badge status-badge--neutral py-1 px-2" style="font-size: 0.75rem;">
+                            <i class="fas fa-plug me-1 text-muted"></i>Installs: <strong class="ms-1">{{ install_jobs_count|default:0 }}</strong>
+                        </span>
+                        <span class="status-badge status-badge--neutral py-1 px-2" style="font-size: 0.75rem;">
+                            <i class="fas fa-tools me-1 text-muted"></i>Repairs: <strong class="ms-1">{{ repair_jobs_count|default:0 }}</strong>
+                        </span>
+                        <span class="status-badge status-badge--neutral py-1 px-2" style="font-size: 0.75rem;">
+                            <i class="fas fa-tv me-1 text-muted"></i>Cignal: <strong class="ms-1">{{ cignal_jobs_count|default:0 }}</strong>
+                        </span>
+                        <span class="status-badge status-badge--neutral py-1 px-2" style="font-size: 0.75rem;">
+                            <i class="fas fa-arrows-split-up-and-left me-1 text-muted"></i>Migrations: <strong class="ms-1">{{ migration_jobs_count|default:0 }}</strong>
+                        </span>
                     </div>
                 </div>
 
-                <!-- Repeat Repair & Workmanship Quality Alert -->
+                <!-- Repeat Repair & Workmanship Quality Alert (Calm Warning Callout) -->
                 {% if has_repeat_repairs %}
-                <div class="repeat-repair-alert-card mb-4">
-                    <div class="d-flex align-items-start gap-3">
-                        <div class="alert-icon-box flex-shrink-0">
-                            <i class="fas fa-triangle-exclamation"></i>
-                        </div>
+                <div class="mb-4 p-3 rounded-3" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25);">
+                    <div class="d-flex align-items-start gap-2.5">
+                        <i class="fas fa-triangle-exclamation text-danger mt-1"></i>
                         <div class="flex-grow-1">
-                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-1">
-                                <h6 class="fw-bold text-danger mb-0" style="font-size:0.95rem;">
-                                    ⚠️ Chronic / Repeat Repair Alert — Potential Technician Quality or Hardware Issue
-                                </h6>
-                                <span class="badge bg-danger rounded-pill px-2 py-1" style="font-size:0.72rem;">
-                                    {{ repair_count }} Repairs Recorded
-                                </span>
+                            <div class="fw-semibold text-danger" style="font-size: 0.9rem;">
+                                Chronic / Repeat Repair Alert — Potential Technician Quality or Hardware Issue ({{ repair_count }} Repairs Recorded)
                             </div>
-                            <p class="text-muted mb-2" style="font-size:0.84rem;">
+                            <div class="text-muted mt-1" style="font-size: 13px;">
                                 This subscriber has experienced multiple repair dispatches. Review recent technician work orders below to identify recurring fiber degradation, connector loss, faulty ONT modem, or substandard workmanship.
-                            </p>
-
+                            </div>
                             {% if repeat_repair_alerts %}
-                            <div class="d-flex flex-column gap-2 mt-2">
+                            <div class="d-flex flex-column gap-1.5 mt-2">
                                 {% for alert in repeat_repair_alerts %}
-                                <div class="p-2 rounded-3 border bg-white dark-bg-box" style="font-size:0.82rem; border-left: 4px solid #ef4444 !important;">
-                                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-1">
-                                        <div>
-                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold">
-                                                🚨 Repeat within {{ alert.gap_days }} Day{{ alert.gap_days|pluralize }}
-                                            </span>
-                                            <span class="ms-1 fw-bold text-dark dark-text-white">Ticket #{{ alert.curr_ticket }}</span>
-                                            <span class="text-muted">opened shortly after</span>
-                                            <span class="fw-semibold text-primary">#{{ alert.prev_ticket }}</span>
-                                            <span class="text-muted">({{ alert.prev_date|date:"M d" }} &rarr; {{ alert.curr_date|date:"M d, Y" }})</span>
-                                        </div>
-                                        <div>
-                                            <span class="text-muted">Serviced By:</span>
-                                            <span class="badge bg-warning text-dark fw-bold">{{ alert.prev_techs }}</span>
-                                        </div>
-                                    </div>
-                                    {% if alert.prev_actions %}
-                                    <div class="text-muted mt-1" style="font-size:0.78rem;">
-                                        <i class="fas fa-wrench me-1 text-secondary"></i><strong>Prior Action:</strong> {{ alert.prev_actions|truncatechars:120 }}
-                                    </div>
-                                    {% endif %}
+                                <div class="text-muted" style="font-size: 13px;">
+                                    <span class="text-danger fw-semibold">Repeat within {{ alert.gap_days }} Day{{ alert.gap_days|pluralize }}:</span>
+                                    Ticket <strong class="text-body">#{{ alert.curr_ticket }}</strong> opened shortly after <strong class="text-body">#{{ alert.prev_ticket }}</strong> ({{ alert.prev_date|date:"M d" }} &rarr; {{ alert.curr_date|date:"M d, Y" }})
+                                    &bull; Serviced by: <span class="fw-semibold text-body">{{ alert.prev_techs }}</span>
+                                    {% if alert.prev_actions %} &bull; <em>Prior: {{ alert.prev_actions|truncatechars:80 }}</em>{% endif %}
                                 </div>
                                 {% endfor %}
                             </div>
@@ -124,21 +88,21 @@
 
                 <!-- Ticket Table -->
                 <div class="table-responsive">
-                    <table class="table table-premium table-hover align-middle mb-0">
+                    <table class="table table-hover align-middle mb-0" style="border-collapse: collapse;">
                         <thead>
-                            <tr>
-                                <th>Ticket # &amp; Date</th>
-                                <th>Type &amp; Priority</th>
-                                <th>Status</th>
-                                <th style="min-width:220px;">Client Concern</th>
-                                <th>Assigned Techs / Team</th>
-                                <th style="min-width:240px;">Actions Taken &amp; Readings</th>
-                                <th>Duration</th>
+                            <tr style="border-bottom: 2px solid var(--border-subtle);">
+                                <th style="white-space: nowrap; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); width: 170px;">Ticket # &amp; Date</th>
+                                <th style="white-space: nowrap; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); width: 150px;">Type &amp; Priority</th>
+                                <th style="white-space: nowrap; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); width: 120px;">Status</th>
+                                <th style="white-space: nowrap; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); min-width: 200px;">Client Concern</th>
+                                <th style="white-space: nowrap; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); width: 160px;">Assigned Techs / Team</th>
+                                <th style="white-space: nowrap; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); min-width: 220px;">Actions Taken &amp; Readings</th>
+                                <th style="white-space: nowrap; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); width: 100px;">Duration</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for t in ticket_history %}
-                            <tr>
+                            <tr style="border-bottom: 1px solid var(--border-subtle);">
                                 <!-- Ticket # & Date -->
                                 <td style="white-space:nowrap;">
                                     <div class="fw-bold text-primary" style="font-size:0.88rem;">
@@ -151,45 +115,39 @@
 
                                 <!-- Type -->
                                 <td>
-                                    {% if t.is_repair %}
-                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-semibold" style="font-size:0.78rem;">
-                                        <i class="fas fa-tools me-1"></i>{{ t.type_display }}
+                                    <span class="text-body fw-semibold" style="font-size:0.82rem;">
+                                        {% if t.is_repair %}
+                                            <i class="fas fa-tools me-1 text-muted"></i>{{ t.type_display }}
+                                        {% elif t.ticket_type == 'INSTALLATION' %}
+                                            <i class="fas fa-plug me-1 text-muted"></i>{{ t.type_display }}
+                                        {% elif t.ticket_type == 'CIGNAL' %}
+                                            <i class="fas fa-tv me-1 text-muted"></i>{{ t.type_display }}
+                                        {% else %}
+                                            <i class="fas fa-tag me-1 text-muted"></i>{{ t.type_display }}
+                                        {% endif %}
                                     </span>
-                                    {% elif t.ticket_type == 'INSTALLATION' %}
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle fw-semibold" style="font-size:0.78rem;">
-                                        <i class="fas fa-plug me-1"></i>{{ t.type_display }}
-                                    </span>
-                                    {% elif t.ticket_type == 'CIGNAL' %}
-                                    <span class="badge bg-purple-subtle text-purple border border-purple-subtle fw-semibold" style="font-size:0.78rem;">
-                                        <i class="fas fa-tv me-1"></i>{{ t.type_display }}
-                                    </span>
-                                    {% else %}
-                                    <span class="badge bg-secondary-subtle text-secondary border fw-semibold" style="font-size:0.78rem;">
-                                        {{ t.type_display }}
-                                    </span>
-                                    {% endif %}
                                 </td>
 
                                 <!-- Status -->
                                 <td>
                                     {% if t.status == 'COMPLETED' %}
-                                    <span class="badge bg-success rounded-pill px-2 py-1" style="font-size:0.75rem;">
+                                    <span class="status-badge status-badge--success py-0 px-2" style="font-size:0.75rem;">
                                         <i class="fas fa-check-circle me-1"></i>Completed
                                     </span>
                                     {% elif t.status == 'IN_PROGRESS' %}
-                                    <span class="badge bg-info text-dark rounded-pill px-2 py-1" style="font-size:0.75rem;">
+                                    <span class="status-badge status-badge--info py-0 px-2" style="font-size:0.75rem;">
                                         <i class="fas fa-spinner fa-spin me-1"></i>On Site
                                     </span>
                                     {% elif t.status == 'ASSIGNED' %}
-                                    <span class="badge bg-primary rounded-pill px-2 py-1" style="font-size:0.75rem;">
+                                    <span class="status-badge status-badge--primary py-0 px-2" style="font-size:0.75rem;">
                                         <i class="fas fa-user-clock me-1"></i>Assigned
                                     </span>
                                     {% elif t.status == 'CANCELLED' %}
-                                    <span class="badge bg-secondary rounded-pill px-2 py-1" style="font-size:0.75rem;">
+                                    <span class="status-badge status-badge--neutral py-0 px-2" style="font-size:0.75rem;">
                                         Cancelled
                                     </span>
                                     {% else %}
-                                    <span class="badge bg-warning text-dark rounded-pill px-2 py-1" style="font-size:0.75rem;">
+                                    <span class="status-badge status-badge--warning py-0 px-2" style="font-size:0.75rem;">
                                         <i class="fas fa-clock me-1"></i>Pending
                                     </span>
                                     {% endif %}
@@ -197,7 +155,7 @@
 
                                 <!-- Client Concern -->
                                 <td style="font-size:0.85rem;">
-                                    <div class="fw-semibold text-dark dark-text-white mb-1">
+                                    <div class="fw-semibold text-body mb-1">
                                         {{ t.concern|linebreaksbr|default:"No concern specified" }}
                                     </div>
                                     {% if t.alternate_contact %}
@@ -217,21 +175,21 @@
                                     {% if t.technicians %}
                                     <div class="d-flex flex-wrap gap-1">
                                         {% for tech in t.technicians %}
-                                        <span class="badge bg-light text-dark border rounded-pill px-2 py-1" style="font-size:0.75rem;">
-                                            <i class="fas fa-user-tie text-secondary me-1"></i>{{ tech }}
+                                        <span class="status-badge status-badge--neutral py-0 px-2" style="font-size:0.75rem;">
+                                            <i class="fas fa-user-tie text-muted me-1"></i>{{ tech }}
                                         </span>
                                         {% endfor %}
                                     </div>
                                     {% elif t.team_name %}
-                                    <span class="badge bg-light text-dark border rounded-pill px-2 py-1" style="font-size:0.75rem;">
-                                        <i class="fas fa-users text-secondary me-1"></i>{{ t.team_name }}
+                                    <span class="status-badge status-badge--neutral py-0 px-2" style="font-size:0.75rem;">
+                                        <i class="fas fa-users text-muted me-1"></i>{{ t.team_name }}
                                     </span>
                                     {% else %}
-                                    <span class="text-muted" style="font-size:0.8rem;">Unassigned</span>
+                                    <span class="text-muted fst-italic" style="font-size:0.8rem;">Unassigned</span>
                                     {% endif %}
                                 </td>
 
-                                <!-- Actions Taken & Tech Remarks -->
+                                <!-- Actions Taken & Tech Readings -->
                                 <td style="font-size:0.84rem;">
                                     {% if t.actions_taken %}
                                     <div class="mb-1 text-success fw-semibold">
@@ -244,11 +202,11 @@
                                     </div>
                                     {% endif %}
                                     {% if t.signal_level or t.nap_reading or t.house_reading or t.ont_modem_sn %}
-                                    <div class="d-flex flex-wrap gap-1 mt-1" style="font-size:0.72rem;">
-                                        {% if t.signal_level %}<span class="badge bg-info-subtle text-info border">Signal: {{ t.signal_level }}</span>{% endif %}
-                                        {% if t.nap_reading %}<span class="badge bg-light text-secondary border">NAP: {{ t.nap_reading }}</span>{% endif %}
-                                        {% if t.house_reading %}<span class="badge bg-light text-secondary border">House: {{ t.house_reading }}</span>{% endif %}
-                                        {% if t.ont_modem_sn %}<span class="badge bg-light text-dark border font-monospace">SN: {{ t.ont_modem_sn }}</span>{% endif %}
+                                    <div class="text-muted mt-1" style="font-size: 0.78rem;">
+                                        {% if t.signal_level %}Signal {{ t.signal_level|cut:" dBm"|cut:"dBm" }} dBm{% endif %}
+                                        {% if t.nap_reading %}{% if t.signal_level %} &bull; {% endif %}NAP {{ t.nap_reading }}{% endif %}
+                                        {% if t.house_reading %}{% if t.signal_level or t.nap_reading %} &bull; {% endif %}House {{ t.house_reading }}{% endif %}
+                                        {% if t.ont_modem_sn %}{% if t.signal_level or t.nap_reading or t.house_reading %} &bull; {% endif %}SN: {{ t.ont_modem_sn }}{% endif %}
                                     </div>
                                     {% endif %}
                                     {% if not t.actions_taken and not t.technician_remarks and not t.signal_level %}
@@ -259,7 +217,7 @@
                                 <!-- Duration -->
                                 <td style="font-size:0.82rem; white-space:nowrap;">
                                     {% if t.duration %}
-                                    <span class="fw-semibold text-dark dark-text-white">{{ t.duration }} min{{ t.duration|pluralize }}</span>
+                                    <span class="fw-semibold text-body">{{ t.duration }} min{{ t.duration|pluralize }}</span>
                                     {% elif t.done_at %}
                                     <span class="text-muted">{{ t.done_at|date:"M d, h:i A" }}</span>
                                     {% else %}

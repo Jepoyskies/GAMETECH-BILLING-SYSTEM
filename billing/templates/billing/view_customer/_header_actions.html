@@ -1,72 +1,14 @@
-<!-- Base Partial: Header Actions & Alerts -->
-    <div class="row mb-3">
-        <div class="col-12 d-flex justify-content-end gap-2 flex-wrap">
-            <a href="{% url 'customer_list' %}" class="btn-action btn-edit"><i class="fas fa-arrow-left"></i> Back to List</a>
-            
-            {% if request.user.role == 'Admin' or request.user.role == 'Editor' %}
-                {% if customer.installation_status == 'pending' %}
-                    <button type="button" class="btn-action" style="background:#e0f2fe; color:#0369a1; border: 1px solid #bae6fd;" data-bs-toggle="modal" data-bs-target="#markInstalledModal">
-                        <i class="fas fa-screwdriver-wrench"></i> Mark as Installed
-                    </button>
-                {% endif %}
-                <a href="{% url 'edit_customer' customer.id %}" class="btn-action btn-edit"><i class="fas fa-edit"></i> Edit Profile</a>
-                <button type="button" class="btn-action" style="background:rgba(245,158,11,0.15); color:#fbbf24; border: 1px solid rgba(245,158,11,0.35);" data-bs-toggle="modal" data-bs-target="#modal-customer-repair" title="Send a repair or service ticket directly to Dispatch">
-                    <i class="fas fa-screwdriver-wrench me-1"></i> File Repair Ticket
-                </button>
-                
-                {% if customer.pppoe_username %}
-                    <a href="{% url 'pay_customer' customer.pppoe_username %}?next={{ request.get_full_path|urlencode }}" class="btn-action" style="background:#d1fae5; color:#065f46;"><i class="fas fa-money-bill-wave"></i> Renew / Pay Bill</a>
-                {% endif %}
-                
-                <div class="dropdown">
-                    <button class="btn-action btn-edit dropdown-toggle" type="button" id="moreActionsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="fas fa-ellipsis-v"></i> More Actions
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="moreActionsDropdown" style="border-radius:12px; border:none; padding:10px;">
-                        <li><a class="dropdown-item" href="{% url 'statement_of_account' customer.id %}" target="_blank"><i class="fas fa-file-invoice-dollar text-primary w-25px"></i> Statement of Account</a></li>
-                        <li><button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#customerHealthModal"><i class="fas fa-heartbeat text-warning w-25px"></i> Update Health</button></li>
-                        
-                        <li><hr class="dropdown-divider"></li>
-                        <li><button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#singleSmsModal"><i class="fas fa-sms text-primary w-25px"></i> Send SMS</button></li>
-                        <li><button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#singleEmailModal"><i class="fas fa-envelope text-info w-25px"></i> Send Email</button></li>
-                        
-                        {% if customer.pppoe_username %}
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{% url 'customer_rebate' customer.pppoe_username %}"><i class="fas fa-gift text-success w-25px"></i> Rebate</a></li>
-                            <li><a class="dropdown-item" href="{% url 'customer_rollback' customer.pppoe_username %}"><i class="fas fa-backward text-danger w-25px"></i> Rollback</a></li>
-                            
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <form action="{% url 'customer_kick_session' customer.pppoe_username %}" method="post" class="m-0 p-0" onsubmit="return confirmAction(event, 'Kick Session?', 'Are you sure you want to kick the active session? This will force their router to redial.', 'warning');">
-                                    {% csrf_token %}
-                                    <button type="submit" class="dropdown-item"><i class="fas fa-bolt text-info w-25px"></i> Kick Session</button>
-                                </form>
-                            </li>
-                            <li>
-                                <form action="{% url 'customer_force_suspend' customer.pppoe_username %}" method="post" class="m-0 p-0" onsubmit="return confirmAction(event, 'Force Suspend?', 'Are you sure you want to force suspend this customer? This will set them to expired on the router and drop their session.', 'warning');">
-                                    {% csrf_token %}
-                                    <button type="submit" class="dropdown-item"><i class="fas fa-power-off text-warning w-25px"></i> Force Suspend</button>
-                                </form>
-                            </li>
-                            <li><button class="dropdown-item text-danger fw-bold" data-bs-toggle="modal" data-bs-target="#forceReactivateModal"><i class="fas fa-exclamation-triangle w-25px"></i> Force Reactivate</button></li>
-                        {% endif %}
-                        
-                        {% if request.user.role == 'Admin' %}
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <form action="{% url 'delete_customer' customer.id %}" method="post" class="m-0 p-0" onsubmit="return confirmAction(event, 'Delete Customer?', 'Are you sure you want to delete this customer? This cannot be undone.', 'error');">
-                                    {% csrf_token %}
-                                    <button type="submit" class="dropdown-item text-danger"><i class="fas fa-trash-alt w-25px"></i> Delete</button>
-                                </form>
-                            </li>
-                        {% endif %}
-                    </ul>
-                </div>
-            {% else %}
-                <a href="{% url 'statement_of_account' customer.id %}" class="btn-action" style="background:#e0f2fe; color:#0369a1;"><i class="fas fa-print"></i> Print SOA</a>
-            {% endif %}
-        </div>
-    </div>
+<!-- Base Partial: Header Breadcrumb & Alerts -->
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <a href="{% url 'customer_list' %}" class="text-decoration-none text-muted d-inline-flex align-items-center gap-2" style="font-size: 0.85rem; font-weight: 500; transition: color 0.2s;">
+        <i class="fas fa-arrow-left"></i> <span>Customers</span>
+    </a>
+    {% if not request.user.role == 'Admin' and not request.user.role == 'Editor' %}
+    <a href="{% url 'statement_of_account' customer.id %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3" target="_blank">
+        <i class="fas fa-print me-1"></i> Print SOA
+    </a>
+    {% endif %}
+</div>
 
     {% if customer.sync_status == 'Failed' %}
     <div class="alert alert-danger shadow-sm border-0 rounded-4 mb-4">

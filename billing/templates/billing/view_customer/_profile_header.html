@@ -1,28 +1,158 @@
-<!-- Base Partial: Profile Header -->
-    <div class="profile-header">
-        <div class="d-flex align-items-center">
-            <div class="profile-avatar-ring">{{ customer.full_name|make_list|first|upper }}</div>
+<!-- Base Partial: Profile Header with Unified Page Header & Actions Toolbar -->
+<div class="page-header customer-view-header p-3 p-md-4 mb-4" style="background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, var(--surface-card) 60%); border: 1px solid var(--border-subtle); border-radius: var(--gt-radius-card); box-shadow: var(--shadow-card);">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <!-- Left: Identity & Badges -->
+        <div class="d-flex align-items-center gap-3">
+            <div class="cust-avatar-tile" style="width: 56px; height: 56px; border-radius: 14px; background: var(--section-accent-tint); color: var(--section-accent); font-size: 1.5rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid rgba(37, 99, 235, 0.2);">
+                {{ customer.full_name|make_list|first|upper }}
+            </div>
             <div>
-                <h1 class="profile-title">{{ customer.full_name }}</h1>
-                <div class="profile-subtitle">
-                    <i class="fas fa-map-marker-alt me-1"></i> {{ customer.barangay.name|default:"No Barangay" }}
+                <h1 class="cust-name-title mb-1" style="font-size: 24px; font-weight: 700; color: var(--text-primary); line-height: 1.2;">{{ customer.full_name }}</h1>
+                <div class="cust-meta-line text-muted mb-2" style="font-size: 13px;">
+                    <i class="fas fa-map-marker-alt me-1"></i>{{ customer.barangay.name|default:"No Barangay" }}
                     {% if customer.pppoe_username %} &bull; <i class="fas fa-user me-1"></i>{{ customer.pppoe_username }}{% endif %}
                 </div>
-                <div class="d-flex align-items-center gap-2 flex-wrap mt-1">
-                    <div class="status-badge {{ customer.status }}">
-                        <span style="width:7px; height:7px; border-radius:50%; background:currentColor; opacity:0.7; display:inline-block;"></span>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <!-- Customer Lifecycle Status Badge -->
+                    <span class="status-badge status-badge--{% if customer.status == 'active' %}success{% elif customer.status == 'suspended' %}warning{% elif customer.status == 'expired' %}danger{% else %}neutral{% endif %}">
+                        <span class="status-dot"></span>
                         {{ customer.get_status_display }}
-                    </div>
+                    </span>
+
+                    <!-- Physical Line Installation Status Badge -->
                     {% if customer.installation_status == 'pending' %}
-                        <span class="badge rounded-pill px-3 py-1 d-inline-flex align-items-center gap-1" style="background: rgba(14, 165, 233, 0.15); color: #0284c7; border: 1px solid rgba(14, 165, 233, 0.35); font-size: 0.8rem; font-weight: 600;">
-                            <i class="fas fa-gear fa-spin-pulse"></i> Pending Installation
-                        </span>
+                    <span class="status-badge status-badge--info" title="Awaiting field technicians">
+                        <span class="status-dot"></span> Pending Installation
+                    </span>
                     {% else %}
-                        <span class="badge rounded-pill px-3 py-1 d-inline-flex align-items-center gap-1" style="background: rgba(16, 185, 129, 0.15); color: #059669; border: 1px solid rgba(16, 185, 129, 0.35); font-size: 0.8rem; font-weight: 600;" title="Installed on {% if customer.installed_at %}{{ customer.installed_at|date:'M d, Y' }}{% else %}Premises{% endif %}">
-                            <i class="fas fa-check-circle"></i> Installed Line
-                        </span>
+                    <span class="status-badge status-badge--success" title="Installed on {% if customer.installed_at %}{{ customer.installed_at|date:'M d, Y' }}{% else %}Premises{% endif %}">
+                        <span class="status-dot"></span> Installed Line
+                    </span>
                     {% endif %}
                 </div>
             </div>
         </div>
+
+        <!-- Right: Actions Toolbar in exact requested order -->
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            {% if request.user.role == 'Admin' or request.user.role == 'Editor' %}
+                <!-- 1. Renew / Pay Bill: The ONE solid --color-primary CTA -->
+                {% if customer.pppoe_username %}
+                <a href="{% url 'pay_customer' customer.pppoe_username %}?next={{ request.get_full_path|urlencode }}" class="btn btn-primary d-inline-flex align-items-center gap-2 px-3 py-2 fw-semibold" style="border-radius: 8px; font-size: 0.88rem; box-shadow: 0 2px 8px rgba(37,99,235,0.25);">
+                    <i class="fas fa-money-bill-wave"></i> Renew / Pay Bill
+                </a>
+                {% endif %}
+
+                <!-- 2. Edit Profile: Neutral outline -->
+                <a href="{% url 'edit_customer' customer.id %}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2 px-3 py-2 fw-medium" style="border-radius: 8px; font-size: 0.88rem; border-color: var(--border-subtle); color: var(--text-primary); background: var(--surface-card);">
+                    <i class="fas fa-edit"></i> Edit Profile
+                </a>
+
+                <!-- If Pending Install, provide quick Mark Installed button -->
+                {% if customer.installation_status == 'pending' %}
+                <button type="button" class="btn btn-outline-info d-inline-flex align-items-center gap-2 px-3 py-2 fw-medium" style="border-radius: 8px; font-size: 0.88rem;" data-bs-toggle="modal" data-bs-target="#markInstalledModal">
+                    <i class="fas fa-screwdriver-wrench"></i> Mark Installed
+                </button>
+                {% endif %}
+
+                <!-- 3. Request Service: Outline with blue accent & dropdown -->
+                <div class="dropdown">
+                    <button class="btn btn-outline-primary dropdown-toggle d-inline-flex align-items-center gap-2 px-3 py-2 fw-semibold" type="button" id="requestServiceDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="border-radius: 8px; font-size: 0.88rem; border-color: var(--section-accent); color: var(--section-accent); background: transparent;">
+                        <i class="fas fa-screwdriver-wrench"></i> Request Service
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" aria-labelledby="requestServiceDropdown" style="min-width: 220px; border-radius: 12px; padding: 8px; background: var(--surface-card); border: 1px solid var(--border-subtle) !important;">
+                        <li>
+                            <button type="button" class="dropdown-item py-2 px-3 rounded-2 d-flex align-items-center gap-2" onclick="openRequestServiceModal('INSTALLATION')">
+                                <i class="fas fa-plug text-primary" style="width: 20px;"></i>
+                                <span>New Installation</span>
+                            </button>
+                        </li>
+                        <li>
+                            <button type="button" class="dropdown-item py-2 px-3 rounded-2 d-flex align-items-center gap-2" onclick="openRequestServiceModal('REPAIR')">
+                                <i class="fas fa-tools text-primary" style="width: 20px;"></i>
+                                <span>Repair / Technical Issue</span>
+                            </button>
+                        </li>
+                        <li>
+                            <button type="button" class="dropdown-item py-2 px-3 rounded-2 d-flex align-items-center gap-2" onclick="openRequestServiceModal('SITE_VISIT')">
+                                <i class="fas fa-location-dot text-primary" style="width: 20px;"></i>
+                                <span>Site Visit / Inspection</span>
+                            </button>
+                        </li>
+                        <li><hr class="dropdown-divider my-1" style="border-color: var(--border-divider);"></li>
+                        <li>
+                            <button type="button" class="dropdown-item py-2 px-3 rounded-2 d-flex align-items-center gap-2" onclick="openRequestServiceModal('RELOCATION')">
+                                <i class="fas fa-truck text-muted" style="width: 20px;"></i>
+                                <span class="text-secondary">Transfer / Relocation</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- 4. More Actions: Neutral menu -->
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle d-inline-flex align-items-center gap-2 px-3 py-2 fw-medium" type="button" id="moreActionsDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="border-radius: 8px; font-size: 0.88rem; border-color: var(--border-subtle); color: var(--text-primary); background: var(--surface-card);">
+                        <i class="fas fa-ellipsis-v"></i> More Actions
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" aria-labelledby="moreActionsDropdown" style="min-width: 240px; border-radius: 12px; padding: 8px; background: var(--surface-card); border: 1px solid var(--border-subtle) !important;">
+                        <!-- ACCOUNT -->
+                        <li class="dropdown-header text-uppercase text-muted" style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px; padding: 4px 12px;">Account</li>
+                        <li><a class="dropdown-item py-2 px-3 rounded-2" href="{% url 'statement_of_account' customer.id %}" target="_blank"><i class="fas fa-file-invoice-dollar text-muted me-2" style="width: 18px;"></i> Statement of Account</a></li>
+                        <li><button class="dropdown-item py-2 px-3 rounded-2" data-bs-toggle="modal" data-bs-target="#customerHealthModal"><i class="fas fa-heartbeat text-muted me-2" style="width: 18px;"></i> Update Health</button></li>
+
+                        <!-- CONTACT -->
+                        <li><hr class="dropdown-divider my-1" style="border-color: var(--border-divider);"></li>
+                        <li class="dropdown-header text-uppercase text-muted" style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px; padding: 4px 12px;">Contact</li>
+                        <li><button class="dropdown-item py-2 px-3 rounded-2" data-bs-toggle="modal" data-bs-target="#singleSmsModal"><i class="fas fa-sms text-muted me-2" style="width: 18px;"></i> Send SMS</button></li>
+                        <li><button class="dropdown-item py-2 px-3 rounded-2" data-bs-toggle="modal" data-bs-target="#singleEmailModal"><i class="fas fa-envelope text-muted me-2" style="width: 18px;"></i> Send Email</button></li>
+
+                        <!-- BILLING -->
+                        {% if customer.pppoe_username %}
+                        <li><hr class="dropdown-divider my-1" style="border-color: var(--border-divider);"></li>
+                        <li class="dropdown-header text-uppercase text-muted" style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px; padding: 4px 12px;">Billing</li>
+                        <li><a class="dropdown-item py-2 px-3 rounded-2" href="{% url 'customer_rebate' customer.pppoe_username %}"><i class="fas fa-gift text-muted me-2" style="width: 18px;"></i> Rebate</a></li>
+                        <li>
+                            <button type="button" class="dropdown-item py-2 px-3 rounded-2 text-danger" onclick="confirmRollback('{% url 'customer_rollback' customer.pppoe_username %}')">
+                                <i class="fas fa-backward text-danger me-2" style="width: 18px;"></i> Rollback
+                            </button>
+                        </li>
+
+                        <!-- CONNECTION -->
+                        <li><hr class="dropdown-divider my-1" style="border-color: var(--border-divider);"></li>
+                        <li class="dropdown-header text-uppercase text-muted" style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px; padding: 4px 12px;">Connection</li>
+                        <li>
+                            <form action="{% url 'customer_kick_session' customer.pppoe_username %}" method="post" class="m-0 p-0" onsubmit="return confirmAction(event, 'Kick Session?', 'Are you sure you want to kick the active session? This will force their router to redial.', 'warning');">
+                                {% csrf_token %}
+                                <button type="submit" class="dropdown-item py-2 px-3 rounded-2"><i class="fas fa-bolt text-muted me-2" style="width: 18px;"></i> Kick Session</button>
+                            </form>
+                        </li>
+                        <li>
+                            <form action="{% url 'customer_force_suspend' customer.pppoe_username %}" method="post" class="m-0 p-0" onsubmit="return confirmAction(event, 'Force Suspend?', 'Are you sure you want to force suspend this customer? This will set them to expired on the router and drop their session.', 'warning');">
+                                {% csrf_token %}
+                                <button type="submit" class="dropdown-item py-2 px-3 rounded-2 text-danger"><i class="fas fa-power-off text-danger me-2" style="width: 18px;"></i> Force Suspend</button>
+                            </form>
+                        </li>
+                        <li>
+                            <button type="button" class="dropdown-item py-2 px-3 rounded-2 text-danger" data-bs-toggle="modal" data-bs-target="#forceReactivateModal">
+                                <i class="fas fa-exclamation-triangle text-danger me-2" style="width: 18px;"></i> Force Reactivate
+                            </button>
+                        </li>
+                        {% endif %}
+
+                        <!-- DANGER -->
+                        {% if request.user.role == 'Admin' %}
+                        <li><hr class="dropdown-divider my-1" style="border-color: var(--border-divider);"></li>
+                        <li class="dropdown-header text-uppercase text-danger" style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px; padding: 4px 12px;">Danger</li>
+                        <li>
+                            <form action="{% url 'delete_customer' customer.id %}" method="post" class="m-0 p-0" onsubmit="return confirmAction(event, 'Delete Customer?', 'Are you sure you want to delete this customer? This cannot be undone.', 'error');">
+                                {% csrf_token %}
+                                <button type="submit" class="dropdown-item py-2 px-3 rounded-2 text-danger"><i class="fas fa-trash-alt text-danger me-2" style="width: 18px;"></i> Delete</button>
+                            </form>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            {% endif %}
+        </div>
     </div>
+</div>

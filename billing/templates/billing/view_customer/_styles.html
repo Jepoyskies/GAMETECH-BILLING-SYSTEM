@@ -1,207 +1,143 @@
 <!-- Base Partial: Styles -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
-/* Profile header already covered by page-hero + dashboard-card in theme.css */
-.profile-header {
-  background: linear-gradient(135deg, #1e3a5f 0%, #2151A1 50%, #38bdf8 100%);
-  color: #fff;
-  padding: 36px 40px;
-  border-radius: 20px;
+/* Page & Profile Header */
+.page-header {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, var(--surface-card) 60%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg, 16px);
+  padding: 24px 28px;
   margin-bottom: 24px;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 10px 30px rgba(33,81,161,0.25);
-}
-.profile-header::before {
-  content: '';
-  position: absolute;
-  right: -60px; top: -60px;
-  width: 220px; height: 220px;
-  background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
-  border-radius: 50%;
-}
-.profile-header::after {
-  content: '';
-  position: absolute;
-  left: -40px; bottom: -40px;
-  width: 160px; height: 160px;
-  background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
-  border-radius: 50%;
-}
-.profile-avatar-ring {
-  width: 70px; height: 70px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.18);
-  border: 2px solid rgba(255,255,255,0.35);
-  backdrop-filter: blur(8px);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 2rem; font-weight: 700; color: white;
-  flex-shrink: 0; margin-right: 20px;
-}
-.profile-title { font-size: 1.8rem; font-weight: 800; margin: 0; line-height: 1.2; }
-.profile-subtitle { font-size: 0.95rem; opacity: 0.85; margin-top: 4px; }
-.status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 30px; font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 12px; }
-.status-badge.active    { background: rgba(22,163,74,0.25); border: 1px solid rgba(22,163,74,0.4); }
-.status-badge.inactive  { background: rgba(100,116,139,0.25); border: 1px solid rgba(100,116,139,0.4); }
-.status-badge.expired   { background: rgba(220,38,38,0.25); border: 1px solid rgba(220,38,38,0.4); }
-.status-badge.suspended { background: rgba(245,158,11,0.25); border: 1px solid rgba(245,158,11,0.4); }
-
-.info-card { background: #fff; border-radius: 20px; padding: 28px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); margin-bottom: 24px; border: 1px solid rgba(0,0,0,0.04); height: 100%; }
-.dark-mode .info-card { background: #1e293b; border-color: rgba(255,255,255,0.05); box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
-.info-title { font-size: 1rem; font-weight: 700; color: #1e293b; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; }
-.dark-mode .info-title { color: #f1f5f9; }
-.info-title i { color: #2563eb; }
-
-.info-list { list-style: none; padding: 0; margin: 0; }
-.info-list li { display: flex; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid rgba(0,0,0,0.05); align-items: center; gap: 12px; }
-.dark-mode .info-list li { border-bottom-color: rgba(255,255,255,0.05); }
-.info-list li:last-child { border-bottom: none; padding-bottom: 0; }
-.info-label { color: #64748b; font-size: 0.85rem; font-weight: 500; flex-shrink: 0; }
-.dark-mode .info-label { color: #94a3b8; }
-.info-value { color: #1e293b; font-size: 0.88rem; font-weight: 600; text-align: right; }
-.dark-mode .info-value { color: #e2e8f0; }
-
-.btn-action { display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; border-radius: 12px; font-weight: 600; font-size: 0.85rem; transition: all 0.2s; text-decoration: none; cursor: pointer; border: none; }
-.btn-edit { background: #f1f5f9; color: #334155; }
-.btn-edit:hover { background: #e2e8f0; color: #334155; }
-.btn-delete { background: #fef2f2; color: #ef4444; }
-.btn-delete:hover { background: #fee2e2; }
-.dark-mode .btn-edit { background: #334155; color: #f1f5f9; }
-.dark-mode .btn-edit:hover { background: #475569; color: #f1f5f9; }
-.dark-mode .btn-delete { background: rgba(239,68,68,0.1); color: #ef4444; }
-
-.live-monitor-box { background: linear-gradient(145deg, #1e3a5f, #1e40af); padding: 20px; border-radius: 12px; color: white; display: flex; gap: 20px; align-items: center;}
-.monitor-metric { text-align: center; flex: 1;}
-.monitor-metric-title { font-size: 0.75rem; opacity: 0.8; text-transform: uppercase; font-weight: 600;}
-.monitor-metric-value { font-size: 1.5rem; font-weight: 700; font-family: monospace;}
-
-.w-25px { width: 25px; text-align: center; }
-.dark-mode .dropdown-menu { background: #1e293b; border-color: rgba(255,255,255,0.1); }
-.dark-mode .dropdown-item { color: #e2e8f0; }
-.dark-mode .dropdown-item:hover { background: #334155; color: #fff; }
-.dark-mode .dropdown-divider { border-top-color: rgba(255,255,255,0.1); }
-.dark-mode .modal-content { background: #1e293b; color: #f1f5f9; border: 1px solid rgba(255,255,255,0.1); }
-.dark-mode .modal-content .text-muted { color: #94a3b8 !important; }
-.dark-mode .modal-content input, .dark-mode .modal-content select { background: #0f172a; color: #f1f5f9; border-color: #334155; }
-
-/* Cignal Pending Request Glow & Highlighting */
-.cignal-pending-card {
-    border: 2px solid #0284c7 !important;
-    box-shadow: 0 0 15px rgba(2, 132, 199, 0.4), 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
-    animation: cignalBorderGlow 2.5s infinite ease-in-out;
-}
-@keyframes cignalBorderGlow {
-    0% {
-        border-color: #0284c7;
-        box-shadow: 0 0 10px rgba(2, 132, 199, 0.35);
-    }
-    50% {
-        border-color: #38bdf8;
-        box-shadow: 0 0 25px rgba(56, 189, 248, 0.7);
-    }
-    100% {
-        border-color: #0284c7;
-        box-shadow: 0 0 10px rgba(2, 132, 199, 0.35);
-    }
-}
-.cignal-pending-banner {
-    background: rgba(2, 132, 199, 0.08);
-    border: 1px solid rgba(2, 132, 199, 0.25);
-}
-.dark-mode .cignal-pending-banner {
-    background: rgba(56, 189, 248, 0.12);
-    border: 1px solid rgba(56, 189, 248, 0.35);
-}
-.cignal-pulse-btn {
-    animation: cignalBtnPulse 2s infinite ease-in-out;
-}
-@keyframes cignalBtnPulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
-}
-.cignal-radar-pulse {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: rgba(2, 132, 199, 0.15);
-    animation: cignalRadar 1.8s infinite;
-}
-@keyframes cignalRadar {
-    0% { box-shadow: 0 0 0 0 rgba(2, 132, 199, 0.5); }
-    70% { box-shadow: 0 0 0 8px rgba(2, 132, 199, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(2, 132, 199, 0); }
 }
 
-/* Highlighted Red row for Active Account that is Offline */
+.profile-avatar-tile {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md, 12px);
+  background: rgba(37, 99, 235, 0.12);
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+/* Info Cards */
+.info-card {
+  background: var(--surface-card);
+  border-radius: var(--radius-lg, 16px);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 24px;
+  border: 1px solid var(--border-subtle);
+  height: 100%;
+}
+
+.info-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.info-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.info-list li {
+  display: flex;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  align-items: center;
+  gap: 12px;
+}
+
+.info-list li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.info-label {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.info-value {
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: right;
+}
+
+/* Password eye toggle & masked text */
+.pw-toggle-btn {
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+.pw-toggle-btn:hover {
+  opacity: 1;
+}
+
+/* Live Traffic & Metrics */
+.live-monitor-box {
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 12px);
+  padding: 18px 0;
+  display: flex;
+  text-align: center;
+}
+
+/* Activity Log Details Formatting (plain text, unboxed) */
+.activity-log-details div.border,
+.activity-log-details .bg-light,
+.activity-log-details .bg-danger-subtle,
+.activity-log-details .border-danger-subtle,
+.activity-log-details .border-light {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+.activity-log-details table {
+  margin-bottom: 0 !important;
+  background: transparent !important;
+}
+
+.activity-log-details td {
+  padding: 2px 4px !important;
+  background: transparent !important;
+}
+
+.activity-log-details .text-success {
+  color: var(--text-primary) !important;
+  font-weight: 600 !important;
+}
+
+/* Red Offline Row Highlight */
 .active-offline-row-highlight {
-    background: rgba(239, 68, 68, 0.12) !important;
-    border: 1px solid rgba(239, 68, 68, 0.45) !important;
-    border-radius: 10px !important;
-    padding: 8px 12px !important;
-    margin: 4px 0 !important;
-    box-shadow: 0 0 14px rgba(239, 68, 68, 0.25) !important;
-    animation: activeOfflinePulse 2.5s infinite ease-in-out;
-}
-@keyframes activeOfflinePulse {
-    0% {
-        border-color: rgba(239, 68, 68, 0.35);
-        box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
-    }
-    50% {
-        border-color: rgba(239, 68, 68, 0.7);
-        box-shadow: 0 0 18px rgba(239, 68, 68, 0.4);
-    }
-    100% {
-        border-color: rgba(239, 68, 68, 0.35);
-        box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
-    }
-}
-.badge-active-offline {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
-    color: #ffffff !important;
-    border: 1px solid #f87171 !important;
-    font-weight: 700 !important;
-    font-size: 0.8rem !important;
-    padding: 4px 10px !important;
-    border-radius: 6px !important;
-    letter-spacing: 0.3px;
-    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5) !important;
+  background: rgba(239, 68, 68, 0.08) !important;
+  border: 1px solid rgba(239, 68, 68, 0.35) !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  margin: 4px 0 !important;
 }
 
-/* Repeat Repair Quality Alert Card */
-.repeat-repair-alert-card {
-    background: rgba(239, 68, 68, 0.06);
-    border: 1px solid rgba(239, 68, 68, 0.28);
-    border-left: 5px solid #ef4444;
-    border-radius: 14px;
-    padding: 16px 20px;
-    box-shadow: 0 4px 18px rgba(239, 68, 68, 0.08);
-}
-.alert-icon-box {
-    width: 42px;
-    height: 42px;
-    border-radius: 12px;
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.25rem;
-}
-.dark-mode .repeat-repair-alert-card {
-    background: rgba(239, 68, 68, 0.12);
-    border-color: rgba(239, 68, 68, 0.35);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
-}
-.dark-mode .dark-bg-box {
-    background: #1e293b !important;
-    border-color: rgba(255, 255, 255, 0.08) !important;
-}
-.dark-mode .dark-text-white {
-    color: #f8fafc !important;
+/* Cignal Pending Request Banner */
+.cignal-pending-card {
+  border: 2px solid var(--color-primary) !important;
 }
 </style>

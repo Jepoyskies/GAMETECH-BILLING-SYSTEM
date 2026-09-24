@@ -1,18 +1,19 @@
 <!-- ══════════════ 6-STEP OPERATIONAL LIFECYCLE TRACKER ══════════════ -->
 <div class="row mb-4">
     <div class="col-12">
-        <div class="dashboard-card animate-fade-in p-3 p-md-4" style="background: linear-gradient(145deg, rgba(15,23,42,0.92) 0%, rgba(30,41,59,0.85) 100%); border: 1px solid rgba(148,163,184,0.14); border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.4);">
+        <div class="dashboard-card animate-fade-in p-3 p-md-4" style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: var(--gt-radius-card); box-shadow: var(--shadow-card);">
             
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 pb-2 border-bottom border-secondary border-opacity-25">
-                <div class="d-flex align-items-center gap-2">
-                    <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(59,130,246,0.15); display: flex; align-items: center; justify-content: center; color: #60a5fa;">
+            <!-- Tracker Header -->
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 pb-3" style="border-bottom: 1px solid var(--border-divider);">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--section-accent-tint); display: flex; align-items: center; justify-content: center; color: var(--section-accent);">
                         <i class="fas fa-route"></i>
                     </div>
                     <div>
-                        <h6 class="mb-0 fw-bold text-white" style="font-family: 'Inter', sans-serif; font-size: 0.95rem;">
+                        <h6 class="mb-0 fw-bold" style="font-size: 0.95rem; color: var(--text-primary);">
                             Operations Lifecycle &amp; Fulfillment Tracker
                         </h6>
-                        <span class="text-muted" style="font-size: 0.75rem;">
+                        <span class="text-muted" style="font-size: 0.78rem;">
                             End-to-End Line Provisioning, Field Execution &amp; Activation
                         </span>
                     </div>
@@ -20,15 +21,15 @@
                 
                 <div class="d-flex align-items-center gap-2">
                     {% if active_ticket %}
-                    <span class="badge" style="background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); font-size: 0.75rem; padding: 5px 10px;">
+                    <span class="status-badge status-badge--neutral">
                         <i class="fas fa-ticket-alt me-1"></i> Active Order: {{ active_ticket.ticket_number }}
                     </span>
-                    <a href="{% url 'dispatch_dashboard' %}?q={{ active_ticket.ticket_number }}" target="_blank" class="btn btn-sm btn-outline-info rounded-pill px-3 py-1" style="font-size: 0.75rem;">
+                    <a href="{% url 'dispatch_dashboard' %}?q={{ active_ticket.ticket_number }}" target="_blank" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" style="border-radius: 8px; font-size: 0.78rem; border-color: var(--border-subtle); color: var(--text-secondary); background: transparent;">
                         <i class="fas fa-external-link-alt me-1"></i> View in Cockpit
                     </a>
                     {% else %}
-                    <span class="badge" style="background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); font-size: 0.75rem; padding: 5px 10px;">
-                        <i class="fas fa-check-circle me-1"></i> Line Fully Activated &amp; Healthy
+                    <span class="status-badge status-badge--success">
+                        <span class="status-dot"></span> Line Fully Activated &amp; Healthy
                     </span>
                     {% endif %}
                 </div>
@@ -39,87 +40,83 @@
                 
                 <!-- STAGE 1: AGENT / INTAKE -->
                 <div class="col-6 col-md-2">
-                    <div class="p-2 p-md-3 rounded-3 h-100 d-flex flex-column justify-content-between border {% if lifecycle_tracker.step1 == 'completed' %}border-success border-opacity-50 bg-success bg-opacity-10{% else %}border-secondary border-opacity-25 bg-dark bg-opacity-30{% endif %}">
+                    <div class="p-2 p-md-3 rounded-3 h-100 d-flex flex-column justify-content-between" style="{% if lifecycle_tracker.step1 == 'completed' %}background: var(--badge-success-bg); border: 1px solid var(--badge-success-text);{% elif lifecycle_tracker.step1 == 'active' %}background: var(--section-accent-tint); border: 1.5px solid var(--section-accent);{% else %}background: var(--surface-subtle); border: 1px solid var(--border-divider);{% endif %}">
                         <div>
                             <div class="mb-2">
                                 {% if lifecycle_tracker.step1 == 'completed' %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: rgba(16,185,129,0.2); color: #34d399;">
-                                    <i class="fas fa-user-tie"></i>
+                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: rgba(16,185,129,0.2); color: var(--badge-success-text);">
+                                    <i class="fas fa-check"></i>
                                 </span>
                                 {% else %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: rgba(100,116,139,0.15); color: #94a3b8;">
+                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: rgba(100,116,139,0.15); color: var(--text-muted);">
                                     <i class="fas fa-walking"></i>
                                 </span>
                                 {% endif %}
                             </div>
-                            <div class="fw-bold" style="font-size: 0.82rem; color: #f8fafc;">
-                                {% if lifecycle_tracker.has_agent %}
+                            <div class="fw-bold" style="font-size: 0.82rem; color: var(--text-primary);">
                                 Agent Intake
-                                {% else %}
-                                <del style="color: #64748b;">Agent</del>
-                                {% endif %}
                             </div>
-                            <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 2px;">
+                            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">
                                 {% if lifecycle_tracker.has_agent %}
-                                {{ lifecycle_tracker.agent_name|truncatechars:18 }}
+                                {{ lifecycle_tracker.agent_name|truncatechars:16 }}
                                 {% else %}
-                                <span class="badge" style="background: rgba(100,116,139,0.25); color: #cbd5e1; font-size: 0.65rem;">Direct Walk-in</span>
+                                Skipped &bull; Direct walk-in
                                 {% endif %}
                             </div>
                         </div>
                         <div class="mt-2 pt-1">
-                            <span class="badge w-100" style="background: {% if lifecycle_tracker.step1 == 'completed' %}rgba(16,185,129,0.2); color: #34d399;{% else %}rgba(100,116,139,0.18); color: #94a3b8;{% endif %} font-size: 0.68rem;">
-                                {% if lifecycle_tracker.has_agent %}Referred{% else %}Direct Application{% endif %}
+                            <span class="status-badge status-badge--{% if lifecycle_tracker.step1 == 'completed' %}success{% else %}neutral{% endif %} w-100 justify-content-center" style="font-size: 0.68rem; padding: 3px 6px;">
+                                {% if lifecycle_tracker.has_agent %}Referred{% else %}Direct Walk-in{% endif %}
                             </span>
                         </div>
                     </div>
                 </div>
 
-                <!-- STAGE 2: CUSTOMER / INTAKE -->
+                <!-- STAGE 2: CUSTOMER CRM -->
                 <div class="col-6 col-md-2">
-                    <div class="p-2 p-md-3 rounded-3 h-100 d-flex flex-column justify-content-between border border-success border-opacity-50 bg-success bg-opacity-10">
+                    <div class="p-2 p-md-3 rounded-3 h-100 d-flex flex-column justify-content-between" style="background: var(--badge-success-bg); border: 1px solid var(--badge-success-text);">
                         <div>
                             <div class="mb-2">
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: rgba(16,185,129,0.2); color: #34d399;">
-                                    <i class="fas fa-user-check"></i>
+                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: rgba(16,185,129,0.2); color: var(--badge-success-text);">
+                                    <i class="fas fa-check"></i>
                                 </span>
                             </div>
-                            <div class="fw-bold text-white" style="font-size: 0.82rem;">Customer CRM</div>
-                            <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 2px;">
+                            <div class="fw-bold" style="font-size: 0.82rem; color: var(--text-primary);">Customer CRM</div>
+                            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">
                                 {{ customer.created_at|date:"M d, Y"|default:"Registered" }}
                             </div>
                         </div>
                         <div class="mt-2 pt-1">
-                            <span class="badge w-100" style="background: rgba(16,185,129,0.2); color: #34d399; font-size: 0.68rem;">
+                            <span class="status-badge status-badge--success w-100 justify-content-center" style="font-size: 0.68rem; padding: 3px 6px;">
                                 Account Created
                             </span>
                         </div>
                     </div>
                 </div>
 
-                <!-- STAGE 3: DISPATCH & ASSIGN -->
+                <!-- STAGE 3: DISPATCH COCKPIT -->
                 <div class="col-6 col-md-2">
-                    <div class="p-2 p-md-3 rounded-3 h-100 d-flex flex-column justify-content-between border {% if lifecycle_tracker.step3 == 'completed' %}border-success border-opacity-50 bg-success bg-opacity-10{% elif lifecycle_tracker.step3 == 'active' %}border-warning border-opacity-75 bg-warning bg-opacity-10 shadow-sm{% else %}border-secondary border-opacity-25 bg-dark bg-opacity-30{% endif %}">
+                    <div class="p-2 p-md-3 rounded-3 h-100 d-flex flex-column justify-content-between" style="{% if lifecycle_tracker.step3 == 'completed' %}background: var(--badge-success-bg); border: 1px solid var(--badge-success-text);{% elif lifecycle_tracker.step3 == 'active' %}background: var(--section-accent-tint); border: 1.5px solid var(--section-accent);{% else %}background: var(--surface-subtle); border: 1px solid var(--border-divider);{% endif %}">
                         <div>
                             <div class="mb-2">
                                 {% if lifecycle_tracker.step3 == 'completed' %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: rgba(16,185,129,0.2); color: #34d399;">
-                                    <i class="fas fa-truck-ramp-box"></i>
+                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: rgba(16,185,129,0.2); color: var(--badge-success-text);">
+                                    <i class="fas fa-check"></i>
                                 </span>
                                 {% elif lifecycle_tracker.step3 == 'active' %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle animate-pulse" style="width: 34px; height: 34px; background: rgba(245,158,11,0.2); color: #fbbf24;">
-                                    <i class="fas fa-hourglass-half"></i>
+                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: var(--section-accent-tint); color: var(--section-accent-text);">
+                                    <i class="fas fa-truck-ramp-box"></i>
                                 </span>
                                 {% else %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: rgba(100,116,139,0.15); color: #64748b;">
-                                    <i class="fas fa-truck"></i>
+                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: rgba(100,116,139,0.15); color: var(--text-muted);">
+                                    <i class="fas fa-lock"></i>
                                 </span>
                                 {% endif %}
                             </div>
-                            <div class="fw-bold" style="font-size: 0.82rem; color: {% if lifecycle_tracker.step3 == 'active' %}#fbbf24{% else %}#f8fafc{% endif %};">
+                            <div class="fw-bold" style="font-size: 0.82rem; color: {% if lifecycle_tracker.step3 == 'active' %}var(--section-accent-text){% else %}var(--text-primary){% endif %};">
                                 Dispatch Cockpit
                             </div>
-                            <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 2px;">
+                            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">
                                 {% if active_ticket and active_ticket.team %}
                                 Team {{ active_ticket.team.name }}
                                 {% elif active_ticket %}
@@ -130,7 +127,7 @@
                             </div>
                         </div>
                         <div class="mt-2 pt-1">
-                            <span class="badge w-100" style="background: {% if lifecycle_tracker.step3 == 'completed' %}rgba(16,185,129,0.2); color: #34d399;{% elif lifecycle_tracker.step3 == 'active' %}rgba(245,158,11,0.2); color: #fbbf24;{% else %}rgba(100,116,139,0.18); color: #64748b;{% endif %} font-size: 0.68rem;">
+                            <span class="status-badge status-badge--{% if lifecycle_tracker.step3 == 'completed' %}success{% elif lifecycle_tracker.step3 == 'active' %}info{% else %}neutral{% endif %} w-100 justify-content-center" style="font-size: 0.68rem; padding: 3px 6px;">
                                 {% if lifecycle_tracker.step3 == 'completed' %}Dispatched{% elif lifecycle_tracker.step3 == 'active' %}Pending Assign{% else %}Queued{% endif %}
                             </span>
                         </div>
@@ -139,29 +136,29 @@
 
                 <!-- STAGE 4: FIELD TECHNICIAN -->
                 <div class="col-6 col-md-2">
-                    <div class="p-2 p-md-3 rounded-3 h-100 d-flex flex-column justify-content-between border {% if lifecycle_tracker.step4 == 'completed' %}border-success border-opacity-50 bg-success bg-opacity-10{% elif lifecycle_tracker.step4 == 'active' %}border-cyan border-opacity-75 bg-info bg-opacity-10 shadow-sm{% else %}border-secondary border-opacity-25 bg-dark bg-opacity-30{% endif %}">
+                    <div class="p-2 p-md-3 rounded-3 h-100 d-flex flex-column justify-content-between" style="{% if lifecycle_tracker.step4 == 'completed' %}background: var(--badge-success-bg); border: 1px solid var(--badge-success-text);{% elif lifecycle_tracker.step4 == 'active' %}background: var(--section-accent-tint); border: 1.5px solid var(--section-accent);{% else %}background: var(--surface-subtle); border: 1px solid var(--border-divider);{% endif %}">
                         <div>
                             <div class="mb-2">
                                 {% if lifecycle_tracker.step4 == 'completed' %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: rgba(16,185,129,0.2); color: #34d399;">
-                                    <i class="fas fa-screwdriver-wrench"></i>
+                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: rgba(16,185,129,0.2); color: var(--badge-success-text);">
+                                    <i class="fas fa-check"></i>
                                 </span>
                                 {% elif lifecycle_tracker.step4 == 'active' %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle animate-pulse" style="width: 34px; height: 34px; background: rgba(6,182,212,0.2); color: #22d3ee;">
+                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: var(--section-accent-tint); color: var(--section-accent-text);">
                                     <i class="fas fa-hard-hat"></i>
                                 </span>
                                 {% else %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: rgba(100,116,139,0.15); color: #64748b;">
-                                    <i class="fas fa-tools"></i>
+                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: rgba(100,116,139,0.15); color: var(--text-muted);">
+                                    <i class="fas fa-lock"></i>
                                 </span>
                                 {% endif %}
                             </div>
-                            <div class="fw-bold" style="font-size: 0.82rem; color: {% if lifecycle_tracker.step4 == 'active' %}#22d3ee{% else %}#f8fafc{% endif %};">
+                            <div class="fw-bold" style="font-size: 0.82rem; color: {% if lifecycle_tracker.step4 == 'active' %}var(--section-accent-text){% else %}var(--text-primary){% endif %};">
                                 Field Technician
                             </div>
-                            <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 2px;">
+                            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">
                                 {% if active_ticket and active_ticket.technicians.exists %}
-                                {{ active_ticket.technicians.first.name|truncatechars:18 }}
+                                {{ active_ticket.technicians.first.name|truncatechars:16 }}
                                 {% elif active_ticket and active_ticket.time_accomplish %}
                                 Specs Recorded
                                 {% else %}
@@ -170,7 +167,7 @@
                             </div>
                         </div>
                         <div class="mt-2 pt-1">
-                            <span class="badge w-100" style="background: {% if lifecycle_tracker.step4 == 'completed' %}rgba(16,185,129,0.2); color: #34d399;{% elif lifecycle_tracker.step4 == 'active' %}rgba(6,182,212,0.2); color: #22d3ee;{% else %}rgba(100,116,139,0.18); color: #64748b;{% endif %} font-size: 0.68rem;">
+                            <span class="status-badge status-badge--{% if lifecycle_tracker.step4 == 'completed' %}success{% elif lifecycle_tracker.step4 == 'active' %}info{% else %}neutral{% endif %} w-100 justify-content-center" style="font-size: 0.68rem; padding: 3px 6px;">
                                 {% if lifecycle_tracker.step4 == 'completed' %}Field Done{% elif lifecycle_tracker.step4 == 'active' %}On-Site Work{% else %}Awaiting Tech{% endif %}
                             </span>
                         </div>
@@ -179,36 +176,36 @@
 
                 <!-- STAGE 5: DISPATCH QA REVIEW -->
                 <div class="col-6 col-md-2">
-                    <div class="p-2 p-md-3 rounded-3 h-100 d-flex flex-column justify-content-between border {% if lifecycle_tracker.step5 == 'completed' %}border-success border-opacity-50 bg-success bg-opacity-10{% elif lifecycle_tracker.step5 == 'active' %}border-purple border-opacity-75 bg-primary bg-opacity-10 shadow-sm{% else %}border-secondary border-opacity-25 bg-dark bg-opacity-30{% endif %}">
+                    <div class="p-2 p-md-3 rounded-3 h-100 d-flex flex-column justify-content-between" style="{% if lifecycle_tracker.step5 == 'completed' %}background: var(--badge-success-bg); border: 1px solid var(--badge-success-text);{% elif lifecycle_tracker.step5 == 'active' %}background: var(--section-accent-tint); border: 1.5px solid var(--section-accent);{% else %}background: var(--surface-subtle); border: 1px solid var(--border-divider);{% endif %}">
                         <div>
                             <div class="mb-2">
                                 {% if lifecycle_tracker.step5 == 'completed' %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: rgba(16,185,129,0.2); color: #34d399;">
-                                    <i class="fas fa-clipboard-check"></i>
+                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: rgba(16,185,129,0.2); color: var(--badge-success-text);">
+                                    <i class="fas fa-check"></i>
                                 </span>
                                 {% elif lifecycle_tracker.step5 == 'active' %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle animate-pulse" style="width: 34px; height: 34px; background: rgba(168,85,247,0.2); color: #c084fc;">
-                                    <i class="fas fa-headset"></i>
+                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: var(--section-accent-tint); color: var(--section-accent-text);">
+                                    <i class="fas fa-clipboard-check"></i>
                                 </span>
                                 {% else %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: rgba(100,116,139,0.15); color: #64748b;">
-                                    <i class="fas fa-clipboard-list"></i>
+                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: rgba(100,116,139,0.15); color: var(--text-muted);">
+                                    <i class="fas fa-lock"></i>
                                 </span>
                                 {% endif %}
                             </div>
-                            <div class="fw-bold" style="font-size: 0.82rem; color: {% if lifecycle_tracker.step5 == 'active' %}#c084fc{% else %}#f8fafc{% endif %};">
+                            <div class="fw-bold" style="font-size: 0.82rem; color: {% if lifecycle_tracker.step5 == 'active' %}var(--section-accent-text){% else %}var(--text-primary){% endif %};">
                                 Dispatch QA
                             </div>
-                            <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 2px;">
+                            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">
                                 {% if active_ticket and active_ticket.signal_level %}
-                                {{ active_ticket.signal_level }} dBm
+                                {{ active_ticket.signal_level|cut:" dBm"|cut:"dBm" }} dBm
                                 {% else %}
                                 Quality Audit
                                 {% endif %}
                             </div>
                         </div>
                         <div class="mt-2 pt-1">
-                            <span class="badge w-100" style="background: {% if lifecycle_tracker.step5 == 'completed' %}rgba(16,185,129,0.2); color: #34d399;{% elif lifecycle_tracker.step5 == 'active' %}rgba(168,85,247,0.2); color: #c084fc;{% else %}rgba(100,116,139,0.18); color: #64748b;{% endif %} font-size: 0.68rem;">
+                            <span class="status-badge status-badge--{% if lifecycle_tracker.step5 == 'completed' %}success{% elif lifecycle_tracker.step5 == 'active' %}warning{% else %}neutral{% endif %} w-100 justify-content-center" style="font-size: 0.68rem; padding: 3px 6px;">
                                 {% if lifecycle_tracker.step5 == 'completed' %}QA Passed{% elif lifecycle_tracker.step5 == 'active' %}Reviewing Report{% else %}Pending QA{% endif %}
                             </span>
                         </div>
@@ -217,27 +214,27 @@
 
                 <!-- STAGE 6: ADMIN FINAL SIGN-OFF -->
                 <div class="col-6 col-md-2">
-                    <div class="p-2 p-md-3 rounded-3 h-100 d-flex flex-column justify-content-between border {% if lifecycle_tracker.step6 == 'completed' %}border-success border-opacity-50 bg-success bg-opacity-10{% elif lifecycle_tracker.step6 == 'active' %}border-pink border-opacity-75 bg-danger bg-opacity-10 shadow-sm{% else %}border-secondary border-opacity-25 bg-dark bg-opacity-30{% endif %}">
+                    <div class="p-2 p-md-3 rounded-3 h-100 d-flex flex-column justify-content-between" style="{% if lifecycle_tracker.step6 == 'completed' %}background: var(--badge-success-bg); border: 1px solid var(--badge-success-text);{% elif lifecycle_tracker.step6 == 'active' %}background: var(--section-accent-tint); border: 1.5px solid var(--section-accent);{% else %}background: var(--surface-subtle); border: 1px solid var(--border-divider);{% endif %}">
                         <div>
                             <div class="mb-2">
                                 {% if lifecycle_tracker.step6 == 'completed' %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: rgba(16,185,129,0.2); color: #34d399;">
-                                    <i class="fas fa-shield-halved"></i>
+                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: rgba(16,185,129,0.2); color: var(--badge-success-text);">
+                                    <i class="fas fa-check"></i>
                                 </span>
                                 {% elif lifecycle_tracker.step6 == 'active' %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle animate-pulse" style="width: 34px; height: 34px; background: rgba(236,72,153,0.2); color: #f472b6;">
-                                    <i class="fas fa-stamp"></i>
+                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: var(--section-accent-tint); color: var(--section-accent-text);">
+                                    <i class="fas fa-shield-halved"></i>
                                 </span>
                                 {% else %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: rgba(100,116,139,0.15); color: #64748b;">
+                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; background: rgba(100,116,139,0.15); color: var(--text-muted);">
                                     <i class="fas fa-lock"></i>
                                 </span>
                                 {% endif %}
                             </div>
-                            <div class="fw-bold" style="font-size: 0.82rem; color: {% if lifecycle_tracker.step6 == 'active' %}#f472b6{% else %}#f8fafc{% endif %};">
+                            <div class="fw-bold" style="font-size: 0.82rem; color: {% if lifecycle_tracker.step6 == 'active' %}var(--section-accent-text){% else %}var(--text-primary){% endif %};">
                                 Admin Sign-off
                             </div>
-                            <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 2px;">
+                            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">
                                 {% if customer.installation_status == 'installed' %}
                                 Line Installed
                                 {% else %}
@@ -246,7 +243,7 @@
                             </div>
                         </div>
                         <div class="mt-2 pt-1">
-                            <span class="badge w-100" style="background: {% if lifecycle_tracker.step6 == 'completed' %}rgba(16,185,129,0.2); color: #34d399;{% elif lifecycle_tracker.step6 == 'active' %}rgba(236,72,153,0.2); color: #f472b6;{% else %}rgba(100,116,139,0.18); color: #64748b;{% endif %} font-size: 0.68rem;">
+                            <span class="status-badge status-badge--{% if lifecycle_tracker.step6 == 'completed' %}success{% elif lifecycle_tracker.step6 == 'active' %}info{% else %}neutral{% endif %} w-100 justify-content-center" style="font-size: 0.68rem; padding: 3px 6px;">
                                 {% if lifecycle_tracker.step6 == 'completed' %}Activated{% elif lifecycle_tracker.step6 == 'active' %}Awaiting Admin{% else %}Locked{% endif %}
                             </span>
                         </div>

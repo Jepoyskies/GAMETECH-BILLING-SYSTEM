@@ -201,8 +201,11 @@ document.addEventListener("DOMContentLoaded", function() {
                     x: { display: false },
                     y: {
                         beginAtZero: true,
-                        grid: { color: 'rgba(0,0,0,0.05)' },
-                        ticks: { font: { size: 10 } }
+                        grid: { color: document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode') ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' },
+                        ticks: {
+                            font: { size: 10 },
+                            color: document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode') ? '#94a3b8' : '#64748b'
+                        }
                     }
                 },
                 interaction: {
@@ -212,6 +215,22 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
             }
         });
+
+        // Theme update observer for Chart
+        function updateChartTheme() {
+            if (!trafficChart) return;
+            const isDark = document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode');
+            if (trafficChart.options && trafficChart.options.scales && trafficChart.options.scales.y) {
+                trafficChart.options.scales.y.grid.color = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+                trafficChart.options.scales.y.ticks.color = isDark ? '#94a3b8' : '#64748b';
+                trafficChart.update('none');
+            }
+        }
+        try {
+            const chartObserver = new MutationObserver(updateChartTheme);
+            chartObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
+            chartObserver.observe(document.body, { attributes: true, attributeFilter: ['class', 'data-theme'] });
+        } catch(e) {}
     }
 
     // 4. Live Mikrotik Polling
@@ -260,8 +279,9 @@ document.addEventListener("DOMContentLoaded", function() {
                     
                     if (data.stability && stabilityBadge) {
                         stabilityBadge.innerText = data.stability;
-                        stabilityBadge.className = 'badge ms-2 bg-' + data.stability_color;
-                        stabilityBadge.style.display = 'inline-block';
+                        const isGood = data.stability.toLowerCase().includes('good') || data.stability_color === 'success';
+                        stabilityBadge.className = 'status-badge ' + (isGood ? 'status-badge--success' : 'status-badge--warning') + ' ms-2';
+                        stabilityBadge.style.display = 'inline-flex';
                     }
                     
                     if (data.rx_mbps !== undefined && data.tx_mbps !== undefined) {
@@ -461,6 +481,14 @@ document.addEventListener('submit', function(e) {
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Submitting to Dispatch...';
         }
 
+        const tType = document.getElementById('cr-ticket-type')?.value || 'REPAIR';
+        let sTab = 'CLIENT_CONCERNS';
+        if (tType === 'INSTALLATION' || tType === 'MIGRATION') {
+            sTab = 'INTERNET_INSTALL';
+        } else if (tType === 'CIGNAL') {
+            sTab = 'CIGNAL_PLAY';
+        }
+
         const payload = {
             customer_id: document.getElementById('cr-customer-id')?.value,
             client_name: document.getElementById('cr-client-name')?.value,
@@ -472,8 +500,8 @@ document.addEventListener('submit', function(e) {
             mikrotik_device_id: document.getElementById('cr-mikrotik-id')?.value || null,
             latitude: document.getElementById('cr-latitude')?.value || null,
             longitude: document.getElementById('cr-longitude')?.value || null,
-            ticket_type: document.getElementById('cr-ticket-type')?.value || 'REPAIR',
-            source_tab: 'CLIENT_CONCERNS',
+            ticket_type: tType,
+            source_tab: sTab,
             priority: document.getElementById('cr-priority')?.value || 'NORMAL',
             concern: document.getElementById('cr-concern')?.value || '',
             remarks: document.getElementById('cr-remarks')?.value || '',
@@ -545,4 +573,130 @@ document.addEventListener('submit', function(e) {
         });
     }
 });
+
+// ─── Service Request & Action Helpers ───
+function openRequestServiceModal(ticketType) {
+    const typeSelect = document.getElementById('cr-ticket-type');
+    const concernInput = document.getElementById('cr-concern');
+    
+    if (ticketType === 'SITE_VISIT') {
+        if (typeSelect) typeSelect.value = 'REPAIR';
+        if (concernInput && !concernInput.value.includes('[Site Visit]')) {
+            concernInput.value = '[Site Visit] ' + concernInput.value;
+        }
+    } else {
+        if (typeSelect) {
+            const hasOption = Array.from(typeSelect.options).some(opt => opt.value === ticketType);
+            if (hasOption) {
+                typeSelect.value = ticketType;
+            } else {
+                typeSelect.value = 'REPAIR';
+            }
+        }
+    }
+
+    const modalEl = document.getElementById('modal-customer-repair');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
+}
+
+function togglePasswordVisibility(btn) {
+    const container = btn.closest('.info-value');
+    if (!container) return;
+    const maskedSpan = container.querySelector('.password-masked');
+    if (!maskedSpan) return;
+    const actualPw = maskedSpan.getAttribute('data-pw');
+    const isMasked = maskedSpan.textContent === '••••••';
+    if (isMasked) {
+        maskedSpan.textContent = actualPw || '—';
+        btn.innerHTML = '<i class="far fa-eye-slash"></i>';
+    } else {
+        maskedSpan.textContent = '••••••';
+        btn.innerHTML = '<i class="far fa-eye"></i>';
+    }
+}
+
+function copyPasswordText(text, btn) {
+    if (!text) return;
+    function showCheck() {
+        const origHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check text-success"></i>';
+        setTimeout(function() { btn.innerHTML = origHtml; }, 1200);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(showCheck).catch(function() {
+            fallbackCopy(text, btn);
+        });
+    } else {
+        fallbackCopy(text, btn);
+    }
+}
+
+function confirmAction(e, title, text, icon) {
+    e.preventDefault();
+    const form = e.target;
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: title || 'Are you sure?',
+            text: text || 'This action cannot be undone.',
+            icon: icon || 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, proceed',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                form.submit();
+            }
+        });
+        return false;
+    } else {
+        if (confirm(text || 'Are you sure you want to proceed?')) {
+            form.submit();
+        }
+        return false;
+    }
+}
+
+function confirmRollback(url) {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Rollback Subscription?',
+            text: 'Are you sure you want to rollback the last transaction/renewal for this customer?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, rollback',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = url;
+            }
+        });
+    } else {
+        if (confirm('Are you sure you want to rollback the last transaction for this customer?')) {
+            window.location.href = url;
+        }
+    }
+}
+
+function toggleMoreLogs() {
+    const hiddenRows = document.querySelectorAll('.log-row-hidden');
+    const btn = document.getElementById('btnToggleLogs');
+    if (!btn) return;
+    const isShowing = btn.getAttribute('data-showing') === 'true';
+    if (isShowing) {
+        hiddenRows.forEach(row => row.classList.add('d-none'));
+        btn.setAttribute('data-showing', 'false');
+        btn.innerHTML = '<i class="fas fa-chevron-down me-1"></i> Show More Activity (' + hiddenRows.length + ' more)';
+    } else {
+        hiddenRows.forEach(row => row.classList.remove('d-none'));
+        btn.setAttribute('data-showing', 'true');
+        btn.innerHTML = '<i class="fas fa-chevron-up me-1"></i> Show Less';
+    }
+}
 </script>

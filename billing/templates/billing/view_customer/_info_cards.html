@@ -7,24 +7,24 @@
                 <ul class="info-list">
                     <li>
                         <span class="info-label">Address</span>
-                        <span class="info-value">
-                            {{ customer.address|default:"—" }}
+                        <span class="info-value d-flex align-items-center justify-content-end flex-wrap gap-1">
+                            <span>{{ customer.address|default:"—" }}</span>
                             {% if customer.latitude and customer.longitude %}
-                                <a href="https://www.google.com/maps?q={{ customer.latitude }},{{ customer.longitude }}" target="_blank" class="badge bg-info bg-opacity-20 text-info border border-info border-opacity-30 ms-1" title="Open in Google Maps">
-                                    <i class="fas fa-location-dot"></i> Pin
+                                <a href="https://www.google.com/maps?q={{ customer.latitude }},{{ customer.longitude }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2 ms-1 d-inline-flex align-items-center gap-1 text-muted" style="font-size: 0.72rem; height: 22px; border-radius: var(--radius-sm);" title="Open in Google Maps">
+                                    <i class="fas fa-location-dot text-primary"></i> Map
                                 </a>
                             {% endif %}
                         </span>
                     </li>
                     <li>
                         <span class="info-label">Barangay</span>
-                        <span class="info-value text-info fw-semibold">{{ customer.barangay.name|default:"—" }}</span>
+                        <span class="info-value fw-semibold">{{ customer.barangay.name|default:"—" }}</span>
                     </li>
                     <li>
                         <span class="info-label">Phone</span>
                         <span class="info-value">
                             {% if customer.phone %}
-                                <a href="tel:{{ customer.phone }}" class="text-white fw-bold text-decoration-none"><i class="fas fa-phone me-1 text-success"></i>{{ customer.phone }}</a>
+                                <a href="tel:{{ customer.phone }}" class="text-body fw-bold text-decoration-none"><i class="fas fa-phone me-1 text-success"></i>{{ customer.phone }}</a>
                             {% else %}
                                 <span class="text-muted">—</span>
                             {% endif %}
@@ -44,7 +44,7 @@
                             {% if customer.agent %}
                                 {{ customer.agent.name }}
                             {% else %}
-                                <span class="badge bg-secondary bg-opacity-25 text-white-50 border border-secondary border-opacity-25"><i class="fas fa-walking me-1"></i>Walk-in / Direct</span>
+                                <span class="status-badge status-badge--neutral py-0 px-2" style="font-size: 0.75rem;"><i class="fas fa-walking me-1"></i>Walk-in / Direct</span>
                             {% endif %}
                         </span>
                     </li>
@@ -57,7 +57,7 @@
                                 {{ customer.expires_at|date:"M d, Y h:i A" }}
                             {% endif %}
                             {% if request.user.role == 'Admin' %}
-                            <button type="button" class="btn btn-sm btn-link p-0 ms-2 text-primary" data-bs-toggle="modal" data-bs-target="#editExpirationModal"><i class="fas fa-edit"></i></button>
+                            <button type="button" class="btn btn-sm btn-link p-0 ms-2 text-primary" data-bs-toggle="modal" data-bs-target="#editExpirationModal" title="Edit Expiration Date"><i class="fas fa-edit"></i></button>
                             {% endif %}
                         </span>
                     </li>
@@ -87,7 +87,7 @@
         <!-- Network Info -->
         <div class="col-lg-4">
             <div class="info-card">
-                <h3 class="info-title"><i class="fas fa-network-wired"></i> Network Details</h3>
+                <h3 class="info-title"><i class="fas fa-network-wired text-primary"></i> Network Details</h3>
                 <ul class="info-list">
                     <li>
                         <span class="info-label">Plan</span>
@@ -103,11 +103,35 @@
                     </li>
                     <li>
                         <span class="info-label">PPPoE Password</span>
-                        <span class="info-value">{{ customer.pppoe_password|default:"—" }}</span>
+                        <span class="info-value d-inline-flex align-items-center gap-2">
+                            {% if customer.pppoe_password %}
+                                <span class="password-masked font-monospace" data-pw="{{ customer.pppoe_password|escapejs }}">••••••</span>
+                                <button type="button" class="btn btn-sm btn-link p-0 text-muted pw-toggle-btn" title="Show/Hide Password" onclick="togglePasswordVisibility(this)">
+                                    <i class="far fa-eye"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-link p-0 text-muted" title="Copy Password" onclick="copyPasswordText('{{ customer.pppoe_password|escapejs }}', this)">
+                                    <i class="far fa-copy"></i>
+                                </button>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </span>
                     </li>
                     <li>
                         <span class="info-label">Portal Password <i class="fas fa-lock text-primary ms-1" title="Customer Portal Login Password"></i></span>
-                        <span class="info-value font-monospace fw-bold text-primary">{{ customer.portal_password|default:"—" }}</span>
+                        <span class="info-value d-inline-flex align-items-center gap-2">
+                            {% if customer.portal_password %}
+                                <span class="password-masked font-monospace fw-bold text-primary" data-pw="{{ customer.portal_password|escapejs }}">••••••</span>
+                                <button type="button" class="btn btn-sm btn-link p-0 text-muted pw-toggle-btn" title="Show/Hide Password" onclick="togglePasswordVisibility(this)">
+                                    <i class="far fa-eye"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-link p-0 text-muted" title="Copy Password" onclick="copyPasswordText('{{ customer.portal_password|escapejs }}', this)">
+                                    <i class="far fa-copy"></i>
+                                </button>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </span>
                     </li>
                     <li id="live-mt-status-row" class="{% if customer.status == 'active' and mt_status != 'Connected' and mt_status != 'Loading...' %}active-offline-row-highlight{% endif %}" style="transition: all 0.3s ease;">
                         <span class="info-label">
@@ -118,13 +142,13 @@
                             {% if mt_status == 'Loading...' %}
                                 <span class="text-secondary"><i class="fas fa-spinner fa-spin me-1" style="font-size:0.6rem;"></i>Loading...</span>
                             {% elif mt_status == 'Connected' %}
-                                <span class="text-success"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Connected</span>
+                                <span class="text-success fw-semibold"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Connected</span>
                             {% elif customer.status == 'active' %}
-                                <span class="badge badge-active-offline d-inline-flex align-items-center gap-1">
+                                <span class="status-badge status-badge--warning d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;">
                                     <i class="fas fa-triangle-exclamation"></i> {{ mt_status|default:"Active but Offline" }}
                                 </span>
                             {% else %}
-                                <span class="text-danger"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>{{ mt_status|default:"Disconnected" }}</span>
+                                <span class="text-danger fw-semibold"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>{{ mt_status|default:"Disconnected" }}</span>
                             {% endif %}
                         </span>
                     </li>
@@ -134,7 +158,7 @@
                     </li>
                     <li>
                         <span class="info-label">MAC Address</span>
-                        <span class="info-value" id="mt-live-mac">{% if customer.mac_address %}{{ customer.mac_address }}{% elif live_mac %}{{ live_mac }}{% else %}—{% endif %}</span>
+                        <span class="info-value font-monospace" id="mt-live-mac">{% if customer.mac_address %}{{ customer.mac_address }}{% elif live_mac %}{{ live_mac }}{% else %}—{% endif %}</span>
                     </li>
                     <li id="last-logged-out-container">
                         <span class="info-label">Last Logged Out</span>
@@ -149,18 +173,18 @@
             <!-- Add-ons & Extra -->
             <div class="info-card {% if pending_cignal_addon %}cignal-pending-card{% endif %}">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h3 class="info-title mb-0"><i class="fas fa-tv"></i> Add-ons & Extra</h3>
-                    <a href="{% url 'cignal_dashboard' %}?highlight_customer={{ customer.id }}" class="btn btn-sm btn-outline-info rounded-pill px-3 shadow-sm fw-semibold" title="Manage all Cignal accounts & operations in Cignal Hub">
+                    <h3 class="info-title mb-0"><i class="fas fa-tv text-primary"></i> Add-ons & Extra</h3>
+                    <a href="{% url 'cignal_dashboard' %}?highlight_customer={{ customer.id }}" class="btn btn-sm btn-outline-secondary px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1.5" style="font-size: 0.8rem; border-radius: var(--radius-sm);" title="Manage all Cignal accounts & operations in Cignal Hub">
                         <i class="fas fa-satellite-dish me-1"></i> Go to Cignal Hub
                     </a>
                 </div>
 
                 {% if pending_cignal_addon %}
-                <div id="cignalPendingBanner" class="cignal-pending-banner mb-3 p-2 rounded d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div id="cignalPendingBanner" class="cignal-pending-banner mb-3 p-2 rounded d-flex align-items-center justify-content-between flex-wrap gap-2" style="background: var(--surface-subtle); border: 1px solid var(--border-subtle);">
                     <div class="d-flex align-items-center gap-2">
                         <span class="cignal-radar-pulse"><i class="fas fa-satellite-dish text-primary"></i></span>
                         <div>
-                            <div class="fw-bold" style="font-size: 0.85rem; color: #0284c7;">
+                            <div class="fw-bold" style="font-size: 0.85rem; color: var(--color-primary);">
                                 Pending: {{ pending_cignal_addon.addon_type }}
                             </div>
                             <small class="text-muted" style="font-size: 0.72rem;">
@@ -170,13 +194,13 @@
                     </div>
                     <div class="d-flex align-items-center gap-1.5">
                         <button type="button"
-                            class="btn btn-sm btn-outline-danger py-0 px-2 fw-semibold rounded-pill d-inline-flex align-items-center gap-1"
-                            style="font-size: 0.74rem; height: 26px;"
+                            class="btn btn-sm btn-outline-danger py-0 px-2 fw-semibold d-inline-flex align-items-center gap-1"
+                            style="font-size: 0.74rem; height: 26px; border-radius: var(--radius-sm);"
                             title="Cancel / Delete this pending request"
                             onclick="cancelCustomerCignalAddon('{{ pending_cignal_addon.id }}', '{{ pending_cignal_addon.addon_type|escapejs }}')">
                             <i class="fas fa-trash-alt"></i> Cancel
                         </button>
-                        <a href="{% url 'cignal_dashboard' %}?highlight_customer={{ customer.id }}" class="btn btn-sm btn-warning text-dark py-0 px-2 fw-semibold rounded-pill d-inline-flex align-items-center gap-1" style="font-size: 0.74rem; height: 26px;">
+                        <a href="{% url 'cignal_dashboard' %}?highlight_customer={{ customer.id }}" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 0.74rem; height: 26px; border-radius: var(--radius-sm);">
                             Go to Hub <i class="fas fa-arrow-right"></i>
                         </a>
                     </div>
@@ -190,53 +214,37 @@
                     </div>
                     <div class="d-flex flex-column gap-2">
                         {% for sub in customer.cignal_plans.all %}
-                        <div class="p-2 rounded-3 border" style="background: rgba(255, 255, 255, 0.03); border-color: rgba(255, 255, 255, 0.08) !important;">
+                        <div class="py-2 border-bottom" style="border-color: var(--border-subtle) !important;">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div class="d-flex align-items-center gap-2">
-                                    <span class="badge border border-secondary text-light" style="font-size: 0.65rem;">
-                                        <i class="fas fa-satellite-dish me-1 text-muted"></i>Cignal
-                                    </span>
-                                    <strong class="text-light" style="font-size: 0.85rem;">{{ sub.account_name|default:"Cignal Subscription" }}</strong>
-                                </div>
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="badge {% if sub.is_active %}bg-success-subtle text-success border border-success-subtle{% else %}bg-secondary-subtle text-secondary border border-secondary-subtle{% endif %}" style="font-size: 0.72rem;">
+                                    <strong class="text-body" style="font-size: 0.88rem;">{{ sub.account_name|default:"Cignal Subscription" }}</strong>
+                                    <span class="status-badge {% if sub.is_active %}status-badge--success{% else %}status-badge--neutral{% endif %}" style="font-size: 0.7rem; padding: 2px 8px;">
                                         {% if sub.is_active %}<i class="fas fa-check-circle me-1"></i>Active{% else %}<i class="fas fa-clock me-1"></i>Expired{% endif %}
                                     </span>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0 gt-btn text-light" style="font-size: 0.72rem;" title="Edit Subscription Details" onclick="openCignalEditModal({id: '{{ sub.id }}', customerId: '{{ customer.id }}', label: '{{ sub.account_name|escapejs }}', playNo: '{{ sub.cignal_play_no|escapejs }}', boxNo: '{{ sub.cignal_box_no|escapejs }}', customerName: '{{ customer.full_name|escapejs }}', hardwarePaymentType: '{{ sub.hardware_payment_type|default:"none" }}', installmentsPaid: '{{ sub.installments_paid|default:0 }}', monthlyLoadPlan: '{{ sub.monthly_load_plan|default:"149" }}', expirationDate: '{% if sub.expiration_date %}{{ sub.expiration_date|date:'Y-m-d\TH:i' }}{% elif sub.end_date %}{{ sub.end_date|date:'Y-m-d\TH:i' }}{% endif %}'})">
-                                        <i class="fas fa-pencil-alt me-1"></i>Edit
+                                </div>
+                                <div class="d-flex align-items-center gap-1">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary p-1 d-inline-flex align-items-center justify-content-center" style="width: 28px; height: 28px; border-radius: var(--radius-sm);" title="Edit Subscription Details" onclick="openCignalEditModal({id: '{{ sub.id }}', customerId: '{{ customer.id }}', label: '{{ sub.account_name|escapejs }}', playNo: '{{ sub.cignal_play_no|escapejs }}', boxNo: '{{ sub.cignal_box_no|escapejs }}', customerName: '{{ customer.full_name|escapejs }}', hardwarePaymentType: '{{ sub.hardware_payment_type|default:"none" }}', installmentsPaid: '{{ sub.installments_paid|default:0 }}', monthlyLoadPlan: '{{ sub.monthly_load_plan|default:"149" }}', expirationDate: '{% if sub.expiration_date %}{{ sub.expiration_date|date:'Y-m-d\TH:i' }}{% elif sub.end_date %}{{ sub.end_date|date:'Y-m-d\TH:i' }}{% endif %}'})">
+                                        <i class="fas fa-pencil-alt text-muted" style="font-size: 0.75rem;"></i>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2 py-0 gt-btn" style="font-size: 0.72rem;" title="Reload Subscription" onclick="openCignalPaymentModal({customerId: '{{ customer.id }}', customerName: '{{ customer.full_name|escapejs }}', pppoe: '{{ customer.pppoe_username|escapejs }}', subscriptionId: '{{ sub.id }}', hardware_payment_type: '{{ sub.hardware_payment_type|default:"none" }}', installments_paid: '{{ sub.installments_paid|default:0 }}', expirationDate: '{% if sub.expiration_date %}{{ sub.expiration_date|date:'Y-m-d\TH:i' }}{% elif sub.end_date %}{{ sub.end_date|date:'Y-m-d\TH:i' }}{% endif %}', subscriptions: [{id: '{{ sub.id }}', cignal_play_no: '{{ sub.cignal_play_no|escapejs }}', cignal_box_no: '{{ sub.cignal_box_no|escapejs }}', account_name: '{{ sub.account_name|escapejs }}', expiration_date: '{% if sub.expiration_date %}{{ sub.expiration_date|date:'Y-m-d\TH:i' }}{% elif sub.end_date %}{{ sub.end_date|date:'Y-m-d\TH:i' }}{% endif %}', hardware_payment_type: '{{ sub.hardware_payment_type|default:"none" }}', installments_paid: '{{ sub.installments_paid|default:0 }}', monthly_load_plan: '{{ sub.monthly_load_plan|default:"149" }}'}]})">
-                                        <i class="fas fa-coins me-1"></i>Reload
+                                    <button type="button" class="btn btn-sm btn-outline-secondary p-1 d-inline-flex align-items-center justify-content-center" style="width: 28px; height: 28px; border-radius: var(--radius-sm);" title="Reload Subscription" onclick="openCignalPaymentModal({customerId: '{{ customer.id }}', customerName: '{{ customer.full_name|escapejs }}', pppoe: '{{ customer.pppoe_username|escapejs }}', subscriptionId: '{{ sub.id }}', hardware_payment_type: '{{ sub.hardware_payment_type|default:"none" }}', installments_paid: '{{ sub.installments_paid|default:0 }}', expirationDate: '{% if sub.expiration_date %}{{ sub.expiration_date|date:'Y-m-d\TH:i' }}{% elif sub.end_date %}{{ sub.end_date|date:'Y-m-d\TH:i' }}{% endif %}', subscriptions: [{id: '{{ sub.id }}', cignal_play_no: '{{ sub.cignal_play_no|escapejs }}', cignal_box_no: '{{ sub.cignal_box_no|escapejs }}', account_name: '{{ sub.account_name|escapejs }}', expiration_date: '{% if sub.expiration_date %}{{ sub.expiration_date|date:'Y-m-d\TH:i' }}{% elif sub.end_date %}{{ sub.end_date|date:'Y-m-d\TH:i' }}{% endif %}', hardware_payment_type: '{{ sub.hardware_payment_type|default:"none" }}', installments_paid: '{{ sub.installments_paid|default:0 }}', monthly_load_plan: '{{ sub.monthly_load_plan|default:"149" }}'}]})">
+                                        <i class="fas fa-coins text-muted" style="font-size: 0.75rem;"></i>
                                     </button>
                                 </div>
                             </div>
-                            <div class="d-flex justify-content-between align-items-center mt-1 text-muted flex-wrap gap-1" style="font-size: 0.76rem;">
+                            <div class="d-flex justify-content-between align-items-center mt-1 text-muted flex-wrap gap-1" style="font-size: 0.78rem;">
                                 <span>
-                                    {% if sub.cignal_play_no %}
-                                        <span class="badge border border-secondary text-light me-1" style="font-size: 0.65rem;">Play</span>
-                                        <strong class="font-monospace text-light">{{ sub.cignal_play_no }}</strong>
-                                        <button type="button" class="btn btn-link p-0 ms-1 text-muted" style="font-size:0.68rem;" title="Copy Play No" onclick="copyCignalText('{{ sub.cignal_play_no|escapejs }}', this)"><i class="far fa-copy"></i></button>
-                                    {% endif %}
-                                    {% if sub.cignal_play_no and sub.cignal_box_no %}<span class="text-muted mx-1">|</span>{% endif %}
-                                    {% if sub.cignal_box_no %}
-                                        <span class="badge border border-secondary text-light me-1" style="font-size: 0.65rem;">Box</span>
-                                        <strong class="font-monospace text-light">{{ sub.cignal_box_no }}</strong>
-                                        <button type="button" class="btn btn-link p-0 ms-1 text-muted" style="font-size:0.68rem;" title="Copy Box No" onclick="copyCignalText('{{ sub.cignal_box_no|escapejs }}', this)"><i class="far fa-copy"></i></button>
-                                    {% endif %}
-                                    {% if not sub.cignal_play_no and not sub.cignal_box_no %}<strong class="font-monospace text-muted">—</strong>{% endif %}
+                                    {% if sub.cignal_play_no %}Play # {{ sub.cignal_play_no }}{% endif %}
+                                    {% if sub.cignal_play_no and sub.cignal_box_no %} · {% endif %}
+                                    {% if sub.cignal_box_no %}Box # {{ sub.cignal_box_no }}{% endif %}
+                                    {% if not sub.cignal_play_no and not sub.cignal_box_no %}—{% endif %}
                                     {% if sub.hardware_payment_type == 'installment' %}
-                                        <span class="badge border border-secondary text-light ms-1" style="font-size: 0.65rem;" title="Box Installment"><i class="fas fa-clock me-1 text-muted"></i>Box: {{ sub.installments_paid|default:0 }}/12</span>
+                                        <span class="status-badge status-badge--neutral ms-1 py-0 px-1" style="font-size: 0.65rem;" title="Box Installment">Box: {{ sub.installments_paid|default:0 }}/12</span>
                                     {% elif sub.hardware_payment_type == 'cashout' %}
-                                        <span class="badge border border-secondary text-light ms-1" style="font-size: 0.65rem;"><i class="fas fa-check me-1 text-muted"></i>Cashout</span>
+                                        <span class="status-badge status-badge--neutral ms-1 py-0 px-1" style="font-size: 0.65rem;">Cashout</span>
                                     {% endif %}
                                 </span>
                                 <span>
-                                    Due Date: 
-                                    {% if sub.expiration_date or sub.end_date %}
-                                    <strong class="{% if sub.is_active %}text-light{% else %}text-danger{% endif %}">{{ sub.expiration_date|default:sub.end_date|date:"M d, Y" }}</strong>
-                                    {% else %}
-                                    <span class="text-muted">No Due Date</span>
-                                    {% endif %}
+                                    Due {% if sub.expiration_date or sub.end_date %}{{ sub.expiration_date|default:sub.end_date|date:"M d, Y" }}{% else %}—{% endif %}
                                 </span>
                             </div>
                         </div>
@@ -250,7 +258,7 @@
                         <span class="info-label">Cignal Play No.</span>
                         <span class="info-value">
                             {% if customer.cignalplay_no %}
-                            <span class="font-monospace fw-bold text-light">{{ customer.cignalplay_no }}</span>
+                            <span class="font-monospace fw-bold">{{ customer.cignalplay_no }}</span>
                             <button type="button" class="btn btn-link p-0 ms-1 text-muted" style="font-size:0.68rem;" title="Copy Play No" onclick="copyCignalText('{{ customer.cignalplay_no|escapejs }}', this)"><i class="far fa-copy"></i></button>
                             {% else %}
                             —
@@ -259,13 +267,13 @@
                     </li>
                     <li>
                         <span class="info-label">Cignal Play Date</span>
-                        <span class="info-value text-light">{{ customer.cignalplay_date|date:"M d, Y"|default:"—" }}</span>
+                        <span class="info-value">{{ customer.cignalplay_date|date:"M d, Y"|default:"—" }}</span>
                     </li>
                     <li>
                         <span class="info-label">Cignal Box No.</span>
                         <span class="info-value">
                             {% if customer.cignalbox_no %}
-                            <span class="font-monospace fw-bold text-light">{{ customer.cignalbox_no }}</span>
+                            <span class="font-monospace fw-bold">{{ customer.cignalbox_no }}</span>
                             <button type="button" class="btn btn-link p-0 ms-1 text-muted" style="font-size:0.68rem;" title="Copy Box No" onclick="copyCignalText('{{ customer.cignalbox_no|escapejs }}', this)"><i class="far fa-copy"></i></button>
                             {% else %}
                             —
@@ -274,7 +282,7 @@
                     </li>
                     <li>
                         <span class="info-label">Join Date</span>
-                        <span class="info-value text-light">{{ customer.created_at|date:"M d, Y" }}</span>
+                        <span class="info-value">{{ customer.created_at|date:"M d, Y" }}</span>
                     </li>
                 </ul>
             </div>
