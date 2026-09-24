@@ -18,8 +18,7 @@ class RouterDryRunTestCase(TestCase):
             api_username="admin",
             api_password="test_password",
             api_port=8728,
-            total_ports=8,
-            status="online",
+            health_status="Excellent",
         )
 
     def test_dry_run_flag_is_active(self):

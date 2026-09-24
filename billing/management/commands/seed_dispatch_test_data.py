@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
-from billing.models import Customer, Agent, InternetPlan, Barangay, SystemAdmin
+from billing.models import Customer, Agent, SubscriptionPlan, Barangay, SystemAdmin
 from network_manager.models import MikrotikDevice
 from dispatch.models import JobTicket
 
@@ -55,8 +55,13 @@ class Command(BaseCommand):
         barangay, _ = Barangay.objects.get_or_create(
             name="Bulua Test Zone", defaults={"code": "BLU"}
         )
-        plan, _ = InternetPlan.objects.get_or_create(
-            name="GTipid Fiber 1000", defaults={"price": 1000.00, "speed": 35}
+        plan, _ = SubscriptionPlan.objects.get_or_create(
+            name="GTipid Fiber 1000",
+            defaults={
+                "price": 1000.00,
+                "speed_up": "35 Mbps",
+                "speed_down": "35 Mbps",
+            },
         )
 
         # 2. Test Router
@@ -67,8 +72,7 @@ class Command(BaseCommand):
                 "api_username": "admin",
                 "api_password": "dry_run_password",
                 "api_port": 8728,
-                "total_ports": 8,
-                "status": "online",
+                "health_status": "Excellent",
             },
         )
 

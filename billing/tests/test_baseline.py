@@ -1,6 +1,6 @@
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
-from billing.models import InternetPlan, Barangay, Customer, SystemAdmin
+from billing.models import SubscriptionPlan, Barangay, Customer, SystemAdmin
 from network_manager.models import MikrotikDevice
 from dispatch.models import JobTicket
 
@@ -18,10 +18,11 @@ class BaselineWorkflowTestCase(TestCase):
             email="admin@gametech.local",
         )
         self.barangay = Barangay.objects.create(name="Carmen", code="CRM")
-        self.plan = InternetPlan.objects.create(
+        self.plan = SubscriptionPlan.objects.create(
             name="GTipid Fiber 1000",
+            speed_up="35 Mbps",
+            speed_down="35 Mbps",
             price=1000.00,
-            speed=35,
         )
         self.device = MikrotikDevice.objects.create(
             device_name="Core Router Carmen",
@@ -29,8 +30,7 @@ class BaselineWorkflowTestCase(TestCase):
             api_username="admin",
             api_password="pass",
             api_port=8728,
-            total_ports=8,
-            status="online",
+            health_status="Excellent",
         )
 
     def test_customer_creation_and_query(self):
