@@ -311,7 +311,7 @@ def api_return_to_dispatch(request, ticket_id):
         # Update customer state to Closed - Not Installed per Spec #12
         if ticket.customer:
             ticket.customer.installation_status = 'closed_not_installed'
-            ticket.customer.save(update_fields=['installation_status', 'updated_at'])
+            ticket.customer.save(update_fields=['installation_status'])
 
         note = f"Job returned to Dispatch after {ticket.contact_attempt_count} attempt(s). Reason: {reason}. {notes}"
         JobTicketHistory.objects.create(

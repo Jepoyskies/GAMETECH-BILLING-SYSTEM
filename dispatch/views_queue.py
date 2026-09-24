@@ -263,12 +263,16 @@ def api_correct_timer(request, ticket_id):
         if arrived_at_str:
             parsed_arrived = parse_datetime(arrived_at_str)
             if parsed_arrived:
+                if timezone.is_naive(parsed_arrived):
+                    parsed_arrived = timezone.make_aware(parsed_arrived)
                 ticket.arrived_at = parsed_arrived
                 ticket.time_start = parsed_arrived
 
         if finished_at_str:
             parsed_finished = parse_datetime(finished_at_str)
             if parsed_finished:
+                if timezone.is_naive(parsed_finished):
+                    parsed_finished = timezone.make_aware(parsed_finished)
                 ticket.finished_at = parsed_finished
                 ticket.time_accomplish = parsed_finished
 
