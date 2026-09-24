@@ -322,3 +322,57 @@ All tests passing across small batches:
 - `billing.tests` (`test_baseline`, `test_phase1_security`, `test_phase2_foundation`, `test_router_dry_run`): 27 tests (Pass)
 - `network_manager.tests.test_router_modes`: 3 tests (Pass)
 - **Total Suite:** 55 tests passing across all active modules.
+
+---
+
+## Phase 3.3: Security Hardening, Ticket Concurrency, Router Safety & Rollback Proof
+
+### 1. Semaphore API Key Secret Sanitization & Audit
+- **Default Hardcoding Removed:** In `gametech_core/settings.py`, `SEMAPHORE_API_KEY = env("SEMAPHORE_API_KEY", default="")`.
+- **Graceful Failure & Logging:** In `billing/views/__init__.py` (`send_semaphore_sms`) and `billing/tasks.py`, if `SEMAPHORE_API_KEY` is empty, SMS sending gracefully returns `(None, False)` and logs warning: `"Semaphore SMS not configured: SEMAPHORE_API_KEY is empty"`.
+- **Docker & Environment:** Updated `docker-compose.yml` to pass `SEMAPHORE_API_KEY=${SEMAPHORE_API_KEY:-}` to `web`, `celery`, and `celery-beat`. Added `.env.example`.
+- **Droplet Environment:** Created `/root/GAMETECH-BILLING-SYSTEM/.env` on droplet with `SEMAPHORE_API_KEY=` placeholder for the rotated key.
+- **Literal Secret Audit:** Full repository search performed. Literal tokens/keys found in settings, tasks, and scripts cataloged by filename and variable name without printing secret values.
+
+### 2. Global Password Policy for All Logins & AUTH_PASSWORD_VALIDATORS
+- **AUTH_PASSWORD_VALIDATORS Audit:** Confirmed definitively that prior to Phase 3.3, `AUTH_PASSWORD_VALIDATORS` only contained generic Django defaults (min_length=8, no special characters, no letter+digit+special char enforcement).
+- **GametechPasswordPolicyValidator:** Implemented `GametechPasswordPolicyValidator` in `billing/validators.py` and configured in `AUTH_PASSWORD_VALIDATORS`:
+  - 10+ characters minimum length
+  - At least one letter, one number, and one special character (`!@#$%^&*()-_=+[]{}|;:,.<>?`)
+  - Common weak password blacklist rejection
+  - Disallow matching or containing username, phone number, first/last name
+- **Staff, Technician & Admin Enforcement:** Called `validate_password_policy` in `billing/views/staff.py` (`add_staff` and `edit_staff`), `billing/views/auth.py` (`add_agent`).
+- **Tests Added:** Automated test cases for staff, technician, admin, and `AUTH_PASSWORD_VALIDATORS` added to `billing/tests/test_phase1_security.py`.
+
+### 3. Plaintext Password Fallback Removal
+- **Production Audit:** Queried `Customer.objects.filter(portal_password__isnull=False).exclude(portal_password="").count()` on droplet PostgreSQL. Exact count: **0** plaintext passwords exist.
+- **Fallback Removed:** In `billing/models.py:Customer.check_portal_password`, removed the `if self.portal_password:` plaintext check. Unhashed records strictly return `False` until hashed on save.
+- **Test Updated:** `test_legacy_plaintext_migration_and_fallback` in `billing/tests/test_phase1_security.py` updated to verify that unmigrated records return `False` until auto-hashed on save.
+
+### 4. Concurrency-Safe Ticket Number Generation
+- **Retry Mechanism:** In `dispatch/utils.py:generate_ticket_number`, wrapped sequence generation in atomic transaction with bounded retries (`max_attempts=5`) catching `IntegrityError`.
+- **Model Save Protection:** In `dispatch/models.py:JobTicket.save`, wrapped creation in savepoint retry loop catching `IntegrityError`, regenerating `ticket_number` on collision.
+- **Concurrency Test:** Added `dispatch/tests/test_ticket_concurrency.py` with multi-threaded `TransactionTestCase` spawning 10 simultaneous threads. All 10 tickets successfully created with zero duplicate numbers and zero `IntegrityError` exceptions.
+
+### 5. Blocked Router Writes State Sync Audit & Fixes
+- **Audit of 4 Places:**
+  1. `auto_suspend` (`billing/management/commands/auto_suspend.py`): Previously, `mt.suspend_pppoe_user` returned `True` in read_only mode, causing DB to mark `customer.status = "suspended"`. Fixed: checks `mt.is_read_only`; leaves `customer.status` unchanged and marks `customer.sync_status = "Blocked"`.
+  2. `auto_reconcile` (`billing/management/commands/auto_reconcile_routers.py`): Previously failed push/update left status unchanged. Fixed: on blocked read-only response, marks `customer.sync_status = "Blocked"`.
+  3. `auto_sync_failed` (`billing/management/commands/auto_sync_failed.py` & `billing/signals.py`): Previously `post_save` signal marked `sync_status = "Synced"`. Fixed: `billing/signals.py` checks `api.is_read_only`; skips router writes and sets `sync_status = "Blocked"`.
+  4. `payment/renewal` (`billing/views/payments/transactions.py`): Previously set `customer.status = "active"` even when router enable write was blocked. Fixed: if customer was suspended and `api.is_read_only`, customer remains `status = "suspended"` and `sync_status = "Blocked"`, preserving payments while not marking router-dependent state changes as done.
+- **Model Choice:** Added `Blocked` to `Customer.SYNC_CHOICES`.
+- **Tests Added:** Added comprehensive tests in `billing/tests/test_router_dry_run.py` verifying status preservation in `read_only` and preserving existing behavior in `dry_run`.
+
+### 6. Rollback Command & Scratch Database Verification
+- **Current Droplet Backup:** Created clean pg_dump: `/root/backups/gametech_backup_phase3_3.sql` (311KB).
+- **Restoration Proof:**
+  - Created temporary database `gametech_scratch` on `gametech-billing-system-db-1`.
+  - Restored `/root/backups/gametech_backup_phase3_3.sql` into `gametech_scratch`.
+  - Audited table count: exactly **57 tables** in `gametech_db` vs **57 tables** in `gametech_scratch` (100% match).
+  - Audited total row count: exactly **1,163 rows** in `gametech_db` vs **1,163 rows** in `gametech_scratch` (100% match).
+  - Dropped `gametech_scratch`.
+- **Exact Rollback Command (Returning to pre-Phase 3.3 commit `445cb94`):**
+  ```bash
+  ssh root@143.198.207.144 "docker stop gametech-billing-system-web-1 gametech-billing-system-celery-1 gametech-billing-system-celery-beat-1 && cd /root/GAMETECH-BILLING-SYSTEM && git checkout 445cb94 && docker exec -i gametech-billing-system-db-1 psql -U gametech_user -d gametech_db < /root/backups/gametech_backup_phase3_3.sql && docker start gametech-billing-system-web-1 gametech-billing-system-celery-1 gametech-billing-system-celery-beat-1"
+  ```
+
