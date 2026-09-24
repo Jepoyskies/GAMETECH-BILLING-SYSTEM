@@ -38,8 +38,8 @@ class Phase32GuardAndLoopholeTests(TestCase):
         self.plan = SubscriptionPlan.objects.create(
             name="Plan-1500",
             price=Decimal("1500.00"),
-            speed_desc="50 Mbps",
-            billing_cycle_days=30,
+            speed_down="50M",
+            speed_up="50M",
         )
         self.device = MikrotikDevice.objects.create(
             device_name="Core-Mikrotik",
