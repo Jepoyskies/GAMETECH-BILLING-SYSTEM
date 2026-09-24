@@ -166,21 +166,24 @@ class CustomerPortalSecurityTestCase(TestCase):
 
         reset_resp = self.client.post(
             reverse('reset_customer_portal_password', args=[self.customer.id]),
-            follow=True,
         )
-        self.assertEqual(reset_resp.status_code, 200)
+        self.assertEqual(reset_resp.status_code, 302)
+
+        # Retrieve generated temp password from session (stored once before view_customer pops it)
+        temp_data = self.client.session.get("customer_temp_password_display")
+        self.assertIsNotNone(temp_data)
+        generated_pw = temp_data.get("temp_password")
+        self.assertTrue(bool(generated_pw))
+
+        # Now follow redirect to view_customer
+        view_resp = self.client.get(reset_resp.url)
+        self.assertEqual(view_resp.status_code, 200)
 
         # Verify customer credentials state
         self.customer.refresh_from_db()
         self.assertTrue(self.customer.must_change_password)
         self.assertIsNotNone(self.customer.temp_password_created_at)
         self.assertIsNone(self.customer.portal_password)
-
-        # Retrieve generated temp password from session (only place temporary password resides during display)
-        temp_data = self.client.session.get("customer_temp_password_display")
-        self.assertIsNotNone(temp_data)
-        generated_pw = temp_data.get("temp_password")
-        self.assertTrue(bool(generated_pw))
 
         # Check SmsLog: must contain [REDACTED] and NEVER the generated plain password
         sms = SmsLog.objects.filter(phone=self.customer.phone).order_by('-id').first()
