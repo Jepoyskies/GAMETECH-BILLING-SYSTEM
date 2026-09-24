@@ -1,52 +1,55 @@
-<!-- Active Cignal Subscriptions Card with Status Tabs -->
-<div class="cignal-glass-card mb-4">
-    <div class="cignal-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-      <div class="d-flex align-items-center gap-2">
-        <h6 class="mb-0"><i class="fas fa-satellite-dish header-icon-danger"></i> Cignal Subscriptions</h6>
+<!-- Active Cignal Subscriptions Card with Unified Design System -->
+<div class="gt-table-card mb-4" style="--section-accent: #ef4444;">
+    <!-- Top Toolbar: Title, Search, Primary CTA, External link -->
+    <div class="gt-table-toolbar">
+      <div class="gt-table-toolbar-left">
+        <h6 class="mb-0 fw-bold" style="font-size: 16px; color: var(--gt-text-title);">
+          <i class="fas fa-satellite-dish me-2" style="color: var(--section-accent);"></i> Cignal Subscriptions
+        </h6>
       </div>
-      <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-end" style="max-width: 520px;">
+      <div class="gt-table-toolbar-right">
         <!-- Integrated Search Bar -->
-        <div class="input-group input-group-sm" style="max-width: 250px;">
-          <span class="input-group-text cignal-search-addon">
+        <div class="input-group input-group-sm" style="width: 250px;">
+          <span class="input-group-text" style="background: var(--gt-surface-subtle); border-color: var(--gt-input-border); color: var(--gt-text-muted); border-radius: var(--gt-radius-btn) 0 0 var(--gt-radius-btn);">
             <i class="fas fa-search" style="font-size:0.75rem;"></i>
           </span>
-          <input type="text" id="cignalSearchInput" class="form-control cignal-search-input" placeholder="Search subscriber, PPPoE..." oninput="filterCignalTable(this.value)">
+          <input type="text" id="cignalSearchInput" class="form-control" placeholder="Search subscriber, PPPoE..." oninput="filterCignalTable(this.value)" style="background: var(--gt-input-bg); border-color: var(--gt-input-border); color: var(--gt-text-title); border-radius: 0 var(--gt-radius-btn) var(--gt-radius-btn) 0; font-size: 13px;">
         </div>
-        <button type="button" class="btn-cignal-primary" onclick="openEnrollCignalModal()">
+        <button type="button" class="gt-btn-primary" onclick="openEnrollCignalModal()">
           <i class="fas fa-user-plus"></i> Add Customer
         </button>
-        <a href="{% url 'cignal_play_list' %}" class="btn-cignal-icon" title="View All Cignal Accounts">
+        <a href="{% url 'cignal_play_list' %}" class="gt-icon-btn" title="View All Cignal Accounts">
           <i class="fas fa-arrow-up-right-from-square"></i>
         </a>
       </div>
     </div>
 
-    <!-- Status Navigation Bar (Segmented Control) -->
-    <div class="px-3 pt-3 pb-2 border-bottom border-secondary border-opacity-10 d-flex justify-content-between align-items-center flex-wrap gap-2">
-      <div class="cignal-nav-tabs">
-        <a href="?tab=active" class="cignal-tab-btn {% if current_tab == 'active' %}active{% endif %}" title="Active Cignal Subscriptions">
+    <!-- Status Navigation Bar (Scrollable Filter Pills) -->
+    <div class="px-3 pt-3 pb-2 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-color: var(--gt-border-divider) !important;">
+      <div class="gt-filter-pills-row mb-0">
+        <a href="?tab=active" class="gt-filter-pill {% if current_tab == 'active' %}active{% endif %}" title="Active Cignal Subscriptions">
           <i class="fas fa-users text-danger"></i> Active
-          <span class="cignal-tab-badge {% if current_tab == 'active' %}bg-danger text-white{% else %}bg-secondary bg-opacity-25 text-muted{% endif %}">{{ count_active }}</span>
+          <span class="gt-pill-count">{{ count_active }}</span>
         </a>
-        <a href="?tab=expiring_soon" class="cignal-tab-btn {% if current_tab == 'expiring_soon' %}active{% endif %}" title="Subscriptions Expiring in 5 Days">
+        <a href="?tab=expiring_soon" class="gt-filter-pill {% if current_tab == 'expiring_soon' %}active{% endif %}" title="Subscriptions Expiring in 5 Days">
           <i class="fas fa-clock text-warning"></i> Expiring Soon
-          <span class="cignal-tab-badge {% if current_tab == 'expiring_soon' %}bg-warning text-dark{% else %}bg-secondary bg-opacity-25 text-muted{% endif %}">{{ expiring_cignals|length }}</span>
+          <span class="gt-pill-count">{{ expiring_cignals|length }}</span>
         </a>
-        <a href="?tab=expired" class="cignal-tab-btn {% if current_tab == 'expired' %}active{% endif %}" title="Subscriptions Overdue / Past Due Date">
+        <a href="?tab=expired" class="gt-filter-pill {% if current_tab == 'expired' %}active{% endif %}" title="Subscriptions Overdue / Past Due Date">
           <i class="fas fa-triangle-exclamation text-danger"></i> Overdue
-          <span class="cignal-tab-badge {% if current_tab == 'expired' %}bg-danger text-white{% else %}bg-secondary bg-opacity-25 text-muted{% endif %}">{{ count_expired }}</span>
+          <span class="gt-pill-count">{{ count_expired }}</span>
         </a>
-        <a href="?tab=installment" class="cignal-tab-btn {% if current_tab == 'installment' %}active{% endif %}" title="Hardware Installments Ongoing">
+        <a href="?tab=installment" class="gt-filter-pill {% if current_tab == 'installment' %}active{% endif %}" title="Hardware Installments Ongoing">
           <i class="fas fa-box text-warning"></i> Installments
-          <span class="cignal-tab-badge {% if current_tab == 'installment' %}bg-warning text-dark{% else %}bg-secondary bg-opacity-25 text-muted{% endif %}">{{ count_installment }}</span>
+          <span class="gt-pill-count">{{ count_installment }}</span>
         </a>
-        <a href="?tab=fully_paid" class="cignal-tab-btn {% if current_tab == 'fully_paid' %}active{% endif %}" title="Fully Paid Hardware">
+        <a href="?tab=fully_paid" class="gt-filter-pill {% if current_tab == 'fully_paid' %}active{% endif %}" title="Fully Paid Hardware">
           <i class="fas fa-check-circle text-success"></i> Fully Paid
-          <span class="cignal-tab-badge {% if current_tab == 'fully_paid' %}bg-success text-white{% else %}bg-secondary bg-opacity-25 text-muted{% endif %}">{{ count_fully_paid }}</span>
+          <span class="gt-pill-count">{{ count_fully_paid }}</span>
         </a>
-        <a href="?tab=deleted" class="cignal-tab-btn tab-deleted {% if current_tab == 'deleted' %}active{% endif %}" title="Pulled-Out or Removed Subscriptions">
-          <i class="fas fa-archive text-danger"></i> Pulled-Out / Removed
-          <span class="cignal-tab-badge {% if current_tab == 'deleted' %}bg-danger text-white{% else %}bg-secondary bg-opacity-25 text-muted{% endif %}">{{ count_deleted }}</span>
+        <a href="?tab=deleted" class="gt-filter-pill {% if current_tab == 'deleted' %}active{% endif %}" title="Pulled-Out or Removed Subscriptions">
+          <i class="fas fa-archive text-danger"></i> Pulled-Out
+          <span class="gt-pill-count">{{ count_deleted }}</span>
         </a>
       </div>
 
@@ -54,74 +57,66 @@
         {% if user.is_staff or user.is_superuser %}
         <form method="POST" action="{% url 'purge_all_cancelled_cignal_subscriptions' %}" onsubmit="return confirm('ADMIN ACTION: Permanently purge all {{ count_deleted }} pulled-out / removed subscriptions? This CANNOT be undone.');">
           {% csrf_token %}
-          <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1 fw-bold gt-btn shadow-sm" style="font-size:0.75rem;">
-            <i class="fas fa-trash-can me-1"></i> Clear Pulled-Out / Removed (Admin Only)
+          <button type="submit" class="gt-btn-secondary text-danger" style="font-size:12px; padding: 0.35rem 0.75rem;">
+            <i class="fas fa-trash-can me-1"></i> Clear Pulled-Out (Admin Only)
           </button>
         </form>
-        {% else %}
-        <span class="badge bg-secondary bg-opacity-25 text-muted py-1.5 px-2.5 rounded-pill" style="font-size:0.72rem;" title="Only administrators can permanently purge archived records">
-          <i class="fas fa-lock me-1"></i> Admin-Only Purge
-        </span>
         {% endif %}
       {% endif %}
     </div>
 
-    <!-- Table Container -->
+    <!-- Subscriptions Table Container -->
     <div class="table-responsive">
       {% if current_tab == 'deleted' %}
       <!-- ── PULLED-OUT / REMOVED TABLE ── -->
-      <table class="table table-dark table-hover align-middle mb-0">
+      <table class="table gt-table align-middle mb-0">
         <thead>
           <tr>
-            <th>Customer</th>
-            <th>Subscription Details</th>
-            <th>Removed When</th>
-            <th>Removed By</th>
-            <th class="text-end">Archive Actions</th>
+            <th style="width: 25%;">Customer</th>
+            <th style="width: 35%;">Subscription</th>
+            <th style="width: 20%;">Removed When</th>
+            <th style="width: 20%; text-align: right; padding-right: 1.5rem;">Archive Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for plan in cancelled_plans %}
           <tr>
             <td>
-              <a href="{% url 'view_customer' plan.customer.id %}" class="fw-bold text-decoration-none text-info d-block">
+              <a href="{% url 'view_customer' plan.customer.id %}" class="fw-medium text-decoration-none d-block" style="font-size: 14px; color: var(--gt-text-title);">
                 {{ plan.customer.full_name|default:plan.customer.pppoe_username }}
               </a>
               {% if plan.customer.pppoe_username %}
-                <small class="text-muted font-monospace" style="font-size:0.75rem;"><i class="fas fa-user-circle me-1"></i>{{ plan.customer.pppoe_username }}</small>
+                <div class="text-muted" style="font-size: 12px; margin-top: 2px;">
+                  <i class="fas fa-user-circle me-1"></i>{{ plan.customer.pppoe_username }}
+                </div>
               {% endif %}
             </td>
             <td>
-              <div class="cignal-sub-card" style="border-left-color: #ef4444; opacity: 0.85;">
-                <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
-                  <span class="fw-bold text-light" style="font-size:0.84rem;">
-                    <i class="fas fa-ban text-danger me-1"></i>{{ plan.account_name|default:"Cignal Subscription" }}
-                  </span>
-                  <span class="badge bg-danger bg-opacity-25 text-danger border border-danger border-opacity-25" style="font-size:0.68rem;">Cancelled / Pulled Out</span>
-                </div>
-                <div class="d-flex flex-wrap gap-2 mt-1">
-                  <span class="cignal-acct-chip">Play #: {{ plan.cignal_play_no|default:"None" }}</span>
-                  <span class="cignal-acct-chip cignal-acct-chip-box">Box #: {{ plan.cignal_box_no|default:"None" }}</span>
-                </div>
+              <div class="fw-semibold text-title" style="font-size: 14px;">
+                {{ plan.account_name|default:"Cignal Subscription" }}
+              </div>
+              <div class="text-muted mt-0.5" style="font-size: 12px;">
+                Play # <span class="font-monospace text-title">{{ plan.cignal_play_no|default:"None" }}</span> · Box # <span class="font-monospace text-title">{{ plan.cignal_box_no|default:"None" }}</span>
+              </div>
+              <div class="text-muted mt-0.5" style="font-size: 12px;">
+                <span class="gt-status-badge gt-status-badge--danger" style="font-size: 11px; padding: 0.1rem 0.5rem;">Cancelled / Pulled-Out</span>
               </div>
             </td>
             <td>
-              {% if plan.cancelled_at %}
-                <div class="text-light" style="font-size:0.82rem;"><i class="far fa-clock me-1 text-muted"></i>{{ plan.cancelled_at|date:"M d, Y H:i" }}</div>
-              {% else %}
-                <small class="text-muted">N/A</small>
-              {% endif %}
+              <div style="font-size: 14px;" class="text-title">
+                {{ plan.cancelled_at|date:"M d, Y H:i"|default:"N/A" }}
+              </div>
+              <div class="gt-status-meta">
+                by {{ plan.cancelled_by|default:"Admin" }}
+              </div>
             </td>
-            <td>
-              <span class="badge bg-secondary bg-opacity-25 text-muted">{{ plan.cancelled_by|default:"Admin" }}</span>
-            </td>
-            <td class="text-end">
-              <div class="d-flex gap-2 justify-content-end align-items-center flex-wrap">
+            <td class="text-end" style="padding-right: 1.5rem;">
+              <div class="d-inline-flex gap-1.5 justify-content-end align-items-center">
                 <!-- Restore Action -->
                 <form method="POST" action="{% url 'restore_cignal_subscription' plan.id %}" style="display:inline;" onsubmit="return confirm('Restore Cignal subscription \'{{ plan.account_name|escapejs }}\' for {{ plan.customer.full_name|escapejs }} back to active?');">
                   {% csrf_token %}
-                  <button type="submit" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 gt-btn" style="font-size:0.75rem;" title="Restore to Active Subscriptions">
-                    <i class="fas fa-undo me-1"></i> Restore
+                  <button type="submit" class="gt-btn-secondary" style="font-size:12px; padding: 0.35rem 0.75rem;" title="Restore to Active Subscriptions">
+                    <i class="fas fa-undo me-1 text-success"></i> Restore
                   </button>
                 </form>
 
@@ -129,7 +124,7 @@
                 {% if user.is_staff or user.is_superuser %}
                 <form method="POST" action="{% url 'purge_cignal_subscription' plan.id %}" style="display:inline;" onsubmit="return confirm('ADMIN WARNING: Permanently delete \'{{ plan.account_name|escapejs }}\'? This cannot be undone.');">
                   {% csrf_token %}
-                  <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1 gt-btn" style="font-size:0.75rem;" title="Permanently Delete">
+                  <button type="submit" class="gt-icon-btn gt-icon-btn--danger" title="Permanently Delete">
                     <i class="fas fa-trash-alt"></i>
                   </button>
                 </form>
@@ -137,14 +132,11 @@
               </div>
             </td>
           </tr>
-            <td colspan="5">
-              <div class="d-flex flex-column align-items-center justify-content-center py-5 text-center cignal-empty-state">
-                <div class="mb-3 p-3 rounded-circle" style="background: rgba(148, 163, 184, 0.1); color: #94a3b8;">
-                    <i class="fas fa-folder-open fa-2x"></i>
-                </div>
-                <h6 class="text-white fw-bold mb-1">No Pulled-Out / Removed Records</h6>
-                <p class="text-muted small mb-0">No pulled-out or removed subscriptions found. Discontinued hardware and removed accounts are kept here safely for admin review.</p>
-              </div>
+          {% empty %}
+          <tr>
+            <td colspan="4" class="py-5 text-center text-muted">
+              <i class="fas fa-folder-open fa-2x mb-2 text-muted opacity-50"></i>
+              <div class="fw-semibold">No Pulled-Out / Removed Records</div>
             </td>
           </tr>
           {% endfor %}
@@ -153,73 +145,72 @@
 
       {% elif current_tab == 'expiring_soon' %}
       <!-- ── EXPIRING SOON TABLE ── -->
-      <table class="table table-dark table-hover align-middle mb-0">
+      <table class="table gt-table align-middle mb-0">
         <thead>
           <tr>
-            <th>Customer</th>
-            <th>Account Name</th>
-            <th>Play & Box Numbers</th>
-            <th>Expiration Date</th>
-            <th class="text-end">Action</th>
+            <th style="width: 24%;">Customer</th>
+            <th style="width: 34%;">Subscription</th>
+            <th style="width: 20%;">Status</th>
+            <th style="width: 22%; text-align: right; padding-right: 1.5rem;">Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for item in expiring_cignals %}
           <tr>
             <td>
-              <a href="{% url 'view_customer' item.customer.id %}" class="fw-bold text-decoration-none text-info">
+              <a href="{% url 'view_customer' item.customer.id %}" class="fw-medium text-decoration-none d-block" style="font-size: 14px; color: var(--gt-text-title);">
                 {{ item.customer.full_name|default:item.customer.pppoe_username }}
               </a>
+              {% if item.customer.pppoe_username %}
+                <div class="text-muted" style="font-size: 12px; margin-top: 2px;">
+                  <i class="fas fa-user-circle me-1"></i>{{ item.customer.pppoe_username }}
+                </div>
+              {% endif %}
             </td>
             <td>
-              <strong class="text-light">{{ item.account_name|default:"Cignal Subscription" }}</strong>
-            </td>
-            <td>
-              <div class="d-flex flex-column gap-1 small">
-                {% if item.cignal_play_no %}
-                  <div class="d-inline-flex align-items-center gap-1">
-                    <span class="badge border border-secondary text-light" style="font-size:0.65rem;">Play</span>
-                    <span class="font-monospace text-light fw-semibold">{{ item.cignal_play_no }}</span>
-                  </div>
+              <div class="fw-semibold text-title" style="font-size: 14px;">
+                {{ item.account_name|default:"Cignal Subscription" }}
+                {% if item.monthly_load_plan %}
+                  <span class="text-muted fw-normal">· ₱{{ item.monthly_load_plan }}/mo</span>
                 {% endif %}
-                {% if item.cignal_box_no %}
-                  <div class="d-inline-flex align-items-center gap-1">
-                    <span class="badge border border-secondary text-light" style="font-size:0.65rem;">Box</span>
-                    <span class="font-monospace text-light fw-semibold">{{ item.cignal_box_no }}</span>
-                  </div>
-                {% endif %}
-                {% if not item.cignal_play_no and not item.cignal_box_no %}
-                  <span class="text-muted">—</span>
+              </div>
+              <div class="text-muted mt-0.5" style="font-size: 12px;">
+                Play # <span class="font-monospace text-title">{{ item.cignal_play_no|default:"None" }}</span> · Box # <span class="font-monospace text-title">{{ item.cignal_box_no|default:"None" }}</span>
+              </div>
+              <div class="text-muted mt-0.5" style="font-size: 12px;">
+                {% if item.hardware_payment_type == 'installment' %}
+                  Installment ₱250/mo ({{ item.installments_paid|default:0 }}/12)
+                {% elif item.hardware_payment_type == 'cashout' %}
+                  Cashout ₱3,000 — Fully Paid
+                {% else %}
+                  App Only · No Box Hardware
                 {% endif %}
               </div>
             </td>
             <td>
-              <span class="badge border border-danger-subtle text-danger px-2 py-1" style="font-size:0.75rem;">
-                <i class="far fa-clock me-1"></i>
-                {% if item.expiration_date %}{{ item.expiration_date|date:"M d, Y H:i" }}{% elif item.end_date %}{{ item.end_date|date:"M d, Y H:i" }}{% else %}N/A{% endif %}
+              <span class="gt-status-badge gt-status-badge--warning">
+                <span class="gt-status-dot"></span>Expiring Soon
               </span>
+              <div class="gt-status-meta">
+                Due: {{ item.expiration_date|default:item.end_date|date:"M d, Y" }}
+              </div>
             </td>
-            <td class="text-end">
-              <div class="d-flex gap-2 justify-content-end align-items-center">
-                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 gt-btn text-light" style="font-size: 0.75rem;" title="Edit Subscription Details" onclick="openCignalEditModal({id: '{{ item.id }}', label: '{{ item.account_name|escapejs }}', playNo: '{{ item.cignal_play_no|escapejs }}', boxNo: '{{ item.cignal_box_no|escapejs }}', customerName: '{{ item.customer.full_name|escapejs }}', hardwarePaymentType: '{{ item.hardware_payment_type|default:"none" }}', installmentsPaid: '{{ item.installments_paid|default:0 }}', monthlyLoadPlan: '{{ item.monthly_load_plan|default:"149" }}', expirationDate: '{% if item.expiration_date %}{{ item.expiration_date|date:'Y-m-d\TH:i' }}{% elif item.end_date %}{{ item.end_date|date:'Y-m-d\TH:i' }}{% endif %}'})">
-                  <i class="fas fa-pencil-alt me-1"></i> Edit
+            <td class="text-end" style="padding-right: 1.5rem;">
+              <div class="d-inline-flex align-items-center gap-1.5 justify-content-end">
+                <button type="button" class="gt-icon-btn" title="Edit Subscription Details" onclick="openCignalEditModal({id: '{{ item.id }}', label: '{{ item.account_name|escapejs }}', playNo: '{{ item.cignal_play_no|escapejs }}', boxNo: '{{ item.cignal_box_no|escapejs }}', customerName: '{{ item.customer.full_name|escapejs }}', hardwarePaymentType: '{{ item.hardware_payment_type|default:"none" }}', installmentsPaid: '{{ item.installments_paid|default:0 }}', monthlyLoadPlan: '{{ item.monthly_load_plan|default:"149" }}', expirationDate: '{% if item.expiration_date %}{{ item.expiration_date|date:'Y-m-d\TH:i' }}{% elif item.end_date %}{{ item.end_date|date:'Y-m-d\TH:i' }}{% endif %}'})">
+                  <i class="fas fa-pencil-alt"></i>
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 gt-btn" style="font-size: 0.75rem;" onclick="openCignalPaymentModal({customerId: '{{ item.customer.id }}', customerName: '{{ item.customer.full_name|escapejs }}', pppoe: '{{ item.customer.pppoe_username|escapejs }}', subscriptionId: '{{ item.id }}', hardware_payment_type: '{{ item.hardware_payment_type|default:"none" }}', installments_paid: '{{ item.installments_paid|default:0 }}', expirationDate: '{% if item.expiration_date %}{{ item.expiration_date|date:'Y-m-d\TH:i' }}{% elif item.end_date %}{{ item.end_date|date:'Y-m-d\TH:i' }}{% endif %}', subscriptions: [{id: '{{ item.id }}', cignal_play_no: '{{ item.cignal_play_no|escapejs }}', cignal_box_no: '{{ item.cignal_box_no|escapejs }}', account_name: '{{ item.account_name|escapejs }}', expiration_date: '{% if item.expiration_date %}{{ item.expiration_date|date:'Y-m-d\TH:i' }}{% elif item.end_date %}{{ item.end_date|date:'Y-m-d\TH:i' }}{% endif %}', hardware_payment_type: '{{ item.hardware_payment_type|default:"none" }}', installments_paid: '{{ item.installments_paid|default:0 }}', monthly_load_plan: '{{ item.monthly_load_plan|default:"149" }}'}]})">
-                  <i class="fas fa-coins me-1"></i> Reload
+                <button type="button" class="gt-icon-btn" title="Record Payment / Reload" onclick="openCignalPaymentModal({customerId: '{{ item.customer.id }}', customerName: '{{ item.customer.full_name|escapejs }}', pppoe: '{{ item.customer.pppoe_username|escapejs }}', subscriptionId: '{{ item.id }}', hardware_payment_type: '{{ item.hardware_payment_type|default:"none" }}', installments_paid: '{{ item.installments_paid|default:0 }}', expirationDate: '{% if item.expiration_date %}{{ item.expiration_date|date:'Y-m-d\TH:i' }}{% elif item.end_date %}{{ item.end_date|date:'Y-m-d\TH:i' }}{% endif %}', subscriptions: [{id: '{{ item.id }}', cignal_play_no: '{{ item.cignal_play_no|escapejs }}', cignal_box_no: '{{ item.cignal_box_no|escapejs }}', account_name: '{{ item.account_name|escapejs }}', expiration_date: '{% if item.expiration_date %}{{ item.expiration_date|date:'Y-m-d\TH:i' }}{% elif item.end_date %}{{ item.end_date|date:'Y-m-d\TH:i' }}{% endif %}', hardware_payment_type: '{{ item.hardware_payment_type|default:"none" }}', installments_paid: '{{ item.installments_paid|default:0 }}', monthly_load_plan: '{{ item.monthly_load_plan|default:"149" }}'}]})">
+                  <i class="fas fa-coins text-success"></i>
                 </button>
               </div>
             </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="5">
-              <div class="d-flex flex-column align-items-center justify-content-center py-5 text-center cignal-empty-state">
-                <div class="mb-3 p-3 rounded-circle" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
-                    <i class="fas fa-shield-alt fa-2x"></i>
-                </div>
-                <h6 class="text-white fw-bold mb-1">No Subscriptions Expiring Soon</h6>
-                <p class="text-muted small mb-0">All active Cignal Play and Box accounts are in good standing for the next 5 days.</p>
-              </div>
+            <td colspan="4" class="py-5 text-center text-muted">
+              <i class="fas fa-check-circle fa-2x mb-2 text-success opacity-75"></i>
+              <div class="fw-semibold">No Subscriptions Expiring Soon</div>
             </td>
           </tr>
           {% endfor %}
@@ -228,273 +219,237 @@
 
       {% elif current_tab == 'expired' %}
       <!-- ── OVERDUE / EXPIRED TABLE ── -->
-      <table class="table table-dark table-hover align-middle mb-0">
+      <table class="table gt-table align-middle mb-0">
         <thead>
           <tr>
-            <th>Customer</th>
-            <th>Subscription & Accounts</th>
-            <th>Expiration Date</th>
-            <th>Overdue Status</th>
-            <th class="text-end">Action</th>
+            <th style="width: 24%;">Customer</th>
+            <th style="width: 34%;">Subscription</th>
+            <th style="width: 20%;">Status</th>
+            <th style="width: 22%; text-align: right; padding-right: 1.5rem;">Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for item in expired_cignals_list %}
           <tr>
             <td>
-              <a href="{% url 'view_customer' item.customer.id %}" class="fw-bold text-decoration-none text-info d-block">
+              <a href="{% url 'view_customer' item.customer.id %}" class="fw-medium text-decoration-none d-block" style="font-size: 14px; color: var(--gt-text-title);">
                 {{ item.customer.full_name|default:item.customer.pppoe_username }}
               </a>
-              <div class="d-flex align-items-center gap-2 mt-1">
-                {% if item.customer.pppoe_username %}
-                  <small class="text-muted font-monospace" style="font-size:0.75rem;"><i class="fas fa-user-circle me-1"></i>{{ item.customer.pppoe_username }}</small>
-                {% endif %}
-                {% if item.customer.phone %}
-                  <a href="tel:{{ item.customer.phone }}" class="text-decoration-none text-success small font-monospace" style="font-size:0.75rem;" title="Call Customer">
-                    <i class="fas fa-phone me-1"></i>{{ item.customer.phone }}
-                  </a>
-                  <button type="button" class="btn btn-link p-0 text-muted" style="font-size:0.7rem;" title="Copy Phone" onclick="copyCignalText('{{ item.customer.phone|escapejs }}', this)">
-                    <i class="far fa-copy"></i>
-                  </button>
-                {% endif %}
-              </div>
-            </td>
-            <td>
-              <div class="d-flex flex-column gap-1">
-                <span class="fw-bold text-light" style="font-size:0.84rem;">
-                  <i class="fas fa-tv text-danger me-1"></i>{{ item.account_name|default:"Cignal Subscription" }}
-                </span>
-                <div class="d-flex flex-wrap align-items-center gap-2">
-                  {% if item.cignal_play_no %}
-                    <span class="cignal-acct-chip">
-                      <i class="fas fa-play text-info" style="font-size:0.6rem;"></i> Play: <strong class="ms-1">{{ item.cignal_play_no }}</strong>
-                      <button type="button" class="btn btn-link p-0 ms-1 text-muted" style="font-size:0.7rem;" title="Copy Play No" onclick="copyCignalText('{{ item.cignal_play_no|escapejs }}', this)"><i class="far fa-copy"></i></button>
-                    </span>
-                  {% endif %}
-                  {% if item.cignal_box_no %}
-                    <span class="cignal-acct-chip cignal-acct-chip-box">
-                      <i class="fas fa-box text-warning" style="font-size:0.6rem;"></i> Box: <strong class="ms-1">{{ item.cignal_box_no }}</strong>
-                      <button type="button" class="btn btn-link p-0 ms-1 text-muted" style="font-size:0.7rem;" title="Copy Box No" onclick="copyCignalText('{{ item.cignal_box_no|escapejs }}', this)"><i class="far fa-copy"></i></button>
-                    </span>
-                  {% endif %}
+              {% if item.customer.pppoe_username %}
+                <div class="text-muted" style="font-size: 12px; margin-top: 2px;">
+                  <i class="fas fa-user-circle me-1"></i>{{ item.customer.pppoe_username }}
                 </div>
-              </div>
-            </td>
-            <td>
-              <span class="badge border border-danger text-danger px-2 py-1" style="font-size:0.75rem; background: rgba(239, 68, 68, 0.1);">
-                <i class="far fa-calendar-times me-1"></i>
-                {% if item.expiration_date %}{{ item.expiration_date|date:"M d, Y" }}{% elif item.end_date %}{{ item.end_date|date:"M d, Y" }}{% else %}N/A{% endif %}
-              </span>
-            </td>
-            <td>
-              {% if item.days_until_expiry is not None and item.days_until_expiry < 0 %}
-                <span class="badge bg-danger text-white rounded-pill px-2.5 py-1" style="font-size:0.72rem;">
-                  <i class="fas fa-exclamation-circle me-1"></i> Overdue by {{ item.days_until_expiry|stringformat:"d"|slice:"1:" }} day(s)
-                </span>
-              {% else %}
-                <span class="badge bg-secondary text-light rounded-pill px-2.5 py-1" style="font-size:0.72rem;">Expired</span>
               {% endif %}
             </td>
-            <td class="text-end">
-              <div class="d-flex gap-2 justify-content-end align-items-center">
-                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 gt-btn text-light" style="font-size: 0.75rem;" title="Edit Subscription Details" onclick="openCignalEditModal({id: '{{ item.id }}', label: '{{ item.account_name|escapejs }}', playNo: '{{ item.cignal_play_no|escapejs }}', boxNo: '{{ item.cignal_box_no|escapejs }}', customerName: '{{ item.customer.full_name|escapejs }}', hardwarePaymentType: '{{ item.hardware_payment_type|default:"none" }}', installmentsPaid: '{{ item.installments_paid|default:0 }}', monthlyLoadPlan: '{{ item.monthly_load_plan|default:"149" }}', expirationDate: '{% if item.expiration_date %}{{ item.expiration_date|date:'Y-m-d\TH:i' }}{% elif item.end_date %}{{ item.end_date|date:'Y-m-d\TH:i' }}{% endif %}'})">
-                  <i class="fas fa-pencil-alt me-1"></i> Edit
+            <td>
+              <div class="fw-semibold text-title" style="font-size: 14px;">
+                {{ item.account_name|default:"Cignal Subscription" }}
+                {% if item.monthly_load_plan %}
+                  <span class="text-muted fw-normal">· ₱{{ item.monthly_load_plan }}/mo</span>
+                {% endif %}
+              </div>
+              <div class="text-muted mt-0.5" style="font-size: 12px;">
+                Play # <span class="font-monospace text-title">{{ item.cignal_play_no|default:"None" }}</span> · Box # <span class="font-monospace text-title">{{ item.cignal_box_no|default:"None" }}</span>
+              </div>
+              <div class="text-muted mt-0.5" style="font-size: 12px;">
+                {% if item.hardware_payment_type == 'installment' %}
+                  Installment ₱250/mo ({{ item.installments_paid|default:0 }}/12)
+                {% elif item.hardware_payment_type == 'cashout' %}
+                  Cashout ₱3,000 — Fully Paid
+                {% else %}
+                  App Only · No Box Hardware
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              <span class="gt-status-badge gt-status-badge--danger">
+                <span class="gt-status-dot"></span>Overdue
+              </span>
+              <div class="gt-status-meta text-danger">
+                Expired: {{ item.expiration_date|default:item.end_date|date:"M d, Y" }}
+              </div>
+            </td>
+            <td class="text-end" style="padding-right: 1.5rem;">
+              <div class="d-inline-flex align-items-center gap-1.5 justify-content-end">
+                <button type="button" class="gt-icon-btn" title="Edit Subscription Details" onclick="openCignalEditModal({id: '{{ item.id }}', label: '{{ item.account_name|escapejs }}', playNo: '{{ item.cignal_play_no|escapejs }}', boxNo: '{{ item.cignal_box_no|escapejs }}', customerName: '{{ item.customer.full_name|escapejs }}', hardwarePaymentType: '{{ item.hardware_payment_type|default:"none" }}', installmentsPaid: '{{ item.installments_paid|default:0 }}', monthlyLoadPlan: '{{ item.monthly_load_plan|default:"149" }}', expirationDate: '{% if item.expiration_date %}{{ item.expiration_date|date:'Y-m-d\TH:i' }}{% elif item.end_date %}{{ item.end_date|date:'Y-m-d\TH:i' }}{% endif %}'})">
+                  <i class="fas fa-pencil-alt"></i>
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 gt-btn fw-bold" style="font-size: 0.75rem;" onclick="openCignalPaymentModal({customerId: '{{ item.customer.id }}', customerName: '{{ item.customer.full_name|escapejs }}', pppoe: '{{ item.customer.pppoe_username|escapejs }}', subscriptionId: '{{ item.id }}', hardware_payment_type: '{{ item.hardware_payment_type|default:"none" }}', installments_paid: '{{ item.installments_paid|default:0 }}', expirationDate: '{% if item.expiration_date %}{{ item.expiration_date|date:'Y-m-d\TH:i' }}{% elif item.end_date %}{{ item.end_date|date:'Y-m-d\TH:i' }}{% endif %}', subscriptions: [{id: '{{ item.id }}', cignal_play_no: '{{ item.cignal_play_no|escapejs }}', cignal_box_no: '{{ item.cignal_box_no|escapejs }}', account_name: '{{ item.account_name|escapejs }}', expiration_date: '{% if item.expiration_date %}{{ item.expiration_date|date:'Y-m-d\TH:i' }}{% elif item.end_date %}{{ item.end_date|date:'Y-m-d\TH:i' }}{% endif %}', hardware_payment_type: '{{ item.hardware_payment_type|default:"none" }}', installments_paid: '{{ item.installments_paid|default:0 }}', monthly_load_plan: '{{ item.monthly_load_plan|default:"149" }}'}]})">
-                  <i class="fas fa-coins me-1"></i> Record Reload
+                <button type="button" class="gt-icon-btn" title="Record Payment / Reload" onclick="openCignalPaymentModal({customerId: '{{ item.customer.id }}', customerName: '{{ item.customer.full_name|escapejs }}', pppoe: '{{ item.customer.pppoe_username|escapejs }}', subscriptionId: '{{ item.id }}', hardware_payment_type: '{{ item.hardware_payment_type|default:"none" }}', installments_paid: '{{ item.installments_paid|default:0 }}', expirationDate: '{% if item.expiration_date %}{{ item.expiration_date|date:'Y-m-d\TH:i' }}{% elif item.end_date %}{{ item.end_date|date:'Y-m-d\TH:i' }}{% endif %}', subscriptions: [{id: '{{ item.id }}', cignal_play_no: '{{ item.cignal_play_no|escapejs }}', cignal_box_no: '{{ item.cignal_box_no|escapejs }}', account_name: '{{ item.account_name|escapejs }}', expiration_date: '{% if item.expiration_date %}{{ item.expiration_date|date:'Y-m-d\TH:i' }}{% elif item.end_date %}{{ item.end_date|date:'Y-m-d\TH:i' }}{% endif %}', hardware_payment_type: '{{ item.hardware_payment_type|default:"none" }}', installments_paid: '{{ item.installments_paid|default:0 }}', monthly_load_plan: '{{ item.monthly_load_plan|default:"149" }}'}]})">
+                  <i class="fas fa-coins text-success"></i>
                 </button>
               </div>
             </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="5">
-              <div class="d-flex flex-column align-items-center justify-content-center py-5 text-center cignal-empty-state">
-                <div class="mb-3 p-3 rounded-circle" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
-                    <i class="fas fa-check-circle fa-2x"></i>
-                </div>
-                <h6 class="text-white fw-bold mb-1">No Overdue Cignal Subscriptions</h6>
-                <p class="text-muted small mb-0">All active subscriptions have valid current load dates.</p>
-              </div>
+            <td colspan="4" class="py-5 text-center text-muted">
+              <i class="fas fa-check-circle fa-2x mb-2 text-success opacity-75"></i>
+              <div class="fw-semibold">No Overdue Cignal Subscriptions</div>
             </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
+
       {% else %}
-      <!-- ── ACTIVE / INSTALLMENT / FULLY PAID TABLE ── -->
-      <table id="cignalSubscriptionsTable" class="table table-dark table-hover align-middle mb-0">
+      <!-- ── ACTIVE / INSTALLMENT / FULLY PAID TABLE (Clean Plain Cells) ── -->
+      <table id="cignalSubscriptionsTable" class="table gt-table align-middle mb-0">
         <thead>
           <tr>
-            <th>Customer</th>
-            <th>Subscription / Accounts</th>
-            <th>Date Applied</th>
-            <th>Adjusted By</th>
-            <th class="text-end">Action</th>
+            <th style="width: 22%;">Customer</th>
+            <th style="width: 32%;">Subscription</th>
+            <th style="width: 18%;">Status</th>
+            <th style="width: 16%;">Date Applied</th>
+            <th style="width: 12%; text-align: right; padding-right: 1.5rem;">Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for customer in customers_list %}
-          <tr>
-            <td>
-              <a href="{% url 'view_customer' customer.id %}" class="fw-bold text-decoration-none text-info d-block">
-                {{ customer.full_name|default:customer.pppoe_username }}
-              </a>
-              <div class="d-flex align-items-center gap-2 flex-wrap mt-0.5">
-                {% if customer.full_name and customer.pppoe_username %}
-                  <small class="text-muted font-monospace" style="font-size:0.75rem;"><i class="fas fa-user-circle me-1"></i>{{ customer.pppoe_username }}</small>
+            {% for plan in customer.cignal_plans.all %}
+            <tr>
+              {# Cell 1: Customer #}
+              <td>
+                <a href="{% url 'view_customer' customer.id %}" class="fw-medium text-decoration-none d-block" style="font-size: 14px; color: var(--gt-text-title);">
+                  {{ customer.full_name|default:customer.pppoe_username }}
+                </a>
+                <div class="d-flex align-items-center gap-2 flex-wrap text-muted" style="font-size: 12px; margin-top: 2px;">
+                  {% if customer.full_name and customer.pppoe_username %}
+                    <span><i class="fas fa-user-circle me-1"></i>{{ customer.pppoe_username }}</span>
+                  {% endif %}
+                  {% if customer.phone %}
+                    <a href="tel:{{ customer.phone }}" class="text-muted text-decoration-none" title="Call">
+                      <i class="fas fa-phone me-1"></i>{{ customer.phone }}
+                    </a>
+                    <button type="button" class="btn btn-link p-0 text-muted" style="font-size: 11px;" title="Copy Phone" onclick="copyCignalText('{{ customer.phone|escapejs }}', this)">
+                      <i class="far fa-copy"></i>
+                    </button>
+                  {% endif %}
+                </div>
+              </td>
+
+              {# Cell 2: Subscription (3 Clean Lines) #}
+              <td>
+                <!-- Line 1: Plan Name · Channels · Price -->
+                <div class="fw-semibold text-title" style="font-size: 14px;">
+                  {{ plan.account_name|default:"Cignal Subscription" }}
+                  {% if plan.monthly_load_plan == '149' %}
+                    <span class="text-muted fw-normal">· 42 Ch · ₱149/mo</span>
+                  {% elif plan.monthly_load_plan == '399' %}
+                    <span class="text-muted fw-normal">· 62 Ch · ₱399/mo</span>
+                  {% elif plan.monthly_load_plan %}
+                    <span class="text-muted fw-normal">· ₱{{ plan.monthly_load_plan }}/mo</span>
+                  {% endif %}
+                </div>
+
+                <!-- Line 2: Play # · Box # (Monospace only on numbers) -->
+                <div class="text-muted mt-0.5" style="font-size: 12px;">
+                  Play # <span class="font-monospace text-title">{% if plan.cignal_play_no %}{{ plan.cignal_play_no }}{% else %}None{% endif %}</span>
+                  {% if plan.cignal_play_no %}
+                    <button type="button" class="btn btn-link p-0 text-muted" style="font-size: 11px;" title="Copy Play No" onclick="copyCignalText('{{ plan.cignal_play_no|escapejs }}', this)"><i class="far fa-copy"></i></button>
+                  {% endif %}
+                  · Box # <span class="font-monospace text-title">{% if plan.cignal_box_no %}{{ plan.cignal_box_no }}{% else %}None{% endif %}</span>
+                  {% if plan.cignal_box_no %}
+                    <button type="button" class="btn btn-link p-0 text-muted" style="font-size: 11px;" title="Copy Box No" onclick="copyCignalText('{{ plan.cignal_box_no|escapejs }}', this)"><i class="far fa-copy"></i></button>
+                  {% endif %}
+                </div>
+
+                <!-- Line 3: Hardware Details -->
+                <div class="text-muted mt-0.5" style="font-size: 12px;">
+                  {% if plan.hardware_payment_type == 'installment' %}
+                    <span>Installment ₱250/mo ({{ plan.installments_paid|default:0 }}/12) · ₱{{ plan.hardware_paid_formatted }} / ₱3,000 · {{ plan.hardware_remaining_months }} mo left</span>
+                  {% elif plan.hardware_payment_type == 'cashout' %}
+                    <span class="text-success"><i class="fas fa-check-circle me-1"></i>Cashout ₱3,000 — Fully Paid</span>
+                  {% elif plan.hardware_payment_type == 'none' %}
+                    <span>App Only · No Box Hardware</span>
+                  {% else %}
+                    <span>Standard Setup</span>
+                  {% endif %}
+                </div>
+              </td>
+
+              {# Cell 3: Status (One badge + Due date muted below) #}
+              <td>
+                {% if plan.expiration_date or plan.end_date %}
+                  {% if plan.is_active %}
+                    <span class="gt-status-badge gt-status-badge--success">
+                      <span class="gt-status-dot"></span>Active
+                    </span>
+                    <div class="gt-status-meta">
+                      Due {{ plan.expiration_date|default:plan.end_date|date:"M d, Y" }}
+                    </div>
+                  {% else %}
+                    <span class="gt-status-badge gt-status-badge--danger">
+                      <span class="gt-status-dot"></span>Overdue
+                    </span>
+                    <div class="gt-status-meta text-danger">
+                      Expired {{ plan.expiration_date|default:plan.end_date|date:"M d, Y" }}
+                    </div>
+                  {% endif %}
+                {% else %}
+                  <span class="gt-status-badge gt-status-badge--warning">
+                    <span class="gt-status-dot"></span>No Due Date
+                  </span>
                 {% endif %}
-                {% if customer.phone %}
-                  <a href="tel:{{ customer.phone }}" class="text-decoration-none text-success small font-monospace" style="font-size:0.75rem;" title="Call Customer">
-                    <i class="fas fa-phone me-1"></i>{{ customer.phone }}
-                  </a>
-                  <button type="button" class="btn btn-link p-0 text-muted" style="font-size:0.68rem;" title="Copy Phone" onclick="copyCignalText('{{ customer.phone|escapejs }}', this)">
-                    <i class="far fa-copy"></i>
-                  </button>
-                {% endif %}
-              </div>
-            </td>
-            <td>
-              <div class="d-flex flex-column gap-2">
-              {% if customer.cignal_plans.all %}
-                {% for plan in customer.cignal_plans.all %}
-                  <div class="cignal-sub-card">
-                    <div class="cignal-sub-strip"></div>
-                    <!-- Row 1: Label + Load Badge + Expiry -->
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-                      <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <span class="fw-bold" style="font-size:0.84rem; color: inherit;">
-                          <i class="fas fa-tv text-danger me-1" style="filter: drop-shadow(0 0 5px rgba(239,68,68,0.4));"></i>{{ plan.account_name|default:"Cignal Subscription" }}
-                        </span>
-                        {% if plan.monthly_load_plan == '149' %}
-                          <span class="cignal-load-badge"><i class="fas fa-satellite-dish me-1"></i>42 Ch · ₱149/mo</span>
-                        {% elif plan.monthly_load_plan == '399' %}
-                          <span class="cignal-load-badge"><i class="fas fa-satellite-dish me-1"></i>62 Ch · ₱399/mo</span>
-                        {% elif plan.monthly_load_plan %}
-                          <span class="cignal-load-badge"><i class="fas fa-satellite-dish me-1"></i>₱{{ plan.monthly_load_plan }}/mo</span>
-                        {% else %}
-                          <span class="cignal-badge-neutral">No Load Set</span>
-                        {% endif %}
-                      </div>
-                      <div>
-                        {% if plan.expiration_date or plan.end_date %}
-                          {% if plan.is_active %}
-                            <span class="cignal-expiry-badge cignal-expiry-ok"><i class="far fa-calendar-check"></i>Due: {{ plan.expiration_date|default:plan.end_date|date:"M d, Y H:i" }}</span>
-                          {% else %}
-                            <span class="cignal-expiry-badge cignal-expiry-crit"><i class="fas fa-exclamation-triangle"></i>Expired: {{ plan.expiration_date|default:plan.end_date|date:"M d, Y H:i" }}</span>
-                          {% endif %}
-                        {% else %}
-                          <span class="cignal-expiry-badge cignal-expiry-warn"><i class="far fa-clock"></i>No Due Date</span>
-                        {% endif %}
-                      </div>
-                    </div>
-                    <!-- Row 2: Account Chips -->
-                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                      <span class="cignal-acct-chip">
-                        <i class="fas fa-tv" style="font-size:0.62rem;"></i>
-                        Play&nbsp;#:&nbsp;{% if plan.cignal_play_no %}{{ plan.cignal_play_no }} <button type="button" class="btn btn-link p-0 ms-1 text-muted" style="font-size:0.68rem;" title="Copy Play No" onclick="copyCignalText('{{ plan.cignal_play_no|escapejs }}', this)"><i class="far fa-copy"></i></button>{% else %}<em style="opacity:0.5;">None</em>{% endif %}
-                      </span>
-                      <span class="cignal-acct-chip cignal-acct-chip-box">
-                        <i class="fas fa-box" style="font-size:0.62rem;"></i>
-                        Box&nbsp;#:&nbsp;{% if plan.cignal_box_no %}{{ plan.cignal_box_no }} <button type="button" class="btn btn-link p-0 ms-1 text-muted" style="font-size:0.68rem;" title="Copy Box No" onclick="copyCignalText('{{ plan.cignal_box_no|escapejs }}', this)"><i class="far fa-copy"></i></button>{% else %}<em style="opacity:0.5;">None</em>{% endif %}
-                      </span>
-                    </div>
-                    <!-- Row 3: Hardware Status -->
-                    <div>
-                      {% if plan.hardware_payment_type == 'installment' %}
-                        <div class="d-flex flex-wrap align-items-center gap-3" style="font-size:0.72rem;">
-                          <div class="d-flex align-items-center gap-1 text-warning fw-bold">
-                            <i class="fas fa-boxes-packing" style="font-size:0.75rem;"></i>
-                            <span>Installment ₱250/mo</span>
-                            <span class="badge bg-warning text-dark ms-1" style="font-size:0.66rem; padding: 2px 7px;">{{ plan.installments_paid|default:0 }}/12</span>
-                          </div>
-                          <div class="d-flex align-items-center gap-2 flex-grow-1">
-                            <div class="cignal-hw-bar-wrap flex-grow-1">
-                              <div class="cignal-hw-bar cignal-hw-bar-install" style="width:{% widthratio plan.installments_paid|default:0 12 100 %}%"></div>
-                            </div>
-                            <span style="color: #94a3b8; white-space:nowrap;">₱{{ plan.hardware_paid_formatted }} / ₱3,000</span>
-                          </div>
-                          {% if plan.hardware_remaining_amount == 0 %}
-                            <span class="badge bg-success" style="font-size:0.65rem;">Fully Paid</span>
-                          {% else %}
-                            <span style="color:#94a3b8; white-space:nowrap;">{{ plan.hardware_remaining_months }} mo left</span>
-                          {% endif %}
-                        </div>
-                      {% elif plan.hardware_payment_type == 'cashout' %}
-                        <div class="d-flex align-items-center gap-2" style="font-size:0.72rem;">
-                          <div class="cignal-hw-bar-wrap" style="min-width:80px;">
-                            <div class="cignal-hw-bar" style="width:100%"></div>
-                          </div>
-                          <span class="text-success fw-bold"><i class="fas fa-check-circle me-1"></i>Cashout ₱3,000 — Fully Paid</span>
-                        </div>
-                      {% elif plan.hardware_payment_type == 'none' %}
-                        <div class="d-flex align-items-center gap-1" style="font-size:0.72rem; color:#64748b;">
-                          <i class="fas fa-mobile-alt" style="font-size:0.75rem;"></i> App Only · No Box Hardware
-                        </div>
-                      {% else %}
-                        <div class="d-flex align-items-center gap-1" style="font-size:0.72rem; color:#64748b;">
-                          <i class="fas fa-info-circle"></i> Standard Setup
-                        </div>
-                      {% endif %}
-                    </div>
-                  </div>
-                {% endfor %}
-              {% else %}
-                <span class="text-muted" style="font-size:0.75rem;"><i class="fas fa-info-circle me-1"></i>No active subscriptions</span>
-              {% endif %}
-              </div>
-            </td>
-            <td>
-              {% if customer.cignal_plans.first.start_date %}
-                <div><small class="text-light">{{ customer.cignal_plans.first.start_date|date:"M d, Y" }}</small></div>
-              {% elif customer.cignal_plans.first.created_at %}
-                <div><small class="text-light">{{ customer.cignal_plans.first.created_at|date:"M d, Y" }}</small></div>
-              {% else %}
-                <small class="text-muted">N/A</small>
-              {% endif %}
-            </td>
-            <td><small class="text-muted">{{ customer.cignal_plans.first.adjusted_by|default:"-" }}</small></td>
-            <td class="text-end">
-              <div class="d-flex gap-2 justify-content-end align-items-center flex-wrap">
-                {% for plan in customer.cignal_plans.all %}
-                <div class="d-flex gap-1 align-items-center border border-secondary border-opacity-25 rounded px-2 py-1" style="background: rgba(255,255,255,0.03);">
-                  <small class="text-muted me-1" style="font-size:0.7rem;">{{ plan.account_name|default:"Sub #"|add:plan.id|truncatechars:18 }}</small>
-                  <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0 gt-btn text-light" style="font-size: 0.7rem;" title="Edit" onclick="openCignalEditModal({id: '{{ plan.id }}', customerId: '{{ customer.id }}', label: '{{ plan.account_name|escapejs }}', playNo: '{{ plan.cignal_play_no|escapejs }}', boxNo: '{{ plan.cignal_box_no|escapejs }}', customerName: '{{ customer.full_name|escapejs }}', hardwarePaymentType: '{{ plan.hardware_payment_type|default:'none' }}', installmentsPaid: '{{ plan.installments_paid|default:0 }}', monthlyLoadPlan: '{{ plan.monthly_load_plan|default:'149' }}', expirationDate: '{% if plan.expiration_date %}{{ plan.expiration_date|date:'Y-m-d\TH:i' }}{% elif plan.end_date %}{{ plan.end_date|date:'Y-m-d\TH:i' }}{% endif %}'})">
+              </td>
+
+              {# Cell 4: Date Applied + Adjusted By merged #}
+              <td>
+                <div style="font-size: 14px;" class="text-title">
+                  {% if plan.start_date %}
+                    {{ plan.start_date|date:"M d, Y" }}
+                  {% elif plan.created_at %}
+                    {{ plan.created_at|date:"M d, Y" }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </div>
+                <div class="gt-status-meta">
+                  by {{ plan.adjusted_by|default:"Admin" }}
+                </div>
+              </td>
+
+              {# Cell 5: Actions: Edit, Payment, and "..." menu for remove #}
+              <td class="text-end" style="padding-right: 1.5rem;">
+                <div class="d-inline-flex align-items-center gap-1.5 justify-content-end">
+                  <button type="button" class="gt-icon-btn" title="Edit Subscription Details" onclick="openCignalEditModal({id: '{{ plan.id }}', customerId: '{{ customer.id }}', label: '{{ plan.account_name|escapejs }}', playNo: '{{ plan.cignal_play_no|escapejs }}', boxNo: '{{ plan.cignal_box_no|escapejs }}', customerName: '{{ customer.full_name|escapejs }}', hardwarePaymentType: '{{ plan.hardware_payment_type|default:'none' }}', installmentsPaid: '{{ plan.installments_paid|default:0 }}', monthlyLoadPlan: '{{ plan.monthly_load_plan|default:'149' }}', expirationDate: '{% if plan.expiration_date %}{{ plan.expiration_date|date:'Y-m-d\TH:i' }}{% elif plan.end_date %}{{ plan.end_date|date:'Y-m-d\TH:i' }}{% endif %}'})">
                     <i class="fas fa-pencil-alt"></i>
                   </button>
-                  <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2 py-0 gt-btn" style="font-size: 0.7rem;" title="Reload Load" onclick="openCignalPaymentModal({customerId: '{{ customer.id }}', customerName: '{{ customer.full_name|escapejs }}', pppoe: '{{ customer.pppoe_username|escapejs }}', subscriptionId: '{{ plan.id }}', expirationDate: '{% if plan.expiration_date %}{{ plan.expiration_date|date:'Y-m-d\TH:i' }}{% elif plan.end_date %}{{ plan.end_date|date:'Y-m-d\TH:i' }}{% endif %}', subscriptions: [{id: '{{ plan.id }}', cignal_play_no: '{{ plan.cignal_play_no|escapejs }}', cignal_box_no: '{{ plan.cignal_box_no|escapejs }}', account_name: '{{ plan.account_name|escapejs }}', expiration_date: '{% if plan.expiration_date %}{{ plan.expiration_date|date:'Y-m-d\TH:i' }}{% elif plan.end_date %}{{ plan.end_date|date:'Y-m-d\TH:i' }}{% endif %}', hardware_payment_type: '{{ plan.hardware_payment_type|default:'none' }}', installments_paid: '{{ plan.installments_paid|default:0 }}', monthly_load_plan: '{{ plan.monthly_load_plan|default:'149' }}'}]})">
-                    <i class="fas fa-coins"></i>
+                  <button type="button" class="gt-icon-btn" title="Record Payment / Reload" onclick="openCignalPaymentModal({customerId: '{{ customer.id }}', customerName: '{{ customer.full_name|escapejs }}', pppoe: '{{ customer.pppoe_username|escapejs }}', subscriptionId: '{{ plan.id }}', expirationDate: '{% if plan.expiration_date %}{{ plan.expiration_date|date:'Y-m-d\TH:i' }}{% elif plan.end_date %}{{ plan.end_date|date:'Y-m-d\TH:i' }}{% endif %}', subscriptions: [{id: '{{ plan.id }}', cignal_play_no: '{{ plan.cignal_play_no|escapejs }}', cignal_box_no: '{{ plan.cignal_box_no|escapejs }}', account_name: '{{ plan.account_name|escapejs }}', expiration_date: '{% if plan.expiration_date %}{{ plan.expiration_date|date:'Y-m-d\TH:i' }}{% elif plan.end_date %}{{ plan.end_date|date:'Y-m-d\TH:i' }}{% endif %}', hardware_payment_type: '{{ plan.hardware_payment_type|default:'none' }}', installments_paid: '{{ plan.installments_paid|default:0 }}', monthly_load_plan: '{{ plan.monthly_load_plan|default:'149' }}'}]})">
+                    <i class="fas fa-coins text-success"></i>
                   </button>
-                  <form method="POST" action="{% url 'cancel_cignal_subscription' plan.id %}" style="display:inline;" onsubmit="return confirm('Mark Cignal subscription \'{{ plan.account_name|escapejs }}\' for {{ customer.full_name|escapejs }} as Pulled-Out / Removed? You can restore it later.');">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2 py-0 gt-btn" style="font-size: 0.7rem;" title="Mark as Pulled-Out / Removed">
-                      <i class="fas fa-times"></i>
+                  <div class="dropdown d-inline-block">
+                    <button type="button" class="gt-icon-btn" data-bs-toggle="dropdown" aria-expanded="false" title="More Actions">
+                      <i class="fas fa-ellipsis-vertical"></i>
                     </button>
-                  </form>
+                    <ul class="dropdown-menu dropdown-menu-end gt-dropdown-menu">
+                      <li>
+                        <a class="dropdown-item" href="{% url 'view_customer' customer.id %}">
+                          <i class="fas fa-user text-primary me-2"></i>View Customer Profile
+                        </a>
+                      </li>
+                      <li><hr class="dropdown-divider my-1" style="border-color: var(--gt-border-divider);"></li>
+                      <li>
+                        <form method="POST" action="{% url 'cancel_cignal_subscription' plan.id %}" onsubmit="return confirm('Mark Cignal subscription \'{{ plan.account_name|escapejs }}\' for {{ customer.full_name|escapejs }} as Pulled-Out / Removed? You can restore it later.');">
+                          {% csrf_token %}
+                          <button type="submit" class="dropdown-item text-danger">
+                            <i class="fas fa-trash-alt me-2"></i>Mark Pulled-Out / Remove
+                          </button>
+                        </form>
+                      </li>
+                    </ul>
+                  </div>
                 </div>
-                {% empty %}
-                <span class="text-muted" style="font-size:0.75rem;"><i class="fas fa-info-circle me-1"></i>No subscriptions</span>
-                {% endfor %}
-              </div>
-            </td>
-          </tr>
+              </td>
+            </tr>
+            {% endfor %}
           {% empty %}
           <tr>
-            <td colspan="5">
-              <div class="d-flex flex-column align-items-center justify-content-center py-5 text-center cignal-empty-state">
-                <div class="mb-3 p-3 rounded-circle" style="background: rgba(148, 163, 184, 0.1); color: #94a3b8;">
-                    <i class="fas fa-users fa-2x"></i>
-                </div>
-                <h6 class="text-white fw-bold mb-1">
-                  {% if current_tab == 'installment' %}No Ongoing Installments
-                  {% elif current_tab == 'fully_paid' %}No Fully Paid Hardware Subscribers
-                  {% else %}No Active Cignal Subscribers{% endif %}
-                </h6>
-                <p class="text-muted small mb-0">
-                  {% if current_tab == 'installment' %}Subscribers with ongoing hardware installments (₱250/mo) will appear here.
-                  {% elif current_tab == 'fully_paid' %}Subscribers who have completed 12 months or paid cashout will appear here.
-                  {% else %}Activated Cignal Play and Box subscribers will appear here.{% endif %}
-                </p>
+            <td colspan="5" class="py-5 text-center text-muted">
+              <i class="fas fa-satellite-dish fa-2x mb-2 text-muted opacity-50"></i>
+              <div class="fw-semibold">
+                {% if current_tab == 'installment' %}No Ongoing Installments
+                {% elif current_tab == 'fully_paid' %}No Fully Paid Hardware Subscribers
+                {% else %}No Active Cignal Subscribers{% endif %}
               </div>
             </td>
           </tr>

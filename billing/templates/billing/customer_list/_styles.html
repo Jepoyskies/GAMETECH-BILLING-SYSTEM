@@ -1,434 +1,123 @@
-<!-- Base Partial: Styles -->
-<!-- DataTables Bootstrap 5 & Responsive CSS -->
+<!-- Base Partial: Customer Directory Scoped Styles -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
+
 <style>
-    #customerTable thead th {
-        padding: 0.7rem 0.85rem !important;
-        font-size: 0.74rem !important;
-        font-weight: 700 !important;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: #94a3b8 !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-        vertical-align: middle;
-        white-space: nowrap;
-    }
+/* Page-level section accent override */
+:root {
+  --section-accent: #3b82f6;
+}
 
-    #customerTable tbody td {
-        padding: 0.65rem 0.85rem !important;
-        font-size: 0.83rem !important;
-        color: #cbd5e1 !important;
-        vertical-align: middle !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
-    }
+/* DataTables Controls & Search Styling */
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter {
+  margin-bottom: var(--gt-sp-3);
+}
 
-    #customerTable tbody td b,
-    #customerTable tbody td strong {
-        font-size: 0.86rem !important;
-        font-weight: 600 !important;
-        color: #f8fafc !important;
-    }
+.dataTables_wrapper .dataTables_filter input {
+  background: var(--gt-input-bg) !important;
+  border: 1px solid var(--gt-input-border) !important;
+  color: var(--gt-text-title) !important;
+  border-radius: var(--gt-radius-btn) !important;
+  padding: 0.4rem 0.85rem !important;
+  font-size: 13px !important;
+  outline: none;
+  min-width: 220px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
 
-    .cust-status-wrap {
-        display: flex;
-        flex-direction: column;
-        gap: 3px;
-        justify-content: center;
-    }
+.dataTables_wrapper .dataTables_filter input:focus {
+  border-color: var(--section-accent) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--section-accent) 20%, transparent) !important;
+}
 
-    .cust-base-badge {
-        font-size: 0.72rem !important;
-        padding: 0.22rem 0.55rem !important;
-        font-weight: 600 !important;
-        letter-spacing: 0.02em;
-    }
+.dataTables_wrapper .dataTables_length select {
+  background: var(--gt-input-bg) !important;
+  border: 1px solid var(--gt-input-border) !important;
+  color: var(--gt-text-title) !important;
+  border-radius: var(--gt-radius-btn) !important;
+  padding: 0.35rem 1.8rem 0.35rem 0.75rem !important;
+  font-size: 13px !important;
+}
 
-    /* Subtle row hover effect */
-    #customerTable tbody tr {
-        transition: background-color 0.15s ease, transform 0.1s ease;
-    }
-    #customerTable tbody tr:hover {
-        background-color: rgba(255, 255, 255, 0.05) !important;
-    }
-    html.dark-mode #customerTable tbody tr:hover,
-    body.dark-mode #customerTable tbody tr:hover {
-        background-color: rgba(255, 255, 255, 0.05) !important;
-    }
+.dataTables_wrapper .dataTables_info {
+  font-size: 12px;
+  color: var(--gt-text-muted);
+  padding: 1rem 1.5rem !important;
+}
 
-    .dataTables_length,
-    .dataTables_filter {
-        margin-bottom: 1rem;
-    }
+.dataTables_wrapper .dataTables_paginate {
+  padding: 0.85rem 1.5rem !important;
+}
 
-    /* ============================================================
-       FUTURISTIC GLASSMORPHIC HEADER & CONTROLS
-    ============================================================ */
-    .customer-hero-card {
-        position: relative;
-        background: radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.18) 0%, rgba(15, 23, 42, 0.95) 75%),
-                    linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.98) 100%);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 18px;
-        padding: 1.5rem 1.75rem;
-        box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.5), 0 0 35px -5px rgba(56, 189, 248, 0.15);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        overflow: hidden;
-    }
-    .customer-hero-card::after {
-        content: '';
-        position: absolute;
-        top: -50%;
-        right: -15%;
-        width: 320px;
-        height: 320px;
-        background: radial-gradient(circle, rgba(14, 165, 233, 0.22) 0%, rgba(14, 165, 233, 0) 70%);
-        border-radius: 50%;
-        pointer-events: none;
-        filter: blur(30px);
-    }
-    .customer-hero-icon {
-        width: 52px;
-        height: 52px;
-        border-radius: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        background: rgba(56, 189, 248, 0.15);
-        border: 1px solid rgba(56, 189, 248, 0.35);
-        color: #38bdf8;
-        box-shadow: 0 0 20px rgba(56, 189, 248, 0.25);
-    }
+.dataTables_wrapper .pagination .page-link {
+  background: var(--gt-surface-card);
+  border: var(--gt-border-card);
+  color: var(--gt-text-muted);
+  border-radius: 8px !important;
+  margin: 0 2px;
+  font-size: 12px;
+  padding: 0.35rem 0.75rem;
+}
 
-    /* ============================================================
-       TOP STAT PILLS (EXCITEMENT COUNTERS)
-    ============================================================ */
-    .gt-stat-pill {
-        display: flex;
-        align-items: center;
-        gap: 0.85rem;
-        padding: 0.85rem 1.25rem;
-        background: rgba(15, 23, 42, 0.7);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 14px;
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, box-shadow 0.2s ease;
-        text-decoration: none;
-        color: inherit;
-    }
-    .gt-stat-pill:hover {
-        transform: translateY(-2px);
-        border-color: rgba(56, 189, 248, 0.35);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25), 0 0 15px rgba(56, 189, 248, 0.1);
-    }
-    .gt-stat-pill-icon {
-        width: 42px;
-        height: 42px;
-        border-radius: 11px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.15rem;
-        flex-shrink: 0;
-    }
-    .gt-stat-pill-total .gt-stat-pill-icon {
-        background: rgba(56, 189, 248, 0.15);
-        border: 1px solid rgba(56, 189, 248, 0.3);
-        color: #38bdf8;
-    }
-    .gt-stat-pill-active .gt-stat-pill-icon {
-        background: rgba(34, 197, 94, 0.15);
-        border: 1px solid rgba(34, 197, 94, 0.3);
-        color: #22c55e;
-    }
-    .gt-stat-pill-expiring .gt-stat-pill-icon {
-        background: rgba(245, 158, 11, 0.15);
-        border: 1px solid rgba(245, 158, 11, 0.3);
-        color: #f59e0b;
-    }
-    .gt-stat-pill-paid-offline .gt-stat-pill-icon {
-        background: rgba(245, 158, 11, 0.18);
-        border: 1px solid rgba(245, 158, 11, 0.4);
-        color: #f59e0b;
-        box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
-    }
-    .gt-stat-pill-paid-offline:hover {
-        border-color: rgba(245, 158, 11, 0.5);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25), 0 0 15px rgba(245, 158, 11, 0.18);
-    }
-    .gt-stat-pill-expired .gt-stat-pill-icon,
-    .gt-stat-pill-offline .gt-stat-pill-icon {
-        background: rgba(239, 68, 68, 0.15);
-        border: 1px solid rgba(239, 68, 68, 0.3);
-        color: #ef4444;
-    }
-    .gt-stat-pill-expired:hover {
-        border-color: rgba(239, 68, 68, 0.5);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25), 0 0 15px rgba(239, 68, 68, 0.18);
-    }
-    .gt-stat-pill-inactive .gt-stat-pill-icon {
-        background: rgba(148, 163, 184, 0.15);
-        border: 1px solid rgba(148, 163, 184, 0.3);
-        color: #94a3b8;
-    }
-    .gt-stat-pill-val {
-        font-size: 1.35rem;
-        font-weight: 800;
-        line-height: 1.1;
-        color: #f8fafc;
-        font-family: var(--gt-font-mono, monospace);
-    }
-    .gt-stat-pill-lbl {
-        font-size: 0.72rem;
-        color: #94a3b8;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        font-weight: 600;
-    }
+.dataTables_wrapper .pagination .page-item.active .page-link {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  color: #ffffff !important;
+}
 
-    /* ============================================================
-       MODERN TOGGLE FILTER PILLS
-    ============================================================ */
-    .gt-filter-pills-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        align-items: center;
-    }
-    .gt-filter-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.45rem;
-        padding: 0.45rem 1.1rem;
-        font-size: 0.84rem;
-        font-weight: 600;
-        border-radius: 9999px;
-        text-decoration: none;
-        transition: all 0.2s ease;
-        background: rgba(15, 23, 42, 0.6);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        color: #94a3b8;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-    }
-    .gt-filter-pill:hover {
-        background: rgba(255, 255, 255, 0.08);
-        color: #f8fafc;
-        border-color: rgba(255, 255, 255, 0.25);
-        transform: translateY(-1px);
-    }
-    .gt-filter-pill.active {
-        background: #0284c7;
-        border-color: #38bdf8;
-        color: #ffffff;
-        box-shadow: 0 0 15px rgba(2, 132, 199, 0.45), 0 4px 10px rgba(0, 0, 0, 0.2);
-    }
-    .gt-filter-pill.active-success.active {
-        background: #16a34a;
-        border-color: #4ade80;
-        box-shadow: 0 0 15px rgba(22, 163, 74, 0.45);
-    }
-    .gt-filter-pill.active-warning.active {
-        background: #d97706;
-        border-color: #fbbf24;
-        box-shadow: 0 0 15px rgba(217, 119, 6, 0.45);
-    }
-    .gt-filter-pill.active-danger.active {
-        background: #dc2626;
-        border-color: #f87171;
-        box-shadow: 0 0 15px rgba(220, 38, 38, 0.45);
-    }
-    .gt-filter-pill.active-secondary.active {
-        background: #475569;
-        border-color: #94a3b8;
-        box-shadow: 0 0 15px rgba(71, 85, 105, 0.45);
-    }
+/* Row State Visual Highlights */
+.table-row-paid-offline {
+  background: rgba(239, 68, 68, 0.05) !important;
+}
 
-    /* ============================================================
-       ULTRA-COMPACT MOBILE-FIRST ARCHITECTURE
-       Mobile (<768px): block-level cards  |  Desktop: normal table
-    ============================================================ */
-    @media (max-width: 767.98px) {
+.table-row-pending-install {
+  background: rgba(14, 165, 233, 0.04) !important;
+}
 
-        /* ── Hide desktop table chrome ── */
-        #customerTable thead { display: none !important; }
-        #customerTable,
-        #customerTable tbody { display: block !important; width: 100% !important; }
+.table-row-suspended {
+  background: rgba(245, 158, 11, 0.04) !important;
+}
 
-        /* ── Each <tr> becomes a compact profile card ── */
-        #customerTable tbody tr {
-            display: block;
-            position: relative;
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 11px 13px 9px 13px;
-            margin-bottom: 10px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-        }
-        #customerTable tbody tr.table-warning,
-        #customerTable tbody tr.table-row-expired {
-            border-color: rgba(244, 63, 94, 0.3) !important;
-            background: rgba(244, 63, 94, 0.06) !important;
-        }
-        #customerTable tbody tr.table-secondary,
-        #customerTable tbody tr.table-row-inactive {
-            border-color: rgba(148, 163, 184, 0.2) !important;
-            background: rgba(148, 163, 184, 0.04) !important;
-        }
+.table-row-expired {
+  background: rgba(239, 68, 68, 0.04) !important;
+}
 
-        /* ── All <td> reset ── */
-        #customerTable tbody tr td {
-            display: block;
-            padding: 0 !important;
-            border: none !important;
-        }
+.table-row-inactive {
+  opacity: 0.75;
+}
 
-        /* col 1 – Checkbox: hide on mobile */
-        #customerTable tbody tr td:nth-child(1) { display: none; }
+/* Select filter custom styles */
+.gt-select-filter {
+  transition: border-color 0.2s ease;
+}
 
-        /* col 2 – Full Name: bold, leave room for button */
-        #customerTable tbody tr td:nth-child(2) {
-            font-size: 0.9rem;
-            font-weight: 700;
-            color: #1e293b;
-            padding-right: 72px !important;
-        }
+.gt-select-filter:focus {
+  border-color: var(--section-accent) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--section-accent) 20%, transparent) !important;
+}
 
-        /* col 3 – Email: hide */
-        #customerTable tbody tr td:nth-child(3) { display: none; }
-
-        /* col 4 – Phone */
-        #customerTable tbody tr td:nth-child(4) {
-            font-size: 0.76rem;
-            color: #64748b;
-            margin-top: 3px;
-        }
-
-        /* col 5 – Plan: inline */
-        #customerTable tbody tr td:nth-child(5) {
-            display: inline !important;
-            font-size: 0.74rem;
-            color: #64748b;
-            margin-top: 4px;
-        }
-
-        /* col 6 – Agent: hide */
-        #customerTable tbody tr td:nth-child(6) { display: none; }
-
-        /* col 7 – Barangay: inline next to Plan */
-        #customerTable tbody tr td:nth-child(7) {
-            display: inline !important;
-            font-size: 0.74rem;
-            color: #64748b;
-        }
-        #customerTable tbody tr td:nth-child(7)::before {
-            content: '  ·  ';
-            color: #cbd5e1;
-        }
-
-        /* col 8 – Router: hide */
-        #customerTable tbody tr td:nth-child(8) { display: none; }
-
-        /* col 9 – Status: hide the big badge; show only conn-status badge */
-        #customerTable tbody tr td:nth-child(9) { margin-top: 5px; }
-        #customerTable tbody tr td:nth-child(9) > .badge:first-child { display: none !important; }
-
-        /* col 10 – Actions: absolute top-right */
-        #customerTable tbody tr td:nth-child(10) {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-        }
-        #customerTable tbody tr td:nth-child(10) .btn {
-            padding: 3px 10px;
-            font-size: 0.74rem;
-        }
-    }
-
-    /* ============================================================
-       HIGHLIGHTED ROW STATES (DARK-MODE FIRST & ACCENT BORDERS)
-    ============================================================ */
-    .table-row-paid-offline {
-        background-color: rgba(239, 68, 68, 0.08) !important;
-        box-shadow: inset 3px 0 0 #ef4444 !important;
-    }
-    .table-row-paid-offline td:first-child {
-        border-left: 3px solid #ef4444 !important;
-    }
-    .table-row-paid-offline:hover {
-        background-color: rgba(239, 68, 68, 0.14) !important;
-    }
-
-    .table-row-pending-install {
-        background-color: rgba(14, 165, 233, 0.06) !important;
-        box-shadow: inset 3px 0 0 #0ea5e9 !important;
-    }
-    .table-row-pending-install td:first-child {
-        border-left: 3px solid #0ea5e9 !important;
-    }
-    .table-row-pending-install:hover {
-        background-color: rgba(14, 165, 233, 0.12) !important;
-    }
-
-    .table-row-expired {
-        background-color: rgba(244, 63, 94, 0.06) !important;
-        box-shadow: inset 3px 0 0 #f43f5e !important;
-    }
-    .table-row-expired td:first-child {
-        border-left: 3px solid #f43f5e !important;
-    }
-    .table-row-expired:hover {
-        background-color: rgba(244, 63, 94, 0.12) !important;
-    }
-
-    .table-row-suspended {
-        background-color: rgba(99, 102, 241, 0.06) !important;
-        box-shadow: inset 3px 0 0 #6366f1 !important;
-    }
-    .table-row-suspended td:first-child {
-        border-left: 3px solid #6366f1 !important;
-    }
-    .table-row-suspended:hover {
-        background-color: rgba(99, 102, 241, 0.12) !important;
-    }
-
-    .table-row-inactive {
-        background-color: rgba(148, 163, 184, 0.03) !important;
-        opacity: 0.75;
-    }
-    .table-row-inactive:hover {
-        background-color: rgba(148, 163, 184, 0.07) !important;
-        opacity: 0.95;
-    }
-
-    /* HARD NEUTRALIZATION: Kill any Bootstrap table-warning bright yellow in Dark Mode */
-    #customerTable tbody tr.table-warning,
-    #customerTable tbody tr.table-warning > *,
-    #customerTable tbody tr.table-warning td,
-    .dark-mode #customerTable tbody tr.table-warning,
-    .dark-mode #customerTable tbody tr.table-warning > *,
-    .dark-mode #customerTable tbody tr.table-warning td {
-        background-color: rgba(245, 158, 11, 0.08) !important;
-        color: #cbd5e1 !important;
-        border-color: rgba(255, 255, 255, 0.06) !important;
-    }
-    #customerTable tbody tr.table-warning td b,
-    #customerTable tbody tr.table-warning td strong {
-        color: #f8fafc !important;
-    }
-    #customerTable tbody tr.table-secondary,
-    #customerTable tbody tr.table-secondary > *,
-    #customerTable tbody tr.table-secondary td,
-    .dark-mode #customerTable tbody tr.table-secondary,
-    .dark-mode #customerTable tbody tr.table-secondary > *,
-    .dark-mode #customerTable tbody tr.table-secondary td {
-        background-color: rgba(148, 163, 184, 0.04) !important;
-        color: #94a3b8 !important;
-        border-color: rgba(255, 255, 255, 0.06) !important;
-    }
+/* Connection status indicator dot styles */
+.conn-status-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: 2px;
+  vertical-align: middle;
+  background-color: #64748b;
+  transition: all 0.3s ease;
+}
+.conn-status-indicator.conn-online {
+  background-color: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+}
+.conn-status-indicator.conn-offline {
+  background-color: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+}
+.conn-status-indicator.conn-warning {
+  background-color: #f59e0b;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
+}
 </style>
-
