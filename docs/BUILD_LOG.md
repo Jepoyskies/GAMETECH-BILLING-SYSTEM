@@ -129,20 +129,60 @@ The codebase interacts with live MikroTik routers across the following functiona
 
 ---
 
+---
+
+## Phase 3: Onboarding Policy Checklist, Prospects Inbox & Mobile Agent Portal (COMPLETED & VERIFIED)
+- **Pre-Migration Safety Backup:**
+  - Droplet snapshot: `/root/backups/gametech_phase3_backup_20260924.sql` (272 KB).
+- **Mandatory Pre-Installation Policy Checklist:**
+  - Enforced server-side in `billing/views/customers/crud.py` for all new-install registrations (`installation_status='pending'`).
+  - Requires all 6 policy checkboxes ticked: free standard install, agreed plan rate, no 24-month lock-in, 60-day staggered lock, same-day repair, 24h+ outage rebates.
+  - Captures confirmed_by, verification method (`in_person`, `phone`, `chat`), and an immutable JSON policy snapshot.
+  - Direct POSTs bypassing the checklist are strictly rejected with an explicit validation error.
+- **Manual Override Exception ("Installed / Existing Subscriber"):**
+  - Allows bypassing the checklist and install ticket creation ONLY when `installation_status='installed'`.
+  - Requires `billing.create_customer` permission and explicitly logs an audit trail in `SystemLog` (`MANUAL_OVERRIDE_ADD`).
+- **Atomic Creation & Idempotent Unassigned Dispatch Ticket:**
+  - One atomic transaction creates `Customer` (`Pending Install`), records `ChecklistConfirmation`, converts `Prospect` if present, and triggers install job order creation.
+  - Reused existing `auto_create_dispatch_ticket_on_pending_install` signal in `dispatch/signals.py`.
+  - Job ticket is created as UNASSIGNED (`status='PENDING'`, `team=None`, `assigned_to=None`) in the Dispatch Queue; technicians cannot view it until Dispatch assigns it in Phase 4.
+  - Idempotency guarantees exactly ONE install ticket per subscriber even if customer profile is re-saved.
+- **Declines Handling:**
+  - `ChecklistConfirmation` supports null prospect/customer with `applicant_name` and `applicant_phone` to record walk-in declines without creating phantom subscriber accounts.
+  - Agent referral declines update `Prospect.status='declined'` with the recorded decline reason and display in real time on the agent's dashboard.
+- **Mobile-First Agent Portal (No Admin Sidebar):**
+  - Minimal mobile responsive layout (`base_agent.html`) with Gametech branding, no admin sidebars.
+  - Referral intake form (`submit_prospect.html`) with Philippine mobile number normalization (`normalize_ph_phone`).
+  - Referrals tracker (`dashboard.html`) showing real-time status badges, payment progress indicators, and Phase 5 incentive/payout placeholders.
+  - Prospect editing (`edit_prospect.html`) allowing agents to update details until staff opens/reviews the lead.
+  - Duplicate detection on submit and staff review against both existing customers and prospects.
+  - Staff bell notification (`Notification` model) generated whenever an agent submits a new referral lead.
+  - Restyled agent profile (`view_agent.html`) with "Add Customer to this Agent" CTA button.
+- **Automated Test Suite:**
+  - `billing.tests.test_phase3_onboarding`: 9 comprehensive automated tests (100% passing).
+  - Full billing test suite: 36 tests (100% passing).
+
+---
+
 ## Verification & Rollback Procedures
 
 ### One-Line Emergency Rollback Commands
+- **Rollback Phase 3 (Return to Phase 2 baseline):**
+  ```bash
+  git checkout feature/dispatch-operation~3; cat /root/backups/gametech_phase3_backup_20260924.sql | ssh root@143.198.207.144 "docker exec -i 28514b2a5c9a psql -U gametech_user gametech_db"; ssh root@143.198.207.144 "docker restart gametech-billing-system-web-1"
+  ```
 - **Rollback Phase 2 (Return to Phase 1 baseline):**
   ```bash
-  git checkout feature/dispatch-operation~2; cat /root/backups/gametech_phase2_backup_20260924.sql | ssh root@143.198.207.144 "docker exec -i 28514b2a5c9a psql -U gametech_user gametech_db"; ssh root@143.198.207.144 "docker restart gametech-billing-system-web-1"
+  git checkout feature/dispatch-operation~4; cat /root/backups/gametech_phase2_backup_20260924.sql | ssh root@143.198.207.144 "docker exec -i 28514b2a5c9a psql -U gametech_user gametech_db"; ssh root@143.198.207.144 "docker restart gametech-billing-system-web-1"
   ```
 - **Rollback Phase 1 (Return to Phase 0 baseline):**
   ```bash
-  git checkout feature/dispatch-operation~3; cat /root/backups/gametech_phase1_backup_20260924.sql | ssh root@143.198.207.144 "docker exec -i 28514b2a5c9a psql -U gametech_user gametech_db"; ssh root@143.198.207.144 "docker restart gametech-billing-system-web-1"
+  git checkout feature/dispatch-operation~5; cat /root/backups/gametech_phase1_backup_20260924.sql | ssh root@143.198.207.144 "docker exec -i 28514b2a5c9a psql -U gametech_user gametech_db"; ssh root@143.198.207.144 "docker restart gametech-billing-system-web-1"
   ```
 - **Rollback Entire Feature (Return to main):**
   ```bash
   git checkout main; git pull origin main; cat /root/backups/gametech_phase0_backup_20260924.sql | ssh root@143.198.207.144 "docker exec -i 28514b2a5c9a psql -U gametech_user gametech_db"; ssh root@143.198.207.144 "docker restart gametech-billing-system-web-1"
   ```
+
 
 
