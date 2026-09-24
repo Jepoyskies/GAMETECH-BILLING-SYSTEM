@@ -1,0 +1,269 @@
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   DISPATCH DASHBOARD — Unified Gametech Design System
+   ══════════════════════════════════════════════════════════════════ */
+.dash-page-wrap { padding: 1.5rem 1.75rem; font-family: 'Inter', sans-serif; }
+
+.dash-section-heading {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 24px 0 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* 1. Operational Overview 4-Cards Grid */
+.kpi-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.dash-kpi-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+/* 2. Overview Layout (4-Stack on left + Donut & Legend on right) */
+.overview-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 1.5rem;
+  background: var(--surface-card);
+  border: var(--border-subtle);
+  border-radius: var(--gt-radius-card);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-card);
+}
+@media (max-width: 991px) {
+  .overview-layout { grid-template-columns: 1fr; }
+}
+.overview-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.overview-mini-card {
+  background: var(--surface-subtle);
+  border: var(--border-divider);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.overview-mini-left { display: flex; align-items: center; gap: 0.7rem; }
+.overview-mini-icon {
+  width: 34px; height: 34px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.9rem;
+}
+.overview-mini-label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+.overview-mini-val { font-size: 1.2rem; font-weight: 800; color: var(--text-primary); }
+
+/* Donut & Legend Horizontal Layout (Legend next to donut, pills below) */
+.donut-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 0.5rem;
+}
+.donut-visual-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 2rem;
+  width: 100%;
+}
+.donut-svg-wrap {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  flex-shrink: 0;
+}
+.donut-bg-track {
+  stroke: #e2e8f0;
+}
+.dark-mode .donut-bg-track,
+html.dark-mode .donut-bg-track {
+  stroke: rgba(255, 255, 255, 0.08);
+}
+.donut-svg-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+.donut-svg-center-val {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+}
+.donut-svg-center-lbl {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+/* Legend items */
+.status-legend-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem 1.2rem;
+  min-width: 220px;
+}
+.status-legend-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.8rem;
+}
+.legend-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.legend-label { color: var(--text-muted); font-weight: 500; }
+.legend-value { font-weight: 700; color: var(--text-primary); }
+
+.donut-toggle-tabs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* 3. Monitoring Summary */
+.monitoring-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+.monitoring-card-box {
+  background: var(--surface-card);
+  border: var(--border-subtle);
+  border-radius: var(--gt-radius-card);
+  padding: 1.15rem 1.25rem;
+  box-shadow: var(--shadow-card);
+}
+.monitoring-card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.monitoring-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  text-align: center;
+}
+.mon-stat-item {
+  padding: 0.6rem 0.3rem;
+  border-radius: 8px;
+  background: var(--surface-subtle);
+  border: var(--border-divider);
+}
+.mon-stat-val {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+.mon-stat-lbl {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+.mon-stat-val.done { color: var(--status-success); }
+.mon-stat-val.cancelled { color: var(--status-danger); }
+
+/* 4. Leaderboard */
+.leaderboard-card {
+  background: var(--surface-card);
+  border: var(--border-subtle);
+  border-radius: var(--gt-radius-card);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  margin-bottom: 1.5rem;
+}
+.leaderboard-table { width: 100%; border-collapse: collapse; }
+.leaderboard-th {
+  padding: 0.65rem 0.85rem;
+  text-align: left;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  background: var(--surface-subtle);
+  border-bottom: var(--border-divider);
+}
+.leaderboard-td {
+  padding: 0.72rem 0.85rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  border-bottom: var(--border-divider);
+  vertical-align: middle;
+}
+.leaderboard-td.text-dark {
+  color: var(--text-primary) !important;
+}
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 800;
+  background: var(--surface-subtle);
+  color: var(--text-muted);
+}
+.rank-badge.gold   { background: #fef08a; color: #854d0e; }
+.rank-badge.silver { background: #e2e8f0; color: #334155; }
+.rank-badge.bronze { background: #fed7aa; color: #9a3412; }
+.pill-rate {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.pill-green  { background: rgba(16,185,129,0.12); color: var(--status-success); }
+.pill-yellow { background: rgba(245,158,11,0.12); color: var(--status-warning); }
+.pill-red    { background: rgba(239,68,68,0.12); color: var(--status-danger); }
+
+/* 5. ERP Stepper Toggle */
+.erp-pipeline-toggle {
+  background: var(--surface-card);
+  border: var(--border-subtle);
+  border-radius: var(--gt-radius-card);
+  padding: 0.85rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-card);
+  transition: all 0.2s;
+}
+.erp-pipeline-toggle:hover {
+  background: var(--surface-hover);
+}
+</style>

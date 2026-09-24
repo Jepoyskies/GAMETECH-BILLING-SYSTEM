@@ -4,11 +4,17 @@
 <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
 <script>
 $(document).ready(function() {
-  $('#agentsTable').DataTable({
-    responsive: true,
-    pageLength: 25,
-    order: [[0, 'asc']],
-    language: { search: '', searchPlaceholder: 'Search agents...' }
-  });
+  var hasRows = $('#agentsTable tbody tr td[colspan]').length === 0;
+  if (hasRows) {
+    var dt = $('#agentsTable').DataTable({
+      responsive: true,
+      pageLength: 25,
+      dom: 'rtip',
+      order: [[0, 'asc']]
+    });
+    $('#agentSearchInput').on('keyup input', function() {
+      dt.search(this.value).draw();
+    });
+  }
 });
 </script>

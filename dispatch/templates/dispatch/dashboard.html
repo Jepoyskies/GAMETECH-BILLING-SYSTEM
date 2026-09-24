@@ -4,494 +4,38 @@
 {% block title %}Dashboard | Gametech Dispatch{% endblock %}
 
 {% block extra_css %}
-<style>
-/* ========================================================
-   DISPATCH DASHBOARD — Matching Original Port 5502 System
-   ======================================================== */
-.dash-page-wrap { padding: 1.5rem 1.75rem; font-family: 'Inter', sans-serif; }
-
-/* Header */
-.dash-header {
-  display: flex; justify-content: space-between; align-items: flex-start;
-  margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;
-}
-.dash-title-wrap h1 {
-  font-size: 1.45rem; font-weight: 800; color: #1e293b;
-  margin: 0 0 0.2rem 0; letter-spacing: -0.02em;
-  display: flex; align-items: center; gap: 0.5rem;
-}
-.dash-timestamp {
-  font-size: 0.8rem; color: #64748b; margin: 0; font-weight: 500;
-}
-.dash-actions {
-  display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
-}
-.dash-filter-btn {
-  padding: 0.42rem 0.85rem; border-radius: 8px; font-size: 0.82rem;
-  font-weight: 600; text-decoration: none; border: 1px solid #cbd5e1;
-  background: #fff; color: #475569; transition: all 0.15s;
-}
-.dash-filter-btn:hover { background: #f8fafc; color: #1e293b; }
-.dash-filter-btn.active {
-  background: #3533cd; border-color: #3533cd; color: #fff;
-}
-.btn-dash-export {
-  background: #fff; border: 1px solid #cbd5e1; border-radius: 8px;
-  padding: 0.42rem 0.85rem; font-size: 0.82rem; font-weight: 600;
-  color: #334155; display: inline-flex; align-items: center; gap: 0.4rem;
-  text-decoration: none; transition: all 0.15s;
-}
-.btn-dash-export:hover { background: #f1f5f9; }
-
-/* Sections */
-.dash-section { margin-bottom: 2rem; }
-.dash-section-title {
-  font-size: 1.12rem; font-weight: 700; color: #1e293b;
-  margin-bottom: 0.85rem; display: flex; align-items: center; gap: 0.5rem;
-}
-
-/* 1. Operational Overview 4-Cards */
-.kpi-grid-4 {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem; margin-bottom: 1.5rem;
-}
-.dash-kpi-card {
-  background: #fff; border-radius: 12px; border: 1px solid #e2e8f0;
-  padding: 1.15rem 1.25rem; display: flex; align-items: flex-start;
-  gap: 0.9rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-  position: relative; overflow: hidden;
-}
-.dash-kpi-icon {
-  width: 42px; height: 42px; border-radius: 10px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
-}
-.kpi-amber .dash-kpi-icon { background: #fef3c7; color: #d97706; }
-.kpi-blue  .dash-kpi-icon { background: #dbeafe; color: #2563eb; }
-.kpi-green .dash-kpi-icon { background: #dcfce7; color: #16a34a; }
-.kpi-red   .dash-kpi-icon { background: #fee2e2; color: #dc2626; }
-
-.dash-kpi-number {
-  font-size: 1.65rem; font-weight: 800; color: #0f172a;
-  line-height: 1.1; margin-bottom: 0.15rem;
-}
-.dash-kpi-label {
-  font-size: 0.82rem; font-weight: 600; color: #64748b; margin-bottom: 0.25rem;
-}
-.dash-kpi-sub {
-  font-size: 0.72rem; color: #94a3b8; font-weight: 500;
-}
-
-/* 2. Overview Layout (4-Stack on left + Donut on right) */
-.overview-layout {
-  display: grid; grid-template-columns: 280px 1fr;
-  gap: 1.25rem; background: #fff; border: 1px solid #e2e8f0;
-  border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-}
-@media (max-width: 991px) {
-  .overview-layout { grid-template-columns: 1fr; }
-}
-.overview-stack {
-  display: flex; flex-direction: column; gap: 0.75rem;
-}
-.overview-mini-card {
-  background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 10px;
-  padding: 0.85rem 1rem; display: flex; align-items: center; justify-content: space-between;
-}
-.overview-mini-left { display: flex; align-items: center; gap: 0.7rem; }
-.overview-mini-icon {
-  width: 34px; height: 34px; border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  background: #ede9fe; color: #6366f1; font-size: 0.9rem;
-}
-.overview-mini-label { font-size: 0.8rem; font-weight: 600; color: #64748b; }
-.overview-mini-val { font-size: 1.2rem; font-weight: 800; color: #1e293b; }
-
-/* Status Donut & Legends */
-.donut-container {
-  display: flex; align-items: center; justify-content: space-around;
-  flex-wrap: wrap; gap: 1.5rem; padding: 0.5rem;
-}
-.donut-chart-box {
-  display: flex; flex-direction: column; align-items: center; position: relative;
-}
-.donut-svg-wrap { position: relative; width: 220px; height: 220px; }
-.donut-svg-center {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  text-align: center; pointer-events: none;
-}
-.donut-svg-center-val {
-  font-size: 1.4rem; font-weight: 800; color: #1e293b; line-height: 1;
-}
-.donut-svg-center-lbl {
-  font-size: 0.72rem; font-weight: 600; color: #64748b; margin-top: 0.2rem;
-}
-.donut-toggle-tabs {
-  display: flex; gap: 0.35rem; margin-top: 0.85rem; flex-wrap: wrap; justify-content: center;
-}
-.donut-tab-pill {
-  padding: 0.28rem 0.65rem; border-radius: 20px; font-size: 0.72rem;
-  font-weight: 600; border: 1px solid #cbd5e1; background: #fff; color: #475569;
-  cursor: pointer; transition: all 0.15s;
-}
-.donut-tab-pill.active {
-  background: #3533cd; border-color: #3533cd; color: #fff;
-}
-
-/* Legend items */
-.status-legend-grid {
-  display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.6rem 1.2rem;
-  min-width: 220px;
-}
-.status-legend-item {
-  display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
-  font-size: 0.8rem;
-}
-.legend-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
-.legend-label { color: #475569; font-weight: 500; }
-.legend-value { font-weight: 700; color: #1e293b; }
-
-/* 3. Monitoring Summary (3 Cards Grid) */
-.monitoring-summary-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1rem;
-}
-.monitoring-card-box {
-  background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
-  padding: 1.15rem 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-}
-.monitoring-card-title {
-  font-size: 0.95rem; font-weight: 700; color: #1e293b; margin-bottom: 0.85rem;
-  display: flex; align-items: center; justify-content: space-between;
-}
-.monitoring-stats-row {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; text-align: center;
-}
-.mon-stat-item {
-  padding: 0.6rem 0.3rem; border-radius: 8px; background: #f8fafc;
-}
-.mon-stat-val { font-size: 1.15rem; font-weight: 800; color: #1e293b; line-height: 1.1; }
-.mon-stat-lbl { font-size: 0.7rem; font-weight: 600; color: #64748b; margin-top: 0.2rem; }
-.mon-stat-val.done { color: #16a34a; }
-.mon-stat-val.cancelled { color: #dc2626; }
-
-/* 4. Tables / Leaderboards */
-.leaderboard-card {
-  background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
-  overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 1.5rem;
-}
-.leaderboard-table { width: 100%; border-collapse: collapse; }
-.leaderboard-th {
-  padding: 0.65rem 0.85rem; text-align: left; font-size: 0.76rem;
-  font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
-  color: #64748b; background: #f8fafc; border-bottom: 1px solid #e2e8f0;
-}
-.leaderboard-td {
-  padding: 0.72rem 0.85rem; font-size: 0.82rem; color: #334155;
-  border-bottom: 1px solid #f1f5f9; vertical-align: middle;
-}
-.rank-badge {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 24px; height: 24px; border-radius: 50%; font-size: 0.75rem;
-  font-weight: 800; background: #f1f5f9; color: #64748b;
-}
-.rank-badge.gold   { background: #fef08a; color: #854d0e; }
-.rank-badge.silver { background: #e2e8f0; color: #334155; }
-.rank-badge.bronze { background: #fed7aa; color: #9a3412; }
-
-.pill-rate {
-  display: inline-block; padding: 0.2rem 0.65rem; border-radius: 12px;
-  font-size: 0.75rem; font-weight: 700;
-}
-.pill-green  { background: #dcfce7; color: #15803d; }
-.pill-yellow { background: #fef3c7; color: #b45309; }
-.pill-red    { background: #fee2e2; color: #b91c1c; }
-
-/* ERP Stepper Collapse */
-.erp-pipeline-toggle {
-  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;
-  padding: 0.75rem 1rem; cursor: pointer; display: flex; align-items: center;
-  justify-content: space-between; font-size: 0.85rem; font-weight: 600; color: #334155;
-  margin-bottom: 0.75rem;
-}
-
-/* ========================================================
-   DISPATCH DASHBOARD — DARK MODE OVERRIDES
-   ======================================================== */
-html.dark-mode .dash-title-wrap h1,
-body.dark-mode .dash-title-wrap h1,
-.dark-mode .dash-title-wrap h1 {
-  color: #f8fafc !important;
-}
-
-html.dark-mode .dash-timestamp,
-body.dark-mode .dash-timestamp,
-.dark-mode .dash-timestamp {
-  color: #94a3b8 !important;
-}
-
-html.dark-mode .dash-section-title,
-body.dark-mode .dash-section-title,
-.dark-mode .dash-section-title {
-  color: #f8fafc !important;
-}
-
-/* 1. Operational Overview 4-Cards */
-html.dark-mode .dash-kpi-card,
-body.dark-mode .dash-kpi-card,
-.dark-mode .dash-kpi-card {
-  background: #1e293b !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35) !important;
-}
-
-html.dark-mode .dash-kpi-number,
-body.dark-mode .dash-kpi-number,
-.dark-mode .dash-kpi-number {
-  color: #f8fafc !important;
-}
-
-html.dark-mode .dash-kpi-label,
-body.dark-mode .dash-kpi-label,
-.dark-mode .dash-kpi-label {
-  color: #94a3b8 !important;
-}
-
-html.dark-mode .dash-kpi-sub,
-body.dark-mode .dash-kpi-sub,
-.dark-mode .dash-kpi-sub {
-  color: #64748b !important;
-}
-
-html.dark-mode .kpi-amber .dash-kpi-icon { background: rgba(245, 158, 11, 0.15) !important; color: #fbbf24 !important; }
-html.dark-mode .kpi-blue  .dash-kpi-icon { background: rgba(59, 130, 246, 0.15) !important; color: #60a5fa !important; }
-html.dark-mode .kpi-green .dash-kpi-icon { background: rgba(16, 185, 129, 0.15) !important; color: #34d399 !important; }
-html.dark-mode .kpi-red   .dash-kpi-icon { background: rgba(239, 68, 68, 0.15) !important; color: #f87171 !important; }
-
-/* 2. Overview Layout */
-html.dark-mode .overview-layout,
-body.dark-mode .overview-layout,
-.dark-mode .overview-layout {
-  background: #1e293b !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35) !important;
-}
-
-html.dark-mode .overview-mini-card,
-body.dark-mode .overview-mini-card,
-.dark-mode .overview-mini-card {
-  background: #0f172a !important;
-  border-color: rgba(255, 255, 255, 0.06) !important;
-}
-
-html.dark-mode .overview-mini-label,
-body.dark-mode .overview-mini-label,
-.dark-mode .overview-mini-label {
-  color: #94a3b8 !important;
-}
-
-html.dark-mode .overview-mini-val,
-body.dark-mode .overview-mini-val,
-.dark-mode .overview-mini-val {
-  color: #f8fafc !important;
-}
-
-html.dark-mode .donut-bg-track {
-  stroke: rgba(255, 255, 255, 0.08) !important;
-}
-
-html.dark-mode .donut-svg-center-val,
-body.dark-mode .donut-svg-center-val,
-.dark-mode .donut-svg-center-val {
-  color: #f8fafc !important;
-}
-
-html.dark-mode .donut-svg-center-lbl,
-body.dark-mode .donut-svg-center-lbl,
-.dark-mode .donut-svg-center-lbl {
-  color: #94a3b8 !important;
-}
-
-html.dark-mode .donut-tab-pill,
-body.dark-mode .donut-tab-pill,
-.dark-mode .donut-tab-pill {
-  background: #0f172a !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-  color: #cbd5e1 !important;
-}
-
-html.dark-mode .donut-tab-pill:hover,
-body.dark-mode .donut-tab-pill:hover,
-.dark-mode .donut-tab-pill:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-  color: #f8fafc !important;
-}
-
-html.dark-mode .donut-tab-pill.active,
-body.dark-mode .donut-tab-pill.active,
-.dark-mode .donut-tab-pill.active {
-  background: #3533cd !important;
-  border-color: #3533cd !important;
-  color: #fff !important;
-}
-
-html.dark-mode .legend-label,
-body.dark-mode .legend-label,
-.dark-mode .legend-label {
-  color: #cbd5e1 !important;
-}
-
-html.dark-mode .legend-value,
-body.dark-mode .legend-value,
-.dark-mode .legend-value {
-  color: #f8fafc !important;
-}
-
-/* 3. Monitoring Summary */
-html.dark-mode .monitoring-card-box,
-body.dark-mode .monitoring-card-box,
-.dark-mode .monitoring-card-box {
-  background: #1e293b !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35) !important;
-}
-
-html.dark-mode .monitoring-card-title,
-body.dark-mode .monitoring-card-title,
-.dark-mode .monitoring-card-title {
-  color: #f8fafc !important;
-}
-
-html.dark-mode .monitoring-card-title .btn-light,
-body.dark-mode .monitoring-card-title .btn-light,
-.dark-mode .monitoring-card-title .btn-light {
-  background: rgba(255, 255, 255, 0.06) !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
-  color: #cbd5e1 !important;
-}
-
-html.dark-mode .monitoring-card-title .btn-light:hover,
-body.dark-mode .monitoring-card-title .btn-light:hover,
-.dark-mode .monitoring-card-title .btn-light:hover {
-  background: rgba(255, 255, 255, 0.12) !important;
-  color: #ffffff !important;
-}
-
-html.dark-mode .mon-stat-item,
-body.dark-mode .mon-stat-item,
-.dark-mode .mon-stat-item {
-  background: #0f172a !important;
-}
-
-html.dark-mode .mon-stat-val,
-body.dark-mode .mon-stat-val,
-.dark-mode .mon-stat-val {
-  color: #f8fafc !important;
-}
-
-html.dark-mode .mon-stat-lbl,
-body.dark-mode .mon-stat-lbl,
-.dark-mode .mon-stat-lbl {
-  color: #94a3b8 !important;
-}
-
-/* 4. Leaderboard */
-html.dark-mode .leaderboard-card,
-body.dark-mode .leaderboard-card,
-.dark-mode .leaderboard-card {
-  background: #1e293b !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35) !important;
-}
-
-html.dark-mode .leaderboard-th,
-body.dark-mode .leaderboard-th,
-.dark-mode .leaderboard-th {
-  background: #0f172a !important;
-  color: #94a3b8 !important;
-  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-html.dark-mode .leaderboard-td,
-body.dark-mode .leaderboard-td,
-.dark-mode .leaderboard-td {
-  color: #cbd5e1 !important;
-  border-bottom-color: rgba(255, 255, 255, 0.05) !important;
-}
-
-html.dark-mode .leaderboard-td.text-dark,
-body.dark-mode .leaderboard-td.text-dark,
-.dark-mode .leaderboard-td.text-dark {
-  color: #f8fafc !important;
-}
-
-/* Filter & Action Buttons */
-html.dark-mode .dash-filter-btn,
-body.dark-mode .dash-filter-btn,
-.dark-mode .dash-filter-btn,
-html.dark-mode .btn-dash-export,
-body.dark-mode .btn-dash-export,
-.dark-mode .btn-dash-export {
-  background: #1e293b !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
-  color: #cbd5e1 !important;
-}
-
-html.dark-mode .dash-filter-btn:hover,
-body.dark-mode .dash-filter-btn:hover,
-.dark-mode .dash-filter-btn:hover,
-html.dark-mode .btn-dash-export:hover,
-body.dark-mode .btn-dash-export:hover,
-.dark-mode .btn-dash-export:hover {
-  background: #334155 !important;
-  color: #f8fafc !important;
-}
-
-html.dark-mode .dash-filter-btn.active,
-body.dark-mode .dash-filter-btn.active,
-.dark-mode .dash-filter-btn.active {
-  background: #3533cd !important;
-  border-color: #3533cd !important;
-  color: #ffffff !important;
-}
-
-/* ERP Stepper Toggle */
-html.dark-mode .erp-pipeline-toggle,
-body.dark-mode .erp-pipeline-toggle,
-.dark-mode .erp-pipeline-toggle {
-  background: #1e293b !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-  color: #cbd5e1 !important;
-}
-
-html.dark-mode #erpStepperCollapse > div,
-body.dark-mode #erpStepperCollapse > div,
-.dark-mode #erpStepperCollapse > div {
-  background-color: #1e293b !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-}
-</style>
+{% include "dispatch/styles/_dashboard_styles.html" %}
 {% endblock %}
 
 {% block content %}
 <div class="dash-page-wrap">
-  {% include "dispatch/_nav_tabs.html" %}
 
   <!-- Header -->
-  <div class="dash-header">
-    <div class="dash-title-wrap">
-      <h1><i class="fas fa-chart-pie text-primary"></i> Dashboard</h1>
-      <p class="dash-timestamp" id="dashLiveClock">
-        {{ now|date:"M d, Y, h:i:s A" }} &middot; Realtime Operational Overview
-      </p>
+  <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div class="d-flex align-items-center gap-3">
+      <div class="gt-header-icon">
+        <i class="fas fa-chart-pie"></i>
+      </div>
+      <div>
+        <div class="gt-header-eyebrow mb-1">
+          <i class="fas fa-satellite-dish"></i> DISPATCH
+        </div>
+        <h1 class="gt-header-title">Dashboard</h1>
+        <p class="gt-header-sub" id="dashLiveClock">
+          {{ now|date:"M d, Y, h:i:s A" }} &middot; Realtime Operational Overview
+        </p>
+      </div>
     </div>
-    <div class="dash-actions">
-      <a href="?date_range=all" class="dash-filter-btn {% if date_filter == 'all' or not date_filter %}active{% endif %}">All Records</a>
-      <a href="?date_range=today" class="dash-filter-btn {% if date_filter == 'today' %}active{% endif %}">Today</a>
-      <a href="?date_range=this_month" class="dash-filter-btn {% if date_filter == 'this_month' %}active{% endif %}">This Month</a>
-      <a href="{% url 'dispatch_export_tickets' %}" class="btn-dash-export">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <div class="gt-filter-pills-row mb-0">
+        <a href="?date_range=all" class="gt-filter-pill {% if date_filter == 'all' or not date_filter %}active{% endif %}">All Records</a>
+        <a href="?date_range=today" class="gt-filter-pill {% if date_filter == 'today' %}active{% endif %}">Today</a>
+        <a href="?date_range=this_month" class="gt-filter-pill {% if date_filter == 'this_month' %}active{% endif %}">This Month</a>
+      </div>
+      <a href="{% url 'dispatch_export_tickets' %}" class="gt-btn-secondary" title="Export CSV">
         <i class="fas fa-download"></i> Export CSV
       </a>
-      <button onclick="location.reload()" class="btn-dash-export" title="Refresh Dashboard">
+      <button onclick="location.reload()" class="gt-icon-btn" title="Refresh Dashboard">
         <i class="fas fa-sync-alt"></i>
       </button>
     </div>
@@ -499,43 +43,51 @@ body.dark-mode #erpStepperCollapse > div,
 
   <!-- 1. Operational Overview (4 KPI Cards) -->
   <div class="dash-section">
-    <div class="dash-section-title">
+    <div class="dash-section-heading">
       <i class="fas fa-bolt text-warning"></i> Operational Overview
     </div>
     <div class="kpi-grid-4">
       <!-- For Dispatch -->
-      <div class="dash-kpi-card kpi-amber">
-        <div class="dash-kpi-icon"><i class="fas fa-clock"></i></div>
+      <div class="gt-kpi-card">
+        <div class="gt-kpi-icon" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b; border-color: rgba(245, 158, 11, 0.25);">
+          <i class="fas fa-clock"></i>
+        </div>
         <div>
-          <div class="dash-kpi-number">{{ operational_overview.for_dispatch.total }}</div>
-          <div class="dash-kpi-label">For Dispatch</div>
+          <div class="gt-kpi-val">{{ operational_overview.for_dispatch.total }}</div>
+          <div class="gt-kpi-lbl">For Dispatch</div>
           <div class="dash-kpi-sub">{{ operational_overview.for_dispatch.installs }} Install &middot; {{ operational_overview.for_dispatch.repairs }} Repair</div>
         </div>
       </div>
       <!-- Ongoing -->
-      <div class="dash-kpi-card kpi-blue">
-        <div class="dash-kpi-icon"><i class="fas fa-tools"></i></div>
+      <div class="gt-kpi-card">
+        <div class="gt-kpi-icon" style="background: rgba(59, 130, 246, 0.12); color: #3b82f6; border-color: rgba(59, 130, 246, 0.25);">
+          <i class="fas fa-tools"></i>
+        </div>
         <div>
-          <div class="dash-kpi-number">{{ operational_overview.ongoing.total }}</div>
-          <div class="dash-kpi-label">Ongoing</div>
+          <div class="gt-kpi-val">{{ operational_overview.ongoing.total }}</div>
+          <div class="gt-kpi-lbl">Ongoing</div>
           <div class="dash-kpi-sub">{{ operational_overview.ongoing.installs }} Install &middot; {{ operational_overview.ongoing.repairs }} Repair</div>
         </div>
       </div>
       <!-- Closed -->
-      <div class="dash-kpi-card kpi-green">
-        <div class="dash-kpi-icon"><i class="fas fa-check-circle"></i></div>
+      <div class="gt-kpi-card">
+        <div class="gt-kpi-icon" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border-color: rgba(16, 185, 129, 0.25);">
+          <i class="fas fa-check-circle"></i>
+        </div>
         <div>
-          <div class="dash-kpi-number">{{ operational_overview.closed.total }}</div>
-          <div class="dash-kpi-label">Total Closed</div>
+          <div class="gt-kpi-val">{{ operational_overview.closed.total }}</div>
+          <div class="gt-kpi-lbl">Total Closed</div>
           <div class="dash-kpi-sub">{{ operational_overview.closed.installs }} Install &middot; {{ operational_overview.closed.repairs }} Repair</div>
         </div>
       </div>
       <!-- Cancelled -->
-      <div class="dash-kpi-card kpi-red">
-        <div class="dash-kpi-icon"><i class="fas fa-ban"></i></div>
+      <div class="gt-kpi-card">
+        <div class="gt-kpi-icon" style="background: rgba(239, 68, 68, 0.12); color: #ef4444; border-color: rgba(239, 68, 68, 0.25);">
+          <i class="fas fa-ban"></i>
+        </div>
         <div>
-          <div class="dash-kpi-number">{{ operational_overview.cancelled.total }}</div>
-          <div class="dash-kpi-label">Total Cancelled</div>
+          <div class="gt-kpi-val">{{ operational_overview.cancelled.total }}</div>
+          <div class="gt-kpi-lbl">Total Cancelled</div>
           <div class="dash-kpi-sub">{{ operational_overview.cancelled.installs }} Install &middot; {{ operational_overview.cancelled.repairs }} Repair</div>
         </div>
       </div>
@@ -544,7 +96,7 @@ body.dark-mode #erpStepperCollapse > div,
 
   <!-- 2. Overview Section (4-Stack on left + Donut on right) -->
   <div class="dash-section">
-    <div class="dash-section-title">
+    <div class="dash-section-heading">
       <i class="fas fa-chart-bar text-primary"></i> Overview
     </div>
     <div class="overview-layout">
@@ -552,40 +104,40 @@ body.dark-mode #erpStepperCollapse > div,
       <div class="overview-stack">
         <div class="overview-mini-card">
           <div class="overview-mini-left">
-            <div class="overview-mini-icon"><i class="fas fa-clipboard-list"></i></div>
+            <div class="overview-mini-icon" style="background: rgba(99, 102, 241, 0.15); color: #6366f1;"><i class="fas fa-clipboard-list"></i></div>
             <span class="overview-mini-label">Total Dispatches</span>
           </div>
           <span class="overview-mini-val">{{ overview_data.total_dispatches }}</span>
         </div>
         <div class="overview-mini-card">
           <div class="overview-mini-left">
-            <div class="overview-mini-icon" style="background:#dbeafe; color:#2563eb;"><i class="fas fa-wifi"></i></div>
+            <div class="overview-mini-icon" style="background: rgba(59, 130, 246, 0.15); color: #2563eb;"><i class="fas fa-wifi"></i></div>
             <span class="overview-mini-label">Installations</span>
           </div>
           <span class="overview-mini-val">{{ overview_data.installations }}</span>
         </div>
         <div class="overview-mini-card">
           <div class="overview-mini-left">
-            <div class="overview-mini-icon" style="background:#fee2e2; color:#dc2626;"><i class="fas fa-wrench"></i></div>
+            <div class="overview-mini-icon" style="background: rgba(239, 68, 68, 0.15); color: #dc2626;"><i class="fas fa-wrench"></i></div>
             <span class="overview-mini-label">Repairs</span>
           </div>
           <span class="overview-mini-val">{{ overview_data.repairs }}</span>
         </div>
         <div class="overview-mini-card">
           <div class="overview-mini-left">
-            <div class="overview-mini-icon" style="background:#fef3c7; color:#d97706;"><i class="fas fa-headset"></i></div>
+            <div class="overview-mini-icon" style="background: rgba(245, 158, 11, 0.15); color: #d97706;"><i class="fas fa-headset"></i></div>
             <span class="overview-mini-label">Concerns</span>
           </div>
           <span class="overview-mini-val">{{ overview_data.concerns }}</span>
         </div>
       </div>
 
-      <!-- Donut Right -->
+      <!-- Donut Right (with Legend NEXT TO it, pills below) -->
       <div class="donut-container">
-        <div class="donut-chart-box">
+        <div class="donut-visual-row">
           <div class="donut-svg-wrap">
-            <svg width="220" height="220" viewBox="0 0 100 100">
-              <circle class="donut-bg-track" cx="50" cy="50" r="38" fill="none" stroke="#e2e8f0" stroke-width="14" />
+            <svg width="200" height="200" viewBox="0 0 100 100">
+              <circle class="donut-bg-track" cx="50" cy="50" r="38" fill="none" stroke-width="14" />
               <!-- Pending segment -->
               <circle id="donutPending" cx="50" cy="50" r="38" fill="none" stroke="#f59e0b" stroke-width="14" stroke-dasharray="40 200" stroke-dashoffset="0" />
               <!-- In Progress segment -->
@@ -599,36 +151,37 @@ body.dark-mode #erpStepperCollapse > div,
             </div>
           </div>
 
-          <div class="donut-toggle-tabs">
-            <button class="donut-tab-pill active" onclick="switchPieMode('all', this)">All Records</button>
-            <button class="donut-tab-pill" onclick="switchPieMode('internet_install', this)">Internet Install</button>
-            <button class="donut-tab-pill" onclick="switchPieMode('cignal_play', this)">Cignal Play</button>
-            <button class="donut-tab-pill" onclick="switchPieMode('client_concerns', this)">Client Concerns</button>
+          <!-- Legends directly beside donut -->
+          <div class="status-legend-grid">
+            <div class="status-legend-item">
+              <div><span class="legend-dot" style="background:#f59e0b;"></span> <span class="legend-label">Pending</span></div>
+              <span class="legend-value" id="legPending">—</span>
+            </div>
+            <div class="status-legend-item">
+              <div><span class="legend-dot" style="background:#3b82f6;"></span> <span class="legend-label">Assigned</span></div>
+              <span class="legend-value" id="legAssigned">—</span>
+            </div>
+            <div class="status-legend-item">
+              <div><span class="legend-dot" style="background:#06b6d4;"></span> <span class="legend-label">In Progress</span></div>
+              <span class="legend-value" id="legInProgress">—</span>
+            </div>
+            <div class="status-legend-item">
+              <div><span class="legend-dot" style="background:#10b981;"></span> <span class="legend-label">Done</span></div>
+              <span class="legend-value" id="legDone">—</span>
+            </div>
+            <div class="status-legend-item">
+              <div><span class="legend-dot" style="background:#ef4444;"></span> <span class="legend-label">Cancelled</span></div>
+              <span class="legend-value" id="legCancelled">—</span>
+            </div>
           </div>
         </div>
 
-        <!-- Legends -->
-        <div class="status-legend-grid">
-          <div class="status-legend-item">
-            <div><span class="legend-dot" style="background:#f59e0b;"></span> <span class="legend-label">Pending</span></div>
-            <span class="legend-value" id="legPending">—</span>
-          </div>
-          <div class="status-legend-item">
-            <div><span class="legend-dot" style="background:#3b82f6;"></span> <span class="legend-label">Assigned</span></div>
-            <span class="legend-value" id="legAssigned">—</span>
-          </div>
-          <div class="status-legend-item">
-            <div><span class="legend-dot" style="background:#06b6d4;"></span> <span class="legend-label">In Progress</span></div>
-            <span class="legend-value" id="legInProgress">—</span>
-          </div>
-          <div class="status-legend-item">
-            <div><span class="legend-dot" style="background:#10b981;"></span> <span class="legend-label">Done</span></div>
-            <span class="legend-value" id="legDone">—</span>
-          </div>
-          <div class="status-legend-item">
-            <div><span class="legend-dot" style="background:#ef4444;"></span> <span class="legend-label">Cancelled</span></div>
-            <span class="legend-value" id="legCancelled">—</span>
-          </div>
+        <!-- Filter Pills Below the Chart -->
+        <div class="donut-toggle-tabs">
+          <button class="gt-filter-pill donut-tab-pill active" onclick="switchPieMode('all', this)">All Records</button>
+          <button class="gt-filter-pill donut-tab-pill" onclick="switchPieMode('internet_install', this)">Internet Install</button>
+          <button class="gt-filter-pill donut-tab-pill" onclick="switchPieMode('cignal_play', this)">Cignal Play</button>
+          <button class="gt-filter-pill donut-tab-pill" onclick="switchPieMode('client_concerns', this)">Client Concerns</button>
         </div>
       </div>
     </div>
@@ -636,7 +189,7 @@ body.dark-mode #erpStepperCollapse > div,
 
   <!-- 3. Monitoring Summary (3 Cards Grid) -->
   <div class="dash-section">
-    <div class="dash-section-title">
+    <div class="dash-section-heading">
       <i class="fas fa-layer-group text-info"></i> Monitoring Summary
     </div>
     <div class="monitoring-summary-grid">
@@ -644,7 +197,7 @@ body.dark-mode #erpStepperCollapse > div,
       <div class="monitoring-card-box">
         <div class="monitoring-card-title">
           <span><i class="fas fa-wifi text-primary me-2"></i> Internet Install</span>
-          <a href="{% url 'internet_install' %}" class="btn btn-sm btn-light border py-0 px-2" style="font-size:0.75rem;">View</a>
+          <a href="{% url 'internet_install' %}" class="gt-btn-secondary py-1 px-2.5" style="font-size:0.75rem;">View</a>
         </div>
         <div class="monitoring-stats-row">
           <div class="mon-stat-item">
@@ -666,7 +219,7 @@ body.dark-mode #erpStepperCollapse > div,
       <div class="monitoring-card-box">
         <div class="monitoring-card-title">
           <span><i class="fas fa-tv text-purple me-2" style="color:#a855f7;"></i> Cignal Play</span>
-          <a href="{% url 'cignal_install' %}" class="btn btn-sm btn-light border py-0 px-2" style="font-size:0.75rem;">View</a>
+          <a href="{% url 'cignal_install' %}" class="gt-btn-secondary py-1 px-2.5" style="font-size:0.75rem;">View</a>
         </div>
         <div class="monitoring-stats-row">
           <div class="mon-stat-item">
@@ -688,7 +241,7 @@ body.dark-mode #erpStepperCollapse > div,
       <div class="monitoring-card-box">
         <div class="monitoring-card-title">
           <span><i class="fas fa-headset text-warning me-2"></i> Client Concerns</span>
-          <a href="{% url 'client_concerns' %}" class="btn btn-sm btn-light border py-0 px-2" style="font-size:0.75rem;">View</a>
+          <a href="{% url 'client_concerns' %}" class="gt-btn-secondary py-1 px-2.5" style="font-size:0.75rem;">View</a>
         </div>
         <div class="monitoring-stats-row">
           <div class="mon-stat-item">
@@ -710,8 +263,8 @@ body.dark-mode #erpStepperCollapse > div,
 
   <!-- 4. Technician Productivity & Leaderboard -->
   <div class="dash-section">
-    <div class="dash-section-title">
-      <i class="fas fa-users-cog text-primary"></i> Field Productivity & Close Rate
+    <div class="dash-section-heading">
+      <i class="fas fa-users-cog text-primary"></i> Field Productivity &amp; Close Rate
     </div>
     <div class="leaderboard-card">
       <div class="table-responsive">
@@ -764,28 +317,28 @@ body.dark-mode #erpStepperCollapse > div,
     </div>
   </div>
 
-  <!-- 5. Collapsible ERP Pipeline Stepper (Preserving Gametech's Backend Intelligence) -->
+  <!-- 5. Collapsible ERP Pipeline Stepper -->
   <div class="dash-section">
     <div class="erp-pipeline-toggle" data-bs-toggle="collapse" data-bs-target="#erpStepperCollapse" aria-expanded="false">
-      <span><i class="fas fa-stream text-primary me-2"></i> ERP 5-Stage Pipeline & Provisioning Console</span>
+      <span><i class="fas fa-stream text-primary me-2"></i> ERP 5-Stage Pipeline &amp; Provisioning Console</span>
       <i class="fas fa-chevron-down"></i>
     </div>
     <div class="collapse" id="erpStepperCollapse">
-      <div class="p-3 bg-white border rounded-3 shadow-sm mb-3">
+      <div class="p-3 border rounded-3 shadow-sm mb-3 mt-2" style="background: var(--surface-card); border-color: var(--border-subtle) !important;">
         <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
-          <a href="{% url 'dispatch_verification' %}" class="btn btn-sm btn-outline-primary">
+          <a href="{% url 'dispatch_verification' %}" class="gt-btn-secondary" style="font-size:0.82rem;">
             1. Verification ({{ pending_verification_count }} pending)
           </a>
-          <a href="{% url 'dispatch_assignment' %}" class="btn btn-sm btn-outline-info">
+          <a href="{% url 'dispatch_assignment' %}" class="gt-btn-secondary" style="font-size:0.82rem;">
             2. Assignment ({{ awaiting_assignment_count }} pending)
           </a>
-          <a href="{% url 'technician_mobile_ui' %}" class="btn btn-sm btn-outline-warning">
+          <a href="{% url 'technician_mobile_ui' %}" class="gt-btn-secondary" style="font-size:0.82rem;">
             3. Mobile Field Tech ({{ active_in_field_count }} active)
           </a>
-          <a href="{% url 'dispatch_qa' %}" class="btn btn-sm btn-outline-success">
+          <a href="{% url 'dispatch_qa' %}" class="gt-btn-secondary" style="font-size:0.82rem;">
             4. QA Review ({{ pending_qa_approval_count }} pending)
           </a>
-          <a href="{% url 'dispatch_approval' %}" class="btn btn-sm btn-outline-secondary">
+          <a href="{% url 'dispatch_approval' %}" class="gt-btn-secondary" style="font-size:0.82rem;">
             5. Final Approval
           </a>
         </div>
@@ -864,9 +417,20 @@ function switchPieMode(mode, btn) {
   }
 }
 
+// Chart theme updater on theme change
+function updateDonutTheme() {
+  var isDark = document.documentElement.classList.contains('dark-mode') || (document.body && document.body.classList.contains('dark-mode'));
+  var track = document.querySelector('.donut-bg-track');
+  if (track) {
+    track.setAttribute('stroke', isDark ? 'rgba(255,255,255,0.08)' : '#e2e8f0');
+  }
+}
+window.addEventListener('themeChanged', updateDonutTheme);
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
   switchPieMode('all', document.querySelector('.donut-tab-pill.active'));
+  updateDonutTheme();
 });
 </script>
 {% endblock %}
