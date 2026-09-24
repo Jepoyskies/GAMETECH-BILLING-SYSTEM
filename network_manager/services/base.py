@@ -26,9 +26,9 @@ class MikrotikBase:
             self.is_dry_run = (self.router_mode == "dry_run")
             self.is_read_only = (self.router_mode == "read_only")
 
-            if self.is_dry_run:
+            if self.is_dry_run or getattr(settings, "ROUTER_DRY_RUN", False):
                 dev_name = getattr(device, "device_name", str(getattr(device, "ip_address", "DryRunRouter")))
-                logger.info(f"[ROUTER_MODE=dry_run] Stubbed MikrotikAPI initialized for {dev_name}")
+                logger.info(f"[ROUTER_MODE={self.router_mode}] Stubbed MikrotikAPI initialized for {dev_name}")
                 self.connection = DryRunConnectionPool(dev_name)
                 self._connection_failed = False
                 return
@@ -63,6 +63,9 @@ class MikrotikBase:
             """Handles connection securely with timeouts and returns the API instance, with automatic fallback for older RouterOS versions."""
             if self.is_dry_run:
                 return self.connection.get_api()
+
+            if getattr(settings, "ROUTER_DRY_RUN", False) and self.is_read_only:
+                return ReadOnlyApiWrapper(self.connection.get_api(), self.device.device_name)
 
             dev_id = getattr(self.device, "id", None) or self.device.ip_address
             cache_key = f"router_unreachable_{dev_id}"

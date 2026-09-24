@@ -74,7 +74,7 @@ class RouterDryRunTestCase(TestCase):
         resource = api.get_resource("/system/resource")
         self.assertTrue(len(resource.get()) > 0)
 
-    @override_settings(ROUTER_MODE="read_only", ROUTER_DRY_RUN=False)
+    @override_settings(ROUTER_MODE="read_only")
     def test_read_only_auto_suspend_preserves_status_and_marks_blocked(self):
         """Verify auto_suspend does not change customer status to suspended when ROUTER_MODE=read_only."""
         from django.core.management import call_command
@@ -103,7 +103,7 @@ class RouterDryRunTestCase(TestCase):
         self.assertEqual(cust.status, "active")
         self.assertEqual(cust.sync_status, "Blocked")
 
-    @override_settings(ROUTER_MODE="read_only", ROUTER_DRY_RUN=False)
+    @override_settings(ROUTER_MODE="read_only")
     def test_read_only_customer_sync_signal_marks_blocked(self):
         """Verify customer post_save sync signal marks sync_status='Blocked' when ROUTER_MODE=read_only."""
         from billing.models import Customer, SubscriptionPlan, Barangay
