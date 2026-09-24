@@ -14,6 +14,7 @@ from billing.models import (
     ChecklistPolicySetting,
     Payment,
     SystemLog,
+    SystemAdmin,
 )
 from network_manager.models import MikrotikDevice
 from billing.security import (
@@ -75,6 +76,19 @@ class Phase32GuardAndLoopholeTests(TestCase):
         csr_group, _ = Group.objects.get_or_create(name="CSR")
         self.staff_user.groups.add(csr_group)
         self.staff_with_import_perm.groups.add(csr_group)
+
+        SystemAdmin.objects.create(
+            username=self.staff_user.username,
+            full_name="Staff John",
+            email=self.staff_user.email,
+            role="CSR",
+        )
+        SystemAdmin.objects.create(
+            username=self.staff_with_import_perm.username,
+            full_name="Staff Importer",
+            email=self.staff_with_import_perm.email,
+            role="CSR",
+        )
 
         # Ensure active policy setting
         ChecklistPolicySetting.get_active()
