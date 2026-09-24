@@ -55,12 +55,15 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "http")
 # live: Full read & write to real hardware (set only by administrator at cutover)
 import sys
 _is_testing = "test" in sys.argv or any("pytest" in str(arg) for arg in sys.argv)
-ROUTER_MODE = env.str("ROUTER_MODE", default="dry_run" if _is_testing else "read_only").lower().strip()
-if ROUTER_MODE not in ("dry_run", "read_only", "live"):
-    ROUTER_MODE = "read_only"
-
-# Backward-compatibility alias
-ROUTER_DRY_RUN = (ROUTER_MODE == "dry_run")
+if _is_testing:
+    ROUTER_MODE = "dry_run"
+    ROUTER_DRY_RUN = True
+else:
+    ROUTER_MODE = env.str("ROUTER_MODE", default="read_only").lower().strip()
+    if ROUTER_MODE not in ("dry_run", "read_only", "live"):
+        ROUTER_MODE = "read_only"
+    # Backward-compatibility alias
+    ROUTER_DRY_RUN = (ROUTER_MODE == "dry_run")
 
 # Application definition
 
