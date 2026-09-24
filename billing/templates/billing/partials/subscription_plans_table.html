@@ -1,270 +1,373 @@
-<!-- STATUS SUMMARY (All Original Bars Restored + Paid but Offline Alert Bar) -->
-<div class="d-flex flex-wrap gap-3 mb-4">
-    <!-- Card 1: Active -->
-    <div class="flex-fill" style="min-width: 185px; flex: 1 1 auto;">
-        <div class="dashboard-card h-100 p-3 d-flex flex-column {% if status_filter == 'active' and not connection_filter %}border-2 border-success shadow{% endif %}"
-             onclick="const u=new URLSearchParams(window.location.search); if(u.get('status')==='active'&&!u.get('connection')){u.delete('status');}else{u.set('status','active');u.delete('connection');} window.location.search=u.toString();"
-             style="border-bottom: 4px solid #10b981; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;"
-             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 15px rgba(16,185,129,0.2)';"
-             onmouseout="this.style.transform='none'; this.style.boxShadow='var(--card-shadow)';"
-             title="Filter Active Accounts">
-            <div class="d-flex align-items-center mb-2">
-                <div style="background: rgba(16, 185, 129, 0.15); color: #10b981; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; margin-right: 12px; box-shadow: 0 0 10px rgba(16, 185, 129, 0.2); flex-shrink: 0;">
-                    <i class="fas fa-check-circle"></i>
-                </div>
-                <div>
-                    <div class="text-muted fw-bold" style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;">Active</div>
-                    <div class="text-muted small" style="font-size: 0.72rem;">Paid &gt; 7D</div>
-                </div>
-            </div>
-            <div class="mt-auto fs-2 fw-bolder" style="color: var(--text-primary);">{{ count_active }}</div>
-        </div>
-    </div>
+{% load static %}
+<style>
+/* ── Stat Cards ─────────────────────────────────────────────────── */
+.subs-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 1.5rem;
+}
+.subs-kpi {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  cursor: pointer;
+  transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+  position: relative;
+  overflow: hidden;
+}
+.subs-kpi::before {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: 0 0 12px 12px;
+  background: var(--kpi-accent, #64748b);
+}
+.subs-kpi:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.18); }
+.subs-kpi.active-filter { border-color: var(--kpi-accent, #64748b); box-shadow: 0 0 0 3px rgba(var(--kpi-accent-rgb, 100,116,139),0.18); }
+.subs-kpi-icon {
+  width: 36px; height: 36px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.95rem; margin-bottom: 0.65rem;
+  background: rgba(var(--kpi-accent-rgb, 100,116,139), 0.12);
+  color: var(--kpi-accent, #64748b);
+}
+.subs-kpi-label {
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.1rem;
+}
+.subs-kpi-sub {
+  font-size: 0.68rem; color: var(--text-muted); opacity: 0.75; margin-bottom: 0.45rem;
+}
+.subs-kpi-count {
+  font-size: 1.85rem; font-weight: 900; line-height: 1;
+  color: var(--text-primary); font-variant-numeric: tabular-nums;
+}
 
-    <!-- Card 2: Expiring -->
-    <div class="flex-fill" style="min-width: 185px; flex: 1 1 auto;">
-        <div class="dashboard-card h-100 p-3 d-flex flex-column {% if status_filter == 'expiring' and not connection_filter %}border-2 border-warning shadow{% endif %}"
-             onclick="const u=new URLSearchParams(window.location.search); if(u.get('status')==='expiring'&&!u.get('connection')){u.delete('status');}else{u.set('status','expiring');u.delete('connection');} window.location.search=u.toString();"
-             style="border-bottom: 4px solid #f59e0b; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;"
-             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 15px rgba(245,158,11,0.2)';"
-             onmouseout="this.style.transform='none'; this.style.boxShadow='var(--card-shadow)';"
-             title="Filter Accounts Expiring Soon">
-            <div class="d-flex align-items-center mb-2">
-                <div style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; margin-right: 12px; box-shadow: 0 0 10px rgba(245, 158, 11, 0.2); flex-shrink: 0;">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <div>
-                    <div class="text-muted fw-bold" style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;">Expiring</div>
-                    <div class="text-muted small" style="font-size: 0.72rem;">Due &le; 7D</div>
-                </div>
-            </div>
-            <div class="mt-auto fs-2 fw-bolder" style="color: var(--text-primary);">{{ count_expiring }}</div>
-        </div>
-    </div>
+/* ── Alert indicator for Paid but Offline ── */
+.subs-kpi-alert-dot {
+  display: inline-block; width: 7px; height: 7px;
+  border-radius: 50%; background: #f59e0b;
+  animation: livePulse 1.6s infinite;
+  vertical-align: middle; margin-left: 4px;
+}
 
-    <!-- Card 3: Paid but Offline (NOC Alert) -->
-    <div class="flex-fill" style="min-width: 195px; flex: 1 1 auto;">
-        <div class="dashboard-card h-100 p-3 d-flex flex-column {% if status_filter == 'paid_offline' or status_filter == 'active' and connection_filter == 'Not Connected' %}border-2 border-warning shadow{% endif %}"
-             onclick="const u=new URLSearchParams(window.location.search); if(u.get('status')==='paid_offline'||(u.get('status')==='active'&&u.get('connection')==='Not Connected')){u.delete('status');u.delete('connection');}else{u.set('status','paid_offline');u.delete('connection');} window.location.search=u.toString();"
-             style="border-bottom: 4px solid #f59e0b; background: rgba(245, 158, 11, 0.05); transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;"
-             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 15px rgba(245,158,11,0.25)';"
-             onmouseout="this.style.transform='none'; this.style.boxShadow='var(--card-shadow)';"
-             title="Requires Technician Attention! Active accounts disconnected from router">
-            <div class="d-flex align-items-center mb-2">
-                <div style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; margin-right: 12px; box-shadow: 0 0 10px rgba(245, 158, 11, 0.3); flex-shrink: 0;">
-                    <i class="fas fa-triangle-exclamation"></i>
-                </div>
-                <div>
-                    <div class="text-warning fw-bold d-flex align-items-center gap-1" style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;">
-                        Paid but Offline
-                        <span class="badge bg-warning text-dark px-1.5 py-0.5 ms-1" style="font-size: 0.62rem; font-weight: 700;">Alert</span>
-                    </div>
-                    <div class="text-warning small opacity-75" style="font-size: 0.72rem;">Needs Tech Visit</div>
-                </div>
-            </div>
-            <div class="mt-auto fs-2 fw-bolder text-warning">{{ paid_but_offline_count }}</div>
-        </div>
-    </div>
+/* ── Table card ─────────────────────────────────────────────────── */
+.subs-table-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+}
+.subs-table-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.9rem 1.1rem;
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap; gap: 0.6rem;
+}
+.subs-table-title {
+  font-size: 0.88rem; font-weight: 700;
+  color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;
+}
+.subs-table-meta { font-size: 0.78rem; color: var(--text-muted); font-weight: 500; }
+.subs-table { width: 100%; border-collapse: collapse; white-space: nowrap; }
+.subs-th {
+  padding: 0.6rem 0.85rem;
+  text-align: left; font-size: 0.72rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-muted); background: var(--table-head-bg, rgba(0,0,0,0.06));
+  white-space: nowrap;
+}
+.subs-th a { color: inherit; text-decoration: none; }
+.subs-th a:hover { color: var(--text-primary); }
+.subs-td { padding: 0.65rem 0.85rem; vertical-align: middle; border-bottom: 1px solid var(--border-color); }
+.subs-row { transition: background 0.12s; }
+.subs-row:last-child td { border-bottom: none; }
+.subs-row:hover td { background: rgba(var(--theme-primary-rgb, 53,51,205), 0.04); }
 
-    <!-- Card 4: Connected -->
-    <div class="flex-fill" style="min-width: 185px; flex: 1 1 auto;">
-        <div class="dashboard-card h-100 p-3 d-flex flex-column {% if connection_filter == 'Connected' and not status_filter %}border-2 border-primary shadow{% endif %}"
-             onclick="const u=new URLSearchParams(window.location.search); if(u.get('connection')==='Connected'&&!u.get('status')){u.delete('connection');}else{u.set('connection','Connected');u.delete('status');} window.location.search=u.toString();"
-             style="border-bottom: 4px solid #3b82f6; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;"
-             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 15px rgba(59,130,246,0.2)';"
-             onmouseout="this.style.transform='none'; this.style.boxShadow='var(--card-shadow)';"
-             title="Filter Connected Users">
-            <div class="d-flex align-items-center mb-2">
-                <div style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; margin-right: 12px; box-shadow: 0 0 10px rgba(59, 130, 246, 0.2); flex-shrink: 0;">
-                    <i class="fas fa-link"></i>
-                </div>
-                <div>
-                    <div class="text-muted fw-bold" style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;">Connected</div>
-                    <div class="text-muted small" style="font-size: 0.72rem;">Router Live</div>
-                </div>
-            </div>
-            <div class="mt-auto fs-2 fw-bolder" style="color: var(--text-primary);">{{ count_connected }}</div>
-        </div>
-    </div>
+/* ── Client info ── */
+.subs-client-name { font-size: 0.88rem; font-weight: 700; color: var(--text-primary); }
+.subs-client-user { font-size: 0.76rem; color: var(--text-muted); margin-top: 2px; }
+.subs-acct-badge {
+  display: inline-block; margin-top: 4px;
+  font-size: 0.68rem; font-weight: 600; padding: 2px 8px; border-radius: 20px;
+  background: rgba(59,130,246,0.12); color: #3b82f6; border: 1px solid rgba(59,130,246,0.22);
+}
 
-    <!-- Card 5: Offline -->
-    <div class="flex-fill" style="min-width: 185px; flex: 1 1 auto;">
-        <div class="dashboard-card h-100 p-3 d-flex flex-column {% if connection_filter == 'Not Connected' and not status_filter %}border-2 border-secondary shadow{% endif %}"
-             onclick="const u=new URLSearchParams(window.location.search); if(u.get('connection')==='Not Connected'&&!u.get('status')){u.delete('connection');}else{u.set('connection','Not Connected');u.delete('status');} window.location.search=u.toString();"
-             style="border-bottom: 4px solid #94a3b8; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;"
-             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 15px rgba(148,163,184,0.2)';"
-             onmouseout="this.style.transform='none'; this.style.boxShadow='var(--card-shadow)';"
-             title="Filter Offline Users">
-            <div class="d-flex align-items-center mb-2">
-                <div style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; margin-right: 12px; flex-shrink: 0;">
-                    <i class="fas fa-unlink"></i>
-                </div>
-                <div>
-                    <div class="text-muted fw-bold" style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;">Offline</div>
-                    <div class="text-muted small" style="font-size: 0.72rem;">Disconnected</div>
-                </div>
-            </div>
-            <div class="mt-auto fs-2 fw-bolder" style="color: var(--text-primary);">{{ count_not_connected }}</div>
-        </div>
-    </div>
+/* ── Status badges ── */
+.sb {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 0.22rem 0.65rem; border-radius: 20px;
+  font-size: 0.72rem; font-weight: 600; white-space: nowrap; border: 1px solid transparent;
+}
+.sb-active     { background: rgba(16,185,129,0.12); color: #10b981; border-color: rgba(16,185,129,0.28); }
+.sb-expiring   { background: rgba(245,158,11,0.12); color: #f59e0b; border-color: rgba(245,158,11,0.28); }
+.sb-expired    { background: rgba(239,68,68,0.12);  color: #ef4444; border-color: rgba(239,68,68,0.28); }
+.sb-inactive   { background: rgba(100,116,139,0.12);color: #94a3b8; border-color: rgba(100,116,139,0.22); }
+.sb-connected  { background: rgba(16,185,129,0.1);  color: #10b981; border-color: rgba(16,185,129,0.25); }
+.sb-offline    { background: rgba(239,68,68,0.08);  color: #ef4444; border-color: rgba(239,68,68,0.22); }
+.sb-device     { background: rgba(251,191,36,0.12); color: #f59e0b; border-color: rgba(251,191,36,0.25); }
+.sb-plan       { background: rgba(99,102,241,0.1);  color: #818cf8; border-color: rgba(99,102,241,0.22); }
+.sb-uptime     { background: rgba(16,185,129,0.08); color: #10b981; border-color: rgba(16,185,129,0.2); }
+.sb-downtime   { background: rgba(239,68,68,0.08);  color: #ef4444; border-color: rgba(239,68,68,0.2); }
+.sb-never      { background: rgba(100,116,139,0.08);color: #94a3b8; border-color: rgba(100,116,139,0.18); }
+.sb-nodev      { background: rgba(100,116,139,0.08);color: #64748b; border-color: rgba(100,116,139,0.18); }
 
-    <!-- Card 6: Expired -->
-    <div class="flex-fill" style="min-width: 185px; flex: 1 1 auto;">
-        <div class="dashboard-card h-100 p-3 d-flex flex-column {% if status_filter == 'expired' and not connection_filter %}border-2 border-danger shadow{% endif %}"
-             onclick="const u=new URLSearchParams(window.location.search); if(u.get('status')==='expired'&&!u.get('connection')){u.delete('status');}else{u.set('status','expired');u.delete('connection');} window.location.search=u.toString();"
-             style="border-bottom: 4px solid #ef4444; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;"
-             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 15px rgba(239,68,68,0.2)';"
-             onmouseout="this.style.transform='none'; this.style.boxShadow='var(--card-shadow)';"
-             title="Filter Expired Subscriptions">
-            <div class="d-flex align-items-center mb-2">
-                <div style="background: rgba(239, 68, 68, 0.15); color: #ef4444; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; margin-right: 12px; box-shadow: 0 0 10px rgba(239, 68, 68, 0.2); flex-shrink: 0;">
-                    <i class="fas fa-times-circle"></i>
-                </div>
-                <div>
-                    <div class="text-muted fw-bold" style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;">Expired</div>
-                    <div class="text-muted small" style="font-size: 0.72rem;">Unpaid (&le; 7D)</div>
-                </div>
-            </div>
-            <div class="mt-auto fs-2 fw-bolder text-danger">{{ count_expired }}</div>
-        </div>
-    </div>
+/* ── Actions ── */
+.btn-subs-pay {
+  background: #16a34a; color: #fff; border: none; border-radius: 7px;
+  padding: 0.3rem 0.85rem; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap;
+  transition: background 0.15s;
+  text-decoration: none;
+}
+.btn-subs-pay:hover { background: #15803d; color: #fff; }
+.btn-subs-gear {
+  background: var(--card-bg); border: 1px solid var(--border-color);
+  color: var(--text-muted); border-radius: 7px;
+  padding: 0.3rem 0.6rem; font-size: 0.78rem; cursor: pointer;
+  transition: all 0.15s; display: inline-flex; align-items: center;
+}
+.btn-subs-gear:hover { border-color: var(--text-muted); color: var(--text-primary); }
 
-    <!-- Card 7: Inactive -->
-    <div class="flex-fill" style="min-width: 185px; flex: 1 1 auto;">
-        <div class="dashboard-card h-100 p-3 d-flex flex-column {% if status_filter == 'inactive' and not connection_filter %}border-2 border-secondary shadow{% endif %}"
-             onclick="const u=new URLSearchParams(window.location.search); if(u.get('status')==='inactive'&&!u.get('connection')){u.delete('status');}else{u.set('status','inactive');u.delete('connection');} window.location.search=u.toString();"
-             style="border-bottom: 4px solid #64748b; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;"
-             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 15px rgba(100,116,139,0.2)';"
-             onmouseout="this.style.transform='none'; this.style.boxShadow='var(--card-shadow)';"
-             title="Filter Inactive / Suspended Subscriptions">
-            <div class="d-flex align-items-center mb-2">
-                <div style="background: rgba(100, 116, 139, 0.15); color: #64748b; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; margin-right: 12px; flex-shrink: 0;">
-                    <i class="fas fa-user-slash"></i>
-                </div>
-                <div>
-                    <div class="text-muted fw-bold" style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;">Inactive</div>
-                    <div class="text-muted small" style="font-size: 0.72rem;">Suspended / &gt; 7D</div>
-                </div>
-            </div>
-            <div class="mt-auto fs-2 fw-bolder text-secondary">{{ count_inactive }}</div>
-        </div>
-    </div>
+/* ── Empty state ── */
+.subs-empty { text-align: center; padding: 3rem 0; color: var(--text-muted); }
+.subs-empty i { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.35; }
+</style>
+
+<!-- KPI STAT CARDS -->
+<div class="subs-kpi-grid">
+
+  <!-- Active -->
+  <div class="subs-kpi {% if status_filter == 'active' and not connection_filter %}active-filter{% endif %}"
+       style="--kpi-accent:#10b981; --kpi-accent-rgb:16,185,129;"
+       onclick="subsSetFilter('status','active','{{ status_filter }}','{{ connection_filter }}')"
+       title="Filter: Active accounts">
+    <div class="subs-kpi-icon"><i class="fas fa-check-circle"></i></div>
+    <div class="subs-kpi-label">Active</div>
+    <div class="subs-kpi-sub">Paid &gt; 7 days</div>
+    <div class="subs-kpi-count">{{ count_active }}</div>
+  </div>
+
+  <!-- Expiring -->
+  <div class="subs-kpi {% if status_filter == 'expiring' and not connection_filter %}active-filter{% endif %}"
+       style="--kpi-accent:#f59e0b; --kpi-accent-rgb:245,158,11;"
+       onclick="subsSetFilter('status','expiring','{{ status_filter }}','{{ connection_filter }}')"
+       title="Filter: Expiring soon">
+    <div class="subs-kpi-icon"><i class="fas fa-clock"></i></div>
+    <div class="subs-kpi-label">Expiring</div>
+    <div class="subs-kpi-sub">Due &le; 7 days</div>
+    <div class="subs-kpi-count">{{ count_expiring }}</div>
+  </div>
+
+  <!-- Paid but Offline -->
+  <div class="subs-kpi {% if status_filter == 'paid_offline' %}active-filter{% endif %}"
+       style="--kpi-accent:#f97316; --kpi-accent-rgb:249,115,22;"
+       onclick="subsSetFilter('status','paid_offline','{{ status_filter }}','{{ connection_filter }}')"
+       title="Requires attention — paid but disconnected">
+    <div class="subs-kpi-icon"><i class="fas fa-triangle-exclamation"></i></div>
+    <div class="subs-kpi-label">Paid but Offline <span class="subs-kpi-alert-dot"></span></div>
+    <div class="subs-kpi-sub">Needs tech visit</div>
+    <div class="subs-kpi-count" style="color:#f97316;">{{ paid_but_offline_count }}</div>
+  </div>
+
+  <!-- Connected -->
+  <div class="subs-kpi {% if connection_filter == 'Connected' and not status_filter %}active-filter{% endif %}"
+       style="--kpi-accent:#3b82f6; --kpi-accent-rgb:59,130,246;"
+       onclick="subsSetFilter('connection','Connected','{{ status_filter }}','{{ connection_filter }}')"
+       title="Filter: Connected to router">
+    <div class="subs-kpi-icon"><i class="fas fa-signal"></i></div>
+    <div class="subs-kpi-label">Connected</div>
+    <div class="subs-kpi-sub">Router live</div>
+    <div class="subs-kpi-count">{{ count_connected }}</div>
+  </div>
+
+  <!-- Offline -->
+  <div class="subs-kpi {% if connection_filter == 'Not Connected' and not status_filter %}active-filter{% endif %}"
+       style="--kpi-accent:#94a3b8; --kpi-accent-rgb:148,163,184;"
+       onclick="subsSetFilter('connection','Not Connected','{{ status_filter }}','{{ connection_filter }}')"
+       title="Filter: Disconnected from router">
+    <div class="subs-kpi-icon"><i class="fas fa-wifi" style="opacity:0.4;"></i></div>
+    <div class="subs-kpi-label">Offline</div>
+    <div class="subs-kpi-sub">Disconnected</div>
+    <div class="subs-kpi-count">{{ count_not_connected }}</div>
+  </div>
+
+  <!-- Expired -->
+  <div class="subs-kpi {% if status_filter == 'expired' and not connection_filter %}active-filter{% endif %}"
+       style="--kpi-accent:#ef4444; --kpi-accent-rgb:239,68,68;"
+       onclick="subsSetFilter('status','expired','{{ status_filter }}','{{ connection_filter }}')"
+       title="Filter: Expired subscriptions">
+    <div class="subs-kpi-icon"><i class="fas fa-times-circle"></i></div>
+    <div class="subs-kpi-label">Expired</div>
+    <div class="subs-kpi-sub">Unpaid &le; 7D</div>
+    <div class="subs-kpi-count" style="color:#ef4444;">{{ count_expired }}</div>
+  </div>
+
+  <!-- Inactive -->
+  <div class="subs-kpi {% if status_filter == 'inactive' and not connection_filter %}active-filter{% endif %}"
+       style="--kpi-accent:#64748b; --kpi-accent-rgb:100,116,139;"
+       onclick="subsSetFilter('status','inactive','{{ status_filter }}','{{ connection_filter }}')"
+       title="Filter: Inactive or suspended">
+    <div class="subs-kpi-icon"><i class="fas fa-user-slash"></i></div>
+    <div class="subs-kpi-label">Inactive</div>
+    <div class="subs-kpi-sub">Suspended &gt; 7D</div>
+    <div class="subs-kpi-count">{{ count_inactive }}</div>
+  </div>
+
 </div>
 
-<!-- DATA TABLE -->
-<div class="dashboard-card">
-    <div class="card-header">
-        <i class="fas fa-users text-primary"></i> Subscriptions List
+<!-- TABLE CARD -->
+<div class="subs-table-card">
+  <div class="subs-table-header">
+    <div class="subs-table-title">
+      <i class="fas fa-users" style="color:var(--theme-primary);"></i>
+      Subscriptions List
     </div>
-    <div class="table-responsive" style="overflow-x: auto; overflow-y: hidden;">
-        <table class="table table-premium table-hover align-middle mb-0" style="width:100%; white-space: nowrap;">
-            <thead>
-                <tr>
-                    <th style="width: 40px;"><input type="checkbox" id="selectAll"></th>
-                    <th>
-                        <a href="?search={{ search }}&status={{ status_filter }}&device={{ device_filter }}&connection={{ connection_filter }}&per_page={{ per_page }}&sort=full_name&order={% if sort == 'full_name' and order == 'ASC' %}desc{% else %}asc{% endif %}" class="text-decoration-none" style="color: inherit;">
-                            Client Info {% if sort == 'full_name' %}<i class="fas fa-sort-{{ order|lower }}"></i>{% endif %}
-                        </a>
-                    </th>
-                    <th>
-                        <a href="?search={{ search }}&status={{ status_filter }}&device={{ device_filter }}&connection={{ connection_filter }}&per_page={{ per_page }}&sort=expires_at&order={% if sort == 'expires_at' and order == 'ASC' %}desc{% else %}asc{% endif %}" class="text-decoration-none" style="color: inherit;">
-                            Billing Status {% if sort == 'expires_at' %}<i class="fas fa-sort-{{ order|lower }}"></i>{% endif %}
-                        </a>
-                    </th>
-                    <th>Network Status</th>
-                    <th class="text-end">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for customer in page_obj %}
-                <tr>
-                    <td><input type="checkbox" class="customer-checkbox" value="{{ customer.id }}"></td>
-                    <td>
-                        <div class="fw-bold text-white">{{ customer.full_name }}</div>
-                        <div class="text-muted small"><i class="fas fa-user-circle me-1"></i> {{ customer.pppoe_username|default:"-" }}</div>
-                        {% if customer.account_type %}
-                            <span class="badge bg-primary text-xs mt-1">{{ customer.account_type.type_name }}</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <div class="mb-1">
-                            {% if not customer.expires_at %}
-                                <span class="badge bg-danger text-white px-2 py-1 shadow-sm"><i class="fas fa-times-circle me-1"></i> Expired</span>
-                            {% elif customer.expires_at <= one_week_ago %}
-                                <span class="badge bg-secondary text-white px-2 py-1 shadow-sm"><i class="fas fa-user-slash me-1"></i> Inactive</span>
-                            {% elif customer.expires_at <= now %}
-                                <span class="badge bg-danger text-white px-2 py-1 shadow-sm"><i class="fas fa-times-circle me-1"></i> Expired</span>
-                            {% elif customer.expires_at <= soon %}
-                                <span class="badge bg-warning text-dark px-2 py-1 shadow-sm"><i class="fas fa-exclamation-triangle me-1"></i> Expiring Soon</span>
-                            {% else %}
-                                <span class="badge bg-success text-white px-2 py-1 shadow-sm"><i class="fas fa-check-circle me-1"></i> Active</span>
-                            {% endif %}
-                        </div>
-                        <div class="text-muted small"><i class="fas fa-calendar-alt me-1"></i> {{ customer.expires_at|date:"Y-m-d H:i"|default:"N/A" }}</div>
-                        <div class="text-info small mt-1"><i class="fas fa-box me-1"></i> {{ customer.service_plan.plan_name|default:"N/A" }}</div>
-                    </td>
-                    <td>
-                        <div class="d-flex align-items-center gap-2 mb-1">
-                            {% if customer.mikrotik_device %}
-                                <span class="badge bg-warning text-dark">{{ customer.mikrotik_device.device_name }}</span>
-                            {% else %}
-                                <span class="badge bg-secondary">No Device</span>
-                            {% endif %}
-                            
-                            {% if customer.mt_connected %}
-                                <span class="badge bg-transparent border border-success text-success px-2 py-1"><i class="fas fa-link me-1"></i> Connected</span>
-                            {% else %}
-                                <span class="badge bg-transparent border border-danger text-danger px-2 py-1"><i class="fas fa-unlink me-1"></i> Offline</span>
-                            {% endif %}
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            {% if customer.mt_connected %}
-                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="fas fa-clock me-1"></i> {{ customer.mt_uptime }}</span>
-                            {% elif not customer.mt_downtime or "1970" in customer.mt_downtime %}
-                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1"><i class="fas fa-minus-circle me-1"></i> Never Connected</span>
-                            {% else %}
-                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1"><i class="fas fa-arrow-down me-1"></i> Down: {{ customer.mt_downtime }}</span>
-                            {% endif %}
-                            
-                            {% if customer.mt_profile %}
-                                <span class="badge bg-info text-dark">{{ customer.mt_profile }}</span>
-                            {% endif %}
-                        </div>
-                    </td>
-                    <td class="text-end">
-                        <div class="d-flex align-items-center justify-content-end gap-1">
-                            <a href="{% url 'pay_customer' customer.pppoe_username %}?next={% url 'subscription_plans' %}{% if request.GET %}?{{ request.GET.urlencode|urlencode }}{% endif %}" class="btn btn-sm btn-success fw-bold px-3 py-1 shadow-sm" style="border-radius: 6px; font-size: 0.8rem;" title="Pay"><i class="fas fa-credit-card me-1"></i> Pay</a>
-                            
-                            <div class="dropdown">
-                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border-radius: 6px; font-size: 0.8rem; background: rgba(255,255,255,0.05); border-color: rgba(0,0,0,0.1);">
-                                    <i class="fas fa-cog"></i>
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 0.85rem; border-radius: 8px;">
-                                    <li><a class="dropdown-item" href="{% url 'view_customer' customer.id %}"><i class="fas fa-eye text-primary me-2"></i> View Profile</a></li>
-                                    <li><a class="dropdown-item" href="{% url 'customer_rebate' customer.pppoe_username %}"><i class="fa-solid fa-coins text-warning me-2"></i> Rebates</a></li>
-                                    <li><a class="dropdown-item" href="{% url 'customer_rollback' customer.pppoe_username %}"><i class="fa-regular fa-face-meh text-danger me-2"></i> Re-Adjustments</a></li>
-                                    <li><a class="dropdown-item" href="{% url 'statement_of_account' customer.id %}"><i class="fas fa-file-invoice text-success me-2"></i> SOA</a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item text-muted" href="{% url 'system_logs' %}?search={{ customer.pppoe_username }}"><i class="fas fa-clipboard-list me-2"></i> User Log</a></li>
-                                    <li><a class="dropdown-item text-muted" href="{% url 'rebates_logs' %}?search={{ customer.pppoe_username }}"><i class="fa-solid fa-person-walking-dashed-line-arrow-right me-2"></i> Rebates Log</a></li>
-                                </ul>
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="5" class="text-center py-4 text-muted">No results found.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    
-    <!-- PAGINATION -->
-    {% if page_obj.has_other_pages %}
-    <div class="pagination-container">
-        {% include 'billing/partials/pagination.html' with page_obj=page_obj query_params=query_params %}
-    </div>
-    {% endif %}
+    <div class="subs-table-meta">{{ page_obj.paginator.count }} subscriber{{ page_obj.paginator.count|pluralize }}</div>
+  </div>
+
+  <div style="overflow-x:auto;">
+    <table class="subs-table">
+      <thead>
+        <tr>
+          <th class="subs-th" style="width:38px;"><input type="checkbox" id="selectAll" style="accent-color:var(--theme-primary);"></th>
+          <th class="subs-th">
+            <a href="?search={{ search }}&status={{ status_filter }}&device={{ device_filter }}&connection={{ connection_filter }}&per_page={{ per_page }}&sort=full_name&order={% if sort == 'full_name' and order == 'ASC' %}desc{% else %}asc{% endif %}">
+              Client {% if sort == 'full_name' %}<i class="fas fa-sort-{{ order|lower }}" style="opacity:0.6;"></i>{% endif %}
+            </a>
+          </th>
+          <th class="subs-th">
+            <a href="?search={{ search }}&status={{ status_filter }}&device={{ device_filter }}&connection={{ connection_filter }}&per_page={{ per_page }}&sort=expires_at&order={% if sort == 'expires_at' and order == 'ASC' %}desc{% else %}asc{% endif %}">
+              Billing {% if sort == 'expires_at' %}<i class="fas fa-sort-{{ order|lower }}" style="opacity:0.6;"></i>{% endif %}
+            </a>
+          </th>
+          <th class="subs-th">Network</th>
+          <th class="subs-th" style="text-align:right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for customer in page_obj %}
+        <tr class="subs-row">
+          <td class="subs-td">
+            <input type="checkbox" class="customer-checkbox" value="{{ customer.id }}" style="accent-color:var(--theme-primary);">
+          </td>
+
+          <!-- Client Info -->
+          <td class="subs-td">
+            <div class="subs-client-name">{{ customer.full_name }}</div>
+            <div class="subs-client-user"><i class="fas fa-user-circle" style="opacity:0.55;"></i> {{ customer.pppoe_username|default:"—" }}</div>
+            {% if customer.account_type %}
+              <span class="subs-acct-badge">{{ customer.account_type.type_name }}</span>
+            {% endif %}
+          </td>
+
+          <!-- Billing Status -->
+          <td class="subs-td">
+            {% if not customer.expires_at %}
+              <span class="sb sb-expired"><i class="fas fa-times-circle"></i> Expired</span>
+            {% elif customer.expires_at <= one_week_ago %}
+              <span class="sb sb-inactive"><i class="fas fa-user-slash"></i> Inactive</span>
+            {% elif customer.expires_at <= now %}
+              <span class="sb sb-expired"><i class="fas fa-times-circle"></i> Expired</span>
+            {% elif customer.expires_at <= soon %}
+              <span class="sb sb-expiring"><i class="fas fa-clock"></i> Expiring Soon</span>
+            {% else %}
+              <span class="sb sb-active"><i class="fas fa-check-circle"></i> Active</span>
+            {% endif %}
+            <div style="margin-top:5px;">
+              <span class="sb sb-plan"><i class="fas fa-box" style="opacity:0.7;"></i> {{ customer.service_plan.plan_name|default:"No Plan" }}</span>
+            </div>
+            <div style="margin-top:4px;font-size:0.71rem;color:var(--text-muted);">
+              <i class="fas fa-calendar-alt" style="opacity:0.6;"></i> {{ customer.expires_at|date:"M d, Y"|default:"N/A" }}
+            </div>
+          </td>
+
+          <!-- Network Status -->
+          <td class="subs-td">
+            <div style="display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;">
+              {% if customer.mikrotik_device %}
+                <span class="sb sb-device"><i class="fas fa-router"></i> {{ customer.mikrotik_device.device_name }}</span>
+              {% else %}
+                <span class="sb sb-nodev"><i class="fas fa-router" style="opacity:0.4;"></i> No Device</span>
+              {% endif %}
+
+              {% if customer.mt_connected %}
+                <span class="sb sb-connected"><i class="fas fa-signal"></i> Connected</span>
+              {% else %}
+                <span class="sb sb-offline"><i class="fas fa-wifi" style="opacity:0.5;"></i> Offline</span>
+              {% endif %}
+            </div>
+            <div style="margin-top:5px;">
+              {% if customer.mt_connected %}
+                <span class="sb sb-uptime"><i class="fas fa-clock" style="opacity:0.7;"></i> {{ customer.mt_uptime }}</span>
+              {% elif not customer.mt_downtime or "1970" in customer.mt_downtime %}
+                <span class="sb sb-never"><i class="fas fa-minus-circle" style="opacity:0.6;"></i> Never connected</span>
+              {% else %}
+                <span class="sb sb-downtime"><i class="fas fa-arrow-down" style="opacity:0.7;"></i> Down: {{ customer.mt_downtime }}</span>
+              {% endif %}
+            </div>
+          </td>
+
+          <!-- Actions -->
+          <td class="subs-td" style="text-align:right;">
+            <div style="display:inline-flex;align-items:center;gap:0.4rem;">
+              <a href="{% url 'pay_customer' customer.pppoe_username %}?next={% url 'subscription_plans' %}{% if request.GET %}?{{ request.GET.urlencode|urlencode }}{% endif %}"
+                 class="btn-subs-pay" title="Pay">
+                <i class="fas fa-credit-card"></i> Pay
+              </a>
+              <div class="dropdown">
+                <button class="btn-subs-gear dropdown-toggle" type="button"
+                        data-bs-toggle="dropdown" aria-expanded="false" title="More options">
+                  <i class="fas fa-ellipsis-v"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size:0.84rem;border-radius:10px;min-width:170px;">
+                  <li><a class="dropdown-item" href="{% url 'view_customer' customer.id %}"><i class="fas fa-eye text-primary me-2"></i> View Profile</a></li>
+                  <li><a class="dropdown-item" href="{% url 'customer_rebate' customer.pppoe_username %}"><i class="fas fa-coins text-warning me-2"></i> Rebates</a></li>
+                  <li><a class="dropdown-item" href="{% url 'customer_rollback' customer.pppoe_username %}"><i class="fas fa-rotate-left text-danger me-2"></i> Re-Adjustments</a></li>
+                  <li><a class="dropdown-item" href="{% url 'statement_of_account' customer.id %}"><i class="fas fa-file-invoice text-success me-2"></i> SOA</a></li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li><a class="dropdown-item text-muted" href="{% url 'system_logs' %}?search={{ customer.pppoe_username }}"><i class="fas fa-clipboard-list me-2"></i> User Log</a></li>
+                  <li><a class="dropdown-item text-muted" href="{% url 'rebates_logs' %}?search={{ customer.pppoe_username }}"><i class="fas fa-person-walking-dashed-line-arrow-right me-2"></i> Rebates Log</a></li>
+                </ul>
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5">
+            <div class="subs-empty">
+              <i class="fas fa-users-slash d-block"></i>
+              No subscribers match the current filters.
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if page_obj.has_other_pages %}
+  <div class="pagination-container">
+    {% include 'billing/partials/pagination.html' with page_obj=page_obj query_params=query_params %}
+  </div>
+  {% endif %}
 </div>
+
+<script>
+// KPI card click → update URL filters
+function subsSetFilter(key, val, currentStatus, currentConn) {
+  const p = new URLSearchParams(window.location.search);
+  // Toggle off if already active
+  const already = (key === 'status' && p.get('status') === val && !p.get('connection'))
+               || (key === 'connection' && p.get('connection') === val && !p.get('status'));
+  p.delete('status'); p.delete('connection'); p.delete('page');
+  if (!already) p.set(key, val);
+  window.location.search = p.toString();
+}
+</script>
