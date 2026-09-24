@@ -28,6 +28,7 @@
 | **ERR-059** | Disconnected Operations Pipeline: Missing Repair Intake, Missing Tech Confirmation Guard, and Duplicate Dispatch Job Tickets | `dispatch/views.py`, `pipeline_views.py`, `_modal_scripts.html`, `view_customer.html` | Operations / Dispatch |
 | **ERR-060** | Unconsumed Internal Flash Messages Leaking to Public Login Screen Styled as Alarming Red Error Banners | `billing/templates/billing/base.html`, `login.html`, `billing/views/auth.py`, `customer_portal/views/auth.py` | Auth / Messages |
 | **ERR-063** | Customer Portal Modal Backdrop Freeze on Plan Selection & Close | `_modals.html`, `plan_card.html`, `portal_dashboard.html`, `_scripts.html` | Frontend (Modals) |
+| **ERR-065** | Blinding White Cards on Dispatch Dashboard in Dark Mode & Table Contrast Degradation | `dispatch/dashboard.html`, `_monitoring_page_styles.html`, `_gt_design_system.html` | Frontend (Theme/CSS) |
 
 ---
 
@@ -1157,6 +1158,25 @@
   * Implement `_modal_dispatch_detail.html` (<250 lines) with all 9 sections and dynamic Team technician checkboxes with "Select all".
   * Wire row click handlers with `openDispatchDetailModal(id)` across all tables and `stopPropagation` on row action buttons.
   * Upgrade `api_ticket_detail` to serialize comprehensive data and accept `POST` updates with SweetAlert confirmation.
+
+### ERR-065: Blinding White Cards on Dispatch Dashboard in Dark Mode & Table Contrast Degradation
+* **Symptoms**:
+  * Switching to dark mode leaves cards in `/dispatch/dashboard/` bright white (`#fff`) with black text against the dark theme background.
+  * Customer Directory and Cignal Play tables suffer contrast degradation, unreadable dark text, or washed out rows in dark mode.
+* **Root Causes**:
+  * `dispatch/dashboard.html` hardcoded `#fff` card and layout backgrounds without `html.dark-mode` / `.dark-mode` selectors.
+  * `_monitoring_page_styles.html` omitted `{% include "dispatch/styles/_theme.html" %}`, depriving monitoring pages of CSS tokens.
+  * `_gt_design_system.html` table cells lacked explicit `--bs-table-color` overrides, allowing Bootstrap 5's default black text to conflict with dark mode.
+* **Exact Target Files**:
+  * `dispatch/templates/dispatch/dashboard.html`
+  * `dispatch/templates/dispatch/styles/_monitoring_page_styles.html`
+  * `dispatch/templates/dispatch/styles/_theme.html`
+  * `billing/templates/billing/partials/_gt_design_system.html`
+  * `billing/templates/billing/customer_list/_styles.html`
+* **1-Step Fix**:
+  * Add scoped `html.dark-mode` overrides for `.dash-kpi-card`, `.overview-layout`, `.overview-mini-card`, `.monitoring-card-box`, `.leaderboard-card`, and SVG tracks.
+  * Include `_theme.html` inside `_monitoring_page_styles.html`.
+  * Set `--bs-table-color` explicitly to `#334155` (light) and `#cbd5e1` (dark) with `#1e293b` solid dark card surfaces in `_gt_design_system.html`.
 
 ---
 
