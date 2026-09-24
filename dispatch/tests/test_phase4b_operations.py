@@ -59,7 +59,8 @@ class Phase4BOperationsTestCase(TestCase):
         self.plan = SubscriptionPlan.objects.create(
             name="Plan 1500 Fast",
             price=1500.00,
-            speed="50 Mbps",
+            speed_up="50 Mbps",
+            speed_down="50 Mbps",
         )
         self.customer = Customer.objects.create(
             full_name="Juan Subscriber 4B",
