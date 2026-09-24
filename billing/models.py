@@ -435,6 +435,16 @@ class Customer(models.Model):
         return timezone.now() > self.temp_password_created_at + timedelta(days=max_days)
 
     def save(self, *args, **kwargs):
+        # Shared Model-Level Guard: New-install customers require completed ChecklistConfirmation
+        if (self.installation_status == "pending" or self.status == "pending") and not getattr(self, "is_test_data", False):
+            if not getattr(self, "_checklist_verified", False):
+                has_confirmed = self.pk and self.checklist_confirmations.filter(outcome="agreed").exists()
+                if not has_confirmed:
+                    from django.core.exceptions import ValidationError
+                    raise ValidationError(
+                        "Cannot create or save a 'Pending Installation' customer without a completed, agreed ChecklistConfirmation."
+                    )
+
         if not self.email:
             self.email = None
 
@@ -585,18 +595,6 @@ class Customer(models.Model):
             ("add_existing_subscriber", "Can add installed/existing subscriber with manual override"),
             ("change_customer_agent", "Can change customer assigned sales agent"),
         ]
-
-    def save(self, *args, **kwargs):
-        # Shared Model-Level Guard: New-install customers require completed ChecklistConfirmation
-        if (self.installation_status == "pending" or self.status == "pending") and not getattr(self, "is_test_data", False):
-            if not getattr(self, "_checklist_verified", False):
-                has_confirmed = self.pk and self.checklist_confirmations.filter(outcome="agreed").exists()
-                if not has_confirmed:
-                    from django.core.exceptions import ValidationError
-                    raise ValidationError(
-                        "Cannot create or save a 'Pending Installation' customer without a completed, agreed ChecklistConfirmation."
-                    )
-        super().save(*args, **kwargs)
 
 
 class Payment(models.Model):
