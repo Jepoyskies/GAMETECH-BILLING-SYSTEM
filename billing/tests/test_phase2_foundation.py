@@ -308,7 +308,7 @@ class Phase2FoundationTests(TestCase):
             is_test_data=True,
         )
 
-        from billing.views.customers.list import customers_list_view
+        from billing.views.customers.list import customer_list
         from billing.management.commands.auto_suspend import Command as AutoSuspendCommand
 
         # Verify auto-suspend query excludes pending and closed_not_installed
@@ -319,6 +319,13 @@ class Phase2FoundationTests(TestCase):
         self.assertIn(c_active_expired, due_customers)
         self.assertNotIn(c_pending_install, due_customers)
         self.assertNotIn(c_closed, due_customers)
+
+        # Verify customer_list view executes cleanly with exclusions
+        req = self.rf.get("/customers/")
+        req.user = self.staff_user
+        resp = customer_list(req)
+        self.assertEqual(resp.status_code, 200)
+
 
     def test_named_permissions_and_role_matrix(self):
         """Verifies the 14 named permissions and role matrix permissions."""
