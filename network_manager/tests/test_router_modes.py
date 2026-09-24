@@ -20,7 +20,6 @@ class RouterModeSafetyTests(TestCase):
             api_username="admin",
             api_password="password123",
             api_port=8728,
-            is_active=True,
         )
 
     @override_settings(ROUTER_MODE="dry_run", ROUTER_DRY_RUN=True)

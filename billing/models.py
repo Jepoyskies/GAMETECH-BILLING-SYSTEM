@@ -457,7 +457,15 @@ class Customer(models.Model):
         from billing.security import is_checklist_bypass_active
 
         if entering_pending and not is_checklist_bypass_active():
-            has_confirmed = self.pk and self.checklist_confirmations.filter(outcome="agreed").exists()
+            has_confirmed = False
+            if self.pk:
+                has_confirmed = self.checklist_confirmations.filter(outcome="agreed").exists()
+            if not has_confirmed and self.phone:
+                from billing.models import ChecklistConfirmation
+                has_confirmed = ChecklistConfirmation.objects.filter(
+                    applicant_phone=self.phone, outcome="agreed"
+                ).exists()
+
             if not has_confirmed:
                 from django.core.exceptions import ValidationError
                 raise ValidationError(

@@ -47,7 +47,6 @@ class Phase32GuardAndLoopholeTests(TestCase):
             api_username="admin",
             api_password="password",
             api_port=8728,
-            is_active=True,
         )
         self.client = Client()
 

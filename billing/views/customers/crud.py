@@ -303,11 +303,8 @@ def add_customer(request):
                     cignalbox_date=request.POST.get("cignalbox_date") or None,
                     created_form_by=request.user.username,
                 )
-                customer._checklist_verified = True
-                customer.save()
-
-                ChecklistConfirmation.objects.create(
-                    customer=customer,
+                confirmation = ChecklistConfirmation.objects.create(
+                    customer=None,
                     prospect=prospect,
                     confirmed_by=request.user,
                     method=checklist_method,
@@ -323,6 +320,9 @@ def add_customer(request):
                     applicant_name=customer.full_name,
                     applicant_phone=customer.phone,
                 )
+                customer.save()
+                confirmation.customer = customer
+                confirmation.save(update_fields=["customer"])
 
                 if prospect:
                     prospect.converted_customer = customer
