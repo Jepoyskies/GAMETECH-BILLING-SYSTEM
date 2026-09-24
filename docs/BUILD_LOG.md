@@ -14,6 +14,8 @@
 | **Phase 0** | 2026-09-24 03:45 UTC | `/root/backups/gametech_phase0_backup_20260924.sql` | 231 KB | Pre-migration baseline backup before Dispatch Operation build | `cat /root/backups/gametech_phase0_backup_20260924.sql \| docker exec -i 28514b2a5c9a psql -U gametech_user gametech_db` |
 | **Phase 1** | 2026-09-24 04:35 UTC | `/root/backups/gametech_phase1_backup_20260924.sql` | 233 KB | Pre-migration backup before Customer password hashing migration 0054 | `cat /root/backups/gametech_phase1_backup_20260924.sql \| docker exec -i 28514b2a5c9a psql -U gametech_user gametech_db` |
 | **Phase 2** | 2026-09-24 05:16 UTC | `/root/backups/gametech_phase2_backup_20260924.sql` | 233 KB | Pre-migration backup before Phase 2 Dispatch Foundation migrations 0055 & 0011 | `cat /root/backups/gametech_phase2_backup_20260924.sql \| docker exec -i 28514b2a5c9a psql -U gametech_user gametech_db` |
+| **Phase 3.3** | 2026-09-24 09:30 UTC | `/root/backups/gametech_backup_phase3_3.sql` | 311 KB | Pre-migration backup before Phase 3.3 fixes and security validation | `cat /root/backups/gametech_backup_phase3_3.sql \| docker exec -i gametech-billing-system-db-1 psql -U gametech_user -d gametech_db` |
+| **Phase 4A** | 2026-09-24 11:20 UTC | `/root/backups/gametech_backup_pre_phase4a.sql` | 311 KB | Pre-migration backup before Phase 4A Dispatch Queue & Mobile Tech migration 0012 | `cat /root/backups/gametech_backup_pre_phase4a.sql \| docker exec -i gametech-billing-system-db-1 psql -U gametech_user -d gametech_db` |
 
 ---
 
@@ -404,5 +406,68 @@ All tests passing across small batches:
 - Batch 8 (`billing.tests.test_phase2_foundation`): 9 tests (Pass)
 - Batch 9 (`network_manager.tests.test_router_modes`): 3 tests (Pass)
 - **Total Phase 3.3 Verified Test Suite:** **68 tests, 0 failures, 0 errors** across all active modules.
+
+---
+
+## Phase 4A: Dispatch Operations & Mobile Technician Workflows
+
+### 1. Architectural Decisions & Scope
+- **Pre-Migration Safety Backup:**
+  - Dumped PostgreSQL database prior to running migration `0012`: `/root/backups/gametech_backup_pre_phase4a.sql` (311 KB).
+  - Droplet migration `dispatch.0012_jobticket_arrival_coords_timer_correction` successfully applied.
+- **Retirement of Draft Stage 1/2/3 Pages:**
+  - Audited codebase and removed unlinked legacy draft files:
+    - `dispatch/templates/dispatch/pipeline/1_verification.html`
+    - `dispatch/templates/dispatch/pipeline/2_assignment.html`
+    - `dispatch/templates/dispatch/pipeline/3_tech_mobile.html`
+  - Added URL alias redirects for `dispatch_verification` and `dispatch_assignment` directing to `dispatch_queue`.
+  - Updated sidebar navigation (`billing/templates/billing/base/_sidebar.html`), QA (`4_qa.html`), and approval (`5_approval.html`) templates to point to `dispatch_queue` and `technician_mobile_ui`.
+- **Unified Dispatch Queue Architecture (`dispatch/views_queue.py` & `queue.html`):**
+  - Tickets arrive initially with status `UNASSIGNED` (or `PENDING` mapped into unassigned view).
+  - Sub-views/tabs: All, Unassigned, Assigned, In Progress, Review/QA, Completed, Returned/Cancelled.
+  - Metrics cards: Unassigned count, Dispatched count, In-Progress count, On-Duty technician count.
+  - Implemented modular partials: `_queue_assign_modal.html`, `_queue_timer_modal.html`, `_technician_duty_bar.html`, and `_queue_ticket_row.html`.
+- **Team-Based Assignment Picker & Off-Duty Technician Toggle:**
+  - Assignment modal supports assigning to individual technicians or entire teams in one atomic action.
+  - Off-duty technician toggle (`api_toggle_technician_duty` on `/dispatch/api/technicians/<tech_id>/toggle-duty/`): updates `technician.is_available`.
+  - Off-duty technicians are strictly excluded from assignment picker dropdowns.
+- **Technician Mobile-First Job View (`dispatch/views_tech.py` & `tech_mobile.html`):**
+  - Technicians see **ONLY** jobs assigned to them (`technicians=tech`, status in `ASSIGNED`, `IN_PROGRESS`).
+  - Technicians cannot see unassigned jobs and cannot self-assign jobs (enforced at both UI and API level with HTTP 403 Forbidden).
+  - **Arrived Action (`api_ticket_arrived`):**
+    - Transitions ticket `ASSIGNED` -> `IN_PROGRESS`.
+    - Starts the timer: records `arrived_at = timezone.now()` and `time_start`.
+    - Captures optional GPS coordinates (`arrival_latitude`, `arrival_longitude`) if provided by the device browser.
+  - **Done Action (`api_ticket_done`):**
+    - Stops the timer: records `finished_at = timezone.now()`, `time_accomplish`, and calculates duration in minutes.
+    - Saves technician completion report (`technician_report`).
+    - Standard installs/repairs transition to `PENDING_REVIEW` for QA dispatcher sign-off.
+    - `SITE_VISIT` tickets flow directly from `ASSIGNED` -> `IN_PROGRESS` -> `COMPLETED`, skipping QA.
+    - Dispatches in-app notification to staff: `Technician Completed Job: <ticket_number>`.
+  - **Contact Attempt Logging & 3-Attempt Rule (`api_log_call_attempt` & `api_return_to_dispatch`):**
+    - Technicians log contact attempts with outcome (`unanswered`, `busy`, `out_of_coverage`, `client_declined`, `wrong_number`).
+    - Attempt entries persisted to `CallAttemptLog`.
+    - Return to Dispatch button unlocks strictly after 3 logged attempts or client refusal.
+    - Returning to Dispatch transitions ticket to `CANCELLED`, records cancellation reason, sets customer `installation_status='closed_not_installed'`, records audit history, and dispatches notification to staff.
+- **Dispatcher Timer Correction (`api_correct_timer`):**
+  - Dispatchers / staff can manually correct forgotten arrival or completion timestamps via modal.
+  - Requires a mandatory explanation (`reason`), recorded in `timer_correction_reason`, `timer_corrected_at`, and `timer_corrected_by`.
+  - Recalculates job duration in minutes.
+- **Audit Logging & State Transition Guard:**
+  - `JobTicket.can_transition_to(target_status)` validates state machine constraints.
+  - Every transition creates a `JobTicketHistory` entry and logs to `SystemLog`/`AuditLog`.
+
+### 2. Automated Test Suite (`dispatch/tests/test_dispatch_operations.py`)
+- Created comprehensive test suite under `dispatch/tests/`:
+  1. `test_allowed_and_forbidden_state_transitions`: Validates forward flow (`UNASSIGNED` -> `ASSIGNED` -> `IN_PROGRESS` -> `PENDING_REVIEW`) and rejects invalid leaps (`UNASSIGNED` -> `COMPLETED`).
+  2. `test_technicians_cannot_see_or_accept_unassigned_jobs`: Validates technician sees only assigned jobs, receives HTTP 403 when attempting to assign unassigned tickets.
+  3. `test_off_duty_technicians_not_offered`: Verifies off-duty technicians are filtered out of the assignment modal list.
+  4. `test_arrived_starts_timer_and_records_optional_gps`: Verifies arrival timestamp initiation and optional latitude/longitude storage.
+  5. `test_done_stops_timer_and_saves_report`: Verifies completion timestamp, duration calculation, and report storage.
+  6. `test_timer_correction_with_logged_reason`: Verifies dispatcher timer adjustment requires a non-empty reason and updates audit metadata.
+  7. `test_3_contact_attempt_rule_and_return_to_dispatch`: Verifies that return to dispatch is blocked before 3 attempts, unlocked after 3 attempts or client refusal, sets customer to `closed_not_installed`, and dispatches notification to staff.
+- **All 7 tests passed (0 failures, 0 errors).**
+- **Existing Regression Batches (Phase 1 Security, Portal Security, Router Dry Run, Concurrency) all passed (0 failures, 0 errors).**
+
 
 
