@@ -2,7 +2,7 @@ from decimal import Decimal
 from unittest.mock import MagicMock, patch
 from django.test import TestCase, Client, override_settings
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Permission
+from django.contrib.auth.models import Permission, Group
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.utils import timezone
@@ -71,6 +71,10 @@ class Phase32GuardAndLoopholeTests(TestCase):
             codename="import_router_subscribers"
         )
         self.staff_with_import_perm.user_permissions.add(import_perm)
+
+        csr_group, _ = Group.objects.get_or_create(name="CSR")
+        self.staff_user.groups.add(csr_group)
+        self.staff_with_import_perm.groups.add(csr_group)
 
         # Ensure active policy setting
         ChecklistPolicySetting.get_active()
@@ -258,7 +262,7 @@ class Phase32GuardAndLoopholeTests(TestCase):
         self.client.force_login(self.staff_user)
         resp = self.client.post(
             bulk_url,
-            {"action": "bulk_import", "usernames": ["dup_user", "fresh_user"]},
+            {"bulk_action": "bulk_import", "selected_users": ["dup_user", "fresh_user"]},
         )
         self.assertEqual(resp.status_code, 302)
         # Should redirect back with error message and NOT import
@@ -269,7 +273,7 @@ class Phase32GuardAndLoopholeTests(TestCase):
         with patch("network_manager.sync_services.MikrotikAPI.get_all_pppoe_users", return_value=mock_users_data):
             resp = self.client.post(
                 bulk_url,
-                {"action": "bulk_import", "usernames": ["dup_user", "fresh_user"]},
+                {"bulk_action": "bulk_import", "selected_users": ["dup_user", "fresh_user"]},
             )
             self.assertEqual(resp.status_code, 302)
 
