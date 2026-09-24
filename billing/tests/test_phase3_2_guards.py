@@ -137,7 +137,7 @@ class Phase32GuardAndLoopholeTests(TestCase):
             SystemLog.objects.filter(action="SECURITY_BYPASS").count(),
             initial_logs + 1,
         )
-        log = SystemLog.objects.filter(action="SECURITY_BYPASS").latest("timestamp")
+        log = SystemLog.objects.filter(action="SECURITY_BYPASS").latest("changed_at")
         self.assertIn("Legacy Billing DB Migration Pass", log.new_data)
         self.assertIn("super_admin", log.changed_by)
 
@@ -204,13 +204,13 @@ class Phase32GuardAndLoopholeTests(TestCase):
 
         # 1. Unauthorized attempt (staff_user lacks permission)
         self.client.force_login(self.staff_user)
-        resp = self.client.post(f"/network-manager/devices/{self.device.id}/sync/")
+        resp = self.client.post(f"/network-manager/devices/{self.device.id}/sync-users/")
         self.assertEqual(resp.status_code, 403)
 
         # 2. Authorized attempt (staff_with_import_perm)
         self.client.force_login(self.staff_with_import_perm)
         with patch("network_manager.services.MikrotikAPI.get_ppp_secrets", return_value=mock_secrets):
-            resp = self.client.post(f"/network-manager/devices/{self.device.id}/sync/")
+            resp = self.client.post(f"/network-manager/devices/{self.device.id}/sync-users/")
             self.assertEqual(resp.status_code, 200)
             data = resp.json()
             self.assertEqual(data["status"], "success")
@@ -226,7 +226,7 @@ class Phase32GuardAndLoopholeTests(TestCase):
             # Verify: summary SystemLog created
             summary_log = SystemLog.objects.filter(
                 action="ROUTER_SYNC_IMPORT", target_name=self.device.device_name
-            ).latest("timestamp")
+            ).latest("changed_at")
             self.assertIn("1 imported, 1 skipped", summary_log.new_data)
 
     def test_router_sync_path5_bulk_import_permission_source_and_deduplication(self):
@@ -253,7 +253,7 @@ class Phase32GuardAndLoopholeTests(TestCase):
         # 1. Unauthorized user fails
         self.client.force_login(self.staff_user)
         resp = self.client.post(
-            f"/network-manager/sync/{self.device.id}/actions/",
+            f"/network-manager/devices/{self.device.id}/sync/bulk/",
             {"action": "bulk_import", "usernames": ["dup_user", "fresh_user"]},
         )
         self.assertEqual(resp.status_code, 302)
@@ -264,7 +264,7 @@ class Phase32GuardAndLoopholeTests(TestCase):
         self.client.force_login(self.staff_with_import_perm)
         with patch("network_manager.sync_services.MikrotikAPI.get_all_pppoe_users", return_value=mock_users_data):
             resp = self.client.post(
-                f"/network-manager/sync/{self.device.id}/actions/",
+                f"/network-manager/devices/{self.device.id}/sync/bulk/",
                 {"action": "bulk_import", "usernames": ["dup_user", "fresh_user"]},
             )
             self.assertEqual(resp.status_code, 302)
@@ -280,7 +280,7 @@ class Phase32GuardAndLoopholeTests(TestCase):
             # Verify SystemLog
             summary_log = SystemLog.objects.filter(
                 action="ROUTER_SYNC_IMPORT", target_name=self.device.device_name
-            ).latest("timestamp")
+            ).latest("changed_at")
             self.assertIn("1 imported, 1 skipped", summary_log.new_data)
 
     def test_router_recovery_path6_recover_from_mikrotik_command(self):
@@ -326,5 +326,5 @@ class Phase32GuardAndLoopholeTests(TestCase):
             # Verify SystemLog
             summary_log = SystemLog.objects.filter(
                 action="ROUTER_RECOVERY_IMPORT", target_name=self.device.device_name
-            ).latest("timestamp")
+            ).latest("changed_at")
             self.assertIn("1 created, 1 updated, 0 skipped", summary_log.new_data)
