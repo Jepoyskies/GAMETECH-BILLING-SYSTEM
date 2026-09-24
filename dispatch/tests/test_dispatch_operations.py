@@ -38,8 +38,8 @@ class DispatchOperationsTestCase(TestCase):
             address="Zone 3 Bulua",
             barangay=self.barangay,
             plan=self.plan,
-            status="pending",
-            installation_status="pending",
+            status="active",
+            installation_status="installed",
         )
 
         # Users and Teams
