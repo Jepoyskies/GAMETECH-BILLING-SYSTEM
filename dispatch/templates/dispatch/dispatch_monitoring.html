@@ -5,125 +5,44 @@
 
 {% block extra_css %}
 <style>
-/* ========================================
-   DISPATCH LOG — Matching original DispatchMonitoring.tsx
-   ======================================== */
-.dispatch-log-wrap { padding: 1.25rem 1.5rem; }
-
-/* Header */
-.dispatch-log-header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 1.1rem; flex-wrap: wrap; gap: 0.75rem;
+/* Dispatch Log accent: blue */
+.mon-page { --mon-accent: #2563eb; --mon-accent-bg: rgba(37,99,235,0.1); }
+.dlog-turnaround {
+  font-family: monospace; font-size: 0.74rem; color: var(--d-cyan,#06b6d4);
+  background: rgba(6,182,212,0.08); border: 1px solid rgba(6,182,212,0.2);
+  border-radius: 5px; padding: 0.12rem 0.45rem; white-space: nowrap;
 }
-.dispatch-log-title { display: flex; align-items: center; gap: 0.6rem; }
-.dispatch-log-title h1 {
-  font-size: 1.3rem; font-weight: 800; color: #1e293b;
-  margin: 0; font-family: '"'"'Inter'"'"', sans-serif;
-}
-.dispatch-log-header-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
-
-/* Filter bar — matches original top bar */
-.dispatch-log-filters {
-  display: flex; align-items: center; gap: 0.5rem;
-  flex-wrap: wrap; margin-bottom: 1rem;
-  padding: 0.65rem 1rem;
-  background: #fff; border: 1px solid #e2e8f0;
-  border-radius: 10px;
-}
-.dispatch-log-filters select,
-.dispatch-log-filters input[type=text] {
-  border: 1px solid #e2e8f0; background: #fff; color: #334155;
-  border-radius: 7px; padding: 0.35rem 0.7rem;
-  font-size: 0.81rem; font-family: '"'"'Inter'"'"', sans-serif;
-  cursor: pointer; min-width: 120px;
-}
-.dispatch-log-filters select:focus,
-.dispatch-log-filters input:focus { outline: none; border-color: #3b82f6; }
-.dispatch-log-filters .filter-label {
-  font-size: 0.76rem; color: #64748b; font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.04em;
-}
-.btn-dispatch-export {
-  background: #ecfdf5; border: 1px solid #6ee7b7;
-  color: #065f46; border-radius: 7px; padding: 0.35rem 0.9rem;
-  font-size: 0.8rem; font-weight: 600; cursor: pointer;
-  display: inline-flex; align-items: center; gap: 0.35rem;
-  text-decoration: none; transition: background 0.15s;
-}
-.btn-dispatch-export:hover { background: #d1fae5; color: #065f46; }
-.btn-filter-reset {
-  background: #f8fafc; border: 1px solid #e2e8f0; color: #64748b;
-  border-radius: 7px; padding: 0.35rem 0.75rem;
-  font-size: 0.8rem; font-weight: 500; cursor: pointer;
-  display: inline-flex; align-items: center; gap: 0.35rem;
-  text-decoration: none; transition: background 0.15s;
-}
-.btn-filter-reset:hover { background: #e2e8f0; color: #334155; }
-
-/* Card */
-.dispatch-log-card {
-  background: #fff; border: 1px solid #e2e8f0;
-  border-radius: 12px; overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05); margin-bottom: 1.5rem;
-}
-
-/* Table */
-.dispatch-log-table { width: 100%; border-collapse: collapse; }
-.dispatch-log-th {
-  padding: 0.55rem 0.7rem; text-align: left; font-size: 0.74rem;
-  font-weight: 700; color: #475569; text-transform: uppercase;
-  letter-spacing: 0.04em; background: #f8fafc; white-space: nowrap;
-  border-bottom: 2px solid #e2e8f0;
-}
-.dispatch-log-td {
-  padding: 0.55rem 0.7rem; vertical-align: middle; color: #334155;
-  font-size: 0.81rem; border-bottom: 1px solid #f1f5f9;
-}
-.dispatch-log-row:hover td { background: #f8faff; cursor: pointer; }
-
-/* Status badges */
 .dlog-status {
   display: inline-block; padding: 0.18rem 0.6rem;
   border-radius: 20px; font-size: 0.72rem; font-weight: 700;
   white-space: nowrap; border: 1px solid transparent;
 }
-.dlog-status-done      { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
-.dlog-status-pending   { background: #fef9c3; color: #854d0e; border-color: #fde68a; }
-.dlog-status-ongoing   { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
-.dlog-status-cancelled { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
-.dlog-status-default   { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
-
-/* Turnaround pill */
-.dlog-turnaround {
-  font-family: monospace; font-size: 0.74rem; color: #0e7490;
-  background: #ecfeff; border: 1px solid #a5f3fc;
-  border-radius: 5px; padding: 0.12rem 0.45rem; white-space: nowrap;
-}
-
-/* New ticket button */
-.btn-new-ticket {
-  background: #2563eb; color: #fff; border: none;
-  border-radius: 8px; padding: 0.45rem 1rem;
-  font-size: 0.83rem; font-weight: 600; cursor: pointer;
-  display: inline-flex; align-items: center; gap: 0.4rem;
-}
-.btn-new-ticket:hover { background: #1d4ed8; }
+.dlog-status-done      { background:rgba(16,185,129,0.1); color:#047857; border-color:rgba(16,185,129,0.25); }
+.dlog-status-pending   { background:rgba(245,158,11,0.1); color:#b45309; border-color:rgba(245,158,11,0.3); }
+.dlog-status-ongoing   { background:rgba(59,130,246,0.1); color:#2563eb; border-color:rgba(59,130,246,0.25); }
+.dlog-status-cancelled { background:rgba(239,68,68,0.1);  color:#b91c1c; border-color:rgba(239,68,68,0.22); }
+.dlog-status-default   { background:rgba(100,116,139,0.1);color:#64748b; border-color:rgba(100,116,139,0.22); }
+html.dark-mode .dlog-status-done      { color:#34d399; }
+html.dark-mode .dlog-status-pending   { color:#fbbf24; }
+html.dark-mode .dlog-status-ongoing   { color:#60a5fa; }
+html.dark-mode .dlog-status-cancelled { color:#f87171; }
 </style>
+{% include "dispatch/styles/_monitoring_page_styles.html" %}
 {% endblock %}
 
 {% block content %}
-<div class="dispatch-log-wrap">
+<div class="mon-page">
   {% include "dispatch/_nav_tabs.html" %}
 
   <!-- Header -->
-  <div class="dispatch-log-header">
-    <div class="dispatch-log-title">
-      <i class="fas fa-clipboard-list" style="font-size: 1.2rem; color: #3b82f6;"></i>
-      <h1>Dispatch Log</h1>
+  <div class="mon-header">
+    <div class="mon-header-left">
+      <div class="mon-icon"><i class="fas fa-clipboard-list"></i></div>
+      <div><h1>Dispatch Log</h1><p>Complete audit of all dispatch tickets</p></div>
     </div>
-    <div class="dispatch-log-header-actions">
+    <div style="display:flex;gap:0.5rem;align-items:center;">
       <a href="{% url 'dispatch_export_tickets' %}?date_range={{ request.GET.date_range }}&type={{ request.GET.type }}&status={{ request.GET.status }}&source_tab={{ request.GET.source_tab }}&q={{ request.GET.q }}"
-         class="btn-dispatch-export" title="Export matching records as CSV">
+         class="btn-mon-action" style="background:rgba(16,185,129,0.12);color:#047857;border:1px solid rgba(16,185,129,0.3);" title="Export matching records as CSV">
         <i class="fas fa-file-csv"></i> Export
       </a>
     </div>
@@ -131,8 +50,8 @@
 
   <!-- Filter Bar — matching original DispatchMonitoring sort + filter controls -->
   <form method="GET" action="" id="dispatch-log-filter-form">
-    <div class="dispatch-log-filters">
-      <span class="filter-label d-none d-md-inline">Sort:</span>
+    <div class="mon-filter-bar">
+      <span style="font-size:0.76rem;color:var(--d-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">Sort:</span>
       <select name="sort" onchange="this.form.submit()">
         <option value="date_created" {% if request.GET.sort == "date_created" or not request.GET.sort %}selected{% endif %}>Sort: Date Created</option>
         <option value="date_completed" {% if request.GET.sort == "date_completed" %}selected{% endif %}>Sort: Date Completed</option>
@@ -161,12 +80,12 @@
 
       <input type="text" name="q" placeholder="Search client, ticket..." value="{{ request.GET.q }}" style="min-width: 180px;">
 
-      <button type="submit" class="btn-new-ticket" style="background: #3b82f6; padding: 0.35rem 0.8rem; font-size: 0.8rem;">
+      <button type="submit" class="btn-mon-primary" style="background: #3b82f6; padding: 0.35rem 0.8rem; font-size: 0.8rem;">
         <i class="fas fa-search"></i> Search
       </button>
 
       {% if request.GET.q or request.GET.type and request.GET.type != "ALL" or request.GET.source_tab and request.GET.source_tab != "ALL" %}
-      <a href="{% url 'dispatch_dispatches' %}" class="btn-filter-reset">
+      <a href="{% url 'dispatch_dispatches' %}" class="btn-mon-reset">
         <i class="fas fa-rotate-left"></i> Reset
       </a>
       {% endif %}
@@ -174,42 +93,42 @@
   </form>
 
   <!-- Stats row -->
-  <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1rem; font-size: 0.82rem; color: #64748b; font-weight: 500;">
-    <span>Total: <strong style="color: #1e293b;">{{ total_count }}</strong></span>
-    <span>Pending: <strong style="color: #92400e;">{{ pending_count }}</strong></span>
-    <span>Ongoing: <strong style="color: #1e40af;">{{ ongoing_count }}</strong></span>
-    <span>Done: <strong style="color: #065f46;">{{ completed_count }}</strong></span>
+  <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1rem; font-size: 0.82rem; color: var(--d-muted); font-weight: 500;">
+    <span>Total: <strong style="color: var(--d-text-heading);">{{ total_count }}</strong></span>
+    <span>Pending: <strong style="color: #d97706;">{{ pending_count }}</strong></span>
+    <span>Ongoing: <strong style="color: #60a5fa;">{{ ongoing_count }}</strong></span>
+    <span>Done: <strong style="color: #059669;">{{ completed_count }}</strong></span>
   </div>
 
   <!-- Master table (All records - matches original 21-column DispatchMonitoring) -->
-  <div class="dispatch-log-card">
+  <div class="mon-card">
     <div class="table-responsive">
-      <table class="dispatch-log-table">
+      <table class="mon-table">
         <thead>
           <tr>
-            <th class="dispatch-log-th" style="width: 80px;">Status</th>
-            <th class="dispatch-log-th" style="width: 125px;">Date Created</th>
-            <th class="dispatch-log-th" style="width: 125px;">Date Completed</th>
-            <th class="dispatch-log-th" style="width: 85px;">Turnaround</th>
-            <th class="dispatch-log-th">Client</th>
-            <th class="dispatch-log-th">Concern</th>
-            <th class="dispatch-log-th" style="width: 115px;">Ticket No.</th>
-            <th class="dispatch-log-th" style="width: 80px;">Type</th>
-            <th class="dispatch-log-th" style="width: 70px;">Chat</th>
-            <th class="dispatch-log-th" style="width: 90px;">Source</th>
-            <th class="dispatch-log-th" style="width: 90px;">Team</th>
-            <th class="dispatch-log-th" style="width: 115px;">CSR</th>
-            <th class="dispatch-log-th" style="width: 115px;">Sales Agent</th>
-            <th class="dispatch-log-th">Address</th>
-            <th class="dispatch-log-th" style="width: 100px;">Contact</th>
-            <th class="dispatch-log-th">Actions Taken</th>
-            <th class="dispatch-log-th">Remarks</th>
+            <th class="mon-th" style="width: 80px;">Status</th>
+            <th class="mon-th" style="width: 125px;">Date Created</th>
+            <th class="mon-th" style="width: 125px;">Date Completed</th>
+            <th class="mon-th" style="width: 85px;">Turnaround</th>
+            <th class="mon-th">Client</th>
+            <th class="mon-th">Concern</th>
+            <th class="mon-th" style="width: 115px;">Ticket No.</th>
+            <th class="mon-th" style="width: 80px;">Type</th>
+            <th class="mon-th" style="width: 70px;">Chat</th>
+            <th class="mon-th" style="width: 90px;">Source</th>
+            <th class="mon-th" style="width: 90px;">Team</th>
+            <th class="mon-th" style="width: 115px;">CSR</th>
+            <th class="mon-th" style="width: 115px;">Sales Agent</th>
+            <th class="mon-th">Address</th>
+            <th class="mon-th" style="width: 100px;">Contact</th>
+            <th class="mon-th">Actions Taken</th>
+            <th class="mon-th">Remarks</th>
           </tr>
         </thead>
         <tbody>
           {% for r in records %}
-          <tr class="dispatch-log-row" onclick="openMonitoringDetailModal({{ r.id }})">
-            <td class="dispatch-log-td">
+          <tr class="mon-row" onclick="openMonitoringDetailModal({{ r.id }})">
+            <td class="mon-td">
               {% if r.status_option %}
                 {% with label=r.status_option.label|lower %}
                 <span class="dlog-status {% if 'done' in label or 'complet' in label %}dlog-status-done{% elif 'pending' in label %}dlog-status-pending{% elif 'cancel' in label %}dlog-status-cancelled{% elif 'ongoing' in label or 'progress' in label %}dlog-status-ongoing{% else %}dlog-status-default{% endif %}">
@@ -220,41 +139,41 @@
                 <span class="dlog-status dlog-status-pending">Pending</span>
               {% endif %}
             </td>
-            <td class="dispatch-log-td" style="white-space: nowrap; color: #475569;">
+            <td class="mon-td" style="white-space: nowrap; color: var(--d-muted);">
               {{ r.created_at|date:"n/j/Y" }}<br>
-              <small style="color: #94a3b8;">{{ r.created_at|date:"g:i A" }}</small>
+              <small style="color: var(--d-muted);">{{ r.created_at|date:"g:i A" }}</small>
             </td>
-            <td class="dispatch-log-td" style="white-space: nowrap; color: #475569;">
-              {% if r.done_at %}{{ r.done_at|date:"n/j/Y" }}<br><small style="color: #94a3b8;">{{ r.done_at|date:"g:i A" }}</small>{% else %}<span style="color: #cbd5e1;">—</span>{% endif %}
+            <td class="mon-td" style="white-space: nowrap; color: var(--d-muted);">
+              {% if r.done_at %}{{ r.done_at|date:"n/j/Y" }}<br><small style="color: var(--d-muted);">{{ r.done_at|date:"g:i A" }}</small>{% else %}<span style="color: var(--d-muted); opacity:0.4;">—</span>{% endif %}
             </td>
-            <td class="dispatch-log-td">
+            <td class="mon-td">
               {% if r.done_at and r.created_at %}
                 {% with delta_secs=r.done_at|timeuntil:r.created_at %}
                 <span class="dlog-turnaround">{{ delta_secs }}</span>
                 {% endwith %}
-              {% else %}<span style="color: #cbd5e1;">—</span>{% endif %}
+              {% else %}<span style="color: var(--d-muted); opacity:0.4;">—</span>{% endif %}
             </td>
-            <td class="dispatch-log-td">
-              <div style="font-weight: 600; color: #1e293b;">{{ r.client_name }}</div>
+            <td class="mon-td">
+              <div style="font-weight: 600; color: var(--d-text-heading);">{{ r.client_name }}</div>
               {% if r.customer %}
               <a href="{% url 'view_customer' r.customer.id %}" target="_blank" style="font-size: 0.72rem; color: #3b82f6;" class="text-decoration-none">
                 <i class="fas fa-arrow-up-right-from-square me-1"></i>CRM
               </a>
               {% endif %}
             </td>
-            <td class="dispatch-log-td" style="max-width: 200px;">
-              <div class="text-truncate" title="{{ r.concern }}" style="color: #334155;">{{ r.concern|default:"—" }}</div>
+            <td class="mon-td" style="max-width: 200px;">
+              <div class="text-truncate" title="{{ r.concern }}" style="color: var(--d-text);">{{ r.concern|default:"—" }}</div>
             </td>
-            <td class="dispatch-log-td">
-              <span style="font-family: monospace; font-weight: 700; font-size: 0.79rem; color: #1e293b;">{{ r.ticket_number|default:"—" }}</span>
+            <td class="mon-td">
+              <span style="font-family: monospace; font-weight: 700; font-size: 0.79rem; color: var(--d-text-heading);">{{ r.ticket_number|default:"—" }}</span>
             </td>
-            <td class="dispatch-log-td" style="font-size: 0.78rem; color: #3b82f6; font-weight: 600;">
+            <td class="mon-td" style="font-size: 0.78rem; color: #3b82f6; font-weight: 600;">
               {{ r.type_option.label|default:"—" }}
             </td>
-            <td class="dispatch-log-td" style="font-size: 0.77rem; color: #64748b;">
+            <td class="mon-td" style="font-size: 0.77rem; color: #64748b;">
               {{ r.chat_type_option.label|default:"—" }}
             </td>
-            <td class="dispatch-log-td" style="font-size: 0.77rem; color: #64748b;">
+            <td class="mon-td" style="font-size: 0.77rem; color: #64748b;">
               {% if r.tab_type == "INTERNET_INSTALL" %}
                 <span style="color: #0e7490;"><i class="fas fa-wifi me-1"></i>Install</span>
               {% elif r.tab_type == "CIGNAL_PLAY" %}
@@ -263,38 +182,38 @@
                 <span style="color: #f59e0b;"><i class="fas fa-headset me-1"></i>Concern</span>
               {% else %}{{ r.tab_type|default:"—" }}{% endif %}
             </td>
-            <td class="dispatch-log-td" style="font-size: 0.77rem;">
+            <td class="mon-td" style="font-size: 0.77rem;">
               {% with team_list=r.teams.all %}
               {% if team_list %}
-                {% for t in team_list %}<span style="background: #eff6ff; color: #1e40af; border-radius: 5px; padding: 0.1rem 0.4rem; font-size: 0.71rem; margin-right: 2px; white-space: nowrap;">{{ t.name }}</span>{% endfor %}
-              {% else %}<span style="color: #cbd5e1;">—</span>{% endif %}
+                {% for t in team_list %}<span style="background: #eff6ff; color: #60a5fa; border-radius: 5px; padding: 0.1rem 0.4rem; font-size: 0.71rem; margin-right: 2px; white-space: nowrap;">{{ t.name }}</span>{% endfor %}
+              {% else %}<span style="color: var(--d-muted); opacity:0.4;">—</span>{% endif %}
               {% endwith %}
             </td>
-            <td class="dispatch-log-td" style="font-size: 0.78rem; color: #334155; font-weight: 600; white-space: nowrap;">
+            <td class="mon-td" style="font-size: 0.78rem; color: var(--d-text); font-weight: 600; white-space: nowrap;">
               {% if r.csr %}{{ r.csr.get_full_name|default:r.csr.username|upper }}{% else %}—{% endif %}
             </td>
-            <td class="dispatch-log-td" style="font-size: 0.77rem; color: #64748b; white-space: nowrap;">
+            <td class="mon-td" style="font-size: 0.77rem; color: #64748b; white-space: nowrap;">
               {{ r.sales_agent.name|default:"—" }}
             </td>
-            <td class="dispatch-log-td" style="max-width: 180px;">
-              <div class="text-truncate" title="{{ r.address }}" style="font-size: 0.78rem; color: #475569;">{{ r.address|default:"—" }}</div>
+            <td class="mon-td" style="max-width: 180px;">
+              <div class="text-truncate" title="{{ r.address }}" style="font-size: 0.78rem; color: var(--d-muted);">{{ r.address|default:"—" }}</div>
             </td>
-            <td class="dispatch-log-td" style="white-space: nowrap;">
+            <td class="mon-td" style="white-space: nowrap;">
               {% if r.contact_number %}
               <a href="tel:{{ r.contact_number }}" class="text-decoration-none" style="color: #3b82f6; font-size: 0.78rem;">{{ r.contact_number }}</a>
-              {% else %}<span style="color: #cbd5e1;">—</span>{% endif %}
+              {% else %}<span style="color: var(--d-muted); opacity:0.4;">—</span>{% endif %}
             </td>
-            <td class="dispatch-log-td" style="max-width: 160px;">
-              <div class="text-truncate" title="{{ r.actions_taken }}" style="font-size: 0.77rem; color: #475569;">{{ r.actions_taken|default:"—" }}</div>
+            <td class="mon-td" style="max-width: 160px;">
+              <div class="text-truncate" title="{{ r.actions_taken }}" style="font-size: 0.77rem; color: var(--d-muted);">{{ r.actions_taken|default:"—" }}</div>
             </td>
-            <td class="dispatch-log-td" style="max-width: 160px;">
-              <div class="text-truncate" title="{{ r.remarks }}" style="font-size: 0.77rem; color: #475569;">{{ r.remarks|default:"—" }}</div>
+            <td class="mon-td" style="max-width: 160px;">
+              <div class="text-truncate" title="{{ r.remarks }}" style="font-size: 0.77rem; color: var(--d-muted);">{{ r.remarks|default:"—" }}</div>
             </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="17" style="text-align: center; padding: 3rem 1rem; color: #94a3b8;">
-              <i class="fas fa-inbox mb-2" style="font-size: 2rem; display: block; color: #cbd5e1;"></i>
+            <td colspan="17" style="text-align: center; padding: 3rem 1rem; color: var(--d-muted);">
+              <i class="fas fa-inbox mb-2" style="font-size: 2rem; display: block; color: var(--d-muted); opacity:0.4;"></i>
               No dispatch records found
             </td>
           </tr>

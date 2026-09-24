@@ -5,57 +5,34 @@
 
 {% block extra_css %}
 <style>
-.monitoring-page-wrap { padding: 1.5rem 1.75rem; }
-.monitoring-header-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem; }
-.monitoring-title { display: flex; align-items: center; gap: 0.65rem; }
-.monitoring-title-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: #ede9fe; color: #7c3aed; font-size: 1.1rem; }
-.monitoring-title h1 { font-size: 1.35rem; font-weight: 800; color: #1e293b; margin: 0; letter-spacing: -0.02em; font-family: '"'"'Inter'"'"', sans-serif; }
-.btn-add-record { background: #7c3aed; color: #fff; border: none; border-radius: 8px; padding: 0.5rem 1.1rem; font-size: 0.84rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; }
-.btn-add-record:hover { background: #6d28d9; }
-.monitoring-filter-bar { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1rem; }
-.monitoring-filter-bar select { border: 1px solid #e2e8f0; background: #fff; color: #334155; border-radius: 7px; padding: 0.38rem 0.75rem; font-size: 0.82rem; font-family: '"'"'Inter'"'"', sans-serif; cursor: pointer; min-width: 130px; }
-.monitoring-filter-bar select:focus { outline: none; border-color: #7c3aed; }
-.btn-filter-reset { background: #f1f5f9; border: 1px solid #e2e8f0; color: #475569; border-radius: 7px; padding: 0.38rem 0.85rem; font-size: 0.82rem; cursor: pointer; font-weight: 500; }
-.monitoring-tabs { display: flex; border-bottom: 2px solid #e2e8f0; background: #fff; }
-.monitoring-tab-btn { padding: 0.65rem 1.3rem; border: none; background: none; font-size: 0.85rem; font-weight: 600; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; display: inline-flex; align-items: center; gap: 0.5rem; font-family: '"'"'Inter'"'"', sans-serif; }
-.monitoring-tab-btn.active { color: #7c3aed; border-bottom-color: #7c3aed; }
-.mon-tab-count { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 20px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; padding: 0 5px; }
-.mon-tab-count.amber { background: #fef3c7; color: #92400e; }
-.mon-tab-count.purple { background: #ede9fe; color: #5b21b6; }
-.monitoring-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.05); margin-bottom: 1.5rem; }
-.monitoring-table { width: 100%; border-collapse: collapse; }
-.monitoring-th { padding: 0.6rem 0.75rem; text-align: left; font-size: 0.76rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; background: #f8fafc; white-space: nowrap; }
-.monitoring-td { padding: 0.6rem 0.75rem; vertical-align: middle; color: #334155; border-bottom: 1px solid #f1f5f9; }
-.monitoring-row:hover td { background: #faf5ff; }
-.mon-status-badge { display: inline-block; padding: 0.2rem 0.65rem; border-radius: 20px; font-size: 0.73rem; font-weight: 600; white-space: nowrap; border: 1px solid transparent; }
-.mon-status-pending { background: #fef9c3; color: #854d0e; border-color: #fde68a; }
-.mon-status-resched { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
-.mon-status-ongoing { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
-.mon-status-closed  { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
-.mon-status-for-follow-up { background: #fce7f3; color: #9d174d; border-color: #fbcfe8; }
-.mon-status-transition { background: #ede9fe; color: #5b21b6; border-color: #ddd6fe; }
-.btn-mon-dispatch { background: #7c3aed; color: #fff; border: none; border-radius: 6px; padding: 0.3rem 0.7rem; font-size: 0.77rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
-.btn-mon-dispatch:hover { background: #6d28d9; }
-.btn-mon-undispatch { background: #f59e0b; color: #fff; border: none; border-radius: 6px; padding: 0.28rem 0.6rem; font-size: 0.75rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
-.btn-mon-done { background: #16a34a; color: #fff; border: none; border-radius: 6px; padding: 0.28rem 0.6rem; font-size: 0.75rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+/* Cignal Play accent */
+.mon-page { --mon-accent: #7c3aed; --mon-accent-bg: rgba(124,58,237,0.1); }
 </style>
+{% include "dispatch/styles/_monitoring_page_styles.html" %}
 {% endblock %}
 
 {% block content %}
-<div class="monitoring-page-wrap">
+<div class="mon-page">
   {% include "dispatch/_nav_tabs.html" %}
-  <div class="monitoring-header-bar">
-    <div class="monitoring-title">
-      <div class="monitoring-title-icon"><i class="fas fa-tv"></i></div>
-      <div><h1>Cignal Play</h1></div>
+  <div class="mon-header">
+    <div class="mon-header-left">
+      <div class="mon-icon"><i class="fas fa-tv"></i></div>
+      <div>
+        <h1>Cignal Play</h1>
+        <p>Manage Cignal subscription scheduling and dispatch</p>
+      </div>
     </div>
-    <button class="btn-add-record" data-bs-toggle="modal" data-bs-target="#modal-add-monitoring-record">
+    <button class="btn-mon-primary" data-bs-toggle="modal" data-bs-target="#modal-add-monitoring-record">
+      <i class="fas fa-plus"></i> New Record
+    </button>
+  </div>
+    <button class="btn-mon-primary" data-bs-toggle="modal" data-bs-target="#modal-add-monitoring-record">
       <i class="fas fa-plus"></i> New Record
     </button>
   </div>
 
   <form method="GET" action="" id="monitoring-filter-form">
-    <div class="monitoring-filter-bar">
+    <div class="mon-filter-bar">
       <select name="date_range" onchange="this.form.submit()">
         <option value="all" {% if not request.GET.date_range or request.GET.date_range == "all" %}selected{% endif %}>All Records</option>
         <option value="today" {% if request.GET.date_range == "today" %}selected{% endif %}>Today</option>
@@ -80,22 +57,17 @@
         {% endif %}
       </select>
       {% if csr_filter != "ALL" or status_filter != "ALL" %}
-      <a href="?" class="btn-filter-reset"><i class="fas fa-rotate-left me-1"></i>Reset</a>
+      <a href="?" class="btn-mon-reset"><i class="fas fa-rotate-left me-1"></i>Reset</a>
       {% endif %}
     </div>
   </form>
 
-  <div style="margin-bottom: 0.85rem; display: flex; gap: 1rem;">
-    <span style="font-size: 0.83rem; color: #64748b; font-weight: 500;">Pending <strong style="color: #92400e;">{{ pending_count }}</strong></span>
-    <span style="font-size: 0.83rem; color: #64748b; font-weight: 500;">Ongoing <strong style="color: #5b21b6;">{{ ongoing_count }}</strong></span>
-  </div>
-
-  <div class="monitoring-card">
-    <div class="monitoring-tabs">
-      <button class="monitoring-tab-btn active" id="btn-tab-pending" type="button" onclick="switchMonTab('"'"'pending'"'"')">
+    <div class="mon-card">
+    <div class="mon-tabs">
+      <button class="mon-tab-btn active" id="btn-tab-pending" type="button" onclick="switchMonTab('"'"'pending'"'"')">
         <i class="fas fa-hourglass-half" style="color: #f59e0b;"></i> Pending <span class="mon-tab-count amber">{{ pending_count }}</span>
       </button>
-      <button class="monitoring-tab-btn" id="btn-tab-ongoing" type="button" onclick="switchMonTab('"'"'ongoing'"'"')">
+      <button class="mon-tab-btn" id="btn-tab-ongoing" type="button" onclick="switchMonTab('"'"'ongoing'"'"')">
         <i class="fas fa-tv" style="color: #7c3aed;"></i> Ongoing <span class="mon-tab-count purple">{{ ongoing_count }}</span>
       </button>
     </div>
