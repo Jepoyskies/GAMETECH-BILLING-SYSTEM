@@ -204,3 +204,132 @@ class Phase1SecurityTestCase(TestCase):
         is_limited, retry_after = is_ip_rate_limited(test_ip, endpoint_name="test_endpoint", limit=15, window=60)
         self.assertTrue(is_limited)
         self.assertTrue(retry_after > 0)
+
+    def test_auth_password_validators_django_admin(self):
+        """Verify that AUTH_PASSWORD_VALIDATORS enforces 10+ chars, letter, number, special char, common check, and username match."""
+        from django.contrib.auth.password_validation import validate_password
+
+        admin_user = User.objects.create_superuser("admin_hero", "admin@example.com", "TempPassword123!")
+
+        # 1. Too short (< 10 chars)
+        with self.assertRaises(ValidationError):
+            validate_password("Short1!", user=admin_user)
+
+        # 2. No letter
+        with self.assertRaises(ValidationError):
+            validate_password("1234567890!@#", user=admin_user)
+
+        # 3. No number
+        with self.assertRaises(ValidationError):
+            validate_password("NoNumbersHere!@#", user=admin_user)
+
+        # 4. No special char
+        with self.assertRaises(ValidationError):
+            validate_password("NoSpecialChars123", user=admin_user)
+
+        # 5. Common weak password
+        with self.assertRaises(ValidationError):
+            validate_password("password123", user=admin_user)
+
+        # 6. Contains username
+        with self.assertRaises(ValidationError):
+            validate_password("admin_hero!999", user=admin_user)
+
+        # 7. Strong compliant password succeeds
+        validate_password("StrongP@ssw0rd2026", user=admin_user)
+
+    def test_staff_and_technician_creation_password_policy(self):
+        """Verify that add_staff rejects weak passwords and accepts strong compliant passwords for Staff and Technician."""
+        from billing.models import StaffRole, SystemAdmin
+
+        admin_user = User.objects.create_superuser("sec_super", "sec@example.com", "SuperSec123!")
+        self.client.force_login(admin_user)
+
+        StaffRole.objects.get_or_create(name="CSR")
+        StaffRole.objects.get_or_create(name="Technician")
+
+        # 1. Staff creation with weak password fails
+        resp_weak = self.client.post("/staff/add/", {
+            "username": "csr_john",
+            "full_name": "John CSR",
+            "email": "csr@example.com",
+            "role": "CSR",
+            "status": "Active",
+            "password": "weak",
+        })
+        self.assertFalse(User.objects.filter(username="csr_john").exists())
+
+        # 2. Staff creation with valid password succeeds
+        resp_valid = self.client.post("/staff/add/", {
+            "username": "csr_john",
+            "full_name": "John CSR",
+            "email": "csr@example.com",
+            "role": "CSR",
+            "status": "Active",
+            "password": "ValidCSR#Pass2026",
+        })
+        self.assertTrue(User.objects.filter(username="csr_john").exists())
+        self.assertTrue(SystemAdmin.objects.filter(username="csr_john").exists())
+
+        # 3. Technician creation with weak password fails
+        resp_tech_weak = self.client.post("/staff/add/", {
+            "username": "tech_bob",
+            "full_name": "Bob Tech",
+            "email": "tech@example.com",
+            "role": "Technician",
+            "status": "Active",
+            "password": "tech_bob123",  # lacks special char and contains username
+        })
+        self.assertFalse(User.objects.filter(username="tech_bob").exists())
+
+        # 4. Technician creation with valid password succeeds
+        resp_tech_valid = self.client.post("/staff/add/", {
+            "username": "tech_bob",
+            "full_name": "Bob Tech",
+            "email": "tech@example.com",
+            "role": "Technician",
+            "status": "Active",
+            "password": "ValidTech#Pass2026",
+        })
+        self.assertTrue(User.objects.filter(username="tech_bob").exists())
+
+    def test_admin_password_change_policy(self):
+        """Verify that edit_staff rejects weak password updates for admin users."""
+        from billing.models import StaffRole, SystemAdmin
+
+        super_user = User.objects.create_superuser("master_admin", "master@example.com", "MasterSec#2026")
+        self.client.force_login(super_user)
+
+        admin_role, _ = StaffRole.objects.get_or_create(name="Admin")
+        staff_admin = SystemAdmin.objects.create(
+            username="target_admin",
+            full_name="Target Admin",
+            email="target@example.com",
+            role="Admin",
+            status="Active",
+        )
+        target_u = User.objects.create_user("target_admin", "target@example.com", "InitialSec#2026")
+
+        # Edit with weak password fails
+        self.client.post(f"/staff/edit/{staff_admin.pk}/", {
+            "username": "target_admin",
+            "full_name": "Target Admin",
+            "email": "target@example.com",
+            "role": "Admin",
+            "status": "Active",
+            "password": "weakpassword",
+        })
+        target_u.refresh_from_db()
+        self.assertTrue(target_u.check_password("InitialSec#2026"))
+
+        # Edit with compliant password succeeds
+        self.client.post(f"/staff/edit/{staff_admin.pk}/", {
+            "username": "target_admin",
+            "full_name": "Target Admin",
+            "email": "target@example.com",
+            "role": "Admin",
+            "status": "Active",
+            "password": "NewStrongAdmin#2026",
+        })
+        target_u.refresh_from_db()
+        self.assertTrue(target_u.check_password("NewStrongAdmin#2026"))

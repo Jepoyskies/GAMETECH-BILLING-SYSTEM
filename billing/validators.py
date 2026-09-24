@@ -66,11 +66,46 @@ def validate_password_policy(password, user_or_customer=None, identifier=None):
             check_values.append(user_or_customer.pppoe_username.lower())
         if hasattr(user_or_customer, "full_name") and user_or_customer.full_name:
             check_values.append(user_or_customer.full_name.lower())
+        if hasattr(user_or_customer, "get_full_name") and callable(user_or_customer.get_full_name):
+            fn = user_or_customer.get_full_name().lower()
+            if fn:
+                check_values.append(fn)
+        if hasattr(user_or_customer, "first_name") and user_or_customer.first_name:
+            check_values.append(user_or_customer.first_name.lower())
+        if hasattr(user_or_customer, "last_name") and user_or_customer.last_name:
+            check_values.append(user_or_customer.last_name.lower())
 
     pw_lower = password.lower()
     for val in check_values:
-        if val and (pw_lower == val or val in pw_lower):
+        if not val:
+            continue
+        if pw_lower == val:
             raise ValidationError("Password must not contain or match your username, full name, or phone number.")
+        if len(val) >= 3 and val in pw_lower:
+            raise ValidationError("Password must not contain or match your username, full name, or phone number.")
+
+
+class GametechPasswordPolicyValidator:
+    """
+    Django password validator class for AUTH_PASSWORD_VALIDATORS setting.
+    Enforces Gametech Global Password Policy across Django admin, built-in
+    PasswordChangeForm, UserCreationForm, and UserChangeForm:
+    - 10+ characters
+    - At least one letter
+    - At least one number
+    - At least one special character (!@#$%^&*()-_=+[]{}|;:,.<>?)
+    - Not on common weak passwords blacklist
+    - Not equal to username, phone, or name
+    """
+    def validate(self, password, user=None):
+        validate_password_policy(password, user_or_customer=user)
+
+    def get_help_text(self):
+        return (
+            "Your password must be at least 10 characters long, contain at least one letter, "
+            "one number, one special character (!@#$%^&*), not be a commonly used password, "
+            "and not match or contain your username, name, or phone number."
+        )
 
 
 def generate_temp_password(length=10):

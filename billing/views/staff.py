@@ -8,7 +8,9 @@ from django.contrib.auth.hashers import make_password
 from django.db import transaction
 from django.db.models import Q, ProtectedError, RestrictedError
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from billing.models import SystemAdmin, StaffRole
+from billing.validators import validate_password_policy
 
 
 @login_required
@@ -252,6 +254,15 @@ def add_staff(request):
             messages.error(request, err_msg)
             return render(request, "billing/add_staff.html", {"available_roles": available_roles, "form_data": request.POST})
 
+        try:
+            validate_password_policy(raw_password, identifier=username)
+        except ValidationError as e:
+            err_msg = "; ".join(e.messages) if hasattr(e, "messages") else str(e)
+            if is_ajax:
+                return JsonResponse({"status": "error", "message": err_msg}, status=400)
+            messages.error(request, err_msg)
+            return render(request, "billing/add_staff.html", {"available_roles": available_roles, "form_data": request.POST})
+
         if (
             User.objects.filter(username__iexact=username).exists()
             or SystemAdmin.objects.filter(username__iexact=username).exists()
@@ -353,6 +364,14 @@ def edit_staff(request, pk):
         role = request.POST.get("role")
         status = request.POST.get("status")
         raw_password = request.POST.get("password")
+        if raw_password:
+            try:
+                target_user = User.objects.filter(username=staff.username).first()
+                validate_password_policy(raw_password, user_or_customer=target_user, identifier=username)
+            except ValidationError as e:
+                err_msg = "; ".join(e.messages) if hasattr(e, "messages") else str(e)
+                messages.error(request, err_msg)
+                return redirect("edit_staff", pk=pk)
 
         if (
             User.objects.filter(username=username)

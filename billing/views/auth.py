@@ -76,6 +76,14 @@ def add_agent(request):
         email = request.POST.get("email")
         phone = request.POST.get("phone")
         password = request.POST.get("password")
+        if password:
+            from billing.validators import validate_password_policy
+            from django.core.exceptions import ValidationError
+            try:
+                validate_password_policy(password, identifier=name)
+            except ValidationError as e:
+                messages.error(request, f"Password does not meet security requirements: {e.messages[0]}")
+                return render(request, "billing/add_agent.html")
 
         # Hash password if provided, just like PHP's password_hash()
         hashed_pw = make_password(password) if password else None
