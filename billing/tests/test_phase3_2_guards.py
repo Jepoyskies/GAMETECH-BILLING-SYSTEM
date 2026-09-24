@@ -4,6 +4,7 @@ from django.test import TestCase, Client, override_settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.exceptions import ValidationError
+from django.urls import reverse
 from django.utils import timezone
 
 from billing.models import (
@@ -204,13 +205,14 @@ class Phase32GuardAndLoopholeTests(TestCase):
 
         # 1. Unauthorized attempt (staff_user lacks permission)
         self.client.force_login(self.staff_user)
-        resp = self.client.post(f"/network-manager/devices/{self.device.id}/sync-users/")
+        sync_users_url = reverse('sync_device_users', args=[self.device.id])
+        resp = self.client.post(sync_users_url)
         self.assertEqual(resp.status_code, 403)
 
         # 2. Authorized attempt (staff_with_import_perm)
         self.client.force_login(self.staff_with_import_perm)
         with patch("network_manager.services.MikrotikAPI.get_ppp_secrets", return_value=mock_secrets):
-            resp = self.client.post(f"/network-manager/devices/{self.device.id}/sync-users/")
+            resp = self.client.post(sync_users_url)
             self.assertEqual(resp.status_code, 200)
             data = resp.json()
             self.assertEqual(data["status"], "success")
@@ -250,10 +252,12 @@ class Phase32GuardAndLoopholeTests(TestCase):
             ],
         }
 
+        bulk_url = reverse('sync_bulk_action', args=[self.device.id])
+
         # 1. Unauthorized user fails
         self.client.force_login(self.staff_user)
         resp = self.client.post(
-            f"/network-manager/devices/{self.device.id}/sync/bulk/",
+            bulk_url,
             {"action": "bulk_import", "usernames": ["dup_user", "fresh_user"]},
         )
         self.assertEqual(resp.status_code, 302)
@@ -264,7 +268,7 @@ class Phase32GuardAndLoopholeTests(TestCase):
         self.client.force_login(self.staff_with_import_perm)
         with patch("network_manager.sync_services.MikrotikAPI.get_all_pppoe_users", return_value=mock_users_data):
             resp = self.client.post(
-                f"/network-manager/devices/{self.device.id}/sync/bulk/",
+                bulk_url,
                 {"action": "bulk_import", "usernames": ["dup_user", "fresh_user"]},
             )
             self.assertEqual(resp.status_code, 302)
