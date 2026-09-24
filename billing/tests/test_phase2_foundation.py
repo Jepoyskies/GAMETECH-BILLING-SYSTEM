@@ -292,13 +292,14 @@ class Phase2FoundationTests(TestCase):
             is_test_data=True,
         )
         # 2. Pending install customer with null or past expiration (must NOT be counted)
-        c_pending_install = Customer.objects.create(
-            full_name="Pending Install",
-            status="pending",
-            installation_status="pending",
-            expires_at=past_due,
-            is_test_data=True,
-        )
+        from billing.security import test_seeding_bypass_checklist
+        with test_seeding_bypass_checklist("phase2_test"):
+            c_pending_install = Customer.objects.create(
+                full_name="Pending Install",
+                status="pending",
+                installation_status="pending",
+                expires_at=past_due,
+            )
         # 3. Closed - Not Installed customer (must NOT be counted anywhere)
         c_closed = Customer.objects.create(
             full_name="Closed Not Installed",
