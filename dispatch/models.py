@@ -394,10 +394,15 @@ class JobTicket(models.Model):
     contact_attempt_count = models.PositiveSmallIntegerField(default=0, help_text="Number of times technician tried to reach client (max 3)")
     cancellation_reason = models.CharField(max_length=20, choices=CANCELLATION_REASON_CHOICES, null=True, blank=True)
 
-    # Phase 2 Operational & Lifecycle Additions
+    # Phase 2 & 4 Operational & Lifecycle Additions
     arrived_at = models.DateTimeField(null=True, blank=True, help_text="When field technician clicked Arrived on site")
+    arrival_latitude = models.FloatField(null=True, blank=True, help_text="GPS latitude recorded upon arrival")
+    arrival_longitude = models.FloatField(null=True, blank=True, help_text="GPS longitude recorded upon arrival")
     finished_at = models.DateTimeField(null=True, blank=True, help_text="When field technician clicked Done on site")
     technician_report = models.TextField(null=True, blank=True, help_text="Work done report entered by technician")
+    timer_corrected_at = models.DateTimeField(null=True, blank=True, help_text="When dispatcher corrected timer")
+    timer_corrected_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='timer_corrected_tickets')
+    timer_correction_reason = models.TextField(null=True, blank=True, help_text="Mandatory reason for manual timer adjustment")
     qa_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='qa_reviewed_tickets')
     client_called_by_qa = models.BooleanField(default=False, help_text="Checked if QA dispatcher called client for verification")
     client_agent_informed = models.BooleanField(default=False, help_text="Checked by dispatch when informing client's agent of unreachable/cancellation")
@@ -409,6 +414,54 @@ class JobTicket(models.Model):
     same_person_stages = models.JSONField(default=list, blank=True, help_text="List of stage names handled by the same person")
     bounce_count = models.PositiveIntegerField(default=0, help_text="Number of times this ticket has been bounced back")
     repeated_bounce_alert = models.BooleanField(default=False, help_text="Flagged when ticket bounces 2 or more times")
+
+    def can_transition_to(self, target_status):
+        """
+        Validates whether transitioning from self.status to target_status is allowed.
+        Enforces lifecycle rules for installations, repairs, and site visits.
+        """
+        if self.status == target_status:
+            return True
+
+        allowed = {
+            'PENDING': ['ASSIGNED', 'CANCELLED'],
+            'ASSIGNED': ['IN_PROGRESS', 'PENDING', 'CANCELLED'],
+            'IN_PROGRESS': ['COMPLETED', 'ASSIGNED', 'CANCELLED'],
+            'COMPLETED': ['QA_PASSED', 'APPROVED', 'ASSIGNED', 'CANCELLED'],
+            'QA_PASSED': ['APPROVED', 'COMPLETED', 'ASSIGNED', 'CANCELLED'],
+            'APPROVED': ['CANCELLED'],
+            'CANCELLED': ['PENDING'],
+        }
+
+        # Site visits go assign -> in_progress -> completed (skipping QA & admin approval)
+        if self.ticket_type == 'SITE_VISIT' and self.status == 'IN_PROGRESS' and target_status in ['COMPLETED', 'APPROVED']:
+            return True
+
+        return target_status in allowed.get(self.status, [])
+
+    def record_stage_action(self, stage_name, user):
+        """
+        Tracks the actor of a pipeline stage and flags same-person handling across multiple stages.
+        """
+        if not user or not user.is_authenticated:
+            return
+
+        stages = list(self.same_person_stages or [])
+        user_id_str = str(user.id)
+        current_entry = f"{stage_name}:{user_id_str}"
+        if current_entry not in stages:
+            stages.append(current_entry)
+            self.same_person_stages = stages
+
+        # Check if this user handled distinct stages
+        distinct_stages = set()
+        for s in stages:
+            if ":" in s:
+                stg, uid = s.split(":", 1)
+                if uid == user_id_str:
+                    distinct_stages.add(stg)
+        if len(distinct_stages) >= 2:
+            self.same_person_flag = True
 
     # Audit & Dispatcher Tracking
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='dispatched_tickets')

@@ -1,0 +1,520 @@
+{% extends "billing/base/base.html" %}
+{% load static %}
+
+{% block title %}Field Technician Portal | Gametech Unli Fiber{% endblock %}
+
+{% block content %}
+<div class="container py-3" style="max-width: 680px;">
+
+  <!-- Technician Status Header Card -->
+  <div class="card border-0 shadow-sm mb-3" style="background: var(--surface-card); border-radius: 14px; border: 1px solid var(--border-subtle) !important;">
+    <div class="card-body p-3 d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center gap-3">
+        <div class="rounded-circle p-2 d-flex align-items-center justify-content-center text-white" style="width: 44px; height: 44px; background: var(--gt-dispatch-violet, #7c3aed);">
+          <i class="fas fa-screwdriver-wrench fs-5"></i>
+        </div>
+        <div>
+          <h5 class="fw-bold mb-0" style="color: var(--text-main);">
+            {{ technician.name|default:"Technician" }}
+          </h5>
+          <span class="text-muted small">
+            <i class="fas fa-users-gear me-1"></i> {{ technician.team.name|default:"No Team Assigned" }}
+          </span>
+        </div>
+      </div>
+
+      <div class="text-end">
+        <span class="badge {% if technician.is_available %}bg-success text-white{% else %}bg-secondary text-white{% endif %} px-2 py-1" style="font-size: 0.75rem; border-radius: 6px;">
+          {% if technician.is_available %}On Duty{% else %}Off Duty{% endif %}
+        </span>
+        <div class="small text-muted mt-1" style="font-size: 0.72rem;">
+          {{ tickets|length }} Assigned Job{{ tickets|length|pluralize }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Staff Preview Selector -->
+    {% if is_staff_preview %}
+      <div class="card-footer p-2 bg-transparent border-top small d-flex align-items-center justify-content-between" style="border-color: var(--border-subtle) !important;">
+        <span class="text-warning"><i class="fas fa-eye me-1"></i> Staff Previewing:</span>
+        <form method="GET" class="d-inline-flex gap-2">
+          <select name="tech_id" class="form-select form-select-sm" onchange="this.form.submit()" style="width: auto;">
+            {% for t in all_techs %}
+              <option value="{{ t.id }}" {% if technician.id == t.id %}selected{% endif %}>{{ t.name }}</option>
+            {% endfor %}
+          </select>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Job Ticket Feed -->
+  {% if tickets %}
+    <h6 class="text-uppercase small fw-bold text-muted mb-2 px-1">
+      <i class="fas fa-list-check me-1"></i> Today's Assigned Tasks
+    </h6>
+
+    {% for t in tickets %}
+      <div class="card border-0 shadow-sm mb-3" style="background: var(--surface-card); border-radius: 14px; border: 1px solid var(--border-subtle) !important; border-left: 5px solid {% if t.status == 'IN_PROGRESS' %}#f59e0b{% else %}var(--gt-dispatch-violet, #7c3aed){% endif %} !important;">
+        <div class="card-body p-3">
+          
+          <!-- Top Badges & Priority -->
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <span class="badge me-1" style="background: var(--gt-dispatch-violet, #7c3aed); color: #fff;">
+                {{ t.get_ticket_type_display }}
+              </span>
+              {% if t.priority == 'URGENT' %}
+                <span class="badge bg-danger">Urgent</span>
+              {% elif t.priority == 'HIGH' %}
+                <span class="badge bg-warning text-dark">High</span>
+              {% endif %}
+              {% if t.status == 'IN_PROGRESS' %}
+                <span class="badge bg-warning text-dark"><i class="fas fa-clock fa-spin me-1"></i> On Site / Active</span>
+              {% endif %}
+            </div>
+            <span class="fw-bold font-monospace small" style="color: var(--text-muted);">{{ t.ticket_number }}</span>
+          </div>
+
+          <!-- Client Info -->
+          <h5 class="fw-bold mb-1" style="color: var(--text-main);">{{ t.client_name }}</h5>
+          <p class="text-muted small mb-2 d-flex align-items-center gap-1">
+            <i class="fas fa-location-dot text-danger"></i>
+            <span>{{ t.address }}{% if t.barangay %}, {{ t.barangay }}{% endif %}</span>
+          </p>
+
+          <!-- Plan & Concern -->
+          {% if t.plan_package %}
+            <div class="small mb-2 p-2 rounded-2" style="background: var(--surface-bg, rgba(0,0,0,0.03));">
+              <strong>Package:</strong> {{ t.plan_package }}
+              {% if t.concern %}<div class="text-muted text-truncate">{{ t.concern }}</div>{% endif %}
+            </div>
+          {% endif %}
+
+          <!-- Scheduled Slot -->
+          <div class="d-flex align-items-center gap-2 small text-muted mb-3">
+            <i class="fas fa-calendar-day"></i>
+            <span>{{ t.scheduled_date|date:"M d, Y"|default:"Today" }} - {{ t.scheduled_time|default:"Scheduled" }}</span>
+          </div>
+
+          <!-- Contact Attempts Warning if any -->
+          {% if t.contact_attempt_count > 0 %}
+            <div class="alert alert-danger py-1 px-2 small mb-3 d-flex justify-content-between align-items-center">
+              <span><i class="fas fa-phone-slash me-1"></i> Contact Attempts: <strong>{{ t.contact_attempt_count }}/3</strong></span>
+              {% if t.contact_attempt_count >= 3 or t.cancellation_reason %}
+                <span class="badge bg-danger">Escalation Eligible</span>
+              {% endif %}
+            </div>
+          {% endif %}
+
+          <!-- Action Buttons Bar -->
+          <div class="row g-2">
+            <!-- Call Client & Log Attempt -->
+            <div class="col-6">
+              <div class="btn-group w-100">
+                <a href="tel:{{ t.contact_number }}" class="btn btn-sm btn-outline-secondary w-75 d-inline-flex align-items-center justify-content-center gap-1">
+                  <i class="fas fa-phone text-success"></i> Call Client
+                </a>
+                <button type="button" class="btn btn-sm btn-outline-secondary w-25" onclick="openContactModal('{{ t.id }}', '{{ t.ticket_number }}', {{ t.contact_attempt_count }})" title="Log Contact Attempt">
+                  <i class="fas fa-pen-to-square"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Return to Dispatch (if 3+ attempts or refusal) -->
+            {% if t.contact_attempt_count >= 3 %}
+              <div class="col-6">
+                <button type="button" class="btn btn-sm btn-danger w-100 d-inline-flex align-items-center justify-content-center gap-1" onclick="openReturnModal('{{ t.id }}', '{{ t.ticket_number }}')">
+                  <i class="fas fa-arrow-rotate-left"></i> Return to Dispatch
+                </button>
+              </div>
+            {% endif %}
+
+            <!-- Arrived / Done Workflow Buttons -->
+            {% if t.status == 'ASSIGNED' %}
+              <div class="{% if t.contact_attempt_count >= 3 %}col-12{% else %}col-6{% endif %}">
+                <button type="button" 
+                        id="btnArrived{{ t.id }}" 
+                        class="btn btn-sm text-white fw-bold w-100 d-inline-flex align-items-center justify-content-center gap-1"
+                        style="background: #059669; border-color: #059669;"
+                        onclick="triggerArrived('{{ t.id }}')">
+                  <i class="fas fa-location-arrow"></i> Arrived on Site
+                </button>
+              </div>
+            {% elif t.status == 'IN_PROGRESS' %}
+              <div class="{% if t.contact_attempt_count >= 3 %}col-12{% else %}col-6{% endif %}">
+                <button type="button" 
+                        class="btn btn-sm text-white fw-bold w-100 d-inline-flex align-items-center justify-content-center gap-1"
+                        style="background: #2563eb; border-color: #2563eb;"
+                        onclick="openDoneModal('{{ t.id }}', '{{ t.ticket_number }}', '{{ t.ticket_type }}')">
+                  <i class="fas fa-check-circle"></i> Done (Finish Form)
+                </button>
+              </div>
+            {% endif %}
+          </div>
+
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <!-- Zero Assigned Jobs Placeholder -->
+    <div class="card border-0 shadow-sm p-5 text-center" style="background: var(--surface-card); border-radius: 14px; border: 1px solid var(--border-subtle) !important;">
+      <i class="fas fa-clipboard-check text-muted fa-3x mb-3"></i>
+      <h5 class="fw-bold mb-1" style="color: var(--text-main);">No Jobs Assigned Right Now</h5>
+      <p class="text-muted small mb-0">Technicians cannot pick or claim unassigned jobs. All incoming orders and repairs are scheduled by the Dispatch team.</p>
+    </div>
+  {% endif %}
+
+</div>
+
+<!-- Contact Attempt Modal -->
+<div class="modal fade" id="modalContactAttempt" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content shadow-lg border-0" style="background: var(--surface-card); color: var(--text-main); border-radius: 14px;">
+      <div class="modal-header border-bottom" style="border-color: var(--border-subtle) !important;">
+        <h5 class="modal-title fs-6 fw-bold">Log Call Attempt: <span id="contactModalTicketNumber" class="text-primary">-</span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="contactAttemptForm" onsubmit="submitContactAttempt(event)">
+        <input type="hidden" id="contactModalTicketId" value="">
+        <div class="modal-body p-3">
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-uppercase">Call Outcome</label>
+            <select id="contactResultSelect" class="form-select">
+              <option value="unanswered">Unanswered / Ringing</option>
+              <option value="rejected">Call Rejected / Dropped</option>
+              <option value="busy">Number Busy / Cannot be Reached</option>
+              <option value="client_declined">Client Declined / Cancelled</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label small fw-bold text-uppercase">Notes</label>
+            <textarea id="contactNotes" class="form-control" rows="2" placeholder="e.g. Ringing with no answer after 5 rings"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-top" style="border-color: var(--border-subtle) !important;">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" id="btnSubmitContact" class="btn btn-primary btn-sm fw-bold">Log Attempt</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Return to Dispatch Modal -->
+<div class="modal fade" id="modalReturnDispatch" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content shadow-lg border-0" style="background: var(--surface-card); color: var(--text-main); border-radius: 14px;">
+      <div class="modal-header border-bottom" style="border-color: var(--border-subtle) !important;">
+        <h5 class="modal-title fs-6 fw-bold text-danger"><i class="fas fa-triangle-exclamation me-1"></i> Return Job to Dispatch</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="returnDispatchForm" onsubmit="submitReturnDispatch(event)">
+        <input type="hidden" id="returnModalTicketId" value="">
+        <div class="modal-body p-3">
+          <div class="alert alert-danger small py-2 mb-3">
+            Returning this job notifies Dispatch and flags the applicant as unreachable or cancelled.
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-uppercase">Return Reason</label>
+            <select id="returnReasonSelect" class="form-select">
+              <option value="no_contact">Client Unreachable (3+ No Contact Attempts)</option>
+              <option value="change_of_mind">Client Changed Mind</option>
+              <option value="undecided">Client Undecided</option>
+              <option value="other">Other Operational Obstacle</option>
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label small fw-bold text-uppercase">Explanation / Notes</label>
+            <textarea id="returnNotes" class="form-control" rows="2" required placeholder="Mandatory operational explanation..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-top" style="border-color: var(--border-subtle) !important;">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" id="btnSubmitReturn" class="btn btn-danger btn-sm fw-bold">Return to Dispatch</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Done / Completion Form Modal -->
+<div class="modal fade" id="modalDoneJob" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content shadow-lg border-0" style="background: var(--surface-card); color: var(--text-main); border-radius: 14px;">
+      <div class="modal-header border-bottom" style="border-color: var(--border-subtle) !important;">
+        <h5 class="modal-title fs-6 fw-bold d-flex align-items-center gap-2">
+          <span class="badge bg-primary text-white"><i class="fas fa-clipboard-check"></i></span>
+          <span>Complete Job &amp; Stop Timer: <strong id="doneModalTicketNumber" class="text-primary">-</strong></span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <form id="doneJobForm" onsubmit="submitDoneJob(event)">
+        <input type="hidden" id="doneModalTicketId" value="">
+        <div class="modal-body p-3">
+          
+          <div class="row g-2 mb-3">
+            <div class="col-md-4">
+              <label class="form-label small fw-bold">NAP Port</label>
+              <input type="text" id="doneNapPort" class="form-control form-control-sm" placeholder="e.g. Port 4">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-bold">Cable Length (m)</label>
+              <input type="text" id="doneCableLength" class="form-control form-control-sm" placeholder="e.g. 150m">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-bold">Signal Level (dBm)</label>
+              <input type="text" id="doneSignalLevel" class="form-control form-control-sm" placeholder="e.g. -19.5 dBm">
+            </div>
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-bold">ONT / Modem S/N or MAC</label>
+              <input type="text" id="doneOntSn" class="form-control form-control-sm" placeholder="e.g. ZTEGC1234567">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-bold">Pole Number</label>
+              <input type="text" id="donePoleNumber" class="form-control form-control-sm" placeholder="e.g. Pole #12">
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label small fw-bold">Technician Report / Work Done <span class="text-danger">*</span></label>
+            <textarea id="doneReport" class="form-control form-control-sm" rows="3" required placeholder="Describe work completed, fiber readings, modem placement, and speedtest result..."></textarea>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label small fw-bold">Client Acknowledged By</label>
+            <input type="text" id="doneAcknowledgedBy" class="form-control form-control-sm" placeholder="Name of subscriber or household member who signed off">
+          </div>
+        </div>
+
+        <div class="modal-footer border-top" style="border-color: var(--border-subtle) !important;">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" id="btnSubmitDone" class="btn btn-primary btn-sm fw-bold px-4">
+            <i class="fas fa-check me-1"></i> Submit Completion Report
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile Tech Client Logic -->
+<script>
+function triggerArrived(ticketId) {
+  const btn = document.getElementById('btnArrived' + ticketId);
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Getting GPS & Arriving...';
+  }
+
+  // Attempt to capture browser GPS location if available
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        postArrived(ticketId, pos.coords.latitude, pos.coords.longitude, btn);
+      },
+      (err) => {
+        // Gracefully proceed without GPS
+        postArrived(ticketId, null, null, btn);
+      },
+      { timeout: 5000, enableHighAccuracy: true }
+    );
+  } else {
+    postArrived(ticketId, null, null, btn);
+  }
+}
+
+function postArrived(ticketId, lat, lng, btn) {
+  fetch(`/dispatch/api/tickets/${ticketId}/arrived/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken'),
+    },
+    body: JSON.stringify({
+      latitude: lat,
+      longitude: lng,
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      window.location.reload();
+    } else {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-location-arrow"></i> Arrived on Site';
+      }
+      alert(data.error || 'Failed to mark arrival.');
+    }
+  })
+  .catch(err => {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-location-arrow"></i> Arrived on Site';
+    }
+    alert('Network error marking arrival.');
+  });
+}
+
+function openDoneModal(ticketId, ticketNumber, ticketType) {
+  document.getElementById('doneModalTicketId').value = ticketId;
+  document.getElementById('doneModalTicketNumber').innerText = ticketNumber;
+  const modal = new bootstrap.Modal(document.getElementById('modalDoneJob'));
+  modal.show();
+}
+
+function submitDoneJob(event) {
+  event.preventDefault();
+  const ticketId = document.getElementById('doneModalTicketId').value;
+  const napPort = document.getElementById('doneNapPort').value;
+  const cableLength = document.getElementById('doneCableLength').value;
+  const signalLevel = document.getElementById('doneSignalLevel').value;
+  const ontSn = document.getElementById('doneOntSn').value;
+  const poleNumber = document.getElementById('donePoleNumber').value;
+  const report = document.getElementById('doneReport').value;
+  const acknowledgedBy = document.getElementById('doneAcknowledgedBy').value;
+
+  const btn = document.getElementById('btnSubmitDone');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Submitting...';
+
+  fetch(`/dispatch/api/tickets/${ticketId}/done/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken'),
+    },
+    body: JSON.stringify({
+      nap_port: napPort,
+      cable_length: cableLength,
+      signal_level: signalLevel,
+      ont_modem_sn: ontSn,
+      pole_number: poleNumber,
+      technician_report: report,
+      acknowledged_by: acknowledgedBy,
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-check me-1"></i> Submit Completion Report';
+    if (data.success) {
+      window.location.reload();
+    } else {
+      alert(data.error || 'Failed to complete job.');
+    }
+  })
+  .catch(err => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-check me-1"></i> Submit Completion Report';
+    alert('Network error completing job.');
+  });
+}
+
+function openContactModal(ticketId, ticketNumber, count) {
+  document.getElementById('contactModalTicketId').value = ticketId;
+  document.getElementById('contactModalTicketNumber').innerText = ticketNumber;
+  document.getElementById('contactNotes').value = '';
+  const modal = new bootstrap.Modal(document.getElementById('modalContactAttempt'));
+  modal.show();
+}
+
+function submitContactAttempt(event) {
+  event.preventDefault();
+  const ticketId = document.getElementById('contactModalTicketId').value;
+  const result = document.getElementById('contactResultSelect').value;
+  const notes = document.getElementById('contactNotes').value;
+
+  const btn = document.getElementById('btnSubmitContact');
+  btn.disabled = true;
+
+  fetch(`/dispatch/api/tickets/${ticketId}/contact-attempt/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken'),
+    },
+    body: JSON.stringify({
+      result: result,
+      notes: notes,
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    btn.disabled = false;
+    if (data.success) {
+      window.location.reload();
+    } else {
+      alert(data.error || 'Failed to log call attempt.');
+    }
+  })
+  .catch(err => {
+    btn.disabled = false;
+    alert('Network error logging call attempt.');
+  });
+}
+
+function openReturnModal(ticketId, ticketNumber) {
+  document.getElementById('returnModalTicketId').value = ticketId;
+  document.getElementById('returnNotes').value = '';
+  const modal = new bootstrap.Modal(document.getElementById('modalReturnDispatch'));
+  modal.show();
+}
+
+function submitReturnDispatch(event) {
+  event.preventDefault();
+  const ticketId = document.getElementById('returnModalTicketId').value;
+  const reason = document.getElementById('returnReasonSelect').value;
+  const notes = document.getElementById('returnNotes').value;
+
+  const btn = document.getElementById('btnSubmitReturn');
+  btn.disabled = true;
+
+  fetch(`/dispatch/api/tickets/${ticketId}/return-to-dispatch/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken'),
+    },
+    body: JSON.stringify({
+      reason: reason,
+      notes: notes,
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    btn.disabled = false;
+    if (data.success) {
+      window.location.reload();
+    } else {
+      alert(data.error || 'Failed to return job to dispatch.');
+    }
+  })
+  .catch(err => {
+    btn.disabled = false;
+    alert('Network error returning job to dispatch.');
+  });
+}
+
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+</script>
+{% endblock %}

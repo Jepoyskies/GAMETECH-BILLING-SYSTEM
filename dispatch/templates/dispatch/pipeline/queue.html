@@ -1,0 +1,389 @@
+{% extends "billing/base/base.html" %}
+{% load static %}
+
+{% block title %}Dispatch Queue & Operations | Gametech Unli Fiber{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-3">
+
+  <!-- Header & Stepper -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+      <h3 class="fw-bold mb-1 d-flex align-items-center gap-2" style="color: var(--text-main);">
+        <span class="badge" style="background: var(--gt-dispatch-violet, #7c3aed); color: #fff;">
+          <i class="fas fa-truck-fast"></i>
+        </span>
+        <span>Dispatch Queue &amp; Assignment Console</span>
+      </h3>
+      <p class="text-muted small mb-0">Central ISP job dispatch, team scheduling, technician duty management, and operational routing.</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <a href="{% url 'technician_mobile_ui' %}" class="btn btn-sm btn-outline-secondary" style="border-radius: 8px;">
+        <i class="fas fa-mobile-screen me-1"></i> Tech Mobile View
+      </a>
+      <a href="{% url 'dispatch_qa' %}" class="btn btn-sm btn-outline-secondary" style="border-radius: 8px;">
+        <i class="fas fa-clipboard-check me-1"></i> QA Review
+      </a>
+      <a href="{% url 'add_customer' %}" class="btn btn-sm text-white fw-bold px-3" style="background: var(--gt-dispatch-violet, #7c3aed); border-color: var(--gt-dispatch-violet, #7c3aed); border-radius: 8px;">
+        <i class="fas fa-plus me-1"></i> New Walk-in / Order
+      </a>
+    </div>
+  </div>
+
+  <!-- Stepper Bar -->
+  <div class="card border-0 shadow-sm mb-3" style="background: var(--surface-card); border-radius: 12px; border: 1px solid var(--border-subtle) !important;">
+    <div class="card-body p-2 d-flex flex-wrap align-items-center justify-content-between gap-2" style="font-size: 0.82rem;">
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge rounded-circle p-2 text-white" style="background: var(--gt-dispatch-violet, #7c3aed); width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;">1</span>
+        <strong style="color: var(--gt-dispatch-violet, #7c3aed);">Queue &amp; Assignment</strong>
+      </div>
+      <i class="fas fa-chevron-right text-muted small"></i>
+      <div class="d-flex align-items-center gap-2 opacity-75">
+        <span class="badge rounded-circle p-2 bg-secondary text-white" style="width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;">2</span>
+        <span>Field Execution</span>
+      </div>
+      <i class="fas fa-chevron-right text-muted small"></i>
+      <div class="d-flex align-items-center gap-2 opacity-75">
+        <span class="badge rounded-circle p-2 bg-secondary text-white" style="width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;">3</span>
+        <span>Dispatch QA</span>
+      </div>
+      <i class="fas fa-chevron-right text-muted small"></i>
+      <div class="d-flex align-items-center gap-2 opacity-75">
+        <span class="badge rounded-circle p-2 bg-secondary text-white" style="width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;">4</span>
+        <span>Admin Sign-off</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Technician Duty Roster Bar -->
+  {% include "dispatch/pipeline/_technician_duty_bar.html" %}
+
+  <!-- Filters & Search Toolbar -->
+  <div class="card border-0 shadow-sm mb-3" style="background: var(--surface-card); border-radius: 12px; border: 1px solid var(--border-subtle) !important;">
+    <div class="card-body p-3">
+      <form method="GET" class="row g-2 align-items-center">
+        <input type="hidden" name="tab" value="{{ active_tab }}">
+        <div class="col-md-5">
+          <div class="input-group">
+            <span class="input-group-text bg-transparent border-end-0" style="border-color: var(--border-subtle) !important;">
+              <i class="fas fa-search text-muted"></i>
+            </span>
+            <input type="text" name="q" value="{{ search_query }}" class="form-control border-start-0" placeholder="Search ticket #, client, phone, address, barangay..." style="border-color: var(--border-subtle) !important;">
+          </div>
+        </div>
+
+        <div class="col-md-5">
+          <div class="btn-group w-100" role="group">
+            <a href="?tab={{ active_tab }}&type=ALL&q={{ search_query }}" class="btn btn-sm {% if ticket_type_filter == 'ALL' %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="{% if ticket_type_filter == 'ALL' %}background: var(--gt-dispatch-violet, #7c3aed); border-color: var(--gt-dispatch-violet, #7c3aed);{% endif %}">All</a>
+            <a href="?tab={{ active_tab }}&type=INSTALLATION&q={{ search_query }}" class="btn btn-sm {% if ticket_type_filter == 'INSTALLATION' %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="{% if ticket_type_filter == 'INSTALLATION' %}background: var(--gt-dispatch-violet, #7c3aed); border-color: var(--gt-dispatch-violet, #7c3aed);{% endif %}">Install</a>
+            <a href="?tab={{ active_tab }}&type=REPAIR&q={{ search_query }}" class="btn btn-sm {% if ticket_type_filter == 'REPAIR' %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="{% if ticket_type_filter == 'REPAIR' %}background: var(--gt-dispatch-violet, #7c3aed); border-color: var(--gt-dispatch-violet, #7c3aed);{% endif %}">Repair</a>
+            <a href="?tab={{ active_tab }}&type=SITE_VISIT&q={{ search_query }}" class="btn btn-sm {% if ticket_type_filter == 'SITE_VISIT' %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="{% if ticket_type_filter == 'SITE_VISIT' %}background: var(--gt-dispatch-violet, #7c3aed); border-color: var(--gt-dispatch-violet, #7c3aed);{% endif %}">Site Visit</a>
+            <a href="?tab={{ active_tab }}&type=CIGNAL&q={{ search_query }}" class="btn btn-sm {% if ticket_type_filter == 'CIGNAL' %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="{% if ticket_type_filter == 'CIGNAL' %}background: var(--gt-dispatch-violet, #7c3aed); border-color: var(--gt-dispatch-violet, #7c3aed);{% endif %}">Cignal</a>
+          </div>
+        </div>
+
+        <div class="col-md-2 text-end">
+          <button type="submit" class="btn btn-sm btn-outline-secondary w-100">Apply Filters</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Queue Tabs Navigation -->
+  <ul class="nav nav-pills mb-3 gap-2" id="queueTabs" role="tablist">
+    <li class="nav-item">
+      <a class="nav-link {% if active_tab == 'unassigned' %}active{% endif %} d-flex align-items-center gap-2" 
+         href="?tab=unassigned&type={{ ticket_type_filter }}&q={{ search_query }}"
+         style="border-radius: 8px; {% if active_tab == 'unassigned' %}background: var(--gt-dispatch-violet, #7c3aed);{% endif %}">
+        <i class="fas fa-inbox"></i>
+        <span>Unassigned Queue</span>
+        <span class="badge bg-light text-dark">{{ unassigned_count }}</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if active_tab == 'ongoing' %}active{% endif %} d-flex align-items-center gap-2" 
+         href="?tab=ongoing&type={{ ticket_type_filter }}&q={{ search_query }}"
+         style="border-radius: 8px; {% if active_tab == 'ongoing' %}background: var(--gt-dispatch-violet, #7c3aed);{% endif %}">
+        <i class="fas fa-person-digging"></i>
+        <span>Assigned / Ongoing</span>
+        <span class="badge bg-light text-dark">{{ ongoing_count }}</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if active_tab == 'attention' %}active{% endif %} d-flex align-items-center gap-2" 
+         href="?tab=attention&type={{ ticket_type_filter }}&q={{ search_query }}"
+         style="border-radius: 8px; {% if active_tab == 'attention' %}background: #dc2626; color: #fff;{% endif %}">
+        <i class="fas fa-triangle-exclamation"></i>
+        <span>Needs Attention</span>
+        <span class="badge bg-light text-dark">{{ attention_count }}</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if active_tab == 'completed' %}active{% endif %} d-flex align-items-center gap-2" 
+         href="?tab=completed&type={{ ticket_type_filter }}&q={{ search_query }}"
+         style="border-radius: 8px; {% if active_tab == 'completed' %}background: var(--gt-dispatch-violet, #7c3aed);{% endif %}">
+        <i class="fas fa-circle-check"></i>
+        <span>Completed / History</span>
+        <span class="badge bg-light text-dark">{{ completed_count }}</span>
+      </a>
+    </li>
+  </ul>
+
+  <!-- Tab Content -->
+  <div class="card border-0 shadow-sm" style="background: var(--surface-card); border-radius: 12px; border: 1px solid var(--border-subtle) !important;">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" style="color: var(--text-main);">
+        <thead class="small text-uppercase" style="background: var(--surface-bg, rgba(0,0,0,0.02)); border-bottom: 2px solid var(--border-subtle);">
+          <tr>
+            <th class="ps-3 py-3">Ticket #</th>
+            <th>Type</th>
+            <th>Client &amp; Contact</th>
+            <th>Address / Barangay</th>
+            <th>Schedule</th>
+            <th>Assigned Tech / Team</th>
+            <th>Status</th>
+            <th class="text-end pe-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if active_tab == 'unassigned' %}
+            {% for ticket in unassigned_tickets %}
+              {% include "dispatch/pipeline/_queue_ticket_row.html" with ticket=ticket mode="unassigned" %}
+            {% empty %}
+              <tr>
+                <td colspan="8" class="text-center py-5 text-muted">
+                  <i class="fas fa-circle-check text-success fa-2x mb-2 d-block"></i>
+                  <strong>Zero Unassigned Tickets</strong>
+                  <div class="small">All incoming orders and client concerns have been assigned.</div>
+                </td>
+              </tr>
+            {% endfor %}
+          {% elif active_tab == 'ongoing' %}
+            {% for ticket in ongoing_tickets %}
+              {% include "dispatch/pipeline/_queue_ticket_row.html" with ticket=ticket mode="ongoing" %}
+            {% empty %}
+              <tr>
+                <td colspan="8" class="text-center py-5 text-muted">
+                  <i class="fas fa-clipboard text-muted fa-2x mb-2 d-block"></i>
+                  <strong>No ongoing jobs in the field right now.</strong>
+                </td>
+              </tr>
+            {% endfor %}
+          {% elif active_tab == 'attention' %}
+            {% for ticket in attention_tickets %}
+              {% include "dispatch/pipeline/_queue_ticket_row.html" with ticket=ticket mode="attention" %}
+            {% empty %}
+              <tr>
+                <td colspan="8" class="text-center py-5 text-muted">
+                  <i class="fas fa-shield-check text-success fa-2x mb-2 d-block"></i>
+                  <strong>No escalated or unreachable jobs requiring attention.</strong>
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            {% for ticket in completed_tickets %}
+              {% include "dispatch/pipeline/_queue_ticket_row.html" with ticket=ticket mode="completed" %}
+            {% empty %}
+              <tr>
+                <td colspan="8" class="text-center py-5 text-muted">
+                  <strong>No completed tickets matching the filter.</strong>
+                </td>
+              </tr>
+            {% endfor %}
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Include Modals -->
+{% include "dispatch/pipeline/_queue_assign_modal.html" %}
+{% include "dispatch/pipeline/_queue_timer_modal.html" %}
+
+<!-- Page Client Scripts -->
+<script>
+function openAssignModal(ticketId, ticketNumber, clientName, address, concern, ticketType) {
+  document.getElementById('assignTicketId').value = ticketId;
+  document.getElementById('assignTicketNumber').innerText = ticketNumber;
+  document.getElementById('assignClientName').innerText = clientName;
+  document.getElementById('assignClientAddress').innerText = address;
+  document.getElementById('assignClientConcern').innerText = concern || 'Standard Installation / Service';
+  document.getElementById('assignTicketTypeBadge').innerText = ticketType;
+  
+  // Reset fields
+  document.getElementById('assignTeamSelect').value = '';
+  document.querySelectorAll('.tech-checkbox').forEach(cb => cb.checked = false);
+  
+  const modal = new bootstrap.Modal(document.getElementById('modalAssignTicket'));
+  modal.show();
+}
+
+function onTeamSelectChanged(selectElem) {
+  const selectedTeamId = selectElem.value;
+  // If team chosen, automatically check all techs belonging to that team
+  document.querySelectorAll('.tech-checkbox').forEach(cb => {
+    if (selectedTeamId && cb.getAttribute('data-team') === selectedTeamId) {
+      cb.checked = true;
+    } else if (selectedTeamId) {
+      cb.checked = false;
+    }
+  });
+}
+
+function submitTicketAssignment(event) {
+  event.preventDefault();
+  const ticketId = document.getElementById('assignTicketId').value;
+  const teamId = document.getElementById('assignTeamSelect').value;
+  const schedDate = document.getElementById('assignSchedDate').value;
+  const schedTime = document.getElementById('assignSchedTime').value;
+  const remarks = document.getElementById('assignRemarks').value;
+  
+  const techIds = [];
+  document.querySelectorAll('.tech-checkbox:checked').forEach(cb => techIds.push(cb.value));
+
+  const btn = document.getElementById('btnSubmitAssign');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Assigning...';
+
+  fetch(`/dispatch/api/tickets/${ticketId}/assign/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken'),
+    },
+    body: JSON.stringify({
+      team_id: teamId || null,
+      technician_ids: techIds,
+      scheduled_date: schedDate,
+      scheduled_time: schedTime,
+      remarks: remarks,
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Confirm Dispatch';
+    if (data.success) {
+      window.location.reload();
+    } else {
+      alert(data.error || 'Failed to assign ticket.');
+    }
+  })
+  .catch(err => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Confirm Dispatch';
+    alert('Network error while assigning ticket.');
+  });
+}
+
+function toggleTechDuty(techId) {
+  const btn = document.getElementById('techDutyBtn' + techId);
+  if (btn) btn.classList.add('opacity-50');
+
+  fetch(`/dispatch/api/technicians/${techId}/toggle-duty/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken'),
+    }
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      window.location.reload();
+    } else {
+      alert(data.error || 'Failed to toggle technician duty.');
+    }
+  })
+  .catch(err => alert('Network error toggling duty.'));
+}
+
+function openTimerModal(ticketId, ticketNumber, arrivedAt, finishedAt) {
+  document.getElementById('timerTicketId').value = ticketId;
+  document.getElementById('timerTicketNumber').innerText = ticketNumber;
+  document.getElementById('timerArrivedAt').value = arrivedAt ? arrivedAt.slice(0, 16) : '';
+  document.getElementById('timerFinishedAt').value = finishedAt ? finishedAt.slice(0, 16) : '';
+  document.getElementById('timerReason').value = '';
+
+  const modal = new bootstrap.Modal(document.getElementById('modalCorrectTimer'));
+  modal.show();
+}
+
+function submitTimerCorrection(event) {
+  event.preventDefault();
+  const ticketId = document.getElementById('timerTicketId').value;
+  const arrivedAt = document.getElementById('timerArrivedAt').value;
+  const finishedAt = document.getElementById('timerFinishedAt').value;
+  const reason = document.getElementById('timerReason').value;
+
+  const btn = document.getElementById('btnSubmitTimer');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
+
+  fetch(`/dispatch/api/tickets/${ticketId}/correct-timer/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken'),
+    },
+    body: JSON.stringify({
+      arrived_at: arrivedAt || null,
+      finished_at: finishedAt || null,
+      reason: reason,
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save me-1"></i> Save Timer Correction';
+    if (data.success) {
+      window.location.reload();
+    } else {
+      alert(data.error || 'Failed to correct timer.');
+    }
+  })
+  .catch(err => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save me-1"></i> Save Timer Correction';
+    alert('Network error saving timer.');
+  });
+}
+
+function undispatchTicket(ticketId) {
+  if (!confirm('Are you sure you want to return this job to the Unassigned queue?')) return;
+  fetch(`/dispatch/api/tickets/${ticketId}/undispatch/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken'),
+    }
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      window.location.reload();
+    } else {
+      alert(data.error || 'Failed to undispatch ticket.');
+    }
+  })
+  .catch(err => alert('Network error.'));
+}
+
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+</script>
+{% endblock %}

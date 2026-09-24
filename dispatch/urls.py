@@ -1,6 +1,9 @@
 from django.urls import path
+from django.views.generic import RedirectView
 from . import views
 from . import pipeline_views
+from . import views_queue
+from . import views_tech
 
 urlpatterns = [
     path('', views.dispatch_index_view, name='dispatch_index'),
@@ -17,11 +20,14 @@ urlpatterns = [
     path('customers/', views.dispatch_customers_view, name='dispatch_customers'),
     path('customers/<int:customer_id>/', views.dispatch_customer_detail_view, name='dispatch_customer_detail'),
     
-    # 5-Stage ERP Pipeline
-    path('pipeline/1-verification/', pipeline_views.dispatch_verification, name='dispatch_verification'),
-    path('pipeline/2-assignment/', pipeline_views.dispatch_assignment, name='dispatch_assignment'),
-    path('pipeline/2-assignment/undispatch/<int:ticket_id>/', pipeline_views.dispatch_undispatch, name='dispatch_undispatch'),
-    path('pipeline/3-mobile-tech/', pipeline_views.technician_mobile_ui, name='technician_mobile_ui'),
+    # Phase 4A Unified Dispatch Queue & Mobile Tech View
+    path('queue/', views_queue.dispatch_queue_view, name='dispatch_queue'),
+    path('pipeline/queue/', views_queue.dispatch_queue_view, name='dispatch_pipeline_queue'),
+    path('pipeline/1-verification/', RedirectView.as_view(pattern_name='dispatch_queue', permanent=False), name='dispatch_verification'),
+    path('pipeline/2-assignment/', RedirectView.as_view(pattern_name='dispatch_queue', permanent=False), name='dispatch_assignment'),
+    path('pipeline/2-assignment/undispatch/<int:ticket_id>/', views_queue.api_undispatch_ticket, name='dispatch_undispatch'),
+    path('pipeline/3-mobile-tech/', views_tech.technician_mobile_view, name='technician_mobile_ui'),
+    path('my-jobs/', views_tech.technician_mobile_view, name='technician_my_jobs'),
     path('pipeline/4-qa/', pipeline_views.dispatch_qa, name='dispatch_qa'),
     path('pipeline/5-approval/', pipeline_views.dispatch_approval, name='dispatch_approval'),
 
@@ -29,15 +35,20 @@ urlpatterns = [
     path('api/tickets/', views.api_tickets_list, name='api_dispatch_tickets'),
     path('api/tickets/create/', views.api_create_ticket, name='api_dispatch_create_ticket'),
     path('api/tickets/<int:ticket_id>/', views.api_ticket_detail, name='api_dispatch_ticket_detail'),
-    path('api/tickets/<int:ticket_id>/assign/', views.api_assign_ticket, name='api_dispatch_assign_ticket'),
+    path('api/tickets/<int:ticket_id>/assign/', views_queue.api_assign_ticket, name='api_dispatch_assign_ticket'),
     path('api/tickets/<int:ticket_id>/status/', views.api_update_status, name='api_dispatch_update_status'),
-    path('api/tickets/<int:ticket_id>/undispatch/', views.api_undispatch_ticket, name='api_dispatch_undispatch_ticket'),
+    path('api/tickets/<int:ticket_id>/undispatch/', views_queue.api_undispatch_ticket, name='api_dispatch_undispatch_ticket'),
+    path('api/tickets/<int:ticket_id>/correct-timer/', views_queue.api_correct_timer, name='api_dispatch_correct_timer'),
+    path('api/technicians/<int:tech_id>/toggle-duty/', views_queue.api_toggle_technician_duty, name='api_dispatch_toggle_technician_duty'),
+    path('api/tickets/<int:ticket_id>/arrived/', views_tech.api_ticket_arrived, name='api_dispatch_ticket_arrived'),
+    path('api/tickets/<int:ticket_id>/done/', views_tech.api_ticket_done, name='api_dispatch_ticket_done'),
     path('api/tickets/<int:ticket_id>/location/', views.api_update_location, name='api_dispatch_update_location'),
-    path('api/tickets/<int:ticket_id>/complete/', views.api_complete_job, name='api_dispatch_complete_job'),
+    path('api/tickets/<int:ticket_id>/complete/', views_tech.api_ticket_done, name='api_dispatch_complete_job'),
     path('api/tickets/<int:ticket_id>/delete/', views.api_delete_ticket, name='api_dispatch_delete_ticket'),
     path('api/records/<int:record_id>/delete/', views.api_delete_record, name='api_dispatch_delete_record'),
-    path('api/tickets/<int:ticket_id>/contact-attempt/', views.api_log_contact_attempt, name='api_dispatch_contact_attempt'),
-    path('api/tickets/<int:ticket_id>/mark-unreachable/', views.api_mark_unreachable, name='api_dispatch_mark_unreachable'),
+    path('api/tickets/<int:ticket_id>/contact-attempt/', views_tech.api_log_call_attempt, name='api_dispatch_contact_attempt'),
+    path('api/tickets/<int:ticket_id>/return-to-dispatch/', views_tech.api_return_to_dispatch, name='api_dispatch_return_to_dispatch'),
+    path('api/tickets/<int:ticket_id>/mark-unreachable/', views_tech.api_return_to_dispatch, name='api_dispatch_mark_unreachable'),
     path('api/tickets/<int:ticket_id>/send-welcome-sms/', views.api_send_welcome_sms, name='api_dispatch_send_welcome_sms'),
     
     # Phase 3: Customer search & duplicate check APIs

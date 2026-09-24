@@ -1,0 +1,33 @@
+<!-- Technician Duty Roster Toolbar -->
+<div class="card border-0 shadow-sm mb-4" style="background: var(--surface-card); border-radius: 12px; border: 1px solid var(--border-subtle) !important;">
+  <div class="card-body p-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge" style="background: var(--gt-dispatch-violet, #7c3aed); color: #fff;">
+          <i class="fas fa-user-clock"></i>
+        </span>
+        <strong class="small text-uppercase" style="letter-spacing: 0.5px;">Field Technician Roster &amp; Duty Status</strong>
+      </div>
+      <span class="small text-muted">Click any technician badge to toggle On-Duty / Off-Duty</span>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      {% for tech in all_technicians %}
+        <button type="button" 
+                class="btn btn-sm d-inline-flex align-items-center gap-2 tech-duty-btn {% if tech.is_available %}btn-outline-success{% else %}btn-outline-secondary opacity-75{% endif %}"
+                id="techDutyBtn{{ tech.id }}"
+                onclick="toggleTechDuty({{ tech.id }})"
+                title="Click to toggle duty status"
+                style="border-radius: 20px; font-size: 0.78rem;">
+          <span class="status-indicator rounded-circle" style="width: 8px; height: 8px; background: {% if tech.is_available %}#22c55e{% else %}#94a3b8{% endif %};"></span>
+          <strong>{{ tech.name }}</strong>
+          <span class="badge {% if tech.is_available %}bg-success text-white{% else %}bg-secondary text-white{% endif %}" id="techBadge{{ tech.id }}" style="font-size:0.65rem;">
+            {% if tech.is_available %}On Duty{% else %}Off Duty{% endif %}
+          </span>
+        </button>
+      {% empty %}
+        <span class="text-muted small">No technicians registered yet.</span>
+      {% endfor %}
+    </div>
+  </div>
+</div>
