@@ -425,9 +425,6 @@ class Customer(models.Model):
         """Verifies raw_password against portal_password_hash."""
         from django.contrib.auth.hashers import check_password
         if not self.portal_password_hash:
-            # Fallback for unmigrated record
-            if self.portal_password:
-                return self.portal_password == raw_password
             return False
         return check_password(raw_password, self.portal_password_hash)
 

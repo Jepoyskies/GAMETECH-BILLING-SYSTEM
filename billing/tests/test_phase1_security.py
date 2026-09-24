@@ -57,7 +57,7 @@ class Phase1SecurityTestCase(TestCase):
         self.assertFalse(self.customer.check_portal_password("WrongPassword123!@"))
 
     def test_legacy_plaintext_migration_and_fallback(self):
-        """Verify that legacy plaintext passwords fallback cleanly and hash on save."""
+        """Verify that plaintext fallback is removed (unhashed records return False until hashed on save)."""
         # Simulate unmigrated legacy record
         Customer.objects.filter(id=self.customer.id).update(
             portal_password="legacyplaintext1",
@@ -65,9 +65,10 @@ class Phase1SecurityTestCase(TestCase):
         )
         self.customer.refresh_from_db()
         self.assertEqual(self.customer.portal_password, "legacyplaintext1")
-        self.assertTrue(self.customer.check_portal_password("legacyplaintext1"))
+        # Plaintext fallback is removed: unhashed record must return False
+        self.assertFalse(self.customer.check_portal_password("legacyplaintext1"))
 
-        # Trigger save
+        # Trigger save to auto-hash and blank legacy plaintext
         self.customer.save()
         self.customer.refresh_from_db()
         self.assertIsNone(self.customer.portal_password)
