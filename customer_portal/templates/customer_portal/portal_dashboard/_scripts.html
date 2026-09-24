@@ -194,9 +194,9 @@ function handlePaymentClick() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
 
     // If account is suspended, expired, or disconnected, never show Advance Payment popup!
-    // Directly open payment modal to let customer pay and reactivate.
+    // Directly go to checkout to let customer pay and reactivate.
     if (isSuspendedOrExpired || !dueDate) {
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('mockPaymentModal')).show();
+        window.location.href = "{% url 'customer_portal:portal_checkout' %}";
         return;
     }
 
@@ -212,9 +212,13 @@ function handlePaymentClick() {
             confirmButtonColor: '#facc15',
             cancelButtonColor: '#64748b',
             confirmButtonText: 'Yes, extend!',
-        }).then(r => { if (r.isConfirmed) bootstrap.Modal.getOrCreateInstance(document.getElementById('mockPaymentModal')).show(); });
+        }).then(r => { 
+            if (r.isConfirmed) {
+                window.location.href = "{% url 'customer_portal:portal_checkout' %}";
+            }
+        });
     } else {
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('mockPaymentModal')).show();
+        window.location.href = "{% url 'customer_portal:portal_checkout' %}";
     }
 }
 
