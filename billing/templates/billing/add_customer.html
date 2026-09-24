@@ -37,30 +37,139 @@
         <form method="post" autocomplete="off" id="add-customer-form" novalidate>
             {% csrf_token %}
             <input type="hidden" name="next" value="{{ request.GET.next|default:'' }}">
+            {% if prospect %}
+            <input type="hidden" name="prospect_id" value="{{ prospect.id }}">
+            <div class="alert alert-info border-2 mb-4 d-flex justify-content-between align-items-center shadow-sm rounded-3">
+                <div>
+                    <i class="fas fa-handshake me-2 text-primary fs-5"></i>
+                    <span>Converting Referral Lead: <strong>{{ prospect.full_name }}</strong> (Agent: <strong>{{ prospect.agent.name|default:'Direct' }}</strong>)</span>
+                </div>
+                <span class="badge bg-primary">Lead ID #{{ prospect.id }}</span>
+            </div>
+            {% endif %}
 
-            <div class="form-section-label"><i class="fas fa-id-card me-1"></i> Basic Information</div>
+            <!-- STEP 1: MANDATORY POLICY CHECKLIST -->
+            <div class="gt-cl-card p-4 mb-4" id="step1-checklist-card" style="border-left: 4px solid #3b82f6;">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <div>
+                        <h5 class="fw-bold text-white mb-0">
+                            <i class="fas fa-clipboard-check text-primary me-2"></i> Step 1: Onboarding Policy Checklist
+                            <span class="badge bg-danger ms-2" id="checklist-mandatory-pill" style="font-size: 0.72rem;">Mandatory for Installation</span>
+                        </h5>
+                        <p class="text-muted small mb-0 mt-1">All 6 policy commitments must be explained to and confirmed by the applicant before registration.</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-info fw-bold" onclick="quickCheckAllPolicies()">
+                            <i class="fas fa-check-double me-1"></i> Check All 6
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger fw-bold" data-bs-toggle="modal" data-bs-target="#declineWalkinModal">
+                            <i class="fas fa-times me-1"></i> Applicant Declined
+                        </button>
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label class="plan-form-label fw-bold small">Verification Method <span class="req">*</span></label>
+                        <select name="checklist_method" id="checklist_method" class="plan-form-control">
+                            <option value="in_person" selected>In-Person (Walk-In)</option>
+                            <option value="phone">Phone Call</option>
+                            <option value="chat">Online Chat</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <div id="checklist-counter-badge" class="badge bg-secondary p-2 w-100 text-center fw-bold" style="font-size: 0.85rem;">
+                            <i class="fas fa-tasks me-1"></i> 0 of 6 Policies Verified
+                        </div>
+                    </div>
+                </div>
+
+                <!-- The 6 Check Items -->
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="form-check p-3 border rounded bg-dark border-secondary h-100 policy-check-box">
+                            <input class="form-check-input ms-0 me-2 policy-item-checkbox" type="checkbox" name="item_free_install" id="item_free_install" value="true">
+                            <label class="form-check-label text-white small" for="item_free_install" style="cursor: pointer;">
+                                <strong class="d-block text-info">1. Free Standard Installation</strong>
+                                Free standard installation inclusive of fiber drop cable and optical equipment.
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check p-3 border rounded bg-dark border-secondary h-100 policy-check-box">
+                            <input class="form-check-input ms-0 me-2 policy-item-checkbox" type="checkbox" name="item_specific_plan" id="item_specific_plan" value="true">
+                            <label class="form-check-label text-white small" for="item_specific_plan" style="cursor: pointer;">
+                                <strong class="d-block text-info">2. Agreed Plan & Monthly Rate</strong>
+                                Specific package speed, monthly subscription fee, and billing cut-off cycle agreed.
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check p-3 border rounded bg-dark border-secondary h-100 policy-check-box">
+                            <input class="form-check-input ms-0 me-2 policy-item-checkbox" type="checkbox" name="item_no_lockin" id="item_no_lockin" value="true">
+                            <label class="form-check-label text-white small" for="item_no_lockin" style="cursor: pointer;">
+                                <strong class="d-block text-info">3. No 24-Month Lock-in Period</strong>
+                                No mandatory 24-month contract lock; subscriber may cancel anytime without lock-in penalties.
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check p-3 border rounded bg-dark border-secondary h-100 policy-check-box">
+                            <input class="form-check-input ms-0 me-2 policy-item-checkbox" type="checkbox" name="item_staggered_lock" id="item_staggered_lock" value="true">
+                            <label class="form-check-label text-white small" for="item_staggered_lock" style="cursor: pointer;">
+                                <strong class="d-block text-info">4. 60-Day Initial Lock for Staggered Terms</strong>
+                                60-day commitment applies when choosing staggered installation or promotional balance terms.
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check p-3 border rounded bg-dark border-secondary h-100 policy-check-box">
+                            <input class="form-check-input ms-0 me-2 policy-item-checkbox" type="checkbox" name="item_same_day_repair" id="item_same_day_repair" value="true">
+                            <label class="form-check-label text-white small" for="item_same_day_repair" style="cursor: pointer;">
+                                <strong class="d-block text-info">5. Same-Day Field Repair SLA</strong>
+                                Same-day on-site restoration commitment for service trouble tickets filed before 2:00 PM.
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check p-3 border rounded bg-dark border-secondary h-100 policy-check-box">
+                            <input class="form-check-input ms-0 me-2 policy-item-checkbox" type="checkbox" name="item_rebates_24h" id="item_rebates_24h" value="true">
+                            <label class="form-check-label text-white small" for="item_rebates_24h" style="cursor: pointer;">
+                                <strong class="d-block text-info">6. Automated Outage Rebates (24h+)</strong>
+                                Automatic pro-rated billing rebate credited on next cycle for continuous outages exceeding 24 hours.
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="override-bypass-notice" class="alert alert-secondary mt-3 mb-0 py-2 px-3 small border-secondary" style="display: none;">
+                    <i class="fas fa-info-circle text-warning me-1"></i> <strong>Manual Override Active:</strong> Pre-existing installed subscribers skip the onboarding checklist.
+                </div>
+            </div>
+
+            <div class="form-section-label"><i class="fas fa-id-card me-1"></i> Step 2: Subscriber Details & Provisioning</div>
 
             <div class="mb-3">
                 <label class="plan-form-label">Full Name <span class="req">*</span></label>
                 <div class="input-icon-wrapper">
                     <i class="fas fa-user i-icon"></i>
-                    <input type="text" name="full_name" class="plan-form-control" required placeholder="Juan Dela Cruz" data-customer-autocomplete data-submit-button=".btn-submit">
+                    <input type="text" name="full_name" id="input_full_name" class="plan-form-control" required placeholder="Juan Dela Cruz" value="{{ prospect.full_name|default:'' }}" data-customer-autocomplete data-submit-button=".btn-submit">
                 </div>
             </div>
 
             <div class="row g-3 mb-3">
                 <div class="col-md-6">
-                    <label class="plan-form-label">Email Address <span class="req">*</span></label>
+                    <label class="plan-form-label">Email Address</label>
                     <div class="input-icon-wrapper">
                         <i class="fas fa-envelope i-icon"></i>
-                        <input type="email" name="email" class="plan-form-control" required placeholder="juan@example.com">
+                        <input type="email" name="email" class="plan-form-control" placeholder="juan@example.com" value="{{ prospect.email|default:'' }}">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <label class="plan-form-label">Phone Number <span class="req">*</span></label>
                     <div class="input-icon-wrapper">
                         <i class="fas fa-phone i-icon"></i>
-                        <input type="text" name="phone" class="plan-form-control" required placeholder="e.g. 9123456789">
+                        <input type="text" name="phone" id="input_phone" class="plan-form-control" required placeholder="e.g. 09123456789" value="{{ prospect.phone|default:'' }}">
                     </div>
                 </div>
             </div>
@@ -75,7 +184,7 @@
                         {% for category, plans in categorized_plans.items %}
                             <optgroup label="{{ category }}">
                             {% for plan in plans %}
-                                <option value="{{ plan.id }}">{{ plan.name }} - {{ plan.speed_down|default:'N/A' }} / {{ plan.speed_up|default:'N/A' }} (₱{{ plan.price }})</option>
+                                <option value="{{ plan.id }}" {% if prospect and prospect.plan_id == plan.id %}selected{% endif %}>{{ plan.name }} - {{ plan.speed_down|default:'N/A' }} / {{ plan.speed_up|default:'N/A' }} (₱{{ plan.price }})</option>
                             {% endfor %}
                             </optgroup>
                         {% endfor %}
@@ -98,9 +207,9 @@
                 <div class="col-md-6">
                     <label class="plan-form-label">Agent <span class="text-muted small fw-normal">(Optional)</span></label>
                     <select name="agent_id" class="plan-form-control">
-                        <option value="" selected>🚶 Walk-in / Direct (No Agent)</option>
+                        <option value="" {% if not prefill_agent_id %}selected{% endif %}>🚶 Walk-in / Direct (No Agent)</option>
                         {% for agent in agents %}
-                        <option value="{{ agent.id }}">{{ agent.name }}</option>
+                        <option value="{{ agent.id }}" {% if prefill_agent_id == agent.id|stringformat:'s' or prefill_agent_id == agent.id %}selected{% endif %}>{{ agent.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -233,7 +342,7 @@
                     <label class="plan-form-label">Full Address</label>
                     <div class="input-icon-wrapper">
                         <i class="fas fa-home i-icon"></i>
-                        <input type="text" name="address" class="plan-form-control" placeholder="Street Address">
+                        <input type="text" name="address" class="plan-form-control" placeholder="Street Address" value="{{ prospect.address|default:'' }}">
                     </div>
                 </div>
                 <div class="col-md-12">
@@ -247,7 +356,7 @@
                     <select name="barangay_id" class="plan-form-control" required>
                         <option value="">-- Select Barangay --</option>
                         {% for barangay in barangays %}
-                        <option value="{{ barangay.id }}">{{ barangay.name }}</option>
+                        <option value="{{ barangay.id }}" {% if prospect and prospect.barangay_id == barangay.id %}selected{% endif %}>{{ barangay.name }}</option>
                         {% endfor %}
                     </select>
                     {% endif %}
@@ -273,9 +382,57 @@
 
             <div class="d-flex align-items-center justify-content-between gap-2 mt-4">
                 <a href="{% if request.GET.next %}{{ request.GET.next }}{% else %}{% url 'customer_list' %}{% endif %}" class="btn-cancel text-nowrap text-center">Cancel</a>
-                <button type="submit" class="btn-submit text-nowrap"><i class="fas fa-save me-2"></i>Save Customer</button>
+                <button type="submit" class="btn-submit text-nowrap"><i class="fas fa-save me-2"></i>Create Customer & Dispatch Job Order</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Walk-in / Applicant Decline Modal -->
+<div class="modal fade" id="declineWalkinModal" tabindex="-1" aria-labelledby="declineWalkinModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-white border border-danger">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-danger fw-bold" id="declineWalkinModalLabel">
+                    <i class="fas fa-times-circle me-2"></i> Record Applicant Policy Decline
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{% url 'add_customer' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="decline">
+                {% if prospect %}<input type="hidden" name="prospect_id" value="{{ prospect.id }}">{% endif %}
+                <div class="modal-body">
+                    <p class="small text-muted mb-3">
+                        Recording a decline logs a <code>ChecklistConfirmation</code> audit record with the reason, but <strong>creates NO customer</strong> in the billing database.
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Applicant Name</label>
+                        <input type="text" name="applicant_name" id="decline_modal_name" class="form-control bg-dark text-white border-secondary" placeholder="Applicant Name" value="{{ prospect.full_name|default:'' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Contact Number</label>
+                        <input type="text" name="applicant_phone" id="decline_modal_phone" class="form-control bg-dark text-white border-secondary" placeholder="Phone Number" value="{{ prospect.phone|default:'' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Verification Method</label>
+                        <select name="checklist_method" class="form-select bg-dark text-white border-secondary">
+                            <option value="in_person" selected>In-Person (Walk-In)</option>
+                            <option value="phone">Phone Call</option>
+                            <option value="chat">Online Chat</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Decline Reason <span class="text-danger">*</span></label>
+                        <textarea name="decline_reason" class="form-control bg-dark text-white border-secondary" rows="3" placeholder="Reason applicant declined terms..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger fw-bold">Submit Decline Record</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -446,6 +603,9 @@
 
         function updateSetupUI() {
             const installInput = document.getElementById('input_installed_at');
+            const checklistCard = document.getElementById('step1-checklist-card');
+            const bypassNotice = document.getElementById('override-bypass-notice');
+            const mandatoryPill = document.getElementById('checklist-mandatory-pill');
 
             if (radPending && radPending.checked) {
                 // "For Installation (New Applicant)" -> SHOW date field so staff can schedule dispatch
@@ -455,6 +615,11 @@
                 cardInstalled.style.borderColor = '';
                 if (datesRow) datesRow.style.display = 'flex';
                 if (existingHelper) existingHelper.style.display = 'none';
+                if (bypassNotice) bypassNotice.style.display = 'none';
+                if (mandatoryPill) {
+                    mandatoryPill.className = 'badge bg-danger ms-2';
+                    mandatoryPill.textContent = 'Mandatory for Installation';
+                }
                 if (statusSelect) {
                     statusSelect.value = 'pending';
                     if (statusSelect.tomselect) statusSelect.tomselect.setValue('pending');
@@ -467,6 +632,11 @@
                 cardPending.style.borderColor = '';
                 if (datesRow) datesRow.style.display = 'none';
                 if (existingHelper) existingHelper.style.display = 'block';
+                if (bypassNotice) bypassNotice.style.display = 'block';
+                if (mandatoryPill) {
+                    mandatoryPill.className = 'badge bg-secondary ms-2';
+                    mandatoryPill.textContent = 'Bypassed (Manual Override)';
+                }
                 if (installInput) {
                     installInput.removeAttribute('required');
                 }
@@ -475,6 +645,60 @@
                     if (statusSelect.tomselect) statusSelect.tomselect.setValue('expired');
                 }
             }
+        }
+
+        // Checklist Counter & Check All logic
+        function updateChecklistCounter() {
+            const checkboxes = document.querySelectorAll('.policy-item-checkbox');
+            const checkedCount = document.querySelectorAll('.policy-item-checkbox:checked').length;
+            const badge = document.getElementById('checklist-counter-badge');
+            if (badge) {
+                if (checkedCount === 6) {
+                    badge.className = 'badge bg-success p-2 w-100 text-center fw-bold';
+                    badge.innerHTML = '<i class="fas fa-check-circle me-1"></i> All 6 Policies Verified & Confirmed';
+                } else {
+                    badge.className = 'badge bg-warning text-dark p-2 w-100 text-center fw-bold';
+                    badge.innerHTML = '<i class="fas fa-tasks me-1"></i> ' + checkedCount + ' of 6 Policies Verified';
+                }
+            }
+        }
+
+        window.quickCheckAllPolicies = function() {
+            document.querySelectorAll('.policy-item-checkbox').forEach(cb => { cb.checked = true; });
+            updateChecklistCounter();
+        };
+
+        document.querySelectorAll('.policy-item-checkbox').forEach(cb => {
+            cb.addEventListener('change', updateChecklistCounter);
+        });
+        updateChecklistCounter();
+
+        // Sync modal fields on open
+        window.openWalkinDeclineModal = function() {
+            const nameInput = document.getElementById('input_full_name');
+            const phoneInput = document.getElementById('input_phone');
+            const modalName = document.getElementById('decline_modal_name');
+            const modalPhone = document.getElementById('decline_modal_phone');
+            if (nameInput && modalName && nameInput.value) modalName.value = nameInput.value;
+            if (phoneInput && modalPhone && phoneInput.value) modalPhone.value = phoneInput.value;
+        };
+
+        // Enforce checklist validation on submit for "For Installation"
+        const customerForm = document.getElementById('add-customer-form');
+        if (customerForm) {
+            customerForm.addEventListener('submit', function(e) {
+                if (radPending && radPending.checked) {
+                    const checkedCount = document.querySelectorAll('.policy-item-checkbox:checked').length;
+                    if (checkedCount < 6) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        alert('Checklist Incomplete: All 6 policy items must be confirmed before creating an installation subscriber.');
+                        const step1 = document.getElementById('step1-checklist-card');
+                        if (step1) step1.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        return false;
+                    }
+                }
+            });
         }
 
         if (cardInstalled) {

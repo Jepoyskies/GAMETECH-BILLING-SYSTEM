@@ -141,7 +141,13 @@ urlpatterns = [
     # Agent Portal
     path("agent-dashboard/", views.agent_dashboard, name="agent_dashboard"),
     path("agent-dashboard/add/", views.agent_add_prospect, name="agent_add_prospect"),
+    path("agent-dashboard/prospects/<int:prospect_id>/edit/", views.agent_edit_prospect, name="agent_edit_prospect"),
     path("agent-dashboard/cashout/", views.agent_request_cashout, name="agent_request_cashout"),
+
+    # Staff Prospect Inbox & Onboarding
+    path("prospects/", views.prospects_inbox, name="prospects_inbox"),
+    path("prospects/<int:prospect_id>/", views.prospect_detail, name="prospect_detail"),
+    path("prospects/<int:prospect_id>/decline/", views.prospect_decline, name="prospect_decline"),
     
     path("agents/", views.agent_list, name="agent_list"),
     path("agents/add/", views.add_agent, name="add_agent"),

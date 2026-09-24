@@ -1,0 +1,106 @@
+{% extends "billing/agent_portal/base_agent.html" %}
+
+{% block title %}Edit Referral: {{ prospect.full_name }} | Gametech{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Back Link -->
+        <div class="mb-3">
+            <a href="{% url 'agent_dashboard' %}" class="btn btn-outline-secondary btn-sm rounded-pill">
+                <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+            </a>
+        </div>
+
+        <div class="agent-card p-4 p-md-5">
+            <div class="mb-4">
+                <span class="badge bg-info-subtle text-info border border-info-subtle mb-2">Edit Active Referral</span>
+                <h4 class="fw-bold text-white mb-1"><i class="fas fa-edit text-primary me-2"></i> Edit Referral: {{ prospect.full_name }}</h4>
+                <p class="text-muted small mb-0">Update applicant details before staff begins review.</p>
+            </div>
+
+            <form method="POST" action="{% url 'agent_edit_prospect' prospect.id %}">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label class="form-label text-muted small fw-bold">Applicant Full Name <span class="text-danger">*</span></label>
+                    <input type="text" name="full_name" class="form-control" required value="{{ prospect.full_name }}">
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small fw-bold">Philippine Mobile Phone <span class="text-danger">*</span></label>
+                        <input type="tel" name="phone" class="form-control font-monospace" required value="{{ prospect.phone }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small fw-bold">Email Address</label>
+                        <input type="email" name="email" class="form-control" value="{{ prospect.email|default:'' }}">
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small fw-bold">Barangay <span class="text-danger">*</span></label>
+                        <select name="barangay" class="form-select" required>
+                            <option value="">-- Select Barangay --</option>
+                            {% for b in barangays %}
+                                <option value="{{ b.id }}" {% if prospect.barangay_id == b.id %}selected{% endif %}>{{ b.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small fw-bold">Preferred Plan</label>
+                        <select name="plan_id" class="form-select">
+                            <option value="">-- Choose Subscription Plan --</option>
+                            {% for p in plans %}
+                                <option value="{{ p.id }}" {% if prospect.plan_id == p.id %}selected{% endif %}>{{ p.name }} (₱{{ p.price|floatformat:2 }}/mo)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-muted small fw-bold">Complete Street Address / Landmark</label>
+                    <textarea name="address" class="form-control" rows="2">{{ prospect.address|default:'' }}</textarea>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small fw-bold">Preferred Installation Date</label>
+                        <input type="date" name="preferred_installation_date" class="form-control" value="{{ prospect.preferred_installation_date|date:'Y-m-d'|default:'' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small fw-bold">Preferred Initial Payment</label>
+                        <select name="preferred_payment_method" class="form-select">
+                            <option value="cash" {% if prospect.preferred_payment_method == 'cash' %}selected{% endif %}>Cash on Hand (Pay to Tech upon Setup)</option>
+                            <option value="gcash" {% if prospect.preferred_payment_method == 'gcash' %}selected{% endif %}>GCash Digital Payment</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small fw-bold">Valid ID Type</label>
+                        <input type="text" name="id_type" class="form-control" value="{{ prospect.id_type|default:'' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small fw-bold">ID Number</label>
+                        <input type="text" name="id_number" class="form-control font-monospace" value="{{ prospect.id_number|default:'' }}">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label text-muted small fw-bold">Special Instructions / Remarks</label>
+                    <textarea name="notes" class="form-control" rows="2">{{ prospect.notes|default:'' }}</textarea>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary-gt py-3 fs-6">
+                        <i class="fas fa-save me-2"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

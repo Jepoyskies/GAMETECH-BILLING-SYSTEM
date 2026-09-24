@@ -102,3 +102,4 @@ from .cignal_dashboard import *
 from .subscriptions import *
 from .agents import *
 from .staff import *
+from .prospects import *

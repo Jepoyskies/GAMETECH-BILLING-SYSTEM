@@ -1396,13 +1396,19 @@ class ChecklistConfirmation(models.Model):
     item_rebates_24h = models.BooleanField(default=False, help_text="Automated billing rebates for continuous outages exceeding 24 hours")
 
     notes = models.TextField(blank=True, null=True)
+    applicant_name = models.CharField(
+        max_length=255, blank=True, null=True, help_text="Applicant name (for walk-in declines without prospect)"
+    )
+    applicant_phone = models.CharField(
+        max_length=20, blank=True, null=True, help_text="Applicant phone (for walk-in declines without prospect)"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["-created_at"]
 
     def __str__(self):
-        target = self.prospect.full_name if self.prospect else (self.customer.full_name if self.customer else "Unknown")
+        target = self.prospect.full_name if self.prospect else (self.customer.full_name if self.customer else (self.applicant_name or "Unknown"))
         return f"Checklist for {target} ({self.get_outcome_display()}) by {self.confirmed_by}"
 
 

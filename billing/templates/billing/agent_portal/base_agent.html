@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{% block title %}Agent Portal | Gametech Unli Fiber{% endblock %}</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gt-primary: #0284c7;
+            --gt-primary-dark: #0369a1;
+            --gt-bg: #0f172a;
+            --gt-card-bg: #1e293b;
+            --gt-border: rgba(255, 255, 255, 0.08);
+            --gt-text: #f8fafc;
+            --gt-muted: #94a3b8;
+        }
+        body {
+            background-color: var(--gt-bg);
+            color: var(--gt-text);
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            padding-bottom: 60px;
+        }
+        .agent-header {
+            background: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--gt-border);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .agent-card {
+            background: var(--gt-card-bg);
+            border: 1px solid var(--gt-border);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+        }
+        .btn-primary-gt {
+            background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+            border: none;
+            color: white;
+            font-weight: 600;
+            border-radius: 12px;
+            padding: 10px 18px;
+            transition: all 0.2s ease;
+        }
+        .btn-primary-gt:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+            color: white;
+        }
+        .form-control, .form-select {
+            background-color: #0f172a !important;
+            border-color: rgba(255, 255, 255, 0.15) !important;
+            color: #f8fafc !important;
+            border-radius: 10px;
+            padding: 10px 14px;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--gt-primary) !important;
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.25) !important;
+        }
+        .badge-status {
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Top Mobile Navigation Header -->
+    <header class="agent-header py-3 px-3 px-md-4 mb-4">
+        <div class="container d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <a href="{% url 'agent_dashboard' %}" class="text-decoration-none d-flex align-items-center gap-2">
+                    <div class="rounded-3 bg-primary d-flex align-items-center justify-content-center text-white" style="width: 38px; height: 38px;">
+                        <i class="fas fa-bolt fs-5"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold text-white fs-6 lh-1">GAMETECH</div>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.65rem;">AGENT PORTAL</span>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Agent Identity & Logout -->
+            <div class="d-flex align-items-center gap-3">
+                <div class="text-end d-none d-sm-block">
+                    <div class="fw-bold text-white small lh-1">{{ request.user.agent_profile.name|default:request.user.username }}</div>
+                    <span class="text-muted" style="font-size: 0.72rem;">Sales Agent</span>
+                </div>
+                <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm rounded-pill px-3" title="Sign Out">
+                    <i class="fas fa-sign-out-alt me-1"></i> <span class="d-none d-sm-inline">Logout</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="container px-3 px-md-4">
+        <!-- Django Flash Messages -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show border-2 rounded-3 shadow-sm mb-4" role="alert">
+                    <i class="fas {% if message.tags == 'error' %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %} me-2"></i>
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -34,6 +34,8 @@ from billing.models import (
     AddOnRequest,
     Notification,
     ImprovementRequest,
+    Prospect,
+    ChecklistConfirmation,
 )
 import requests
 from network_manager.models import MikrotikDevice, NapBox
@@ -43,74 +45,102 @@ import calendar
 from billing.views.services import get_categorized_plans
 
 
+def _get_add_customer_context(request, prefill_username="", prospect=None, prefill_agent_id=None):
+    return {
+        "categorized_plans": get_categorized_plans(),
+        "devices": MikrotikDevice.objects.all(),
+        "agents": Agent.objects.all(),
+        "barangays": Barangay.objects.all(),
+        "account_types": AccountType.objects.all(),
+        "prefill_username": prefill_username,
+        "prospect": prospect,
+        "prefill_agent_id": prefill_agent_id or (prospect.agent_id if prospect else None),
+    }
+
+
 @login_required
-@role_required(["Admin", "Agent", "CSR"])
+@role_required(["Admin", "Staff", "CSR", "Dispatch"])
 @permission_required("billing.add_customer", raise_exception=True)
 def add_customer(request):
+    if hasattr(request.user, "agent_profile") and not request.user.is_staff:
+        messages.error(request, "Agents must submit referrals through the Agent Portal.")
+        return redirect("agent_dashboard")
+
+    from django.utils.crypto import get_random_string
+
+    prospect_id = request.POST.get("prospect_id") or request.GET.get("prospect_id")
+    prospect = Prospect.objects.filter(id=prospect_id).first() if prospect_id else None
+    agent_id_param = request.GET.get("agent_id")
+
     if request.method == "POST":
-        from django.utils.crypto import get_random_string
+        action = request.POST.get("action", "").strip()
+
+        # Handle Checklist Decline Action
+        if action == "decline":
+            applicant_name = (request.POST.get("full_name") or request.POST.get("applicant_name") or "").strip()
+            applicant_phone = (request.POST.get("phone") or request.POST.get("applicant_phone") or "").strip()
+            decline_reason = (request.POST.get("decline_reason") or "Declined at policy checklist stage.").strip()
+            checklist_method = request.POST.get("checklist_method", "in_person")
+
+            ChecklistConfirmation.objects.create(
+                prospect=prospect,
+                confirmed_by=request.user,
+                method=checklist_method,
+                outcome="declined",
+                decline_reason=decline_reason,
+                applicant_name=applicant_name or (prospect.full_name if prospect else "Walk-in Applicant"),
+                applicant_phone=applicant_phone or (prospect.phone if prospect else ""),
+                notes=f"Walk-in/applicant declined policy terms. Recorded by {request.user.username}.",
+            )
+            if prospect:
+                prospect.status = "declined"
+                prospect.decline_reason = decline_reason
+                prospect.save(update_fields=["status", "decline_reason", "updated_at"])
+
+            try:
+                SystemLog.objects.create(
+                    table_name="ChecklistConfirmation",
+                    record_id=str(prospect.id if prospect else "walk-in"),
+                    action="DECLINE",
+                    changed_by=request.user.username,
+                    target_name=applicant_name or (prospect.full_name if prospect else "Walk-in Applicant"),
+                    old_data="",
+                    new_data=f"Policy declined: {decline_reason}",
+                )
+            except Exception:
+                pass
+
+            messages.info(request, "Applicant policy terms decline recorded. No customer created.")
+            if prospect:
+                return redirect("prospects_inbox")
+            return redirect("customer_list")
 
         email = (request.POST.get("email") or "").strip()
         phone = (request.POST.get("phone") or "").strip()
         pppoe_username = (request.POST.get("pppoe_username") or "").strip()
+        installation_status = request.POST.get("installation_status", "pending")
+        if not installation_status:
+            installation_status = "pending"
 
         # Duplicate checks
         if phone and Customer.objects.filter(phone=phone).exists():
             messages.error(request, "A customer with this phone number already exists.")
-            context = {
-                "categorized_plans": get_categorized_plans(),
-                "devices": MikrotikDevice.objects.all(),
-                "agents": Agent.objects.all(),
-                "barangays": Barangay.objects.all(),
-                "account_types": AccountType.objects.all(),
-                "prefill_username": pppoe_username,
-            }
+            context = _get_add_customer_context(request, pppoe_username, prospect, agent_id_param)
             return render(request, "billing/add_customer.html", context)
 
         if email and Customer.objects.filter(email__iexact=email).exists():
             messages.error(request, "A customer with this email address already exists.")
-            context = {
-                "categorized_plans": get_categorized_plans(),
-                "devices": MikrotikDevice.objects.all(),
-                "agents": Agent.objects.all(),
-                "barangays": Barangay.objects.all(),
-                "account_types": AccountType.objects.all(),
-                "prefill_username": pppoe_username,
-            }
+            context = _get_add_customer_context(request, pppoe_username, prospect, agent_id_param)
             return render(request, "billing/add_customer.html", context)
 
         if pppoe_username and Customer.objects.filter(pppoe_username__iexact=pppoe_username).exists():
             messages.error(request, "A customer with this PPPoE username already exists.")
-            context = {
-                "categorized_plans": get_categorized_plans(),
-                "devices": MikrotikDevice.objects.all(),
-                "agents": Agent.objects.all(),
-                "barangays": Barangay.objects.all(),
-                "account_types": AccountType.objects.all(),
-                "prefill_username": pppoe_username,
-            }
+            context = _get_add_customer_context(request, pppoe_username, prospect, agent_id_param)
             return render(request, "billing/add_customer.html", context)
 
-        if request.user.role == "Agent":
-            barangay_name = request.POST.get("barangay_name")
-            if barangay_name:
-                barangay, _ = Barangay.objects.get_or_create(
-                    name__iexact=barangay_name,
-                    defaults={"name": barangay_name, "health_status": "Excellent"},
-                )
-                barangay_id = barangay.id
-            else:
-                barangay_id = None
-            latitude = None
-            longitude = None
-        else:
-            barangay_id = request.POST.get("barangay_id")
-            latitude = request.POST.get("latitude") or None
-            longitude = request.POST.get("longitude") or None
-
-        installation_status = request.POST.get("installation_status")
-        if not installation_status:
-            installation_status = "pending"
+        barangay_id = request.POST.get("barangay_id")
+        latitude = request.POST.get("latitude") or None
+        longitude = request.POST.get("longitude") or None
 
         installed_at_val = None
         installed_at_str = request.POST.get("installed_at")
@@ -132,67 +162,178 @@ def add_customer(request):
             except ValueError:
                 expires_at_val = None
 
-        if installation_status == "pending":
-            cust_status = "pending"
+        # Check Branch: Installed / Existing Subscriber Manual Override vs For Installation
+        if installation_status == "installed":
+            # Exception 2: Manual override requires permission & audit log, skips checklist & install ticket
+            is_authorized = (
+                request.user.is_staff
+                or request.user.is_superuser
+                or request.user.has_perm("billing.create_customer")
+            )
+            if not is_authorized:
+                messages.error(
+                    request,
+                    "Permission denied: Manual override for existing installed subscribers requires authorization.",
+                )
+                context = _get_add_customer_context(request, pppoe_username, prospect, agent_id_param)
+                return render(request, "billing/add_customer.html", context)
+
+            cust_status = request.POST.get("status")
+            if not cust_status or (cust_status == "active" and not expires_at_val):
+                cust_status = "expired"
+
+            with transaction.atomic():
+                customer = Customer.objects.create(
+                    full_name=request.POST.get("full_name"),
+                    email=email or None,
+                    phone=phone,
+                    address=request.POST.get("address"),
+                    pppoe_username=pppoe_username or None,
+                    pppoe_password=request.POST.get("pppoe_password") or get_random_string(8),
+                    status=cust_status,
+                    installation_status="installed",
+                    installed_at=installed_at_val,
+                    expires_at=expires_at_val,
+                    plan_id=request.POST.get("plan_id"),
+                    mikrotik_device_id=request.POST.get("device_id") or None,
+                    agent_id=request.POST.get("agent_id") or None,
+                    original_agent_id=request.POST.get("agent_id") or None,
+                    barangay_id=barangay_id,
+                    account_type_id=request.POST.get("account_type_id") or None,
+                    latitude=latitude,
+                    longitude=longitude,
+                    cignalplay_no=request.POST.get("cignalplay_no"),
+                    cignalplay_date=request.POST.get("cignalplay_date") or None,
+                    cignalbox_no=request.POST.get("cignalbox_no"),
+                    cignalbox_date=request.POST.get("cignalbox_date") or None,
+                    created_form_by=request.user.username,
+                )
+
+                SystemLog.objects.create(
+                    table_name="Customer",
+                    record_id=str(customer.id),
+                    action="MANUAL_OVERRIDE_ADD",
+                    changed_by=request.user.username,
+                    target_name=customer.full_name,
+                    old_data="",
+                    new_data=f"Manual Override: Existing Installed Subscriber created without checklist or install ticket. Name: {customer.full_name}, Status: {customer.status}",
+                )
+
+            messages.success(request, "Existing subscriber (manual override) added successfully!")
+            next_url = request.POST.get("next") or request.GET.get("next")
+            if next_url:
+                return redirect(next_url)
+            return redirect("customer_list")
+
         else:
-            if request.user.role == "Agent":
-                cust_status = "pending"
-            else:
-                cust_status = request.POST.get("status")
-                # An installed subscriber with no future expiration date or no payment cannot be active
-                if not cust_status or (cust_status == "active" and not expires_at_val):
-                    cust_status = "expired"
+            # Rule 1: MANDATORY SERVER-SIDE CHECKLIST FOR "FOR INSTALLATION" (Pending Install)
+            item_free_install = request.POST.get("item_free_install") in ["true", "True", "on", "1", True]
+            item_specific_plan = request.POST.get("item_specific_plan") in ["true", "True", "on", "1", True]
+            item_no_lockin = request.POST.get("item_no_lockin") in ["true", "True", "on", "1", True]
+            item_staggered_lock = request.POST.get("item_staggered_lock") in ["true", "True", "on", "1", True]
+            item_same_day_repair = request.POST.get("item_same_day_repair") in ["true", "True", "on", "1", True]
+            item_rebates_24h = request.POST.get("item_rebates_24h") in ["true", "True", "on", "1", True]
+            checklist_method = request.POST.get("checklist_method", "in_person")
 
-        customer = Customer.objects.create(
-            full_name=request.POST.get("full_name"),
-            email=request.POST.get("email") or None,
-            phone=request.POST.get("phone"),
-            address=request.POST.get("address"),
-            pppoe_username=request.POST.get("pppoe_username") or None,
-            pppoe_password=request.POST.get("pppoe_password") or get_random_string(8),
-            status=cust_status,
-            installation_status=installation_status,
-            installed_at=installed_at_val,
-            expires_at=expires_at_val,
-            plan_id=request.POST.get("plan_id"),
-            mikrotik_device_id=request.POST.get("device_id") or None,
-            agent_id=request.POST.get("agent_id") or None,
-            barangay_id=barangay_id,
-            account_type_id=request.POST.get("account_type_id") or None,
-            latitude=latitude,
-            longitude=longitude,
-            cignalplay_no=request.POST.get("cignalplay_no"),
-            cignalplay_date=request.POST.get("cignalplay_date") or None,
-            cignalbox_no=request.POST.get("cignalbox_no"),
-            cignalbox_date=request.POST.get("cignalbox_date") or None,
-            created_form_by=request.user.username,
-        )
+            all_checked = all([
+                item_free_install, item_specific_plan, item_no_lockin,
+                item_staggered_lock, item_same_day_repair, item_rebates_24h
+            ])
 
-        from billing.models import SystemLog
+            if not all_checked:
+                messages.error(
+                    request,
+                    "Checklist confirmation is mandatory for all new installations. All 6 policy items must be confirmed before creating a customer.",
+                )
+                context = _get_add_customer_context(request, pppoe_username, prospect, agent_id_param)
+                return render(request, "billing/add_customer.html", context)
 
-        SystemLog.objects.create(
-            table_name="Customer",
-            record_id=str(customer.id),
-            action="ADD",
-            changed_by=request.user.username,
-            target_name=customer.full_name,
-            old_data="",
-            new_data=f"Name: {customer.full_name}\nPhone: {customer.phone}\nStatus: {customer.status}\nInstallation: {customer.installation_status}",
-        )
-        messages.success(request, "Customer added successfully!")
-        next_url = request.POST.get("next") or request.GET.get("next")
-        if next_url:
-            return redirect(next_url)
-        return redirect("customer_list")
-    context = {
-        "categorized_plans": get_categorized_plans(),
-        "devices": MikrotikDevice.objects.all(),
-        "agents": Agent.objects.all(),
-        "barangays": Barangay.objects.all(),
-        "account_types": AccountType.objects.all(),
-        "prefill_username": request.GET.get("pppoe_username", ""),
-    }
+            policy_snapshot = {
+                "item_free_install": "Free installation inclusive of standard fiber drop cable and optical equipment.",
+                "item_specific_plan": "Agreed monthly subscription rate, package speed, and monthly billing cut-off cycle.",
+                "item_no_lockin": "No mandatory 24-month lock-in contract; subscriber may cancel anytime without pre-termination fees.",
+                "item_staggered_lock": "60-day initial payment lock applies when choosing staggered installation or promotional balance terms.",
+                "item_same_day_repair": "Same-day on-site restoration SLA commitment for network fault tickets logged before 2:00 PM.",
+                "item_rebates_24h": "Automatic, pro-rated billing rebate credited on the next cycle for continuous outages exceeding 24 hours.",
+            }
+
+            with transaction.atomic():
+                agent_id = request.POST.get("agent_id") or None
+                customer = Customer.objects.create(
+                    full_name=request.POST.get("full_name"),
+                    email=email or None,
+                    phone=phone,
+                    address=request.POST.get("address"),
+                    pppoe_username=pppoe_username or None,
+                    pppoe_password=request.POST.get("pppoe_password") or get_random_string(8),
+                    status="pending",
+                    installation_status="pending",
+                    installed_at=installed_at_val,
+                    expires_at=expires_at_val,
+                    plan_id=request.POST.get("plan_id"),
+                    mikrotik_device_id=request.POST.get("device_id") or None,
+                    agent_id=agent_id,
+                    original_agent_id=agent_id,
+                    barangay_id=barangay_id,
+                    account_type_id=request.POST.get("account_type_id") or None,
+                    latitude=latitude,
+                    longitude=longitude,
+                    cignalplay_no=request.POST.get("cignalplay_no"),
+                    cignalplay_date=request.POST.get("cignalplay_date") or None,
+                    cignalbox_no=request.POST.get("cignalbox_no"),
+                    cignalbox_date=request.POST.get("cignalbox_date") or None,
+                    created_form_by=request.user.username,
+                )
+
+                ChecklistConfirmation.objects.create(
+                    customer=customer,
+                    prospect=prospect,
+                    confirmed_by=request.user,
+                    method=checklist_method,
+                    outcome="agreed",
+                    item_free_install=True,
+                    item_specific_plan=True,
+                    item_no_lockin=True,
+                    item_staggered_lock=True,
+                    item_same_day_repair=True,
+                    item_rebates_24h=True,
+                    policy_snapshot=policy_snapshot,
+                    applicant_name=customer.full_name,
+                    applicant_phone=customer.phone,
+                )
+
+                if prospect:
+                    prospect.converted_customer = customer
+                    prospect.status = "converted"
+                    prospect.save(update_fields=["converted_customer", "status", "updated_at"])
+
+                SystemLog.objects.create(
+                    table_name="Customer",
+                    record_id=str(customer.id),
+                    action="ADD",
+                    changed_by=request.user.username,
+                    target_name=customer.full_name,
+                    old_data="",
+                    new_data=f"Name: {customer.full_name}\nPhone: {customer.phone}\nStatus: {customer.status}\nInstallation: {customer.installation_status}\nChecklist: Confirmed 6/6 by {request.user.username}",
+                )
+
+            messages.success(
+                request,
+                f"Customer {customer.full_name} created successfully! Policy checklist confirmed and installation order dispatched to the unassigned queue.",
+            )
+            next_url = request.POST.get("next") or request.GET.get("next")
+            if next_url:
+                return redirect(next_url)
+            return redirect("customer_list")
+
+    context = _get_add_customer_context(
+        request,
+        request.GET.get("pppoe_username", ""),
+        prospect,
+        agent_id_param,
+    )
     return render(request, "billing/add_customer.html", context)
+
 
 
 @role_required(["Admin", "Editor"])

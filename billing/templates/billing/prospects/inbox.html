@@ -1,0 +1,198 @@
+{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}Prospect Referrals Inbox | Gametech{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-3 px-md-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h4 class="mb-1 fw-bold text-white"><i class="fas fa-inbox me-2 text-primary"></i> Prospect Referrals Inbox</h4>
+            <p class="mb-0 text-muted small">Review agent referral leads, run mandatory onboarding policy checklists, and convert to subscribers.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'add_customer' %}" class="btn btn-primary btn-sm fw-bold">
+                <i class="fas fa-user-plus me-1"></i> Add Direct Walk-in
+            </a>
+        </div>
+    </div>
+
+    <!-- Status Tabs -->
+    <div class="row g-2 mb-4">
+        <div class="col-6 col-md-2">
+            <a href="{% url 'prospects_inbox' %}?status=all" class="text-decoration-none">
+                <div class="dashboard-card p-3 text-center {% if current_status == 'all' %}border-primary shadow{% endif %}">
+                    <span class="text-muted small d-block">All Leads</span>
+                    <strong class="fs-4 text-white">{{ counts.all }}</strong>
+                </div>
+            </a>
+        </div>
+        <div class="col-6 col-md-2">
+            <a href="{% url 'prospects_inbox' %}?status=submitted" class="text-decoration-none">
+                <div class="dashboard-card p-3 text-center {% if current_status == 'submitted' %}border-warning shadow{% endif %}">
+                    <span class="text-warning small d-block fw-bold"><i class="fas fa-clock me-1"></i> New Submissions</span>
+                    <strong class="fs-4 text-warning">{{ counts.submitted }}</strong>
+                </div>
+            </a>
+        </div>
+        <div class="col-6 col-md-2">
+            <a href="{% url 'prospects_inbox' %}?status=under_review" class="text-decoration-none">
+                <div class="dashboard-card p-3 text-center {% if current_status == 'under_review' %}border-info shadow{% endif %}">
+                    <span class="text-info small d-block fw-bold"><i class="fas fa-search me-1"></i> Under Review</span>
+                    <strong class="fs-4 text-info">{{ counts.under_review }}</strong>
+                </div>
+            </a>
+        </div>
+        <div class="col-6 col-md-2">
+            <a href="{% url 'prospects_inbox' %}?status=converted" class="text-decoration-none">
+                <div class="dashboard-card p-3 text-center {% if current_status == 'converted' %}border-success shadow{% endif %}">
+                    <span class="text-success small d-block fw-bold"><i class="fas fa-check-circle me-1"></i> Converted</span>
+                    <strong class="fs-4 text-success">{{ counts.converted }}</strong>
+                </div>
+            </a>
+        </div>
+        <div class="col-6 col-md-2">
+            <a href="{% url 'prospects_inbox' %}?status=declined" class="text-decoration-none">
+                <div class="dashboard-card p-3 text-center {% if current_status == 'declined' %}border-danger shadow{% endif %}">
+                    <span class="text-danger small d-block fw-bold"><i class="fas fa-times-circle me-1"></i> Declined</span>
+                    <strong class="fs-4 text-danger">{{ counts.declined }}</strong>
+                </div>
+            </a>
+        </div>
+        <div class="col-6 col-md-2">
+            <a href="{% url 'prospects_inbox' %}?duplicate=1" class="text-decoration-none">
+                <div class="dashboard-card p-3 text-center {% if duplicate_filter == '1' %}border-warning shadow bg-warning-subtle{% endif %}">
+                    <span class="text-warning small d-block fw-bold"><i class="fas fa-exclamation-triangle me-1"></i> Duplicates</span>
+                    <strong class="fs-4 text-warning">{{ counts.duplicates }}</strong>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters & Search -->
+    <div class="gt-cl-card p-3 mb-4">
+        <form method="GET" action="{% url 'prospects_inbox' %}" class="row g-2 align-items-center">
+            <input type="hidden" name="status" value="{{ current_status }}">
+            {% if duplicate_filter %}
+                <input type="hidden" name="duplicate" value="{{ duplicate_filter }}">
+            {% endif %}
+            <div class="col-md-5">
+                <div class="input-group">
+                    <span class="input-group-text bg-dark border-secondary text-muted"><i class="fas fa-search"></i></span>
+                    <input type="text" name="q" value="{{ search_q }}" class="form-control bg-dark text-white border-secondary" placeholder="Search applicant name, phone, address...">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select name="agent_id" class="form-select bg-dark text-white border-secondary">
+                    <option value="">-- All Referring Agents --</option>
+                    {% for ag in agents %}
+                        <option value="{{ ag.id }}" {% if selected_agent == ag.id|stringformat:"s" %}selected{% endif %}>{{ ag.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm fw-bold w-100"><i class="fas fa-filter me-1"></i> Filter</button>
+                <a href="{% url 'prospects_inbox' %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-redo"></i></a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Table -->
+    <div class="gt-cl-card p-0 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 text-white" style="font-size: 0.9rem;">
+                <thead class="bg-dark text-muted text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+                    <tr>
+                        <th class="ps-3 py-3">Applicant Name</th>
+                        <th class="py-3">Contact & Address</th>
+                        <th class="py-3">Preferred Plan</th>
+                        <th class="py-3">Referring Agent</th>
+                        <th class="py-3">Submitted</th>
+                        <th class="py-3">Status</th>
+                        <th class="text-end pe-3 py-3">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in prospects %}
+                    <tr>
+                        <td class="ps-3 py-3">
+                            <strong class="text-white d-block">{{ p.full_name }}</strong>
+                            {% if p.duplicate_flag %}
+                                <span class="badge bg-warning text-dark font-monospace" style="font-size: 0.7rem;">
+                                    <i class="fas fa-exclamation-triangle me-1"></i> DUPLICATE WARNING
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3">
+                            <span class="d-block font-monospace text-info"><i class="fas fa-phone me-1 text-muted"></i>{{ p.phone }}</span>
+                            <span class="text-muted small">{{ p.address|default:p.barangay.name|default:"No address" }}</span>
+                        </td>
+                        <td class="py-3">
+                            {% if p.plan %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ p.plan.name }}</span>
+                            {% else %}
+                                <span class="text-muted small">Pending Selection</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3">
+                            {% if p.agent %}
+                                <a href="{% url 'view_agent' p.agent.id %}" class="text-decoration-none text-white fw-semibold">
+                                    <i class="fas fa-handshake me-1 text-primary"></i> {{ p.agent.name }}
+                                </a>
+                            {% else %}
+                                <span class="text-muted small">Walk-In / Direct</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 text-muted small">
+                            {{ p.created_at|date:"M d, Y" }}
+                            <div style="font-size: 0.72rem;">{{ p.created_at|time:"H:i" }}</div>
+                        </td>
+                        <td class="py-3">
+                            {% if p.status == 'submitted' %}
+                                <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i> Submitted</span>
+                            {% elif p.status == 'under_review' %}
+                                <span class="badge bg-info"><i class="fas fa-search me-1"></i> Under Review</span>
+                            {% elif p.status == 'converted' %}
+                                <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> Converted</span>
+                            {% elif p.status == 'declined' %}
+                                <span class="badge bg-danger"><i class="fas fa-times me-1"></i> Declined</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ p.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-3 py-3">
+                            <a href="{% url 'prospect_detail' p.id %}" class="btn btn-sm btn-outline-primary fw-semibold">
+                                <i class="fas fa-external-link-alt me-1"></i> Review
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="fas fa-inbox fa-3x mb-3 text-secondary opacity-50"></i>
+                            <p class="mb-0">No referral prospects found for this filter criteria.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if prospects.has_other_pages %}
+        <div class="p-3 border-top border-secondary d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Page {{ prospects.number }} of {{ prospects.paginator.num_pages }}</span>
+            <ul class="pagination pagination-sm mb-0">
+                {% if prospects.has_previous %}
+                    <li class="page-item"><a class="page-link bg-dark text-white border-secondary" href="?page={{ prospects.previous_page_number }}&status={{ current_status }}&q={{ search_q }}&agent_id={{ selected_agent }}">Previous</a></li>
+                {% endif %}
+                {% if prospects.has_next %}
+                    <li class="page-item"><a class="page-link bg-dark text-white border-secondary" href="?page={{ prospects.next_page_number }}&status={{ current_status }}&q={{ search_q }}&agent_id={{ selected_agent }}">Next</a></li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

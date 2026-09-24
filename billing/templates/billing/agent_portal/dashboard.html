@@ -1,0 +1,176 @@
+{% extends "billing/agent_portal/base_agent.html" %}
+
+{% block title %}My Agent Portal | Gametech Unli Fiber{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Welcome & Quick CTA Banner -->
+    <div class="col-12">
+        <div class="agent-card p-4" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-left: 5px solid #0284c7;">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle mb-2">Authenticated Sales Agent</span>
+                    <h4 class="fw-bold text-white mb-1">Mabuhay, {{ agent.name }}!</h4>
+                    <p class="text-muted small mb-0">Track your submitted applicant leads, review installation status, and check your referral incentives.</p>
+                </div>
+                <div>
+                    <a href="{% url 'agent_add_prospect' %}" class="btn btn-primary-gt shadow-sm px-4 py-2 fs-6">
+                        <i class="fas fa-user-plus me-2"></i> Submit New Referral
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Incentive Engine & Payout Placeholders (Phase 5) -->
+    <div class="col-md-6">
+        <div class="agent-card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="fw-bold text-white mb-0">
+                    <i class="fas fa-chart-line text-warning me-2"></i> Progress Toward Next 5 Referrals
+                </h6>
+                <span class="badge bg-warning text-dark font-monospace" style="font-size: 0.65rem;">
+                    [Phase 5 Placeholder: Incentive Progress Engine]
+                </span>
+            </div>
+            <p class="text-muted small mb-3">Earn PHP 500.00 for every successfully qualified subscriber. Payouts trigger in batches of 5 (PHP 2,500.00).</p>
+            
+            <div class="d-flex justify-content-between small text-muted mb-1">
+                <span>Batch Qualification Target</span>
+                <strong class="text-warning">{{ qualified_count|default:"0" }} / 5 Qualified</strong>
+            </div>
+            <div class="progress bg-dark border border-secondary mb-3" style="height: 10px; border-radius: 8px;">
+                <div class="progress-bar bg-warning" role="progressbar" style="width: {{ progress_pct|default:'0' }}%;" aria-valuenow="{{ qualified_count|default:'0' }}" aria-valuemin="0" aria-valuemax="5"></div>
+            </div>
+            <div class="p-2 rounded bg-dark border border-secondary text-muted small">
+                <i class="fas fa-info-circle text-info me-1"></i> Full automatic batch locking, 60-day staggered lock, and 2nd-month qualification engine will activate in Phase 5.
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="agent-card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="fw-bold text-white mb-0">
+                    <i class="fas fa-wallet text-success me-2"></i> Commission Payout History
+                </h6>
+                <span class="badge bg-secondary font-monospace" style="font-size: 0.65rem;">
+                    [Phase 5 Placeholder: Payout History Engine]
+                </span>
+            </div>
+            <p class="text-muted small mb-3">Disbursements and admin payment confirmations will be recorded here.</p>
+            
+            <div class="text-center py-3 text-muted">
+                <i class="fas fa-receipt fa-2x mb-2 text-secondary opacity-50"></i>
+                <div class="small">No payout batches disbursed yet. (Engine activating in Phase 5).</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Referrals List -->
+    <div class="col-12">
+        <div class="agent-card p-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <h5 class="fw-bold text-white mb-0">
+                    <i class="fas fa-users text-primary me-2"></i> My Referrals ({{ prospects|length }})
+                </h5>
+                <span class="text-muted small">Real-time status of your submitted applicants</span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 text-white" style="font-size: 0.88rem;">
+                    <thead class="bg-dark text-muted text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">
+                        <tr>
+                            <th class="ps-2 py-3">Applicant Name</th>
+                            <th class="py-3">Contact & Barangay</th>
+                            <th class="py-3">Plan</th>
+                            <th class="py-3">Date Submitted</th>
+                            <th class="py-3">Application Status</th>
+                            <th class="py-3">Payment Progress</th>
+                            <th class="text-end pe-2 py-3">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in prospects %}
+                        <tr>
+                            <td class="ps-2 py-3">
+                                <strong class="text-white d-block">{{ p.full_name }}</strong>
+                                {% if p.duplicate_flag %}
+                                    <span class="badge bg-warning text-dark font-monospace" style="font-size: 0.68rem;">
+                                        <i class="fas fa-flag me-1"></i> Flagged for Review
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3">
+                                <span class="d-block font-monospace text-info">{{ p.phone }}</span>
+                                <span class="text-muted small">{{ p.barangay.name|default:p.address|default:"Unassigned" }}</span>
+                            </td>
+                            <td class="py-3">
+                                {% if p.plan %}
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ p.plan.name }}</span>
+                                {% else %}
+                                    <span class="text-muted small">TBD</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 text-muted small">
+                                {{ p.created_at|date:"M d, Y" }}
+                            </td>
+                            <td class="py-3">
+                                {% if p.status == 'submitted' %}
+                                    <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i> Submitted</span>
+                                {% elif p.status == 'under_review' %}
+                                    <span class="badge bg-info"><i class="fas fa-search me-1"></i> Under Review</span>
+                                {% elif p.status == 'converted' %}
+                                    <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> Converted to Customer</span>
+                                {% elif p.status == 'declined' %}
+                                    <span class="badge bg-danger"><i class="fas fa-times me-1"></i> Declined</span>
+                                    {% if p.decline_reason %}
+                                        <div class="text-danger small mt-1" style="font-size: 0.72rem;">{{ p.decline_reason|truncatechars:40 }}</div>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ p.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3">
+                                {% if p.converted_customer %}
+                                    {% if p.converted_customer.first_payment_date %}
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                            <i class="fas fa-check me-1"></i> 1st Payment Logged
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                                            <i class="fas fa-hourglass-half me-1"></i> Pending 1st Payment
+                                        </span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted small">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-2 py-3">
+                                {% if not p.opened_by_staff_at and p.status == 'submitted' %}
+                                    <a href="{% url 'agent_edit_prospect' p.id %}" class="btn btn-sm btn-outline-primary fw-semibold">
+                                        <i class="fas fa-edit me-1"></i> Edit
+                                    </a>
+                                {% else %}
+                                    <span class="badge bg-secondary text-muted" title="Staff has opened this referral for review. Details are locked.">
+                                        <i class="fas fa-lock me-1"></i> Reviewing
+                                    </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="fas fa-user-plus fa-3x mb-3 text-secondary opacity-50"></i>
+                                <p class="mb-2">You haven't submitted any referrals yet.</p>
+                                <a href="{% url 'agent_add_prospect' %}" class="btn btn-sm btn-primary-gt">Submit Your First Referral</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
