@@ -115,6 +115,7 @@ class RouterDryRunTestCase(TestCase):
         cust = Customer.objects.create(
             full_name="Signal Subscriber",
             pppoe_username="signal_ro",
+            pppoe_password="pppoe_pass_123",
             status="active",
             installation_status="installed",
             mikrotik_device=self.device,
@@ -136,6 +137,7 @@ class RouterDryRunTestCase(TestCase):
         cust = Customer.objects.create(
             full_name="Dry Run Subscriber",
             pppoe_username="dry_run_cust",
+            pppoe_password="pppoe_pass_123",
             status="active",
             installation_status="installed",
             mikrotik_device=self.device,
