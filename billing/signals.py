@@ -42,11 +42,12 @@ def sync_customer_to_mikrotik(sender, instance, created, **kwargs):
     Syncs the customer's PPPoE secret to their assigned Mikrotik device when saved.
     """
     if (
-        not instance.mikrotik_device
+        getattr(instance, "is_test_data", False)
+        or not instance.mikrotik_device
         or not instance.pppoe_username
         or not instance.pppoe_password
     ):
-        return  # Missing critical info, can't sync
+        return  # Skip test accounts or missing critical info
 
     # --- NEW LOGIC: Skip sync if no Mikrotik-relevant fields changed ---
     if (
@@ -278,7 +279,7 @@ def delete_customer_from_mikrotik(sender, instance, **kwargs):
     """
     When a Customer is deleted in Django, remove their PPP secret and any bridge drop rules from their Mikrotik device.
     """
-    if not instance.mikrotik_device or not instance.pppoe_username:
+    if getattr(instance, "is_test_data", False) or not instance.mikrotik_device or not instance.pppoe_username:
         return
 
     try:

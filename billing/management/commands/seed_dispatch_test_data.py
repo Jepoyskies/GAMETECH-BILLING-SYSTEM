@@ -19,6 +19,9 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        from django.conf import settings
+        settings.ROUTER_DRY_RUN = True
+
         if options["cleanup"]:
             self.stdout.write("Cleaning up fake dispatch test data...")
             deleted_tickets = JobTicket.objects.filter(
