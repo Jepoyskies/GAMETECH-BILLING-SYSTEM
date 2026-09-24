@@ -478,8 +478,23 @@ class JobTicket(models.Model):
     def save(self, *args, **kwargs):
         if not self.ticket_number:
             from dispatch.utils import generate_ticket_number
-            self.ticket_number = generate_ticket_number(self.ticket_type)
-        super().save(*args, **kwargs)
+            from django.db import IntegrityError, transaction
+            import time
+
+            max_retries = 5
+            for attempt in range(max_retries):
+                self.ticket_number = generate_ticket_number(self.ticket_type)
+                try:
+                    with transaction.atomic():
+                        super().save(*args, **kwargs)
+                    return
+                except IntegrityError:
+                    if attempt == max_retries - 1:
+                        raise
+                    self.ticket_number = None
+                    time.sleep(0.05 * (attempt + 1))
+        else:
+            super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.ticket_number} - {self.client_name} ({self.get_status_display()})"
