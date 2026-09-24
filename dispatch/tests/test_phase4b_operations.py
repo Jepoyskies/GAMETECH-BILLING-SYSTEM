@@ -26,8 +26,6 @@ class Phase4BOperationsTestCase(TestCase):
             email="admin_4b@gametech.local",
             password="AdminPassword123!",
         )
-        self.admin_user.role = "Admin"
-        self.admin_user.save()
 
         # QA Staff user
         self.qa_user = User.objects.create_user(
@@ -36,7 +34,6 @@ class Phase4BOperationsTestCase(TestCase):
             password="QaPassword123!",
             is_staff=True,
         )
-        self.qa_user.role = "Staff"
         qa_perm = Permission.objects.filter(codename="dispatch_qa").first()
         if qa_perm:
             self.qa_user.user_permissions.add(qa_perm)
@@ -48,8 +45,6 @@ class Phase4BOperationsTestCase(TestCase):
             email="tech_4b@gametech.local",
             password="TechPassword123!",
         )
-        self.tech_user.role = "Technician"
-        self.tech_user.save()
 
         self.team = Team.objects.create(name="Team Alpha 4B", leader="Juan Leader")
         self.technician = Technician.objects.create(
