@@ -1207,6 +1207,26 @@
 
 ---
 
+### ERR-067: Customer View "More Actions" Dropdown Clipped at 40px Below Account Header
+* **Symptoms**:
+  * On `/customers/view/<id>/` (Customer Profile), clicking the "More Actions" dropdown button expands a truncated ~40px dark box displaying only the uppercase header `ACCOUNT`, cutting off all 10 actions (Statement of Account, Update Health, Send SMS, Send Email, Rebate, Rollback, Kick Session, Force Suspend, Force Reactivate, Delete).
+  * The dropdown toggle chevron flips upwards (`^`) due to Popper boundary detection failure.
+* **Root Causes**:
+  * `.page-header` in `billing/templates/billing/partials/_gt_design_system.html` enforces `overflow: hidden;`, causing the parent `.customer-view-header` to hard-clip any element protruding beyond the card's bottom border.
+  * Bootstrap 5 Popper.js treats `.page-header` as a clipping parent, detects insufficient clearance, and attempts to constrain or flip the menu into a dropup.
+  * Sibling `.dashboard-card.animate-fade-in` in `_lifecycle_tracker.html` retains a CSS `transform: translateY(0)` stacking context via `animation-fill-mode: both`.
+* **Exact Target Files**:
+  * `billing/templates/billing/view_customer/_styles.html`
+  * `billing/templates/billing/view_customer/_profile_header.html`
+  * `billing/templates/billing/view_customer/_lifecycle_tracker.html`
+* **1-Step Fix**:
+  * Set `overflow: visible !important;` on `.page-header.customer-view-header` (and suppress `.page-header.customer-view-header::after { display: none !important; }` to eliminate horizontal scroll bleed).
+  * Add `data-bs-display="static"` to both `#moreActionsDropdown` and `#requestServiceDropdown` buttons to disable Popper dynamic boundary clipping and enforce pure static CSS positioning.
+  * Explicitly style `.page-header.customer-view-header .dropdown-menu` with `position: absolute !important; top: 100% !important; right: 0 !important; left: auto !important; margin-top: 8px !important; z-index: 1060 !important; max-height: calc(100vh - 180px) !important; overflow-y: auto !important;`.
+  * Add `style="position: relative; z-index: 1;"` to the `_lifecycle_tracker.html` outer row to ensure stacking priority remains subordinate to `.customer-view-header` (`z-index: 1050`).
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 
