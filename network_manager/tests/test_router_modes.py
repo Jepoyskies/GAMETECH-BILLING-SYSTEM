@@ -14,6 +14,8 @@ class RouterModeSafetyTests(TestCase):
     """
 
     def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
         self.device = MikrotikDevice.objects.create(
             device_name="Test Router Core",
             ip_address="192.168.88.1",
