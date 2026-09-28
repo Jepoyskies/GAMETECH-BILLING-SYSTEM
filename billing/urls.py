@@ -151,6 +151,9 @@ urlpatterns = [
     path("prospects/<int:prospect_id>/reopen/", views.prospect_reopen, name="prospect_reopen"),
     
     path("agents/", views.agent_list, name="agent_list"),
+    path("agents/payouts/", views.agent_payouts_list, name="agent_payouts_list"),
+    path("agents/payouts/create-batch/<int:agent_id>/", views.create_payout_batch_view, name="create_payout_batch"),
+    path("agents/payouts/mark-paid/<int:batch_id>/", views.mark_payout_batch_paid_view, name="mark_payout_batch_paid"),
     path("agents/add/", views.add_agent, name="add_agent"),
     path("agents/edit/<int:agent_id>/", views.edit_agent, name="edit_agent"),
     path("agents/view/<int:agent_id>/", views.view_agent, name="view_agent"),

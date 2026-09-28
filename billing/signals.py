@@ -410,3 +410,44 @@ def log_user_login(sender, request, user, **kwargs):
         old_data=f"IP: {ip_addr}",
         new_data="User successfully logged in.",
     )
+
+
+from billing.models import Payment
+
+
+@receiver(post_save, sender=Payment)
+def payment_post_save_incentive_trigger(sender, instance, created, **kwargs):
+    """
+    Triggers the Agent Incentive Engine whenever a payment is created or updated.
+    Evaluates 2nd-month qualification, advance payments, and rollback adjustments.
+    """
+    if kwargs.get("raw"):
+        return
+    customer = instance.customer
+    if not customer and instance.username:
+        customer = Customer.objects.filter(pppoe_username=instance.username).first()
+    if not customer:
+        return
+    try:
+        from billing.services.incentives import evaluate_agent_qualification
+        evaluate_agent_qualification(customer, triggering_payment=instance)
+    except Exception as e:
+        logger.warning(f"Incentive qualification evaluation failed on Payment {instance.id}: {e}")
+
+
+@receiver(post_delete, sender=Payment)
+def payment_post_delete_incentive_trigger(sender, instance, **kwargs):
+    """
+    Re-evaluates agent qualification if a payment is deleted.
+    """
+    customer = instance.customer
+    if not customer and instance.username:
+        customer = Customer.objects.filter(pppoe_username=instance.username).first()
+    if not customer:
+        return
+    try:
+        from billing.services.incentives import evaluate_agent_qualification
+        evaluate_agent_qualification(customer)
+    except Exception as e:
+        logger.warning(f"Incentive qualification evaluation failed on Payment delete {instance.id}: {e}")
+

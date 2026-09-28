@@ -238,6 +238,12 @@ def customer_rollback_view(request, username):
                     paid_at=timezone.now(),
                 )
 
+                try:
+                    from billing.services.incentives import evaluate_agent_qualification
+                    evaluate_agent_qualification(customer)
+                except Exception:
+                    pass
+
             # 4. Sync to Mikrotik — kick/suspend as needed based on reverted expiry
             if customer.mikrotik_device and customer.pppoe_username:
                 try:

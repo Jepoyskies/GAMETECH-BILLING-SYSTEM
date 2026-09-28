@@ -33,24 +33,44 @@ class Agent(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     @property
+    def unpaid_qualified_count(self):
+        """Count of qualified referrals not yet assigned to a payout batch."""
+        return self.qualification_events.filter(status="qualified", payout_batch__isnull=True).count()
+
+    @property
     def claimable_commission(self):
         """
-        Total claimable commission from CommissionTransactions.
+        Total claimable commission based on batches of 5 qualified customers (₱2,500 per 5).
         """
+        from decimal import Decimal
         from django.db.models import Sum
+        unpaid = self.unpaid_qualified_count
+        if unpaid > 0 or self.qualification_events.exists():
+            batches = unpaid // 5
+            return Decimal(str(batches * 2500))
+        # Legacy fallback
         total = self.commissiontransaction_set.filter(status='CLAIMABLE').aggregate(total=Sum('amount'))['total']
-        return total or 0
+        return total or Decimal("0.00")
 
     @property
     def qualified_customers_count(self):
-        """Count of referred customers who have qualified with >= 2 payments."""
+        """Total count of referred customers who have qualified."""
+        event_count = self.qualification_events.filter(status__in=["qualified", "paid_out"]).count()
+        if event_count > 0:
+            return event_count
+        # Legacy fallback
         from django.db.models import Count
         return self.customer_set.annotate(pay_count=Count('payments')).filter(pay_count__gte=2).count()
 
     @property
+    def carry_over_count(self):
+        """Qualified customers carrying over toward the next batch of 5."""
+        return self.unpaid_qualified_count % 5
+
+    @property
     def is_cashout_eligible(self):
         """Gated behind 5 qualifying customers and ₱2,500 claimable commission."""
-        return self.qualified_customers_count >= 5 and self.claimable_commission >= 2500
+        return self.unpaid_qualified_count >= 5 or (self.qualified_customers_count >= 5 and self.claimable_commission >= 2500)
 
     def __str__(self):
         return self.name

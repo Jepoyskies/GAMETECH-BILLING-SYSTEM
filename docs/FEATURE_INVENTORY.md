@@ -218,3 +218,25 @@ This document tracks every UI control, button, menu item, column, field, modal, 
 | Force Suspend | Form in More Actions | Form in More Actions | KEPT / FIXED (Unclipped via CSS scroll/z-index; annotated with Read-Only Mode badge when ROUTER_MODE=read_only) |
 | Force Reactivate | Button in More Actions | Button in More Actions | KEPT / FIXED (Unclipped via CSS scroll/z-index; annotated with Read-Only Mode badge when ROUTER_MODE=read_only) |
 | Delete Customer | Form in More Actions (Admin role) | Form in More Actions (`perms.billing.delete_customer or is_superuser`) | KEPT / FIXED (Unclipped via CSS scroll/z-index; permission-based check allows anyone permitted to delete) |
+
+---
+
+## 10. Agent Incentive Engine & Payouts (`/agents/payouts/`, `/agent-dashboard/`)
+- **Templates:** `billing/templates/billing/payouts/index.html`, `billing/templates/billing/agent_portal/dashboard.html`
+- **Views:** `billing/views/payouts.py`, `billing/views/agents.py`
+- **Services:** `billing/services/incentives.py`
+
+### Inventory & Capabilities
+| Feature / Control | Capability | Status |
+|---|---|---|
+| **2nd Month Qualification** | Automatically detects when 2nd month is paid (renewal, 2+ month upfront advance, or cumulative partials $\ge$ 2x plan price). Excludes one-time fees (₱500 GIMI upgrade fee). | ADDED / VERIFIED |
+| **Exclusions & Cancellations** | Legacy, router-sync, and non-agent customers excluded. Cancelled before qualifying never counts; already-qualified preserved. | ADDED / VERIFIED |
+| **Revocation on Rollback** | Revokes qualification event if payment rollback brings net paid below 2x plan price prior to payout. Re-qualifies upon subsequent payment. | ADDED / VERIFIED |
+| **Idempotency** | Re-saving payments or re-evaluating customers never creates duplicate events. | ADDED / VERIFIED |
+| **Admin Payout Screen** | `/agents/payouts/` lists agents with $\ge$ 5 qualified customers; shows pending approval batches and permanent ledger. | ADDED / VERIFIED |
+| **Batch Creation** | Multiples of 5 (FIFO oldest qualified first); links to `AgentPayoutBatch` and `AgentQualificationEvent.payout_batch`; extras cleanly carry over. | ADDED / VERIFIED |
+| **Mark Paid** | Records `paid_by`, `paid_at`, and `reference_no`; transitions batch to `paid` and events to `paid_out`. Permanent record preserved. | ADDED / VERIFIED |
+| **Agent Portal Wallet & Progress** | Progress toward next 5 (`progress / 5`), progress bar, and claimable balance in Agent Portal. | ADDED / VERIFIED |
+| **Referrals Payment Progress** | Shows progress for qualifying month (e.g. `PHP 100 paid, PHP 900 remaining`), unlock date, and due date while preserving privacy. | ADDED / VERIFIED |
+| **Permanent Payout Ledger** | Agent portal reads completed batches directly from permanent ledger. | ADDED / VERIFIED |
+

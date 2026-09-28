@@ -1,10 +1,26 @@
+from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Q
-from billing.models import Agent, Customer, Prospect, Barangay, SubscriptionPlan, Notification, SystemLog
+from billing.models import (
+    Agent,
+    Customer,
+    Prospect,
+    Barangay,
+    SubscriptionPlan,
+    Notification,
+    SystemLog,
+    AgentQualificationEvent,
+    AgentPayoutBatch,
+    IncentiveSetting,
+)
 from billing.validators import normalize_ph_phone, check_customer_or_prospect_duplicate
+from billing.services.incentives import (
+    get_agent_incentive_summary,
+    get_customer_qualifying_paid_total,
+)
 
 
 @login_required
@@ -12,7 +28,8 @@ def agent_dashboard(request):
     """
     Agent Portal Dashboard:
     Minimal mobile-friendly layout for sales agents.
-    Strictly displays the agent's own referrals and incentive progress.
+    Strictly displays the agent's own referrals, 2nd-month qualifying progress,
+    unlock date, and permanent payout history from the incentive ledger.
     """
     try:
         agent = request.user.agent_profile
@@ -21,24 +38,90 @@ def agent_dashboard(request):
         return redirect("dashboard")
 
     # Strict isolation: Fetch ONLY referrals submitted by or assigned to this agent
-    prospects = Prospect.objects.filter(agent=agent).select_related("barangay", "plan", "converted_customer").order_by("-created_at")
+    prospects = (
+        Prospect.objects.filter(agent=agent)
+        .select_related("barangay", "plan", "converted_customer", "converted_customer__plan")
+        .order_by("-created_at")
+    )
 
-    qualified_count = getattr(agent, "qualified_customers_count", 0)
-    target_count = 5
-    progress_pct = min(100, int((qualified_count / target_count) * 100)) if target_count else 0
-    is_cashout_eligible = getattr(agent, "is_cashout_eligible", False)
+    summary = get_agent_incentive_summary(agent)
+    batch_size = summary["batch_size"]
+    progress_count = summary["progress_to_next"]
+    progress_pct = min(100, int((progress_count / batch_size) * 100)) if batch_size else 0
+
+    # Decorate prospects with qualification and payment progress
+    for p in prospects:
+        cust = p.converted_customer
+        if cust:
+            event = AgentQualificationEvent.objects.filter(customer=cust, agent=agent).first()
+            if event and event.status == "paid_out":
+                p.qualification_status = "paid_out"
+                p.progress_text = "Paid Out (₱500)"
+                p.is_qualified = True
+            elif event and event.status == "qualified":
+                p.qualification_status = "qualified"
+                p.progress_text = "Qualified (₱500)"
+                p.is_qualified = True
+            elif event and event.status == "revoked":
+                p.qualification_status = "revoked"
+                p.progress_text = "Revoked (Rollback)"
+                p.is_qualified = False
+            else:
+                is_cancelled = (
+                    cust.status in ["closed_not_installed", "pull out"]
+                    or cust.installation_status == "closed_not_installed"
+                )
+                if is_cancelled:
+                    p.qualification_status = "cancelled"
+                    p.progress_text = "Cancelled (Ineligible)"
+                    p.is_qualified = False
+                else:
+                    net_paid = get_customer_qualifying_paid_total(cust)
+                    plan_price = cust.plan.price if cust.plan and cust.plan.price else Decimal("0.00")
+                    threshold = Decimal("2.00") * plan_price
+
+                    if net_paid >= threshold and plan_price > 0:
+                        p.qualification_status = "qualified"
+                        p.progress_text = "Qualified (₱500)"
+                        p.is_qualified = True
+                    elif net_paid > plan_price and plan_price > 0:
+                        paid_2nd_month = net_paid - plan_price
+                        rem_2nd_month = threshold - net_paid
+                        p.qualification_status = "in_progress"
+                        p.progress_text = f"PHP {paid_2nd_month:,.0f} paid, PHP {rem_2nd_month:,.0f} remaining"
+                        p.is_qualified = False
+                    elif net_paid > 0 and plan_price > 0:
+                        p.qualification_status = "in_progress"
+                        p.progress_text = f"PHP 0 paid, PHP {plan_price:,.0f} remaining"
+                        p.is_qualified = False
+                    else:
+                        p.qualification_status = "pending_payment"
+                        p.progress_text = "Pending 1st Payment"
+                        p.is_qualified = False
+
+            p.unlock_date = cust.agent_lock_until
+        else:
+            p.qualification_status = "prospect"
+            p.progress_text = "Pending Onboarding"
+            p.unlock_date = None
+
+    payout_history = AgentPayoutBatch.objects.filter(agent=agent).order_by("-created_at")
 
     context = {
         "agent": agent,
         "prospects": prospects,
-        "claimable_commission": getattr(agent, "claimable_commission", 0.0),
-        "qualified_count": qualified_count,
-        "target_count": target_count,
+        "claimable_commission": summary["claimable_amount"],
+        "unpaid_qualified": summary["unpaid_qualified"],
+        "total_qualified": summary["total_qualified"],
+        "batch_size": batch_size,
+        "progress_count": progress_count,
         "progress_pct": progress_pct,
-        "is_cashout_eligible": is_cashout_eligible,
+        "is_cashout_eligible": summary["is_cashout_eligible"],
+        "payout_history": payout_history,
         "barangays": Barangay.objects.all(),
     }
     return render(request, "billing/agent_portal/dashboard.html", context)
+
 
 
 @login_required

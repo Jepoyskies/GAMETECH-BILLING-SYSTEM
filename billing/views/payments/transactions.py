@@ -239,8 +239,12 @@ def pay_customer_view(request, username):
                     "expired",
                 ]
 
-                # 4. Update Customer Expiry
+                # 4. Update Customer Expiry & First Payment Timestamp
                 locked_customer.expires_at = new_expiry
+                if not locked_customer.first_payment_date:
+                    locked_customer.first_payment_date = timezone.now().date()
+                if not locked_customer.agent_lock_until and (locked_customer.agent or locked_customer.original_agent):
+                    locked_customer.agent_lock_until = timezone.now() + timezone.timedelta(days=60)
 
                 # 5. Update Status if suspended
                 if was_suspended:

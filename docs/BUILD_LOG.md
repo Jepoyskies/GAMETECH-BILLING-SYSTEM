@@ -556,6 +556,49 @@ All tests passing across small batches:
 - **Automated Verification:**
   - Added `billing/tests/test_customer_view_actions.py` covering all 10 actions for permitted staff, omission of Delete for unpermitted staff, read-only mode badge rendering, and direct rollback routing.
 
+---
+
+## Phase 5B: Agent Incentive Engine (SPEC Decision 7)
+
+- **Qualification Engine (`billing/services/incentives.py`):**
+  - Built `evaluate_agent_qualification` and `get_customer_qualifying_paid_total`:
+    - Automatically detects when a customer's second month is paid (later renewal payment, 2+ month upfront advance, or cumulative partial payments reaching 2x monthly plan price).
+    - Excludes one-time fees (specifically ₱500 GIMI upgrade fee detected in `Payment.reason`).
+    - Excludes legacy, router-sync, and non-agent customers.
+    - Excludes subscribers cancelled before qualifying (`closed_not_installed`, `pull out`).
+    - Preserves already-qualified status even if a customer later disconnects.
+    - Revocation on rollback: if a qualifying payment is rolled back or adjusted before payout causing net paid to drop below 2x plan price, marks event `status='revoked'` with explanation. Re-qualifies if customer subsequently repays.
+    - Idempotency: re-saving payments or re-evaluating customers returns the existing event without creating duplicates.
+- **Central Hook Integration (`billing/signals.py` & payment views):**
+  - Connected `post_save` and `post_delete` signals on `Payment` to trigger `evaluate_agent_qualification` on every payment created, updated, or removed.
+  - Added explicit incentive trigger in `customer_rollback_view` (`billing/views/payments/rebates.py`).
+  - Stamped `first_payment_date` and `agent_lock_until = timezone.now() + 60 days` on first payment in `pay_customer_view` (`billing/views/payments/transactions.py`).
+- **Admin Payout Management (`billing/views/payouts.py` & `billing/templates/billing/payouts/index.html`):**
+  - Gated strictly by `billing.mark_payout_paid` permission (`has_dispatch_permission`).
+  - Displays agents ready for cashout with $\ge$ 5 unpaid qualified customers.
+  - Allows creating payout batches in multiples of 5 (e.g. 5, 10, 15) using FIFO (oldest qualified first) linking to `AgentPayoutBatch` and updating event `payout_batch`. Extras cleanly carry over.
+  - Allows marking batches as paid with mandatory `reference_no`, setting `status='paid'`, `paid_by=request.user`, `paid_at=now`, and transitioning linked events to `status='paid_out'`.
+  - Permanent ledger preserves customer links and payout history forever.
+  - Styled with Dispatch Operation / Agent Sales violet accent (`#8b5cf6`) and Gametech Design System tokens.
+- **Agent Portal Enhancements (`billing/views/agents.py` & `dashboard.html`):**
+  - Incentive Wallet: displays claimable balance, progress toward next 5 (`progress_to_next / 5`), and progress bar.
+  - Referral table: displays payment progress for the qualifying month (e.g. `PHP 100 paid, PHP 900 remaining`), unlock date (`customer.agent_lock_until`), and due date.
+  - Preserves privacy: strictly shows applicant name, status, payment progress, unlock date, and due date (no phone numbers, addresses, or router credentials).
+  - Payout history card reading from the permanent ledger.
+- **Automated Verification (`billing/tests/test_agent_incentives.py`):**
+  - Added 10 comprehensive unit tests covering:
+    1. Second-month payment qualification.
+    2. Two-month advance qualification.
+    3. Cumulative partial payments qualification.
+    4. One-time upgrade fee exclusion from qualifying threshold.
+    5. Cancellation before qualifying never counts & already-qualified preservation.
+    6. Revocation on payment rollback & re-qualification.
+    7. Idempotent duplicate processing.
+    8. Batches of 5 and multiples (12 qualified -> batch of 10 created and marked paid).
+    9. Extras carry-over (2 remaining carry over toward next 5).
+    10. Permissions (`mark_payout_paid`) and agent portal cross-agent data isolation.
+
+
 
 
 
