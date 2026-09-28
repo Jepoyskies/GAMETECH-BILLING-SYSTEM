@@ -133,7 +133,7 @@ class UIRestorationsTestCase(TestCase):
         self.assertIn("Claimable Commissions", html)
 
         # Assert Dashboard link
-        self.assertIn('href="/dispatch/"', html)
+        self.assertIn(reverse("dispatch_dashboard"), html)
         self.assertIn("Dashboard", html)
 
         # Assert copy buttons
