@@ -13,9 +13,12 @@
     </div>
   </div>
   <div class="d-flex align-items-center gap-2">
+    <a href="{% url 'dispatch_dashboard' %}" class="gt-btn-secondary">
+      <i class="fas fa-arrow-left me-1"></i> Dashboard
+    </a>
     {% if perms.billing.mark_payout_paid or request.user.is_superuser %}
-    <a href="{% url 'agent_payouts_list' %}" class="btn btn-outline-secondary btn-sm fw-bold d-flex align-items-center gap-2">
-      <i class="fas fa-hand-holding-usd" style="color: #8b5cf6;"></i> Agent Payouts
+    <a href="{% url 'agent_payouts_list' %}" class="gt-btn-secondary">
+      <i class="fas fa-hand-holding-usd text-warning me-1"></i> Agent Payouts
     </a>
     {% endif %}
     <button type="button" class="gt-btn-primary" data-bs-toggle="modal" data-bs-target="#modal-add-agent">
@@ -31,3 +34,54 @@
 </div>
 {% endfor %}
 {% endif %}
+
+<!-- 4 Executive KPI Hero Cards -->
+<div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-3 mb-4" style="--section-accent: #8b5cf6;">
+  <div class="col">
+    <div class="gt-kpi-card h-100">
+      <div class="gt-kpi-icon" style="background: rgba(139,92,246,0.15); color: #8b5cf6; border-color: rgba(139,92,246,0.25);">
+        <i class="fas fa-users"></i>
+      </div>
+      <div>
+        <div class="gt-kpi-val">{{ total_agents }}</div>
+        <div class="gt-kpi-lbl">Registered Agents</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="gt-kpi-card h-100">
+      <div class="gt-kpi-icon" style="background: rgba(16,185,129,0.15); color: #10b981; border-color: rgba(16,185,129,0.25);">
+        <i class="fas fa-user-check"></i>
+      </div>
+      <div>
+        <div class="gt-kpi-val">{{ active_agents }}</div>
+        <div class="gt-kpi-lbl">Active Referrers</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="gt-kpi-card h-100">
+      <div class="gt-kpi-icon" style="background: rgba(59,130,246,0.15); color: #3b82f6; border-color: rgba(59,130,246,0.25);">
+        <i class="fas fa-network-wired"></i>
+      </div>
+      <div>
+        <div class="gt-kpi-val">{{ total_referrals }}</div>
+        <div class="gt-kpi-lbl">Total Referrals</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="gt-kpi-card h-100">
+      <div class="gt-kpi-icon" style="background: rgba(245,158,11,0.15); color: #f59e0b; border-color: rgba(245,158,11,0.25);">
+        <i class="fas fa-wallet"></i>
+      </div>
+      <div>
+        <div class="gt-kpi-val">₱{{ total_commission|floatformat:2 }}</div>
+        <div class="gt-kpi-lbl">Claimable Commissions</div>
+      </div>
+    </div>
+  </div>
+</div>
