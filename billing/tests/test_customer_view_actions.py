@@ -38,12 +38,17 @@ class CustomerViewMoreActionsTestCase(TestCase):
             password="AdminPassword123!",
         )
 
-        # 2. Staff user without delete_customer permission
+        # 2. Staff user with Editor role (can view actions) without delete_customer permission
         self.staff_no_delete = User.objects.create_user(
             username="staff_no_delete",
             email="staff@gametech.local",
             password="StaffPassword123!",
             is_staff=True,
+        )
+        from billing.models import SystemAdmin
+        SystemAdmin.objects.create(
+            username="staff_no_delete",
+            role="Editor",
         )
 
     def test_all_10_actions_appear_for_permitted_staff(self):
