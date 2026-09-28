@@ -296,10 +296,11 @@
       <table id="cignalSubscriptionsTable" class="table gt-table align-middle mb-0">
         <thead>
           <tr>
-            <th style="width: 22%;">Customer</th>
-            <th style="width: 32%;">Subscription</th>
-            <th style="width: 18%;">Status</th>
-            <th style="width: 16%;">Date Applied</th>
+            <th style="width: 20%;">Customer</th>
+            <th style="width: 28%;">Subscription</th>
+            <th style="width: 16%;">Status</th>
+            <th style="width: 12%;">Date Applied</th>
+            <th style="width: 12%;">Adjusted By</th>
             <th style="width: 12%; text-align: right; padding-right: 1.5rem;">Actions</th>
           </tr>
         </thead>
@@ -392,7 +393,7 @@
                 {% endif %}
               </td>
 
-              {# Cell 4: Date Applied + Adjusted By merged #}
+              {# Cell 4: Date Applied #}
               <td>
                 <div style="font-size: 14px;" class="text-title">
                   {% if plan.start_date %}
@@ -403,12 +404,16 @@
                     —
                   {% endif %}
                 </div>
-                <div class="gt-status-meta">
-                  by {{ plan.adjusted_by|default:"Admin" }}
+              </td>
+
+              {# Cell 5: Adjusted By #}
+              <td>
+                <div style="font-size: 13px;" class="text-title">
+                  {{ plan.adjusted_by|default:"Admin" }}
                 </div>
               </td>
 
-              {# Cell 5: Actions: Edit, Payment, and "..." menu for remove #}
+              {# Cell 6: Actions: Edit, Payment, direct Cancel button, and overflow dropdown for extras #}
               <td class="text-end" style="padding-right: 1.5rem;">
                 <div class="d-inline-flex align-items-center gap-1.5 justify-content-end">
                   <button type="button" class="gt-icon-btn" title="Edit Subscription Details" onclick="openCignalEditModal({id: '{{ plan.id }}', customerId: '{{ customer.id }}', label: '{{ plan.account_name|escapejs }}', playNo: '{{ plan.cignal_play_no|escapejs }}', boxNo: '{{ plan.cignal_box_no|escapejs }}', customerName: '{{ customer.full_name|escapejs }}', hardwarePaymentType: '{{ plan.hardware_payment_type|default:'none' }}', installmentsPaid: '{{ plan.installments_paid|default:0 }}', monthlyLoadPlan: '{{ plan.monthly_load_plan|default:'149' }}', expirationDate: '{% if plan.expiration_date %}{{ plan.expiration_date|date:'Y-m-d\TH:i' }}{% elif plan.end_date %}{{ plan.end_date|date:'Y-m-d\TH:i' }}{% endif %}'})">
@@ -417,6 +422,12 @@
                   <button type="button" class="gt-icon-btn" title="Record Payment / Reload" onclick="openCignalPaymentModal({customerId: '{{ customer.id }}', customerName: '{{ customer.full_name|escapejs }}', pppoe: '{{ customer.pppoe_username|escapejs }}', subscriptionId: '{{ plan.id }}', expirationDate: '{% if plan.expiration_date %}{{ plan.expiration_date|date:'Y-m-d\TH:i' }}{% elif plan.end_date %}{{ plan.end_date|date:'Y-m-d\TH:i' }}{% endif %}', subscriptions: [{id: '{{ plan.id }}', cignal_play_no: '{{ plan.cignal_play_no|escapejs }}', cignal_box_no: '{{ plan.cignal_box_no|escapejs }}', account_name: '{{ plan.account_name|escapejs }}', expiration_date: '{% if plan.expiration_date %}{{ plan.expiration_date|date:'Y-m-d\TH:i' }}{% elif plan.end_date %}{{ plan.end_date|date:'Y-m-d\TH:i' }}{% endif %}', hardware_payment_type: '{{ plan.hardware_payment_type|default:'none' }}', installments_paid: '{{ plan.installments_paid|default:0 }}', monthly_load_plan: '{{ plan.monthly_load_plan|default:'149' }}'}]})">
                     <i class="fas fa-coins text-success"></i>
                   </button>
+                  <form method="POST" action="{% url 'cancel_cignal_subscription' plan.id %}" style="display:inline;" onsubmit="return confirm('Mark Cignal subscription \'{{ plan.account_name|escapejs }}\' for {{ customer.full_name|escapejs }} as Pulled-Out / Removed? You can restore it later.');">
+                    {% csrf_token %}
+                    <button type="submit" class="gt-icon-btn gt-icon-btn--danger" title="Mark as Pulled-Out / Removed">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </form>
                   <div class="dropdown d-inline-block">
                     <button type="button" class="gt-icon-btn" data-bs-toggle="dropdown" aria-expanded="false" title="More Actions">
                       <i class="fas fa-ellipsis-vertical"></i>
@@ -427,15 +438,6 @@
                           <i class="fas fa-user text-primary me-2"></i>View Customer Profile
                         </a>
                       </li>
-                      <li><hr class="dropdown-divider my-1" style="border-color: var(--gt-border-divider);"></li>
-                      <li>
-                        <form method="POST" action="{% url 'cancel_cignal_subscription' plan.id %}" onsubmit="return confirm('Mark Cignal subscription \'{{ plan.account_name|escapejs }}\' for {{ customer.full_name|escapejs }} as Pulled-Out / Removed? You can restore it later.');">
-                          {% csrf_token %}
-                          <button type="submit" class="dropdown-item text-danger">
-                            <i class="fas fa-trash-alt me-2"></i>Mark Pulled-Out / Remove
-                          </button>
-                        </form>
-                      </li>
                     </ul>
                   </div>
                 </div>
@@ -444,7 +446,7 @@
             {% endfor %}
           {% empty %}
           <tr>
-            <td colspan="5" class="py-5 text-center text-muted">
+            <td colspan="6" class="py-5 text-center text-muted">
               <i class="fas fa-satellite-dish fa-2x mb-2 text-muted opacity-50"></i>
               <div class="fw-semibold">
                 {% if current_tab == 'installment' %}No Ongoing Installments
