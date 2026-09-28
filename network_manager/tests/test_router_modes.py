@@ -173,9 +173,11 @@ class RouterModeSafetyTests(TestCase):
         mock_raw_active_res = MagicMock()
         mock_raw_bridge_res = MagicMock()
 
-        mock_raw_secret_res.get.return_value = [
-            {"id": "*1", "name": "alice_live", "profile": "Plan-1500", "comment": "Alice"}
-        ]
+        mock_raw_secret_res.get.side_effect = (
+            lambda **kwargs: [
+                {"id": "*1", "name": "alice_live", "profile": "Plan-1500", "comment": "Alice"}
+            ] if kwargs.get("name") in (None, "alice_live") else []
+        )
         mock_raw_active_res.get.return_value = [
             {"id": "*A1", "name": "alice_live", "address": "10.0.0.5"}
         ]
