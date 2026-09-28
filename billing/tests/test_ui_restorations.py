@@ -33,12 +33,12 @@ class UIRestorationsTestCase(TestCase):
         )
         self.cignal = CignalPlay.objects.create(
             customer=self.customer,
+            plan_name="Cignal Play Basic",
             account_name="Cignal Box Primary",
             cignal_play_no="CP-998877",
             cignal_box_no="CB-112233",
             monthly_load_plan="149",
             hardware_payment_type="none",
-            status="active",
             adjusted_by="Admin Officer",
         )
         self.agent = Agent.objects.create(
