@@ -598,8 +598,34 @@ All tests passing across small batches:
     9. Extras carry-over (2 remaining carry over toward next 5).
     10. Permissions (`mark_payout_paid`) and agent portal cross-agent data isolation.
 
+---
 
+## Redesigned Pages Regression Restorations (Audit Resolution)
 
-
-
-
+- **Audit Resolution & Owner Decisions:**
+  - Audited all 6 non-KEPT items identified from the design-system overhaul across Customers Directory, Cignal Dashboard, and Sales Agents Directory.
+  - Retained intentional product decisions: optional email in Add Customer and unified Dispatch Queue replacing legacy pipeline stage 1/2/3 pages.
+- **Customers Directory Row Actions Restored (`billing/templates/billing/customer_list/_table.html`):**
+  - Restored row actions to direct visible icon buttons (`.gt-icon-btn` and `.gt-icon-btn--danger`) in their original order:
+    1. View Details (`href="{% url 'view_customer' customer.id %}"`, `title="View Details"`, `fa-eye`)
+    2. File Dispatch / Repair Ticket (`href="{% url 'view_customer' customer.id %}#modal-customer-repair"`, `title="File Dispatch / Repair Ticket"`, `fa-screwdriver-wrench`)
+    3. Edit Customer (`href="{% url 'edit_customer' customer.id %}"`, `title="Edit Customer"`, `fa-edit`, gated by Admin/Editor role)
+    4. Delete Customer (`action="{% url 'delete_customer' customer.id %}"`, `title="Delete Customer"`, `fa-trash-alt`, confirmation dialog `onsubmit="return confirm('Are you sure you want to delete this customer?');"`, gated by Admin/Editor role)
+  - Removed superfluous "..." overflow menu from row actions since all 4 items are original direct visible controls.
+- **Cignal Subscriptions Table Restorations (`billing/templates/billing/cignal_dashboard/_active_subscriptions.html`):**
+  - Restored standalone `Adjusted By` column header (`<th>Adjusted By</th>`) and data cell (`<td>{{ plan.adjusted_by|default:"Admin" }}</td>`).
+  - Restored direct visible `Mark as Pulled-Out / Removed` button (`cancel_cignal_subscription`, `gt-icon-btn--danger`, `fa-times`) with native confirmation dialog.
+  - Kept overflow "..." dropdown menu exclusively for the non-direct extra action (`View Customer Profile`).
+  - Updated table colspan to 6 for empty-state rendering.
+- **Agent Directory Restorations (`billing/templates/billing/agents/_stats.html`, `_table.html`, `_scripts.html`):**
+  - Restored 4 executive KPI hero cards styled with shared tokens (`gt-kpi-card`): Registered Agents (`total_agents`), Active Referrers (`active_agents`), Total Referrals (`total_referrals`), and Claimable Commissions (`₱{{ total_commission|floatformat:2 }}`).
+  - Restored Dashboard back link (`<a href="{% url 'dispatch_dashboard' %}" class="gt-btn-secondary">`).
+  - Restored one-click clipboard copy buttons for agent email and phone (`copyText`) with visual toast confirmation.
+  - Retained responsive table consolidation in place of separate duplicate mobile card layouts.
+- **Automated Verification (`billing/tests/test_ui_restorations.py`):**
+  - Added test suite with 4 comprehensive tests validating:
+    1. Direct visible row actions and confirmation dialog for Admin in Customers Directory.
+    2. Permission gating omitting Edit and Delete actions for unpermitted Viewers.
+    3. Standalone `Adjusted By` column and visible Pulled-Out action in Cignal Dashboard.
+    4. 4 KPI hero cards, Dashboard back link, and one-click copy buttons in Agent Directory.
+  - 100% test pass rate across new and existing regression suites (4/4 restoration tests passed, 14/14 regression tests passed).

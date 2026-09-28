@@ -41,11 +41,10 @@ This document tracks every UI control, button, menu item, column, field, modal, 
 | **Table Columns** | 8. Router | KEPT | Assigned Mikrotik device |
 | **Table Columns** | 9. Status | KEPT | Dual badge: Lifecycle status + Live MT status dot |
 | **Table Columns** | 10. Actions | KEPT | Row action buttons |
-| **Row Actions** | View Profile (`view_customer`) | KEPT | Eye icon button |
-| **Row Actions** | Edit Details (`edit_customer`) | KEPT | Pencil icon button |
-| **Row Actions** | Row More Dropdown (`gt-dropdown-menu`) | KEPT | Three dots icon button |
-| ↳ More Action | File Repair Ticket (`#modal-customer-repair`) | KEPT | Added in redesign |
-| ↳ More Action | Delete Customer (`delete_customer`) | MOVED | Moved from direct row button into row dropdown |
+| **Row Actions** | View Profile (`view_customer`) | RESTORED / KEPT | Eye icon button (`gt-icon-btn`) |
+| **Row Actions** | File Repair Ticket (`#modal-customer-repair`) | RESTORED | Direct visible button (`gt-icon-btn`), restored from dropdown |
+| **Row Actions** | Edit Details (`edit_customer`) | RESTORED / KEPT | Pencil icon button (`gt-icon-btn`, Admin/Editor) |
+| **Row Actions** | Delete Customer (`delete_customer`) | RESTORED | Direct visible button with confirmation (`gt-icon-btn--danger`, Admin/Editor), restored from dropdown |
 
 ---
 
@@ -101,12 +100,12 @@ This document tracks every UI control, button, menu item, column, field, modal, 
 | **Tabs** | All Subscriptions Tab | KEPT | Complete subscriber directory |
 | **Tabs** | Pending Applications Tab | KEPT | Waiting staff approval |
 | **Tabs** | Recent Activity Logs Tab | KEPT | Audit events |
-| **Active Table Columns** | Customer, Subscription, Status, Actions | KEPT | 4 consolidated responsive columns |
-| **Overdue Table Columns** | Customer, Subscription, Status, Actions | KEPT | 4 consolidated responsive columns |
-| **All Table Columns** | Customer, Subscription, Status, Date Applied, Actions | MOVED / MERGED | "Adjusted By" column merged into "Date Applied" cell |
-| **Row Actions** | Edit Details (`openEditCignalModal`) | KEPT | Icon button |
-| **Row Actions** | Record Payment / Reload (`openReloadCignalModal`) | KEPT | Icon button |
-| **Row Actions** | Delete Subscription (`delete_cignal_subscription`) | MOVED | Moved into row dropdown |
+| **Active Table Columns** | Customer, Subscription, Status, Actions | KEPT | Consolidated responsive columns |
+| **Overdue Table Columns** | Customer, Subscription, Status, Actions | KEPT | Consolidated responsive columns |
+| **All / Subscriptions Table Columns** | Customer, Subscription, Status, Date Applied, Adjusted By, Actions | RESTORED | Restored standalone "Adjusted By" column (`<th>Adjusted By</th>`) |
+| **Row Actions** | Edit Details (`openCignalEditModal`) | KEPT | Icon button |
+| **Row Actions** | Record Payment / Reload (`openCignalPaymentModal`) | KEPT | Icon button |
+| **Row Actions** | Mark Pulled-Out / Remove (`cancel_cignal_subscription`) | RESTORED | Restored to direct visible button (`gt-icon-btn--danger`) with confirmation; dropdown kept only for View Customer Profile |
 
 ---
 
@@ -191,12 +190,14 @@ This document tracks every UI control, button, menu item, column, field, modal, 
 |---|---|---|---|
 | **Agents List** | Search Input (`#agentSearchInput`) | KEPT | Search bar in table toolbar |
 | **Agents List** | Add Agent Modal (`#modal-add-agent`) | KEPT | Modal form for creating agents |
-| **Agents List** | Stats Bar (Total, Active, Referrals, Commission) | KEPT | Metric tiles in `_stats.html` |
+| **Agents List** | Dashboard Back Link (`dispatch_dashboard`) | RESTORED | Restored secondary header button (`gt-btn-secondary`) |
+| **Agents List** | Stats Bar (4 KPI Hero Cards) | RESTORED | Restored 4 executive metric cards (`gt-kpi-card`: Total, Active, Referrals, Commission) |
 | **Agents List Table** | Columns: Name, Contact, Customers, Payout, Commission, Actions | KEPT | Responsive table layout |
+| **Contact Column** | One-Click Copy Actions (`copyText`) | RESTORED | Restored one-click clipboard copy buttons for email and phone |
 | **Row Actions** | View Agent Profile (`view_agent`) | KEPT | Eye icon button |
 | **Row Actions** | Edit Agent (`edit_agent`) | KEPT | Pencil icon button |
-| **Row Actions** | Delete Agent (`delete_agent`) | MOVED | Moved into icon button with confirmation dialog |
-| **Row Actions** | Mobile Separate Cards Layout | REMOVED | Consolidated into responsive DataTables view |
+| **Row Actions** | Delete Agent (`delete_agent`) | KEPT | Direct icon button with confirmation dialog |
+| **Row Actions** | Mobile Separate Cards Layout | REMOVED | Consolidated into responsive DataTables view (purely visual) |
 | **Agent View** | Profile details, referred customers table, commission log | KEPT | All features preserved |
 | **Agent Portal** | Prospect submission, commission cashout request | KEPT | All portal features preserved |
 
