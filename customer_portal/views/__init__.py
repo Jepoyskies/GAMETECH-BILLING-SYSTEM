@@ -5,6 +5,7 @@ from .dashboard import portal_dashboard, portal_statement_view
 from .payments import portal_process_mock_payment, portal_apply_addon, portal_cancel_addon
 from .tickets import submit_ticket, portal_ticket_history
 from .api import portal_router_uplink_api
+from .checkout import portal_checkout
 
 __all__ = [
     "portal_login",
@@ -18,4 +19,5 @@ __all__ = [
     "submit_ticket",
     "portal_ticket_history",
     "portal_router_uplink_api",
+    "portal_checkout",
 ]
