@@ -1,0 +1,3 @@
+# WORKING_RULES.md — Gametech Engineering & Operational Directives
+
+0. LOGIC FREEZE. The owner has spent a long time fixing the links between billing, payments and the Mikrotik routers. NEVER change how payments, renewals, expiry, cut-off, reactivation, router calls, PPPoE, SMS, or any existing business logic behaves, and NEVER apply a change that would alter what happens to a router, a payment or a customer's status, unless the owner has approved that exact change in this conversation. If a prompt seems to require it, or you think a change is needed, STOP and list it under PROPOSED CHANGES with the risk in plain words. You know this system better than the reviewer: if any instruction in a prompt looks wrong or risky for this system, do not follow it; explain why.
