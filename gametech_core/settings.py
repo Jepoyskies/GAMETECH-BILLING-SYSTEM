@@ -59,9 +59,9 @@ if _is_testing:
     ROUTER_MODE = "dry_run"
     ROUTER_DRY_RUN = True
 else:
-    ROUTER_MODE = env.str("ROUTER_MODE", default="read_only").lower().strip()
+    ROUTER_MODE = env.str("ROUTER_MODE", default="live").lower().strip()
     if ROUTER_MODE not in ("dry_run", "read_only", "live"):
-        ROUTER_MODE = "read_only"
+        ROUTER_MODE = "live"
     # Backward-compatibility alias
     ROUTER_DRY_RUN = (ROUTER_MODE == "dry_run")
 

@@ -1029,7 +1029,7 @@ def view_customer(request, customer_id):
         "live_mac": live_mac,
         "last_logged_out": last_logged_out,
         "temp_password_info": request.session.pop("customer_temp_password_display", None),
-        "router_mode": getattr(settings, "ROUTER_MODE", "read_only").lower().strip(),
+        "router_mode": getattr(settings, "ROUTER_MODE", "live").lower().strip(),
     }
     return render(request, "billing/view_customer.html", context)
 

@@ -24,8 +24,8 @@ class MikrotikAPI:
 
     def _get_api_connection(self):
         """Helper to get a fresh connection to the router."""
-        mode = getattr(settings, "ROUTER_MODE", "read_only").lower().strip()
-        if mode == "dry_run" or getattr(settings, "ROUTER_DRY_RUN", False):
+        mode = getattr(settings, "ROUTER_MODE", "live").lower().strip()
+        if mode == "dry_run" or (getattr(settings, "ROUTER_DRY_RUN", False) and mode != "live"):
             pool = DryRunConnectionPool(self.ip_address)
             return pool, pool.get_api()
 
@@ -147,7 +147,7 @@ class MikrotikAPI:
         """
         Push User (For Export): Creates or updates a user on the router.
         """
-        mode = getattr(settings, "ROUTER_MODE", "read_only").lower().strip()
+        mode = getattr(settings, "ROUTER_MODE", "live").lower().strip()
         if mode == "read_only":
             from network_manager.services.read_only import log_blocked_write
             log_blocked_write(f"Blocked sync_services.add_pppoe_user for {name} on {self.ip_address}")
@@ -201,7 +201,7 @@ class MikrotikAPI:
         """
         Delete User (For Cleanup): Finds and removes an orphaned user from the router.
         """
-        mode = getattr(settings, "ROUTER_MODE", "read_only").lower().strip()
+        mode = getattr(settings, "ROUTER_MODE", "live").lower().strip()
         if mode == "read_only":
             from network_manager.services.read_only import log_blocked_write
             log_blocked_write(f"Blocked sync_services.delete_pppoe_user for {name} on {self.ip_address}")

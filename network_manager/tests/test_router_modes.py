@@ -158,3 +158,90 @@ class RouterModeSafetyTests(TestCase):
             self.assertFalse(del_res["success"])
             self.assertIn("Blocked by read_only mode", del_res["error"])
             mock_raw_secret.remove.assert_not_called()
+
+    @override_settings(ROUTER_MODE="live", ROUTER_DRY_RUN=False)
+    def test_live_mode_pure_pass_through(self):
+        """
+        Verify that in live mode the router wrapper is a pure pass-through:
+        activate, disable, kick, profile change, and remove reach the router
+        layer unchanged without interception, without BLOCKED_WRITE logs, and with raw return values.
+        """
+        mock_raw_api = MagicMock()
+        mock_raw_secret_res = MagicMock()
+        mock_raw_active_res = MagicMock()
+        mock_raw_bridge_res = MagicMock()
+
+        mock_raw_secret_res.get.return_value = [
+            {"id": "*1", "name": "alice_live", "profile": "Plan-1500", "comment": "Alice"}
+        ]
+        mock_raw_active_res.get.return_value = [
+            {"id": "*A1", "name": "alice_live", "address": "10.0.0.5"}
+        ]
+        mock_raw_bridge_res.get.return_value = []
+
+        def get_resource_side_effect(path):
+            if path == "/ppp/secret":
+                return mock_raw_secret_res
+            elif path == "/ppp/active":
+                return mock_raw_active_res
+            elif path == "/interface/bridge/filter":
+                return mock_raw_bridge_res
+            return MagicMock()
+
+        mock_raw_api.get_resource.side_effect = get_resource_side_effect
+
+        with patch("routeros_api.RouterOsApiPool") as mock_pool_cls:
+            mock_pool_instance = MagicMock()
+            mock_pool_instance.get_api.return_value = mock_raw_api
+            mock_pool_cls.return_value = mock_pool_instance
+
+            api = MikrotikAPI(self.device, router_mode="live")
+            self.assertFalse(api.is_read_only)
+            self.assertFalse(api.is_dry_run)
+
+            # 1. ACTIVATE / ENABLE: Reaches router layer
+            success, msg = api.enable_pppoe_user("alice_live")
+            self.assertTrue(success)
+            mock_raw_secret_res.set.assert_called()
+
+            # 2. SUSPEND / DISABLE: Reaches router layer
+            mock_raw_secret_res.set.reset_mock()
+            mock_raw_active_res.remove.reset_mock()
+            success, msg = api.suspend_pppoe_user("alice_live")
+            self.assertTrue(success)
+            mock_raw_secret_res.set.assert_called()
+            mock_raw_active_res.remove.assert_called()
+
+            # 3. KICK: Reaches router layer
+            mock_raw_active_res.remove.reset_mock()
+            success, msg = api.kick_active_user("alice_live")
+            self.assertTrue(success)
+            mock_raw_active_res.remove.assert_called_once()
+
+            # 4. PROFILE CHANGE: Reaches router layer
+            mock_raw_secret_res.set.reset_mock()
+            success, msg = api.set_user_pppoe_profile("alice_live", "Plan-2000")
+            self.assertTrue(success)
+            mock_raw_secret_res.set.assert_called()
+
+            # 5. REMOVE: Reaches router layer
+            mock_raw_secret_res.remove.reset_mock()
+            success, msg = api.delete_pppoe_user("alice_live")
+            self.assertTrue(success)
+            mock_raw_secret_res.remove.assert_called()
+
+            # 6. Auditing: Zero BLOCKED_WRITE entries logged
+            blocked_count = SystemLog.objects.filter(action="BLOCKED_WRITE").count()
+            self.assertEqual(blocked_count, 0)
+
+            # 7. SyncMikrotikAPI in live mode: pure pass-through
+            mock_raw_secret_res.add.reset_mock()
+            mock_raw_secret_res.remove.reset_mock()
+            sync_api = SyncMikrotikAPI("192.168.88.1", "admin", "pw", 8728)
+            add_res = sync_api.add_pppoe_user("live_bob", "pw", "p1", "Bob")
+            self.assertTrue(add_res["success"])
+            mock_raw_secret_res.add.assert_called()
+
+            del_res = sync_api.delete_pppoe_user("alice_live")
+            self.assertTrue(del_res["success"])
+            mock_raw_secret_res.remove.assert_called()

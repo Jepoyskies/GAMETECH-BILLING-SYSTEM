@@ -629,3 +629,30 @@ All tests passing across small batches:
     3. Standalone `Adjusted By` column and visible Pulled-Out action in Cignal Dashboard.
     4. 4 KPI hero cards, Dashboard back link, and one-click copy buttons in Agent Directory.
   - 100% test pass rate across new and existing regression suites (4/4 restoration tests passed, 14/14 regression tests passed).
+
+---
+
+## Phase 3.2 Restoration: Live Router Behavior Restored (`ROUTER_MODE=live`)
+
+- **Owner Decision & Objective:**
+  - System restored to live router behavior identical to before Phase 3.2.
+  - Payment/renewal activates the router; Kick Session, Force Suspend, and Force Reactivate execute write operations directly on the router as before.
+  - All billing, payment, expiry, and cut-off logic preserved with zero alteration.
+- **Droplet Environment & Database Backup:**
+  - Backed up production PostgreSQL database on droplet to `/root/backups/gametech_pre_live_20260928_130645.sql` (311KB).
+  - Configured `ROUTER_MODE=live` in `/root/GAMETECH-BILLING-SYSTEM/docker-compose.yml` and `/root/GAMETECH-BILLING-SYSTEM/.env` for `web`, `celery`, and `celery-beat` services.
+  - Set default `ROUTER_MODE = env.str("ROUTER_MODE", default="live")` in `gametech_core/settings.py` (with automatic test isolation `ROUTER_MODE = "dry_run"`).
+- **Pure Pass-Through Router Wrapper:**
+  - In `network_manager/services/base.py` (`MikrotikBase`) and `network_manager/sync_services.py` (`MikrotikAPI`):
+    - Default mode set to `"live"`.
+    - In live mode, `self.is_read_only` evaluates to `False`. The raw API instance from `RouterOsApiPool` is returned directly without wrapping in `ReadOnlyApiWrapper`.
+    - Zero write interception, zero flow-altering logs, zero `sync_status='Blocked'`, and zero modified return values.
+  - In `billing/views/customers/crud.py` (`view_customer`):
+    - Passed `"router_mode": "live"`, ensuring the "Read-Only Mode" badge in Customer View More Actions is automatically hidden. All 10 More Actions items remain intact.
+- **Preserved Exclusions (Pending Install & Closed-Not-Installed):**
+  - Kept safe exclusions in `auto_suspend.py` querysets (`due_customers` and `rogue_customers`) excluding `pending` and `closed_not_installed` customers from overdue cut-off loops.
+- **Automated Verification:**
+  - Added `test_live_mode_pure_pass_through` to `network_manager/tests/test_router_modes.py`:
+    - Validates activate (`enable_pppoe_user`), disable (`suspend_pppoe_user`), kick (`kick_active_user`), profile change (`set_user_pppoe_profile`), and remove (`delete_pppoe_user`) reach the router socket layer unchanged.
+    - Asserts 0 `BLOCKED_WRITE` entries in `SystemLog` and raw success return values.
+

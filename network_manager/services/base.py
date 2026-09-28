@@ -18,15 +18,15 @@ class MikrotikBase:
             elif dry_run is not None:
                 self.router_mode = "dry_run" if dry_run else "live"
             else:
-                self.router_mode = getattr(settings, "ROUTER_MODE", "read_only").lower().strip()
+                self.router_mode = getattr(settings, "ROUTER_MODE", "live").lower().strip()
 
             if self.router_mode not in ("dry_run", "read_only", "live"):
-                self.router_mode = "read_only"
+                self.router_mode = "live"
 
             self.is_dry_run = (self.router_mode == "dry_run")
             self.is_read_only = (self.router_mode == "read_only")
 
-            if self.is_dry_run or getattr(settings, "ROUTER_DRY_RUN", False):
+            if self.is_dry_run or (getattr(settings, "ROUTER_DRY_RUN", False) and self.router_mode != "live"):
                 dev_name = getattr(device, "device_name", str(getattr(device, "ip_address", "DryRunRouter")))
                 logger.info(f"[ROUTER_MODE={self.router_mode}] Stubbed MikrotikAPI initialized for {dev_name}")
                 self.connection = DryRunConnectionPool(dev_name)
