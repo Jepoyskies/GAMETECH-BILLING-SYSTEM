@@ -213,8 +213,8 @@ This document tracks every UI control, button, menu item, column, field, modal, 
 | Send SMS | Button in More Actions | Button in More Actions | KEPT |
 | Send Email | Button in More Actions | Button in More Actions | KEPT |
 | Rebate | Link in More Actions | Link in More Actions | KEPT |
-| Rollback | Link `<a href="{% url 'customer_rollback' %}">` | Button with SweetAlert popup `<button onclick="confirmRollback(...)">` | BEHAVIOR CHANGED (Accidental wrapper) |
-| Kick Session | Form in More Actions | Form in More Actions | CLIPPED BY CSS on <900px viewports; Missing read-only mode badge |
-| Force Suspend | Form in More Actions | Form in More Actions | CLIPPED BY CSS on <900px viewports; Missing read-only mode badge |
-| Force Reactivate | Button in More Actions | Button in More Actions | CLIPPED BY CSS on <900px viewports; Missing read-only mode badge |
-| Delete Customer | Form in More Actions (Admin role) | Form in More Actions (Admin role) | CLIPPED BY CSS on <900px viewports; Hidden if staff user lacks explicit Admin role |
+| Rollback | Link `<a href="{% url 'customer_rollback' %}">` | Direct link `<a href="{% url 'customer_rollback' %}">` without redundant SweetAlert popup | KEPT / FIXED (Preserves original route & form confirmation) |
+| Kick Session | Form in More Actions | Form in More Actions | KEPT / FIXED (Unclipped via CSS scroll/z-index; annotated with Read-Only Mode badge when ROUTER_MODE=read_only) |
+| Force Suspend | Form in More Actions | Form in More Actions | KEPT / FIXED (Unclipped via CSS scroll/z-index; annotated with Read-Only Mode badge when ROUTER_MODE=read_only) |
+| Force Reactivate | Button in More Actions | Button in More Actions | KEPT / FIXED (Unclipped via CSS scroll/z-index; annotated with Read-Only Mode badge when ROUTER_MODE=read_only) |
+| Delete Customer | Form in More Actions (Admin role) | Form in More Actions (`perms.billing.delete_customer or is_superuser`) | KEPT / FIXED (Unclipped via CSS scroll/z-index; permission-based check allows anyone permitted to delete) |

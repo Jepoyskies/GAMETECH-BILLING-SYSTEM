@@ -538,6 +538,25 @@ All tests passing across small batches:
   - `billing.tests.test_phase1_security` & `customer_portal.tests.test_portal_security`: 16 tests passed.
   - `billing.tests.test_router_dry_run`: 10 tests passed (`ROUTER_MODE=read_only` confirmed active and blocking writes).
 
+---
+
+## Customer View: "More Actions" Dropdown Unclipping & Permission Refinement
+
+- **Dropdown Menu Unclipping & Responsiveness:**
+  - In `billing/templates/billing/view_customer/_styles.html` and `_profile_header.html`, configured `.page-header.customer-view-header .dropdown-menu` with `position: absolute`, `data-bs-display="static"`, `z-index: 1060`, `min-width: 250px`, `max-width: 90vw`, and `max-height: min(450px, 65vh)` with smooth `overflow-y: auto`.
+  - Added custom scrollbar styles ensuring high-contrast scrolling across laptop viewports and mobile screens in both light and dark themes.
+  - Set `overflow: visible !important;` on `.customer-view-header` (`z-index: 1050`) and ensured `_lifecycle_tracker.html` has subordinate `z-index: 1`.
+- **Rollback Direct Link Restoration:**
+  - Preserved original route `{% url 'customer_rollback' customer.pppoe_username %}` and dedicated form warning/confirmation screen in `customer_rollback.html`.
+  - Removed redundant `confirmRollback()` SweetAlert popup that intercepted user navigation before reaching the adjustment screen.
+- **Permission-Based Delete Gate:**
+  - Replaced hardcoded `request.user.role == 'Admin'` with `perms.billing.delete_customer or request.user.is_superuser`, matching the view's `@permission_required("billing.delete_customer")` decorator.
+- **Router Safety Annotations:**
+  - Passed `router_mode` into `view_customer` context; annotated the Connection section header in More Actions with a distinct "Read-Only Mode" badge when `ROUTER_MODE=read_only`.
+- **Automated Verification:**
+  - Added `billing/tests/test_customer_view_actions.py` covering all 10 actions for permitted staff, omission of Delete for unpermitted staff, read-only mode badge rendering, and direct rollback routing.
+
+
 
 
 
