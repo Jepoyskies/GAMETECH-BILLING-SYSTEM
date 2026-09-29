@@ -695,15 +695,10 @@ class Customer(models.Model):
         if not self.pppoe_username:
             return 'Offline'
         from django.core.cache import cache
-        if cache.get(f'router_unreachable_{self.mikrotik_device.id}'):
+        if self.mikrotik_device and cache.get(f'router_unreachable_{self.mikrotik_device.id}'):
             return 'Unknown'
         active_users = cache.get('active_pppoe_usernames_set') or set()
         return 'Online' if self.pppoe_username.lower() in {str(u).lower() for u in active_users} else 'Offline'
-        live_data = cache.get('live_monitoring_data') or {}
-        for router in live_data.get('routers', []):
-            if router.get('device_name') == self.mikrotik_device.device_name:
-                return 'Online' if router.get('internet_online') else 'Offline'
-        return 'Unknown'
 
     @property
     def is_expired(self):

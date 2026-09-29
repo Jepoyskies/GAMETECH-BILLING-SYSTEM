@@ -173,12 +173,14 @@ def api_router_uplink(request):
                 uplink_status = "Offline"
                 uplink_ping = "Error"
 
+            # Map to unified status vocabulary: Online / Offline / Unknown
+            unified_status = "Online" if uplink_status == "Online" else ("Offline" if uplink_status == "Offline" else "Unknown")
             routers.append(
                 {
                     "id": device.id,
                     "name": device.device_name,
                     "ip": device.ip_address,
-                    "uplink_status": uplink_status,
+                    "uplink_status": unified_status,
                     "uplink_ping": uplink_ping,
                 }
             )
@@ -419,21 +421,13 @@ def api_customer_mikrotik_status(request, customer_id):
         else:
             data["is_active_offline"] = True
 
-    # --- Unified Status (Synchronized across all views) ---
-    # 1. Connection = Customer's PPPoE session active (internet reaching them)
-    data["connection_status"] = "Online" if data["mt_status"] == "Connected" else "Offline"
-
-    # 2. Router = MikroTik device reachable + has uplink
-    if data["mt_status"] in ("API Unreachable", "Offline (Router Off)"):
-        data["router_status"] = "Offline"
-    elif data["mt_status"] in ("No Router Assigned",):
-        data["router_status"] = "Offline"
-    else:
-        data["router_status"] = "Online" if not getattr(api, "_connection_failed", False) else "Offline"
-
-    # 3. For Dispatching & Payment
+    # --- Unified Status (Synchronized from model properties — single source of truth) ---
+    # All pages (customer list, customer detail, live monitoring) now use the same model properties
+    data["connection_status"] = customer.connection_status
+    data["router_status"] = customer.router_status
     data["dispatch_status"] = customer.dispatch_status or "No"
     data["payment_status"] = customer.payment_status
+    data["is_expired"] = customer.is_expired
 
     from django.http import JsonResponse
 

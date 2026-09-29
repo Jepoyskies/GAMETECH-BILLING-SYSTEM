@@ -135,4 +135,118 @@
             }
         });
     }
+
+    function updateConnectionStatuses() {
+        let indicators = document.querySelectorAll('.conn-status-indicator');
+        if (indicators.length === 0) return;
+        
+        Promise.all([
+            fetch('/api/active-usernames/').then(res => res.json()),
+            fetch('/api/router-uplink/').then(res => res.json())
+        ])
+        .then(([activeData, uplinkData]) => {
+            if (activeData.status === 'success') {
+                let active_users = new Set(activeData.active_usernames || []);
+                let user_router_map = activeData.user_router_map || {};
+                let offline_routers = new Set(activeData.offline_routers || []);
+                
+                let router_uplinks = {};
+                if (uplinkData && uplinkData.routers) {
+                    uplinkData.routers.forEach(r => {
+                        router_uplinks[r.id] = r.uplink_status;
+                    });
+                }
+                
+                indicators.forEach(el => {
+                    let pppoe = el.getAttribute('data-pppoe');
+                    let status = el.getAttribute('data-status');
+                    let routerId = parseInt(el.getAttribute('data-router-id'));
+                    let tr = el.closest('tr');
+                    let baseBadge = tr ? tr.querySelector('.cust-base-badge') : null;
+                    let routerBadge = tr ? tr.querySelector('.unified-router-badge') : null;
+                    let connBadge = tr ? tr.querySelector('.unified-connection-badge') : null;
+                    
+                    // 1. Router status: MikroTik device reachable + has uplink
+                    let isRouterOnline = true;
+                    if (!isNaN(routerId)) {
+                        if (offline_routers.has(routerId) || router_uplinks[routerId] === 'Offline') {
+                            isRouterOnline = false;
+                        }
+                    }
+                    
+                    // 2. Connection status: Customer's PPPoE session active (internet reaching them)
+                    let isConnectionOnline = active_users.has(pppoe);
+                    
+                    // Update router badge (MikroTik device)
+                    if (routerBadge) {
+                        if (isRouterOnline) {
+                            routerBadge.className = 'unified-status-badge unified-router-badge status-badge--success';
+                            routerBadge.title = 'MikroTik Router: Online';
+                            routerBadge.innerHTML = '<i class="fas fa-wifi me-1"></i>Router: Online';
+                        } else {
+                            routerBadge.className = 'unified-status-badge unified-router-badge status-badge--neutral';
+                            routerBadge.title = 'MikroTik Router: Offline';
+                            routerBadge.innerHTML = '<i class="fas fa-wifi me-1"></i>Router: Offline';
+                        }
+                    }
+                    
+                    // Update connection badge (Customer's PPPoE session)
+                    if (connBadge) {
+                        if (isConnectionOnline) {
+                            connBadge.className = 'unified-status-badge unified-connection-badge status-badge--success';
+                            connBadge.title = 'Customer Connection: Online';
+                            connBadge.innerHTML = '<i class="fas fa-globe me-1"></i>Connection: Online';
+                        } else {
+                            connBadge.className = 'unified-status-badge unified-connection-badge status-badge--danger';
+                            connBadge.title = 'Customer Connection: Offline';
+                            connBadge.innerHTML = '<i class="fas fa-globe me-1"></i>Connection: Offline';
+                        }
+                    }
+                    
+                    // Set diagnostic attributes for showReason()
+                    if (!isRouterOnline) {
+                        el.setAttribute('data-router-unreachable', 'true');
+                        if (offline_routers.has(routerId)) {
+                            el.setAttribute('data-router-api-down', 'true');
+                        }
+                    }
+                    if (isConnectionOnline && user_router_map[pppoe] && !isNaN(routerId) && user_router_map[pppoe].router_id !== routerId) {
+                        el.setAttribute('data-different-router', user_router_map[pppoe].router_name);
+                    }
+                    
+                    // Update row highlighting
+                    if (tr) {
+                        tr.classList.remove('table-row-paid-offline');
+                        tr.classList.remove('table-row-pending-install');
+                        tr.classList.remove('table-row-suspended');
+                        
+                        if (status === 'suspended') {
+                            tr.classList.add('table-row-suspended');
+                        } else if (status === 'active' && !isConnectionOnline) {
+                            tr.classList.add('table-row-paid-offline');
+                        }
+                    }
+                    
+                    // Update base badge visibility
+                    if (baseBadge) {
+                        baseBadge.style.display = '';
+                        if (status === 'active' && isConnectionOnline) {
+                            baseBadge.className = 'status-badge status-badge--success cust-base-badge';
+                            baseBadge.innerHTML = '<span class="status-dot"></span>Active';
+                        }
+                    }
+                });
+            }
+        })
+        .catch(err => console.error("Error fetching connection statuses", err));
+    }
+    
+    // Run immediately, then every 30 seconds
+    updateConnectionStatuses();
+    setInterval(updateConnectionStatuses, 30000);
+    
+    // Also run when DataTables redraws the page
+    $('#customerTable').on('draw.dt', function () {
+        updateConnectionStatuses();
+    });
 </script>

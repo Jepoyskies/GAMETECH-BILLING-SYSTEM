@@ -244,39 +244,41 @@ document.addEventListener("DOMContentLoaded", function() {
                 const statusContainer = document.getElementById('mt-status-container');
                 const liveMtRow = document.getElementById('live-mt-status-row');
                 if (statusContainer) {
-                    if (data.mt_status === 'Connected') {
+                    const routerOn = data.router_status === 'Online';
+                    const connOn = data.connection_status === 'Online';
+                    const unknown = data.router_status === 'Unknown' || data.connection_status === 'Unknown';
+
+                    if (routerOn && connOn) {
                         if (liveMtRow) liveMtRow.classList.remove('active-offline-row-highlight');
-                        if (data.is_different_router) {
-                            statusContainer.innerHTML = '<span class="text-success fw-semibold"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Connection Online</span> <span class="badge bg-warning text-dark ms-1" style="font-size:0.75rem;" title="Active on ' + (data.connected_router_name || 'Other Router') + ' (Assigned to ' + (data.assigned_router_name || 'New Router') + ')"><i class="fas fa-exchange-alt me-1"></i>On ' + (data.connected_router_name || 'Other Router') + '</span>';
-                        } else {
-                            statusContainer.innerHTML = '<span class="text-success fw-semibold"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Connection Online</span>';
-                        }
-                    } else if (data.is_pending_install || data.mt_status === 'Pending Installation') {
-                        if (liveMtRow) liveMtRow.classList.remove('active-offline-row-highlight');
-                        statusContainer.innerHTML = '<span class="badge rounded-pill px-2 py-1 d-inline-flex align-items-center gap-1" style="background: rgba(14, 165, 233, 0.15); color: #0284c7; border: 1px solid rgba(14, 165, 233, 0.35); font-weight: 600; font-size: 0.8rem;"><i class="fas fa-gear"></i> Pending Installation</span>';
-                    } else if (data.is_active_offline || data.mt_status === 'Active but Offline') {
+                        statusContainer.innerHTML = '<span class="text-success fw-semibold"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Fully Online</span>';
+                    } else if (routerOn && !connOn) {
                         if (liveMtRow) liveMtRow.classList.add('active-offline-row-highlight');
-                        const displayStatus = data.mt_status || 'Connection Offline';
-                        statusContainer.innerHTML = '<span class="status-badge status-badge--warning d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-triangle-exclamation"></i>' + displayStatus + '</span>';
-                    } else {
+                        statusContainer.innerHTML = '<span class="status-badge status-badge--warning d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-triangle-exclamation"></i>Router Online, Internet Offline</span>';
+                    } else if (!routerOn && connOn) {
+                        if (liveMtRow) liveMtRow.classList.add('active-offline-row-highlight');
+                        statusContainer.innerHTML = '<span class="status-badge status-badge--warning d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-triangle-exclamation"></i>Router Offline, Internet Online</span>';
+                    } else if (unknown) {
                         if (liveMtRow) liveMtRow.classList.remove('active-offline-row-highlight');
-                        statusContainer.innerHTML = '<span class="status-badge status-badge--danger d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>' + (data.mt_status || 'Connection Offline') + '</span>';
+                        statusContainer.innerHTML = '<span class="status-badge status-badge--neutral d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-question-circle"></i>Checking...</span>';
+                    } else {
+                        if (liveMtRow) liveMtRow.classList.add('active-offline-row-highlight');
+                        statusContainer.innerHTML = '<span class="status-badge status-badge--danger d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Fully Offline</span>';
                     }
                 }
 
                 // Update Profile Header 4-Status Badges in Real-Time
                 const hdrRouterBadge = document.getElementById('hdr-router-badge');
                 if (hdrRouterBadge) {
-                    const isRouterOn = (data.router_status === 'Online' || data.mt_status === 'Connected');
-                    hdrRouterBadge.className = 'status-badge ' + (isRouterOn ? 'status-badge--success' : 'status-badge--danger');
-                    hdrRouterBadge.innerHTML = '<i class="fas fa-wifi me-1"></i>Router: ' + (isRouterOn ? 'Online' : 'Offline');
+                    const isRouterOn = data.router_status === 'Online';
+                    hdrRouterBadge.className = 'status-badge ' + (isRouterOn ? 'status-badge--success' : (data.router_status === 'Unknown' ? 'status-badge--warning' : 'status-badge--danger'));
+                    hdrRouterBadge.innerHTML = '<i class="fas fa-wifi me-1"></i>Router: ' + data.router_status;
                 }
 
                 const hdrConnBadge = document.getElementById('hdr-conn-badge');
                 if (hdrConnBadge) {
-                    const isConnOn = (data.connection_status === 'Online');
-                    hdrConnBadge.className = 'status-badge ' + (isConnOn ? 'status-badge--success' : 'status-badge--danger');
-                    hdrConnBadge.innerHTML = '<i class="fas fa-globe me-1"></i>Connection: ' + (isConnOn ? 'Online' : 'Offline');
+                    const isConnOn = data.connection_status === 'Online';
+                    hdrConnBadge.className = 'status-badge ' + (isConnOn ? 'status-badge--success' : (data.connection_status === 'Unknown' ? 'status-badge--warning' : 'status-badge--danger'));
+                    hdrConnBadge.innerHTML = '<i class="fas fa-globe me-1"></i>Connection: ' + data.connection_status;
                 }
 
                 const macEl = document.getElementById('mt-live-mac');
