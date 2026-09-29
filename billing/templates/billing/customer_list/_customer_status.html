@@ -1,65 +1,33 @@
 {% comment %}
   Unified Customer Status Badges
-  Shows 5 statuses: Dispatch, Payment, Router, Connection, Expired
+  Shows 5 statuses: Billing, Dispatch, Payment, Router, Connection
   Usage: {% include "billing/customer_list/_customer_status.html" with customer=customer %}
 {% endcomment %}
 <div class="d-flex flex-column align-items-start" style="gap: 4px;">
+    {# Billing / Lifecycle Status #}
+    <span class="status-badge status-badge--{% if customer.status == 'active' %}success{% elif customer.status == 'suspended' %}warning{% elif customer.status == 'expired' %}danger{% elif customer.status == 'pending' %}info{% else %}neutral{% endif %} cust-base-badge" style="font-size: 11px; padding: 2px 8px;">
+        <span class="status-dot"></span>{{ customer.get_status_display }}
+    </span>
+
     {# Dispatch Status #}
     {% if customer.dispatch_status %}
         <span class="status-badge status-badge--info" style="font-size: 11px; padding: 2px 8px;">
             <i class="fas fa-truck me-1"></i>{{ customer.dispatch_status }}
         </span>
-    {% else %}
-        <span class="status-badge status-badge--neutral" style="font-size: 11px; padding: 2px 8px;">
-            <i class="fas fa-check me-1"></i>No Dispatch
-        </span>
     {% endif %}
 
     {# Payment Status #}
-    {% if customer.payment_status == 'Paid' %}
-        <span class="status-badge status-badge--success" style="font-size: 11px; padding: 2px 8px;">
-            <i class="fas fa-peso-sign me-1"></i>Paid
-        </span>
-    {% else %}
-        <span class="status-badge status-badge--danger" style="font-size: 11px; padding: 2px 8px;">
-            <i class="fas fa-peso-sign me-1"></i>Unpaid
-        </span>
-    {% endif %}
+    <span class="status-badge {% if customer.payment_status == 'Paid' %}status-badge--success{% else %}status-badge--danger{% endif %}" style="font-size: 11px; padding: 2px 8px;">
+        <i class="fas fa-peso-sign me-1"></i>{{ customer.payment_status }}
+    </span>
 
-    {# Expired Status #}
-    {% if customer.is_expired %}
-        <span class="status-badge status-badge--danger" style="font-size: 11px; padding: 2px 8px;">
-            <i class="fas fa-clock me-1"></i>Expired
-        </span>
-    {% endif %}
+    {# Router Status (MikroTik device reachable + has uplink) #}
+    <span class="unified-status-badge unified-router-badge {% if customer.router_status == 'Online' %}status-badge--success{% else %}status-badge--neutral{% endif %}" style="font-size: 11px; padding: 2px 8px;">
+        <i class="fas fa-wifi me-1"></i>Router {{ customer.router_status }}
+    </span>
 
-    {# Router Status (PPPoE session on Mikrotik) #}
-    {% if customer.router_status == 'Online' %}
-        <span class="status-badge status-badge--success" style="font-size: 11px; padding: 2px 8px;">
-            <i class="fas fa-wifi me-1"></i>Router Online
-        </span>
-    {% elif customer.router_status == 'Unknown' %}
-        <span class="status-badge status-badge--warning" style="font-size: 11px; padding: 2px 8px;">
-            <i class="fas fa-wifi me-1"></i>Router Unknown
-        </span>
-    {% else %}
-        <span class="status-badge status-badge--neutral" style="font-size: 11px; padding: 2px 8px;">
-            <i class="fas fa-wifi me-1"></i>Router Offline
-        </span>
-    {% endif %}
-
-    {# Connection Status (Mikrotik WAN/Internet) #}
-    {% if customer.connection_status == 'Online' %}
-        <span class="status-badge status-badge--success" style="font-size: 11px; padding: 2px 8px;">
-            <i class="fas fa-globe me-1"></i>Internet Online
-        </span>
-    {% elif customer.connection_status == 'Unknown' %}
-        <span class="status-badge status-badge--warning" style="font-size: 11px; padding: 2px 8px;">
-            <i class="fas fa-globe me-1"></i>Internet Unknown
-        </span>
-    {% else %}
-        <span class="status-badge status-badge--danger" style="font-size: 11px; padding: 2px 8px;">
-            <i class="fas fa-globe me-1"></i>Internet Offline
-        </span>
-    {% endif %}
+    {# Connection Status (Customer's PPPoE session / internet reaching them) #}
+    <span class="unified-status-badge unified-connection-badge {% if customer.connection_status == 'Online' %}status-badge--success{% else %}status-badge--danger{% endif %}" style="font-size: 11px; padding: 2px 8px;">
+        <i class="fas fa-globe me-1"></i>Connection {{ customer.connection_status }}
+    </span>
 </div>
