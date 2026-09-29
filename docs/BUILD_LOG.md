@@ -613,6 +613,25 @@ All tests passing across small batches:
 - **Verdict:** Direct 1:1 copy would NOT safely reproduce router reality. Six issue categories identified with counts.
 - **No data was imported. No changes to application code.**
 
+## Legacy Import Tool & Page (Preparation)
+
+- **Import command:** `billing/management/commands/import_legacy_customers.py`
+  - Parses MySQL dump, preserves PPPoE credentials and status exactly.
+  - Converts expiry dates from UTC to UTC+8.
+  - Auto-creates missing Mikrotik devices (e.g., `ccr2116.v1`).
+  - Maps legacy plan names to current `SubscriptionPlan` records.
+  - Flags zero-date customers (9) with `expires_at=NULL` for review instead of giving fake expiry.
+  - Generates random portal passwords.
+  - Idempotent (`update_or_create`), disconnects signals during import.
+- **Import page:** `billing/templates/billing/import_data.html` (updated)
+  - Accepts `.sql` dump files.
+  - Shows zero-date customer review section after import.
+  - Shows import summary (total customers, timestamp).
+- **View:** `billing/views/settings.py` → `import_legacy_data_view` (updated)
+  - Handles SQL file upload, calls `import_legacy_customers` command.
+  - Reads import report JSON and passes zero-date customers to template.
+- **No import has been run. Tool is ready for when the fresh dump arrives.**
+
 ## Redesigned Pages Regression Restorations (Audit Resolution)
 
 - **Audit Resolution & Owner Decisions:**
