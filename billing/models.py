@@ -431,7 +431,7 @@ class Customer(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     sms_sent_at = models.DateTimeField(null=True, blank=True)
-    expires_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True, db_index=True)
 
     def get_status_display_badge(self):
         return f'<span class="badge badge-{self.status}">{self.get_status_display()}</span>'

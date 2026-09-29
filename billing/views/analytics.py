@@ -1,6 +1,7 @@
 from decimal import Decimal
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from billing.decorators import role_required
 from billing.models import Customer, SubscriptionPlan, Payment
 from django.db.models import Sum, Count, Q
@@ -12,6 +13,10 @@ from datetime import timedelta
 @role_required(["Admin", "Superadmin"])
 def analytics_dashboard(request):
     today = timezone.localtime().date()
+    cache_key = f"analytics_dashboard_{today}"
+    cached = cache.get(cache_key)
+    if cached:
+        return render(request, "billing/analytics.html", cached)
 
     # Total Active Customers
     active_customers = Customer.objects.filter(status="active").count()
@@ -67,4 +72,5 @@ def analytics_dashboard(request):
         "plan_distribution": plan_distribution,
     }
 
+    cache.set(cache_key, context, 300)  # Cache for 5 minutes
     return render(request, "billing/analytics.html", context)
