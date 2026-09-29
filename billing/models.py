@@ -636,52 +636,87 @@ class Customer(models.Model):
         return secret_comment
 
     @property
-    def dispatch_status(self):
-        """Returns the active dispatch type: Repair, Installation, Reconnection, etc."""
+    def active_dispatch_ticket(self):
+        """Returns the active JobTicket or None."""
         from dispatch.models import JobTicket
-        active = JobTicket.objects.filter(
+        return JobTicket.objects.filter(
             customer=self,
-            status__in=['pending', 'dispatched', 'in_progress']
-        ).first()
-        return active.ticket_type if active else None
+            status__in=['PENDING', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'QA_PASSED']
+        ).order_by('-created_at').first()
+
+    @property
+    def dispatch_status(self):
+        """Returns the active dispatch type display: Repair, Installation, Relocation, etc., or None."""
+        ticket = self.active_dispatch_ticket
+        if ticket:
+            type_map = {
+                'INSTALLATION': 'Installation',
+                'REPAIR': 'Repair',
+                'CIGNAL': 'Cignal',
+                'MIGRATION': 'Migration',
+                'RELOCATION': 'Relocation',
+                'PULL_OUT': 'Pull Out',
+                'SITE_VISIT': 'Site Visit',
+            }
+            return type_map.get(ticket.ticket_type, ticket.get_ticket_type_display() or ticket.ticket_type)
+        # Check legacy DispatchRecord
+        legacy = self.dispatches.filter(done_at__isnull=True).order_by('-created_at').first()
+        if legacy:
+            return 'Repair' if legacy.source_tab == 'CLIENT_CONCERNS' else 'Installation'
+        return None
 
     @property
     def payment_status(self):
-        """Returns 'Paid' or 'Unpaid' based on billing status."""
-        if self.status in ('active', 'suspended'):
+        """Returns 'Paid' or 'Unpaid' based on billing status and expiration date."""
+        from django.utils import timezone
+        if self.status == 'active':
+            if self.expires_at and self.expires_at < timezone.now():
+                return 'Unpaid'
             return 'Paid'
         return 'Unpaid'
 
     @property
     def router_status(self):
-        """Returns 'Online' if PPPoE session is active on Mikrotik, else 'Offline'."""
+        """Returns 'Online' if PPPoE session is active on Mikrotik, 'Offline' if not, or 'Unknown' if router is unreachable."""
         if not self.pppoe_username:
             return 'Offline'
         from django.core.cache import cache
+        if cache.get(f'router_unreachable_{self.mikrotik_device.id}'):
+            return 'Unknown'
         active_users = cache.get('active_pppoe_usernames_set') or set()
-        return 'Online' if self.pppoe_username.lower() in {u.lower() for u in active_users} else 'Offline'
+        return 'Online' if self.pppoe_username.lower() in {str(u).lower() for u in active_users} else 'Offline'
 
     @property
     def connection_status(self):
-        """Returns 'Online' if the Mikrotik has internet (WAN up), else 'Offline'."""
+        """Returns 'Online' if the Mikrotik has internet (WAN up), 'Offline' if not, or 'Unknown' if router is unreachable."""
         if not self.mikrotik_device:
             return 'Offline'
         from django.core.cache import cache
+        if cache.get(f'router_unreachable_{self.mikrotik_device.id}'):
+            return 'Unknown'
         live_data = cache.get('live_monitoring_data') or {}
         for router in live_data.get('routers', []):
             if router.get('device_name') == self.mikrotik_device.device_name:
                 return 'Online' if router.get('internet_online') else 'Offline'
-        return 'Offline'
+        return 'Unknown'
+
+    @property
+    def is_expired(self):
+        """Returns True if the customer is past their expiration date."""
+        from django.utils import timezone
+        return self.expires_at and timezone.now() > self.expires_at
 
     @property
     def status_summary(self):
-        """Returns a dict of all 4 statuses for API/template use."""
+        """Returns a dict of all 5 statuses for API/template use."""
         return {
-            'dispatch': self.dispatch_status or 'None',
+            'dispatch': self.dispatch_status or 'No',
             'payment': self.payment_status,
             'router': self.router_status,
             'connection': self.connection_status,
+            'expired': 'Yes' if self.is_expired else 'No',
         }
+
 
     class Meta:
         permissions = [

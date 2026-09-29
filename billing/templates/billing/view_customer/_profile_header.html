@@ -30,6 +30,41 @@
                     </span>
                     {% endif %}
                 </div>
+
+                <!-- Unified Status Badges: For Dispatching, Payment, Router, Connection -->
+                <div class="d-flex align-items-center gap-2 flex-wrap mt-2">
+                    <!-- 1. For Dispatching -->
+                    {% if customer.dispatch_status and customer.dispatch_status != 'None' and customer.dispatch_status != 'No' %}
+                        <a href="#section-ticket-history" class="status-badge status-badge--warning text-decoration-none" style="font-size: 11px; padding: 2px 8px;" title="Active Dispatch Ticket: {{ customer.active_dispatch_ticket.ticket_number|default:customer.dispatch_status }}">
+                            <i class="fas fa-screwdriver-wrench me-1"></i>For Dispatch: {{ customer.dispatch_status }}{% if customer.active_dispatch_ticket %} ({{ customer.active_dispatch_ticket.ticket_number }}){% endif %}
+                        </a>
+                    {% else %}
+                        <span class="status-badge status-badge--neutral" style="font-size: 11px; padding: 2px 8px;">
+                            <i class="fas fa-check-circle me-1"></i>For Dispatch: No
+                        </span>
+                    {% endif %}
+
+                    <!-- 2. Payment -->
+                    {% if customer.payment_status == 'Paid' %}
+                        <span class="status-badge status-badge--success" style="font-size: 11px; padding: 2px 8px;" title="Billing is active (Due: {{ customer.expires_at|date:'M d, Y'|default:'Active' }})">
+                            <i class="fas fa-peso-sign me-1"></i>Payment: Paid
+                        </span>
+                    {% else %}
+                        <span class="status-badge status-badge--danger" style="font-size: 11px; padding: 2px 8px;" title="Account is unpaid / due">
+                            <i class="fas fa-exclamation-circle me-1"></i>Payment: Unpaid
+                        </span>
+                    {% endif %}
+
+                    <!-- 3. Router (Home Modem) -->
+                    <span id="hdr-router-badge" class="status-badge {% if customer.router_status == 'Online' %}status-badge--success{% else %}status-badge--danger{% endif %}" style="font-size: 11px; padding: 2px 8px;" title="Customer Home Router / ONT Modem">
+                        <i class="fas fa-wifi me-1"></i>Router: {{ customer.router_status }}
+                    </span>
+
+                    <!-- 4. Connection (ISP Uplink) -->
+                    <span id="hdr-conn-badge" class="status-badge {% if customer.connection_status == 'Online' %}status-badge--success{% else %}status-badge--danger{% endif %}" style="font-size: 11px; padding: 2px 8px;" title="ISP Internet WAN Uplink from Repeater to MikroTik">
+                        <i class="fas fa-globe me-1"></i>Connection: {{ customer.connection_status }}
+                    </span>
+                </div>
             </div>
         </div>
 
