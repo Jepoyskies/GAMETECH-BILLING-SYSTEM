@@ -1,7 +1,10 @@
 <!-- Base Partial: Customer Table -->
+<style>
+    #customerTable td, #customerTable th { padding-top: 6px !important; padding-bottom: 6px !important; }
+</style>
 <div class="gt-table-card animate-fade-in animate-delay-2" style="--section-accent: #3b82f6;">
     <div class="table-responsive p-0">
-        <table id="customerTable" class="table gt-table align-middle mb-0" style="width:100%; border-collapse: collapse;">
+        <table id="customerTable" class="table gt-table align-middle mb-0" style="width:100%; border-collapse: collapse; min-width: 1100px;">
             <thead>
                 <tr>
                     <th class="all" style="width: 40px; text-align: center;">
@@ -27,7 +30,7 @@
                     </td>
 
                     {# col 2 – Full Name + mobile status dot #}
-                    <td>
+                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;">
                         {% if customer.is_paid_offline %}
                             <span class="d-inline-block d-md-none me-1 rounded-circle align-middle"
                                   style="width:9px;height:9px;background:#ef4444;box-shadow:0 0 6px rgba(239,68,68,0.7);"></span>
@@ -47,7 +50,7 @@
                             <span class="d-inline-block d-md-none me-1 rounded-circle align-middle"
                                   style="width:9px;height:9px;background:#64748b;box-shadow:0 0 5px rgba(100,116,139,0.4);"></span>
                         {% endif %}
-                        <span class="fw-semibold text-title">{{ customer.full_name }}</span>
+                        <span class="fw-semibold text-title" title="{{ customer.full_name }}">{{ customer.full_name }}</span>
                         {% if customer.is_suspicious %}
                             <span class="badge bg-danger ms-1" title="Suspicious Account: {{ customer.suspicious_reasons|join:', ' }}"><i class="fas fa-exclamation-triangle"></i></span>
                         {% endif %}
@@ -60,10 +63,10 @@
                     <td><span class="font-monospace text-body-secondary" style="font-size: 13px;">{{ customer.phone }}</span></td>
 
                     {# col 5 – Plan #}
-                    <td>
+                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">
                         {% if customer.plan %}
                             <i class="fa-solid fa-wifi d-inline d-md-none text-secondary me-1" style="font-size:0.68rem;"></i>
-                            <span class="fw-medium">{{ customer.plan.name }}</span>
+                            <span class="fw-medium" title="{{ customer.plan.name }}">{{ customer.plan.name }}</span>
                         {% else %}
                             <span class="text-muted">None</span>
                         {% endif %}
@@ -90,9 +93,9 @@
                     </td>
 
                     {# col 8 – Router #}
-                    <td>
+                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;">
                         {% if customer.mikrotik_device %}
-                            <span class="fw-medium text-title" style="color: var(--text-primary); font-size: 13px;">
+                            <span class="fw-medium text-title" style="color: var(--text-primary); font-size: 13px;" title="{{ customer.mikrotik_device.device_name }}">
                                 {{ customer.mikrotik_device.device_name }}
                             </span>
                         {% else %}
@@ -101,7 +104,7 @@
                     </td>
 
                     {# col 9 – Unified Status Badges #}
-                    <td class="align-middle" style="min-width: 180px;">
+                    <td class="align-middle" style="min-width: 200px; padding-top: 6px; padding-bottom: 6px;">
                         {% include "billing/customer_list/_customer_status.html" with customer=customer %}
                         {# Hidden telemetry data for JS #}
                         <span class="conn-status-indicator" style="display: none;"
@@ -120,16 +123,6 @@
                               data-barangay-id="{{ customer.barangay.id|default:'' }}"
                               data-barangay-health="{{ customer.barangay.health_status|default:'Excellent' }}"
                               data-barangay-name="{{ customer.barangay.name|default:'Unknown Barangay' }}"></span>
-
-                        {% if customer.expires_at %}
-                        <div class="text-muted" style="font-size: 11px; margin-top: 4px; white-space: nowrap;">
-                            {% if customer.status == 'expired' or customer.status == 'suspended' %}
-                                Expired {{ customer.expires_at|date:"M d, Y" }}
-                            {% else %}
-                                Due {{ customer.expires_at|date:"M d, Y" }}
-                            {% endif %}
-                        </div>
-                        {% endif %}
                     </td>
 
                     {# col 10 – Row Actions #}
