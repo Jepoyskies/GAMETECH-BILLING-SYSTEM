@@ -33,7 +33,10 @@
         <a href="?date_range=this_month" class="gt-filter-pill {% if date_filter == 'this_month' %}active{% endif %}">This Month</a>
       </div>
       <a href="{% url 'dispatch_export_tickets' %}" class="gt-btn-secondary" title="Export CSV">
-        <i class="fas fa-download"></i> Export CSV
+        <i class="fas fa-file-csv"></i> CSV
+      </a>
+      <a href="{% url 'dispatch_export_dispatches_excel' %}" class="gt-btn-secondary" title="Export Excel">
+        <i class="fas fa-file-excel"></i> Excel
       </a>
       <button onclick="location.reload()" class="gt-icon-btn" title="Refresh Dashboard">
         <i class="fas fa-sync-alt"></i>
@@ -91,6 +94,60 @@
           <div class="dash-kpi-sub">{{ operational_overview.cancelled.installs }} Install &middot; {{ operational_overview.cancelled.repairs }} Repair</div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Collection Rate KPI -->
+  <div class="dash-section">
+    <div class="dash-section-heading">
+      <i class="fas fa-percentage text-success"></i> Collection Rate
+    </div>
+    <div class="kpi-grid-4">
+      <div class="gt-kpi-card">
+        <div class="gt-kpi-icon" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border-color: rgba(16, 185, 129, 0.25);">
+          <i class="fas fa-hand-holding-usd"></i>
+        </div>
+        <div>
+          <div class="gt-kpi-val">{{ collection_rate }}%</div>
+          <div class="gt-kpi-lbl">Collection Rate</div>
+          <div class="dash-kpi-sub">{{ payers_this_month }} payers / {{ total_customers }} customers</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Expiring Soon with Live Countdown Timers -->
+  <div class="dash-section">
+    <div class="dash-section-heading">
+      <i class="fas fa-hourglass-half text-danger"></i> Expiring Soon (Live Countdown)
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover">
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th>Username</th>
+            <th>Expires At</th>
+            <th>Countdown</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cust in expiring_soon %}
+          <tr>
+            <td>{{ cust.full_name }}</td>
+            <td><code>{{ cust.pppoe_username }}</code></td>
+            <td>{{ cust.expires_at|date:"M d, Y h:i A" }}</td>
+            <td>
+              <span class="badge bg-danger countdown-timer" data-expiry="{{ cust.expires_at|date:'c' }}">
+                <i class="fas fa-clock"></i> <span class="timer-text">--:--:--</span>
+              </span>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="text-center text-muted">No subscriptions expiring in the next 3 days.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
 
@@ -357,6 +414,32 @@ setInterval(function() {
     }) + ' · Realtime Operational Overview';
   }
 }, 1000);
+
+// Live countdown timers for expiring subscriptions
+function updateCountdownTimers() {
+  document.querySelectorAll('.countdown-timer').forEach(function(el) {
+    var expiryStr = el.getAttribute('data-expiry');
+    if (!expiryStr) return;
+    var expiry = new Date(expiryStr);
+    var now = new Date();
+    var diff = expiry - now;
+    var timerText = el.querySelector('.timer-text');
+    if (!timerText) return;
+    if (diff <= 0) {
+      timerText.textContent = 'EXPIRED';
+      el.classList.remove('bg-danger');
+      el.classList.add('bg-secondary');
+    } else {
+      var days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      var hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      var mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      var secs = Math.floor((diff % (1000 * 60)) / 1000);
+      timerText.textContent = days + 'd ' + String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+    }
+  });
+}
+setInterval(updateCountdownTimers, 1000);
+updateCountdownTimers();
 
 // Status Chart interactive mode switcher
 var rawChartData = {{ overview_data.chart_data_json|default:"{}"|safe }};

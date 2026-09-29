@@ -89,8 +89,19 @@ urlpatterns = [
 
     # Dispatch Log Export
     path('export/dispatches/', views.export_dispatches_csv, name='dispatch_export_dispatches'),
+    path('export/dispatches/excel/', views.export_dispatches_excel, name='dispatch_export_dispatches_excel'),
 
     # Backup & Restore
     path('api/backup/create/', views.api_backup_create, name='api_backup_create'),
     path('api/backup/restore/', views.api_backup_restore, name='api_backup_restore'),
+
+    # Geographic Map
+    path('map/', views.geo_map_view, name='dispatch_geo_map'),
+    path('api/nap/update-position/', views.api_update_nap_position, name='api_update_nap_position'),
+
+    # FBT/PLC Calculator
+    path('fbt-plc-calculator/', views.fbt_plc_calculator_view, name='fbt_plc_calculator'),
+
+    # Receipt
+    path('receipt/<int:payment_id>/', views.receipt_view, name='dispatch_receipt'),
 ]

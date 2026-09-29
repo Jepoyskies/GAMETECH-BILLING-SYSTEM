@@ -1,0 +1,86 @@
+{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}Receipt #{{ payment.id }} | Gametech{% endblock %}
+
+{% block extra_css %}
+<style>
+  .receipt-container {
+    max-width: 400px; margin: 0 auto; padding: 24px;
+    background: white; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    font-family: 'Courier New', monospace;
+  }
+  .receipt-header { text-align: center; border-bottom: 2px dashed #333; padding-bottom: 16px; margin-bottom: 16px; }
+  .receipt-header h2 { font-size: 1.2rem; margin: 0; }
+  .receipt-header p { margin: 4px 0; font-size: 0.85rem; }
+  .receipt-row { display: flex; justify-content: space-between; margin: 8px 0; font-size: 0.9rem; }
+  .receipt-row .label { font-weight: 600; }
+  .receipt-footer { text-align: center; border-top: 2px dashed #333; padding-top: 16px; margin-top: 16px; font-size: 0.8rem; }
+  .receipt-logo { width: 60px; height: 60px; margin: 0 auto 8px; display: block; }
+  @media print {
+    body * { visibility: hidden; }
+    .receipt-container, .receipt-container * { visibility: visible; }
+    .receipt-container { position: absolute; left: 0; top: 0; box-shadow: none; }
+    .no-print { display: none !important; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="no-print mb-3 d-flex gap-2 justify-content-center">
+  <button onclick="window.print()" class="gt-btn-primary"><i class="fas fa-print"></i> Print Receipt</button>
+  <a href="{% url 'dispatch_dashboard' %}" class="gt-btn-secondary"><i class="fas fa-arrow-left"></i> Back</a>
+</div>
+
+<div class="receipt-container">
+  <div class="receipt-header">
+    <h2>GAMETECH UNLI FIBER</h2>
+    <p>Cagayan de Oro City</p>
+    <p>Official Receipt</p>
+  </div>
+
+  <div class="receipt-row">
+    <span class="label">Receipt #:</span>
+    <span>{{ payment.id }}</span>
+  </div>
+  <div class="receipt-row">
+    <span class="label">Date:</span>
+    <span>{{ payment.paid_at|date:"M d, Y h:i A" }}</span>
+  </div>
+  <div class="receipt-row">
+    <span class="label">Customer:</span>
+    <span>{{ payment.customer.full_name }}</span>
+  </div>
+  <div class="receipt-row">
+    <span class="label">Username:</span>
+    <span>{{ payment.customer.pppoe_username }}</span>
+  </div>
+  <div class="receipt-row">
+    <span class="label">Plan:</span>
+    <span>{{ payment.plan_name }}</span>
+  </div>
+  <div class="receipt-row">
+    <span class="label">Amount:</span>
+    <span>₱{{ payment.amount|floatformat:2 }}</span>
+  </div>
+  <div class="receipt-row">
+    <span class="label">Method:</span>
+    <span>{{ payment.get_payment_method_display }}</span>
+  </div>
+  {% if payment.reference_no %}
+  <div class="receipt-row">
+    <span class="label">Reference:</span>
+    <span>{{ payment.reference_no }}</span>
+  </div>
+  {% endif %}
+  <div class="receipt-row">
+    <span class="label">Processed By:</span>
+    <span>{{ payment.adjusted_by }}</span>
+  </div>
+
+  <div class="receipt-footer">
+    <p>Thank you for your payment!</p>
+    <p>This is a system-generated receipt.</p>
+  </div>
+</div>
+{% endblock %}

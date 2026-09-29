@@ -243,4 +243,14 @@ CELERY_BEAT_SCHEDULE = {
         "task": "billing.tasks.cignal_expiry_notification_task",
         "schedule": crontab(hour="8", minute="0"),  # Run daily at 8:00 AM — alerts staff before workday
     },
+    "auto-backup-hourly": {
+        "task": "billing.tasks.automated_backup_task",
+        "schedule": crontab(minute="0"),  # Run at the top of every hour
+        "kwargs": {"backup_type": "hourly"},
+    },
+    "auto-backup-daily": {
+        "task": "billing.tasks.automated_backup_task",
+        "schedule": crontab(hour="2", minute="0"),  # Run daily at 2:00 AM
+        "kwargs": {"backup_type": "daily"},
+    },
 }

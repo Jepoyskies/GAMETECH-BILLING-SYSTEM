@@ -176,6 +176,27 @@ def dashboard_view(request):
     csr_report = get_csr_performance_report(date_filter=date_filter, date_from=date_from, date_to=date_to)
     tech_report = get_technician_productivity_report(date_filter=date_filter, date_from=date_from, date_to=date_to)
 
+    # Collection Rate KPI (unique financial metric from legacy)
+    from billing.models import Payment
+    from django.db.models import Count, Q
+    from datetime import timedelta
+
+    today = timezone.now().date()
+    month_start = today.replace(day=1)
+    total_customers = Customer.objects.exclude(status__in=['closed_not_installed']).count()
+    payers_this_month = Payment.objects.filter(
+        paid_at__date__gte=month_start
+    ).values('customer').distinct().count()
+    collection_rate = round((payers_this_month / total_customers * 100), 1) if total_customers > 0 else 0
+
+    # Expiring soon (for countdown timers)
+    expiring_soon = Customer.objects.filter(
+        expires_at__isnull=False,
+        expires_at__date__gte=today,
+        expires_at__date__lte=today + timedelta(days=3),
+        status='active'
+    ).values('id', 'full_name', 'pppoe_username', 'expires_at').order_by('expires_at')[:10]
+
     context = {
         'pending_verification_count': pending_verification_count,
         'awaiting_assignment_count': awaiting_assignment_count,
@@ -204,6 +225,10 @@ def dashboard_view(request):
         'monthly_targets': monthly_targets,
         'csr_report': csr_report,
         'tech_report': tech_report,
+        'collection_rate': collection_rate,
+        'payers_this_month': payers_this_month,
+        'total_customers': total_customers,
+        'expiring_soon': expiring_soon,
     }
     return render(request, 'dispatch/dashboard.html', context)
 
@@ -1974,6 +1999,202 @@ def export_dispatches_csv(request):
         ])
 
     return response
+
+
+# ─── Excel Export ──────────────────────────────────────────────────────────────
+
+@login_required
+def export_dispatches_excel(request):
+    """Export DispatchLog to Excel (.xlsx) matching legacy DMS export columns."""
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    except ImportError:
+        return HttpResponse("openpyxl not installed. Run: pip install openpyxl", status=500)
+
+    qs = DispatchRecord.objects.select_related('status_option', 'type_option', 'chat_type_option', 'csr', 'customer').prefetch_related('teams')
+
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
+    status_filter = request.GET.get('status', 'ALL')
+    type_filter = request.GET.get('type', 'ALL')
+    source_tab_filter = request.GET.get('source_tab', 'ALL')
+    search_q = request.GET.get('q', '').strip()
+
+    if date_from:
+        qs = qs.filter(date__gte=date_from)
+    if date_to:
+        qs = qs.filter(date__lte=date_to)
+    if status_filter != 'ALL':
+        qs = qs.filter(status_option__label__icontains=status_filter)
+    if type_filter != 'ALL':
+        qs = qs.filter(type_option__label__icontains=type_filter)
+    if source_tab_filter != 'ALL':
+        qs = qs.filter(source_tab=source_tab_filter)
+    if search_q:
+        qs = qs.filter(
+            Q(client_name__icontains=search_q) |
+            Q(ticket_number__icontains=search_q) |
+            Q(address__icontains=search_q) |
+            Q(contact_number__icontains=search_q)
+        )
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Dispatch Log"
+
+    headers = [
+        'ID', 'Status', 'Date Created', 'Done At', 'Turnaround', 'Client', 'Concern',
+        'Type', 'Chat Type', 'Source', 'Time Start', 'Time Done', 'Duration',
+        'Team', 'CSR', 'Sales Agent', 'Address', 'Contact', 'Ticket Number', 'Remarks',
+        'Schedule Date', 'Schedule Time', 'Barangay/City', 'Account No.', 'Job Order',
+        'Email Address', 'NAP/Port', 'Cable Length Used', 'NAP Reading', 'Pole Number',
+        'Plan/Package', 'ONT/Modem SN', 'Signal Level', 'Facility', 'House Reading',
+        'Special Instruction', 'Technician Remarks', 'Acknowledged By',
+    ]
+
+    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF")
+    thin_border = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin')
+    )
+
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal='center')
+        cell.border = thin_border
+
+    for row, d in enumerate(qs.order_by('-date', '-created_at')[:5000], 2):
+        techs_str = ", ".join(t.name for t in d.teams.all())
+        created_str = d.date.strftime('%Y-%m-%d') if d.date else ''
+        done_str = d.done_at.strftime('%Y-%m-%d %H:%M') if d.done_at else ''
+        turnaround = ''
+        if d.done_at and d.date:
+            diff_minutes = int((d.done_at - d.date).total_seconds() / 60)
+            if diff_minutes >= 0:
+                hours = diff_minutes // 60
+                mins = diff_minutes % 60
+                turnaround = f"{hours}h {mins}m" if hours else f"{mins}m"
+
+        row_data = [
+            d.id,
+            d.status_option.label if d.status_option else '',
+            created_str,
+            done_str,
+            turnaround,
+            d.client_name,
+            d.concern or '',
+            d.type_option.label if d.type_option else '',
+            d.chat_type_option.label if d.chat_type_option else '',
+            d.source_tab,
+            d.time_start.strftime('%Y-%m-%d %H:%M') if d.time_start else '',
+            d.time_accomplish.strftime('%Y-%m-%d %H:%M') if d.time_accomplish else '',
+            f"{d.duration}m" if d.duration else '',
+            techs_str,
+            d.csr.get_full_name() if d.csr else '',
+            d.sales_agent.name if d.sales_agent else '',
+            d.address or '',
+            d.contact_number or '',
+            d.ticket_number or '',
+            d.remarks or '',
+            d.schedule_date.strftime('%Y-%m-%d') if d.schedule_date else '',
+            d.schedule_time or '',
+            d.barangay_city or '',
+            d.account_no or '',
+            d.job_order or '',
+            d.email_address or '',
+            d.nap_port or '',
+            d.cable_length or '',
+            d.nap_reading or '',
+            d.pole_number or '',
+            d.plan_package or '',
+            d.ont_modem_sn or '',
+            d.signal_level or '',
+            d.facility or '',
+            d.house_reading or '',
+            d.special_instruction or '',
+            d.technician_remarks or '',
+            d.acknowledged_by or '',
+        ]
+
+        for col, value in enumerate(row_data, 1):
+            cell = ws.cell(row=row, column=col, value=value)
+            cell.border = thin_border
+
+    # Auto-fit column widths (approximate)
+    for col in range(1, len(headers) + 1):
+        ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = 18
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    timestamp_str = timezone.now().strftime('%Y%m%d_%H%M%S')
+    response['Content-Disposition'] = f'attachment; filename="dispatch_log_{timestamp_str}.xlsx"'
+    wb.save(response)
+    return response
+
+
+# ─── Geographic Map ────────────────────────────────────────────────────────────
+
+@login_required
+def geo_map_view(request):
+    """Geographic map showing NAP boxes and customer locations with drag-and-drop positioning."""
+    from network_manager.models import NapBox
+    from billing.models import Customer
+
+    naps = NapBox.objects.all().values('id', 'napbox_no', 'latitude', 'longitude', 'marker_color')
+    customers = Customer.objects.filter(
+        latitude__isnull=False, longitude__isnull=False
+    ).values('id', 'full_name', 'pppoe_username', 'latitude', 'longitude', 'status')[:500]
+
+    context = {
+        'naps_json': json.dumps(list(naps), default=str),
+        'customers_json': json.dumps(list(customers), default=str),
+    }
+    return render(request, 'dispatch/geo_map.html', context)
+
+
+@login_required
+def api_update_nap_position(request):
+    """AJAX endpoint to update NAP box position."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+
+    from network_manager.models import NapBox
+    nap_id = request.POST.get('nap_id')
+    lat = request.POST.get('lat')
+    lng = request.POST.get('lng')
+
+    if not nap_id or not lat or not lng:
+        return JsonResponse({'success': False, 'error': 'Missing parameters'}, status=400)
+
+    try:
+        nap = NapBox.objects.get(id=nap_id)
+        nap.latitude = lat
+        nap.longitude = lng
+        nap.save()
+        return JsonResponse({'success': True})
+    except NapBox.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'NAP not found'}, status=404)
+
+
+# ─── FBT/PLC Fiber Calculator ──────────────────────────────────────────────────
+
+@login_required
+def fbt_plc_calculator_view(request):
+    """Fiber optic power budget calculator for FBT and PLC splitters."""
+    return render(request, 'dispatch/fbt_plc_calculator.html')
+
+
+# ─── Receipt Generation ────────────────────────────────────────────────────────
+
+@login_required
+def receipt_view(request, payment_id):
+    """Generate a printable receipt for a payment."""
+    from billing.models import Payment
+    payment = get_object_or_404(Payment, id=payment_id)
+    return render(request, 'dispatch/receipt.html', {'payment': payment})
 
 
 # ─── Backup & Restore ───────────────────────────────────────────────────────────

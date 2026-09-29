@@ -1,0 +1,90 @@
+{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}Geographic Map | Gametech Dispatch{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  #map { height: calc(100vh - 200px); min-height: 500px; border-radius: 8px; }
+  .nap-popup { font-size: 13px; }
+  .nap-popup strong { display: block; margin-bottom: 4px; }
+  .legend {
+    background: white; padding: 10px 14px; border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15); font-size: 13px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+  <div class="d-flex align-items-center gap-3">
+    <div class="gt-header-icon"><i class="fas fa-map-marked-alt"></i></div>
+    <div>
+      <div class="gt-header-eyebrow mb-1"><i class="fas fa-satellite-dish"></i> DISPATCH</div>
+      <h1 class="gt-header-title">Geographic Map</h1>
+      <p class="gt-header-sub">NAP boxes and customer locations. Drag markers to reposition.</p>
+    </div>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <a href="{% url 'dispatch_dashboard' %}" class="gt-btn-secondary"><i class="fas fa-arrow-left"></i> Back</a>
+  </div>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  const naps = {{ naps_json|safe }};
+  const customers = {{ customers_json|safe }};
+
+  const map = L.map('map').setView([8.455, 124.628], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  // NAP markers (draggable)
+  naps.forEach(nap => {
+    if (!nap.latitude || !nap.longitude) return;
+    const color = nap.marker_color || 'red';
+    const marker = L.circleMarker([parseFloat(nap.latitude), parseFloat(nap.longitude)], {
+      radius: 10, fillColor: color, color: '#fff', weight: 2, fillOpacity: 0.9
+    }).addTo(map);
+    marker.bindPopup(`<div class="nap-popup"><strong>${nap.napbox_no}</strong>Drag to reposition</div>`);
+    marker.on('dragend', function(e) {
+      const pos = e.target.getLatLng();
+      fetch('{% url "api_update_nap_position" %}', {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `nap_id=${nap.id}&lat=${pos.lat}&lng=${pos.lng}`
+      });
+    });
+    marker.dragging.enable();
+  });
+
+  // Customer markers
+  customers.forEach(cust => {
+    if (!cust.latitude || !cust.longitude) return;
+    const color = cust.status === 'active' ? '#28a745' : '#333';
+    L.circleMarker([parseFloat(cust.latitude), parseFloat(cust.longitude)], {
+      radius: 6, fillColor: color, color: '#fff', weight: 1, fillOpacity: 0.8
+    }).addTo(map).bindPopup(`<div class="nap-popup"><strong>${cust.full_name}</strong>${cust.pppoe_username || ''}</div>`);
+  });
+
+  // Legend
+  const legend = L.control({position: 'bottomright'});
+  legend.onAdd = function() {
+    const div = L.DomUtil.create('div', 'legend');
+    div.innerHTML = `
+      <strong>Legend</strong>
+      <div class="legend-item"><div class="legend-dot" style="background:#dc3545"></div> NAP Box (Red)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#28a745"></div> Active Customer</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#333"></div> Inactive Customer</div>
+    `;
+    return div;
+  };
+  legend.addTo(map);
+</script>
+{% endblock %}
