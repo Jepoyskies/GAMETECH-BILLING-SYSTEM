@@ -167,39 +167,39 @@
                     let routerBadge = tr ? tr.querySelector('.unified-router-badge') : null;
                     let connBadge = tr ? tr.querySelector('.unified-connection-badge') : null;
                     
-                    // 1. Connection status: System/MikroTik receiving internet from Repeater/WAN
-                    let isConnectionOnline = true;
+                    // 1. Router status: MikroTik device reachable + has uplink
+                    let isRouterOnline = true;
                     if (!isNaN(routerId)) {
                         if (offline_routers.has(routerId) || router_uplinks[routerId] === 'Offline') {
-                            isConnectionOnline = false;
+                            isRouterOnline = false;
                         }
                     }
                     
-                    // 2. Router status: Customer's home router / modem receiving service (active PPPoE session)
-                    let isRouterOnline = active_users.has(pppoe);
+                    // 2. Connection status: Customer's PPPoE session active (internet reaching them)
+                    let isConnectionOnline = active_users.has(pppoe);
                     
-                    // Update router badge (Customer Home Modem)
+                    // Update router badge (MikroTik device)
                     if (routerBadge) {
                         if (isRouterOnline) {
                             routerBadge.className = 'unified-status-badge unified-router-badge status-badge--success';
-                            routerBadge.title = 'Home Router: Online';
+                            routerBadge.title = 'MikroTik Router: Online';
                             routerBadge.innerHTML = '<i class="fas fa-wifi me-1"></i>Router: Online';
                         } else {
-                            routerBadge.className = 'unified-status-badge unified-router-badge status-badge--danger';
-                            routerBadge.title = 'Home Router: Offline';
+                            routerBadge.className = 'unified-status-badge unified-router-badge status-badge--neutral';
+                            routerBadge.title = 'MikroTik Router: Offline';
                             routerBadge.innerHTML = '<i class="fas fa-wifi me-1"></i>Router: Offline';
                         }
                     }
                     
-                    // Update connection badge (System/ISP WAN Uplink)
+                    // Update connection badge (Customer's PPPoE session)
                     if (connBadge) {
                         if (isConnectionOnline) {
                             connBadge.className = 'unified-status-badge unified-connection-badge status-badge--success';
-                            connBadge.title = 'Internet Connection: Online';
+                            connBadge.title = 'Customer Connection: Online';
                             connBadge.innerHTML = '<i class="fas fa-globe me-1"></i>Connection: Online';
                         } else {
                             connBadge.className = 'unified-status-badge unified-connection-badge status-badge--danger';
-                            connBadge.title = 'Internet Connection: Offline';
+                            connBadge.title = 'Customer Connection: Offline';
                             connBadge.innerHTML = '<i class="fas fa-globe me-1"></i>Connection: Offline';
                         }
                     }

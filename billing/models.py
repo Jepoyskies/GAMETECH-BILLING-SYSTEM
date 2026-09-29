@@ -677,7 +677,21 @@ class Customer(models.Model):
 
     @property
     def router_status(self):
-        """Returns 'Online' if PPPoE session is active on Mikrotik, 'Offline' if not, or 'Unknown' if router is unreachable."""
+        """Returns 'Online' if the MikroTik router is reachable and has uplink, 'Offline' if not, or 'Unknown' if router is unreachable."""
+        if not self.mikrotik_device:
+            return 'Offline'
+        from django.core.cache import cache
+        if cache.get(f'router_unreachable_{self.mikrotik_device.id}'):
+            return 'Unknown'
+        live_data = cache.get('live_monitoring_data') or {}
+        for router in live_data.get('routers', []):
+            if router.get('device_name') == self.mikrotik_device.device_name:
+                return 'Online' if router.get('internet_online') else 'Offline'
+        return 'Offline'
+
+    @property
+    def connection_status(self):
+        """Returns 'Online' if the customer's PPPoE session is active (internet reaching them), 'Offline' if not, or 'Unknown' if router is unreachable."""
         if not self.pppoe_username:
             return 'Offline'
         from django.core.cache import cache
@@ -685,15 +699,6 @@ class Customer(models.Model):
             return 'Unknown'
         active_users = cache.get('active_pppoe_usernames_set') or set()
         return 'Online' if self.pppoe_username.lower() in {str(u).lower() for u in active_users} else 'Offline'
-
-    @property
-    def connection_status(self):
-        """Returns 'Online' if the Mikrotik has internet (WAN up), 'Offline' if not, or 'Unknown' if router is unreachable."""
-        if not self.mikrotik_device:
-            return 'Offline'
-        from django.core.cache import cache
-        if cache.get(f'router_unreachable_{self.mikrotik_device.id}'):
-            return 'Unknown'
         live_data = cache.get('live_monitoring_data') or {}
         for router in live_data.get('routers', []):
             if router.get('device_name') == self.mikrotik_device.device_name:

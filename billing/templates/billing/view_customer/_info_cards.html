@@ -155,22 +155,28 @@
                             </form>
                         </span>
                     </li>
-                    <li id="live-mt-status-row" class="{% if customer.status == 'active' and mt_status != 'Connected' and mt_status != 'Loading...' %}active-offline-row-highlight{% endif %}" style="transition: all 0.3s ease;">
+                    <li id="live-mt-status-row" style="transition: all 0.3s ease;">
                         <span class="info-label">
                             Live MT Status
-                            <i class="fas fa-question-circle text-muted ms-1" style="cursor:help;" data-bs-toggle="tooltip" data-bs-html="true" title="<div class='text-start p-1' style='font-size: 0.85rem; line-height: 1.4;'><div class='mb-2'><span class='text-success fw-bold me-1'>&bull;</span> <b>Connection Online:</b> Customer's PPPoE session is active — internet is reaching them.</div><div class='mb-2'><span class='text-danger fw-bold me-1'>&bull;</span> <b>Connection Offline:</b> Account is active, but customer's home router is unplugged or PPPoE session is down.</div><div class='mb-2'><span class='text-danger fw-bold me-1'>&bull;</span> <b>Router Offline:</b> The MikroTik router lost its uplink (no internet for anyone on it).</div><div class='mb-2'><span class='text-warning fw-bold me-1'>&bull;</span> <b>Suspended:</b> Account is unpaid.</div><div><span class='text-secondary fw-bold me-1'>&bull;</span> <b>API Unreachable:</b> System cannot connect to the MikroTik router.</div></div>"></i>
+                            <i class="fas fa-question-circle text-muted ms-1" style="cursor:help;" data-bs-toggle="tooltip" data-bs-html="true" title="<div class='text-start p-1' style='font-size: 0.85rem; line-height: 1.4;'><div class='mb-2'><span class='text-success fw-bold me-1'>&bull;</span> <b>Router Online:</b> Customer's PPPoE session is active on the MikroTik.</div><div class='mb-2'><span class='text-danger fw-bold me-1'>&bull;</span> <b>Router Offline:</b> No active PPPoE session on the MikroTik.</div><div class='mb-2'><span class='text-warning fw-bold me-1'>&bull;</span> <b>Router Unknown:</b> Cannot reach the MikroTik to check.</div><div class='mb-2'><span class='text-success fw-bold me-1'>&bull;</span> <b>Internet Online:</b> MikroTik has internet from the repeater/WAN.</div><div><span class='text-danger fw-bold me-1'>&bull;</span> <b>Internet Offline:</b> MikroTik has no internet (repeater down).</div></div>"></i>
                         </span>
                         <span class="info-value" id="mt-status-container">
-                            {% if mt_status == 'Loading...' %}
-                                <span class="text-secondary"><i class="fas fa-spinner fa-spin me-1" style="font-size:0.6rem;"></i>Loading...</span>
-                            {% elif mt_status == 'Connected' %}
-                                <span class="text-success fw-semibold"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Connection Online</span>
-                            {% elif customer.status == 'active' %}
+                            {% if customer.router_status == 'Online' and customer.connection_status == 'Online' %}
+                                <span class="text-success fw-semibold"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Fully Online</span>
+                            {% elif customer.router_status == 'Online' and customer.connection_status == 'Offline' %}
                                 <span class="status-badge status-badge--warning d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;">
-                                    <i class="fas fa-triangle-exclamation"></i> {{ mt_status|default:"Connection Offline" }}
+                                    <i class="fas fa-triangle-exclamation"></i> Router Online, Internet Offline
+                                </span>
+                            {% elif customer.router_status == 'Offline' and customer.connection_status == 'Online' %}
+                                <span class="status-badge status-badge--warning d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;">
+                                    <i class="fas fa-triangle-exclamation"></i> Router Offline, Internet Online
+                                </span>
+                            {% elif customer.router_status == 'Unknown' or customer.connection_status == 'Unknown' %}
+                                <span class="status-badge status-badge--neutral d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;">
+                                    <i class="fas fa-question-circle"></i> Checking...
                                 </span>
                             {% else %}
-                                <span class="text-danger fw-semibold"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>{{ mt_status|default:"Connection Offline" }}</span>
+                                <span class="text-danger fw-semibold"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Fully Offline</span>
                             {% endif %}
                         </span>
                     </li>
