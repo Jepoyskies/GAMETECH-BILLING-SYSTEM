@@ -227,6 +227,9 @@ document.addEventListener("DOMContentLoaded", function() {
             });
         });
         observer.observe(document.body, { childList: true, subtree: true });
+        // Disconnect after 15s — DataTables are initialized by then, and
+        // keeping the observer alive causes memory leaks on long-lived pages.
+        setTimeout(() => observer.disconnect(), 15000);
         
         // Convert Django Messages to Floating Toasts
         const toastContainer = document.createElement('div');
@@ -390,6 +393,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function fetchOnlineStaff() {
+        if (document.hidden) return; // Skip when tab is hidden
         fetch('/api/online-staff/')
             .then(r => r.json())
             .then(data => {
@@ -440,13 +444,14 @@ document.addEventListener("DOMContentLoaded", function() {
     
     // Fetch once on load to show badge
     setTimeout(fetchOnlineStaff, 2000);
-    // Poll every 5 seconds for a truly live list
-    setInterval(fetchOnlineStaff, 5000);
+    // Poll every 15 seconds (reduced from 5s — 3x fewer requests)
+    setInterval(fetchOnlineStaff, 15000);
 
     // ============================================================
     // Notification Dropdown JS
     // ============================================================
     function fetchNotifications() {
+        if (document.hidden) return; // Skip when tab is hidden
         const loading = document.getElementById('notifLoading');
         const empty = document.getElementById('notifEmpty');
         const list = document.getElementById('notifList');
@@ -595,9 +600,9 @@ document.addEventListener("DOMContentLoaded", function() {
     window.markNotificationRead = markNotificationRead;
     window.markAllNotificationsRead = markAllNotificationsRead;
 
-    // Fetch notifications on load & poll every 30s
+    // Fetch notifications on load & poll every 60s (reduced from 30s)
     setTimeout(fetchNotifications, 1000);
-    setInterval(fetchNotifications, 30000);
+    setInterval(fetchNotifications, 60000);
     window.addEventListener('notificationsUpdated', fetchNotifications);
 
     // Idle timeout: automatically log out after 5 minutes of inactivity

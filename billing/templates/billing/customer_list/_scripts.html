@@ -137,6 +137,7 @@
     }
 
     function updateConnectionStatuses() {
+        if (document.hidden) return; // Skip when tab is hidden
         let indicators = document.querySelectorAll('.conn-status-indicator');
         if (indicators.length === 0) return;
         
@@ -241,9 +242,9 @@
         .catch(err => console.error("Error fetching connection statuses", err));
     }
     
-    // Run immediately, then every 30 seconds
+    // Run immediately, then every 60 seconds (reduced from 30s)
     updateConnectionStatuses();
-    setInterval(updateConnectionStatuses, 30000);
+    setInterval(updateConnectionStatuses, 60000);
     
     // Also run when DataTables redraws the page
     $('#customerTable').on('draw.dt', function () {
