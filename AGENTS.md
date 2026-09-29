@@ -171,6 +171,14 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
     * **EXCEPTION**: Only use `git log -S` if the user explicitly asks to track down a regression from a known commit or date range.
     * Rely entirely on the current state of the file as pinpointed by `gametech_filing_index.md` and `gametech_architecture_map.txt`.
 
+22b. **THE DASHBOARD FREEZE LAW (Baseline Is Untouchable)**:
+    * **THE PRINCIPLE**: The Dashboard is the finished, hand-authored design of this product and is the **visual baseline every other page must be made to match**. It is NOT a refactor target. It belongs to another contributor.
+    * **FORBIDDEN**: Editing, "cleaning up", re-tokening, re-fonting, or restyling ANY file in `billing/templates/billing/dashboard/` or `billing/templates/billing/dashboard.html`.
+    * **FORBIDDEN**: Swapping its fonts, hex values, spacing, radii, or the sidebar/topbar chrome it relies on — even for an "obvious improvement" or to remove a hardcoded colour.
+    * **MECHANICAL GUARD**: `base.html` wraps the page-chrome stylesheets in `{% block gt_theme %}`, and `dashboard.html` empties that block. Therefore `static/css/gt/components.css`, `surfaces.css` and `legacy.css` are NOT loaded on the Dashboard. Keep it that way: any new shared stylesheet that carries page chrome belongs inside `{% block gt_theme %}`, never outside it.
+    * **ALLOWED**: Reading the Dashboard to extract its design values (gold `#F9B233`/`#fbae1a`, navy `#0f172a`→`#1e3a8a`, indigo card `rgba(53,51,205,.2)`, radii 24/28/12px, Montserrat-style display numerals) and reproducing them on OTHER pages.
+    * **VERIFY BEFORE COMMITTING**: `git diff --stat -- billing/templates/billing/dashboard/` must be EMPTY for any UI task. If it is not, revert it before pushing.
+
 23. **REDIS CACHE KEY REGISTRY (Zero-Grep Cache Debugging)**:
     * When debugging cache/stale-data issues, look up the key here first. **NEVER** grep the codebase for `cache.set` or `cache.get`.
 

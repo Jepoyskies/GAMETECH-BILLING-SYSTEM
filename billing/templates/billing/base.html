@@ -13,18 +13,12 @@
     <!-- CSS Links -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    {# Outfit is the single product typeface (Dashboard = source of truth) #}
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@400;500;600;700&family=Poppins:wght@400;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     {% include "billing/base/_styles.html" %}
     <link rel="stylesheet" href="{% static 'css/theme.css' %}?v=2.2">
-    <!-- Unified Gametech design system. Load order matters:
-         theme.css < tokens < components < surfaces < data < legacy.
-         tokens.css and data.css are always on (inert variables + plugin
-         theming for DataTables/Select2/SweetAlert).
-         components/surfaces/legacy carry the page-chrome overrides, so they
-         live in a block that the Dashboard opts out of - the Dashboard is
-         someone else's finished design and must render exactly as authored. -->
+    {% if request.resolver_match.url_name != 'dashboard' %}
     <link rel="stylesheet" href="{% static 'css/gt/tokens.css' %}?v=3.0">
     <link rel="stylesheet" href="{% static 'css/gt/data.css' %}?v=3.0">
     {% block gt_theme %}
@@ -32,6 +26,7 @@
     <link rel="stylesheet" href="{% static 'css/gt/surfaces.css' %}?v=3.0">
     <link rel="stylesheet" href="{% static 'css/gt/legacy.css' %}?v=3.0">
     {% endblock %}
+    {% endif %}
     {% block extra_css %}{% endblock %}
     
     <script>
