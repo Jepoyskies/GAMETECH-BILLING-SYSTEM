@@ -14,6 +14,9 @@ class Migration(migrations.Migration):
             name='monitoring_record',
             field=models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='auto_dispatch_source', to='dispatch.monitoringrecord'),
         ),
+        # Note: This migration was originally created with related_name='dispatch_record'
+        # which clashed with MonitoringRecord.dispatch. Fixed to 'auto_dispatch_source'.
+        # A merge migration (0014) was created on production to resolve the conflict.
         migrations.AddField(
             model_name='dispatchrecord',
             name='schedule_date',
