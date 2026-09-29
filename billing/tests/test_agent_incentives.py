@@ -1,5 +1,5 @@
 from decimal import Decimal
-from django.test import TestCase, Client, RequestFactory
+from django.test import TestCase, Client, RequestFactory, override_settings
 from django.contrib.auth.models import User, Permission
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
@@ -22,6 +22,7 @@ from billing.services.incentives import (
 )
 
 
+@override_settings(INCENTIVES_ENABLED=True)
 class AgentIncentiveEngineTests(TestCase):
     """
     Test suite for Phase 5B: Agent Incentive Engine (SPEC Decision 7).
@@ -398,3 +399,67 @@ class AgentIncentiveEngineTests(TestCase):
         )
         Payment.objects.create(customer=cust_router_sync, amount=Decimal("2000.00"), payment_method="Cash")
         self.assertEqual(AgentQualificationEvent.objects.filter(customer=cust_router_sync).count(), 0)
+
+
+@override_settings(INCENTIVES_ENABLED=False)
+class IncentiveKillSwitchTests(TestCase):
+    """
+    Verifies that when INCENTIVES_ENABLED is False (the default):
+    - Payments trigger zero AgentQualificationEvent rows.
+    - The incentive evaluation service is never queried from the signal handler.
+    - Direct calls to evaluate_agent_qualification immediately return None without querying or creating events.
+    """
+
+    def setUp(self):
+        self.plan = SubscriptionPlan.objects.create(
+            name="Plan 1000",
+            speed_up="50 Mbps",
+            speed_down="50 Mbps",
+            price=Decimal("1000.00"),
+            validity_days=30,
+        )
+        self.agent_user = User.objects.create_user(
+            username="killswitch_agent", password="password123", email="ks@test.com"
+        )
+        self.agent = Agent.objects.create(
+            user=self.agent_user,
+            name="KillSwitch Agent",
+            email="ks@test.com",
+            is_test_data=True,
+        )
+        self.customer = Customer.objects.create(
+            full_name="Disabled Incentive Customer",
+            pppoe_username="disabled_cust_user",
+            plan=self.plan,
+            agent=self.agent,
+            original_agent=self.agent,
+            status="active",
+            installation_status="installed",
+            source="dispatch",
+            is_test_data=True,
+        )
+
+    def test_payment_creates_zero_events_and_service_never_queried_when_flag_off(self):
+        from unittest.mock import patch
+
+        # 1. When payment is recorded, service is NEVER called due to signal guard
+        with patch("billing.services.incentives.evaluate_agent_qualification") as mock_service:
+            Payment.objects.create(
+                customer=self.customer,
+                amount=Decimal("2000.00"),
+                payment_method="Cash",
+            )
+            mock_service.assert_not_called()
+
+        # 2. Zero AgentQualificationEvent rows exist
+        self.assertEqual(
+            AgentQualificationEvent.objects.filter(customer=self.customer).count(), 0
+        )
+
+        # 3. Direct invocation of evaluate_agent_qualification also returns None immediately
+        result = evaluate_agent_qualification(self.customer)
+        self.assertIsNone(result)
+        self.assertEqual(
+            AgentQualificationEvent.objects.filter(customer=self.customer).count(), 0
+        )
+

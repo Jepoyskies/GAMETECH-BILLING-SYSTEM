@@ -65,6 +65,9 @@ else:
     # Backward-compatibility alias
     ROUTER_DRY_RUN = (ROUTER_MODE == "dry_run")
 
+# Agent Incentive Engine Kill-Switch (Default: False)
+INCENTIVES_ENABLED = env.bool("INCENTIVES_ENABLED", default=False)
+
 # Application definition
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

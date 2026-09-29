@@ -3,6 +3,7 @@ import re
 from decimal import Decimal
 from django.utils import timezone
 from django.db import transaction
+from django.conf import settings
 from billing.models import (
     Customer,
     Agent,
@@ -56,6 +57,9 @@ def evaluate_agent_qualification(customer, triggering_payment=None):
     - If qualifying payment is rolled back before payout, revoke and flag it.
     - Idempotent: re-saving or re-processing never creates duplicate events.
     """
+    if not getattr(settings, "INCENTIVES_ENABLED", False):
+        return None
+
     if not customer:
         return None
 

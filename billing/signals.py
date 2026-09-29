@@ -421,7 +421,8 @@ def payment_post_save_incentive_trigger(sender, instance, created, **kwargs):
     Triggers the Agent Incentive Engine whenever a payment is created or updated.
     Evaluates 2nd-month qualification, advance payments, and rollback adjustments.
     """
-    if kwargs.get("raw"):
+    from django.conf import settings
+    if not getattr(settings, "INCENTIVES_ENABLED", False) or kwargs.get("raw"):
         return
     customer = instance.customer
     if not customer and instance.username:
@@ -440,6 +441,9 @@ def payment_post_delete_incentive_trigger(sender, instance, **kwargs):
     """
     Re-evaluates agent qualification if a payment is deleted.
     """
+    from django.conf import settings
+    if not getattr(settings, "INCENTIVES_ENABLED", False):
+        return
     customer = instance.customer
     if not customer and instance.username:
         customer = Customer.objects.filter(pppoe_username=instance.username).first()
