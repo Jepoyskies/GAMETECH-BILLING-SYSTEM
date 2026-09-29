@@ -726,7 +726,10 @@ def edit_customer(request, customer_id):
 @role_required(["Admin", "Editor", "CSR", "Agent"])
 @login_required
 def view_customer(request, customer_id):
-    customer = get_object_or_404(Customer, id=customer_id)
+    customer = get_object_or_404(
+        Customer.objects.select_related("plan", "barangay", "mikrotik_device", "agent"),
+        id=customer_id,
+    )
     payments = customer.payments.all().order_by("-paid_at")
 
     # Try to fetch live MT connection status if they have a router

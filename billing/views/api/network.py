@@ -66,11 +66,19 @@ def mikrotik_active_users_data_api(request):
 
 @login_required
 def api_offline_users(request):
+    from django.core.cache import cache
+
+    cached = cache.get("api_offline_users_payload")
+    if cached:
+        return JsonResponse(cached)
+
     response_data = {"offline_users": []}
     from billing.models import Customer
 
     devices = MikrotikDevice.objects.all()
     for device in devices:
+        if cache.get(f"router_unreachable_{device.id}"):
+            continue
         try:
             api = MikrotikAPI(device)
             active_users = api.get_active_pppoe_users()
@@ -118,6 +126,7 @@ def api_offline_users(request):
         except Exception as e:
             print(f"Error fetching offline users for {device.device_name}: {e}")
 
+    cache.set("api_offline_users_payload", response_data, 30)
     return JsonResponse(response_data)
 
 
@@ -435,9 +444,14 @@ def api_customer_mikrotik_status(request, customer_id):
 
 
 def api_network_alerts(request):
+    from django.core.cache import cache
     from billing.models import Barangay, Customer
     from network_manager.models import MikrotikDevice
     from dispatch.models import DispatchRecord
+
+    cached = cache.get("api_network_alerts_payload")
+    if cached:
+        return JsonResponse(cached)
 
     active_device_alerts = MikrotikDevice.objects.exclude(health_status="Excellent")
     active_barangay_alerts = Barangay.objects.exclude(health_status="Excellent")
@@ -499,7 +513,9 @@ def api_network_alerts(request):
             }
         )
 
-    return JsonResponse({"status": "success", "alerts": data})
+    payload = {"status": "success", "alerts": data}
+    cache.set("api_network_alerts_payload", payload, 30)
+    return JsonResponse(payload)
 
 
 def api_active_pppoe_usernames(request):

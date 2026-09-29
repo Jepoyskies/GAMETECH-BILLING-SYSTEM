@@ -24,7 +24,9 @@ def portal_dashboard(request):
     if not customer_id:
         return redirect('customer_portal:portal_login')
     try:
-        customer = Customer.objects.get(id=customer_id)
+        customer = Customer.objects.select_related(
+            "plan", "barangay", "mikrotik_device"
+        ).get(id=customer_id)
     except Customer.DoesNotExist:
         request.session.flush()
         return redirect('customer_portal:portal_login')
@@ -77,9 +79,14 @@ def portal_dashboard(request):
     ).filter(
         Q(addon_type__icontains="Cignal") | Q(addon_type__icontains="Box")
     ).order_by("-requested_at")
-    customer_tickets = customer.job_tickets.all().order_by('-created_at')
-    open_tickets_count = customer_tickets.filter(status__in=['PENDING', 'ASSIGNED', 'IN_PROGRESS']).count()
-    recent_ticket = customer_tickets.first()
+    # Fetch tickets once, then derive counts in-memory (was 3 separate COUNT queries)
+    customer_tickets = list(customer.job_tickets.all().order_by('-created_at'))
+    open_tickets_count = sum(
+        1 for t in customer_tickets
+        if t.status in ['PENDING', 'ASSIGNED', 'IN_PROGRESS']
+    )
+    recent_ticket = customer_tickets[0] if customer_tickets else None
+    total_tickets_count = len(customer_tickets)
 
     speed_down_val = 0.0
     speed_up_val = 0.0
@@ -105,7 +112,7 @@ def portal_dashboard(request):
         'issue_services': issue_services,
         'open_tickets_count': open_tickets_count,
         'recent_ticket': recent_ticket,
-        'total_tickets_count': customer_tickets.count(),
+        'total_tickets_count': total_tickets_count,
         'speed_down_val': speed_down_val,
         'speed_up_val': speed_up_val,
     }
@@ -117,7 +124,9 @@ def portal_statement_view(request):
     if not customer_id:
         return redirect('customer_portal:portal_login')
     try:
-        customer = Customer.objects.get(id=customer_id)
+        customer = Customer.objects.select_related(
+            "plan", "barangay", "mikrotik_device"
+        ).get(id=customer_id)
     except Customer.DoesNotExist:
         request.session.flush()
         return redirect('customer_portal:portal_login')

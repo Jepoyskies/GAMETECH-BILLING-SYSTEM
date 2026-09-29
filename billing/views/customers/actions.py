@@ -348,7 +348,10 @@ def edit_customer_balance(request, customer_id):
 
 @login_required
 def statement_of_account_view(request, customer_id):
-    customer = get_object_or_404(Customer, id=customer_id)
+    customer = get_object_or_404(
+        Customer.objects.select_related("plan", "barangay", "mikrotik_device"),
+        id=customer_id,
+    )
     payments = customer.payments.all().order_by("-paid_at")
 
     date_from = request.GET.get("from")

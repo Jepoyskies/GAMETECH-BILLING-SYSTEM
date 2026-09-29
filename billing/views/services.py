@@ -386,7 +386,10 @@ def get_categorized_plans():
 
 @login_required
 def user_cignal_logs_view(request, customer_id):
-    customer = get_object_or_404(Customer, id=customer_id)
+    customer = get_object_or_404(
+        Customer.objects.select_related("plan", "mikrotik_device"),
+        id=customer_id,
+    )
     logs = customer.cignal_plans.all()
 
     context = {"customer": customer, "logs": logs}

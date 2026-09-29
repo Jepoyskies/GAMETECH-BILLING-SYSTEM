@@ -47,7 +47,7 @@ from billing.views import calculate_new_expiration_date
 
 @login_required
 def payment_logs_view(request):
-    payments = Payment.objects.all().order_by("-paid_at")
+    payments = Payment.objects.select_related("customer").all().order_by("-paid_at")
 
     # Filtering
     filter_from = request.GET.get("from", "")
