@@ -1,5 +1,34 @@
 # AGENTS.md — Global AI Assistant & Token Conservation Protocol for Gametech Unli Fiber
 
+> **BEFORE ANY WORK**: read `docs/WORKING_RULES.md` in full and follow it completely, including Rule 0 (Logic Freeze) and Rule 1 (Scope Lock). Then read `docs/SPEC.md` for the business requirements, `docs/BUILD_LOG.md` (tail) for what has been built so far, and `docs/FEATURE_INVENTORY.md` before touching any page's UI or actions. These four files are the single source of truth for this project across all AI tools (Antigravity, OpenCode, or any other). Do not duplicate their content here; always read the live files.
+
+---
+
+## 🌐 Project Overview
+
+* **Project**: Gametech Unli Fiber — Comprehensive ISP Billing, Subscriber Management, and Field Operations Platform (Cagayan de Oro).
+* **Tech Stack**:
+  * **Backend**: Django 6.1 (Python 3.10), PostgreSQL 15, Redis 7 (caching & broker), Celery + Celery Beat (background tasks/cron).
+  * **Frontend**: Vanilla HTML5/CSS, Bootstrap 5, custom Gametech dark/light design system tokens, jQuery, Chart.js.
+  * **Infrastructure**: Docker & Docker Compose V2 on DigitalOcean Droplet (Ubuntu), Windows PowerShell local dev host.
+  * **Networking**: Direct Socket RouterOS API connections to live physical MikroTik routers (PPPoE / Queues / Uplinks).
+* **Main Django Applications**:
+  * `billing`: Subscriber accounts, subscription plans, payment transactions, rebates, invoices, agent portal, commissions/incentives, accounting reports.
+  * `network_manager`: MikroTik router pool, live telemetry monitoring, PPPoE secret provisioning, bandwidth profiles, automatic sync/reconciliation.
+  * `customer_portal`: Subscriber self-service dashboard (account balance, payment instructions, invoices, support tickets).
+  * `dispatch`: Technician dispatch operations, installation pipelines, field job ticketing, outage and maintenance tracking.
+* **How to Run Tests**:
+  * **Run Tests on Production Droplet Container** (isolated test DB):
+    ```bash
+    ssh root@143.198.207.144 "docker exec gametech-billing-system-web-1 python manage.py test <app_or_test_path> --keepdb"
+    ```
+  * **Local AST Python Syntax Validation** (Zero dependencies on Windows host):
+    ```powershell
+    python -m py_compile path/to/file.py
+    ```
+
+---
+
 ## 🎯 Primary Directive: The Aider-Style Sniper Workflow
 
 All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in this repository **MUST** follow these ironclad, surgical, token-conserving rules to prevent credit depletion, eliminate context bloat, and maintain codebase hygiene across all team members and devices:
