@@ -1,270 +1,92 @@
 <!-- ══════════════ 6-STEP OPERATIONAL LIFECYCLE TRACKER ══════════════ -->
-<div class="row mb-3" style="position: relative; z-index: 1;">
-    <div class="col-12">
-        <div class="dashboard-card animate-fade-in p-2 p-md-3" style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: var(--gt-radius-card); box-shadow: var(--shadow-card);">
-
-            <!-- Tracker Header -->
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2 pb-2" style="border-bottom: 1px solid var(--border-divider);">
-                <div class="d-flex align-items-center gap-2">
-                    <div style="width: 28px; height: 28px; border-radius: 8px; background: var(--section-accent-tint); display: flex; align-items: center; justify-content: center; color: var(--section-accent);">
-                        <i class="fas fa-route"></i>
-                    </div>
-                    <div>
-                        <h6 class="mb-0 fw-bold" style="font-size: 0.85rem; color: var(--text-primary);">
-                            Operations Lifecycle &amp; Fulfillment Tracker
-                        </h6>
-                    </div>
-                </div>
-
-                <div class="d-flex align-items-center gap-2">
-                    {% if active_ticket %}
-                    <span class="status-badge status-badge--neutral" style="font-size: 10px; padding: 2px 6px;">
-                        <i class="fas fa-ticket-alt me-1"></i> Active: {{ active_ticket.ticket_number }}
-                    </span>
-                    {% else %}
-                    <span class="status-badge status-badge--success" style="font-size: 10px; padding: 2px 6px;">
-                        <span class="status-dot"></span> Fully Activated
-                    </span>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Repeated Bounce & Audit Alerts -->
-            {% if lifecycle_tracker.repeated_bounce_alert %}
-            <div class="alert alert-danger py-2 px-3 mb-3 d-flex align-items-center gap-2" style="font-size: 0.8rem; border-radius: 8px;">
-                <i class="fas fa-triangle-exclamation"></i>
-                <span><strong>Repeated Bounce Alert:</strong> This job has been bounced {{ lifecycle_tracker.bounce_count }} times. Please review quality history.</span>
-            </div>
-            {% elif lifecycle_tracker.bounce_count > 0 %}
-            <div class="alert alert-warning py-2 px-3 mb-3 d-flex align-items-center gap-2" style="font-size: 0.8rem; border-radius: 8px;">
-                <i class="fas fa-rotate-left"></i>
-                <span><strong>Job Bounced ({{ lifecycle_tracker.bounce_count }}x):</strong> Ticket was returned for revision.</span>
-            </div>
+{# Uses the shared .gt-stepper component (static/css/gt/components.css):
+   completed = gold filled, active = gold ring, pending = muted.
+   Each stage renders through the small reusable partial _step.html. #}
+<div class="gt-table-card animate-fade-in mb-4">
+    <div class="gt-table-toolbar">
+        <div class="gt-table-toolbar-title">
+            <i class="fas fa-route"></i> Operations Lifecycle &amp; Fulfillment Tracker
+        </div>
+        <div class="gt-table-toolbar-right">
+            {% if active_ticket %}
+            <span class="status-badge status-badge--info">
+                <i class="fas fa-ticket-alt"></i> Active: {{ active_ticket.ticket_number }}
+            </span>
+            {% else %}
+            <span class="status-badge status-badge--success">
+                <span class="status-dot"></span> Fully Activated
+            </span>
             {% endif %}
-            {% if lifecycle_tracker.same_person_flag %}
-            <div class="alert alert-info py-2 px-3 mb-3 d-flex align-items-center gap-2" style="font-size: 0.8rem; border-radius: 8px;">
-                <i class="fas fa-user-shield"></i>
-                <span><strong>Same-Person Rule Audit Flag:</strong> Multiple pipeline stages were executed by the same team member.</span>
-            </div>
+        </div>
+    </div>
+
+    <div class="p-3 p-md-4">
+        {% if lifecycle_tracker.repeated_bounce_alert %}
+        <div class="alert alert-danger d-flex align-items-center gap-2 mb-3" style="font-size: var(--gt-fs-sm);">
+            <i class="fas fa-triangle-exclamation"></i>
+            <span><strong>Repeated Bounce Alert:</strong> This job has been bounced {{ lifecycle_tracker.bounce_count }} times. Please review quality history.</span>
+        </div>
+        {% elif lifecycle_tracker.bounce_count > 0 %}
+        <div class="alert alert-warning d-flex align-items-center gap-2 mb-3" style="font-size: var(--gt-fs-sm);">
+            <i class="fas fa-rotate-left"></i>
+            <span><strong>Job Bounced ({{ lifecycle_tracker.bounce_count }}x):</strong> Ticket was returned for revision.</span>
+        </div>
+        {% endif %}
+        {% if lifecycle_tracker.same_person_flag %}
+        <div class="alert alert-info d-flex align-items-center gap-2 mb-3" style="font-size: var(--gt-fs-sm);">
+            <i class="fas fa-user-shield"></i>
+            <span><strong>Same-Person Rule Audit Flag:</strong> Multiple pipeline stages were executed by the same team member.</span>
+        </div>
+        {% endif %}
+
+        <div class="gt-stepper">
+            {% with sub=lifecycle_tracker.agent_name|truncatechars:14|default:"Direct" %}
+                {% include "billing/view_customer/_step.html" with state=lifecycle_tracker.step1 label="Agent Intake" icon="fa-walking" %}
+            {% endwith %}
+
+            {% with sub=customer.created_at|date:"M d, Y" %}
+                {% include "billing/view_customer/_step.html" with state=lifecycle_tracker.step2 label="Customer CRM" icon="fa-address-card" %}
+            {% endwith %}
+
+            {% if active_ticket and active_ticket.team %}
+                {% with sub=active_ticket.team.name|truncatechars:14 %}
+                    {% include "billing/view_customer/_step.html" with state=lifecycle_tracker.step3 label="Dispatch" icon="fa-truck-ramp-box" %}
+                {% endwith %}
+            {% else %}
+                {% with sub="Awaiting dispatch" %}
+                    {% include "billing/view_customer/_step.html" with state=lifecycle_tracker.step3 label="Dispatch" icon="fa-truck-ramp-box" %}
+                {% endwith %}
             {% endif %}
 
-            <!-- 6-Stage Stepper Grid -->
-            <div class="row g-2 text-center align-items-stretch mt-1">
+            {% if active_ticket and active_ticket.technicians.exists %}
+                {% with sub=active_ticket.technicians.first.name|truncatechars:14 %}
+                    {% include "billing/view_customer/_step.html" with state=lifecycle_tracker.step4 label="Field Tech" icon="fa-hard-hat" %}
+                {% endwith %}
+            {% else %}
+                {% with sub="Unassigned" %}
+                    {% include "billing/view_customer/_step.html" with state=lifecycle_tracker.step4 label="Field Tech" icon="fa-hard-hat" %}
+                {% endwith %}
+            {% endif %}
 
-                <!-- STAGE 1: AGENT / INTAKE -->
-                <div class="col-6 col-md-2">
-                    <div class="p-2 rounded-2 h-100 d-flex flex-column justify-content-between" style="{% if lifecycle_tracker.step1 == 'completed' %}background: var(--badge-success-bg); border: 1px solid var(--badge-success-text);{% elif lifecycle_tracker.step1 == 'active' %}background: var(--section-accent-tint); border: 1.5px solid var(--section-accent);{% else %}background: var(--surface-subtle); border: 1px solid var(--border-divider);{% endif %}">
-                        <div>
-                            <div class="mb-1">
-                                {% if lifecycle_tracker.step1 == 'completed' %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 28px; height: 28px; background: rgba(16,185,129,0.2); color: var(--badge-success-text);">
-                                    <i class="fas fa-check"></i>
-                                </span>
-                                {% else %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 28px; height: 28px; background: rgba(100,116,139,0.15); color: var(--text-muted);">
-                                    <i class="fas fa-walking"></i>
-                                </span>
-                                {% endif %}
-                            </div>
-                            <div class="fw-bold" style="font-size: 0.78rem; color: var(--text-primary);">
-                                Agent Intake
-                            </div>
-                            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
-                                {% if lifecycle_tracker.has_agent %}
-                                {{ lifecycle_tracker.agent_name|truncatechars:12 }}
-                                {% else %}
-                                Direct
-                                {% endif %}
-                            </div>
-                        </div>
-                        <div class="mt-1 pt-1">
-                            <span class="status-badge status-badge--{% if lifecycle_tracker.step1 == 'completed' %}success{% else %}neutral{% endif %} w-100 justify-content-center" style="font-size: 0.62rem; padding: 2px 4px;">
-                                {% if lifecycle_tracker.has_agent %}Referred{% else %}Walk-in{% endif %}
-                            </span>
-                        </div>
-                    </div>
-                </div>
+            {% if active_ticket and active_ticket.signal_level %}
+                {% with sub=active_ticket.signal_level|cut:" dBm"|cut:"dBm"|add:" dBm" %}
+                    {% include "billing/view_customer/_step.html" with state=lifecycle_tracker.step5 label="QA Review" icon="fa-clipboard-check" %}
+                {% endwith %}
+            {% else %}
+                {% with sub="No reading" %}
+                    {% include "billing/view_customer/_step.html" with state=lifecycle_tracker.step5 label="QA Review" icon="fa-clipboard-check" %}
+                {% endwith %}
+            {% endif %}
 
-                <!-- STAGE 2: CUSTOMER CRM -->
-                <div class="col-6 col-md-2">
-                    <div class="p-2 rounded-2 h-100 d-flex flex-column justify-content-between" style="background: var(--badge-success-bg); border: 1px solid var(--badge-success-text);">
-                        <div>
-                            <div class="mb-1">
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 28px; height: 28px; background: rgba(16,185,129,0.2); color: var(--badge-success-text);">
-                                    <i class="fas fa-check"></i>
-                                </span>
-                            </div>
-                            <div class="fw-bold" style="font-size: 0.78rem; color: var(--text-primary);">Customer CRM</div>
-                            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
-                                {{ customer.created_at|date:"M d, Y"|default:"Registered" }}
-                            </div>
-                        </div>
-                        <div class="mt-1 pt-1">
-                            <span class="status-badge status-badge--success w-100 justify-content-center" style="font-size: 0.62rem; padding: 2px 4px;">
-                                Created
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- STAGE 3: DISPATCH COCKPIT -->
-                <div class="col-6 col-md-2">
-                    <div class="p-2 rounded-2 h-100 d-flex flex-column justify-content-between" style="{% if lifecycle_tracker.step3 == 'completed' %}background: var(--badge-success-bg); border: 1px solid var(--badge-success-text);{% elif lifecycle_tracker.step3 == 'active' %}background: var(--section-accent-tint); border: 1.5px solid var(--section-accent);{% else %}background: var(--surface-subtle); border: 1px solid var(--border-divider);{% endif %}">
-                        <div>
-                            <div class="mb-1">
-                                {% if lifecycle_tracker.step3 == 'completed' %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 28px; height: 28px; background: rgba(16,185,129,0.2); color: var(--badge-success-text);">
-                                    <i class="fas fa-check"></i>
-                                </span>
-                                {% elif lifecycle_tracker.step3 == 'active' %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 28px; height: 28px; background: var(--section-accent-tint); color: var(--section-accent-text);">
-                                    <i class="fas fa-truck-ramp-box"></i>
-                                </span>
-                                {% else %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 28px; height: 28px; background: rgba(100,116,139,0.15); color: var(--text-muted);">
-                                    <i class="fas fa-lock"></i>
-                                </span>
-                                {% endif %}
-                            </div>
-                            <div class="fw-bold" style="font-size: 0.78rem; color: {% if lifecycle_tracker.step3 == 'active' %}var(--section-accent-text){% else %}var(--text-primary){% endif %};">
-                                Dispatch
-                            </div>
-                            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
-                                {% if active_ticket and active_ticket.team %}
-                                Team {{ active_ticket.team.name }}
-                                {% elif active_ticket %}
-                                Awaiting Unit
-                                {% else %}
-                                Assigned
-                                {% endif %}
-                            </div>
-                        </div>
-                        <div class="mt-1 pt-1">
-                            <span class="status-badge status-badge--{% if lifecycle_tracker.step3 == 'completed' %}success{% elif lifecycle_tracker.step3 == 'active' %}info{% else %}neutral{% endif %} w-100 justify-content-center" style="font-size: 0.62rem; padding: 2px 4px;">
-                                {% if lifecycle_tracker.step3 == 'completed' %}Dispatched{% elif lifecycle_tracker.step3 == 'active' %}Pending{% else %}Queued{% endif %}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- STAGE 4: FIELD TECHNICIAN -->
-                <div class="col-6 col-md-2">
-                    <div class="p-2 rounded-2 h-100 d-flex flex-column justify-content-between" style="{% if lifecycle_tracker.step4 == 'completed' %}background: var(--badge-success-bg); border: 1px solid var(--badge-success-text);{% elif lifecycle_tracker.step4 == 'active' %}background: var(--section-accent-tint); border: 1.5px solid var(--section-accent);{% else %}background: var(--surface-subtle); border: 1px solid var(--border-divider);{% endif %}">
-                        <div>
-                            <div class="mb-1">
-                                {% if lifecycle_tracker.step4 == 'completed' %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 28px; height: 28px; background: rgba(16,185,129,0.2); color: var(--badge-success-text);">
-                                    <i class="fas fa-check"></i>
-                                </span>
-                                {% elif lifecycle_tracker.step4 == 'active' %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 28px; height: 28px; background: var(--section-accent-tint); color: var(--section-accent-text);">
-                                    <i class="fas fa-hard-hat"></i>
-                                </span>
-                                {% else %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 28px; height: 28px; background: rgba(100,116,139,0.15); color: var(--text-muted);">
-                                    <i class="fas fa-lock"></i>
-                                </span>
-                                {% endif %}
-                            </div>
-                            <div class="fw-bold" style="font-size: 0.78rem; color: {% if lifecycle_tracker.step4 == 'active' %}var(--section-accent-text){% else %}var(--text-primary){% endif %};">
-                                Field Tech
-                            </div>
-                            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
-                                {% if active_ticket and active_ticket.technicians.exists %}
-                                {{ active_ticket.technicians.first.name|truncatechars:12 }}
-                                {% elif active_ticket and active_ticket.time_accomplish %}
-                                Specs Recorded
-                                {% else %}
-                                Line Splicing
-                                {% endif %}
-                            </div>
-                        </div>
-                        <div class="mt-1 pt-1">
-                            <span class="status-badge status-badge--{% if lifecycle_tracker.step4 == 'completed' %}success{% elif lifecycle_tracker.step4 == 'active' %}info{% else %}neutral{% endif %} w-100 justify-content-center" style="font-size: 0.62rem; padding: 2px 4px;">
-                                {% if lifecycle_tracker.step4 == 'completed' %}Done{% elif lifecycle_tracker.step4 == 'active' %}On-Site{% else %}Awaiting{% endif %}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- STAGE 5: DISPATCH QA REVIEW -->
-                <div class="col-6 col-md-2">
-                    <div class="p-2 rounded-2 h-100 d-flex flex-column justify-content-between" style="{% if lifecycle_tracker.step5 == 'completed' %}background: var(--badge-success-bg); border: 1px solid var(--badge-success-text);{% elif lifecycle_tracker.step5 == 'active' %}background: var(--section-accent-tint); border: 1.5px solid var(--section-accent);{% else %}background: var(--surface-subtle); border: 1px solid var(--border-divider);{% endif %}">
-                        <div>
-                            <div class="mb-1">
-                                {% if lifecycle_tracker.step5 == 'completed' %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 28px; height: 28px; background: rgba(16,185,129,0.2); color: var(--badge-success-text);">
-                                    <i class="fas fa-check"></i>
-                                </span>
-                                {% elif lifecycle_tracker.step5 == 'active' %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 28px; height: 28px; background: var(--section-accent-tint); color: var(--section-accent-text);">
-                                    <i class="fas fa-clipboard-check"></i>
-                                </span>
-                                {% else %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 28px; height: 28px; background: rgba(100,116,139,0.15); color: var(--text-muted);">
-                                    <i class="fas fa-lock"></i>
-                                </span>
-                                {% endif %}
-                            </div>
-                            <div class="fw-bold" style="font-size: 0.78rem; color: {% if lifecycle_tracker.step5 == 'active' %}var(--section-accent-text){% else %}var(--text-primary){% endif %};">
-                                QA Review
-                            </div>
-                            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
-                                {% if active_ticket and active_ticket.signal_level %}
-                                {{ active_ticket.signal_level|cut:" dBm"|cut:"dBm" }} dBm
-                                {% else %}
-                                Quality Audit
-                                {% endif %}
-                            </div>
-                        </div>
-                        <div class="mt-1 pt-1">
-                            <span class="status-badge status-badge--{% if lifecycle_tracker.step5 == 'completed' %}success{% elif lifecycle_tracker.step5 == 'active' %}warning{% else %}neutral{% endif %} w-100 justify-content-center" style="font-size: 0.62rem; padding: 2px 4px;">
-                                {% if lifecycle_tracker.step5 == 'completed' %}Passed{% elif lifecycle_tracker.step5 == 'active' %}Reviewing{% else %}Pending{% endif %}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- STAGE 6: ADMIN FINAL SIGN-OFF -->
-                <div class="col-6 col-md-2">
-                    <div class="p-2 rounded-2 h-100 d-flex flex-column justify-content-between" style="{% if lifecycle_tracker.step6 == 'completed' %}background: var(--badge-success-bg); border: 1px solid var(--badge-success-text);{% elif lifecycle_tracker.step6 == 'active' %}background: var(--section-accent-tint); border: 1.5px solid var(--section-accent);{% else %}background: var(--surface-subtle); border: 1px solid var(--border-divider);{% endif %}">
-                        <div>
-                            <div class="mb-1">
-                                {% if lifecycle_tracker.step6 == 'completed' %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 28px; height: 28px; background: rgba(16,185,129,0.2); color: var(--badge-success-text);">
-                                    <i class="fas fa-check"></i>
-                                </span>
-                                {% elif lifecycle_tracker.step6 == 'active' %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 28px; height: 28px; background: var(--section-accent-tint); color: var(--section-accent-text);">
-                                    <i class="fas fa-shield-halved"></i>
-                                </span>
-                                {% else %}
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 28px; height: 28px; background: rgba(100,116,139,0.15); color: var(--text-muted);">
-                                    <i class="fas fa-lock"></i>
-                                </span>
-                                {% endif %}
-                            </div>
-                            <div class="fw-bold" style="font-size: 0.78rem; color: {% if lifecycle_tracker.step6 == 'active' %}var(--section-accent-text){% else %}var(--text-primary){% endif %};">
-                                Admin Sign-off
-                            </div>
-                            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
-                                {% if customer.installation_status == 'installed' %}
-                                Line Installed
-                                {% else %}
-                                Activation Lock
-                                {% endif %}
-                            </div>
-                        </div>
-                        <div class="mt-1 pt-1">
-                            <span class="status-badge status-badge--{% if lifecycle_tracker.step6 == 'completed' %}success{% elif lifecycle_tracker.step6 == 'active' %}info{% else %}neutral{% endif %} w-100 justify-content-center" style="font-size: 0.62rem; padding: 2px 4px;">
-                                {% if lifecycle_tracker.step6 == 'completed' %}Activated{% elif lifecycle_tracker.step6 == 'active' %}Awaiting{% else %}Locked{% endif %}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-
+            {% if customer.installation_status == 'installed' %}
+                {% with sub="Line installed" %}
+                    {% include "billing/view_customer/_step.html" with state=lifecycle_tracker.step6 label="Admin Sign-off" icon="fa-shield-halved" %}
+                {% endwith %}
+            {% else %}
+                {% with sub="Not installed" %}
+                    {% include "billing/view_customer/_step.html" with state=lifecycle_tracker.step6 label="Admin Sign-off" icon="fa-shield-halved" %}
+                {% endwith %}
+            {% endif %}
         </div>
     </div>
 </div>

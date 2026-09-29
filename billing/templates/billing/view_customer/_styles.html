@@ -1,97 +1,76 @@
 <!-- Base Partial: Styles -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
-/* Page & Profile Header */
-.page-header {
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, var(--surface-card) 60%);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg, 16px);
-  padding: 16px 20px;
-  margin-bottom: 16px;
+/* Page & Profile Header
+   The header markup now uses the shared .gt-page-header / .gt-header-icon
+   components, so the old .customer-view-header rules are gone. The two things
+   that must stay page-specific are the dropdown stacking (the shared header
+   clips its overflow for the gold sheen) and the long "More Actions" menu. */
+.gt-page-header.customer-profile-header {
+  overflow: visible;
+  z-index: 1050;
 }
-
-.page-header.customer-view-header {
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, var(--surface-card) 60%) !important;
-  border: 1px solid var(--border-subtle) !important;
-  border-radius: var(--gt-radius-card) !important;
-  box-shadow: var(--shadow-card) !important;
-  position: relative !important;
-  z-index: 1050 !important;
-  overflow: visible !important;
+.gt-page-header.customer-profile-header .dropdown {
+  position: relative;
+  z-index: 1055;
 }
-
-.page-header.customer-view-header::after {
-  display: none !important;
-}
-
-.page-header.customer-view-header .dropdown {
-  position: relative !important;
-  z-index: 1055 !important;
-}
-
-.page-header.customer-view-header .dropdown-menu {
-  position: absolute !important;
-  top: 100% !important;
-  right: 0 !important;
-  left: auto !important;
-  margin-top: 8px !important;
-  z-index: 1060 !important;
-  min-width: 250px !important;
-  max-width: 90vw !important;
-  max-height: min(450px, 65vh) !important;
-  overflow-y: auto !important;
+.gt-page-header.customer-profile-header .dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: auto;
+  margin-top: 8px;
+  z-index: 1060;
+  min-width: 250px;
+  max-width: 90vw;
+  max-height: min(450px, 65vh);
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
-
-.page-header.customer-view-header .dropdown-menu::-webkit-scrollbar {
-  width: 6px;
-}
-.page-header.customer-view-header .dropdown-menu::-webkit-scrollbar-track {
-  background: transparent;
-}
-.page-header.customer-view-header .dropdown-menu::-webkit-scrollbar-thumb {
+.gt-page-header.customer-profile-header .dropdown-menu::-webkit-scrollbar { width: 6px; }
+.gt-page-header.customer-profile-header .dropdown-menu::-webkit-scrollbar-track { background: transparent; }
+.gt-page-header.customer-profile-header .dropdown-menu::-webkit-scrollbar-thumb {
   background: var(--border-subtle);
   border-radius: 4px;
 }
-.page-header.customer-view-header .dropdown-menu::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
-}
-
-.profile-avatar-tile {
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-md, 12px);
-  background: rgba(37, 99, 235, 0.12);
-  border: 1px solid rgba(37, 99, 235, 0.25);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--color-primary);
-  flex-shrink: 0;
-}
+.gt-page-header.customer-profile-header .dropdown-menu::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
 /* Info Cards */
+/* Info cards use the shared card surface (gradient + gold accent) so the
+   profile page matches the Dashboard's card treatment. */
 .info-card {
-  background: var(--surface-card);
-  border-radius: var(--radius-lg, 16px);
-  padding: 16px;
-  box-shadow: var(--shadow-sm);
-  margin-bottom: 16px;
+  background: var(--surface-card-gradient);
+  border-radius: var(--gt-radius-card);
+  padding: 1.5rem 1.75rem;
+  box-shadow: var(--gt-shadow-card);
+  margin-bottom: 1rem;
   border: 1px solid var(--border-subtle);
+  border-left: 4px solid var(--gt-gold);
   height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+.info-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gt-gold), transparent);
 }
 
 .info-title {
-  font-size: 0.9rem;
+  font-size: var(--gt-fs-md);
   font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 12px;
+  color: var(--gt-text-title);
+  letter-spacing: var(--gt-ls-tight);
+  margin-bottom: 1.1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-divider);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.6rem;
 }
+.info-title i { color: var(--section-accent-text); }
 
 .info-list {
   list-style: none;
@@ -102,11 +81,11 @@
 .info-list li {
   display: flex;
   justify-content: space-between;
-  min-height: 32px;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--border-subtle);
+  min-height: 38px;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-divider);
   align-items: center;
-  gap: 8px;
+  gap: 1rem;
 }
 
 .info-list li:last-child {
@@ -115,17 +94,20 @@
 }
 
 .info-label {
-  color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 500;
+  color: var(--gt-text-muted);
+  font-size: var(--gt-fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--gt-ls-label);
   flex-shrink: 0;
 }
 
 .info-value {
-  color: var(--text-primary);
-  font-size: 0.88rem;
+  color: var(--gt-text-title);
+  font-size: var(--gt-fs-base);
   font-weight: 600;
   text-align: right;
+  line-height: 1.45;
 }
 
 /* Password eye toggle & masked text */
