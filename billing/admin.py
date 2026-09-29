@@ -244,8 +244,8 @@ class NotificationAdmin(admin.ModelAdmin):
 
 @admin.register(MessageTemplate)
 class MessageTemplateAdmin(admin.ModelAdmin):
-    list_display = ("name", "type", "subject", "is_active", "updated_at")
-    list_filter = ("type", "is_active")
+    list_display = ("name", "type", "subject")
+    list_filter = ("type",)
     search_fields = ("name", "subject", "body")
 
 
@@ -292,7 +292,7 @@ class CommissionTransactionAdmin(admin.ModelAdmin):
 class CustomerAgentHistoryAdmin(admin.ModelAdmin):
     list_display = ("customer", "from_agent", "to_agent", "changed_by", "reason", "created_at")
     search_fields = ("customer__full_name", "reason")
-    date_hierarchy = "changed_at"
+    date_hierarchy = "created_at"
 
 
 @admin.register(StaffRole)
