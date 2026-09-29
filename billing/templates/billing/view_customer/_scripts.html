@@ -248,18 +248,18 @@ document.addEventListener("DOMContentLoaded", function() {
                     const connOn = data.connection_status === 'Online';
                     const unknown = data.router_status === 'Unknown' || data.connection_status === 'Unknown';
 
-                    if (routerOn && connOn) {
+                    if (unknown) {
+                        if (liveMtRow) liveMtRow.classList.remove('active-offline-row-highlight');
+                        statusContainer.innerHTML = '<span class="status-badge status-badge--neutral d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-question-circle"></i>Checking...</span>';
+                    } else if (routerOn && connOn) {
                         if (liveMtRow) liveMtRow.classList.remove('active-offline-row-highlight');
                         statusContainer.innerHTML = '<span class="text-success fw-semibold"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Fully Online</span>';
                     } else if (routerOn && !connOn) {
                         if (liveMtRow) liveMtRow.classList.add('active-offline-row-highlight');
-                        statusContainer.innerHTML = '<span class="status-badge status-badge--warning d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-triangle-exclamation"></i>Router Online, Internet Offline</span>';
+                        statusContainer.innerHTML = '<span class="status-badge status-badge--warning d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-triangle-exclamation"></i>Router Online, Connection Offline</span>';
                     } else if (!routerOn && connOn) {
                         if (liveMtRow) liveMtRow.classList.add('active-offline-row-highlight');
-                        statusContainer.innerHTML = '<span class="status-badge status-badge--warning d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-triangle-exclamation"></i>Router Offline, Internet Online</span>';
-                    } else if (unknown) {
-                        if (liveMtRow) liveMtRow.classList.remove('active-offline-row-highlight');
-                        statusContainer.innerHTML = '<span class="status-badge status-badge--neutral d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-question-circle"></i>Checking...</span>';
+                        statusContainer.innerHTML = '<span class="status-badge status-badge--warning d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-triangle-exclamation"></i>Router Offline, Connection Online</span>';
                     } else {
                         if (liveMtRow) liveMtRow.classList.add('active-offline-row-highlight');
                         statusContainer.innerHTML = '<span class="status-badge status-badge--danger d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Fully Offline</span>';
