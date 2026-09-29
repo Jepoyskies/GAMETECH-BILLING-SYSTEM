@@ -6,8 +6,7 @@
 {% block content %}
 <div class="container-fluid py-4 px-3 px-md-4">
     <!-- Page Hero -->
-    <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in"
-         style="background: linear-gradient(135deg, #3b0764 0%, #6d28d9 60%, #7c3aed 100%);">
+    <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in">
         <div class="d-flex align-items-center">
             <div class="hero-icon"><i class="fas fa-shield-alt"></i></div>
             <div>
@@ -31,13 +30,44 @@
     </div>
     {% endif %}
 
-    <div class="row mt-4">
+    <style>
+        .roles-grid .role-card { display: flex; flex-direction: column; background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08); }
+        .roles-grid .role-card .card-body { display: flex; flex-direction: column; flex: 1; }
+        .roles-grid .role-name { color: #0f172a; }
+        .role-mod { border: 1px solid rgba(15, 23, 42, 0.1); border-radius: 10px; padding: 0.55rem 0.65rem; background: rgba(15, 23, 42, 0.03); }
+        .role-mod-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+        .role-mod-name { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; font-size: 0.88rem; color: #1e293b; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .role-mod-icon { width: 26px; height: 26px; flex: 0 0 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: rgba(59, 130, 246, 0.14); color: #2563eb; font-size: 0.72rem; }
+        .role-pill { font-size: 0.68rem; font-weight: 700; white-space: nowrap; border-radius: 999px; padding: 0.2rem 0.55rem; border: 1px solid transparent; flex-shrink: 0; }
+        .role-pill-all { background: rgba(22, 163, 74, 0.14); color: #15803d; border-color: rgba(22, 163, 74, 0.35); }
+        .role-pill-count { background: rgba(37, 99, 235, 0.12); color: #1d4ed8; border-color: rgba(37, 99, 235, 0.35); }
+        .role-pill-off { background: rgba(220, 38, 38, 0.08); color: #b91c1c; border-color: rgba(220, 38, 38, 0.25); }
+        .role-mod-off { opacity: 0.75; }
+        .role-chip-wrap { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed rgba(15, 23, 42, 0.18); max-height: 118px; overflow-y: auto; align-content: flex-start; }
+        .role-chip { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.7rem; font-weight: 500; border-radius: 999px; padding: 0.18rem 0.55rem; background: rgba(37, 99, 235, 0.1); color: #1e3a8a; border: 1px solid rgba(37, 99, 235, 0.25); }
+        .role-chip i { font-size: 0.62rem; opacity: 0.8; }
+        .role-chip-wrap::-webkit-scrollbar { width: 6px; }
+        .role-chip-wrap::-webkit-scrollbar-thumb { background: rgba(127, 140, 160, 0.5); border-radius: 3px; }
+        html.dark-mode .roles-grid .role-card, .dark-mode .roles-grid .role-card { background: rgba(30, 41, 59, 0.55); border-color: rgba(255, 255, 255, 0.07); box-shadow: none; backdrop-filter: blur(10px); }
+        html.dark-mode .roles-grid .role-name, .dark-mode .roles-grid .role-name { color: #ffffff; }
+        html.dark-mode .role-mod, .dark-mode .role-mod { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.09); }
+        html.dark-mode .role-mod-name, .dark-mode .role-mod-name { color: #e2e8f0; }
+        html.dark-mode .role-mod-icon, .dark-mode .role-mod-icon { background: rgba(59, 130, 246, 0.18); color: #93c5fd; }
+        html.dark-mode .role-pill-all, .dark-mode .role-pill-all { background: rgba(34, 197, 94, 0.16); color: #4ade80; border-color: rgba(34, 197, 94, 0.35); }
+        html.dark-mode .role-pill-count, .dark-mode .role-pill-count { background: rgba(59, 130, 246, 0.18); color: #93c5fd; border-color: rgba(59, 130, 246, 0.4); }
+        html.dark-mode .role-pill-off, .dark-mode .role-pill-off { background: rgba(248, 113, 113, 0.1); color: #f87171; border-color: rgba(248, 113, 113, 0.3); }
+        html.dark-mode .role-chip-wrap, .dark-mode .role-chip-wrap { border-top-color: rgba(255, 255, 255, 0.12); }
+        html.dark-mode .role-chip, .dark-mode .role-chip { background: rgba(148, 163, 184, 0.12); color: #e2e8f0; border-color: rgba(148, 163, 184, 0.3); }
+        html.dark-mode .role-chip i, .dark-mode .role-chip i { color: #7dd3fc; }
+    </style>
+
+    <div class="row g-4 mt-2 roles-grid">
         {% for role in roles %}
-        <div class="col-md-6 col-lg-4 mb-4">
-            <div class="card h-100 animate-slide-up" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; backdrop-filter: blur(10px);">
+        <div class="col-md-6 col-lg-4 d-flex">
+            <div class="card h-100 flex-fill w-100 animate-slide-up role-card">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-3">
-                        <h5 class="text-white fw-bold mb-0">{{ role.name }}</h5>
+                        <h5 class="role-name fw-bold mb-0">{{ role.name }}</h5>
                         {% if role.name.lower == 'admin' %}
                         <span class="badge" style="background: rgba(124, 58, 237, 0.2); color: #c4b5fd; border: 1px solid rgba(124, 58, 237, 0.3);">Core Role</span>
                         {% else %}
