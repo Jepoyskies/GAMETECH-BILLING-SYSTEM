@@ -101,25 +101,25 @@
                     
                     <div class="d-flex flex-column gap-2">
                         {% for mod in role.subtabs_data %}
-                        <div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="text-white-50"><i class="fas {{ mod.icon }} me-2"></i> {{ mod.name }}</span>
+                        <div class="role-mod{% if role.name.lower != 'admin' and not mod.is_active %} role-mod-off{% endif %}">
+                            <div class="role-mod-head">
+                                <span class="role-mod-name"><span class="role-mod-icon"><i class="fas {{ mod.icon }}"></i></span>{{ mod.name }}</span>
                                 {% if role.name.lower == 'admin' %}
-                                    <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25 text-xs"><i class="fas fa-check-circle me-1"></i>All Subtabs</span>
+                                    <span class="role-pill role-pill-all"><i class="fas fa-check-circle me-1"></i>All Subtabs</span>
                                 {% elif mod.is_active %}
-                                    <span class="badge bg-primary bg-opacity-25 text-info border border-primary border-opacity-25 text-xs">
+                                    <span class="role-pill role-pill-count">
                                         {{ mod.active_subs_count }}/{{ mod.total_subs_count }} Subtabs
                                     </span>
                                 {% else %}
-                                    <i class="fas fa-times-circle text-danger opacity-50"></i>
+                                    <span class="role-pill role-pill-off"><i class="fas fa-times-circle me-1"></i>Off</span>
                                 {% endif %}
                             </div>
-                            {% if role.name.lower != 'admin' and mod.is_active %}
-                            <div class="d-flex flex-wrap gap-1 mt-1 ms-3">
+                            {% if mod.is_active %}
+                            <div class="role-chip-wrap">
                                 {% for s in mod.subtabs %}
                                     {% if s.allowed %}
-                                    <span class="badge bg-dark text-muted border border-secondary border-opacity-25" style="font-size: 0.65rem; font-weight: normal;">
-                                        <i class="fas {{ s.icon }} me-1 text-info opacity-75"></i>{{ s.name }}
+                                    <span class="role-chip">
+                                        <i class="fas {{ s.icon }}"></i>{{ s.name }}
                                     </span>
                                     {% endif %}
                                 {% endfor %}
