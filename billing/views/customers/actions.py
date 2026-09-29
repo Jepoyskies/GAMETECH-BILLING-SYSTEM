@@ -375,6 +375,7 @@ def statement_of_account_view(request, customer_id):
     return render(request, "billing/statement_of_account.html", context)
 
 
+@require_POST
 @role_required(["Admin", "Editor"])
 @login_required
 def bulk_transfer_router(request):
