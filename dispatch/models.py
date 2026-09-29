@@ -159,7 +159,7 @@ class MonitoringRecord(models.Model):
     done_duration = models.IntegerField(null=True, blank=True)
     
     teams = models.ManyToManyField(Technician, related_name='monitoring_records')
-    dispatch = models.OneToOneField(DispatchRecord, on_delete=models.SET_NULL, null=True, blank=True, related_name='monitoring_record')
+    dispatch = models.OneToOneField(DispatchRecord, on_delete=models.SET_NULL, null=True, blank=True, related_name='dispatch_record')
     csr = models.ForeignKey(User, on_delete=models.RESTRICT, related_name='handled_monitoring_records')
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True, related_name='monitoring_records')
     
