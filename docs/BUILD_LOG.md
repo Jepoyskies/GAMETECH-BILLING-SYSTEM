@@ -651,6 +651,26 @@ All tests passing across small batches:
 - **Migration:** `0006_dispatchrecord_monitoring_link_and_job_detail.py`
 - **URLs added:** `export/dispatches/`, `api/backup/create/`, `api/backup/restore/`
 
+## Final Pre-Testing Hardening (2026-09-30)
+
+- **Legacy PHP removed:** All 105 PHP files removed from git (79 features confirmed replicated, 3 duplicates, 5 partials all superseded by Django improvements). Files kept on disk and gitignored for reference only.
+- **Security hardening:**
+  - `SECRET_KEY` moved from hardcoded value to environment variable (64-char random key generated and set in production `.env`).
+  - Removed 6 `print()` debug statements from `network_manager/services/users.py` that leaked customer usernames and session data to stdout.
+  - Resolved `rebates.py` TODO: `sms_sent_at` now resets on rebate so expiry reminders re-trigger correctly.
+- **Admin errors fixed (surfaced by migration):**
+  - `MessageTemplateAdmin` referenced non-existent `is_active` / `updated_at` fields.
+  - `CustomerAgentHistoryAdmin` used `date_hierarchy = "changed_at"` but the model field is `created_at`.
+- **Infrastructure root-cause fix:**
+  - Two competing compose projects (`gametech-billing-system` and `gametech-billing-system-`) were running simultaneously, destroying and recreating each other's containers. This was the cause of the "web container keeps dropping" behaviour.
+  - Compose consolidated to a single `name: gametech` project with explicit `container_name` (`gametech-web`, `gametech-db`, `gametech-redis`, `gametech-celery`, `gametech-celery-beat`).
+  - Added healthchecks for `db` and `redis` with `depends_on: condition: service_healthy`.
+  - Added `restart: unless-stopped` to all services.
+  - Shared `x-app-env` anchor so `SECRET_KEY` and `DEBUG` reach all containers.
+  - Postgres volume explicitly pinned to `gametech-billing-system_postgres_data` (the volume holding the live 66M database).
+- **Migrations:** Applied `0060_customer_expires_at_index` (faked, index already present), `0061_merge`, `dispatch.0014_merge`, `dispatch.0015`. Zero pending.
+- **Verification:** `manage.py check` = 0 issues. 0 pending migrations. `/login/` = HTTP 200, `/` = HTTP 302. Router dry-run test suite = 10/10 OK. All 2375 Python files compile clean.
+
 ## Redesigned Pages Regression Restorations (Audit Resolution)
 
 - **Audit Resolution & Owner Decisions:**
