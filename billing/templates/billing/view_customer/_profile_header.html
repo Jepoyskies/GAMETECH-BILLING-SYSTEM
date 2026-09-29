@@ -3,30 +3,26 @@
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
         <!-- Left: Identity & Badges -->
         <div class="d-flex align-items-center gap-3">
-            <div class="cust-avatar-tile" style="width: 56px; height: 56px; border-radius: 14px; background: var(--section-accent-tint); color: var(--section-accent); font-size: 1.5rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid rgba(37, 99, 235, 0.2);">
+            <div class="cust-avatar-tile" style="width: 48px; height: 48px; border-radius: 12px; background: var(--section-accent-tint); color: var(--section-accent); font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid rgba(37, 99, 235, 0.2);">
                 {{ customer.full_name|make_list|first|upper }}
             </div>
             <div>
-                <h1 class="cust-name-title mb-1" style="font-size: 24px; font-weight: 700; color: var(--text-primary); line-height: 1.2;">{{ customer.full_name }}</h1>
-                <div class="cust-meta-line text-muted mb-2" style="font-size: 13px;">
+                <h1 class="cust-name-title mb-1" style="font-size: 20px; font-weight: 700; color: var(--text-primary); line-height: 1.2;">{{ customer.full_name }}</h1>
+                <div class="cust-meta-line text-muted mb-2" style="font-size: 12px;">
                     <i class="fas fa-map-marker-alt me-1"></i>{{ customer.barangay.name|default:"No Barangay" }}
                     {% if customer.pppoe_username %} &bull; <i class="fas fa-user me-1"></i>{{ customer.pppoe_username }}{% endif %}
                 </div>
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <!-- Customer Lifecycle Status Badge -->
-                    <span class="status-badge status-badge--{% if customer.status == 'active' %}success{% elif customer.status == 'suspended' %}warning{% elif customer.status == 'expired' %}danger{% else %}neutral{% endif %}">
+                    <span class="status-badge status-badge--{% if customer.status == 'active' %}success{% elif customer.status == 'suspended' %}warning{% elif customer.status == 'expired' %}danger{% else %}neutral{% endif %}" style="font-size: 11px; padding: 2px 8px;">
                         <span class="status-dot"></span>
                         {{ customer.get_status_display }}
                     </span>
 
                     <!-- Physical Line Installation Status Badge -->
                     {% if customer.installation_status == 'pending' %}
-                    <span class="status-badge status-badge--info" title="Awaiting field technicians">
-                        <span class="status-dot"></span> Pending Installation
-                    </span>
-                    {% else %}
-                    <span class="status-badge status-badge--success" title="Installed on {% if customer.installed_at %}{{ customer.installed_at|date:'M d, Y' }}{% else %}Premises{% endif %}">
-                        <span class="status-dot"></span> Installed Line
+                    <span class="status-badge status-badge--info" title="Awaiting field technicians" style="font-size: 11px; padding: 2px 8px;">
+                        <span class="status-dot"></span> Pending Install
                     </span>
                     {% endif %}
                 </div>
@@ -35,34 +31,30 @@
                 <div class="d-flex align-items-center gap-2 flex-wrap mt-2">
                     <!-- 1. For Dispatching -->
                     {% if customer.dispatch_status and customer.dispatch_status != 'None' and customer.dispatch_status != 'No' %}
-                        <a href="#section-ticket-history" class="status-badge status-badge--warning text-decoration-none" style="font-size: 11px; padding: 2px 8px;" title="Active Dispatch Ticket: {{ customer.active_dispatch_ticket.ticket_number|default:customer.dispatch_status }}">
-                            <i class="fas fa-screwdriver-wrench me-1"></i>For Dispatch: {{ customer.dispatch_status }}{% if customer.active_dispatch_ticket %} ({{ customer.active_dispatch_ticket.ticket_number }}){% endif %}
+                        <a href="#section-ticket-history" class="status-badge status-badge--warning text-decoration-none" style="font-size: 10px; padding: 2px 6px;" title="Active Dispatch Ticket: {{ customer.active_dispatch_ticket.ticket_number|default:customer.dispatch_status }}">
+                            <i class="fas fa-screwdriver-wrench me-1"></i>Dispatch: {{ customer.dispatch_status }}
                         </a>
-                    {% else %}
-                        <span class="status-badge status-badge--neutral" style="font-size: 11px; padding: 2px 8px;">
-                            <i class="fas fa-check-circle me-1"></i>For Dispatch: No
-                        </span>
                     {% endif %}
 
                     <!-- 2. Payment -->
                     {% if customer.payment_status == 'Paid' %}
-                        <span class="status-badge status-badge--success" style="font-size: 11px; padding: 2px 8px;" title="Billing is active (Due: {{ customer.expires_at|date:'M d, Y'|default:'Active' }})">
-                            <i class="fas fa-peso-sign me-1"></i>Payment: Paid
+                        <span class="status-badge status-badge--success" style="font-size: 10px; padding: 2px 6px;" title="Billing is active (Due: {{ customer.expires_at|date:'M d, Y'|default:'Active' }})">
+                            <i class="fas fa-peso-sign me-1"></i>Paid
                         </span>
                     {% else %}
-                        <span class="status-badge status-badge--danger" style="font-size: 11px; padding: 2px 8px;" title="Account is unpaid / due">
-                            <i class="fas fa-exclamation-circle me-1"></i>Payment: Unpaid
+                        <span class="status-badge status-badge--danger" style="font-size: 10px; padding: 2px 6px;" title="Account is unpaid / due">
+                            <i class="fas fa-exclamation-circle me-1"></i>Unpaid
                         </span>
                     {% endif %}
 
                     <!-- 3. Router (MikroTik device reachable + has uplink) -->
-                    <span id="hdr-router-badge" class="status-badge {% if customer.router_status == 'Online' %}status-badge--success{% else %}status-badge--danger{% endif %}" style="font-size: 11px; padding: 2px 8px;" title="MikroTik router is reachable and has internet uplink">
+                    <span id="hdr-router-badge" class="status-badge {% if customer.router_status == 'Online' %}status-badge--success{% else %}status-badge--danger{% endif %}" style="font-size: 10px; padding: 2px 6px;" title="MikroTik router is reachable and has internet uplink">
                         <i class="fas fa-wifi me-1"></i>Router: {{ customer.router_status }}
                     </span>
 
                     <!-- 4. Connection (Customer's PPPoE session / internet reaching them) -->
-                    <span id="hdr-conn-badge" class="status-badge {% if customer.connection_status == 'Online' %}status-badge--success{% else %}status-badge--danger{% endif %}" style="font-size: 11px; padding: 2px 8px;" title="Customer's PPPoE session is active — internet is reaching them">
-                        <i class="fas fa-globe me-1"></i>Connection: {{ customer.connection_status }}
+                    <span id="hdr-conn-badge" class="status-badge {% if customer.connection_status == 'Online' %}status-badge--success{% else %}status-badge--danger{% endif %}" style="font-size: 10px; padding: 2px 6px;" title="Customer's PPPoE session is active — internet is reaching them">
+                        <i class="fas fa-globe me-1"></i>Conn: {{ customer.connection_status }}
                     </span>
                 </div>
             </div>
