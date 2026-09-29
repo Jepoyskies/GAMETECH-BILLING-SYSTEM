@@ -2,9 +2,11 @@
 {% block title %}Import Legacy Data{% endblock %}
 {% block content %}
 <div class="container-fluid py-4 px-4">
-    <div class="dashboard-card">
-        <div class="section-header section-header-purple">
-            <h6><i class="fas fa-file-import sh-icon"></i> Import Legacy Customers</h6>
+    <div class="gt-table-card">
+        <div class="gt-table-toolbar">
+            <div class="gt-table-toolbar-left">
+                <span class="gt-status-badge gt-status-badge--info"><span class="gt-status-dot"></span> Import Legacy Customers</span>
+            </div>
         </div>
         <div class="p-4">
             <p>Upload a MySQL dump file from your old PHP system to import customers. The system preserves PPPoE credentials, status, and expiry dates (with timezone conversion). Missing routers are auto-created.</p>
@@ -32,15 +34,17 @@
     </div>
 
     {% if zero_date_customers %}
-    <div class="dashboard-card mt-4">
-        <div class="section-header" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
-            <h6><i class="fas fa-exclamation-triangle sh-icon"></i> Zero-Date Customers — Need Review ({{ zero_date_customers|length }})</h6>
+    <div class="gt-table-card mt-4">
+        <div class="gt-table-toolbar">
+            <div class="gt-table-toolbar-left">
+                <span class="gt-status-badge gt-status-badge--warning"><span class="gt-status-dot"></span> Zero-Date Customers — Need Review ({{ zero_date_customers|length }})</span>
+            </div>
         </div>
         <div class="p-4">
             <div class="alert alert-warning">
                 <strong>These customers have no expiry date in the legacy system.</strong> They were imported with <code>expires_at=NULL</code>. Please review each one and decide if they should remain active or be assigned an expiry date.
             </div>
-            <table class="table table-dark table-striped">
+            <table class="gt-table table-striped">
                 <thead>
                     <tr>
                         <th>#</th>
@@ -54,7 +58,7 @@
                         <td>{{ forloop.counter }}</td>
                         <td><code>{{ cust }}</code></td>
                         <td>
-                            <a href="{% url 'customer_list' %}" class="btn btn-sm btn-outline-light">Review in Customer List</a>
+                            <a href="{% url 'customer_list' %}" class="gt-btn-secondary" style="padding: 4px 10px; font-size: 0.78rem;">Review in Customer List</a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -65,9 +69,11 @@
     {% endif %}
 
     {% if total_imported > 0 %}
-    <div class="dashboard-card mt-4">
-        <div class="section-header section-header-green">
-            <h6><i class="fas fa-check-circle sh-icon"></i> Last Import Summary</h6>
+    <div class="gt-table-card mt-4">
+        <div class="gt-table-toolbar">
+            <div class="gt-table-toolbar-left">
+                <span class="gt-status-badge gt-status-badge--success"><span class="gt-status-dot"></span> Last Import Summary</span>
+            </div>
         </div>
         <div class="p-4">
             <p><strong>Total customers imported:</strong> {{ total_imported }}</p>

@@ -1045,4 +1045,418 @@ table.dataTable thead > tr > th.sorting_desc:after {
   background-color: var(--surface-hover) !important;
   color: var(--section-accent) !important;
 }
+
+/* ════════════════════════════════════════════════════════════
+   LEGACY HARMONIZATION LAYER
+   Maps every remaining pre-gt- class onto the unified tokens so no
+   page can drift from the dashboard again. Purely presentational:
+   touches no markup, no business logic, no routes.
+   Inline `style="background:linear-gradient(...)"` on legacy heroes
+   needs !important to win over the attribute.
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Legacy Page Hero → unified gt-page-header ── */
+.page-hero {
+  background: var(--gt-surface-card) !important;
+  border: var(--gt-border-card) !important;
+  border-radius: var(--gt-radius-card) !important;
+  box-shadow: var(--gt-shadow-card) !important;
+  color: var(--gt-text-title) !important;
+  padding: 1.25rem 1.5rem !important;
+  margin-bottom: var(--gt-sp-5) !important;
+  overflow: hidden;
+  position: relative;
+}
+/* Drop the legacy gradient decoration blobs */
+.page-hero::before,
+.page-hero::after {
+  content: none !important;
+}
+/* Re-add the single accent hairline the dashboard uses */
+.page-hero::before {
+  content: '' !important;
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--section-accent), transparent);
+}
+
+.page-hero .hero-icon {
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  padding: 0 !important;
+  border-radius: 12px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  color: var(--section-accent) !important;
+  background: color-mix(in srgb, var(--section-accent) 15%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--section-accent) 30%, transparent) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  flex-shrink: 0;
+}
+
+.page-hero .hero-title {
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--gt-text-title) !important;
+  text-shadow: none !important;
+}
+
+.page-hero .hero-sub {
+  font-size: 14px !important;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--gt-text-muted) !important;
+  opacity: 1 !important;
+}
+
+.page-hero .hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.22rem 0.65rem;
+  border-radius: var(--gt-radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--badge-neutral-text) !important;
+  background: var(--badge-neutral-bg) !important;
+  border: 1px solid color-mix(in srgb, var(--badge-neutral-text) 25%, transparent) !important;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* ── Legacy Section Header → unified gt-table-toolbar ── */
+.section-header,
+.section-header-blue,
+.section-header-green,
+.section-header-purple,
+.section-header-orange,
+.section-header-amber,
+.section-header-red {
+  background: var(--gt-surface-subtle) !important;
+  border-bottom: var(--gt-border-divider) !important;
+  color: var(--gt-text-title) !important;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gt-sp-3);
+  flex-wrap: wrap;
+}
+.section-header h5,
+.section-header h6 {
+  color: var(--gt-text-title) !important;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 14px;
+  font-weight: 600;
+}
+.section-header small {
+  color: var(--gt-text-muted) !important;
+  font-size: 12px;
+}
+.section-header .sh-icon {
+  color: var(--section-accent) !important;
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+/* ── Legacy Dashboard Card → unified gt-table-card ── */
+.dashboard-card {
+  background: var(--gt-surface-card) !important;
+  border: var(--gt-border-card) !important;
+  border-radius: var(--gt-radius-card) !important;
+  box-shadow: var(--gt-shadow-card) !important;
+  color: var(--gt-text-body);
+  overflow: hidden;
+}
+.dashboard-card .card-header {
+  background: var(--gt-surface-subtle) !important;
+  border-bottom: var(--gt-border-divider) !important;
+  color: var(--gt-text-title) !important;
+}
+.dashboard-card.bg-mesh-primary {
+  background: var(--gt-surface-card) !important;
+  color: var(--gt-text-body) !important;
+}
+
+/* ── Legacy Form Card / Submit Button → unified form surfaces ── */
+.form-card {
+  background: var(--gt-surface-card) !important;
+  border: var(--gt-border-card) !important;
+  border-radius: var(--gt-radius-card) !important;
+  box-shadow: var(--gt-shadow-card) !important;
+  color: var(--gt-text-body);
+}
+.btn-submit {
+  background: var(--color-primary) !important;
+  color: #fff !important;
+  border-radius: var(--gt-radius-btn) !important;
+  font-weight: 600;
+  box-shadow: 0 2px 8px -1px rgba(53, 51, 205, 0.35);
+}
+.btn-submit:hover {
+  background: var(--color-primary-hover) !important;
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+/* ── Legacy Filter Panel → unified card surface ── */
+.filter-glass {
+  background: var(--gt-surface-card) !important;
+  border: var(--gt-border-card) !important;
+  border-radius: var(--gt-radius-card) !important;
+  box-shadow: var(--gt-shadow-card) !important;
+  color: var(--gt-text-body);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: var(--gt-sp-5);
+}
+.filter-label,
+.filter-glass .filter-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gt-text-muted) !important;
+  margin-bottom: 0.35rem;
+}
+
+/* ── Legacy Table Premium → unified gt-table ── */
+.table-premium {
+  width: 100%;
+  margin-bottom: 0;
+  color: var(--gt-text-body) !important;
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--gt-text-body);
+}
+.table-premium thead th {
+  padding: 0.85rem 1rem;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gt-text-muted) !important;
+  background: var(--gt-surface-subtle) !important;
+  border-bottom: var(--gt-border-divider) !important;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.table-premium thead th:first-child,
+.table-premium tbody td:first-child { padding-left: 1.5rem !important; }
+.table-premium thead th:last-child,
+.table-premium tbody td:last-child { padding-right: 1.5rem !important; }
+.table-premium tbody td {
+  padding: 1rem;
+  font-size: 14px;
+  color: var(--gt-text-body) !important;
+  background: transparent !important;
+  border-bottom: var(--gt-border-divider) !important;
+  vertical-align: middle;
+}
+.table-premium tbody tr { background: transparent !important; }
+.table-premium tbody tr:hover { background: var(--gt-surface-hover) !important; }
+
+/* ── Legacy Premium Buttons → unified gt-btn tokens ── */
+.btn-premium {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: var(--gt-surface-subtle) !important;
+  color: var(--gt-text-title) !important;
+  border: var(--gt-border-card) !important;
+  border-radius: var(--gt-radius-btn) !important;
+  padding: 0.5rem 0.95rem;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none !important;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: none !important;
+}
+.btn-premium:hover {
+  background: var(--gt-surface-hover) !important;
+  color: var(--gt-text-title) !important;
+  transform: none;
+  box-shadow: none !important;
+}
+.btn-premium.btn-p-primary,
+.btn-premium.btn-p-success {
+  background: var(--color-primary) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  font-weight: 600;
+  box-shadow: 0 2px 8px -1px rgba(53, 51, 205, 0.35) !important;
+}
+.btn-premium.btn-p-primary:hover,
+.btn-premium.btn-p-success:hover {
+  background: var(--color-primary-hover) !important;
+  box-shadow: 0 4px 14px -1px rgba(53, 51, 205, 0.5) !important;
+}
+.btn-premium.btn-p-danger {
+  background: var(--badge-danger-text) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  font-weight: 600;
+}
+.btn-premium.btn-p-danger:hover { filter: brightness(0.92); }
+.btn-premium.btn-p-warning {
+  background: var(--badge-warning-text) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  font-weight: 600;
+}
+.btn-premium.btn-p-ghost {
+  background: var(--gt-surface-subtle) !important;
+  color: var(--gt-text-title) !important;
+}
+
+/* ── Legacy Pills → unified gt-status-badge ── */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.22rem 0.65rem;
+  border-radius: var(--gt-radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.pill-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; box-shadow: none !important; }
+.pill-active {
+  background: var(--badge-success-bg) !important;
+  color: var(--badge-success-text) !important;
+  border: 1px solid color-mix(in srgb, var(--badge-success-text) 25%, transparent) !important;
+}
+.pill-active .pill-dot { background: var(--badge-success-text); }
+.pill-expired {
+  background: var(--badge-danger-bg) !important;
+  color: var(--badge-danger-text) !important;
+  border: 1px solid color-mix(in srgb, var(--badge-danger-text) 25%, transparent) !important;
+}
+.pill-expired .pill-dot { background: var(--badge-danger-text); }
+.pill-suspended {
+  background: var(--badge-warning-bg) !important;
+  color: var(--badge-warning-text) !important;
+  border: 1px solid color-mix(in srgb, var(--badge-warning-text) 25%, transparent) !important;
+}
+.pill-suspended .pill-dot { background: var(--badge-warning-text); }
+.pill-inactive {
+  background: var(--badge-neutral-bg) !important;
+  color: var(--badge-neutral-text) !important;
+  border: 1px solid color-mix(in srgb, var(--badge-neutral-text) 25%, transparent) !important;
+}
+.pill-inactive .pill-dot { background: var(--badge-neutral-text); }
+.pill-pending {
+  background: var(--badge-info-bg) !important;
+  color: var(--badge-info-text) !important;
+  border: 1px solid color-mix(in srgb, var(--badge-info-text) 25%, transparent) !important;
+}
+.pill-pending .pill-dot { background: var(--badge-info-text); }
+
+/* ── Legacy Detail List → token colors ── */
+.detail-list li {
+  border-bottom: var(--gt-border-divider);
+  color: var(--gt-text-body);
+}
+.detail-list .detail-label,
+.detail-list .dl-label { color: var(--gt-text-muted) !important; }
+.detail-list .detail-value,
+.detail-list .dl-value { color: var(--gt-text-title) !important; }
+
+/* ── Legacy empty state alias ── */
+.es-icon { color: var(--gt-text-subtle); opacity: 0.55; margin-bottom: 0.75rem; }
+
+/* ── Legacy card-footer-actions row ── */
+.card-footer-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--gt-sp-3);
+  padding: 1rem 1.5rem;
+  border-top: var(--gt-border-divider);
+  background: var(--gt-surface-card);
+}
+
+/* ── Dark mode parity for legacy surfaces ── */
+.dark-mode .page-hero,
+html.dark-mode .page-hero { color: var(--gt-text-title); }
+.dark-mode .hero-badge,
+html.dark-mode .hero-badge {
+  background: var(--badge-neutral-bg) !important;
+  color: var(--badge-neutral-text) !important;
+}
+
+/* ════════════════════════════════════════════════════════════
+   CHANGELOG CARDS — were referenced across changelog.html and
+   base/_topbar_changelog.html but never defined, so both the
+   "What's New" dropdown and the encyclopedia rendered as
+   unstyled text. Defined here so every page gets them.
+   ════════════════════════════════════════════════════════════ */
+.gt-cl-card {
+  background: var(--gt-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--section-accent);
+  border-radius: var(--gt-radius-btn);
+  padding: 0.75rem 0.9rem;
+  color: var(--gt-text-body);
+}
+.gt-cl-card p,
+.gt-cl-card p.mb-0 { color: var(--gt-text-body) !important; }
+.gt-cl-card code {
+  background: var(--surface-hover);
+  color: var(--gt-text-title);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+
+.gt-cl-blue   { border-left-color: #3b82f6; }
+.gt-cl-green  { border-left-color: #10b981; }
+.gt-cl-purple { border-left-color: #8b5cf6; }
+.gt-cl-orange { border-left-color: #f59e0b; }
+.gt-cl-red    { border-left-color: #ef4444; }
+
+/* Changelog mode toggle (page + topbar share the same control) */
+.gt-cl-mode-toggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--gt-radius-pill);
+  background: var(--gt-surface-subtle);
+  border: var(--gt-border-card);
+}
+.gt-cl-mode-toggle .gt-cl-toggle-btn {
+  border: none;
+  background: transparent;
+  color: var(--gt-text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.3rem 0.8rem;
+  border-radius: var(--gt-radius-pill);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.gt-cl-mode-toggle .gt-cl-toggle-btn:hover {
+  color: var(--gt-text-title);
+  background: var(--gt-surface-hover);
+}
+.gt-cl-mode-toggle .gt-cl-toggle-btn.active {
+  background: var(--color-primary);
+  color: #fff;
+}
 </style>

@@ -138,19 +138,38 @@
                                 <span class="badge bg-success ms-2 fs-6 align-middle" style="border-radius: 8px;">Latest Build</span>
                             </h3>
 
-                            <p class="lead text-muted mb-4">Completed the full UI unification across the entire system. All pages now use the same design language as the dashboard — consistent headers, KPI cards, tables, buttons, badges, and filters throughout.</p>
+                            <p class="lead text-muted mb-4">Completed the full UI unification across the entire system. Every page now renders through one shared component library built on design tokens, so the dashboard's look is the system's look. No page can drift from it again.</p>
 
                             <div class="cl-dual-content">
                                 <!-- Tech View -->
                                 <div class="tech-content">
                                     <div class="card border-0 mb-4" style="background:#f0fdf4; border-radius:12px;">
                                         <div class="card-body p-4">
-                                            <h5 class="fw-bold mb-3" style="color:#059669;"><i class="fas fa-paint-roller me-2"></i> Unified Design System Rollout</h5>
+                                            <h5 class="fw-bold mb-3" style="color:#059669;"><i class="fas fa-paint-roller me-2"></i> Legacy Harmonization Layer (The Fix That Holds)</h5>
+                                            <p class="mb-3">Rather than hand-editing 25+ templates and risking future drift, a single <strong>Legacy Harmonization Layer</strong> was appended to <code>partials/_gt_design_system.html</code>. It re-declares every pre-unification class (<code>.page-hero</code>, <code>.hero-icon</code>, <code>.hero-title</code>, <code>.hero-sub</code>, <code>.hero-badge</code>, <code>.section-header*</code>, <code>.dashboard-card</code>, <code>.table-premium</code>, <code>.btn-premium*</code>, <code>.pill-*</code>, <code>.filter-glass</code>, <code>.form-card</code>, <code>.btn-submit</code>, <code>.detail-list</code>) directly on the unified tokens.</p>
                                             <ul class="mb-0">
-                                                <li><strong>7 Pages Unified:</strong> Pay Customer, Plan List, Analytics, Logs, Settings, Admin Panel, and Staff & Admins — all migrated from legacy <code>page-hero</code>/<code>dashboard-card</code> patterns to the unified <code>gt-page-header</code>/<code>gt-table-card</code> design system.</li>
-                                                <li><strong>Consistent Components:</strong> Every page now uses the same <code>gt-header-icon</code>, <code>gt-header-eyebrow</code>, <code>gt-header-title</code>, <code>gt-header-sub</code>, <code>gt-status-badge</code>, <code>gt-btn-primary</code>, <code>gt-btn-secondary</code>, <code>gt-icon-btn</code>, and <code>gt-filter-pill</code> classes.</li>
-                                                <li><strong>Dark/Light Mode:</strong> All unified pages work correctly in both light and dark themes using CSS custom properties.</li>
-                                                <li><strong>Chart Legend:</strong> Analytics chart legend now uses <code>var(--text-secondary)</code> for theme-reactive color instead of hardcoded dark-only values.</li>
+                                                <li><strong>Load-order safe:</strong> The design system partial is included after <code>theme.css</code> in <code>base.html</code>, so the layer wins at equal specificity; <code>!important</code> is used only where templates carry inline <code>style="background:linear-gradient(...)</code> attributes that no class rule could otherwise beat.</li>
+                                                <li><strong>Zero logic risk:</strong> Purely presentational CSS. No markup, view, model, route, or payment/Mikrotik behaviour touched.</li>
+                                                <li><strong>Dark-mode parity:</strong> Every harmonized class resolves from tokens, so light and dark themes both work without per-page overrides.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="card border-0 mb-4" style="background:#eff6ff; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#1d4ed8;"><i class="fas fa-list-check me-2"></i> Pages Converted to Native <code>gt-</code> Classes</h5>
+                                            <ul class="mb-0">
+                                                <li><strong>Billing core:</strong> Pay Customer, Plan List, Analytics, Logs, Add Customer, Edit Customer, Edit Payment Log, Import Data.</li>
+                                                <li><strong>Operations:</strong> Auto Suspend, MAC History, Improvement Requests, Manage Monitored Services.</li>
+                                                <li><strong>Configuration:</strong> Service Plans, Add-on Pricing, Admin Panel, Settings, Staff &amp; Admins, Rebate, Rollback.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="card border-0 mb-4" style="background:#fef2f2; border-radius:12px;">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-3" style="color:#b91c1c;"><i class="fas fa-bug me-2"></i> Regression Caught &amp; Fixed</h5>
+                                            <ul class="mb-0">
+                                                <li><strong>Audit Logs mobile layout:</strong> The compact event-card breakpoint still targeted <code>.table-premium</code> after the table moved to <code>.gt-table</code>, which would have collapsed the mobile card view into an unstyled block. Retargeted to <code>.gt-table</code> and converted from hardcoded hex to tokens.</li>
+                                                <li><strong>Chart legend contrast:</strong> Analytics legend was pinned to a dark-only hex; now reads <code>var(--text-secondary)</code> so it stays legible in light mode.</li>
                                             </ul>
                                         </div>
                                     </div>
@@ -160,7 +179,7 @@
                                     <div class="card border-0 mb-4" style="background:#f0fdf4; border-radius:12px;">
                                         <div class="card-body p-4">
                                             <h5 class="fw-bold mb-3" style="color:#059669;"><i class="fas fa-paint-roller me-2"></i> Everything Looks the Same Now</h5>
-                                            <p class="mb-0">All pages in the system now look consistent — same headers, same cards, same buttons, same tables. The dashboard design you love is now everywhere.</p>
+                                            <p class="mb-3">Every page in the system now shares the dashboard's look — same headers, cards, tables, buttons, and status tags. We also fixed the mobile layout on the Audit Logs page and a chart that was hard to read in light mode.</p>
                                         </div>
                                     </div>
                                 </div>
