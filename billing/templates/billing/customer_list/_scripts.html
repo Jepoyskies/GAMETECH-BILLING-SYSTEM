@@ -141,8 +141,8 @@
         if (indicators.length === 0) return;
         
         Promise.all([
-            fetch('/api/active-usernames/').then(res => res.json()),
-            fetch('/api/router-uplink/').then(res => res.json())
+            fetch('/api/active-usernames/').then(r => { if (!r.ok) throw new Error('Failed to fetch active users'); return r.json(); }),
+            fetch('/api/router-uplink/').then(r => { if (!r.ok) throw new Error('Failed to fetch router uplinks'); return r.json(); })
         ])
         .then(([activeData, uplinkData]) => {
             if (activeData.status === 'success') {

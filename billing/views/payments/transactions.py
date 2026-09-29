@@ -82,9 +82,8 @@ def create_payment_view(request, customer_id):
 
             days_paid = round((ed - sd).total_seconds() / (24 * 3600), 4)
         except Exception as e:
-            print("Date parse err:", e)
-            days_paid = 0
-            ed = timezone.now()
+            messages.error(request, f"Invalid date format: {e}")
+            return render(request, "billing/pay.html", {"customer": customer})
 
         try:
             pdr = datetime.fromisoformat(payment_date_received.replace("Z", ""))
