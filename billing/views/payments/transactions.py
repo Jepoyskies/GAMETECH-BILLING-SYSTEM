@@ -93,33 +93,35 @@ def create_payment_view(request, customer_id):
         except Exception:
             pdr = timezone.now()
 
-        Payment.objects.create(
-            customer=customer,
-            username=customer.pppoe_username or customer.full_name,
-            plan_name=customer.plan.name if customer.plan else "",
-            mikrotik_device_name=(
-                customer.mikrotik_device.device_name if customer.mikrotik_device else ""
-            ),
-            amount=amount,
-            days_paid=days_paid,
-            payment_method=payment_method,
-            reference_no=reference_no,
-            reason=reason,
-            expires_at=ed,
-            payment_date_received=pdr,
-            paid_at=timezone.now(),
-            adjusted_by=(
-                request.user.username if request.user.is_authenticated else "system"
-            ),
-        )
+        from django.db import transaction
+        with transaction.atomic():
+            Payment.objects.create(
+                customer=customer,
+                username=customer.pppoe_username or customer.full_name,
+                plan_name=customer.plan.name if customer.plan else "",
+                mikrotik_device_name=(
+                    customer.mikrotik_device.device_name if customer.mikrotik_device else ""
+                ),
+                amount=amount,
+                days_paid=days_paid,
+                payment_method=payment_method,
+                reference_no=reference_no,
+                reason=reason,
+                expires_at=ed,
+                payment_date_received=pdr,
+                paid_at=timezone.now(),
+                adjusted_by=(
+                    request.user.username if request.user.is_authenticated else "system"
+                ),
+            )
 
-        customer.expires_at = ed
+            customer.expires_at = ed
 
-        # If the customer was previously inactive or suspended, auto-reactivate them
-        if customer.status in ["expired", "suspended", "inactive", "past_due"]:
-            customer.status = "active"
+            # If the customer was previously inactive or suspended, auto-reactivate them
+            if customer.status in ["expired", "suspended", "inactive", "past_due"]:
+                customer.status = "active"
 
-        customer.save()
+            customer.save()
 
         messages.success(
             request,

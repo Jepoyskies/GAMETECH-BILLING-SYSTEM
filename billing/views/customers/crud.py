@@ -723,6 +723,7 @@ def edit_customer(request, customer_id):
     return render(request, "billing/edit_customer.html", context)
 
 
+@role_required(["Admin", "Editor", "CSR", "Agent"])
 @login_required
 def view_customer(request, customer_id):
     customer = get_object_or_404(Customer, id=customer_id)

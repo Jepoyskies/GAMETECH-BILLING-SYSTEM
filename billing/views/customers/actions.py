@@ -69,6 +69,7 @@ def customer_force_suspend(request, username):
     return redirect("customer_list")
 
 
+@role_required(["Admin", "Editor"])
 @login_required
 def customer_kick_session(request, username):
     """Manually kicks the active PPPoE session without altering their billing status"""

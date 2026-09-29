@@ -82,18 +82,11 @@ def customer_list(request):
             connected_usernames = set(api_payload.get("active_usernames", []))
             cache.set("active_pppoe_usernames_set", connected_usernames, 30)
         else:
+            # Use cached live monitoring data instead of making individual API calls
+            live_data = cache.get("live_monitoring_data")
             connected_usernames = set()
-            for device in MikrotikDevice.objects.all():
-                if cache.get(f"router_unreachable_{device.id}"):
-                    continue
-                try:
-                    api = MikrotikAPI(device)
-                    for au in api.get_active_pppoe_users():
-                        name = au.get("name")
-                        if name:
-                            connected_usernames.add(name)
-                except Exception:
-                    pass
+            if live_data and "active_usernames" in live_data:
+                connected_usernames = set(live_data.get("active_usernames", []))
             cache.set("active_pppoe_usernames_set", connected_usernames, 45)
 
     # Calculate Paid but Offline subscribers (active billing status with active expiration, but disconnected from router)
@@ -106,10 +99,12 @@ def customer_list(request):
         .values("id", "pppoe_username")
     )
 
+    # Normalize to lowercase set for case-insensitive comparison
+    connected_usernames_lower = {u.lower() for u in connected_usernames if u}
     paid_but_offline_ids = [
         c["id"]
         for c in active_paid_customers
-        if c["pppoe_username"] and c["pppoe_username"] not in connected_usernames
+        if c["pppoe_username"] and c["pppoe_username"].lower() not in connected_usernames_lower
     ]
     stats["paid_but_offline"] = len(paid_but_offline_ids)
 
