@@ -252,3 +252,26 @@ def is_checklist_bypass_active() -> bool:
     if getattr(_BYPASS_STATE, "admin_bypass", False):
         return True
     return False
+
+
+# --- Sensitive Operation Audit Logging ---
+
+def log_sensitive_operation(action, entity_type, entity_id, actor, details=""):
+    """
+    Logs sensitive security-relevant operations to SystemLog.
+    Use for: password changes, permission changes, exports, backups, 
+    customer deletion, plan changes, router mode changes, etc.
+    """
+    try:
+        from billing.models import SystemLog
+        SystemLog.objects.create(
+            table_name="Security",
+            record_id=str(entity_id) if entity_id else "0",
+            action=action,
+            changed_by=str(actor) if actor else "System",
+            target_name=entity_type,
+            old_data="",
+            new_data=details or f"{action} on {entity_type} #{entity_id}",
+        )
+    except Exception as e:
+        logger.error(f"Failed to log sensitive operation: {e}")

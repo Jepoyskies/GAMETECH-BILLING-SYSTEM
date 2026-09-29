@@ -41,6 +41,23 @@ CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=False)
 SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=False)
 SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=0)
 
+# Session idle timeout: logout after 5 minutes of inactivity
+SESSION_COOKIE_AGE = 300  # 5 minutes
+SESSION_SAVE_EVERY_REQUEST = True  # Reset idle timer on each request
+
+# Security headers (applied by SecurityMiddleware)
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+SECURE_CSP_DEFAULT_SRC = "'self'"
+SECURE_CSP_SCRIPT_SRC = "'self'"
+SECURE_CSP_STYLE_SRC = "'self' 'unsafe-inline'"
+SECURE_CSP_IMG_SRC = "'self' data:"
+SECURE_CSP_FONT_SRC = "'self'"
+SECURE_CSP_CONNECT_SRC = "'self'"
+SECURE_CSP_FRAME_ANCESTORS = "'none'"
+SECURE_CSP_BASE_URI = "'self'"
+SECURE_CSP_FORM_ACTION = "'self'"
+
 # Semaphore SMS Configuration (environment-driven)
 SEMAPHORE_API_KEY = env("SEMAPHORE_API_KEY", default="")
 SEMAPHORE_SENDER_NAME = env("SEMAPHORE_SENDER_NAME", default="SEMAPHORE")
@@ -94,6 +111,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "billing.middleware.LoginRateLimitMiddleware",
+    "billing.middleware.APIRateLimitMiddleware",
     "billing.middleware.ThreadLocalUserMiddleware",
     "billing.middleware.ActiveUserMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",

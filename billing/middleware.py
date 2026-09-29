@@ -91,3 +91,37 @@ class LoginRateLimitMiddleware:
 
         return self.get_response(request)
 
+
+class APIRateLimitMiddleware:
+    """
+    Rate limiting for API endpoints to prevent abuse.
+    100 requests per minute per IP for general API calls.
+    10 requests per minute for sensitive operations (export, delete, backup).
+    """
+    API_PREFIXES = ("/api/",)
+    SENSITIVE_PATHS = ("export", "delete", "backup", "restore", "suspend", "enable", "disable")
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.path.startswith(self.API_PREFIXES):
+            from billing.security import get_client_ip, is_ip_rate_limited
+            from django.http import JsonResponse
+
+            ip = get_client_ip(request)
+            is_sensitive = any(p in request.path for p in self.SENSITIVE_PATHS)
+
+            if is_sensitive:
+                is_limited, retry_after = is_ip_rate_limited(ip, endpoint_name="api_sensitive", limit=10, window=60)
+            else:
+                is_limited, retry_after = is_ip_rate_limited(ip, endpoint_name="api_general", limit=100, window=60)
+
+            if is_limited:
+                return JsonResponse(
+                    {"success": False, "error": f"Rate limit exceeded. Please wait {retry_after} seconds."},
+                    status=429,
+                )
+
+        return self.get_response(request)
+
