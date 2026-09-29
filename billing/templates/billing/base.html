@@ -18,14 +18,20 @@
     
     {% include "billing/base/_styles.html" %}
     <link rel="stylesheet" href="{% static 'css/theme.css' %}?v=2.2">
-    {# ── Unified Gametech design system (single source of truth) ──
-       Load order matters: theme.css < tokens < components < surfaces < data < legacy.
-       legacy.css runs last so pre-gt- class names inherit the new tokens. #}
+    <!-- Unified Gametech design system. Load order matters:
+         theme.css < tokens < components < surfaces < data < legacy.
+         tokens.css and data.css are always on (inert variables + plugin
+         theming for DataTables/Select2/SweetAlert).
+         components/surfaces/legacy carry the page-chrome overrides, so they
+         live in a block that the Dashboard opts out of - the Dashboard is
+         someone else's finished design and must render exactly as authored. -->
     <link rel="stylesheet" href="{% static 'css/gt/tokens.css' %}?v=3.0">
+    <link rel="stylesheet" href="{% static 'css/gt/data.css' %}?v=3.0">
+    {% block gt_theme %}
     <link rel="stylesheet" href="{% static 'css/gt/components.css' %}?v=3.0">
     <link rel="stylesheet" href="{% static 'css/gt/surfaces.css' %}?v=3.0">
-    <link rel="stylesheet" href="{% static 'css/gt/data.css' %}?v=3.0">
     <link rel="stylesheet" href="{% static 'css/gt/legacy.css' %}?v=3.0">
+    {% endblock %}
     {% block extra_css %}{% endblock %}
     
     <script>
