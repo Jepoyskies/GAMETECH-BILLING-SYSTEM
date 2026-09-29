@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ISP NOC Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial;
+    background: #0b1220;
+    color: #e5e7eb;
+}
+
+.header {
+    padding: 15px;
+    background: #111827;
+    text-align: center;
+    font-size: 20px;
+}
+
+.container {
+    padding: 15px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+}
+
+.card {
+    background: #111827;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.card h3 {
+    margin: 0;
+    font-size: 14px;
+    color: #9ca3af;
+}
+
+.card p {
+    font-size: 22px;
+    margin: 5px 0 0;
+}
+
+.table-card {
+    grid-column: span 4;
+}
+
+input {
+    padding: 8px;
+    width: 250px;
+    margin-bottom: 10px;
+    background: #1f2937;
+    border: none;
+    color: white;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 10px;
+    text-align: center;
+}
+
+th {
+    background: #1f2937;
+}
+
+tr:nth-child(even) {
+    background: #0f172a;
+}
+
+.top-users {
+    grid-column: span 2;
+}
+
+.chart-card {
+    grid-column: span 2;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">📡 ISP NOC Dashboard</div>
+
+<div class="container">
+<div class="grid">
+
+<div class="card">
+    <h3>Online Users</h3>
+    <p id="users">0</p>
+</div>
+
+<div class="card">
+    <h3>Total Download</h3>
+    <p id="download">0 Mbps</p>
+</div>
+
+<div class="card">
+    <h3>Total Upload</h3>
+    <p id="upload">0 Mbps</p>
+</div>
+
+<div class="card">
+    <h3>Last Update</h3>
+    <p id="time">-</p>
+</div>
+
+<div class="card chart-card">
+    <canvas id="trafficChart"></canvas>
+</div>
+
+<div class="card top-users">
+    <h3>Top Users</h3>
+    <ul id="topUsers"></ul>
+</div>
+
+<div class="card table-card">
+    <input type="text" id="search" placeholder="Search user...">
+    <table>
+        <thead>
+            <tr>
+                <th>User</th>
+                <th>IP</th>
+                <th>Download</th>
+                <th>Upload</th>
+            </tr>
+        </thead>
+        <tbody id="table"></tbody>
+    </table>
+</div>
+
+</div>
+</div>
+
+<script>
+let chart = null;
+
+function initChart() {
+    const ctx = document.getElementById('trafficChart').getContext('2d');
+
+    chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: 'Download Mbps',
+                    borderColor: '#22c55e',
+                    data: [],
+                    fill: false
+                },
+                {
+                    label: 'Upload Mbps',
+                    borderColor: '#f59e0b',
+                    data: [],
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            animation: false,
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+function updateChart(rx, tx) {
+    if (!chart) return;
+
+    const time = new Date().toLocaleTimeString();
+
+    chart.data.labels.push(time);
+    chart.data.datasets<a href="" class="citation-link" target="_blank" style="vertical-align: super; font-size: 0.8em; margin-left: 3px;">[0]</a>.data.push(rx);
+    chart.data.datasets<a href="" class="citation-link" target="_blank" style="vertical-align: super; font-size: 0.8em; margin-left: 3px;">[1]</a>.data.push(tx);
+
+    if (chart.data.labels.length > 20) {
+        chart.data.labels.shift();
+        chart.data.datasets.forEach(d => d.data.shift());
+    }
+
+    chart.update();
+}
+
+
+async function loadData() {
+    try {
+        const res = await fetch('pppoe.php');
+        const data = await res.json();
+
+        if (!Array.isArray(data)) return;
+
+        let totalRx = 0;
+        let totalTx = 0;
+
+        document.getElementById('users').innerText = data.length;
+
+        const tbody = document.getElementById('table');
+        const search = document.getElementById('search').value.toLowerCase();
+        tbody.innerHTML = '';
+
+        data.forEach(u => {
+
+            let rx = parseFloat(u.rx_mbps) || 0;
+            let tx = parseFloat(u.tx_mbps) || 0;
+
+            totalRx += rx;
+            totalTx += tx;
+
+            if (!u.user.toLowerCase().includes(search)) return;
+
+            tbody.innerHTML += `
+                <tr>
+                    <td>${u.user}</td>
+                    <td>${u.address || '-'}</td>
+                    <td>${rx.toFixed(2)} Mbps</td>
+                    <td>${tx.toFixed(2)} Mbps</td>
+                </tr>
+            `;
+        });
+
+        document.getElementById('download').innerText = totalRx.toFixed(2) + ' Mbps';
+        document.getElementById('upload').innerText = totalTx.toFixed(2) + ' Mbps';
+        document.getElementById('time').innerText = new Date().toLocaleTimeString();
+
+        updateChart(totalRx, totalTx);
+
+        // Top users
+        const top = [...data]
+            .map(u => ({
+                ...u,
+                total: (parseFloat(u.rx_mbps) || 0) + (parseFloat(u.tx_mbps) || 0)
+            }))
+            .sort((a, b) => b.total - a.total)
+            .slice(0, 5);
+
+        const topList = document.getElementById('topUsers');
+        topList.innerHTML = '';
+
+        top.forEach((u, i) => {
+            topList.innerHTML += `<li>#${i+1} ${u.user} (${u.total.toFixed(2)} Mbps)</li>`;
+        });
+
+    } catch (err) {
+        console.error("Error loading data:", err);
+    }
+}
+
+// safer event binding
+document.getElementById('search').addEventListener('input', () => {
+    loadData();
+});
+
+initChart();
+setInterval(loadData, 2000);
+loadData();
+</script>
+
+</body>
+</html>
