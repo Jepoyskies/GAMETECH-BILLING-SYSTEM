@@ -1,83 +1,23 @@
 {% load static %}
 <!-- Base Partial: Styles -->
     <style>
-/* Fonts, brand colours and every other token live in
-   static/css/gt/tokens.css. Only the legacy aliases below are declared
-   here, and they point at the canonical tokens rather than re-inventing
-   values — one source of truth only. */
 :root {
     --font-heading: 'Poppins', sans-serif;
     --font-subheading: 'Inter', sans-serif;
     --font-body: 'Montserrat', sans-serif;
-    --gt-gold: #F9B233;
-    --gt-indigo: #2151A1;
-    --gt-navy: #15171b;
-    --surface-elevated: #eceef3;
-    --text-secondary: #64748b;
-    --color-primary: #2151A1;
-    --color-cyan: var(--gt-gold);
-    --color-orange: var(--gt-gold);
-    --color-dark-blue: var(--gt-indigo);
-    --color-dark-gray: var(--gt-navy);
-    --color-dusty: var(--text-secondary);
-    --gt-cyan-blue: var(--gt-gold);
-    --gt-dark-blue: var(--gt-navy);
-    --gt-dark-gray: var(--gt-navy);
-    --gt-dusty-blue: var(--surface-elevated);
-    --gt-golden-orange: var(--gt-gold);
-    --gt-primary: var(--color-primary);
-    --gt-white: #FFFFFF;
-    /* Page background tokens — mirrors gt/tokens.css so dashboard doesn't need that file */
+    --color-cyan: #0349cb;
+    --color-orange: #fbae1a;
+    --color-dark-blue: #3533cd;
+    --color-dark-gray: #15171b;
+    --color-dusty: #eceef3;
+    /* Required by theme/tokens_and_base.css dark-mode body background rule */
     --gt-bg: #f8fafc;
     --gt-bg-rgb: 255, 255, 255;
 }
-
-html.dark-mode,
-body.dark-mode {
-    --gt-bg-rgb: 10, 15, 30;
+html.dark-mode, body.dark-mode {
     --gt-bg: #0a0f1e;
+    --gt-bg-rgb: 10, 15, 30;
 }
-
-
-/* ============================================================
-   0. GLOBAL SCROLLBARS (Silky & Minimal)
-   ============================================================ */
-::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-::-webkit-scrollbar-thumb {
-    background: rgba(156, 163, 175, 0.4);
-    border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: rgba(156, 163, 175, 0.7);
-}
-html.dark-mode ::-webkit-scrollbar-thumb {
-    background: rgba(100, 116, 139, 0.4);
-}
-html.dark-mode ::-webkit-scrollbar-thumb:hover {
-    background: rgba(100, 116, 139, 0.7);
-}
-
-/* ============================================================
-   1. SILKY DARK MODE & SURFACE TRANSITIONS
-   ============================================================ */
-body,
-.main-content,
-.content-wrapper,
-.sidebar,
-.topbar,
-.card,
-.modal-content,
-.dropdown-menu,
-.table {
-    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-}
-
 body {
     font-family: var(--font-body);
 }
@@ -131,20 +71,20 @@ h1, h2, h3, h4, h5, h6, .card-title, .modal-title {
 .sidebar.collapsed .sidebar-footer { padding-left: 0 !important; padding-right: 0 !important; }
 .sidebar.collapsed .logout-btn { padding-left: 0 !important; padding-right: 0 !important; justify-content: center; }
 .sidebar .menu-link.active {
-    background: rgba(249, 178, 51, 0.15);
-    color: var(--gt-indigo);
-    border-left: 4px solid var(--gt-gold);
+    background: rgba(3, 73, 203, 0.05);
+    color: #0349cb;
+    border-left: 4px solid #fbae1a;
     font-weight: 600;
 }
 .sidebar .menu-link.active .icon {
-    color: var(--gt-gold);
+    color: #0349cb;
 }
 .sidebar .menu-link:hover:not(.active) {
-    background: var(--surface-hover);
-    color: var(--gt-indigo);
+    background: #f1f5f9;
+    color: #0349cb;
 }
 .sidebar .menu-link:hover:not(.active) .icon {
-    color: var(--gt-gold);
+    color: #0349cb;
 }
 .sidebar .menu-link.logout-btn:hover {
     background: #fef2f2 !important;
@@ -190,33 +130,9 @@ h1, h2, h3, h4, h5, h6, .card-title, .modal-title {
 .main-content { margin-left: 250px; transition: margin 0.3s; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
 .main-content.full, .sidebar.collapsed ~ .main-content { margin-left: 70px; }
 @media (max-width: 991.98px) { .main-content, .main-content.full { margin-left: 0; } }
-/* ============================================================
-   2. FROSTED GLASS STICKY HEADER
-   ============================================================ */
-.topbar {
-    padding: 0.9rem 1.5rem;
-    position: sticky;
-    top: 0;
-    z-index: 1020;
-    width: 100%;
-    min-height: 62px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background-color: rgba(var(--gt-bg-rgb, 255, 255, 255), 0.85) !important;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
-}
-
-html.dark-mode .topbar,
-body.dark-mode .topbar {
-    background-color: rgba(var(--gt-bg-rgb, 15, 23, 42), 0.85) !important;
-    background-image: none !important;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
-}
+.topbar { padding: 0.9rem 1.5rem; background: #fff; border-bottom: 1px solid #f0f0f0;
+           display: flex; align-items: center; justify-content: space-between; min-height: 62px;
+           position: sticky; top: 0; z-index: 1030; width: 100%; }
 .content-wrapper { width: 100%; max-width: 1600px; margin: 0 auto; }
 .menu-btn, .hide-btn, .show-btn {
     background: none; border: none; font-size: 1.45rem; color: #2151A1;
@@ -225,6 +141,8 @@ body.dark-mode .topbar {
 .menu-btn:hover, .hide-btn:hover, .show-btn:hover { color: #F9B233; }
 .topbar-title { font-weight: 600; color: #2151A1; font-size: 1.2rem; }
 .sidebar nav { overflow-y: auto; }
+.sidebar nav::-webkit-scrollbar { width: 6px; }
+.sidebar nav::-webkit-scrollbar-thumb { background: #19407A; border-radius: 2px; }
 
 /* Mobile Optimization - Global */
 @media (max-width: 767.98px) {
@@ -337,7 +255,8 @@ html.dark-mode .hamburger-button div { background-color: #eceef3; }
 .check:checked ~ .hamburger-button:hover .line1 { transform: translate(0, 4px) rotate(-35deg); border-radius: 5px; }
 .check:checked ~ .hamburger-button:hover .line3 { transform: translate(0, -4px) rotate(35deg); border-radius: 5px; }
 .check:checked ~ .hamburger-button:hover .line2 { margin-left: 10px; }
-
+</style>
+    <style>
     /* Pulse animation for high priority notifications */
     @keyframes pulseDanger {
         0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
@@ -346,265 +265,5 @@ html.dark-mode .hamburger-button div { background-color: #eceef3; }
     }
     .pulse-danger {
         animation: pulseDanger 2s infinite;
-    }
-
-    /* ============================================================
-       3. TACTILE BUTTON & CARD MICRO-INTERACTIONS
-       ============================================================ */
-    .gt-btn,
-    .btn-primary,
-    .gt-cl-card {
-        transition: all 0.2s ease-in-out;
-    }
-
-    .gt-btn:hover,
-    .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
-    }
-
-    .gt-btn:active,
-    .btn-primary:active {
-        transform: translateY(0);
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-    }
-
-    .gt-cl-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
-    }
-
-    html.dark-mode .gt-cl-card:hover {
-        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.35);
-    }
-
-    /* ============================================================
-       4. DANGER MODAL ATTENTION SHAKE ANIMATION
-       ============================================================ */
-    @keyframes subtleShake {
-        0%, 100% { transform: translateX(0); }
-        15%, 45%, 75% { transform: translateX(-2px); }
-        30%, 60%, 90% { transform: translateX(2px); }
-    }
-
-    .modal-danger-animate,
-    .modal.show .modal-danger-animate,
-    .modal.modal-danger .modal-content,
-    .modal.danger-modal .modal-content,
-    .swal2-icon.swal2-warning,
-    .swal2-icon.swal2-error {
-        animation: subtleShake 0.4s ease-in-out;
-    }
-
-    /* Leaflet Dark Matter Container & Tile Filter Styling */
-    html.dark-mode .leaflet-container,
-    body.dark-mode .leaflet-container {
-        background: #0f172a !important;
-    }
-    .dark-tiles,
-    .leaflet-tile-pane img.dark-tiles {
-        filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7) !important;
-    }
-    html.dark-mode .leaflet-popup-content-wrapper,
-    html.dark-mode .leaflet-popup-tip {
-        background: #1e293b !important;
-        color: #f8fafc !important;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important;
-    }
-    html.dark-mode .leaflet-control-zoom a {
-        background: #1e293b !important;
-        color: #f8fafc !important;
-        border-color: rgba(255,255,255,0.1) !important;
-    }
-    html.dark-mode .leaflet-control-zoom a:hover {
-        background: #334155 !important;
-    }
-    html.dark-mode .leaflet-control-layers {
-        background: #1e293b !important;
-        color: #f8fafc !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.4) !important;
-        border-radius: 8px !important;
-    }
-    html.dark-mode .leaflet-control-layers-toggle {
-        filter: invert(1);
-    }
-    html.dark-mode .leaflet-control-attribution {
-        background: rgba(15, 23, 42, 0.8) !important;
-        color: #94a3b8 !important;
-    }
-    html.dark-mode .leaflet-control-attribution a {
-        color: #60a5fa !important;
-    }
-
-    /* Global Form Controls & Select Options Dark Mode Styling */
-    .form-select, select.form-select,
-    .plan-form-control, select.plan-form-control,
-    select {
-        background-repeat: no-repeat !important;
-        background-position: right 0.75rem center !important;
-        background-size: 16px 12px !important;
-        appearance: none !important;
-        -webkit-appearance: none !important;
-        -moz-appearance: none !important;
-    }
-    html.dark-mode .plan-form-control, body.dark-mode .plan-form-control,
-    html.dark-mode .form-control, body.dark-mode .form-control,
-    html.dark-mode .form-select, body.dark-mode .form-select {
-        background-color: #1a1d2d !important;
-        border: 1px solid rgba(255, 255, 255, 0.12) !important;
-        color: #f8fafc !important;
-    }
-    html.dark-mode select.plan-form-control, body.dark-mode select.plan-form-control,
-    html.dark-mode select.form-select, body.dark-mode select.form-select,
-    html.dark-mode select, body.dark-mode select {
-        background-color: #1a1d2d !important;
-        color: #f8fafc !important;
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
-        background-repeat: no-repeat !important;
-        background-position: right 0.75rem center !important;
-        background-size: 16px 12px !important;
-        appearance: none !important;
-        -webkit-appearance: none !important;
-        -moz-appearance: none !important;
-    }
-    html.dark-mode select option, body.dark-mode select option,
-    html.dark-mode select.plan-form-control option, body.dark-mode select.plan-form-control option,
-    html.dark-mode select.form-select option, body.dark-mode select.form-select option {
-        background-color: #1a1d2d !important;
-        color: #f8fafc !important;
-        padding: 8px 12px;
-    }
-    html.dark-mode select optgroup, body.dark-mode select optgroup,
-    html.dark-mode select.plan-form-control optgroup, body.dark-mode select.plan-form-control optgroup,
-    html.dark-mode select.form-select optgroup, body.dark-mode select.form-select optgroup {
-        background-color: #151824 !important;
-        color: #38bdf8 !important;
-        font-weight: 600;
-    }
-    .plan-form-control:focus, select.plan-form-control:focus,
-    .form-control:focus, .form-select:focus,
-    html.dark-mode .plan-form-control:focus, body.dark-mode .plan-form-control:focus,
-    html.dark-mode select.plan-form-control:focus, body.dark-mode select.plan-form-control:focus,
-    html.dark-mode .form-control:focus, body.dark-mode .form-control:focus,
-    html.dark-mode .form-select:focus, body.dark-mode .form-select:focus {
-        outline: none !important;
-        border-color: #38bdf8 !important;
-        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25) !important;
-    }
-
-    /* TomSelect Dark Mode Integration */
-    html.dark-mode .ts-wrapper .ts-control,
-    body.dark-mode .ts-wrapper .ts-control {
-        background-color: #1a1d2d !important;
-        border: 1px solid rgba(255, 255, 255, 0.12) !important;
-        color: #f8fafc !important;
-        border-radius: 10px !important;
-    }
-    html.dark-mode .ts-wrapper .ts-control > input,
-    body.dark-mode .ts-wrapper .ts-control > input,
-    html.dark-mode .ts-wrapper .ts-control .item,
-    body.dark-mode .ts-wrapper .ts-control .item {
-        color: #f8fafc !important;
-    }
-    html.dark-mode .ts-wrapper.focus .ts-control,
-    body.dark-mode .ts-wrapper.focus .ts-control {
-        border-color: #38bdf8 !important;
-        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25) !important;
-    }
-    .ts-dropdown {
-        z-index: 9999 !important;
-    }
-    html.dark-mode .ts-dropdown,
-    body.dark-mode .ts-dropdown {
-        background-color: #1a1d2d !important;
-        border: 1px solid rgba(255, 255, 255, 0.15) !important;
-        color: #f8fafc !important;
-        border-radius: 10px !important;
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5) !important;
-    }
-    html.dark-mode .ts-dropdown .option,
-    body.dark-mode .ts-dropdown .option {
-        color: #f8fafc !important;
-        background-color: transparent !important;
-    }
-    html.dark-mode .ts-dropdown .option:hover,
-    html.dark-mode .ts-dropdown .option.active,
-    body.dark-mode .ts-dropdown .option:hover,
-    body.dark-mode .ts-dropdown .option.active {
-        background-color: #262b40 !important;
-        color: #38bdf8 !important;
-    }
-    html.dark-mode .ts-dropdown .optgroup-header,
-    body.dark-mode .ts-dropdown .optgroup-header {
-        background-color: #151824 !important;
-        color: #38bdf8 !important;
-        font-weight: 600 !important;
-    }
-    /* ============================================================
-       5. CIGNAL PLAY UI OVERHAUL
-       ============================================================ */
-    @keyframes pulse-border-warning {
-        0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); border-color: rgba(245, 158, 11, 0.8); }
-        70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); border-color: rgba(245, 158, 11, 0.3); }
-        100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); border-color: rgba(245, 158, 11, 0.1); }
-    }
-    @keyframes pulse-border-danger {
-        0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); border-color: rgba(239, 68, 68, 0.8); }
-        70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); border-color: rgba(239, 68, 68, 0.3); }
-        100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); border-color: rgba(239, 68, 68, 0.1); }
-    }
-    .stat-card-attention {
-        animation: pulse-border-warning 2s infinite;
-        border: 1px solid rgba(245, 158, 11, 0.8) !important;
-    }
-    .pulse-border-danger {
-        animation: pulse-border-danger 2s infinite;
-        border: 1px solid rgba(239, 68, 68, 0.8) !important;
-    }
-    .trend-up { color: #10b981; font-size: 0.75rem; margin-left: 6px; }
-    .trend-down { color: #ef4444; font-size: 0.75rem; margin-left: 6px; }
-    
-    .table-dark.table-hover tbody tr:hover {
-        background-color: rgba(255, 255, 255, 0.05) !important;
-        transform: translateY(-1px);
-        transition: all 0.2s ease;
-    }
-    .table-dark th {
-        letter-spacing: 1px;
-        font-size: 0.75rem;
-        color: #94a3b8;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-    
-    .cignal-empty-state {
-        background: rgba(255,255,255,0.02) !important;
-        border: 1px solid rgba(255,255,255,0.05);
-        transition: all 0.3s ease;
-    }
-    .cignal-empty-state:hover {
-        background: rgba(255,255,255,0.04) !important;
-        border-color: rgba(255,255,255,0.1);
-    }
-    
-    .alert-card-hover {
-        transition: all 0.2s ease;
-        border: 1px solid transparent;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-    }
-    .alert-card-hover:hover {
-        background-color: rgba(255,255,255,0.03);
-        border-radius: 8px;
-        border: 1px solid rgba(255,255,255,0.1);
-        transform: translateX(4px);
-    }
-    
-    /* Dispatch Empty State — Clean No-Dashed State per Gametech Design System */
-    .dispatch-empty-state {
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        padding: 3rem 1rem;
-        text-align: center;
     }
     </style>
