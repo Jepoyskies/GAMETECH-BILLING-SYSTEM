@@ -15,84 +15,86 @@
 {% block content %}
 <div class="container-fluid py-4 px-3 px-md-4">
     
-    <!-- Page Hero -->
-    <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4 animate-fade-in"
-         style="background: linear-gradient(135deg, #022c22 0%, #064e3b 100%); border: 1px solid rgba(16, 185, 129, 0.3); box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);">
-        <div class="d-flex align-items-center">
-            <div class="hero-icon" style="color: #34d399; background: rgba(16, 185, 129, 0.15);"><i class="fas fa-credit-card" style="text-shadow: 0 0 10px rgba(16, 185, 129, 0.8);"></i></div>
+    <!-- Page Header -->
+    <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4" style="--section-accent: #10b981;">
+        <div class="d-flex align-items-center gap-3">
+            <div class="gt-header-icon"><i class="fas fa-credit-card"></i></div>
             <div>
-                <div class="hero-title" style="color: #f8fafc;">Renew Subscription</div>
-                <div class="hero-sub" style="color: #a7f3d0;">Process payment for <strong class="text-white">{{ customer.username|default:customer.full_name }}</strong></div>
+                <div class="gt-header-eyebrow"><i class="fas fa-credit-card me-1"></i> Renew Subscription</div>
+                <h1 class="gt-header-title">Renew Subscription</h1>
+                <p class="gt-header-sub">Process payment for <strong>{{ customer.username|default:customer.full_name }}</strong></p>
             </div>
         </div>
-        <a href="{% url 'payment_portal' %}" class="btn-premium" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.3);">
-            <i class="fas fa-arrow-left"></i> Back to Portal
+        <a href="{% url 'payment_portal' %}" class="gt-btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Portal
         </a>
     </div>
 
     <div class="row g-4 animate-fade-in animate-delay-1">
         <!-- Left Column: Customer Details -->
         <div class="col-lg-5">
-            <div class="dashboard-card h-100" style="overflow:hidden;">
-                <div class="section-header section-header-blue">
-                    <h6><i class="fas fa-user sh-icon"></i> Customer Details</h6>
+            <div class="gt-table-card h-100">
+                <div class="gt-table-toolbar">
+                    <div class="gt-table-toolbar-left">
+                        <span class="gt-status-badge gt-status-badge--info"><span class="gt-status-dot"></span> Customer Details</span>
+                    </div>
                 </div>
                 <div class="p-3">
-                    <ul class="detail-list">
-                        <li>
-                            <span class="detail-label">Name / Username</span>
-                            <span class="detail-value">{{ customer.username|default:customer.full_name }}</span>
+                    <ul class="list-unstyled mb-0">
+                        <li class="d-flex justify-content-between align-items-center py-2" style="border-bottom: 1px solid var(--border-divider);">
+                            <span class="text-muted" style="font-size:0.85rem;">Name / Username</span>
+                            <span class="fw-semibold">{{ customer.username|default:customer.full_name }}</span>
                         </li>
-                        <li>
-                            <span class="detail-label">Service Plan</span>
-                            <span class="detail-value">
-                                <button type="button" id="plan-select-btn" class="btn btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#planModal" style="background: rgba(14, 165, 233, 0.1); color: #0284c7; border: 1px solid rgba(14, 165, 233, 0.3); border-radius: 8px; padding: 6px 14px;">
+                        <li class="d-flex justify-content-between align-items-center py-2" style="border-bottom: 1px solid var(--border-divider);">
+                            <span class="text-muted" style="font-size:0.85rem;">Service Plan</span>
+                            <span>
+                                <button type="button" id="plan-select-btn" class="btn btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#planModal" style="background: color-mix(in srgb, var(--section-accent) 10%, transparent); color: var(--section-accent); border: 1px solid color-mix(in srgb, var(--section-accent) 30%, transparent); border-radius: 8px; padding: 6px 14px;">
                                     {{ customer.plan.name }} {% if customer.plan.speed_down %}- {{ customer.plan.speed_down }}{% endif %}
                                     <i class="fas fa-chevron-down ms-2 fs-6"></i>
                                 </button>
                             </span>
                         </li>
-                        <li>
-                            <span class="detail-label">Monthly Price</span>
-                            <span class="detail-value text-success" id="monthly-price-display"><strong>₱{{ customer.plan.price|default:0.00 }}</strong></span>
+                        <li class="d-flex justify-content-between align-items-center py-2" style="border-bottom: 1px solid var(--border-divider);">
+                            <span class="text-muted" style="font-size:0.85rem;">Monthly Price</span>
+                            <span class="fw-bold" style="color: var(--badge-success-text);" id="monthly-price-display"><strong>₱{{ customer.plan.price|default:0.00 }}</strong></span>
                         </li>
-                        <li id="gimi-upgrade-fee-row" style="display: none;">
-                            <span class="detail-label" style="color: #f59e0b;"><i class="fas fa-tag me-1"></i> Upgrade Fee</span>
-                            <span class="detail-value text-warning fw-bold">₱500.00 <small class="text-muted">(One-time)</small></span>
+                        <li id="gimi-upgrade-fee-row" class="d-flex justify-content-between align-items-center py-2" style="border-bottom: 1px solid var(--border-divider); display: none;">
+                            <span class="text-muted" style="font-size:0.85rem;"><i class="fas fa-tag me-1" style="color: var(--badge-warning-text);"></i> Upgrade Fee</span>
+                            <span class="fw-bold" style="color: var(--badge-warning-text);">₱500.00 <small class="text-muted">(One-time)</small></span>
                         </li>
                         {% if customer.outstanding_balance < 0 %}
-                        <li>
-                            <span class="detail-label">Advance Payment</span>
-                            <span class="detail-value text-success"><strong>₱{{ customer.abs_outstanding_balance|floatformat:2 }}</strong></span>
+                        <li class="d-flex justify-content-between align-items-center py-2" style="border-bottom: 1px solid var(--border-divider);">
+                            <span class="text-muted" style="font-size:0.85rem;">Advance Payment</span>
+                            <span class="fw-bold" style="color: var(--badge-success-text);"><strong>₱{{ customer.abs_outstanding_balance|floatformat:2 }}</strong></span>
                         </li>
                         {% elif customer.outstanding_balance > 0 %}
-                        <li>
-                            <span class="detail-label">Outstanding Balance</span>
-                            <span class="detail-value text-danger"><strong>₱{{ customer.abs_outstanding_balance|floatformat:2 }}</strong></span>
+                        <li class="d-flex justify-content-between align-items-center py-2" style="border-bottom: 1px solid var(--border-divider);">
+                            <span class="text-muted" style="font-size:0.85rem;">Outstanding Balance</span>
+                            <span class="fw-bold" style="color: var(--badge-danger-text);"><strong>₱{{ customer.abs_outstanding_balance|floatformat:2 }}</strong></span>
                         </li>
                         {% else %}
-                        <li>
-                            <span class="detail-label">Outstanding Balance</span>
-                            <span class="detail-value text-muted"><strong>₱0.00</strong></span>
+                        <li class="d-flex justify-content-between align-items-center py-2" style="border-bottom: 1px solid var(--border-divider);">
+                            <span class="text-muted" style="font-size:0.85rem;">Outstanding Balance</span>
+                            <span class="fw-bold text-muted"><strong>₱0.00</strong></span>
                         </li>
                         {% endif %}
-                        <li>
-                            <span class="detail-label">Current Expiry</span>
-                            <span class="detail-value text-warning fw-bold">{{ customer.expires_at|date:'M d, Y h:i A'|default:'None' }}</span>
+                        <li class="d-flex justify-content-between align-items-center py-2" style="border-bottom: 1px solid var(--border-divider);">
+                            <span class="text-muted" style="font-size:0.85rem;">Current Expiry</span>
+                            <span class="fw-bold" style="color: var(--badge-warning-text);">{{ customer.expires_at|date:'M d, Y h:i A'|default:'None' }}</span>
                         </li>
-                        <li>
-                            <span class="detail-label">Current Status</span>
-                            <span class="detail-value">
+                        <li class="d-flex justify-content-between align-items-center py-2" style="border-bottom: 1px solid var(--border-divider);">
+                            <span class="text-muted" style="font-size:0.85rem;">Current Status</span>
+                            <span>
                                 {% if customer.status == 'active' %}
-                                    <span class="pill pill-active"><span class="pill-dot"></span>Active</span>
+                                    <span class="gt-status-badge gt-status-badge--success"><span class="gt-status-dot"></span>Active</span>
                                 {% else %}
-                                    <span class="pill pill-suspended"><span class="pill-dot"></span>{{ customer.status|title }}</span>
+                                    <span class="gt-status-badge gt-status-badge--danger"><span class="gt-status-dot"></span>{{ customer.status|title }}</span>
                                 {% endif %}
                             </span>
                         </li>
-                        <li>
-                            <span class="detail-label">Mikrotik Router</span>
-                            <span class="detail-value">{{ customer.mikrotik_device.device_name|default:'N/A' }}</span>
+                        <li class="d-flex justify-content-between align-items-center py-2">
+                            <span class="text-muted" style="font-size:0.85rem;">Mikrotik Router</span>
+                            <span class="fw-semibold">{{ customer.mikrotik_device.device_name|default:'N/A' }}</span>
                         </li>
                     </ul>
                 </div>
@@ -101,9 +103,11 @@
 
         <!-- Right Column: Payment Form -->
         <div class="col-lg-7">
-            <div class="dashboard-card h-100" style="overflow:hidden;">
-                <div class="section-header section-header-green">
-                    <h6><i class="fas fa-wallet sh-icon"></i> Payment Options</h6>
+            <div class="gt-table-card h-100">
+                <div class="gt-table-toolbar">
+                    <div class="gt-table-toolbar-left">
+                        <span class="gt-status-badge gt-status-badge--success"><span class="gt-status-dot"></span> Payment Options</span>
+                    </div>
                 </div>
                 <div class="p-4">
                     <form action="{% url 'pay_customer' customer.pppoe_username %}" method="post" autocomplete="off" id="renew-form">
@@ -111,83 +115,99 @@
                         <input type='hidden' name='next_url' value='{{ next_url }}'>
                         <input type="hidden" name="new_plan_id" id="hidden_new_plan_id" value="{{ customer.plan_id|default:'' }}">
                         
-                        <div class="mb-4 p-3 rounded-3" style="background:rgba(56,189,248,0.05); border:1px solid rgba(56,189,248,0.2);">
-                            <label for="start_date" class="filter-label" style="color:#0284c7;"><i class="fas fa-calendar-alt me-1"></i> Calculate Expiry From (Base Date)</label>
+                        <div class="mb-4 p-3 rounded-3" style="background: color-mix(in srgb, var(--section-accent) 5%, transparent); border: 1px solid color-mix(in srgb, var(--section-accent) 20%, transparent);">
+                            <label for="start_date" class="fw-semibold mb-1" style="color: var(--section-accent); font-size:0.85rem;"><i class="fas fa-calendar-alt me-1"></i> Calculate Expiry From (Base Date)</label>
                             <input type="datetime-local" id="start_date" name="start_date" class="form-control mb-1" required>
                             <div class="text-muted" style="font-size:0.75rem;"><i class="fas fa-info-circle me-1"></i>Change this if you are recording a payment received in the past.</div>
                         </div>
 
                         <!-- GIMI Upgrade Banner -->
-                        <div id="gimi-upgrade-banner" class="alert alert-warning py-2 px-3 mb-3 d-flex align-items-center gap-2" style="display: none; border-radius: 10px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); color: #f59e0b; font-size: 0.85rem;">
+                        <div id="gimi-upgrade-banner" class="alert py-2 px-3 mb-3 d-flex align-items-center gap-2" style="display: none; border-radius: 10px; background: var(--badge-warning-bg); border: 1px solid color-mix(in srgb, var(--badge-warning-text) 30%, transparent); color: var(--badge-warning-text); font-size: 0.85rem;">
                             <i class="fas fa-bolt fs-6 flex-shrink-0"></i>
                             <div>
                                 <strong>One-Time GIMI Upgrade Fee: ₱500.00</strong><br>
-                                <span class="text-muted" style="font-size: 0.78rem;">Upgrading to GIMI Home Fiber provides higher speed at the same monthly rate. Includes ₱500 one-time upgrade fee.</span>
+                                <span style="font-size: 0.78rem; color: var(--text-muted);">Upgrading to GIMI Home Fiber provides higher speed at the same monthly rate. Includes ₱500 one-time upgrade fee.</span>
                             </div>
                         </div>
                         
                         <!-- Quick Pay Buttons -->
-                        <div class="quick-pay-grid">
-                            <div class="quick-btn" data-days="3">
-                                <span class="months">3 Days</span>
-                                <span class="price">₱<span class="calc-price" data-days="3">0.00</span></span>
+                        <div class="row g-2 mb-4">
+                            <div class="col-4 col-md-3">
+                                <button type="button" class="quick-btn w-100 p-2 rounded-2 border" data-days="3" style="background: var(--surface-card); border-color: var(--border-subtle);">
+                                    <span class="d-block fw-semibold" style="font-size:0.75rem; color: var(--text-secondary);">3 Days</span>
+                                    <span class="d-block fw-bold" style="font-size:0.85rem; color: var(--text-primary);">₱<span class="calc-price" data-days="3">0.00</span></span>
+                                </button>
                             </div>
-                            <div class="quick-btn" data-days="15">
-                                <span class="months">15 Days</span>
-                                <span class="price">₱<span class="calc-price" data-days="15">0.00</span></span>
+                            <div class="col-4 col-md-3">
+                                <button type="button" class="quick-btn w-100 p-2 rounded-2 border" data-days="15" style="background: var(--surface-card); border-color: var(--border-subtle);">
+                                    <span class="d-block fw-semibold" style="font-size:0.75rem; color: var(--text-secondary);">15 Days</span>
+                                    <span class="d-block fw-bold" style="font-size:0.85rem; color: var(--text-primary);">₱<span class="calc-price" data-days="15">0.00</span></span>
+                                </button>
                             </div>
-                            <div class="quick-btn active" data-months="1">
-                                <span class="months">1 Month</span>
-                                <span class="price">₱<span class="calc-price" data-mult="1">0.00</span></span>
+                            <div class="col-4 col-md-3">
+                                <button type="button" class="quick-btn active w-100 p-2 rounded-2 border" data-months="1" style="background: var(--surface-card); border-color: var(--section-accent);">
+                                    <span class="d-block fw-semibold" style="font-size:0.75rem; color: var(--text-secondary);">1 Month</span>
+                                    <span class="d-block fw-bold" style="font-size:0.85rem; color: var(--text-primary);">₱<span class="calc-price" data-mult="1">0.00</span></span>
+                                </button>
                             </div>
-                            <div class="quick-btn" data-months="2">
-                                <span class="months">2 Months</span>
-                                <span class="price">₱<span class="calc-price" data-mult="2">0.00</span></span>
+                            <div class="col-4 col-md-3">
+                                <button type="button" class="quick-btn w-100 p-2 rounded-2 border" data-months="2" style="background: var(--surface-card); border-color: var(--border-subtle);">
+                                    <span class="d-block fw-semibold" style="font-size:0.75rem; color: var(--text-secondary);">2 Months</span>
+                                    <span class="d-block fw-bold" style="font-size:0.85rem; color: var(--text-primary);">₱<span class="calc-price" data-mult="2">0.00</span></span>
+                                </button>
                             </div>
-                            <div class="quick-btn" data-months="3">
-                                <span class="months">3 Months</span>
-                                <span class="price">₱<span class="calc-price" data-mult="3">0.00</span></span>
+                            <div class="col-4 col-md-3">
+                                <button type="button" class="quick-btn w-100 p-2 rounded-2 border" data-months="3" style="background: var(--surface-card); border-color: var(--border-subtle);">
+                                    <span class="d-block fw-semibold" style="font-size:0.75rem; color: var(--text-secondary);">3 Months</span>
+                                    <span class="d-block fw-bold" style="font-size:0.85rem; color: var(--text-primary);">₱<span class="calc-price" data-mult="3">0.00</span></span>
+                                </button>
                             </div>
-                            <div class="quick-btn" data-months="6">
-                                <span class="months">6 Months</span>
-                                <span class="price">₱<span class="calc-price" data-mult="6">0.00</span></span>
+                            <div class="col-4 col-md-3">
+                                <button type="button" class="quick-btn w-100 p-2 rounded-2 border" data-months="6" style="background: var(--surface-card); border-color: var(--border-subtle);">
+                                    <span class="d-block fw-semibold" style="font-size:0.75rem; color: var(--text-secondary);">6 Months</span>
+                                    <span class="d-block fw-bold" style="font-size:0.85rem; color: var(--text-primary);">₱<span class="calc-price" data-mult="6">0.00</span></span>
+                                </button>
                             </div>
-                            <div class="quick-btn" data-months="12">
-                                <span class="months">1 Year</span>
-                                <span class="price">₱<span class="calc-price" data-mult="12">0.00</span></span>
+                            <div class="col-4 col-md-3">
+                                <button type="button" class="quick-btn w-100 p-2 rounded-2 border" data-months="12" style="background: var(--surface-card); border-color: var(--border-subtle);">
+                                    <span class="d-block fw-semibold" style="font-size:0.75rem; color: var(--text-secondary);">1 Year</span>
+                                    <span class="d-block fw-bold" style="font-size:0.85rem; color: var(--text-primary);">₱<span class="calc-price" data-mult="12">0.00</span></span>
+                                </button>
                             </div>
-                            <div class="quick-btn" data-months="custom" id="btn-custom">
-                                <span class="months">Custom</span>
-                                <span class="price">Enter Amount</span>
+                            <div class="col-4 col-md-3">
+                                <button type="button" class="quick-btn w-100 p-2 rounded-2 border" data-months="custom" id="btn-custom" style="background: var(--surface-card); border-color: var(--border-subtle);">
+                                    <span class="d-block fw-semibold" style="font-size:0.75rem; color: var(--text-secondary);">Custom</span>
+                                    <span class="d-block fw-bold" style="font-size:0.85rem; color: var(--text-primary);">Enter Amount</span>
+                                </button>
                             </div>
                         </div>
 
                         <!-- Amount Input -->
                         <div class="mb-4">
-                            <label for="amount" class="filter-label text-success">Payment Amount (₱)</label>
-                            <input type="number" id="amount" name="amount" class="form-control form-control-lg fw-bold text-success" value="0.00" step="0.01" required>
+                            <label for="amount" class="fw-semibold mb-1" style="color: var(--badge-success-text); font-size:0.85rem;">Payment Amount (₱)</label>
+                            <input type="number" id="amount" name="amount" class="form-control form-control-lg fw-bold" style="color: var(--badge-success-text);" value="0.00" step="0.01" required>
                         </div>
                         
                         <!-- Reason Input (For Custom Amounts) -->
                         <div id="reason-block" style="display:none; margin-bottom:1.5rem;">
-                            <label for="reason" class="filter-label">Reason for Custom Amount</label>
+                            <label for="reason" class="fw-semibold mb-1" style="font-size:0.85rem; color: var(--text-secondary);">Reason for Custom Amount</label>
                             <input type="text" id="reason" name="reason" class="form-control" maxlength="255" placeholder="e.g. Prorated payment, half payment, etc.">
                         </div>
 
                         <!-- Real-time Expiry Preview -->
-                        <div class="expiry-preview shadow-sm">
+                        <div class="d-flex align-items-center justify-content-between p-3 rounded-3 mb-4" style="background: var(--surface-subtle); border: 1px solid var(--border-subtle);">
                             <div>
-                                <div class="label"><i class="fas fa-calendar-check me-1"></i> New Expiration Date</div>
-                                <div class="date" id="preview-date">Calculating...</div>
+                                <div class="text-muted" style="font-size:0.75rem;"><i class="fas fa-calendar-check me-1"></i> New Expiration Date</div>
+                                <div class="fw-bold" style="color: var(--text-primary);" id="preview-date">Calculating...</div>
                             </div>
                             <div>
-                                <i class="fas fa-arrow-right text-success opacity-75 fs-2" style="text-shadow: 0 0 10px rgba(16, 185, 129, 0.8);"></i>
+                                <i class="fas fa-arrow-right fs-2" style="color: var(--badge-success-text);"></i>
                             </div>
                         </div>
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="payment_method" class="filter-label">Payment Method</label>
+                                <label for="payment_method" class="fw-semibold mb-1" style="font-size:0.85rem; color: var(--text-secondary);">Payment Method</label>
                                 <select name="payment_method" id="payment_method" class="form-select" required>
                                     <option value="cash" selected>Cash (Office)</option>
                                     <option value="bank_transfer">Bank Transfer</option>
@@ -196,14 +216,14 @@
                                 </select>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="reference_no" class="filter-label">Reference No.</label>
+                                <label for="reference_no" class="fw-semibold mb-1" style="font-size:0.85rem; color: var(--text-secondary);">Reference No.</label>
                                 <input type="text" name="reference_no" id="reference_no" class="form-control" maxlength="64" placeholder="Optional for cash">
                             </div>
                         </div>
 
                         <div class="row mb-3">
                             <div class="col-12">
-                                <label class="filter-label d-block mb-2">Customer Notifications</label>
+                                <label class="fw-semibold mb-2" style="font-size:0.85rem; color: var(--text-secondary);">Customer Notifications</label>
                                 <div class="form-check form-switch mb-2">
                                     <input class="form-check-input" type="checkbox" id="send_sms" name="send_sms" checked>
                                     <label class="form-check-label" for="send_sms">
@@ -220,8 +240,8 @@
                         </div>
 
                         <div class="d-flex gap-3 mt-3">
-                            <a href="{% url 'subscription_plans' %}" class="btn-premium btn-p-ghost flex-grow-1 justify-content-center py-3"><i class="fas fa-times"></i> Cancel</a>
-                            <button type="submit" class="btn-premium btn-p-success flex-grow-1 justify-content-center py-3 fs-6"><i class="fas fa-check-circle"></i> Confirm Payment</button>
+                            <a href="{% url 'subscription_plans' %}" class="gt-btn-secondary flex-grow-1 justify-content-center py-3"><i class="fas fa-times me-1"></i> Cancel</a>
+                            <button type="submit" class="gt-btn-primary flex-grow-1 justify-content-center py-3"><i class="fas fa-check-circle me-1"></i> Confirm Payment</button>
                         </div>
                     </form>
                 </div>
@@ -234,11 +254,11 @@
 <div class="modal fade" id="planModal" tabindex="-1" aria-labelledby="planModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
-      <div class="modal-header border-0" style="background: linear-gradient(135deg, #3b0764 0%, #6d28d9 60%, #8b5cf6 100%); color: white; padding: 20px 24px;">
-        <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="planModalLabel"><i class="fas fa-network-wired text-warning"></i> Choose Service Plan</h5>
-        <button type="button" class="btn-close btn-close-white opacity-75" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-header border-0" style="background: var(--surface-subtle); padding: 20px 24px;">
+        <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="planModalLabel" style="color: var(--text-primary);"><i class="fas fa-network-wired" style="color: var(--section-accent);"></i> Choose Service Plan</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body p-4 bg-light">
+      <div class="modal-body p-4" style="background: var(--surface-page);">
         <ul class="nav nav-pills mb-4 justify-content-center gap-2" id="adminPlanTabs" role="tablist">
           <li class="nav-item" role="presentation">
             <button class="nav-link active rounded-pill fw-bold px-4" id="gtipid-admin-tab" data-bs-toggle="pill" data-bs-target="#gtipid-admin-plans" type="button" role="tab">GTipid Fiber</button>

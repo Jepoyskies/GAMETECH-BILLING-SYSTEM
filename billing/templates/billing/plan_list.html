@@ -10,37 +10,38 @@
 {% block content %}
 <div class="container-fluid py-4 px-3 px-md-4">
 
-  <!-- Page Hero -->
-  <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in"
-       style="background: linear-gradient(135deg, #3b0764 0%, #6d28d9 60%, #8b5cf6 100%);">
-    <div class="d-flex align-items-center">
-      <div class="hero-icon"><i class="fas fa-network-wired"></i></div>
+  <!-- Page Header -->
+  <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4" style="--section-accent: #7C3AED;">
+    <div class="d-flex align-items-center gap-3">
+      <div class="gt-header-icon"><i class="fas fa-network-wired"></i></div>
       <div>
-        <div class="hero-title">Service Plans</div>
-        <div class="hero-sub">Manage internet packages, speeds, pricing, and validity periods</div>
+        <div class="gt-header-eyebrow"><i class="fas fa-network-wired me-1"></i> Service Plans</div>
+        <h1 class="gt-header-title">Service Plans</h1>
+        <p class="gt-header-sub">Manage internet packages, speeds, pricing, and validity periods</p>
       </div>
     </div>
-    <a href="{% url 'add_plan' %}" class="btn-premium" style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);">
-      <i class="fas fa-plus"></i> Add Plan
+    <a href="{% url 'add_plan' %}" class="gt-btn-primary">
+      <i class="fas fa-plus me-1"></i> Add Plan
     </a>
   </div>
 
   {% if messages %}
   {% for message in messages %}
-  <div class="alert alert-{{ message.tags }} alert-dismissible fade show rounded-3 shadow-sm mb-3" role="alert">
+  <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm mb-3" role="alert">
     {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
   </div>
   {% endfor %}
   {% endif %}
 
   <!-- Plans Table Card -->
-  <div class="dashboard-card animate-fade-in animate-delay-1" style="overflow:hidden;">
-    <div class="section-header section-header-purple">
-      <h6><i class="fas fa-list sh-icon"></i> Configured Plans</h6>
-      <small>{{ plans|length }} plans total</small>
+  <div class="gt-table-card">
+    <div class="gt-table-toolbar">
+      <div class="gt-table-toolbar-left">
+        <span class="gt-status-badge gt-status-badge--info"><span class="gt-status-dot"></span> {{ plans|length }} plans total</span>
+      </div>
     </div>
     <div class="table-responsive">
-      <table id="plansTable" class="table table-premium table-hover align-middle mb-0" style="width:100%">
+      <table id="plansTable" class="gt-table align-middle mb-0" style="width:100%">
         <thead>
           <tr>
             <th>ID</th>
@@ -58,33 +59,31 @@
           <tr>
             <td><span class="text-muted" style="font-size:0.78rem;">#{{ plan.id }}</span></td>
             <td>
-              <span class="pill pill-active">
-                <span class="pill-dot"></span>{{ plan.name }}
-              </span>
+              <span class="gt-status-badge gt-status-badge--success"><span class="gt-status-dot"></span>{{ plan.name }}</span>
             </td>
             <td>
-              <span class="fw-bold" style="color:#3b82f6;">↑ {{ plan.speed_up }} Mbps</span>
+              <span class="fw-bold" style="color: var(--section-accent);">↑ {{ plan.speed_up }} Mbps</span>
             </td>
             <td>
-              <span class="fw-bold" style="color:#10b981;">↓ {{ plan.speed_down }} Mbps</span>
+              <span class="fw-bold" style="color: var(--badge-success-text);">↓ {{ plan.speed_down }} Mbps</span>
             </td>
             <td data-sort="{{ plan.price }}">
-              <span class="fw-bold" style="color:#059669; font-size:0.95rem;">₱{{ plan.price|floatformat:2 }}</span>
+              <span class="fw-bold" style="color: var(--badge-success-text); font-size:0.95rem;">₱{{ plan.price|floatformat:2 }}</span>
             </td>
             <td>
-              <span class="pill pill-pending"><span class="pill-dot"></span>{{ plan.validity_days }}d</span>
+              <span class="gt-status-badge gt-status-badge--warning"><span class="gt-status-dot"></span>{{ plan.validity_days }}d</span>
             </td>
-            <td style="max-width:200px; white-space:normal; font-size:0.83rem; color:#64748b;">
+            <td style="max-width:200px; white-space:normal; font-size:0.83rem; color: var(--text-muted);">
               {{ plan.description|default:"—" }}
             </td>
             <td>
-              <div class="d-flex gap-1">
-                <a href="{% url 'edit_plan' plan.id %}" class="btn-premium btn-p-primary" style="padding:6px 12px; font-size:0.78rem;" title="Edit">
-                  <i class="fas fa-edit"></i> Edit
+              <div class="d-flex gap-2">
+                <a href="{% url 'edit_plan' plan.id %}" class="gt-icon-btn" title="Edit">
+                  <i class="fas fa-edit"></i>
                 </a>
                 <form action="{% url 'delete_plan' plan.id %}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this plan?');">
                   {% csrf_token %}
-                  <button type="submit" class="btn-premium btn-p-danger" style="padding:6px 12px; font-size:0.78rem;" title="Delete">
+                  <button type="submit" class="gt-icon-btn gt-icon-btn--danger" title="Delete">
                     <i class="fas fa-trash-alt"></i>
                   </button>
                 </form>

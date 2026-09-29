@@ -91,102 +91,102 @@
 {% block content %}
 <div class="container-fluid py-4 px-3 px-md-4">
 
-    <!-- Page Hero -->
-    <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in">
-        <div class="d-flex align-items-center">
-            <div class="hero-icon"><i class="fas fa-shield-alt"></i></div>
+    <!-- Page Header -->
+    <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4" style="--section-accent: #3b82f6;">
+        <div class="d-flex align-items-center gap-3">
+            <div class="gt-header-icon"><i class="fas fa-shield-alt"></i></div>
             <div>
-                <div class="hero-title">Audit Logs</div>
-                <div class="hero-sub">Track every change, action, and activity across the system</div>
+                <div class="gt-header-eyebrow"><i class="fas fa-shield-alt me-1"></i> Audit Logs</div>
+                <h1 class="gt-header-title">Audit Logs</h1>
+                <p class="gt-header-sub">Track every change, action, and activity across the system</p>
             </div>
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
-            <span class="hero-badge">
-                <i class="fas fa-database me-1"></i>
+            <span class="gt-status-badge gt-status-badge--info"><span class="gt-status-dot"></span>
                 {% if is_capped %}
                     Showing latest 500 of {{ total_db_records }} records
                 {% else %}
                     {{ logs.paginator.count }} records
                 {% endif %}
             </span>
-            <span class="hero-badge"><i class="fas fa-calendar-day me-1"></i> {{ today_records_count }} today</span>
-            <span class="hero-badge"><i class="fas fa-file-alt me-1"></i> Page {{ logs.number }} of {{ logs.paginator.num_pages }}</span>
+            <span class="gt-status-badge gt-status-badge--neutral"><span class="gt-status-dot"></span> {{ today_records_count }} today</span>
+            <span class="gt-status-badge gt-status-badge--neutral"><span class="gt-status-dot"></span> Page {{ logs.number }} of {{ logs.paginator.num_pages }}</span>
         </div>
     </div>
 
-    <!-- Glass Filter Panel -->
-    <div class="filter-glass animate-fade-in animate-delay-1">
-        <!-- Quick Scope Buttons -->
-        <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
-            <span class="filter-label me-1 mb-0"><i class="fas fa-bolt me-1"></i> Quick Scope:</span>
-            <a href="?scope=500" class="btn btn-sm {% if scope == '500' and not date_from and not date_to %}btn-primary text-white fw-bold shadow-sm{% else %}btn-outline-secondary text-white-50{% endif %}" style="border-radius: 20px; font-size: 0.78rem; padding: 3px 12px;">
-                Latest 500
-            </a>
-            <a href="?scope=today" class="btn btn-sm {% if scope == 'today' %}btn-primary text-white fw-bold shadow-sm{% else %}btn-outline-secondary text-white-50{% endif %}" style="border-radius: 20px; font-size: 0.78rem; padding: 3px 12px;">
-                Today ({{ today_records_count }})
-            </a>
-            <a href="?scope=7d" class="btn btn-sm {% if scope == '7d' %}btn-primary text-white fw-bold shadow-sm{% else %}btn-outline-secondary text-white-50{% endif %}" style="border-radius: 20px; font-size: 0.78rem; padding: 3px 12px;">
-                Last 7 Days
-            </a>
-            <a href="?scope=30d" class="btn btn-sm {% if scope == '30d' %}btn-primary text-white fw-bold shadow-sm{% else %}btn-outline-secondary text-white-50{% endif %}" style="border-radius: 20px; font-size: 0.78rem; padding: 3px 12px;">
-                Last 30 Days
-            </a>
-            <a href="?scope=all" class="btn btn-sm {% if scope == 'all' and not date_from and not date_to %}btn-primary text-white fw-bold shadow-sm{% else %}btn-outline-secondary text-white-50{% endif %}" style="border-radius: 20px; font-size: 0.78rem; padding: 3px 12px;">
-                All Time ({{ total_db_records }})
-            </a>
-        </div>
-
-        <form method="get" class="row g-3 align-items-end">
-            <input type="hidden" name="scope" value="{{ scope }}">
-            <div class="col-md-4">
-                <label class="filter-label"><i class="fas fa-search me-1"></i> Search Logs</label>
-                <div class="input-group">
-                    <span class="input-group-text" style="background:transparent; border-right:none;">
-                        <i class="fas fa-search text-muted"></i>
-                    </span>
-                    <input type="text" name="search" value="{{ search }}" class="form-control" style="border-left:none;" placeholder="Search by user or entity..." autocomplete="off">
-                </div>
-            </div>
-            <div class="col-md-2">
-                <label class="filter-label"><i class="fas fa-tag me-1"></i> Action</label>
-                <select name="action_filter" class="form-select">
-                    <option value="">All Actions</option>
-                    <option value="ADD" {% if action_filter == 'ADD' %}selected{% endif %}>ADD</option>
-                    <option value="UPDATE" {% if action_filter == 'UPDATE' %}selected{% endif %}>UPDATE</option>
-                    <option value="DELETE" {% if action_filter == 'DELETE' %}selected{% endif %}>DELETE</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="filter-label"><i class="far fa-calendar me-1"></i> From Date</label>
-                <input type="date" name="date_from" value="{{ date_from }}" class="form-control">
-            </div>
-            <div class="col-md-2">
-                <label class="filter-label"><i class="far fa-calendar me-1"></i> To Date</label>
-                <input type="date" name="date_to" value="{{ date_to }}" class="form-control">
-            </div>
-            <input type="hidden" name="sort" value="{{ sort }}">
-            <input type="hidden" name="dir" value="{{ dir }}">
-            <div class="col-md-2 d-flex gap-2">
-                <button type="submit" class="btn-premium btn-p-primary w-100 justify-content-center">
-                    <i class="fas fa-filter"></i> Filter
-                </button>
-                <a href="{% url 'system_logs' %}" class="btn-premium btn-p-ghost w-100 justify-content-center">
-                    Reset
+    <!-- Filter Panel -->
+    <div class="gt-table-card mb-4">
+        <div class="p-3">
+            <!-- Quick Scope Buttons -->
+            <div class="gt-filter-pills-row mb-3">
+                <span class="text-muted" style="font-size:0.78rem; font-weight:600; text-transform:uppercase; letter-spacing:0.04em;"><i class="fas fa-bolt me-1"></i> Quick Scope:</span>
+                <a href="?scope=500" class="gt-filter-pill {% if scope == '500' and not date_from and not date_to %}active{% endif %}">
+                    Latest 500
+                </a>
+                <a href="?scope=today" class="gt-filter-pill {% if scope == 'today' %}active{% endif %}">
+                    Today ({{ today_records_count }})
+                </a>
+                <a href="?scope=7d" class="gt-filter-pill {% if scope == '7d' %}active{% endif %}">
+                    Last 7 Days
+                </a>
+                <a href="?scope=30d" class="gt-filter-pill {% if scope == '30d' %}active{% endif %}">
+                    Last 30 Days
+                </a>
+                <a href="?scope=all" class="gt-filter-pill {% if scope == 'all' and not date_from and not date_to %}active{% endif %}">
+                    All Time ({{ total_db_records }})
                 </a>
             </div>
-        </form>
+
+            <form method="get" class="row g-3 align-items-end">
+                <input type="hidden" name="scope" value="{{ scope }}">
+                <div class="col-md-4">
+                    <label class="fw-semibold mb-1" style="font-size:0.85rem; color: var(--text-secondary);"><i class="fas fa-search me-1"></i> Search Logs</label>
+                    <input type="text" name="search" value="{{ search }}" class="form-control" placeholder="Search by user or entity..." autocomplete="off">
+                </div>
+                <div class="col-md-2">
+                    <label class="fw-semibold mb-1" style="font-size:0.85rem; color: var(--text-secondary);"><i class="fas fa-tag me-1"></i> Action</label>
+                    <select name="action_filter" class="form-select">
+                        <option value="">All Actions</option>
+                        <option value="ADD" {% if action_filter == 'ADD' %}selected{% endif %}>ADD</option>
+                        <option value="UPDATE" {% if action_filter == 'UPDATE' %}selected{% endif %}>UPDATE</option>
+                        <option value="DELETE" {% if action_filter == 'DELETE' %}selected{% endif %}>DELETE</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="fw-semibold mb-1" style="font-size:0.85rem; color: var(--text-secondary);"><i class="far fa-calendar me-1"></i> From Date</label>
+                    <input type="date" name="date_from" value="{{ date_from }}" class="form-control">
+                </div>
+                <div class="col-md-2">
+                    <label class="fw-semibold mb-1" style="font-size:0.85rem; color: var(--text-secondary);"><i class="far fa-calendar me-1"></i> To Date</label>
+                    <input type="date" name="date_to" value="{{ date_to }}" class="form-control">
+                </div>
+                <input type="hidden" name="sort" value="{{ sort }}">
+                <input type="hidden" name="dir" value="{{ dir }}">
+                <div class="col-md-2 d-flex gap-2">
+                    <button type="submit" class="gt-btn-primary w-100 justify-content-center">
+                        <i class="fas fa-filter me-1"></i> Filter
+                    </button>
+                    <a href="{% url 'system_logs' %}" class="gt-btn-secondary w-100 justify-content-center">
+                        Reset
+                    </a>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- Log Table Card -->
-    <div class="dashboard-card animate-fade-in animate-delay-2" style="overflow:hidden;">
-        <!-- Section Header -->
-        <div class="section-header section-header-blue">
-            <h6><i class="fas fa-list-alt sh-icon"></i> Activity Records</h6>
-            <small>{{ logs.start_index|default:"0" }}–{{ logs.end_index|default:"0" }} of {{ logs.paginator.count }} results</small>
+    <div class="gt-table-card">
+        <div class="gt-table-toolbar">
+            <div class="gt-table-toolbar-left">
+                <span class="gt-status-badge gt-status-badge--info"><span class="gt-status-dot"></span> Activity Records</span>
+            </div>
+            <div class="gt-table-toolbar-right">
+                <span class="text-muted" style="font-size:0.85rem;">{{ logs.start_index|default:"0" }}–{{ logs.end_index|default:"0" }} of {{ logs.paginator.count }} results</span>
+            </div>
         </div>
 
         <div class="table-responsive">
-            <table class="table table-premium table-hover align-middle mb-0">
+            <table class="gt-table align-middle mb-0">
                 <thead>
                     <tr>
                         <th>Date &amp; Time</th>
@@ -240,7 +240,7 @@
 
                         <!-- Action Badge -->
                         <td>
-                            <span class="pill {{ log.specific_action|action_pill_class }}"><span class="pill-dot"></span>{{ log.specific_action|upper }}</span>
+                            <span class="gt-status-badge gt-status-badge--{{ log.specific_action|action_pill_class }}"><span class="gt-status-dot"></span>{{ log.specific_action|upper }}</span>
                         </td>
 
                         <!-- Target Entity -->
@@ -253,7 +253,7 @@
                                 {% else %}{{ log.table_name }}{% endif %}
                             </div>
                             {% if log.target_customer %}
-                                <div class="fw-bold" style="font-size:0.85rem; color:#2563eb;">
+                                <div class="fw-bold" style="font-size:0.85rem; color: var(--section-accent);">
                                     <i class="{{ log.target_icon }} me-1"></i>{{ log.target_customer }}
                                 </div>
                             {% else %}
@@ -267,8 +267,8 @@
                     {% empty %}
                     <tr>
                         <td colspan="5">
-                            <div class="empty-state">
-                                <div class="es-icon"><i class="fas fa-file-search"></i></div>
+                            <div class="gt-empty-state">
+                                <i class="fas fa-file-search"></i>
                                 <h6>No logs found</h6>
                                 <p>Try adjusting your filters or clearing the search to see more results.</p>
                             </div>
@@ -280,7 +280,7 @@
         </div>
 
         <!-- Pagination Footer -->
-        <div class="card-footer-actions">
+        <div class="d-flex justify-content-between align-items-center p-3" style="border-top: 1px solid var(--border-divider);">
             <div class="text-muted small">Showing page <strong>{{ logs.number }}</strong> of <strong>{{ logs.paginator.num_pages }}</strong></div>
             {% include 'billing/partials/pagination.html' with page_obj=logs query_params=query_params %}
         </div>

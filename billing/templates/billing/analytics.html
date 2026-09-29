@@ -1,110 +1,127 @@
 {% extends 'billing/base.html' %}
 {% load static %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h2 class="fw-bold mb-0 text-white">Financial Analytics Dashboard</h2>
-        <p class="text-muted mb-0">Track MRR, churn rates, and growth.</p>
-    </div>
-</div>
+<div class="container-fluid py-4 px-3 px-md-4">
 
-<div class="row g-4 mb-4">
-    <div class="col-md-3">
-        <div class="card bg-dark text-white border-secondary h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="text-muted text-uppercase fw-bold mb-0" style="font-size: 0.75rem; letter-spacing: 0.05em;">Total MTD Revenue</h6>
-                    <i class="fas fa-coins text-success"></i>
-                </div>
-                <h3 class="fw-bold text-success mb-1">₱{{ total_revenue_mtd|floatformat:2 }}</h3>
-                <small class="text-muted">Actual collections this month</small>
-            </div>
-        </div>
+  <!-- Page Header -->
+  <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4" style="--section-accent: #3b82f6;">
+    <div class="d-flex align-items-center gap-3">
+      <div class="gt-header-icon"><i class="fas fa-chart-line"></i></div>
+      <div>
+        <div class="gt-header-eyebrow"><i class="fas fa-chart-line me-1"></i> Financial Analytics</div>
+        <h1 class="gt-header-title">Financial Analytics Dashboard</h1>
+        <p class="gt-header-sub">Track MRR, churn rates, and growth</p>
+      </div>
     </div>
-    <div class="col-md-3">
-        <div class="card bg-dark text-white border-secondary h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="text-muted text-uppercase fw-bold mb-0" style="font-size: 0.75rem; letter-spacing: 0.05em;">Internet Revenue</h6>
-                    <i class="fas fa-wifi text-info"></i>
-                </div>
-                <h3 class="fw-bold text-info mb-1">₱{{ internet_revenue_mtd|floatformat:2 }}</h3>
-                <small class="text-muted">Core fiber & broadband plans</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card bg-dark text-white border-warning h-100" style="box-shadow: 0 0 15px rgba(245, 158, 11, 0.1);">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="text-warning text-uppercase fw-bold mb-0" style="font-size: 0.75rem; letter-spacing: 0.05em;">Cignal Add-on Revenue</h6>
-                    <span class="badge bg-warning text-dark px-2 py-0" style="font-size: 0.65rem;">ADD-ON</span>
-                </div>
-                <h3 class="fw-bold text-warning mb-1">₱{{ cignal_revenue_mtd|floatformat:2 }}</h3>
-                <small class="text-muted">Play & TV Box reloads MTD</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card bg-dark text-white border-secondary h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="text-muted text-uppercase fw-bold mb-0" style="font-size: 0.75rem; letter-spacing: 0.05em;">Projected MRR</h6>
-                    <i class="fas fa-chart-line text-primary"></i>
-                </div>
-                <h3 class="fw-bold text-primary mb-1">₱{{ mrr|floatformat:2 }}</h3>
-                <small class="text-muted">Active subscriber run-rate</small>
-            </div>
-        </div>
-    </div>
-</div>
+  </div>
 
-<div class="row g-4 mb-4">
-    <div class="col-md-4">
-        <div class="card bg-dark text-white border-secondary h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="text-muted text-uppercase fw-bold mb-0" style="font-size: 0.75rem; letter-spacing: 0.05em;">Active Customers</h6>
-                    <i class="fas fa-users text-primary"></i>
-                </div>
-                <h3 class="fw-bold text-primary mb-0">{{ active_customers }}</h3>
-            </div>
+  <!-- Revenue KPI Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="gt-kpi-card h-100">
+        <div class="gt-kpi-icon" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border-color: rgba(16, 185, 129, 0.25);">
+          <i class="fas fa-coins"></i>
         </div>
+        <div>
+          <div class="gt-kpi-val" style="color: var(--badge-success-text);">₱{{ total_revenue_mtd|floatformat:2 }}</div>
+          <div class="gt-kpi-lbl">Total MTD Revenue</div>
+          <div class="text-muted" style="font-size:0.75rem;">Actual collections this month</div>
+        </div>
+      </div>
     </div>
-    <div class="col-md-4">
-        <div class="card bg-dark text-white border-secondary h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="text-muted text-uppercase fw-bold mb-0" style="font-size: 0.75rem; letter-spacing: 0.05em;">Churned / Inactive</h6>
-                    <i class="fas fa-user-slash text-danger"></i>
-                </div>
-                <h3 class="fw-bold text-danger mb-0">{{ churned_customers }}</h3>
-            </div>
+    <div class="col-md-3">
+      <div class="gt-kpi-card h-100">
+        <div class="gt-kpi-icon" style="background: rgba(59, 130, 246, 0.12); color: #3b82f6; border-color: rgba(59, 130, 246, 0.25);">
+          <i class="fas fa-wifi"></i>
         </div>
+        <div>
+          <div class="gt-kpi-val" style="color: var(--badge-info-text);">₱{{ internet_revenue_mtd|floatformat:2 }}</div>
+          <div class="gt-kpi-lbl">Internet Revenue</div>
+          <div class="text-muted" style="font-size:0.75rem;">Core fiber & broadband plans</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="gt-kpi-card h-100">
+        <div class="gt-kpi-icon" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b; border-color: rgba(245, 158, 11, 0.25);">
+          <i class="fas fa-tv"></i>
+        </div>
+        <div>
+          <div class="gt-kpi-val" style="color: var(--badge-warning-text);">₱{{ cignal_revenue_mtd|floatformat:2 }}</div>
+          <div class="gt-kpi-lbl">Cignal Add-on Revenue</div>
+          <div class="text-muted" style="font-size:0.75rem;">Play & TV Box reloads MTD</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="gt-kpi-card h-100">
+        <div class="gt-kpi-icon" style="background: rgba(139, 92, 246, 0.12); color: #8b5cf6; border-color: rgba(139, 92, 246, 0.25);">
+          <i class="fas fa-chart-line"></i>
+        </div>
+        <div>
+          <div class="gt-kpi-val" style="color: var(--accent-violet-text);">₱{{ mrr|floatformat:2 }}</div>
+          <div class="gt-kpi-lbl">Projected MRR</div>
+          <div class="text-muted" style="font-size:0.75rem;">Active subscriber run-rate</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Customer KPI Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="gt-kpi-card h-100">
+        <div class="gt-kpi-icon" style="background: rgba(59, 130, 246, 0.12); color: #3b82f6; border-color: rgba(59, 130, 246, 0.25);">
+          <i class="fas fa-users"></i>
+        </div>
+        <div>
+          <div class="gt-kpi-val" style="color: var(--badge-info-text);">{{ active_customers }}</div>
+          <div class="gt-kpi-lbl">Active Customers</div>
+        </div>
+      </div>
     </div>
     <div class="col-md-4">
-        <div class="card bg-dark text-white border-secondary h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="text-muted text-uppercase fw-bold mb-0" style="font-size: 0.75rem; letter-spacing: 0.05em;">Recent Signups (30 Days)</h6>
-                    <i class="fas fa-user-plus text-info"></i>
-                </div>
-                <h3 class="fw-bold text-info mb-0">+{{ recent_signups }}</h3>
-            </div>
+      <div class="gt-kpi-card h-100">
+        <div class="gt-kpi-icon" style="background: rgba(239, 68, 68, 0.12); color: #ef4444; border-color: rgba(239, 68, 68, 0.25);">
+          <i class="fas fa-user-slash"></i>
         </div>
+        <div>
+          <div class="gt-kpi-val" style="color: var(--badge-danger-text);">{{ churned_customers }}</div>
+          <div class="gt-kpi-lbl">Churned / Inactive</div>
+        </div>
+      </div>
     </div>
-</div>
+    <div class="col-md-4">
+      <div class="gt-kpi-card h-100">
+        <div class="gt-kpi-icon" style="background: rgba(6, 182, 212, 0.12); color: #06b6d4; border-color: rgba(6, 182, 212, 0.25);">
+          <i class="fas fa-user-plus"></i>
+        </div>
+        <div>
+          <div class="gt-kpi-val" style="color: #0891b2;">+{{ recent_signups }}</div>
+          <div class="gt-kpi-lbl">Recent Signups (30 Days)</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-<div class="row g-4">
+  <!-- Chart -->
+  <div class="row g-3">
     <div class="col-md-6">
-        <div class="card bg-dark text-white border-secondary">
-            <div class="card-body">
-                <h5 class="fw-bold mb-4">Plan Distribution</h5>
-                <canvas id="planChart" height="250"></canvas>
-            </div>
+      <div class="gt-table-card">
+        <div class="gt-table-toolbar">
+          <div class="gt-table-toolbar-left">
+            <span class="gt-status-badge gt-status-badge--info"><span class="gt-status-dot"></span> Plan Distribution</span>
+          </div>
         </div>
+        <div class="p-4">
+          <canvas id="planChart" height="250"></canvas>
+        </div>
+      </div>
     </div>
+  </div>
+
 </div>
+{% endblock %}
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -131,7 +148,7 @@
                 plugins: {
                     legend: {
                         position: 'right',
-                        labels: { color: '#e2e8f0' }
+                        labels: { color: 'var(--text-secondary)' }
                     }
                 }
             }
