@@ -247,13 +247,13 @@ For the import to be seamless, the import tool must:
 | `pppoe-200m` | 1 | Business 200 Mbps (id=14) | 3999.00 |
 | `pppoe-120m` | 1 | Business 100 Mbps (id=13) | 1999.00 |
 
-### Remaining Open Decisions
+### All Decisions Resolved (2026-09-29)
 
-| # | Question | Options |
+| # | Question | Decision |
 |---|---|---|
-| 1 | Which current device should `ccr2116.v1` map to? | `Mikrotik A` or `Mikrotik B` |
-| 2 | What should happen to the 9 zero-date customers? | Give them a default expiry (e.g., end of current month) or import with `NULL` expiry |
-| 3 | Confirm plan name mapping (see above) | Owner must verify each legacy plan maps to the correct current SubscriptionPlan |
+| 1 | Device mapping | **Auto-create `ccr2116.v1`** — it is the real production router. If it doesn't exist in the current system, the import tool creates it automatically. |
+| 2 | Zero-date customers | **Give default expiry** — 30 days from import date |
+| 3 | Plan mapping | **Go with the flow** — map to existing current plans. If a legacy plan has no match, the import tool can create it (with `--create-missing-plans` flag). |
 
 ---
 
