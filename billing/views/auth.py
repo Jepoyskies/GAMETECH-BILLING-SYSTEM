@@ -228,9 +228,6 @@ def view_agent(request, agent_id):
             cust = Customer.objects.get(id=cust_id, agent=agent)
             if referral_value is not None:
                 cust.referral_received = referral_value
-            cust.adjusted_by_referral = (
-                request.user.username if request.user.is_authenticated else "unknown"
-            )
             cust.save()
             messages.success(
                 request,
