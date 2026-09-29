@@ -15,9 +15,11 @@
         <span class="status-dot"></span>{% if customer.is_paid_offline %}Paid, Offline{% elif customer.installation_status == 'pending' or customer.status == 'pending' or customer.is_pending_install %}Pending Install{% else %}{{ customer.get_status_display }}{% endif %}
     </span>
 
-    {# ---------- SECONDARY: router + connection as tooltip dots ----------
-       The unified-*-badge class names are JS hooks (see customer_list/_scripts.html)
-       and must be preserved. The modifier class drives the dot colour. #}
+    {% comment %}
+    SECONDARY: router + connection as tooltip dots. The unified-*-badge class
+    names are JS hooks (customer_list/_scripts.html) and must be preserved.
+    The status-badge--* modifier drives the dot colour.
+    {% endcomment %}
     <span class="d-inline-flex align-items-center" style="gap: 0.4rem;">
         <span class="unified-status-badge unified-router-badge gt-conn-dot gt-conn-dot--{% if customer.router_status == 'Online' %}online{% else %}offline{% endif %} status-badge--{% if customer.router_status == 'Online' %}success{% else %}neutral{% endif %}"
               title="MikroTik Router: {{ customer.router_status }}"
