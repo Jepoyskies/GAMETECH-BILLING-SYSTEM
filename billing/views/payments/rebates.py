@@ -65,7 +65,8 @@ def customer_rebate_view(request, username):
 
             # 1. Update Customer Expiry
             customer.expires_at = new_expiry
-            # customer.sms_sent_at = None  # TODO: Uncomment when SMS is added
+            # Reset SMS sent flag so the new expiry triggers a fresh reminder cycle
+            customer.sms_sent_at = None
 
             # Dynamic Status Update based on rebate time
             was_suspended = customer.status in ["suspended", "inactive", "expired"]

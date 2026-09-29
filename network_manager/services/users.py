@@ -81,11 +81,7 @@ class MikrotikUsersMixin:
 
                 # Find the active session by name
                 active_sessions = active_ppp.get(name=username)
-                
-                # DEBUG logging for troubleshooting
-                print(f"DEBUG: kick_active_user - Found {len(active_sessions)} active sessions for {username}: {active_sessions}")
-                logger.info(f"DEBUG: kick_active_user - Found {len(active_sessions)} active sessions for {username}: {active_sessions}")
-                
+
                 if not active_sessions:
                     self.connection.disconnect()
                     return False, f"No active session found for {username}"
@@ -93,10 +89,7 @@ class MikrotikUsersMixin:
                 for session in active_sessions:
                     # Some API versions return 'id', others might return '.id'
                     session_id = session.get('id') or session.get('.id')
-                    
-                    print(f"DEBUG: kick_active_user - Attempting to remove session with internal id: {session_id}")
-                    logger.info(f"DEBUG: kick_active_user - Attempting to remove session with internal id: {session_id}")
-                    
+
                     if session_id:
                         active_ppp.remove(id=session_id)
                         logger.info(
@@ -107,8 +100,6 @@ class MikrotikUsersMixin:
                 self.connection.disconnect()
                 return True, "User kicked successfully."
             except Exception as e:
-                # DEBUG logging for the exception
-                print(f"DEBUG: API Error in kick_active_user: {str(e)}")
                 logger.error(
                     f"Failed to kick PPPoE user {username} from {self.device.device_name}: {e}")
                 return False, f"Mikrotik API Error: {str(e)}"
@@ -123,19 +114,13 @@ class MikrotikUsersMixin:
                 
                 # Find the user by name
                 secrets = ppp_secret.get(name=username)
-                
-                print(f"DEBUG: set_user_pppoe_profile - Found {len(secrets)} secrets for {username}: {secrets}")
-                logger.info(f"DEBUG: set_user_pppoe_profile - Found {len(secrets)} secrets for {username}: {secrets}")
-                
+
                 if not secrets:
                     self.connection.disconnect()
                     return False, f"User {username} not found on MikroTik."
                     
                 user_id = secrets[0].get('id') or secrets[0].get('.id')
-                
-                print(f"DEBUG: set_user_pppoe_profile - Attempting to set profile to {profile_name} with internal id: {user_id}")
-                logger.info(f"DEBUG: set_user_pppoe_profile - Attempting to set profile to {profile_name} with internal id: {user_id}")
-                
+
                 if user_id:
                     ppp_secret.set(id=user_id, profile=profile_name)
                     logger.info(f"Changed profile for PPPoE user {username} to '{profile_name}'")
@@ -145,7 +130,6 @@ class MikrotikUsersMixin:
                 self.connection.disconnect()
                 return True, "User profile updated."
             except Exception as e:
-                print(f"DEBUG: API Error in set_user_pppoe_profile: {str(e)}")
                 logger.error(f"Failed to set profile for user {username}: {e}")
                 return False, f"Mikrotik API Error: {str(e)}"
 
