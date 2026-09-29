@@ -160,6 +160,11 @@ def customer_list(request):
         ),
     ).order_by("status_order", "full_name")
 
+    # Pagination
+    paginator = Paginator(customers, 25)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
     devices = MikrotikDevice.objects.all().order_by("device_name")
     from billing.models import Barangay, SystemLog
 
@@ -172,7 +177,7 @@ def customer_list(request):
         request,
         "billing/customer_list.html",
         {
-            "customers": customers,
+            "customers": page_obj,
             "devices": devices,
             "barangays": barangays,
             "filter_type": filter_type,

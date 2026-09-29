@@ -158,7 +158,14 @@ def pay_customer_view(request, username):
         if amount:
             from decimal import Decimal
 
-            amount_float = float(amount)
+            try:
+                amount_float = float(amount)
+                if amount_float <= 0:
+                    messages.error(request, "Payment amount must be greater than zero.")
+                    return render(request, "billing/pay_customer.html", {"customer": customer})
+            except (ValueError, TypeError):
+                messages.error(request, "Invalid payment amount.")
+                return render(request, "billing/pay_customer.html", {"customer": customer})
 
             # Determine baseline current expiration
             if start_date_str:
