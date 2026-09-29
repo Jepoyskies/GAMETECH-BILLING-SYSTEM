@@ -119,6 +119,31 @@ def get_live_monitoring_data_sync():
                     }
                 )
 
+            # Determine if router has internet uplink by pinging 8.8.8.8
+            internet_online = False
+            try:
+                ping_res = (
+                    api._get_api()
+                    .get_resource("/")
+                    .call("ping", {"address": "8.8.8.8", "count": "2"})
+                )
+                if ping_res and len(ping_res) > 0:
+                    successful = [
+                        p for p in ping_res
+                        if str(p.get("packet-loss", "100")) != "100"
+                        and "avg-rtt" in p
+                    ]
+                    internet_online = len(successful) > 0
+            except Exception:
+                pass
+
+            response_data["routers"].append({
+                "device_name": device.device_name,
+                "ip_address": device.ip_address,
+                "internet_online": internet_online,
+                "active_users": len(active_users),
+            })
+
             api.connection.disconnect()
         except Exception as e:
             logger.error(f"Error connecting to Mikrotik {device.device_name}: {e}")
