@@ -1335,3 +1335,18 @@
 
 
 
+
+### ERR-070: Dashboard Cards Washed-Out Purple / Dark-Mode Styles Not Applying
+
+**Symptom**: Dashboard KPI cards render as a flat washed-out lavender/purple instead of the correct dark-navy glass-morphism style. Occurs when the system-wide gt/ design-system CSS is loaded on the Dashboard page.
+
+**Root Cause (two compounding bugs introduced by UI unification commits):**
+1. ase.html added a *second* dark-mode script on ody (document.body.classList.add) that conflicted with the dashboard's html.dark-mode CSS selectors, leaving dark mode partially active but mismatched.
+2. gt/tokens.css and gt/data.css were placed *outside* the dashboard exclusion guard ({% if url_name != 'dashboard' %}), so they loaded on the dashboard and overrode its custom design-token variables with the gt/ palette.
+
+**Fix**: In illing/templates/billing/base.html:
+- Remove the duplicate ody.dark-mode script block; keep only the html.dark-mode script in <head>.
+- Move ALL gt/ CSS links (	okens.css, data.css, components.css, surfaces.css, legacy.css) inside the single {% if url_name != 'dashboard' %} guard.
+
+**Files**: illing/templates/billing/base.html  
+**Commit**: ix(dashboard): isolate dashboard from gt/ CSS entirely and remove duplicate body.dark-mode script`n
