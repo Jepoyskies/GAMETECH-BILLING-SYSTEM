@@ -7,26 +7,12 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth import get_user_model
 from django.db.models import Max
 from .models import Team, Technician, ConfigOption, AuditLog
+from .utils import log_audit
 from billing.models import StaffRole
 
 logger = logging.getLogger(__name__)
 
 LOCKED_SYSTEM_LABELS = {'done', 'cancelled', 'pending', 'installation', 'repair', 'concern', 'inquiry'}
-
-
-def log_audit(action, entity_type, entity_id, actor, summary=None, before=None, after=None):
-    try:
-        AuditLog.objects.create(
-            action=action,
-            entity_type=entity_type,
-            entity_id=entity_id,
-            actor=actor if (actor and actor.is_authenticated) else None,
-            summary=summary,
-            before_data=before,
-            after_data=after
-        )
-    except Exception as e:
-        logger.warning(f"Failed to record dispatch audit log: {e}")
 
 
 @login_required

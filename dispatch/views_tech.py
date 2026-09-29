@@ -7,24 +7,10 @@ from django.contrib import messages
 from django.utils import timezone
 
 from dispatch.models import JobTicket, JobTicketHistory, Technician, CallAttemptLog, AuditLog
+from dispatch.utils import log_audit
 from billing.models import Customer, Notification
 
 logger = logging.getLogger(__name__)
-
-
-def log_audit(action, entity_type, entity_id, actor, summary=None, before=None, after=None):
-    try:
-        AuditLog.objects.create(
-            action=action,
-            entity_type=entity_type,
-            entity_id=entity_id,
-            actor=actor if (actor and actor.is_authenticated) else None,
-            summary=summary,
-            before_data=before,
-            after_data=after,
-        )
-    except Exception as e:
-        logger.warning(f"Failed to record dispatch audit log: {e}")
 
 
 @login_required

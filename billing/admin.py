@@ -1,5 +1,12 @@
 from django.contrib import admin
-from .models import AccountType, Customer, Agent, Barangay, Payment, JobOrder, AddonPlan, ChecklistPolicySetting
+from .models import (
+    AccountType, Customer, Agent, Barangay, Payment, JobOrder, AddonPlan,
+    ChecklistPolicySetting, CommissionTransaction, StaffRole, SystemAdmin,
+    Rebate, SmsLog, CignalPlay, AuditLog, EmployeeProfile, AddOnRequest,
+    Notification, ImprovementRequest, MonitoredService, MessageTemplate,
+    CustomerAgentHistory, Prospect, ChecklistConfirmation, AgentPayoutBatch,
+    AgentQualificationEvent, IncentiveSetting,
+)
 
 
 # Helpers for RBAC
@@ -190,4 +197,146 @@ class AddonPlanAdmin(admin.ModelAdmin):
     list_display = ("name", "addon_type", "duration_days", "price", "is_active", "created_at")
     list_filter = ("addon_type", "is_active")
     search_fields = ("name", "description")
+
+
+# ─── Operational / Audit Models (read-only staff visibility) ────────────────────
+
+@admin.register(Rebate)
+class RebateAdmin(admin.ModelAdmin):
+    list_display = ("username", "plan_name", "amount", "days", "note", "adjusted_by", "created_at")
+    list_filter = ("adjusted_by",)
+    search_fields = ("username", "plan_name", "note")
+    date_hierarchy = "created_at"
+
+
+@admin.register(SmsLog)
+class SmsLogAdmin(admin.ModelAdmin):
+    list_display = ("phone", "message", "status", "sent_at")
+    list_filter = ("status",)
+    search_fields = ("phone", "message")
+    date_hierarchy = "sent_at"
+
+
+@admin.register(CignalPlay)
+class CignalPlayAdmin(admin.ModelAdmin):
+    list_display = ("customer", "cignal_play_no", "cignal_box_no", "account_name", "plan_name",
+                    "start_date", "expiration_date", "is_cancelled", "cancelled_by")
+    list_filter = ("is_cancelled", "plan_name")
+    search_fields = ("customer__full_name", "cignal_play_no", "cignal_box_no", "account_name")
+    date_hierarchy = "start_date"
+
+
+@admin.register(AuditLog)
+class AuditLogAdmin(admin.ModelAdmin):
+    list_display = ("action_type", "admin_user", "customer", "timestamp")
+    list_filter = ("action_type",)
+    search_fields = ("admin_user__username", "customer__full_name", "remarks")
+    date_hierarchy = "timestamp"
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ("title", "notification_type", "is_read", "created_at")
+    list_filter = ("is_read", "notification_type")
+    search_fields = ("title", "message")
+    date_hierarchy = "created_at"
+
+
+@admin.register(MessageTemplate)
+class MessageTemplateAdmin(admin.ModelAdmin):
+    list_display = ("name", "type", "subject", "is_active", "updated_at")
+    list_filter = ("type", "is_active")
+    search_fields = ("name", "subject", "body")
+
+
+@admin.register(Prospect)
+class ProspectAdmin(admin.ModelAdmin):
+    list_display = ("full_name", "phone", "agent", "status", "created_at")
+    list_filter = ("status",)
+    search_fields = ("full_name", "phone", "address")
+    date_hierarchy = "created_at"
+
+
+@admin.register(ChecklistConfirmation)
+class ChecklistConfirmationAdmin(admin.ModelAdmin):
+    list_display = ("customer", "prospect", "outcome", "method", "policy_version", "created_at")
+    list_filter = ("outcome", "method", "policy_version")
+    search_fields = ("customer__full_name", "applicant_name", "applicant_phone")
+
+
+@admin.register(AgentPayoutBatch)
+class AgentPayoutBatchAdmin(admin.ModelAdmin):
+    list_display = ("batch_number", "agent", "amount", "customer_count", "status", "created_at", "paid_at")
+    list_filter = ("status",)
+    search_fields = ("agent__name", "reference_no", "batch_number")
+    date_hierarchy = "created_at"
+
+
+@admin.register(AgentQualificationEvent)
+class AgentQualificationEventAdmin(admin.ModelAdmin):
+    list_display = ("agent", "customer", "qualifying_amount", "status", "qualified_at", "payout_batch")
+    list_filter = ("status",)
+    search_fields = ("agent__name", "customer__full_name")
+    date_hierarchy = "qualified_at"
+
+
+@admin.register(CommissionTransaction)
+class CommissionTransactionAdmin(admin.ModelAdmin):
+    list_display = ("agent", "customer", "amount", "status", "created_at", "paid_at")
+    list_filter = ("status",)
+    search_fields = ("agent__name", "customer__full_name")
+    date_hierarchy = "created_at"
+
+
+@admin.register(CustomerAgentHistory)
+class CustomerAgentHistoryAdmin(admin.ModelAdmin):
+    list_display = ("customer", "from_agent", "to_agent", "changed_by", "reason", "created_at")
+    search_fields = ("customer__full_name", "reason")
+    date_hierarchy = "changed_at"
+
+
+@admin.register(StaffRole)
+class StaffRoleAdmin(admin.ModelAdmin):
+    list_display = ("name", "can_access_billing", "can_access_network_ops", "can_access_cignal_play", "can_access_dispatch", "can_access_administration")
+    list_filter = ("can_access_billing", "can_access_network_ops", "can_access_cignal_play", "can_access_dispatch", "can_access_administration")
+    search_fields = ("name",)
+
+
+@admin.register(SystemAdmin)
+class SystemAdminAdmin(admin.ModelAdmin):
+    list_display = ("username", "full_name", "email", "role", "status", "created_at")
+    list_filter = ("role", "status")
+    search_fields = ("username", "full_name", "email")
+
+
+@admin.register(EmployeeProfile)
+class EmployeeProfileAdmin(admin.ModelAdmin):
+    list_display = ("user", "employee_id", "phone_number", "branch_location")
+    search_fields = ("user__username", "user__full_name", "employee_id")
+
+
+@admin.register(AddOnRequest)
+class AddOnRequestAdmin(admin.ModelAdmin):
+    list_display = ("customer", "addon_type", "status", "requested_at")
+    list_filter = ("status",)
+    search_fields = ("customer__full_name",)
+
+
+@admin.register(ImprovementRequest)
+class ImprovementRequestAdmin(admin.ModelAdmin):
+    list_display = ("submitted_by", "status", "created_at", "dev_note")
+    list_filter = ("status",)
+    search_fields = ("submitted_by__username", "message")
+
+
+@admin.register(MonitoredService)
+class MonitoredServiceAdmin(admin.ModelAdmin):
+    list_display = ("name", "service_type", "target", "status", "latency_ms", "last_checked")
+    list_filter = ("status", "service_type")
+    search_fields = ("name", "target")
+
+
+@admin.register(IncentiveSetting)
+class IncentiveSettingAdmin(admin.ModelAdmin):
+    list_display = ("incentive_amount", "batch_size", "lock_days", "updated_at")
 

@@ -1,7 +1,27 @@
+import logging
 import re
 import time
 from django.utils import timezone
 from django.db import transaction, IntegrityError
+
+logger = logging.getLogger(__name__)
+
+
+def log_audit(action, entity_type, entity_id, actor, summary=None, before=None, after=None):
+    """Single source of truth for dispatch audit logging. Never raises."""
+    from dispatch.models import AuditLog
+    try:
+        AuditLog.objects.create(
+            action=action,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            actor=actor if (actor and getattr(actor, "is_authenticated", False)) else None,
+            summary=summary,
+            before_data=before,
+            after_data=after,
+        )
+    except Exception as e:
+        logger.warning(f"Failed to record dispatch audit log: {e}")
 
 
 def generate_ticket_number(ticket_type="INSTALLATION", max_attempts=5):

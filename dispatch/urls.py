@@ -1,7 +1,6 @@
 from django.urls import path
 from django.views.generic import RedirectView
 from . import views
-from . import pipeline_views
 from . import views_queue
 from . import views_tech
 from . import views_approval

@@ -1,5 +1,9 @@
 from django.contrib import admin
-from .models import Team, Technician, ConfigOption, DispatchRecord, MonitoringRecord, JobDetail, AuditLog, JobTicket
+from .models import (
+    Team, Technician, ConfigOption, DispatchRecord, MonitoringRecord,
+    JobDetail, AuditLog, JobTicket, JobTicketHistory,
+    TicketBounceHistory, CallAttemptLog
+)
 
 @admin.register(JobTicket)
 class JobTicketAdmin(admin.ModelAdmin):
@@ -49,4 +53,24 @@ class AuditLogAdmin(admin.ModelAdmin):
     list_display = ('action', 'entity_type', 'entity_id', 'actor', 'created_at')
     list_filter = ('action', 'entity_type')
     search_fields = ('summary', 'actor__username')
+
+@admin.register(JobTicketHistory)
+class JobTicketHistoryAdmin(admin.ModelAdmin):
+    list_display = ('job_ticket', 'actor', 'from_status', 'to_status', 'timestamp')
+    list_filter = ('to_status', 'timestamp')
+    search_fields = ('job_ticket__ticket_number',)
+    date_hierarchy = 'timestamp'
+
+@admin.register(TicketBounceHistory)
+class TicketBounceHistoryAdmin(admin.ModelAdmin):
+    list_display = ('ticket', 'from_stage', 'to_stage', 'bounce_type', 'bounced_by', 'created_at')
+    list_filter = ('bounce_type', 'from_stage', 'to_stage')
+    search_fields = ('ticket__ticket_number', 'reason')
+    date_hierarchy = 'created_at'
+
+@admin.register(CallAttemptLog)
+class CallAttemptLogAdmin(admin.ModelAdmin):
+    list_display = ('ticket', 'technician', 'attempt_number', 'result', 'attempt_time')
+    list_filter = ('result', 'attempt_number')
+    search_fields = ('ticket__ticket_number',)
 
