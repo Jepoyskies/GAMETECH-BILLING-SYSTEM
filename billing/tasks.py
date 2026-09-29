@@ -436,12 +436,12 @@ def automated_backup_task(backup_type="hourly"):
     Automated database backup with rotation.
     - hourly: Keep last 24 backups
     - daily: Keep last 7 backups
-    Saves to /backups/ directory with timestamped filenames.
+    Writes to BASE_DIR/backups/ and prunes older files of the same type.
     """
     import os
     from django.conf import settings
     from django.core.management import call_command
-    from datetime import datetime, timedelta
+    from datetime import datetime
 
     backup_dir = os.path.join(settings.BASE_DIR, "backups")
     os.makedirs(backup_dir, exist_ok=True)
@@ -451,23 +451,29 @@ def automated_backup_task(backup_type="hourly"):
     filepath = os.path.join(backup_dir, filename)
 
     try:
-        with open(filepath, "w", encoding="utf-8") as f:
-            call_command("dumpdata", "dispatch", "billing", "network_manager", format="json", output=f)
+        # dumpdata's `output` must be a PATH, not an open file object.
+        call_command("dumpdata", "dispatch", "billing", "network_manager",
+                     format="json", output=filepath)
+
+        # Never leave a 0-byte file posing as a backup.
+        size = os.path.getsize(filepath)
+        if size == 0:
+            os.unlink(filepath)
+            raise RuntimeError("dumpdata produced an empty file")
 
         # Rotation: keep only the N most recent backups of this type
         pattern = f"gametech_{backup_type}_"
-        existing = sorted([f for f in os.listdir(backup_dir) if f.startswith(pattern)])
-
+        existing = sorted(f for f in os.listdir(backup_dir) if f.startswith(pattern))
         max_keep = 24 if backup_type == "hourly" else 7
         while len(existing) > max_keep:
             old = existing.pop(0)
             os.unlink(os.path.join(backup_dir, old))
 
-        logger.info(f"Automated {backup_type} backup created: {filename}")
-        return f"Backup created: {filename}"
+        logger.info(f"Automated {backup_type} backup created: {filename} ({size} bytes)")
+        return f"Backup created: {filename} ({size} bytes)"
     except Exception as e:
         logger.error(f"Automated {backup_type} backup failed: {e}")
-        return str(e)
+        return f"FAILED: {e}"
 
 
 @shared_task(name="billing.tasks.check_dispatch_sla_breaches_task")
