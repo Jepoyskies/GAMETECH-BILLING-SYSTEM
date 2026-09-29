@@ -191,7 +191,7 @@ class StaffRole(models.Model):
         subtab_specs = {
             "billing": ["dashboard", "customers", "subscriptions", "plans", "payments", "payment_logs"],
             "network_ops": ["live_monitoring", "devices", "active_users", "geomap", "winbox", "downdetector", "speedtest"],
-            "dispatch": ["dispatch_dashboard", "dispatch_operation", "dispatch_monitoring", "internet_install", "client_concerns", "agents", "management", "audit_log"],
+            "dispatch": ["dispatch_dashboard", "dispatch_operation", "dispatch_monitoring", "internet_install", "cignal_install", "client_concerns", "agents", "management", "audit_log", "geo_map"],
             "cignal_play": ["cignal_dashboard", "cignal_applications", "cignal_logs"],
             "administration": ["logs", "settings", "admin_panel", "improvement_requests"],
         }

@@ -83,10 +83,12 @@ ROLE_MODULE_SPECS = [
             ("dispatch_operation", "Dispatch Operation / Pipeline", "fa-route"),
             ("dispatch_monitoring", "Master Log", "fa-clipboard-list"),
             ("internet_install", "Internet Install", "fa-plug"),
+            ("cignal_install", "Cignal Install", "fa-tv"),
             ("client_concerns", "Client Concerns", "fa-headset"),
             ("agents", "Agents", "fa-user-tie"),
             ("management", "Management", "fa-sliders"),
             ("audit_log", "Audit Log", "fa-history"),
+            ("geo_map", "Field Map", "fa-map-marked-alt"),
         ]
     },
     {
