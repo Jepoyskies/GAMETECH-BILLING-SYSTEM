@@ -100,70 +100,39 @@
                         {% endif %}
                     </td>
 
-                    {# col 9 – Status badge + connection indicator #}
+                    {# col 9 – Unified Status Badges #}
                     <td class="align-middle" style="min-width: 180px;">
-                        <div class="d-flex flex-column align-items-start" style="gap: 8px;">
-                            {% if customer.installation_status == 'pending' or customer.status == 'pending' or customer.is_pending_install %}
-                                <span class="status-badge status-badge--info">
-                                    <span class="status-dot"></span>Pending Install
-                                </span>
-                            {% elif customer.status == 'active' %}
-                                <span class="status-badge status-badge--success cust-base-badge">
-                                    <span class="status-dot"></span>Active
-                                </span>
-                            {% elif customer.status == 'inactive' %}
-                                <span class="status-badge status-badge--neutral">
-                                    <span class="status-dot"></span>Inactive
-                                </span>
-                            {% elif customer.status == 'suspended' %}
-                                <span class="status-badge status-badge--warning">
-                                    <span class="status-dot"></span>Suspended
-                                </span>
-                            {% elif customer.status == 'pull out' %}
-                                <span class="status-badge status-badge--neutral">
-                                    <span class="status-dot"></span>Pull Out
-                                </span>
-                            {% elif customer.status == 'expired' %}
-                                <span class="status-badge status-badge--danger">
-                                    <span class="status-dot"></span>Expired
-                                </span>
+                        {% include "billing/customer_list/_customer_status.html" with customer=customer %}
+                        {# Hidden telemetry data for JS #}
+                        <span class="conn-status-indicator" style="display: none;"
+                              data-pppoe="{{ customer.pppoe_username|default:'' }}"
+                              data-status="{{ customer.status|lower }}"
+                              data-installation-status="{{ customer.installation_status|default:'installed' }}"
+                              data-expires-at="{% if customer.expires_at %}{{ customer.expires_at|date:'Y-m-d' }}{% endif %}"
+                              data-is-paid-offline="{% if customer.is_paid_offline %}true{% else %}false{% endif %}"
+                              data-customer-id="{{ customer.id }}"
+                              data-health-status="{{ customer.health_status }}"
+                              data-health-reason="{{ customer.health_reason|escapejs }}"
+                              data-balance="{{ customer.outstanding_balance|default:'0' }}"
+                              data-router-id="{{ customer.mikrotik_device.id|default:'' }}"
+                              data-router-health="{{ customer.mikrotik_device.health_status|default:'Excellent' }}"
+                              data-router-name="{{ customer.mikrotik_device.device_name|default:'Unknown Router' }}"
+                              data-barangay-id="{{ customer.barangay.id|default:'' }}"
+                              data-barangay-health="{{ customer.barangay.health_status|default:'Excellent' }}"
+                              data-barangay-name="{{ customer.barangay.name|default:'Unknown Barangay' }}"></span>
+
+                        {% if customer.expires_at %}
+                        <div class="text-muted" style="font-size: 11px; margin-top: 4px; white-space: nowrap;">
+                            {% if customer.status == 'expired' or customer.status == 'suspended' %}
+                                Expired {{ customer.expires_at|date:"M d, Y" }}
                             {% else %}
-                                <span class="status-badge status-badge--neutral">
-                                    <span class="status-dot"></span>{{ customer.status|title }}
-                                </span>
-                            {% endif %}
-
-                            {# Live Mikrotik connection indicator (retained verbatim for telemetry JS) #}
-                            <span class="conn-status-indicator" style="white-space: nowrap; display: block;"
-                                 data-pppoe="{{ customer.pppoe_username|default:'' }}"
-                                 data-status="{{ customer.status|lower }}"
-                                 data-installation-status="{{ customer.installation_status|default:'installed' }}"
-                                 data-expires-at="{% if customer.expires_at %}{{ customer.expires_at|date:'Y-m-d' }}{% endif %}"
-                                 data-is-paid-offline="{% if customer.is_paid_offline %}true{% else %}false{% endif %}"
-                                 data-customer-id="{{ customer.id }}"
-                                 data-health-status="{{ customer.health_status }}"
-                                 data-health-reason="{{ customer.health_reason|escapejs }}"
-                                 data-balance="{{ customer.outstanding_balance|default:'0' }}"
-                                 data-router-id="{{ customer.mikrotik_device.id|default:'' }}"
-                                 data-router-health="{{ customer.mikrotik_device.health_status|default:'Excellent' }}"
-                                 data-router-name="{{ customer.mikrotik_device.device_name|default:'Unknown Router' }}"
-                                 data-barangay-id="{{ customer.barangay.id|default:'' }}"
-                                 data-barangay-health="{{ customer.barangay.health_status|default:'Excellent' }}"
-                                 data-barangay-name="{{ customer.barangay.name|default:'Unknown Barangay' }}"></span>
-
-                            {% if customer.expires_at %}
-                            <div class="text-muted" style="font-size: 11px; margin-top: 4px; white-space: nowrap;">
-                                {% if customer.status == 'expired' or customer.status == 'suspended' %}
-                                    Expired {{ customer.expires_at|date:"M d, Y" }}
-                                {% else %}
-                                    Due {{ customer.expires_at|date:"M d, Y" }}
-                                {% endif %}
-                            </div>
+                                Due {{ customer.expires_at|date:"M d, Y" }}
                             {% endif %}
                         </div>
+                        {% endif %}
                     </td>
 
-                    {# col 10 – Row Actions: Original direct visible buttons styled with shared tokens #}
+                    {# col 10 – Row Actions #}
                     <td class="text-end">
                         <div class="d-inline-flex align-items-center gap-1.5 justify-content-end">
                             <a href="{% url 'view_customer' customer.id %}" class="gt-icon-btn" title="View Details">
