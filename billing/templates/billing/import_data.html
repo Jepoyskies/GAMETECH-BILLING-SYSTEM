@@ -7,8 +7,8 @@
             <h6><i class="fas fa-file-import sh-icon"></i> Import Legacy Customers</h6>
         </div>
         <div class="p-4">
-            <p>Upload a CSV file from your old PHP system to migrate customers. The system will automatically map them to existing Mikrotik PPPoE accounts if the usernames match.</p>
-            
+            <p>Upload a MySQL dump file from your old PHP system to import customers. The system preserves PPPoE credentials, status, and expiry dates (with timezone conversion). Missing routers are auto-created.</p>
+
             {% if messages %}
                 {% for message in messages %}
                     <div class="alert alert-{{ message.tags }}">{{ message }}</div>
@@ -18,19 +18,64 @@
             <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="mb-3">
-                    <label class="form-label">CSV File</label>
-                    <input class="form-control" type="file" name="csv_file" accept=".csv" required>
+                    <label class="form-label">SQL Dump File</label>
+                    <input class="form-control" type="file" name="sql_file" accept=".sql" required>
                 </div>
-                
+
                 <div class="alert alert-info">
-                    <strong>Expected Columns:</strong><br>
-                    <code>full_name, address, pppoe_username, phone, balance</code><br>
-                    <em>Note: The exact column names can vary. The system will attempt to auto-detect them.</em>
+                    <strong>Requirements:</strong> Full MySQL dump from the legacy system (includes <code>customers</code>, <code>pppoe_users</code>, and <code>mikrotik_devices</code> tables).
                 </div>
-                
-                <button type="submit" class="btn-submit"><i class="fas fa-upload me-2"></i> Start Migration</button>
+
+                <button type="submit" class="btn-submit"><i class="fas fa-upload me-2"></i> Start Import</button>
             </form>
         </div>
     </div>
+
+    {% if zero_date_customers %}
+    <div class="dashboard-card mt-4">
+        <div class="section-header" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+            <h6><i class="fas fa-exclamation-triangle sh-icon"></i> Zero-Date Customers — Need Review ({{ zero_date_customers|length }})</h6>
+        </div>
+        <div class="p-4">
+            <div class="alert alert-warning">
+                <strong>These customers have no expiry date in the legacy system.</strong> They were imported with <code>expires_at=NULL</code>. Please review each one and decide if they should remain active or be assigned an expiry date.
+            </div>
+            <table class="table table-dark table-striped">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Customer</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cust in zero_date_customers %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td><code>{{ cust }}</code></td>
+                        <td>
+                            <a href="{% url 'customer_list' %}" class="btn btn-sm btn-outline-light">Review in Customer List</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if total_imported > 0 %}
+    <div class="dashboard-card mt-4">
+        <div class="section-header section-header-green">
+            <h6><i class="fas fa-check-circle sh-icon"></i> Last Import Summary</h6>
+        </div>
+        <div class="p-4">
+            <p><strong>Total customers imported:</strong> {{ total_imported }}</p>
+            {% if report_timestamp %}
+            <p><strong>Import date:</strong> {{ report_timestamp }}</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

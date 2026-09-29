@@ -248,41 +248,54 @@ def changelog_view(request):
 @login_required
 @role_required(["Admin"])
 def import_legacy_data_view(request):
-    import csv
-    import io
+    import json
+    import tempfile
+    from pathlib import Path
     from django.contrib import messages
     from django.core.management import call_command
     from django.http import HttpResponseRedirect
     from django.urls import reverse
 
     if request.method == "POST":
-        csv_file = request.FILES.get("csv_file")
-        if not csv_file:
-            messages.error(request, "Please upload a CSV file.")
+        sql_file = request.FILES.get("sql_file")
+        if not sql_file:
+            messages.error(request, "Please upload a SQL file.")
             return HttpResponseRedirect(reverse("import_legacy_data"))
 
-        if not csv_file.name.endswith(".csv"):
-            messages.error(request, "File must be a CSV.")
+        if not sql_file.name.endswith(".sql"):
+            messages.error(request, "File must be a SQL dump.")
             return HttpResponseRedirect(reverse("import_legacy_data"))
 
         try:
-            # We save the file to a temp location so the management command can read it
-            import tempfile
-
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as tmp:
-                for chunk in csv_file.chunks():
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".sql") as tmp:
+                for chunk in sql_file.chunks():
                     tmp.write(chunk)
                 tmp_path = tmp.name
 
-            # Run the migration command
-            call_command("core_migration", tmp_path)
+            call_command("import_legacy_customers", tmp_path)
             messages.success(request, "Legacy data imported successfully!")
         except Exception as e:
-            messages.error(request, f"Error during migration: {str(e)}")
+            messages.error(request, f"Error during import: {str(e)}")
 
         return HttpResponseRedirect(reverse("import_legacy_data"))
 
-    return render(request, "billing/import_data.html")
+    # Load last import report for display
+    zero_date_customers = []
+    total_imported = 0
+    report_timestamp = None
+    report_path = Path(__file__).parent.parent / "data" / "last_import_report.json"
+    if report_path.exists():
+        with open(report_path, "r") as f:
+            report = json.load(f)
+        zero_date_customers = report.get("zero_date_customers", [])
+        total_imported = report.get("total_customers", 0)
+        report_timestamp = report.get("timestamp", None)
+
+    return render(request, "billing/import_data.html", {
+        "zero_date_customers": zero_date_customers,
+        "total_imported": total_imported,
+        "report_timestamp": report_timestamp,
+    })
 
 
 @login_required

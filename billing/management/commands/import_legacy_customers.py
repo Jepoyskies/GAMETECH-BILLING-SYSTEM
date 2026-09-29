@@ -1,10 +1,11 @@
 import csv
 import io
+import json
 import os
-import re
 import secrets
 import string
 from datetime import timedelta
+from pathlib import Path
 
 from django.core.management.base import BaseCommand
 from django.db.models.signals import post_save
@@ -39,8 +40,7 @@ PLAN_MAPPING = {
     'pppoe-120m': 'Business 100 Mbps',
 }
 
-# Default expiry for zero-date customers: 30 days from import date
-DEFAULT_EXPIRY_DAYS = 30
+# Zero-date customers are flagged for review instead of given a default expiry
 
 
 class Command(BaseCommand):
@@ -182,6 +182,7 @@ class Command(BaseCommand):
             device_map = {}
             account_type_map = {}
             pppoe_creds = {}
+            zero_date_customers = []
 
             # PASS 1: Read PPPoE credentials
             self.stdout.write(self.style.SUCCESS("Pass 1: Extracting PPPoE credentials..."))
@@ -300,8 +301,9 @@ class Command(BaseCommand):
                         if expires_at:
                             expires_at = self.convert_timezone(expires_at)
                         else:
-                            # Zero-date or NULL: give default expiry
-                            expires_at = timezone.now() + timedelta(days=DEFAULT_EXPIRY_DAYS)
+                            # Zero-date or NULL: flag for review, set expires_at=None
+                            expires_at = None
+                            zero_date_customers.append(username or full_name)
 
                         # Get PPPoE password
                         password = pppoe_creds.get(username, None)
@@ -367,6 +369,36 @@ class Command(BaseCommand):
                             self.stdout.write(f"  Updated: {username or full_name}")
 
             self.stdout.write(self.style.SUCCESS("Import complete!"))
+
+            # Save import report for the web interface
+            report = {
+                "timestamp": timezone.now().isoformat(),
+                "total_customers": len(all_rows),
+                "zero_date_customers": zero_date_customers,
+                "devices_created": list(device_map.keys()),
+                "plans_used": list(plan_map.keys()),
+            }
+            report_path = Path(__file__).parent.parent.parent / "data" / "last_import_report.json"
+            report_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(report_path, "w") as f:
+                json.dump(report, f, indent=2, default=str)
+            self.stdout.write(f"  Import report saved to: {report_path}")
+
+            if zero_date_customers:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"\n=== ZERO-DATE CUSTOMERS ({len(zero_date_customers)}) — NEED REVIEW ==="
+                    )
+                )
+                for cust in zero_date_customers:
+                    self.stdout.write(f"  - {cust}")
+                self.stdout.write(
+                    self.style.WARNING(
+                        "These customers have no expiry date in the legacy system. "
+                        "They have been imported with expires_at=NULL. "
+                        "Review them in the import page."
+                    )
+                )
 
         finally:
             # Reconnect the signals
