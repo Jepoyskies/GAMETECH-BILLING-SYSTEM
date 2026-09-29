@@ -190,31 +190,70 @@ For an imported customer to behave identically to a normally-created customer, i
 
 ---
 
-## 7. Verdict
+## 7. Verdict & Import Strategy
 
-### Would a direct 1:1 copy safely reproduce router reality?
+### Owner's Directive: "Like Nothing Happened"
 
-**NO — a direct 1:1 copy would NOT safely reproduce router reality for auto-suspend purposes.**
+The owner's explicit requirement is a **faithless handoff** — the new system should reflect exactly what the old system had, so business operations continue seamlessly. Portal passwords are the only exception (randomized as a new security feature).
 
-### Specific Cases Where It Would NOT Work
+### Owner's Decisions (Confirmed 2026-09-29)
 
-| Issue | Count | Impact |
+| Question | Decision |
+|---|---|
+| Status preservation | **Preserve exactly** — active stays active, expired stays expired, suspended stays suspended |
+| PPPoE username | **Preserve exactly** per customer |
+| PPPoE password | **Preserve exactly** per customer (all happen to be the same value) |
+| Portal password | **Randomized** — new system feature, generated at import time |
+| Expiry dates | **Preserve with timezone conversion** (UTC → UTC+8) |
+| Device mapping | **Still open** — needs owner decision |
+| Active-but-expired (38) | **Import as-is** — auto-suspend will handle them per normal business logic |
+| Zero-date expiry (9) | **Still open** — needs owner decision |
+
+### What "Just Works" Requires
+
+For the import to be seamless, the import tool must:
+
+1. **Convert timezone:** Add 8 hours to all `expires_at` values (UTC → UTC+8)
+2. **Map devices:** Translate `ccr2116.v1` → chosen current device
+3. **Map plans:** Translate legacy plan names (`pppoe-20m`, `pppoe-50m`, etc.) → current `SubscriptionPlan` records
+4. **Preserve status:** Copy `customers.status` directly to `Customer.status`
+5. **Preserve PPPoE:** Copy `pppoe_users.username` → `pppoe_username`, `pppoe_users.password` → `pppoe_password`
+6. **Randomize portal passwords:** Generate secure random passwords for portal login
+7. **Set `installation_status`:** `installed` (these are live customers)
+8. **Set `is_verified`:** `True` (to avoid rogue-account suspension)
+9. **Handle zero-dates:** Decide on fallback for `0000-00-00` values
+
+### Plan Name Mapping (Legacy → Current)
+
+**[UNVERIFIED]** The following mapping is inferred from name similarity and price matching. Owner must confirm.
+
+| Legacy plan_name | Count | Likely current match | Current price |
+|---|---|---|---|
+| `pppoe-20m` | 392 | 20 Mbps Plan (id=19) | 999.00 |
+| `pppoe-50m` | 43 | 50 Mbps Plan (id=21) | 1499.00 |
+| `pppoe-30m` | 35 | 30 Mbps Plan (id=20) | 1299.00 |
+| `pppoe-15m_800` | 19 | GTipid Fiber 1300 (id=8) or GIMI Home Fiber 1300 (id=11) | 1300.00 |
+| `pppoe-10m` | 18 | 10Mbps (id=2) | 750.00 |
+| `pppoe-15m_700` | 7 | GTipid Fiber 1000 (id=7) or GIMI Home Fiber 1000 (id=10) | 1000.00 |
+| `pppoe-50m-speedboost100` | 2 | 50 Mbps Plan (id=21) | 1499.00 |
+| `pppoe-100m` | 2 | 100 Mbps Plan (id=23) | 2499.00 |
+| `pppoe-50m_1300` | 1 | GTipid Fiber 1300 (id=8) | 1300.00 |
+| `pppoe-50m_1200` | 1 | GTipid Fiber 1300 (id=8) | 1300.00 |
+| `pppoe-15m_600` | 1 | 5Mbps (id=4) | 500.00 |
+| `pppoe-30m_1200` | 1 | 30 Mbps Plan (id=20) | 1299.00 |
+| `pppoe-5m` | 1 | 5Mbps (id=4) | 500.00 |
+| `pppoe-50m_1400` | 1 | 50 Mbps Plan (id=21) | 1499.00 |
+| `pppoe-30m-speedboost80` | 1 | 30 Mbps Plan (id=20) | 1299.00 |
+| `pppoe-200m` | 1 | Business 200 Mbps (id=14) | 3999.00 |
+| `pppoe-120m` | 1 | Business 100 Mbps (id=13) | 1999.00 |
+
+### Remaining Open Decisions
+
+| # | Question | Options |
 |---|---|---|
-| **Timezone mismatch** | All 527 rows | Naive import shifts expiry 8 hours earlier, potentially causing premature suspension |
-| **Missing device mapping** | All 527 rows | `ccr2116.v1` does not exist in current system; customers would have no router assigned |
-| **Active but expired** | 38 rows | Status says `active` but expiry is in the past; auto-suspend would immediately suspend these customers |
-| **Zero-date expiry** | 9 rows | `0000-00-00` is not a valid datetime; would cause import errors or incorrect expiry calculations |
-| **Shared password** | All 527 rows | All PPPoE secrets would have the same password; this may or may not match router reality |
-| **Profile = expired** | All 527 rows | Legacy profile is `expired`, not a valid plan name; needs mapping to current SubscriptionPlan |
-
-### Required Decisions Before Import
-
-1. **Device mapping:** Which current device (`Mikrotik A` or `Mikrotik B`) should `ccr2116.v1` map to?
-2. **Timezone conversion:** Confirm that legacy datetimes are in UTC and need +8 hour conversion.
-3. **Active-but-expired customers:** What should happen to the 38 customers whose status is `active` but expiry is in the past? Should they be imported as `active` (and immediately suspended) or as `suspended`?
-4. **Zero-date customers:** What should happen to the 9 customers with `0000-00-00` expiry? Should they be given a default expiry or imported without expiry?
-5. **Password strategy:** Should all imported customers share the same PPPoE password, or should individual passwords be generated?
-6. **Plan mapping:** How should legacy plan names (`pppoe-20m`, `pppoe-50m`, etc.) map to current SubscriptionPlan records?
+| 1 | Which current device should `ccr2116.v1` map to? | `Mikrotik A` or `Mikrotik B` |
+| 2 | What should happen to the 9 zero-date customers? | Give them a default expiry (e.g., end of current month) or import with `NULL` expiry |
+| 3 | Confirm plan name mapping (see above) | Owner must verify each legacy plan maps to the correct current SubscriptionPlan |
 
 ---
 
