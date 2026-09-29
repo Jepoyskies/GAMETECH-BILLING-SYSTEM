@@ -1259,6 +1259,77 @@
 2. Fill in: **Symptoms**, **Root Causes**, **Exact Target Files**, and **1-Step Fix**.
 3. Keep entries short, actionable, and sniper-focused.
 
+---
+
+### ERR-067: Frontend Memory Bloat, Slow Pages & Aggressive Polling
+* **Symptoms**:
+  * Browser snoozes/discards the site tab with a "using too much memory" warning.
+  * Some pages load very slowly, others very fast (inconsistent).
+* **Root Causes**:
+  1. A `MutationObserver` observing `document.body` with `subtree: true` that was **never disconnected**, re-running `querySelectorAll` on every DOM mutation forever.
+  2. Aggressive polling: `fetchOnlineStaff` every 5s and `fetchNotifications` every 30s on **every** page; `updateConnectionStatuses` every 30s on the customer list; `fetchStatus` every 5s on customer profiles.
+  3. No `document.hidden` guard on the base/customer-list polling, so background tabs kept polling.
+  4. N+1 queries on high-traffic views (portal dashboard, customer profile, payment logs) missing `select_related`.
+  5. `api_offline_users` and `api_network_alerts` hitting every MikroTik router and the DB on **every** request with no caching.
+  6. No index on `Customer.expires_at` despite being the most frequently filtered field in the system.
+* **Exact Target Files**:
+  * `billing/templates/billing/base/_scripts.html` (MutationObserver + polling intervals)
+  * `billing/templates/billing/customer_list/_scripts.html`, `billing/templates/billing/view_customer/_scripts.html` (polling)
+  * `billing/templates/billing/base.html` (render-blocking SweetAlert2, missing preconnect, Bootstrap version mismatch)
+  * `customer_portal/views/dashboard.py`, `billing/views/customers/crud.py`, `billing/views/customers/actions.py`, `billing/views/payments/logs.py`, `billing/views/services.py` (N+1)
+  * `billing/views/api/network.py` (`api_offline_users`, `api_network_alerts` caching)
+  * `billing/views/analytics.py` (uncached aggregations)
+  * `billing/models.py` (`Customer.expires_at` db_index)
+* **1-Step Fix**:
+  1. `setTimeout(() => observer.disconnect(), 15000)` after `observer.observe(...)`.
+  2. Relax intervals (5s→15s, 30s→60s) and add `if (document.hidden) return;` to every polling function.
+  3. Add `select_related("plan", "barangay", "mikrotik_device")` to portal/profile/SOA queries and `select_related("customer")` to payment logs.
+  4. Cache `api_offline_users_payload` and `api_network_alerts_payload` for 30s; skip circuit-broken routers via `router_unreachable_<id>`.
+  5. Cache the analytics context for 300s under `analytics_dashboard_<date>`.
+  6. Add `db_index=True` to `Customer.expires_at` (migration `0060_customer_expires_at_index`).
+  7. Move SweetAlert2 to end-of-body with `defer`, add CDN `preconnect` hints, unify Bootstrap to 5.3.3.
+  8. Standardize jQuery 3.7.1 + DataTables 1.13.7 across all templates (previously 3 versions each, causing duplicate downloads).
+
+---
+
+### ERR-068: Untracked Migration Files on Server Break `manage.py migrate`
+* **Symptoms**:
+  * `CommandError: Conflicting migrations detected; multiple leaf nodes in the migration graph`.
+  * `manage.py check` reports bogus `admin.E127/E108/E116` errors for `MessageTemplate` / `CustomerAgentHistory` (fields `is_active`, `updated_at`, `changed_at` "do not exist") even though `billing/admin.py` is correct in the repo.
+* **Root Causes**:
+  1. `makemigrations` run directly on the droplet generated migration files that were **never committed to git** (e.g. `0059_remove_customer_adjusted_by_referral_and_more.py`, `0061_merge_*.py`). Repo and database drift apart.
+  2. Running `makemigrations` on the server a second time (a different `--name`) produced a **duplicate** `0060` index migration alongside the one committed to the repo, creating two leaf nodes.
+  3. With migration files missing/stale in the droplet working tree, Django resolved models from an outdated state, producing phantom admin errors.
+* **Exact Target Files**:
+  * `billing/migrations/` (all files)
+  * Droplet working tree `/root/GAMETECH-BILLING-SYSTEM`
+* **1-Step Fix**:
+  1. `scp` the untracked migration files from the droplet into the local repo, verify with `python -m py_compile`, then `git add billing/migrations/ && git commit && git push origin main`.
+  2. On the droplet: `git checkout -- billing/migrations/` to restore tracked files, then `git pull origin main`.
+  3. **NEVER run `makemigrations` on the droplet** — always generate migrations locally and commit them. Generate with an explicit `--name`, and confirm the file lands in git before deploying.
+  4. Verify with `manage.py check` (expect "no issues") and `manage.py migrate billing` (expect "No migrations to apply").
+  5. If a duplicate `0060` exists, do not delete DB rows from `django_migrations`; instead add an empty merge migration depending on both leaves.
+
+---
+
+### ERR-069: Container Name Flapping After `docker compose up -d`
+* **Symptoms**:
+  * `docker exec gametech-billing-system_web_1 ...` intermittently returns `No such container` or `cannot exec in a stopped container`, then later works again.
+  * `docker ps -a` shows containers with hash prefixes (e.g. `9d8bdc08521b_gametech-billing-system-celery-1`) alongside clean-named ones.
+* **Root Causes**:
+  1. An external verification process on the droplet runs `python manage.py check` / `showmigrations` inside the web container, and concurrent `docker compose up -d` invocations recreate containers mid-command.
+  2. The droplet checkout sits on branch `feature/dispatch-operation` rather than `main`, so `git pull origin main` fast-forwards a non-default branch and the two can visibly diverge.
+  3. Two postgres volumes exist (`gametech-billing_postgres_data` = the `external: true` one actually in use, and the orphaned `gametech-billing-system_postgres_data`). Compose warns about the label mismatch every run.
+* **Exact Target Files**:
+  * `/root/GAMETECH-BILLING-SYSTEM/docker-compose.yml`
+  * Droplet git checkout (branch state)
+* **1-Step Fix**:
+  1. **Resolve the container name immediately before use**: `docker ps --format '{{.Names}}' | grep web` — never assume the name is stable across turns.
+  2. For routine deploys prefer `docker restart <name>` (Rule 32v2); use `docker compose up -d` only when a port actually dropped (502 from nginx).
+  3. Confirm the live volume before any `compose up`: `docker inspect <db-container> --format '{{range .Mounts}}{{.Name}}{{end}}'` must report `gametech-billing_postgres_data`. **Never** delete or prune the orphaned volume.
+  4. Verify health after any recreate: `curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/login/` must return `200`.
+  5. Consider switching the droplet checkout to `main` so deploys and repo state stay aligned.
+
 
 
 

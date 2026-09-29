@@ -182,6 +182,12 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
     | `live_monitoring_data` | Cached Mikrotik live monitoring API response | 30s | `billing/views/api/dashboard.py`, `billing/tasks.py` | Overwritten on each poll cycle |
     | `dashboard_stats_{date}` | Cached dashboard statistics for a specific date | 300s (5min) | `billing/views/dashboard.py` | Expires naturally |
     | `active_pppoe_usernames_set` | Set of connected PPPoE usernames from Mikrotik routers | 30s | `billing/views/api/network.py`, `billing/views/customers/list.py` | Overwritten on each poll/request cycle |
+    | `api_router_uplink_payload` | Cached router uplink status response | 25s | `billing/views/api/network.py` | Overwritten on each poll |
+    | `api_active_pppoe_usernames_payload` | Cached active usernames response | 20s | `billing/views/api/network.py` | Overwritten on each poll |
+    | `api_offline_users_payload` | Cached offline-customer list (hits every router) | 30s | `billing/views/api/network.py` | Overwritten on each poll |
+    | `api_network_alerts_payload` | Cached device/barangay/customer/ticket alerts | 30s | `billing/views/api/network.py` | Overwritten on each poll |
+    | `analytics_dashboard_{date}` | Cached analytics KPIs (MRR, revenue, churn) | 300s | `billing/views/analytics.py` | Expires naturally |
+    | `router_unreachable_{id}` | Circuit breaker flag; fail fast without touching the socket | 45s | `network_manager/services/base.py` | Deleted on successful connect |
 
 24. **THE 400-LINE CIRCUIT BREAKER LAW (Just-In-Time Operation Cleanup)**:
     * **THE TRIGGER**: Whenever an AI touches, edits, or diagnoses a bug in ANY file that exceeds **400 lines** (template, script, or view):
