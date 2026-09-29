@@ -98,8 +98,7 @@ urlpatterns = [
     path('map/', views.geo_map_view, name='dispatch_geo_map'),
     path('api/nap/update-position/', views.api_update_nap_position, name='api_update_nap_position'),
 
-    # FBT/PLC Calculator
-    path('fbt-plc-calculator/', views.fbt_plc_calculator_view, name='fbt_plc_calculator'),
+    # FBT/PLC Calculator -> served by network_manager (single source of truth)
 
     # Receipt
     path('receipt/<int:payment_id>/', views.receipt_view, name='dispatch_receipt'),

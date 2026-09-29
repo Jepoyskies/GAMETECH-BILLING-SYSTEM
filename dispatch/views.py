@@ -2166,11 +2166,8 @@ def api_update_nap_position(request):
 
 
 # ─── FBT/PLC Fiber Calculator ──────────────────────────────────────────────────
-
-@login_required
-def fbt_plc_calculator_view(request):
-    """Fiber optic power budget calculator for FBT and PLC splitters."""
-    return render(request, 'dispatch/fbt_plc_calculator.html')
+# NOTE: served by network_manager.views.tools.fbt_plc_calculator_view, which owns
+# the full network-tree builder. Do not re-add a second calculator here.
 
 
 # ─── Receipt Generation ────────────────────────────────────────────────────────
