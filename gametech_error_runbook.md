@@ -28,6 +28,11 @@
 | **ERR-059** | Disconnected Operations Pipeline: Missing Repair Intake, Missing Tech Confirmation Guard, and Duplicate Dispatch Job Tickets | `dispatch/views.py`, `pipeline_views.py`, `_modal_scripts.html`, `view_customer.html` | Operations / Dispatch |
 | **ERR-060** | Unconsumed Internal Flash Messages Leaking to Public Login Screen Styled as Alarming Red Error Banners | `billing/templates/billing/base.html`, `login.html`, `billing/views/auth.py`, `customer_portal/views/auth.py` | Auth / Messages |
 | **ERR-063** | Customer Portal Modal Backdrop Freeze on Plan Selection & Close | `_modals.html`, `plan_card.html`, `portal_dashboard.html`, `_scripts.html` | Frontend (Modals) |
+| **ERR-071** | `Conflicting migrations detected; multiple leaf nodes` OR `references nonexistent migration 00XX` | `billing/migrations/`, `dispatch/migrations/` | DB / Migrations |
+| **ERR-072** | New sidebar subtab link never renders for any role, including Admin | `billing/models.py` (`subtab_specs`), `billing/views/staff.py` (`ROLE_MODULE_SPECS`) | Auth / Navigation |
+| **ERR-073** | Feature page is built and renders but nothing in the UI can open it; dead partials left behind | `base/_sidebar.html`, `settings.html`, `admin_panel.html` | Navigation (Dead Ends) |
+| **ERR-074** | Table rows shifted one column vs header; empty-state `colspan` wrong | `payment_logs.html` (any table with a gated `<th>`) | Frontend (Table) |
+| **ERR-075** | All containers gone, every page returns `000`, `No such container` | `/root/GAMETECH-BILLING-SYSTEM`, `docker-compose.yml` | Deployment / Outage |
 | **ERR-065** | Blinding White Cards on Dispatch Dashboard in Dark Mode & Table Contrast Degradation | `dispatch/dashboard.html`, `_monitoring_page_styles.html`, `_gt_design_system.html` | Frontend (Theme/CSS) |
 | **ERR-066** | Broken Light Theme, Overlapping Badges, Solid Blue Router Pill, and Unsynced Runtime Charts | `_gt_design_system.html`, `customer_list/_table.html`, `_scripts.html`, `tokens_and_base.css` | Frontend (Theme/CSS) |
 
@@ -1350,3 +1355,177 @@
 
 **Files**: illing/templates/billing/base.html  
 **Commit**: ix(dashboard): isolate dashboard from gt/ CSS entirely and remove duplicate body.dark-mode script`n
+
+
+---
+
+### ERR-071: Migration Graph Broken by Locally-Generated but Uncommitted Migration Files
+
+**Symptom** (two distinct variants, both seen on the droplet):
+1. `CommandError: Conflicting migrations detected; multiple leaf nodes in the migration graph: (0059_..., 0060_...) in billing`
+2. `Migration 0015_alter_monitoringrecord_dispatch in app 'dispatch' references nonexistent migration 0014_merge_...`
+
+**Root Cause**: Django generated a branch merge locally (e.g. `0059` and `0060` both descended from `0058`), and the auto-created merge migration was applied to the production DB -- but the `.py` files were **never committed or pushed**. The DB's `django_migrations` table recorded the merge as applied while the file did not exist in git, so the droplet had a different graph than the repo.
+- Variant 1 (two leaf nodes): the merge file was missing entirely, so both branches still looked like leaves.
+- Variant 2 (missing dependency): a later migration `0015` *did* get committed and depends on the lost `0014`, so a **fresh clone of `main` was broken for everyone**.
+
+**Exact Target Files**:
+- `billing/migrations/`, `dispatch/migrations/`
+- `django_migrations` table (read-only check)
+
+**Diagnosis (1 step, no code reading)**:
+```
+docker exec gametech-web python manage.py showmigrations billing dispatch 2>&1 | tail -10
+```
+
+**1-Step Fix**:
+1. Recover the lost file from the droplet (`cat dispatch/migrations/00XX_merge_*.py`) or regenerate it.
+2. **Commit the migration file to `main`.** Do *not* run `git reset --hard` first -- that is what destroys the file in the first place.
+3. Re-verify: `docker exec gametech-web python manage.py makemigrations --check --dry-run` must print `No changes detected`.
+
+**Prevention**: After any `makemigrations`, commit the generated file **in the same commit** as the model change. Never leave a migration untracked.
+
+---
+
+### ERR-072: New Sidebar Subtab Silently Hidden (SubtabMap Returns False for Unregistered Names)
+
+**Symptom**: A link added to `billing/templates/billing/base/_sidebar.html`, guarded by
+`{% if request.user.role_perms.subtabs.dispatch_<newtab> %}`, never renders -- for **any** role, including Admin. No error, no traceback.
+
+**Root Cause**: `StaffRole.subtabs` is a `dict` subclass whose `__getattr__` returns `self.get(item, False)`. It is only populated with the names listed in `subtab_specs`:
+```python
+"dispatch": ["dispatch_dashboard", "dispatch_operation", ...]
+```
+Any name absent from that list resolves to `False`, so the guard is always false. Same for `{{ admin.role_perms.subtabs.<name> }}` in any template.
+
+**Exact Target Files**:
+- `billing/models.py` -> `StaffRole.subtabs` property -> `subtab_specs`
+- `billing/views/staff.py` -> `ROLE_MODULE_SPECS` (drives the Roles admin UI)
+
+**1-Step Fix**: Register the new subtab in **BOTH** sources of truth; they are independent and easy to forget:
+```python
+# billing/models.py
+"dispatch": [..., "cignal_install", ..., "geo_map"]
+
+# billing/views/staff.py
+("cignal_install", "Cignal Install", "fa-tv"),
+("geo_map", "Field Map", "fa-map-marked-alt"),
+```
+Then verify it resolves for a **non-Admin** role too:
+```python
+r = StaffRole.objects.exclude(name__iexact="admin").filter(can_access_dispatch=True).first()
+print(r.subtabs.dispatch_cignal_install)   # must be True, not False
+```
+
+**Note**: `has_subtab_perm()` returns `True` for any subtab when the role has no key for that module in `subtab_permissions`, so per-role gating is inert until an admin configures it in the Roles UI. That is *not* a substitute for registering the name.
+
+---
+
+### ERR-073: Unreachable Pages / Dead Template Partials (Navigation Drift)
+
+**Symptom**: A feature is fully built and renders correctly, but nothing in the UI can open it. Users report "I clicked around and can't find it". Separately, partials accumulate that nothing includes.
+
+**Real instances found**:
+| Dead page | Why unreachable | Fix |
+| :--- | :--- | :--- |
+| `/dispatch/map/` | its only reference was a dead `_nav_tabs.html` partial | sidebar link added |
+| `/dispatch/cignal-install/` | never added to the sidebar | sidebar link added |
+| `/dispatch/receipt/<id>/` | finished printable Official Receipt, no entry point | row button in Payment Logs |
+| `/dispatch/admin-summary/` | pipeline stepper never linked forward | stepper completed on all stages |
+| `dispatch/_nav_tabs.html` | 179 lines, included by nothing, duplicated the sidebar | deleted |
+
+**Root Cause**: Pages get added to `urls.py` and built, but the navigation layer is not updated in the same change. Deleting a partial can also silently orphan every page that only it linked to.
+
+**Exact Target Files**:
+- `billing/templates/billing/base/_sidebar.html` (primary nav)
+- `billing/templates/billing/settings.html`, `billing/templates/billing/admin_panel.html` (quick-link hubs)
+- app partial folders
+
+**Audit approach** -- reverse every named URL, then subtract legitimate non-page routes:
+- *Endpoints, not pages*: webhooks (`xendit_webhook`), gateway returns (`payment_success`), forced redirects (`force_change_password`), POST-only actions (`verify_customer`, `approve_cignal_request`).
+- *Dynamic reverse*: names passed to a template as a **string** in context (e.g. `"create_url": "create_account_type"` then `{% url create_url %}`) look unreferenced but are fine.
+- *Aliases*: several names can map to the same view (`dispatch_staff`/`dispatch_management`, `technician_my_jobs`/`technician_mobile_ui`).
+- *Namespaced*: `{% url 'customer_portal:portal_checkout' %}` will not match a search for the bare name.
+
+**Prevention (Rule 13)**: Before deleting any partial, grep the whole repo for its filename and re-audit any page it was the sole linker for. After adding a page to `urls.py`, wire it into the sidebar or a hub page in the same change.
+
+---
+
+### ERR-074: Table Columns Misaligned When the Header Cell Is Permission-Gated
+
+**Symptom**: Every data row renders shifted one column left of its header, or the empty-state row spans the wrong width.
+
+**Root Cause**: the `<th>` was gated but the `<td>` was not (or vice versa):
+```html
+<!-- BROKEN: header disappears for non-Admin, but the row cell always renders -->
+{% if request.user.role == 'Admin' %}<th>Actions</th>{% endif %}
+...
+<td>...</td>
+```
+
+**Exact Target Files**: `billing/templates/billing/payment_logs.html` (and any table using `colspan`)
+
+**1-Step Fix**: Make the column exist for everyone and gate only the privileged *buttons* inside it:
+```html
+<th>Actions</th>
+...
+<td>
+  <a href="...">Receipt</a>          <!-- available to all roles -->
+  {% if request.user.role == 'Admin' %}
+    <a href="...">Edit</a>           <!-- Admin only -->
+  {% endif %}
+</td>
+```
+
+**Verify parity (do not eyeball it)** -- header count must equal row-cell count must equal the empty-state `colspan`:
+```python
+th   = len(re.findall(r'<th[\s>]', head))
+td   = len(re.findall(r'<td[\s>]', row))
+span = re.findall(r'colspan="(\d+)"', table)
+assert th == td == int(span[0])
+```
+Beware: a naive `<th[^>]*>` regex also matches `<thead>`, inflating the count by one. Use `<th[\s>]`.
+
+---
+
+### ERR-075: Whole Stack Destroyed by Concurrent Deploy Sessions (Site Fully Down)
+
+**Symptom**: `docker ps` shows one or zero containers; every page returns HTTP `000`. `docker exec gametech-web ...` returns `No such container`. `could not translate host name "db"` because the db container is gone. Observed repeatedly during a multi-session audit.
+
+**Root Cause**: Several AI/terminal sessions running deploys against the same droplet at the same time. The destructive commands seen in `ps`:
+```
+git reset --hard origin/main ; docker-compose build ; docker-compose down ; docker-compose up -d
+```
+Three aggravating factors:
+1. Legacy `docker-compose` (v1) used alongside `docker compose` (v2) -- different default project names, so each invocation recreates the other's containers and forces hash-prefixed names.
+2. `git reset --hard origin/main` deletes uncommitted migration files (see ERR-071).
+3. A test container named `gt_testrunner` squatted the `com.docker.compose.service=web` label, so `docker compose up -d web` failed with a name conflict while the real web container stayed down.
+
+**Data safety**: business data lives in the external volume `gametech-billing_postgres_data` and survives container deletion. Verify before acting:
+```
+docker volume ls | grep postgres_data
+```
+A second, stale volume `gametech-billing-system_postgres_data` also exists. **Never prune it blindly** -- confirm which one the db container mounts first:
+```
+docker inspect <db-container> --format '{{range .Mounts}}{{.Name}} -> {{.Destination}}{{end}}'
+```
+
+**1-Step Recovery**:
+```bash
+cd /root/GAMETECH-BILLING-SYSTEM
+# remove all project containers; volumes are untouched
+for r in 1 2 3; do
+  L=$(docker ps -a --format '{{.Names}}' | grep -E "gametech|gt_" | tr '\n' ' ')
+  [ -z "$L" ] && break
+  for c in $L; do docker rm -f "$c"; done
+  sleep 6
+done
+docker compose up -d
+curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/login/   # must be 200
+```
+
+**Prevention**: Only one session may deploy at a time. Always use Compose **V2** (`docker compose`, with a space). Never `git reset --hard` on the droplet -- use `git pull --ff-only origin main`. Resolve container names dynamically at use time rather than assuming them:
+```bash
+WEB=$(docker ps --filter "label=com.docker.compose.service=web" --format '{{.Names}}' | head -1)
+```
+
