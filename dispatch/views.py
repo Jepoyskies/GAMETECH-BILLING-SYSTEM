@@ -1853,6 +1853,9 @@ def api_monitoring_done(request, record_id):
         monitoring_record=record,
         defaults=dispatch_defaults
     )
+    # Also set the reverse relation on the monitoring record
+    record.dispatch = dispatch_record
+    record.save()
 
     if team_ids:
         dispatch_record.teams.set(team_ids)

@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dispatchrecord',
             name='monitoring_record',
-            field=models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='dispatch_record', to='dispatch.monitoringrecord'),
+            field=models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='auto_dispatch_source', to='dispatch.monitoringrecord'),
         ),
         migrations.AddField(
             model_name='dispatchrecord',

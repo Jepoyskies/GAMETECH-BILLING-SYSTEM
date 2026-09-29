@@ -91,7 +91,7 @@ class DispatchRecord(models.Model):
     sla_rebates_given = models.IntegerField(default=0, help_text="Number of 24h SLA rebate days automatically given")
 
     # Link to the MonitoringRecord that auto-created this dispatch (if applicable)
-    monitoring_record = models.OneToOneField('MonitoringRecord', on_delete=models.SET_NULL, null=True, blank=True, related_name='dispatch_record')
+    monitoring_record = models.OneToOneField('MonitoringRecord', on_delete=models.SET_NULL, null=True, blank=True, related_name='auto_dispatch_source')
 
     # Job detail fields (copied from MonitoringRecord's JobDetail on auto-dispatch)
     schedule_date = models.DateField(null=True, blank=True)
