@@ -1227,6 +1227,31 @@
 
 ---
 
+### ERR-068: Inverted Terminology & Discrepancies Across Customer Status (Router vs Connection & Missing Dispatch Status)
+* **Symptoms**:
+  * Customer profile (`/customers/view/<id>/`) and directory (`/customers/`) showed conflicting, confusing descriptions (e.g. `Offline (Router API Down)` or `Secret Not Found on Router` when account is Active/Paid).
+  * `dispatch_status` always evaluated to `None` or was missing even when the customer had an active ticket (`TICK-...`).
+  * "Router" and "Connection" statuses were defined backwards compared to physical network architecture (Repeater -> MikroTik -> Switch -> Home Router).
+* **Root Causes**:
+  * In `billing/models.py`, `JobTicket.objects.filter(status__in=['pending', ...])` searched lowercase statuses, while `JobTicket.STATUS_CHOICES` stores uppercase (`PENDING`, `ASSIGNED`, `IN_PROGRESS`, `QA_PASSED`).
+  * Legacy code labeled the customer's PPPoE session as "Connection" and the ISP WAN uplink as "Router", inverting the actual topology.
+* **Exact Target Files**:
+  * `billing/models.py` (`dispatch_status`, `payment_status`, `router_status`, `connection_status`)
+  * `billing/views/api/network.py` (`api_customer_mikrotik_status`)
+  * `billing/templates/billing/view_customer/_profile_header.html`
+  * `billing/templates/billing/view_customer/_info_cards.html`
+  * `billing/templates/billing/view_customer/_scripts.html`
+  * `billing/templates/billing/customer_list/_customer_status.html`
+  * `billing/templates/billing/customer_list/_scripts.html`
+* **1-Step Fix**:
+  * Standardize the 4-status matrix across all views:
+    1. **For Dispatch**: `No` or active ticket type (`Repair`, `Installation`, etc.) querying uppercase `JobTicket` statuses.
+    2. **Payment**: `Paid` (active & valid expiration) vs `Unpaid`.
+    3. **Router**: Customer home modem (`Online` = active PPPoE session on MT, `Offline` = disconnected).
+    4. **Connection**: ISP WAN internet uplink (`Online` = MikroTik receiving internet from repeater, `Offline` = repeater/uplink down).
+
+---
+
 ## 📝 How to Add a New Error Entry
 
 

@@ -420,16 +420,16 @@ def api_customer_mikrotik_status(request, customer_id):
             data["is_active_offline"] = True
 
     # --- Unified Status (Synchronized across all views) ---
-    # 1. Connection = System/MikroTik receiving internet from Repeater/WAN uplink
-    if data["mt_status"] in ("API Unreachable", "Offline (Router Off)"):
-        data["connection_status"] = "Offline"
-    elif data["mt_status"] in ("No Router Assigned",):
-        data["connection_status"] = "Offline"
-    else:
-        data["connection_status"] = "Online" if not getattr(api, "_connection_failed", False) else "Offline"
+    # 1. Connection = Customer's PPPoE session active (internet reaching them)
+    data["connection_status"] = "Online" if data["mt_status"] == "Connected" else "Offline"
 
-    # 2. Router = Customer's home router / modem receiving service (active PPPoE session on MT)
-    data["router_status"] = "Online" if data["mt_status"] == "Connected" else "Offline"
+    # 2. Router = MikroTik device reachable + has uplink
+    if data["mt_status"] in ("API Unreachable", "Offline (Router Off)"):
+        data["router_status"] = "Offline"
+    elif data["mt_status"] in ("No Router Assigned",):
+        data["router_status"] = "Offline"
+    else:
+        data["router_status"] = "Online" if not getattr(api, "_connection_failed", False) else "Offline"
 
     # 3. For Dispatching & Payment
     data["dispatch_status"] = customer.dispatch_status or "No"
