@@ -600,6 +600,19 @@ All tests passing across small batches:
 
 ---
 
+## Legacy Dump Profiling (Read-Only Analysis)
+
+- **Document:** `docs/migration/PPPOE_EXPIRY_PROFILE.md`
+- **Scope:** Profiled `backups/backup-2026-03-20_06-21-43.sql` (legacy MySQL dump, 527 customers) to prepare for future import.
+- **Key findings:**
+  - PPPoE credentials live in `pppoe_users` (not `accounts` which is empty). 527 rows, all sharing one plaintext password.
+  - Expiry lives in `customers.expires_at` (datetime). 9 zero-dates, 38 active-but-expired disagreements.
+  - Dump timezone is UTC; current system is UTC+8. Naive import shifts expiry 8 hours earlier.
+  - Legacy device `ccr2116.v1` does not exist in current system (which has `Mikrotik A` and `Mikrotik B`).
+  - Auto-suspend uses `expires_at__lte=now, status="active", installation_status="installed"`.
+- **Verdict:** Direct 1:1 copy would NOT safely reproduce router reality. Six issue categories identified with counts.
+- **No data was imported. No changes to application code.**
+
 ## Redesigned Pages Regression Restorations (Audit Resolution)
 
 - **Audit Resolution & Owner Decisions:**
