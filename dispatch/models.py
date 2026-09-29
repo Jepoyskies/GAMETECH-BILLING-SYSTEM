@@ -89,7 +89,30 @@ class DispatchRecord(models.Model):
     actions_taken = models.TextField(null=True, blank=True)
     
     sla_rebates_given = models.IntegerField(default=0, help_text="Number of 24h SLA rebate days automatically given")
-    
+
+    # Link to the MonitoringRecord that auto-created this dispatch (if applicable)
+    monitoring_record = models.OneToOneField('MonitoringRecord', on_delete=models.SET_NULL, null=True, blank=True, related_name='dispatch_record')
+
+    # Job detail fields (copied from MonitoringRecord's JobDetail on auto-dispatch)
+    schedule_date = models.DateField(null=True, blank=True)
+    schedule_time = models.CharField(max_length=100, null=True, blank=True)
+    barangay_city = models.CharField(max_length=100, null=True, blank=True)
+    account_no = models.CharField(max_length=100, null=True, blank=True)
+    job_order = models.CharField(max_length=100, null=True, blank=True)
+    email_address = models.EmailField(null=True, blank=True)
+    nap_port = models.CharField(max_length=100, null=True, blank=True)
+    cable_length = models.CharField(max_length=100, null=True, blank=True)
+    nap_reading = models.CharField(max_length=100, null=True, blank=True)
+    pole_number = models.CharField(max_length=100, null=True, blank=True)
+    plan_package = models.CharField(max_length=100, null=True, blank=True)
+    ont_modem_sn = models.CharField(max_length=100, null=True, blank=True)
+    signal_level = models.CharField(max_length=100, null=True, blank=True)
+    facility = models.CharField(max_length=100, null=True, blank=True)
+    house_reading = models.CharField(max_length=100, null=True, blank=True)
+    special_instruction = models.TextField(null=True, blank=True)
+    technician_remarks = models.TextField(null=True, blank=True)
+    acknowledged_by = models.CharField(max_length=100, null=True, blank=True)
+
     teams = models.ManyToManyField(Technician, related_name='dispatches')
     csr = models.ForeignKey(User, on_delete=models.RESTRICT, related_name='handled_dispatches')
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True, related_name='dispatches')

@@ -86,4 +86,11 @@ urlpatterns = [
     path('api/monitoring/<int:record_id>/dispatch/', views.api_monitoring_dispatch, name='api_monitoring_dispatch'),
     path('api/monitoring/<int:record_id>/undispatch/', views.api_monitoring_undispatch, name='api_monitoring_undispatch'),
     path('api/monitoring/<int:record_id>/done/', views.api_monitoring_done, name='api_monitoring_done'),
+
+    # Dispatch Log Export
+    path('export/dispatches/', views.export_dispatches_csv, name='dispatch_export_dispatches'),
+
+    # Backup & Restore
+    path('api/backup/create/', views.api_backup_create, name='api_backup_create'),
+    path('api/backup/restore/', views.api_backup_restore, name='api_backup_restore'),
 ]

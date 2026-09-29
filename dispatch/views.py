@@ -1766,13 +1766,100 @@ def api_monitoring_undispatch(request, record_id):
 @login_required
 @require_POST
 def api_monitoring_done(request, record_id):
-    """Mark a MonitoringRecord as Done + sync CRM if internet install."""
+    """Mark a MonitoringRecord as Done, auto-create DispatchRecord, and sync CRM if internet install."""
     record = get_object_or_404(MonitoringRecord, id=record_id)
     done_opt = ConfigOption.objects.filter(list_type='STATUS', module='MONITORING', label__icontains='Done').first()
     if done_opt:
         record.status_option = done_opt
     record.done_at = timezone.now()
     record.save()
+
+    # --- AUTO-DISPATCH: Create/update DispatchRecord from MonitoringRecord ---
+    dispatch_done_opt = ConfigOption.objects.filter(list_type='STATUS', module='DISPATCH', label__icontains='Done').first()
+    dispatch_type_opt = ConfigOption.objects.filter(list_type='TYPE', module='DISPATCH', label__icontains='Installation').first()
+    dispatch_chat_opt = ConfigOption.objects.filter(list_type='CHAT_TYPE', module='DISPATCH', label__icontains='Inquiry').first()
+
+    if record.type_option:
+        dispatch_type_opt = ConfigOption.objects.filter(
+            list_type='TYPE', module='DISPATCH', label__icontains=record.type_option.label
+        ).first() or dispatch_type_opt
+
+    if record.chat_type_option:
+        dispatch_chat_opt = ConfigOption.objects.filter(
+            list_type='CHAT_TYPE', module='DISPATCH', label__icontains=record.chat_type_option.label
+        ).first() or dispatch_chat_opt
+
+    duration = None
+    if record.time_start and record.time_accomplish:
+        duration = int((record.time_accomplish - record.time_start).total_seconds() / 60)
+    elif record.time_start and record.done_at:
+        duration = int((record.done_at - record.time_start).total_seconds() / 60)
+
+    team_ids = list(record.teams.values_list('id', flat=True))
+
+    # Build dispatch data including job detail fields
+    dispatch_defaults = {
+        'date': record.date,
+        'client_name': record.client_name,
+        'address': record.address,
+        'contact_number': record.contact_number,
+        'alternate_contact': record.alternate_contact,
+        'facebook_account': record.facebook_account,
+        'concern': record.concern,
+        'sales_agent': record.sales_agent,
+        'chat_type_option': dispatch_chat_opt,
+        'type_option': dispatch_type_opt,
+        'status_option': dispatch_done_opt,
+        'latitude': record.latitude,
+        'longitude': record.longitude,
+        'remarks': record.remarks,
+        'source_tab': record.tab_type,
+        'ticket_number': record.ticket_number,
+        'actions_taken': record.actions_taken,
+        'time_start': record.time_start,
+        'time_accomplish': record.time_accomplish,
+        'duration': duration,
+        'done_at': record.done_at,
+        'done_duration': duration,
+        'csr': record.csr,
+        'customer': record.customer,
+    }
+
+    # Copy job detail fields from monitoring record's JobDetail
+    job_detail = getattr(record, 'job_detail', None)
+    if job_detail:
+        dispatch_defaults.update({
+            'schedule_date': job_detail.schedule_date,
+            'schedule_time': job_detail.schedule_time,
+            'barangay_city': job_detail.barangay_city,
+            'account_no': job_detail.account_no,
+            'job_order': job_detail.job_order,
+            'email_address': job_detail.email_address,
+            'nap_port': job_detail.nap_port,
+            'cable_length': job_detail.cable_length,
+            'nap_reading': job_detail.nap_reading,
+            'pole_number': job_detail.pole_number,
+            'plan_package': job_detail.plan_package,
+            'ont_modem_sn': job_detail.ont_modem_sn,
+            'signal_level': job_detail.signal_level,
+            'facility': job_detail.facility,
+            'house_reading': job_detail.house_reading,
+            'special_instruction': job_detail.special_instruction,
+            'technician_remarks': job_detail.technician_remarks,
+            'acknowledged_by': job_detail.acknowledged_by,
+        })
+
+    dispatch_record, created = DispatchRecord.objects.update_or_create(
+        monitoring_record=record,
+        defaults=dispatch_defaults
+    )
+
+    if team_ids:
+        dispatch_record.teams.set(team_ids)
+
+    action = 'Created' if created else 'Updated'
+    log_audit('UPDATE', 'DispatchRecord', dispatch_record.id, request.user,
+              summary=f"{action} DispatchRecord from MonitoringRecord #{record.id} ({record.client_name})")
 
     if record.customer and record.tab_type == 'INTERNET_INSTALL':
         cust = record.customer
@@ -1781,4 +1868,166 @@ def api_monitoring_done(request, record_id):
         cust.save()
 
     log_audit('UPDATE', 'MonitoringRecord', record.id, request.user, summary=f"Marked Done: {record.client_name}")
-    return JsonResponse({'success': True})
+    return JsonResponse({'success': True, 'dispatch_record_id': dispatch_record.id})
+
+
+# ─── Dispatch Log Export (CSV) ───────────────────────────────────────────────────
+
+@login_required
+def export_dispatches_csv(request):
+    """Export DispatchRecord log to CSV matching legacy DMS export columns."""
+    qs = DispatchRecord.objects.select_related('status_option', 'type_option', 'chat_type_option', 'csr', 'customer').prefetch_related('teams')
+
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
+    status_filter = request.GET.get('status', 'ALL')
+    type_filter = request.GET.get('type', 'ALL')
+    source_tab_filter = request.GET.get('source_tab', 'ALL')
+    search_q = request.GET.get('q', '').strip()
+
+    if date_from:
+        qs = qs.filter(date__gte=date_from)
+    if date_to:
+        qs = qs.filter(date__lte=date_to)
+    if status_filter != 'ALL':
+        qs = qs.filter(status_option__label__icontains=status_filter)
+    if type_filter != 'ALL':
+        qs = qs.filter(type_option__label__icontains=type_filter)
+    if source_tab_filter != 'ALL':
+        qs = qs.filter(source_tab=source_tab_filter)
+    if search_q:
+        qs = qs.filter(
+            Q(client_name__icontains=search_q) |
+            Q(ticket_number__icontains=search_q) |
+            Q(address__icontains=search_q) |
+            Q(contact_number__icontains=search_q)
+        )
+
+    response = HttpResponse(content_type='text/csv')
+    timestamp_str = timezone.now().strftime('%Y%m%d_%H%M%S')
+    response['Content-Disposition'] = f'attachment; filename="dispatch_log_{timestamp_str}.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow([
+        'ID', 'Status', 'Date Created', 'Done At', 'Turnaround', 'Client', 'Concern',
+        'Type', 'Chat Type', 'Source', 'Time Start', 'Time Done', 'Duration',
+        'Team', 'CSR', 'Sales Agent', 'Address', 'Contact', 'Ticket Number', 'Remarks',
+        'Schedule Date', 'Schedule Time', 'Barangay/City', 'Account No.', 'Job Order',
+        'Email Address', 'NAP/Port', 'Cable Length Used', 'NAP Reading', 'Pole Number',
+        'Plan/Package', 'ONT/Modem SN', 'Signal Level', 'Facility', 'House Reading',
+        'Special Instruction', 'Technician Remarks', 'Acknowledged By',
+    ])
+
+    for d in qs.order_by('-date', '-created_at')[:5000]:
+        techs_str = ", ".join(t.name for t in d.teams.all())
+        created_str = d.date.strftime('%Y-%m-%d') if d.date else ''
+        done_str = d.done_at.strftime('%Y-%m-%d %H:%M') if d.done_at else ''
+        turnaround = ''
+        if d.done_at and d.date:
+            diff_minutes = int((d.done_at - d.date).total_seconds() / 60)
+            if diff_minutes >= 0:
+                hours = diff_minutes // 60
+                mins = diff_minutes % 60
+                turnaround = f"{hours}h {mins}m" if hours else f"{mins}m"
+        writer.writerow([
+            d.id,
+            d.status_option.label if d.status_option else '',
+            created_str,
+            done_str,
+            turnaround,
+            d.client_name,
+            d.concern or '',
+            d.type_option.label if d.type_option else '',
+            d.chat_type_option.label if d.chat_type_option else '',
+            d.source_tab,
+            d.time_start.strftime('%Y-%m-%d %H:%M') if d.time_start else '',
+            d.time_accomplish.strftime('%Y-%m-%d %H:%M') if d.time_accomplish else '',
+            f"{d.duration}m" if d.duration else '',
+            techs_str,
+            d.csr.get_full_name() if d.csr else '',
+            d.sales_agent.name if d.sales_agent else '',
+            d.address or '',
+            d.contact_number or '',
+            d.ticket_number or '',
+            d.remarks or '',
+            d.schedule_date.strftime('%Y-%m-%d') if d.schedule_date else '',
+            d.schedule_time or '',
+            d.barangay_city or '',
+            d.account_no or '',
+            d.job_order or '',
+            d.email_address or '',
+            d.nap_port or '',
+            d.cable_length or '',
+            d.nap_reading or '',
+            d.pole_number or '',
+            d.plan_package or '',
+            d.ont_modem_sn or '',
+            d.signal_level or '',
+            d.facility or '',
+            d.house_reading or '',
+            d.special_instruction or '',
+            d.technician_remarks or '',
+            d.acknowledged_by or '',
+        ])
+
+    return response
+
+
+# ─── Backup & Restore ───────────────────────────────────────────────────────────
+
+@login_required
+@require_POST
+def api_backup_create(request):
+    """Create a full database backup (JSON dump of all dispatch + billing data)."""
+    from django.core.management import call_command
+    import tempfile
+
+    if not (request.user.is_staff or request.user.is_superuser):
+        return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
+
+    timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+    filename = f"gametech_backup_{timestamp}.json"
+
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False, encoding='utf-8') as tmp:
+        call_command('dumpdata', 'dispatch', 'billing', 'network_manager', format='json', output=tmp.name)
+        tmp_path = tmp.name
+
+    with open(tmp_path, 'rb') as f:
+        response = HttpResponse(f.read(), content_type='application/json')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    import os
+    os.unlink(tmp_path)
+
+    log_audit('CREATE', 'Backup', 0, request.user, summary=f"Created full backup: {filename}")
+    return response
+
+
+@login_required
+@require_POST
+def api_backup_restore(request):
+    """Restore database from a JSON backup file."""
+    from django.core.management import call_command
+    import tempfile
+
+    if not (request.user.is_staff or request.user.is_superuser):
+        return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
+
+    backup_file = request.FILES.get('backup_file')
+    if not backup_file:
+        return JsonResponse({'success': False, 'error': 'No backup file uploaded.'}, status=400)
+
+    with tempfile.NamedTemporaryFile(mode='wb', suffix='.json', delete=False) as tmp:
+        for chunk in backup_file.chunks():
+            tmp.write(chunk)
+        tmp_path = tmp.name
+
+    try:
+        call_command('loaddata', tmp_path, format='json')
+        log_audit('UPDATE', 'Backup', 0, request.user, summary=f"Restored backup: {backup_file.name}")
+        return JsonResponse({'success': True, 'message': 'Backup restored successfully.'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Restore failed: {str(e)}'}, status=500)
+    finally:
+        import os
+        os.unlink(tmp_path)
