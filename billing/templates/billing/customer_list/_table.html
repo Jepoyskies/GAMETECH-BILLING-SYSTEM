@@ -1,11 +1,5 @@
 <!-- Base Partial: Customer Table -->
-<style>
-    #customerTable td, #customerTable th { padding-top: 4px !important; padding-bottom: 4px !important; }
-    #customerTable td { font-size: 13px; }
-    #customerTable th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
-    #customerTable td, #customerTable th { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-</style>
-<div class="gt-table-card animate-fade-in animate-delay-2" style="--section-accent: #3b82f6; overflow: hidden;">
+<div class="gt-table-card animate-fade-in animate-delay-2">
     <div class="table-responsive p-0">
     <table id="customerTable" class="table gt-table align-middle mb-0" style="width:100%; border-collapse: collapse; table-layout: fixed;">
         <colgroup>
@@ -47,23 +41,19 @@
                     {# col 2 – Full Name + mobile status dot #}
                     <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;">
                         {% if customer.is_paid_offline %}
-                            <span class="d-inline-block d-md-none me-1 rounded-circle align-middle"
-                                  style="width:9px;height:9px;background:#ef4444;box-shadow:0 0 6px rgba(239,68,68,0.7);"></span>
+                            <span class="gt-conn-dot gt-conn-dot--offline d-inline-block d-md-none me-1 align-middle"></span>
                         {% elif customer.installation_status == 'pending' or customer.status == 'pending' or customer.is_pending_install %}
-                            <span class="d-inline-block d-md-none me-1 rounded-circle align-middle"
-                                  style="width:9px;height:9px;background:#0dcaf0;box-shadow:0 0 6px rgba(13,202,240,0.7);"></span>
+                            <span class="gt-conn-dot d-inline-block d-md-none me-1 align-middle"
+                                  style="background: #0ea5e9; box-shadow: 0 0 6px rgba(14,165,233,0.7);"></span>
                         {% elif customer.status == 'active' %}
-                            <span class="d-inline-block d-md-none me-1 rounded-circle align-middle"
-                                  style="width:9px;height:9px;background:#22c55e;box-shadow:0 0 6px rgba(34,197,94,0.55);"></span>
+                            <span class="gt-conn-dot gt-conn-dot--online d-inline-block d-md-none me-1 align-middle"></span>
                         {% elif customer.status == 'suspended' or customer.status == 'expired' %}
-                            <span class="d-inline-block d-md-none me-1 rounded-circle align-middle"
-                                  style="width:9px;height:9px;background:#f59e0b;box-shadow:0 0 6px rgba(245,158,11,0.55);"></span>
+                            <span class="gt-conn-dot gt-conn-dot--warning d-inline-block d-md-none me-1 align-middle"></span>
                         {% elif customer.status == 'inactive' or customer.status == 'pull out' %}
-                            <span class="d-inline-block d-md-none me-1 rounded-circle align-middle"
-                                  style="width:9px;height:9px;background:#94a3b8;box-shadow:0 0 5px rgba(148,163,184,0.4);"></span>
+                            <span class="gt-conn-dot d-inline-block d-md-none me-1 align-middle"></span>
                         {% else %}
-                            <span class="d-inline-block d-md-none me-1 rounded-circle align-middle"
-                                  style="width:9px;height:9px;background:#64748b;box-shadow:0 0 5px rgba(100,116,139,0.4);"></span>
+                            <span class="gt-conn-dot d-inline-block d-md-none me-1 align-middle"
+                                  style="background: #64748b;"></span>
                         {% endif %}
                         <span class="fw-semibold text-title" title="{{ customer.full_name }}">{{ customer.full_name }}</span>
                         {% if customer.is_suspicious %}
@@ -92,7 +82,7 @@
                         {% if customer.agent %}
                             <span class="text-body-secondary" style="font-size: 12px;">{{ customer.agent.name }}</span>
                         {% else %}
-                            <span class="status-badge status-badge--neutral" style="font-size: 10px; padding: 1px 6px;">
+                            <span class="status-badge status-badge--neutral">
                                 <i class="fas fa-walking"></i>Walk-in
                             </span>
                         {% endif %}
@@ -119,7 +109,7 @@
                     </td>
 
                     {# col 9 – Unified Status Badges #}
-                    <td class="align-middle" style="padding-top: 4px; padding-bottom: 4px;">
+                    <td class="align-middle">
                         {% include "billing/customer_list/_customer_status.html" with customer=customer %}
                         {# Hidden telemetry data for JS #}
                         <span class="conn-status-indicator" style="display: none;"

@@ -3,153 +3,32 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
 
 <style>
-/* Page-level section accent override */
-:root {
-  --section-accent: #3b82f6;
-}
+/* The shared design system (static/css/gt/*) already themes DataTables.
+   Only page-specific layout rules belong here. */
 
-/* DataTables Controls & Search Styling */
-.dataTables_wrapper .dataTables_length,
-.dataTables_wrapper .dataTables_filter {
-  margin-bottom: var(--gt-sp-2);
-}
-
-.dataTables_wrapper .dataTables_filter input {
-  background: var(--gt-input-bg) !important;
-  border: 1px solid var(--gt-input-border) !important;
-  color: var(--gt-text-title) !important;
-  border-radius: var(--gt-radius-btn) !important;
-  padding: 0.3rem 0.75rem !important;
-  font-size: 12px !important;
-  outline: none;
-  min-width: 180px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.dataTables_wrapper .dataTables_filter input:focus {
-  border-color: var(--section-accent) !important;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--section-accent) 20%, transparent) !important;
-}
-
-.dataTables_wrapper .dataTables_length select {
-  background: var(--gt-input-bg) !important;
-  border: 1px solid var(--gt-input-border) !important;
-  color: var(--gt-text-title) !important;
-  border-radius: var(--gt-radius-btn) !important;
-  padding: 0.25rem 1.6rem 0.25rem 0.65rem !important;
-  font-size: 12px !important;
-}
-
-.dataTables_wrapper .dataTables_info {
-  font-size: 11px;
-  color: var(--gt-text-muted);
-  padding: 0.6rem 1rem !important;
-}
-
-.dataTables_wrapper .dataTables_paginate {
-  padding: 0.5rem 1rem !important;
-}
-
-.dataTables_wrapper .pagination .page-link {
-  background: var(--gt-surface-card);
-  border: var(--gt-border-card);
-  color: var(--gt-text-muted);
-  border-radius: 6px !important;
-  margin: 0 1px;
-  font-size: 11px;
-  padding: 0.25rem 0.6rem;
-}
-
-.dataTables_wrapper .pagination .page-item.active .page-link {
-  background: var(--color-primary) !important;
-  border-color: var(--color-primary) !important;
-  color: #ffffff !important;
-}
-
-.dataTables_wrapper .pagination .page-link:hover {
-  background: var(--gt-surface-hover) !important;
-  color: var(--gt-text-title) !important;
-  border-color: color-mix(in srgb, var(--section-accent) 40%, transparent) !important;
-}
-
-/* Compact table styles */
-.gt-table-card {
-  overflow: hidden;
-}
-
-.gt-table-card .table-responsive {
-  overflow-x: auto;
-  overflow-y: hidden;
-  max-height: none;
-}
-
-#customerTable {
-  min-width: 0 !important;
-}
-
+/* Ellipsis on long cells without collapsing row height */
 #customerTable td {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
 #customerTable td:last-child {
   white-space: nowrap;
   overflow: visible;
 }
-
-/* Row State Visual Highlights */
-.table-row-paid-offline {
-  background: rgba(239, 68, 68, 0.05) !important;
+.gt-table-card .table-responsive {
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
-.table-row-pending-install {
-  background: rgba(14, 165, 233, 0.04) !important;
-}
+/* Row State Visual Highlights (triage semantics — see AGENTS.md rule 35) */
+.table-row-paid-offline  { background: var(--badge-danger-bg) !important; }
+.table-row-pending-install{ background: var(--badge-info-bg) !important; }
+.table-row-suspended      { background: var(--badge-warning-bg) !important; }
+.table-row-expired        { background: var(--badge-danger-bg) !important; }
+.table-row-inactive       { opacity: 0.7; }
 
-.table-row-suspended {
-  background: rgba(245, 158, 11, 0.04) !important;
-}
-
-.table-row-expired {
-  background: rgba(239, 68, 68, 0.04) !important;
-}
-
-.table-row-inactive {
-  opacity: 0.75;
-}
-
-/* Select filter custom styles */
-.gt-select-filter {
-  transition: border-color 0.2s ease;
-}
-
-.gt-select-filter:focus {
-  border-color: var(--section-accent) !important;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--section-accent) 20%, transparent) !important;
-}
-
-/* Connection status indicator dot styles */
-.conn-status-indicator {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-left: 2px;
-  vertical-align: middle;
-  background-color: #64748b;
-  transition: all 0.3s ease;
-}
-.conn-status-indicator.conn-online {
-  background-color: #10b981;
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
-}
-.conn-status-indicator.conn-offline {
-  background-color: #ef4444;
-  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
-}
-.conn-status-indicator.conn-warning {
-  background-color: #f59e0b;
-  box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
-}
+/* Connection status indicator: hidden telemetry anchor for the poller
+   (JS reads its data-* attributes — must stay in the DOM). */
+.conn-status-indicator { display: none !important; }
 </style>

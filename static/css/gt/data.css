@@ -1,0 +1,310 @@
+/* ============================================================
+   GAMETECH — DATA LAYER
+   Tables, pagination, DataTables, Select2/TomSelect, SweetAlert2.
+   Row height and type scale match the Dashboard's glass-table.
+   Depends on: gt/tokens.css
+   ============================================================ */
+
+/* ── Card + toolbar shells ──────────────────────────────── */
+.table-card,
+.gt-table-card {
+  background: var(--surface-card-gradient) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: var(--gt-border-card) !important;
+  border-radius: var(--gt-radius-card);
+  box-shadow: var(--gt-shadow-card);
+  overflow: hidden;
+  margin-bottom: var(--gt-sp-5);
+}
+
+.table-toolbar,
+.gt-table-toolbar {
+  padding: 1.1rem 1.5rem;
+  border-bottom: var(--gt-border-divider);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--gt-sp-3);
+}
+.gt-table-toolbar-left  { display: flex; align-items: center; gap: var(--gt-sp-3); flex-grow: 1; flex-wrap: wrap; }
+.gt-table-toolbar-right { display: flex; align-items: center; gap: var(--gt-sp-3); flex-wrap: wrap; }
+.gt-table-toolbar-title {
+  font-size: var(--gt-fs-md);
+  font-weight: 700;
+  color: var(--gt-text-title);
+  letter-spacing: var(--gt-ls-tight);
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+.gt-table-toolbar-title i { color: var(--section-accent-text); }
+
+.gt-card-footer-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--gt-sp-3);
+  padding: 1rem 1.5rem;
+  border-top: var(--gt-border-divider);
+  background: var(--surface-card);
+}
+
+/* ── Table ──────────────────────────────────────────────── */
+.gt-table,
+.table-premium,
+.glass-table {
+  width: 100%;
+  margin-bottom: 0;
+  border-collapse: collapse;
+  color: var(--gt-text-body) !important;
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--gt-text-body);
+}
+
+.gt-table thead th,
+.table-premium thead th,
+.glass-table th,
+.table thead th,
+table.dataTable thead th {
+  padding: 0.9rem 1.1rem;
+  font-size: var(--gt-fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--gt-ls-label);
+  color: var(--gt-text-muted) !important;
+  background: var(--surface-subtle) !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.gt-table thead th:first-child, .gt-table tbody td:first-child,
+.table-premium thead th:first-child, .table-premium tbody td:first-child,
+.glass-table th:first-child, .glass-table td:first-child { padding-left: 1.5rem !important; }
+.gt-table thead th:last-child, .gt-table tbody td:last-child,
+.table-premium thead th:last-child, .table-premium tbody td:last-child,
+.glass-table th:last-child, .glass-table td:last-child { padding-right: 1.5rem !important; }
+
+.gt-table tbody td,
+.table-premium tbody td,
+.glass-table td,
+.table tbody td,
+table.dataTable tbody td {
+  padding: 1rem 1.1rem;
+  font-size: var(--gt-fs-base);
+  color: var(--gt-text-body) !important;
+  background: transparent !important;
+  border-bottom: 1px solid var(--border-divider) !important;
+  vertical-align: middle;
+}
+.gt-table tbody tr,
+.table-premium tbody tr { background: transparent !important; transition: background-color 0.15s ease; }
+.gt-table tbody tr:hover td,
+.table-premium tbody tr:hover td,
+.glass-table tr:hover td,
+.table tbody tr:hover td,
+table.dataTable tbody tr:hover td {
+  background-color: var(--surface-hover) !important;
+}
+html.dark-mode .gt-table tbody tr:hover td,
+body.dark-mode .gt-table tbody tr:hover td { background-color: rgba(255, 255, 255, 0.05) !important; }
+
+/* Zebra (opt-in) */
+.gt-table--zebra tbody tr:nth-child(even) td { background: var(--surface-subtle) !important; }
+
+/* Sticky header */
+.gt-table--sticky thead th,
+.table-responsive--sticky thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--surface-subtle) !important;
+}
+
+/* Links inside tables */
+.gt-table a:not(.btn):not(.gt-btn-primary):not(.gt-btn-secondary):not(.gt-filter-pill):not(.gt-icon-btn):not(.icon-btn),
+.table-premium a:not(.btn) { color: var(--gt-text-title) !important; text-decoration: none !important; }
+.gt-table a:not(.btn):not(.gt-btn-primary):not(.gt-btn-secondary):not(.gt-filter-pill):not(.gt-icon-btn):not(.icon-btn):hover { color: var(--section-accent-text) !important; }
+
+/* Global link hover → brand gold (was cyan in dark mode) */
+html.dark-mode a:hover,
+body.dark-mode a:hover,
+html:not(.dark-mode) a:hover { color: var(--section-accent-text); }
+
+/* ── DataTables controls ────────────────────────────────── */
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter { margin-bottom: var(--gt-sp-2); }
+.dataTables_wrapper .dataTables_length select,
+.dataTables_wrapper .dataTables_filter input {
+  background-color: var(--gt-input-bg) !important;
+  border: 1px solid var(--gt-input-border) !important;
+  color: var(--gt-text-title) !important;
+  border-radius: var(--gt-radius-btn) !important;
+  min-height: 40px;
+  padding: 0.4rem 0.85rem !important;
+  font-size: var(--gt-fs-sm) !important;
+  outline: none;
+}
+.dataTables_wrapper .dataTables_length select { min-width: 130px; }
+.dataTables_wrapper .dataTables_filter input { min-width: 200px; }
+.dataTables_wrapper .dataTables_filter input::placeholder { color: var(--input-placeholder) !important; }
+/* Reserve room for the leading search glyph so the placeholder
+   never renders underneath the icon. */
+.dataTables_wrapper .dataTables_filter input {
+  padding-left: 2.35rem !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 0.8rem center;
+  background-size: 14px 14px;
+}
+.dataTables_wrapper .dataTables_filter input:focus,
+.dataTables_wrapper .dataTables_length select:focus {
+  border-color: var(--gt-gold) !important;
+  box-shadow: 0 0 0 3px var(--gt-gold-soft) !important;
+}
+.dataTables_wrapper .dataTables_info {
+  color: var(--gt-text-muted) !important;
+  font-size: var(--gt-fs-sm) !important;
+  padding: 0.75rem 1rem !important;
+}
+.dataTables_wrapper .dataTables_paginate { padding: 0.5rem 1rem !important; }
+
+/* Sort arrows */
+table.dataTable thead > tr > th.sorting::before,
+table.dataTable thead > tr > th.sorting::after,
+table.dataTable thead > tr > th.sorting_asc::before,
+table.dataTable thead > tr > th.sorting_desc::after { color: var(--gt-text-subtle) !important; opacity: 0.5 !important; }
+table.dataTable thead > tr > th.sorting_asc::before,
+table.dataTable thead > tr > th.sorting_desc::after { color: var(--gt-gold) !important; opacity: 1 !important; }
+
+/* Responsive expand chevron must stay visible in dark mode */
+html.dark-mode table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control::before,
+body.dark-mode table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control::before {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23cbd5e1' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+  filter: none !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+}
+
+/* ── Pagination ─────────────────────────────────────────── */
+.pagination .page-link,
+.dataTables_wrapper .pagination .page-link {
+  background-color: var(--surface-card) !important;
+  border: 1px solid var(--border-subtle) !important;
+  color: var(--gt-text-secondary) !important;
+  border-radius: var(--gt-radius-sm) !important;
+  font-size: var(--gt-fs-sm) !important;
+  margin: 0 2px;
+  padding: 0.4rem 0.7rem;
+  box-shadow: none !important;
+}
+.pagination .page-link:hover,
+.dataTables_wrapper .pagination .page-link:hover {
+  background-color: var(--surface-hover) !important;
+  color: var(--section-accent-text) !important;
+  border-color: var(--gt-gold-border) !important;
+}
+.pagination .page-item.active .page-link,
+.dataTables_wrapper .pagination .page-item.active .page-link {
+  background: var(--gt-gold-gradient) !important;
+  border-color: var(--gt-gold-border) !important;
+  color: var(--color-primary-ink) !important;
+  font-weight: 700;
+}
+.pagination .page-item.disabled .page-link,
+.dataTables_wrapper .pagination .page-item.disabled .page-link {
+  opacity: 0.45;
+  background-color: var(--surface-subtle) !important;
+  color: var(--gt-text-subtle) !important;
+}
+
+/* ── Select2 ────────────────────────────────────────────── */
+.select2-container--bootstrap-5 .select2-selection {
+  background-color: var(--gt-input-bg) !important;
+  border: 1px solid var(--gt-input-border) !important;
+  color: var(--gt-text-title) !important;
+  border-radius: var(--gt-radius-btn) !important;
+  min-height: 40px !important;
+}
+.select2-container--bootstrap-5 .select2-selection--focus { border-color: var(--gt-gold) !important; box-shadow: 0 0 0 3px var(--gt-gold-soft) !important; }
+.select2-container--bootstrap-5 .select2-dropdown {
+  background-color: var(--surface-card) !important;
+  border: 1px solid var(--border-subtle) !important;
+  color: var(--gt-text-title) !important;
+  border-radius: var(--gt-radius-btn) !important;
+  box-shadow: var(--shadow-raised) !important;
+}
+.select2-container--bootstrap-5 .select2-results__option { color: var(--gt-text-title) !important; }
+.select2-container--bootstrap-5 .select2-results__option--highlighted,
+.select2-container--bootstrap-5 .select2-results__option--active {
+  background-color: var(--surface-hover) !important;
+  color: var(--section-accent-text) !important;
+}
+.select2-container--bootstrap-5 .select2-selection__rendered,
+.select2-container--bootstrap-5 .select2-selection__clear { color: var(--gt-text-title) !important; }
+
+/* ── TomSelect ──────────────────────────────────────────── */
+.ts-control, .ts-wrapper .ts-control {
+  background-color: var(--gt-input-bg) !important;
+  border: 1px solid var(--gt-input-border) !important;
+  color: var(--gt-text-title) !important;
+  border-radius: var(--gt-radius-btn) !important;
+  box-shadow: none !important;
+  min-height: 40px;
+}
+.ts-wrapper.focus .ts-control { border-color: var(--gt-gold) !important; box-shadow: 0 0 0 3px var(--gt-gold-soft) !important; }
+.ts-control .item, .ts-control > input { color: var(--gt-text-title) !important; }
+.ts-dropdown {
+  background-color: var(--surface-card) !important;
+  border: 1px solid var(--border-subtle) !important;
+  color: var(--gt-text-title) !important;
+  border-radius: var(--gt-radius-btn) !important;
+  box-shadow: var(--shadow-raised) !important;
+}
+.ts-dropdown .option { color: var(--gt-text-title) !important; background-color: transparent !important; }
+.ts-dropdown .option:hover, .ts-dropdown .active { background-color: var(--surface-hover) !important; color: var(--section-accent-text) !important; }
+.ts-dropdown .optgroup-header { background-color: var(--surface-subtle) !important; color: var(--section-accent-text) !important; font-weight: 600 !important; }
+.ts-wrapper.plan-form-control { padding: 0; border: none; background: transparent; height: auto; }
+
+/* ── SweetAlert2 ────────────────────────────────────────── */
+.swal2-popup {
+  background: var(--surface-card) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: var(--gt-radius-card) !important;
+  font-family: var(--font-body);
+}
+.swal2-title { color: var(--text-primary) !important; font-weight: 700; }
+.swal2-html-container { color: var(--text-secondary) !important; }
+.swal2-close { color: var(--gt-text-muted) !important; }
+.swal2-confirm {
+  background: var(--gt-gold-gradient) !important;
+  color: var(--color-primary-ink) !important;
+  border-radius: var(--gt-radius-btn) !important;
+  border: 1px solid var(--gt-gold-border) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 10px -1px var(--gt-gold-glow) !important;
+}
+.swal2-cancel {
+  background: var(--surface-subtle) !important;
+  color: var(--gt-text-title) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: var(--gt-radius-btn) !important;
+}
+.swal2-icon.swal2-warning { border-color: #f59e0b !important; color: #f59e0b !important; }
+.swal2-icon.swal2-error { border-color: #ef4444 !important; color: #ef4444 !important; }
+.swal2-icon.swal2-success { border-color: #10b981 !important; color: #10b981 !important; }
+
+/* ── Leaflet map (network/dispatch pages) ───────────────── */
+html.dark-mode .leaflet-container,
+body.dark-mode .leaflet-container { background: #0f1428; }
+html.dark-mode .leaflet-tile,
+body.dark-mode .leaflet-tile { filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9); }
+html.dark-mode .leaflet-popup-content-wrapper,
+body.dark-mode .leaflet-popup-content-wrapper { background: var(--surface-card); color: var(--text-primary); }
+html.dark-mode .leaflet-control-zoom a,
+body.dark-mode .leaflet-control-zoom a { background: var(--surface-card); color: var(--text-primary); border-color: var(--border-subtle); }
+html.dark-mode .leaflet-control-zoom a:hover,
+body.dark-mode .leaflet-control-zoom a:hover { background: var(--surface-hover); color: var(--gt-gold-text); }
