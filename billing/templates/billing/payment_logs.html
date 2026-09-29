@@ -125,7 +125,7 @@
                         <th>Plan</th>
                         <th>New Expiry</th>
                         <th>Adjusted By</th>
-                        {% if request.user.role == 'Admin' %}<th>Actions</th>{% endif %}
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -181,9 +181,12 @@
                                 <span class="pill pill-pending"><i class="fas fa-user-shield"></i> {{ p.adjusted_by }}</span>
                             {% endif %}
                         </td>
-                        {% if request.user.role == 'Admin' %}
                         <td>
                             <div class="d-flex gap-1">
+                                <a href="{% url 'dispatch_receipt' p.id %}" target="_blank" rel="noopener" class="btn-premium btn-p-ghost" style="padding:6px 10px; font-size:0.8rem;" title="Print Official Receipt">
+                                    <i class="fas fa-receipt"></i>
+                                </a>
+                                {% if request.user.role == 'Admin' %}
                                 <a href="{% url 'edit_payment_log' p.id %}" class="btn-premium btn-p-ghost" style="padding:6px 10px; font-size:0.8rem;" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
@@ -191,9 +194,9 @@
                                         data-bs-toggle="modal" data-bs-target="#transferModal{{ p.id }}">
                                     <i class="fas fa-exchange-alt"></i>
                                 </button>
+                                {% endif %}
                             </div>
                         </td>
-                        {% endif %}
                     </tr>
                     {% empty %}
                     <tr>
