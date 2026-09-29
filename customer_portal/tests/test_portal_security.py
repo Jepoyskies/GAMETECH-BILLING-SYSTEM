@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from django.core.cache import cache
 from datetime import timedelta
-from billing.models import Customer, SubscriptionPlan, Barangay, SystemLog, SmsLog
+from billing.models import Customer, SubscriptionPlan, Barangay, SystemLog, SmsLog, SystemAdmin
 from billing.security import clear_login_failures
 
 
@@ -44,6 +44,13 @@ class CustomerPortalSecurityTestCase(TestCase):
             username="staff_admin",
             password="Compliant#Staff123",
             is_staff=True,
+        )
+        # User.role is resolved from SystemAdmin; without this record the user
+        # falls back to "Viewer" and role_required() 302s, which would make the
+        # reset/resend test pass a redirect instead of exercising the page.
+        SystemAdmin.objects.get_or_create(
+            username=self.staff_user.username,
+            defaults={"full_name": "Staff Admin", "role": "Admin", "status": "Active"},
         )
 
     def tearDown(self):
