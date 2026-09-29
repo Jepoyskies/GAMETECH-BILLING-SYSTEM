@@ -20,7 +20,7 @@
 * **How to Run Tests**:
   * **Run Tests on Production Droplet Container** (isolated test DB):
     ```bash
-    ssh root@143.198.207.144 "docker exec gametech-billing-system-web-1 python manage.py test <app_or_test_path> --keepdb"
+    ssh root@143.198.207.144 "docker exec gametech-web python manage.py test <app_or_test_path> --keepdb"
     ```
   * **Local AST Python Syntax Validation** (Zero dependencies on Windows host):
     ```powershell
@@ -48,7 +48,7 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
 2. **LOG-FIRST DEBUGGING (Never Guess by Reading Code)**:
    * When diagnosing an error (500, crash, freeze, or broken button):
      * **DO NOT** guess by reading multiple files across the repository.
-     * **DO** inspect the exact error traceback first via `docker logs --tail 30 gametech-billing-system_web_1` or browser console error.
+     * **DO** inspect the exact error traceback first via `docker logs --tail 30 gametech-web` or browser console error.
      * The traceback pinpoints the EXACT file and line number in 1 step — eliminating 95% of exploratory token waste.
 
 3. **STRICT 50–80 LINE READING LIMIT (Never Read Full Files)**:
@@ -90,7 +90,7 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
      2. Commit with conventional commit message (`feat(...)`, `fix(...)`).
      3. Push to `origin main`.
      4. Pull on production droplet: `ssh root@143.198.207.144 "cd /root/GAMETECH-BILLING-SYSTEM && git pull origin main"`.
-     5. If Python code, templates, or settings were modified, restart the Gunicorn container: `ssh root@143.198.207.144 "docker restart gametech-billing-system_web_1"`.
+     5. If Python code, templates, or settings were modified, restart the Gunicorn container: `ssh root@143.198.207.144 "docker restart gametech-web"`.
 
 10. **CONTINUOUS RUNBOOK ENRICHMENT**:
     * Whenever an AI solves a novel bug or architecture quirk not yet documented, it **MUST** append a new `ERR-XXX` entry to `gametech_error_runbook.md` before finishing the task.
@@ -103,7 +103,7 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
 12. **DOCKER-FIRST ERROR CAPTURE (Hard-Mandated for ALL 500 Errors)**:
     * For **ANY** Server Error (500), the AI **MUST** run this command first, before opening any code:
       ```
-      ssh root@143.198.207.144 "docker logs --tail 50 gametech-billing-system_web_1 2>&1 | tail -30"
+      ssh root@143.198.207.144 "docker logs --tail 50 gametech-web 2>&1 | tail -30"
       ```
     * The traceback gives the exact file and line number. Only after reading the traceback may the AI open the pinpointed file.
     * **FORBIDDEN**: Guessing the cause by reading view/model files before checking logs.
@@ -117,7 +117,7 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
     * If a feature uses Redis cache (e.g. active sessions, telemetry, online status) and data is not appearing:
       * **FIRST** verify Redis has the expected keys:
         ```
-        ssh root@143.198.207.144 "docker exec gametech-billing-system_redis_1 redis-cli KEYS 'pattern*'"
+        ssh root@143.198.207.144 "docker exec gametech-redis redis-cli KEYS 'pattern*'"
         ```
       * **DO NOT** rewrite Python view/signal logic until you confirm whether the cache key exists, is empty, or is missing.
 
@@ -129,7 +129,7 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
 16. **STATIC FILE COLLECTSTATIC GUARD (CSS/JS Production Sync)**:
     * After modifying ANY file inside `static/` (CSS, JS, images), the deployment step **MUST** include:
       ```
-      ssh root@143.198.207.144 "docker exec gametech-billing-system_web_1 python manage.py collectstatic --noinput"
+      ssh root@143.198.207.144 "docker exec gametech-web python manage.py collectstatic --noinput"
       ```
     * **FORBIDDEN**: Pushing static file changes without running `collectstatic`. Changes will appear locally but be invisible in production.
 
@@ -149,7 +149,7 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
 19. **TIME-BOUNDED CONTAINER LOGS (Read Fresh, Not Stale)**:
     * When checking production logs for a 500 error, prefer `--since` over `--tail` to avoid stale noise from hours ago:
       ```
-      ssh root@143.198.207.144 "docker logs --since 2m gametech-billing-system_web_1 2>&1 | tail -40"
+      ssh root@143.198.207.144 "docker logs --since 2m gametech-web 2>&1 | tail -40"
       ```
     * Use `--tail 50` only when the error timing is unknown. Use `--since 2m` when you just reproduced the error.
 
@@ -229,7 +229,7 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
       ```
     * For full Django system/migration checks, execute them directly inside the droplet container via SSH:
       ```bash
-      ssh root@143.198.207.144 "docker exec gametech-billing-system_web_1 python manage.py check"
+      ssh root@143.198.207.144 "docker exec gametech-web python manage.py check"
       ```
 
 28. **CANONICAL MODEL & TABLE NOMENCLATURE MATRIX**:
@@ -245,7 +245,7 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
     * **CRITICAL CONTEXT**: When executing multi-statement Python verification code remotely on the droplet container via SSH from a Windows PowerShell host, inline `python -c "import ...; ..."` fails because PowerShell intercepts semicolons, quotes, and parentheses.
     * **MANDATORY**: ALWAYS pipe the Python script directly into `manage.py shell` via stdin:
       ```powershell
-      "<python_script_string>" | ssh root@143.198.207.144 "docker exec -i gametech-billing-system_web_1 python manage.py shell"
+      "<python_script_string>" | ssh root@143.198.207.144 "docker exec -i gametech-web python manage.py shell"
       ```
     * Guarantees 100% clean remote execution without quote or parenthesis escaping errors.
     * **Rule 29b (Headless RequestFactory Auth Guard & HTML Response Protocol)**:
@@ -266,7 +266,7 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
         html = resp.content.decode('utf-8')
         print("STATUS:", resp.status_code)
         print("ASSERTION:", "Expected String" in html)
-        '@ | ssh root@143.198.207.144 "docker exec -i gametech-billing-system_web_1 python manage.py shell"
+        '@ | ssh root@143.198.207.144 "docker exec -i gametech-web python manage.py shell"
         ```
 
 30. **THE REUSABLE MODAL & PARTIAL VARIABLE GUARD LAW (Zero Orphan Variable Crashes)**:
@@ -285,7 +285,7 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
 
 32. **THE CONTAINER PORT & COMPOSE HEALING PROTOCOL**:
     * **ROUTINE DEPLOYS VS. COMPOSE HEALING**:
-      * For routine code/template updates, **STRICTLY** use `docker restart gametech-billing-system_web_1`. It is fast, clean, and avoids invoking Docker Compose.
+      * For routine code/template updates, **STRICTLY** use `docker restart gametech-web`. It is fast, clean, and avoids invoking Docker Compose.
       * **ONLY** invoke Docker Compose if container ports drop or Nginx returns `502 Bad Gateway` (e.g. `docker ps` lacks `0.0.0.0:8000->8000`).
     * **DOCKER COMPOSE V2 SYNTAX STANDARD (No Hyphens)**:
       * When Compose healing is required, **ALWAYS** use modern Compose V2 syntax: `docker compose up -d` (with a space).
@@ -299,7 +299,7 @@ All AI assistants (Antigravity, Gemini, Aider, Cursor, Continue) operating in th
 32v2. **THE ROUTINE DEPLOYMENT RESTART STANDARD (Fast & Safe)**:
     * **STANDARD ROUTINE COMMAND**:
       ```bash
-      ssh root@143.198.207.144 "docker restart gametech-billing-system_web_1"
+      ssh root@143.198.207.144 "docker restart gametech-web"
       ```
     * Never chain `docker compose up` to routine restarts unless port drops have been verified.
 
