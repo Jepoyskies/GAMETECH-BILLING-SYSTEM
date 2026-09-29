@@ -632,6 +632,25 @@ All tests passing across small batches:
   - Reads import report JSON and passes zero-date customers to template.
 - **No import has been run. Tool is ready for when the fresh dump arrives.**
 
+## Dispatch System — Missing Features Implemented
+
+- **Auto-dispatch on monitoring done (`dispatch/views.py`):**
+  - `api_monitoring_done` now auto-creates/updates a `DispatchRecord` when a `MonitoringRecord` is marked done.
+  - Copies all fields: client, address, contact, concern, teams, timestamps, duration, job details.
+  - Maps monitoring status/type/chat_type to dispatch config options.
+  - Syncs CRM customer to installed/active for internet installs.
+- **Dispatch log export (`dispatch/views.py`):**
+  - `export_dispatches_csv` — exports `DispatchRecord` log to CSV with all legacy DMS columns.
+  - Filterable by date, status, type, source_tab, and search query.
+- **Backup & restore (`dispatch/views.py`):**
+  - `api_backup_create` — full JSON dump of dispatch, billing, and network_manager apps.
+  - `api_backup_restore` — restores from uploaded JSON backup file.
+- **Model changes (`dispatch/models.py`):**
+  - Added `monitoring_record` OneToOneField to `DispatchRecord`.
+  - Added 18 job detail fields to `DispatchRecord` (schedule, NAP, cable, signal, etc.).
+- **Migration:** `0006_dispatchrecord_monitoring_link_and_job_detail.py`
+- **URLs added:** `export/dispatches/`, `api/backup/create/`, `api/backup/restore/`
+
 ## Redesigned Pages Regression Restorations (Audit Resolution)
 
 - **Audit Resolution & Owner Decisions:**
