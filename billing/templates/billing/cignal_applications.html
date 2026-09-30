@@ -4,7 +4,11 @@
 {% block title %}Cignal Play Applications | Gametech{% endblock %}
 
 {% block extra_css %}
-{% include "billing/cignal_dashboard/_styles.html" %}
+<style>
+  :root {
+    --section-accent: #ef4444;
+  }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -12,121 +16,119 @@
 <div class="container-fluid py-4 px-3 px-md-4">
 
   <!-- Page Header -->
-  <div class="cignal-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 animate-fade-in">
+  <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
     <div class="d-flex align-items-center gap-3">
-      <div class="cignal-header-icon"><i class="fas fa-file-signature"></i></div>
+      <div class="gt-header-icon">
+        <i class="fas fa-file-signature"></i>
+      </div>
       <div>
-        <div class="d-flex align-items-center gap-2 mb-1">
-          <span class="badge rounded-pill px-3 py-1 fw-semibold" style="background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase;">
-            <i class="fas fa-satellite-dish me-1"></i> Cignal Play
-          </span>
+        <div class="gt-header-eyebrow mb-1">
+          <i class="fas fa-satellite-dish me-1"></i> Cignal Play
         </div>
-        <h1 class="cignal-header-title mb-0">Pending Applications</h1>
-        <p class="cignal-header-sub mb-0">Portal applications awaiting external loading &amp; enrollment verification</p>
+        <h1 class="gt-header-title">Pending Applications</h1>
+        <p class="gt-header-sub">Portal applications awaiting external loading &amp; enrollment verification</p>
       </div>
     </div>
     <div class="d-flex align-items-center gap-2">
-      <a href="{% url 'cignal_dashboard' %}" class="btn-cignal-glass">
-        <i class="fas fa-arrow-left"></i> Dashboard
+      <a href="{% url 'cignal_dashboard' %}" class="btn btn-outline-secondary btn-sm fw-bold">
+        <i class="fas fa-arrow-left me-1"></i> Dashboard
       </a>
-      <span class="cignal-live-badge" style="background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.25); color: #fbbf24;">
-        <span class="cignal-live-dot" style="background: #fbbf24;"></span>
+      <span class="badge bg-warning bg-opacity-20 text-warning border border-warning rounded-pill px-3 py-1 fw-bold" style="font-size: 0.8rem;">
+        <span class="me-1" style="width:8px; height:8px; border-radius:50%; background:#f59e0b; display:inline-block;"></span>
         <span id="cignalAppHeaderCount">{{ pending_applications_count }}</span> Pending
       </span>
     </div>
   </div>
 
-  <div class="row g-3 animate-fade-in animate-delay-1">
-    <div class="col-12">
-      <!-- Full-Width Applications Table Card -->
-      <div class="cignal-glass-card mb-4">
-        <div class="cignal-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-          <div class="d-flex align-items-center gap-2">
-            <h6 class="mb-0"><i class="fas fa-file-signature header-icon-danger"></i> Pending Applications Queue</h6>
-            <span class="cignal-badge-pending"><span id="cignalAppCardCount">{{ pending_applications_count }}</span> Pending</span>
-          </div>
-          <small class="text-muted" style="font-size:0.75rem;"><i class="fas fa-info-circle me-1"></i>Portal applications awaiting external loading &amp; enrollment verification</small>
-        </div>
-        <div class="table-responsive">
-          <table class="cignal-table">
-            <thead>
-              <tr>
-                <th>Customer</th>
-                <th>Contact Number</th>
-                <th>Add-on Requested</th>
-                <th>Requested At</th>
-                <th class="text-end">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for app in applications %}
-              <tr id="cignal-app-row-{{ app.id }}">
-                <td>
-                  <a href="{% url 'view_customer' app.customer.id %}" class="fw-bold text-decoration-none text-info d-block">
-                    {{ app.customer.full_name|default:app.customer.pppoe_username }}
-                  </a>
-                  {% if app.customer.pppoe_username %}
-                  <small class="text-muted font-monospace" style="font-size:0.75rem;">
-                    <i class="fas fa-user-circle me-1"></i>{{ app.customer.pppoe_username }}
-                  </small>
-                  {% endif %}
-                </td>
-                <td>
-                  {% if app.customer.contact_number or app.customer.phone %}
-                  <a href="tel:{{ app.customer.contact_number|default:app.customer.phone }}" class="text-decoration-none text-light small font-monospace">
-                    <i class="fas fa-phone-alt text-success me-1"></i>{{ app.customer.contact_number|default:app.customer.phone }}
-                  </a>
-                  {% else %}
-                  <small class="text-muted">N/A</small>
-                  {% endif %}
-                </td>
-                <td>
-                  <span class="badge bg-info bg-opacity-10 text-info border border-info rounded-pill px-2.5 py-1" style="font-size:0.78rem;">
-                    <i class="fas fa-play me-1"></i>{{ app.addon_type }}
-                  </span>
-                </td>
-                <td>
-                  <small class="text-muted">{{ app.requested_at|date:"M d, Y — g:i A" }}</small>
-                </td>
-                <td class="text-end">
-                  <div class="d-flex justify-content-end align-items-center gap-1.5">
-                    <button type="button"
-                      class="btn btn-sm btn-warning fw-bold rounded-pill px-3 py-1 shadow-sm gt-btn"
-                      data-bs-toggle="modal"
-                      data-bs-target="#cignalAppModal_{{ app.id }}"
-                      title="Record external Cignal enrollment details for {{ app.customer.full_name }}">
-                      <i class="fas fa-clipboard-check me-1"></i> Record Enrollment
-                    </button>
-                    <a href="{% url 'view_customer' app.customer.id %}" class="btn-cignal-icon gt-btn" title="View Customer Profile">
-                      <i class="fas fa-user"></i>
-                    </a>
-                    <button type="button"
-                      class="btn btn-sm btn-outline-danger rounded-circle p-0 d-flex align-items-center justify-content-center gt-btn"
-                      style="width: 32px; height: 32px; font-size: 0.78rem;"
-                      title="Cancel / Delete Application Request"
-                      onclick="confirmCancelCignalApp('{{ app.id }}', '{{ app.customer.full_name|escapejs }}', '{{ app.addon_type|escapejs }}')">
-                      <i class="fas fa-trash-alt"></i>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="5">
-                  <div class="d-flex flex-column align-items-center justify-content-center py-5 text-center cignal-empty-state">
-                    <div class="mb-3 p-3 rounded-circle" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
-                        <i class="fas fa-check-circle fa-2x"></i>
-                    </div>
-                    <h6 class="text-white fw-bold mb-1">All Applications Cleared</h6>
-                    <p class="text-muted small mb-0">There are currently no pending Cignal Play or TV Box requests.</p>
-                  </div>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+  <!-- Applications Table Card -->
+  <div class="gt-table-card">
+    <div class="gt-table-toolbar">
+      <div class="d-flex align-items-center gap-2">
+        <h5 class="fw-bold mb-0" style="font-size: 1rem;">
+          <i class="fas fa-file-signature me-2" style="color: var(--section-accent);"></i> Pending Applications Queue
+        </h5>
+        <span class="badge bg-warning bg-opacity-20 text-warning rounded-pill px-2 py-1" style="font-size: 0.78rem;">
+          <span id="cignalAppCardCount">{{ pending_applications_count }}</span> Pending
+        </span>
       </div>
+      <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Portal applications awaiting external loading &amp; enrollment verification</small>
+    </div>
+    <div class="table-responsive">
+      <table class="gt-table table align-middle mb-0" style="width:100%">
+        <thead>
+          <tr>
+            <th style="font-size: 11px; text-transform: uppercase;">Customer</th>
+            <th style="font-size: 11px; text-transform: uppercase;">Contact Number</th>
+            <th style="font-size: 11px; text-transform: uppercase;">Add-on Requested</th>
+            <th style="font-size: 11px; text-transform: uppercase;">Requested At</th>
+            <th class="text-end pe-3" style="font-size: 11px; text-transform: uppercase;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for app in applications %}
+          <tr id="cignal-app-row-{{ app.id }}">
+            <td>
+              <a href="{% url 'view_customer' app.customer.id %}" class="fw-bold text-decoration-none text-info d-block">
+                {{ app.customer.full_name|default:app.customer.pppoe_username }}
+              </a>
+              {% if app.customer.pppoe_username %}
+              <small class="text-muted font-monospace" style="font-size:0.75rem;">
+                <i class="fas fa-user-circle me-1"></i>{{ app.customer.pppoe_username }}
+              </small>
+              {% endif %}
+            </td>
+            <td>
+              {% if app.customer.contact_number or app.customer.phone %}
+              <a href="tel:{{ app.customer.contact_number|default:app.customer.phone }}" class="text-decoration-none text-light small font-monospace">
+                <i class="fas fa-phone-alt text-success me-1"></i>{{ app.customer.contact_number|default:app.customer.phone }}
+              </a>
+              {% else %}
+              <small class="text-muted">N/A</small>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge bg-info bg-opacity-10 text-info border border-info rounded-pill px-2.5 py-1" style="font-size:0.78rem;">
+                <i class="fas fa-play me-1"></i>{{ app.addon_type }}
+              </span>
+            </td>
+            <td class="text-muted small">{{ app.requested_at|date:"M d, Y — g:i A" }}</td>
+            <td class="text-end pe-3">
+              <div class="d-flex justify-content-end align-items-center gap-1.5">
+                <button type="button"
+                  class="btn btn-sm btn-warning fw-bold rounded-pill px-3 py-1"
+                  data-bs-toggle="modal"
+                  data-bs-target="#cignalAppModal_{{ app.id }}"
+                  title="Record external Cignal enrollment details for {{ app.customer.full_name }}">
+                  <i class="fas fa-clipboard-check me-1"></i> Record Enrollment
+                </button>
+                <a href="{% url 'view_customer' app.customer.id %}" class="btn btn-sm btn-outline-info fw-bold px-2 py-1" title="View Customer Profile" style="font-size: 0.78rem;">
+                  <i class="fas fa-user"></i>
+                </a>
+                <button type="button"
+                  class="btn btn-sm btn-outline-danger rounded-circle p-0 d-flex align-items-center justify-content-center"
+                  style="width: 32px; height: 32px; font-size: 0.78rem;"
+                  title="Cancel / Delete Application Request"
+                  onclick="confirmCancelCignalApp('{{ app.id }}', '{{ app.customer.full_name|escapejs }}', '{{ app.addon_type|escapejs }}')">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5">
+              <div class="d-flex flex-column align-items-center justify-content-center py-5 text-center">
+                <div class="mb-3 p-3 rounded-circle" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
+                  <i class="fas fa-check-circle fa-2x"></i>
+                </div>
+                <h6 class="text-white fw-bold mb-1">All Applications Cleared</h6>
+                <p class="text-muted small mb-0">There are currently no pending Cignal Play or TV Box requests.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
 
@@ -181,7 +183,7 @@ function confirmCancelCignalApp(requestId, customerName, addonType, isFromModal)
                                 tbody.innerHTML = `
                                   <tr>
                                     <td colspan="5">
-                                      <div class="d-flex flex-column align-items-center justify-content-center py-5 text-center cignal-empty-state">
+                                      <div class="d-flex flex-column align-items-center justify-content-center py-5 text-center">
                                         <div class="mb-3 p-3 rounded-circle" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
                                             <i class="fas fa-check-circle fa-2x"></i>
                                         </div>
