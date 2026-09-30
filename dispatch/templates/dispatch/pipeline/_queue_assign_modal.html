@@ -4,7 +4,7 @@
     <div class="modal-content shadow-lg border-0" style="background: var(--surface-card); color: var(--text-main); border-radius: 14px;">
       <div class="modal-header border-bottom" style="border-color: var(--border-subtle) !important;">
         <h5 class="modal-title d-flex align-items-center gap-2" id="modalAssignTicketLabel">
-          <span class="badge" style="background: var(--gt-dispatch-violet, #7c3aed); color: #fff;">
+          <span class="status-badge status-badge--info">
             <i class="fas fa-users-gear"></i>
           </span>
           <span>Assign Ticket: <strong id="assignTicketNumber" class="text-primary">-</strong></span>
@@ -16,10 +16,10 @@
         <input type="hidden" id="assignTicketId" name="ticket_id" value="">
         <div class="modal-body p-4">
           <!-- Client & Concern Summary Banner -->
-          <div class="p-3 mb-3 rounded-3" style="background: rgba(124, 58, 237, 0.08); border-left: 4px solid var(--gt-dispatch-violet, #7c3aed);">
+          <div class="p-3 mb-3 rounded-3" style="background: var(--section-accent-subtle); border-left: 4px solid var(--section-accent);">
             <div class="d-flex justify-content-between align-items-center mb-1">
               <strong id="assignClientName" class="fs-6">-</strong>
-              <span id="assignTicketTypeBadge" class="badge bg-secondary">-</span>
+              <span id="assignTicketTypeBadge" class="status-badge status-badge--info">-</span>
             </div>
             <div id="assignClientAddress" class="text-muted small mb-1">-</div>
             <div id="assignClientConcern" class="small text-truncate" style="max-height: 40px;">-</div>
@@ -57,7 +57,7 @@
           <div class="mb-3">
             <label class="form-label fw-bold small text-uppercase d-flex justify-content-between align-items-center">
               <span>2. Individual Technicians (On-Duty Only)</span>
-              <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.72rem;">
+              <span class="status-badge status-badge--success" style="font-size: 0.72rem;">
                 {{ on_duty_technicians|length }} On Duty
               </span>
             </label>
@@ -65,15 +65,15 @@
               {% if on_duty_technicians %}
                 <div class="row g-2">
                   {% for tech in on_duty_technicians %}
-                    <div class="col-sm-6 col-md-4">
-                      <div class="form-check form-check-inline p-2 border rounded-2 w-100 m-0" style="border-color: var(--border-subtle) !important; background: var(--surface-card);">
-                        <input class="form-check-input tech-checkbox" type="checkbox" name="technician_ids" value="{{ tech.id }}" id="techCheck{{ tech.id }}" data-team="{{ tech.team_id|default:'' }}">
-                        <label class="form-check-label small ms-1 d-flex flex-column" for="techCheck{{ tech.id }}">
-                          <strong class="text-truncate">{{ tech.name }}</strong>
-                          <span class="text-muted" style="font-size:0.7rem;">{{ tech.team.name|default:"No Team" }}</span>
-                        </label>
-                      </div>
+                  <div class="col-sm-6 col-md-4">
+                    <div class="form-check form-check-inline p-2 border rounded-2 w-100 m-0" style="border-color: var(--border-subtle) !important; background: var(--surface-card);">
+                      <input class="form-check-input tech-checkbox" type="checkbox" name="technician_ids" value="{{ tech.id }}" id="techCheck{{ tech.id }}" data-team="{{ tech.team_id|default:'' }}">
+                      <label class="form-check-label small ms-1 d-flex flex-column" for="techCheck{{ tech.id }}">
+                        <strong class="text-truncate">{{ tech.name }}</strong>
+                        <span class="text-muted" style="font-size:0.7rem;">{{ tech.team.name|default:"No Team" }}</span>
+                      </label>
                     </div>
+                  </div>
                   {% endfor %}
                 </div>
               {% else %}
@@ -93,8 +93,8 @@
 
         <div class="modal-footer border-top" style="border-color: var(--border-subtle) !important;">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" id="btnSubmitAssign" class="btn text-white fw-bold px-4" style="background: var(--gt-dispatch-violet, #7c3aed); border-color: var(--gt-dispatch-violet, #7c3aed);">
-            <i class="fas fa-paper-plane me-1"></i> Confirm Dispatch
+          <button type="submit" id="btnSubmitAssign" class="gt-btn-primary">
+            <i class="fas fa-paper-plane"></i> Confirm Dispatch
           </button>
         </div>
       </form>

@@ -1,45 +1,45 @@
-<tr class="{% if ticket.same_person_flag %}table-warning{% endif %}">
+<tr class="{% if mode == 'attention' %}table-row-expired{% endif %}">
   <!-- Ticket # & Priority -->
-  <td class="ps-3">
+  <td>
     <div class="d-flex align-items-center gap-2">
-      <span class="fw-bold" style="font-family: monospace;">{{ ticket.ticket_number }}</span>
+      <span class="fw-bold font-monospace">{{ ticket.ticket_number }}</span>
       {% if ticket.priority == 'URGENT' %}
-        <span class="badge bg-danger">Urgent</span>
+        <span class="status-badge status-badge--danger"><i class="fas fa-fire"></i> Urgent</span>
       {% elif ticket.priority == 'HIGH' %}
-        <span class="badge bg-warning text-dark">High</span>
+        <span class="status-badge status-badge--warning">High</span>
       {% endif %}
       {% if ticket.same_person_flag %}
-        <span class="badge bg-warning text-dark" title="Same person handled multiple pipeline stages">
+        <span class="status-badge status-badge--warning" title="Same person handled multiple pipeline stages">
           <i class="fas fa-triangle-exclamation"></i> Same-Person
         </span>
       {% endif %}
     </div>
-    <div class="text-muted" style="font-size: 0.72rem;">{{ ticket.created_at|date:"M d, Y - h:i A" }}</div>
+    <div class="text-muted small">{{ ticket.created_at|date:"M d, Y - h:i A" }}</div>
   </td>
 
   <!-- Type Badge -->
   <td>
     {% if ticket.ticket_type == 'INSTALLATION' %}
-      <span class="badge" style="background: var(--gt-dispatch-violet, #7c3aed); color: #fff;">New Install</span>
+      <span class="status-badge status-badge--info">New Install</span>
     {% elif ticket.ticket_type == 'REPAIR' %}
-      <span class="badge bg-warning text-dark">Repair</span>
+      <span class="status-badge status-badge--warning">Repair</span>
     {% elif ticket.ticket_type == 'SITE_VISIT' %}
-      <span class="badge bg-info text-dark">Site Visit</span>
+      <span class="status-badge status-badge--neutral">Site Visit</span>
     {% elif ticket.ticket_type == 'CIGNAL' %}
-      <span class="badge bg-danger text-white">Cignal</span>
+      <span class="status-badge status-badge--danger">Cignal</span>
     {% else %}
-      <span class="badge bg-secondary">{{ ticket.get_ticket_type_display }}</span>
+      <span class="status-badge status-badge--neutral">{{ ticket.get_ticket_type_display }}</span>
     {% endif %}
   </td>
 
   <!-- Client & Contact -->
   <td>
-    <div class="fw-bold">{{ ticket.client_name }}</div>
+    <div class="fw-semibold">{{ ticket.client_name }}</div>
     <div class="small text-muted d-flex align-items-center gap-1">
       <i class="fas fa-phone small"></i> {{ ticket.contact_number|default:"No phone" }}
     </div>
     {% if ticket.sales_agent %}
-      <div class="small text-muted" style="font-size: 0.7rem;">Agent: {{ ticket.sales_agent.name }}</div>
+      <div class="small text-muted">Agent: {{ ticket.sales_agent.name }}</div>
     {% endif %}
   </td>
 
@@ -47,15 +47,15 @@
   <td>
     <div class="small text-truncate" style="max-width: 220px;" title="{{ ticket.address }}">{{ ticket.address|default:"-" }}</div>
     {% if ticket.barangay %}
-      <span class="badge bg-secondary-subtle text-secondary border small" style="font-size: 0.68rem;">{{ ticket.barangay }}</span>
+      <span class="status-badge status-badge--neutral" style="font-size: 0.68rem;">{{ ticket.barangay }}</span>
     {% endif %}
   </td>
 
   <!-- Schedule -->
   <td>
     {% if ticket.scheduled_date %}
-      <div class="small fw-bold">{{ ticket.scheduled_date|date:"M d, Y" }}</div>
-      <div class="text-muted" style="font-size: 0.72rem;">{{ ticket.scheduled_time|default:"Anytime" }}</div>
+      <div class="small fw-semibold">{{ ticket.scheduled_date|date:"M d, Y" }}</div>
+      <div class="text-muted small">{{ ticket.scheduled_time|default:"Anytime" }}</div>
     {% else %}
       <span class="text-muted small">Unscheduled</span>
     {% endif %}
@@ -64,73 +64,72 @@
   <!-- Assigned Tech / Team -->
   <td>
     {% if ticket.team %}
-      <div class="small fw-bold text-primary">{{ ticket.team.name }}</div>
+      <div class="fw-semibold">{{ ticket.team.name }}</div>
     {% endif %}
     {% if ticket.technicians.all %}
-      <div class="small text-muted" style="font-size:0.75rem;">
+      <div class="small text-muted">
         {% for tech in ticket.technicians.all %}
-          <span class="badge bg-light text-dark border">{{ tech.name }}</span>
+          {{ tech.name }}{% if not forloop.last %}, {% endif %}
         {% endfor %}
       </div>
     {% elif not ticket.team %}
-      <span class="badge bg-light text-muted border">Unassigned</span>
+      <span class="text-muted small">Not assigned</span>
     {% endif %}
   </td>
 
   <!-- Status & Flags -->
   <td>
     {% if ticket.status == 'PENDING' %}
-      <span class="badge bg-secondary-subtle text-secondary border">Unassigned</span>
+      <span class="status-badge status-badge--warning"><span class="status-dot"></span> Unassigned</span>
     {% elif ticket.status == 'ASSIGNED' %}
-      <span class="badge bg-primary-subtle text-primary border">Assigned</span>
+      <span class="status-badge status-badge--neutral"><span class="status-dot"></span> Assigned</span>
     {% elif ticket.status == 'IN_PROGRESS' %}
-      <span class="badge bg-warning-subtle text-warning border">On Site / Active</span>
+      <span class="status-badge status-badge--info"><span class="status-dot"></span> On Site / Active</span>
     {% elif ticket.status == 'COMPLETED' %}
-      <span class="badge bg-success-subtle text-success border">Done (QA Pending)</span>
+      <span class="status-badge status-badge--success"><span class="status-dot"></span> Done (QA Pending)</span>
     {% elif ticket.status == 'QA_PASSED' %}
-      <span class="badge bg-info-subtle text-info border">QA Passed</span>
+      <span class="status-badge status-badge--success"><span class="status-dot"></span> QA Passed</span>
     {% elif ticket.status == 'APPROVED' %}
-      <span class="badge bg-success text-white">Approved</span>
+      <span class="status-badge status-badge--success"><span class="status-dot"></span> Approved</span>
     {% elif ticket.status == 'CANCELLED' %}
-      <span class="badge bg-danger text-white">Cancelled / Unreachable</span>
+      <span class="status-badge status-badge--danger"><span class="status-dot"></span> Cancelled / Unreachable</span>
     {% endif %}
 
     {% if ticket.contact_attempt_count > 0 %}
-      <div class="small text-danger fw-bold" style="font-size: 0.7rem;">
+      <div class="small text-danger fw-bold">
         <i class="fas fa-phone-slash"></i> {{ ticket.contact_attempt_count }}/3 call attempts
       </div>
     {% endif %}
 
     {% if ticket.timer_corrected_at %}
-      <div class="text-muted" style="font-size: 0.68rem;" title="{{ ticket.timer_correction_reason }}">
+      <div class="text-muted small" title="{{ ticket.timer_correction_reason }}">
         <i class="fas fa-clock-rotate-left"></i> Timer adjusted
       </div>
     {% endif %}
   </td>
 
   <!-- Actions -->
-  <td class="text-end pe-3">
-    <div class="btn-group btn-group-sm">
+  <td class="text-end">
+    <div class="d-inline-flex align-items-center gap-1.5 justify-content-end">
       {% if ticket.status == 'PENDING' %}
-        <button type="button" 
-                class="btn btn-sm text-white fw-bold px-3" 
-                style="background: var(--gt-dispatch-violet, #7c3aed); border-color: var(--gt-dispatch-violet, #7c3aed); border-radius: 6px;"
+        <button type="button"
+                class="gt-btn-primary gt-btn-sm"
                 onclick="openAssignModal('{{ ticket.id }}', '{{ ticket.ticket_number }}', '{{ ticket.client_name|escapejs }}', '{{ ticket.address|escapejs }}', '{{ ticket.concern|escapejs }}', '{{ ticket.get_ticket_type_display|escapejs }}')">
-          <i class="fas fa-user-plus me-1"></i> Assign
+          <i class="fas fa-user-plus"></i> Assign
         </button>
       {% elif ticket.status in 'ASSIGNED,IN_PROGRESS' %}
-        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openTimerModal('{{ ticket.id }}', '{{ ticket.ticket_number }}', '{{ ticket.arrived_at|date:'c' }}', '{{ ticket.finished_at|date:'c' }}')" title="Correct Job Timer">
-          <i class="fas fa-stopwatch text-warning"></i>
+        <button type="button" class="gt-icon-btn" onclick="openTimerModal('{{ ticket.id }}', '{{ ticket.ticket_number }}', '{{ ticket.arrived_at|date:'c' }}', '{{ ticket.finished_at|date:'c' }}')" title="Correct Job Timer" aria-label="Correct Job Timer">
+          <i class="fas fa-stopwatch"></i>
         </button>
-        <button type="button" class="btn btn-sm btn-outline-danger" onclick="undispatchTicket('{{ ticket.id }}')" title="Revert to Unassigned Queue">
+        <button type="button" class="gt-icon-btn gt-icon-btn--danger" onclick="undispatchTicket('{{ ticket.id }}')" title="Revert to Unassigned Queue" aria-label="Revert to Unassigned Queue">
           <i class="fas fa-arrow-rotate-left"></i>
         </button>
       {% else %}
-        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openTimerModal('{{ ticket.id }}', '{{ ticket.ticket_number }}', '{{ ticket.arrived_at|date:'c' }}', '{{ ticket.finished_at|date:'c' }}')" title="View / Adjust Timer">
+        <button type="button" class="gt-icon-btn" onclick="openTimerModal('{{ ticket.id }}', '{{ ticket.ticket_number }}', '{{ ticket.arrived_at|date:'c' }}', '{{ ticket.finished_at|date:'c' }}')" title="View / Adjust Timer" aria-label="View / Adjust Timer">
           <i class="fas fa-clock"></i>
         </button>
       {% endif %}
-      <a href="{% url 'dispatch_job_order_print' ticket.id %}" target="_blank" class="btn btn-sm btn-outline-secondary" title="Print Job Order">
+      <a href="{% url 'dispatch_job_order_print' ticket.id %}" target="_blank" class="gt-icon-btn" title="Print Job Order" aria-label="Print Job Order">
         <i class="fas fa-print"></i>
       </a>
     </div>
