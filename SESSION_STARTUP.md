@@ -2,6 +2,9 @@
 
 > **PURPOSE**: Give any AI assistant immediate orientation in under 30 seconds. Read this file FIRST before any task.
 
+> **RESUMING WORK?** Read `SESSION_HANDOFF.md` first — it records the open
+> problems, decisions needed, and hard rules from the previous session.
+
 ---
 
 ## 30-Second Orientation (READ THIS FIRST)
