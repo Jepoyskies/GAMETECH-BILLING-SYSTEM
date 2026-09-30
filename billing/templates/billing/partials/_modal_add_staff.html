@@ -81,7 +81,6 @@
                 <i class="fas fa-eye" id="toggleStaffPasswordIcon"></i>
               </button>
             </div>
-            <div class="form-text" id="staffDefaultPwHint" style="font-size: 0.75rem;">Select a role to load its default password.</div>
           </div>
 
         </div>
@@ -100,7 +99,6 @@
   </div>
 </div>
 
-{{ role_default_passwords|json_script:"staffDefaultPasswords" }}
 <script>
 (function() {
   // Password Visibility Toggle
@@ -115,33 +113,6 @@
       passIcon.classList.toggle('fa-eye', !isPass);
       passIcon.classList.toggle('fa-eye-slash', isPass);
     });
-  }
-
-  // Auto-fill the role's default password (source of truth: billing/utils.py ROLE_DEFAULT_PASSWORDS)
-  const defaultsEl = document.getElementById('staffDefaultPasswords');
-  const roleSelect = document.querySelector('#addStaffModalForm [name="role"]');
-  const pwHint = document.getElementById('staffDefaultPwHint');
-  if (defaultsEl && roleSelect && passInput) {
-    let defaults = {};
-    try { defaults = JSON.parse(defaultsEl.textContent); } catch (e) { defaults = {}; }
-    const syncHint = function() {
-      const pw = defaults[roleSelect.value];
-      if (pwHint) {
-        pwHint.innerHTML = pw
-          ? 'Default for <b>' + roleSelect.value + '</b>: <code>' + pw + '</code>'
-          : 'No default configured for this role.';
-      }
-    };
-    // Event delegation: role options are rendered server-side but the handler must
-    // survive modal re-renders, so bind on change rather than per-option.
-    roleSelect.addEventListener('change', function() {
-      if (defaults[roleSelect.value] && !passInput.dataset.touched) {
-        passInput.value = defaults[roleSelect.value];
-      }
-      syncHint();
-    });
-    passInput.addEventListener('input', function() { passInput.dataset.touched = '1'; });
-    syncHint();
   }
 
   // AJAX Form Handler for Add Staff Modal

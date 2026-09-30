@@ -242,7 +242,6 @@
                 <input type="password" name="password" class="plan-form-control"
                     placeholder="Enter new password" autocomplete="new-password">
                 <div class="small text-muted mt-1"><i class="fas fa-info-circle"></i> Leave blank to keep the current password.</div>
-                <div class="small text-muted mt-1" id="editStaffPwHint"></div>
             </div>
             {% endif %}
 
@@ -268,7 +267,6 @@
 {% endblock %}
 
 {% block extra_js %}
-{{ role_default_passwords|json_script:"staffDefaultPasswords" }}
 <script>
 // Password reveal + copy helpers (Admin only)
 function gtTogglePw(btn) {
@@ -286,22 +284,5 @@ function gtCopyPw(text, btn) {
     setTimeout(function() { btn.innerHTML = orig; }, 1200);
   });
 }
-document.addEventListener('DOMContentLoaded', function() {
-  var el = document.getElementById('staffDefaultPasswords');
-  var role = document.querySelector('select[name="role"]');
-  var pw = document.querySelector('input[name="password"]');
-  var hint = document.getElementById('editStaffPwHint');
-  if (!el || !role || !pw) return;
-  var defaults = {};
-  try { defaults = JSON.parse(el.textContent); } catch (e) {}
-  var sync = function() {
-    var d = defaults[role.value];
-    if (hint) hint.innerHTML = d
-      ? 'Suggested default for <b>' + role.value + '</b>: <code>' + d + '</code>'
-      : '';
-  };
-  role.addEventListener('change', sync);
-  sync();
-});
 </script>
 {% endblock %}

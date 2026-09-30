@@ -230,9 +230,8 @@
 
             <div class="mb-4">
                 <label class="plan-form-label">Password <span class="req">*</span></label>
-                <input type="password" name="password" id="addStaffPagePassword" class="plan-form-control" required
+                <input type="password" name="password" class="plan-form-control" required
                     placeholder="Create a secure password" autocomplete="new-password">
-                <div class="small text-muted mt-1" id="staffPagePwHint"></div>
             </div>
 
             <div class="d-flex align-items-center justify-content-between gap-2">
@@ -242,32 +241,4 @@
         </form>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-{{ role_default_passwords|json_script:"staffDefaultPasswords" }}
-<script>
-// Auto-fill the role's default password (source of truth: billing/utils.py ROLE_DEFAULT_PASSWORDS)
-document.addEventListener('DOMContentLoaded', function() {
-  var el = document.getElementById('staffDefaultPasswords');
-  var role = document.querySelector('select[name="role"]');
-  var pw = document.getElementById('addStaffPagePassword');
-  var hint = document.getElementById('staffPagePwHint');
-  if (!el || !role || !pw) return;
-  var defaults = {};
-  try { defaults = JSON.parse(el.textContent); } catch (e) {}
-  var sync = function() {
-    var d = defaults[role.value];
-    if (hint) hint.innerHTML = d
-      ? 'Default for <b>' + role.value + '</b>: <code>' + d + '</code> (auto-filled)'
-      : 'No default configured for this role.';
-  };
-  role.addEventListener('change', function() {
-    if (defaults[role.value] && !pw.dataset.touched) pw.value = defaults[role.value];
-    sync();
-  });
-  pw.addEventListener('input', function() { pw.dataset.touched = '1'; });
-  sync();
-});
-</script>
 {% endblock %}
