@@ -191,16 +191,56 @@ def delete_barangay(request, pk):
 
 @login_required
 def backup_database_view(request):
-    db_path = settings.DATABASES["default"]["NAME"]
-    if os.path.exists(db_path):
-        response = FileResponse(
-            open(db_path, "rb"),
-            as_attachment=True,
-            filename=f"gametech_backup_{timezone.now().strftime('%Y%m%d_%H%M%S')}.sqlite3",
-        )
-        return response
+    import subprocess
+    import tempfile
 
-    messages.error(request, "Database file not found.")
+    db_config = settings.DATABASES["default"]
+    engine = db_config.get("ENGINE", "")
+
+    if "sqlite" in engine:
+        db_path = db_config["NAME"]
+        if os.path.exists(db_path):
+            response = FileResponse(
+                open(db_path, "rb"),
+                as_attachment=True,
+                filename=f"gametech_backup_{timezone.now().strftime('%Y%m%d_%H%M%S')}.sqlite3",
+            )
+            return response
+        messages.error(request, "Database file not found.")
+        return redirect("settings")
+
+    # PostgreSQL — use pg_dump
+    if "postgresql" in engine or "postgis" in engine:
+        ts = timezone.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"gametech_backup_{ts}.sql"
+        tmp_path = os.path.join(tempfile.gettempdir(), filename)
+
+        env = os.environ.copy()
+        env["PGPASSWORD"] = db_config.get("PASSWORD", "")
+
+        cmd = [
+            "pg_dump",
+            "--host", db_config.get("HOST", "localhost"),
+            "--port", str(db_config.get("PORT", 5432)),
+            "--username", db_config.get("USER", ""),
+            "--dbname", db_config.get("NAME", ""),
+            "--file", tmp_path,
+        ]
+
+        try:
+            subprocess.run(cmd, env=env, check=True, capture_output=True, timeout=120)
+            response = FileResponse(
+                open(tmp_path, "rb"),
+                as_attachment=True,
+                filename=filename,
+            )
+            os.unlink(tmp_path)
+            return response
+        except Exception as e:
+            messages.error(request, f"Backup failed: {e}")
+            return redirect("settings")
+
+    messages.error(request, "Unsupported database engine for backup.")
     return redirect("settings")
 
 
