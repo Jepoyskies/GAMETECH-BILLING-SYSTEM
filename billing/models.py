@@ -229,6 +229,7 @@ class SystemAdmin(models.Model):
 
     def set_password(self, raw_password):
         """Hashes into password_hash AND stores the plaintext mirror for Admin display."""
+        from django.contrib.auth.hashers import make_password
         self.password_hash = make_password(raw_password)
         self.password_plaintext = raw_password
 
