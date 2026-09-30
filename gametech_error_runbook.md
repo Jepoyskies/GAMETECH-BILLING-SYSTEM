@@ -1733,3 +1733,89 @@ infrastructure failures (502/504) are never misreported as user input errors.
 
 **Date Logged**: 2026-09-30
 
+
+---
+
+### ERR-081: Containers Repeatedly Return to `Created` State — Concurrent Compose Sessions (Root Cause Confirmed)
+
+**Symptom**: `gametech-web`, `gametech-celery` and `gametech-celery-beat` keep
+reverting to `Created` while `gametech-db` / `gametech-redis` restart on their
+own. `docker exec` fails with `No such container`. The site goes down
+intermittently. `docker ps -a` may briefly show *no* containers at all.
+
+**Root Cause (confirmed 2026-09-30)**: NOT a Docker daemon crash and NOT an OOM.
+Verified: `snap.docker.dockerd` had 6 days of continuous uptime on the same PID,
+`dmesg` showed zero OOM kills, and free memory was healthy. The cause is a
+**second session running `docker compose up -d` concurrently**, which recreates
+each other's containers mid-flight (this is the ERR-069 mechanism). On this date
+an extra superuser named `screenshot_verify` (created 12:33, logged in 12:36)
+was deploying alongside the primary session and triggering exactly this.
+
+**Critical detail**: `restart: unless-stopped` does **not** rescue a container
+that has never been started. A container left in `Created` will stay dark
+forever, so the usual self-heal safety net silently does nothing.
+
+**Fix**:
+```bash
+ssh root@143.198.207.144 "/root/GAMETECH-BILLING-SYSTEM/scripts/safe_compose.sh up -d"
+```
+`scripts/safe_compose.sh` wraps `docker compose` in an `flock` so two sessions
+queue instead of fighting. Prefer plain `docker restart gametech-web` for routine
+deploys (AGENTS.md Rule 32v2) — that path never triggers the flapping.
+
+**Prevention**: One deploy at a time. Treat any account/session performing
+verification screenshots as a *deploy-capable* session.
+
+**Date Logged**: 2026-09-30
+
+---
+
+### ERR-082: Do Not Run the Django Test Suite Inside the `gametech-web` Container
+
+**Symptom**: `docker exec gametech-web python manage.py test billing` prints
+`EEEE...`, appears to kill the web container, and the container later reverts to
+`Created` (see ERR-081). Running the suite is enough to destabilise production.
+
+**Root Cause**: The suite builds a full test database (all 60+ migrations) inside
+a 1 vCPU / 1.9 GB container that is simultaneously serving production traffic
+alongside Postgres, Redis, Celery and Celery Beat. It is far too small to host
+test workloads, and the container churn compounds ERR-081.
+
+**Fix / Prevention**: Run tests on a local dev machine or a dedicated throwaway
+container, never in the production `web` container. Reserve
+`docker exec gametech-web python manage.py check` (cheap) for production
+verification.
+
+**Bonus finding**: the failing `E`s were **not** a code regression. They were
+`column "portal_password_plaintext" of relation "billing_customer" does not
+exist` — see ERR-083.
+
+**Date Logged**: 2026-09-30
+
+---
+
+### ERR-083: `portal_password_plaintext` Was Applied to Production Without a Migration
+
+**Symptom**: Every billing test erroring with
+`ProgrammingError: column "portal_password_plaintext" of relation
+"billing_customer" does not exist`, while production works perfectly.
+
+**Root Cause**: `Customer.portal_password_plaintext` existed in `models.py` and
+had been added to the production database by hand, but **no migration was ever
+committed** for it. Production has the column; any database built from
+migrations (CI, a new developer machine, a test run without `--keepdb`) did not.
+`makemigrations --check --dry-run` correctly reported the drift.
+
+**Fix**: Migration `billing/migrations/0063_customer_portal_password_plaintext.py`
+now captures the field. Because production already had the column, it was
+recorded there with a fake apply so the schema is untouched:
+```bash
+docker exec gametech-web python manage.py migrate billing 0063 --fake
+```
+Fresh databases now get the column for real.
+
+**Lesson**: Never patch production schema by hand. If a column exists in prod
+but `makemigrations --check` is clean, you have drift — a future rebuild will
+break. Run `makemigrations --check --dry-run` before every deploy.
+
+**Date Logged**: 2026-09-30
