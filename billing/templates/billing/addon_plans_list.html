@@ -179,55 +179,56 @@
           </tr>
 
           <!-- Edit Modal for this Plan -->
-          <div class="modal fade" id="editPlanModal_{{ plan.id }}" tabindex="-1" aria-labelledby="editPlanModalLabel_{{ plan.id }}" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-              <div class="modal-content gt-modal-content" style="border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);">
-                <div class="modal-header border-bottom-0 pb-0">
-                  <h5 class="modal-title fw-bold" id="editPlanModalLabel_{{ plan.id }}">
-                    <i class="fas fa-edit text-primary me-2"></i> Edit Add-on Plan
-                  </h5>
-                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <div class="modal fade" id="editPlanModal_{{ plan.id }}" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="editPlanModalLabel_{{ plan.id }}" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered gt-modal-scroll">
+              <div class="modal-content gt-modal-card">
+                <div class="modal-header">
+                  <div class="d-flex align-items-center gap-3">
+                    <div class="gt-modal-icon"><i class="fas fa-edit"></i></div>
+                    <h5 class="modal-title" id="editPlanModalLabel_{{ plan.id }}">Edit Add-on Plan</h5>
+                  </div>
+                  <button type="button" class="gt-icon-btn" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
                 </div>
                 <form action="{% url 'edit_addon_plan' plan.id %}" method="post">
                   {% csrf_token %}
                   <div class="modal-body py-3">
                     <div class="mb-3">
-                      <label class="form-label fw-bold">Plan Name</label>
-                      <input type="text" class="form-control" name="name" value="{{ plan.name }}" required>
+                      <label class="form-label" for="editPlanName_{{ plan.id }}">Plan Name</label>
+                      <input type="text" class="form-control" id="editPlanName_{{ plan.id }}" name="name" value="{{ plan.name }}" required>
                     </div>
-                    <div class="row g-2 mb-3">
+                    <div class="row g-3 mb-3">
                       <div class="col-6">
-                        <label class="form-label fw-bold">Service Type</label>
-                        <select name="addon_type" class="form-select" required>
+                        <label class="form-label" for="editPlanType_{{ plan.id }}">Service Type</label>
+                        <select name="addon_type" id="editPlanType_{{ plan.id }}" class="form-select" required>
                           <option value="Cignal Play" {% if plan.addon_type == 'Cignal Play' %}selected{% endif %}>Cignal Play</option>
                           <option value="Cignal Box" {% if plan.addon_type == 'Cignal Box' %}selected{% endif %}>Cignal Box</option>
                           <option value="Other" {% if plan.addon_type == 'Other' %}selected{% endif %}>Other</option>
                         </select>
                       </div>
                       <div class="col-6">
-                        <label class="form-label fw-bold">Duration (Days)</label>
-                        <input type="number" class="form-control" name="duration_days" value="{{ plan.duration_days }}" min="1" required>
+                        <label class="form-label" for="editPlanDuration_{{ plan.id }}">Duration (Days)</label>
+                        <input type="number" class="form-control" id="editPlanDuration_{{ plan.id }}" name="duration_days" value="{{ plan.duration_days }}" min="1" required>
                       </div>
                     </div>
                     <div class="mb-3">
-                      <label class="form-label fw-bold">Price (PHP)</label>
+                      <label class="form-label" for="editPlanPrice_{{ plan.id }}">Price</label>
                       <div class="input-group">
                         <span class="input-group-text">₱</span>
-                        <input type="number" step="0.01" min="0" class="form-control" name="price" value="{{ plan.price }}" required>
+                        <input type="number" step="0.01" min="0" class="form-control" id="editPlanPrice_{{ plan.id }}" name="price" value="{{ plan.price }}" required>
                       </div>
                     </div>
                     <div class="mb-3">
-                      <label class="form-label fw-bold">Description (Optional)</label>
-                      <textarea class="form-control" name="description" rows="3">{{ plan.description|default:'' }}</textarea>
+                      <label class="form-label" for="editPlanDesc_{{ plan.id }}">Description <span class="gt-optional-tag">Optional</span></label>
+                      <textarea class="form-control" id="editPlanDesc_{{ plan.id }}" name="description" rows="3">{{ plan.description|default:'' }}</textarea>
                     </div>
                     <div class="form-check form-switch">
                       <input class="form-check-input" type="checkbox" name="is_active" id="activeSwitch_{{ plan.id }}" {% if plan.is_active %}checked{% endif %}>
                       <label class="form-check-label fw-semibold" for="activeSwitch_{{ plan.id }}">Active and Available for Customers</label>
                     </div>
                   </div>
-                  <div class="modal-footer border-top-0 pt-0 gt-modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="border-radius: 10px;">Cancel</button>
-                    <button type="submit" class="btn btn-primary fw-bold" style="border-radius: 10px;">
+                  <div class="modal-footer">
+                    <button type="button" class="gt-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="gt-btn-primary">
                       <i class="fas fa-save me-1"></i> Save Changes
                     </button>
                   </div>
@@ -237,23 +238,24 @@
           </div>
 
           <!-- Delete Confirmation Modal -->
-          <div class="modal fade" id="deletePlanModal_{{ plan.id }}" tabindex="-1" aria-labelledby="deletePlanModalLabel_{{ plan.id }}" aria-hidden="true">
+          <div class="modal fade" id="deletePlanModal_{{ plan.id }}" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="deletePlanModalLabel_{{ plan.id }}" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered modal-sm">
-              <div class="modal-content gt-modal-content" style="border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);">
-                <div class="modal-header border-bottom-0 pb-0">
-                  <h6 class="modal-title fw-bold text-danger" id="deletePlanModalLabel_{{ plan.id }}">
-                    <i class="fas fa-exclamation-triangle me-1"></i> Delete Plan?
-                  </h6>
-                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              <div class="modal-content gt-modal-card">
+                <div class="modal-header">
+                  <div class="d-flex align-items-center gap-3">
+                    <div class="gt-modal-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    <h6 class="modal-title" id="deletePlanModalLabel_{{ plan.id }}">Delete Plan?</h6>
+                  </div>
+                  <button type="button" class="gt-icon-btn" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="modal-body py-2">
-                  <p class="small text-muted mb-0">Are you sure you want to permanently delete <strong>"{{ plan.name }}"</strong>? This cannot be undone.</p>
+                  <p class="gt-text-muted mb-0">Are you sure you want to permanently delete <strong>"{{ plan.name }}"</strong>? This cannot be undone.</p>
                 </div>
-                <div class="modal-footer border-top-0 pt-2 gt-modal-footer">
-                  <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal" style="border-radius: 8px;">Cancel</button>
+                <div class="modal-footer">
+                  <button type="button" class="gt-btn-secondary" data-bs-dismiss="modal">Cancel</button>
                   <form action="{% url 'delete_addon_plan' plan.id %}" method="post" class="d-inline">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-danger btn-sm fw-bold" style="border-radius: 8px;">
+                    <button type="submit" class="gt-btn-danger">
                       <i class="fas fa-trash-alt me-1"></i> Delete
                     </button>
                   </form>
@@ -268,7 +270,7 @@
                 <i class="fas fa-tags mb-3" style="font-size: 2.5rem; opacity: 0.3;"></i>
                 <h6>No Add-on Plans Configured</h6>
                 <p class="small text-muted mb-3">Create your first Cignal Play or Cignal Box pricing tier to begin offering dynamic add-ons.</p>
-                <button type="button" class="btn btn-primary btn-sm px-3 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#createAddonPlanModal" style="border-radius: 10px; background: #ec4899; border-color: #db2777;">
+                <button type="button" class="gt-btn-primary" data-bs-toggle="modal" data-bs-target="#createAddonPlanModal">
                   <i class="fas fa-plus-circle me-1"></i> Create First Plan
                 </button>
               </div>
@@ -283,55 +285,56 @@
 </div>
 
 <!-- Create Add-on Plan Modal -->
-<div class="modal fade" id="createAddonPlanModal" tabindex="-1" aria-labelledby="createAddonPlanModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content gt-modal-content" style="border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);">
-      <div class="modal-header border-bottom-0 pb-0">
-        <h5 class="modal-title fw-bold" id="createAddonPlanModalLabel">
-          <i class="fas fa-plus-circle text-primary me-2"></i> Add New Add-on Plan
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<div class="modal fade" id="createAddonPlanModal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="createAddonPlanModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered gt-modal-scroll">
+    <div class="modal-content gt-modal-card">
+      <div class="modal-header">
+        <div class="d-flex align-items-center gap-3">
+          <div class="gt-modal-icon"><i class="fas fa-plus-circle"></i></div>
+          <h5 class="modal-title" id="createAddonPlanModalLabel">Add New Add-on Plan</h5>
+        </div>
+        <button type="button" class="gt-icon-btn" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
       </div>
       <form action="{% url 'create_addon_plan' %}" method="post">
         {% csrf_token %}
-        <div class="modal-body py-3">
+        <div class="modal-body">
           <div class="mb-3">
-            <label class="form-label fw-bold">Plan Name</label>
-            <input type="text" class="form-control" name="name" placeholder="e.g. Cignal Play Premium 30-Day" required autofocus>
+            <label class="form-label" for="newPlanName">Plan Name</label>
+            <input type="text" class="form-control" id="newPlanName" name="name" placeholder="e.g. Cignal Play Premium 30-Day" required autofocus>
           </div>
-          <div class="row g-2 mb-3">
+          <div class="row g-3 mb-3">
             <div class="col-6">
-              <label class="form-label fw-bold">Service Type</label>
-              <select name="addon_type" class="form-select" required>
+              <label class="form-label" for="newPlanType">Service Type</label>
+              <select name="addon_type" id="newPlanType" class="form-select" required>
                 <option value="Cignal Play" selected>Cignal Play</option>
                 <option value="Cignal Box">Cignal Box</option>
                 <option value="Other">Other</option>
               </select>
             </div>
             <div class="col-6">
-              <label class="form-label fw-bold">Duration (Days)</label>
-              <input type="number" class="form-control" name="duration_days" value="30" min="1" required>
+              <label class="form-label" for="newPlanDuration">Duration (Days)</label>
+              <input type="number" class="form-control" id="newPlanDuration" name="duration_days" value="30" min="1" required>
             </div>
           </div>
           <div class="mb-3">
-            <label class="form-label fw-bold">Price (PHP)</label>
+            <label class="form-label" for="newPlanPrice">Price</label>
             <div class="input-group">
               <span class="input-group-text">₱</span>
-              <input type="number" step="0.01" min="0" class="form-control" name="price" placeholder="150.00" required>
+              <input type="number" step="0.01" min="0" class="form-control" id="newPlanPrice" name="price" placeholder="150.00" required>
             </div>
           </div>
           <div class="mb-3">
-            <label class="form-label fw-bold">Description (Optional)</label>
-            <textarea class="form-control" name="description" rows="3" placeholder="Optional details, channel count, or tier information..."></textarea>
+            <label class="form-label" for="newPlanDesc">Description <span class="gt-optional-tag">Optional</span></label>
+            <textarea class="form-control" id="newPlanDesc" name="description" rows="3" placeholder="Optional details, channel count, or tier information..."></textarea>
           </div>
           <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" name="is_active" id="newPlanActiveSwitch" checked>
             <label class="form-check-label fw-semibold" for="newPlanActiveSwitch">Active and Available for Customers</label>
           </div>
         </div>
-        <div class="modal-footer border-top-0 pt-0 gt-modal-footer">
-          <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="border-radius: 10px;">Cancel</button>
-          <button type="submit" class="btn btn-primary fw-bold" style="border-radius: 10px; background: #ec4899; border-color: #db2777;">
+        <div class="modal-footer">
+          <button type="button" class="gt-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="gt-btn-primary">
             <i class="fas fa-check-circle me-1"></i> Create Plan
           </button>
         </div>
