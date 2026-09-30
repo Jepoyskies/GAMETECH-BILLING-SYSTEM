@@ -1602,3 +1602,38 @@ Gotchas when writing this sweep:
 
 **Detection**: Run `grep -n "block content" billing/templates/billing/cignal_dashboard.html` — if more than one match exists, the duplicate must be removed.
 
+---
+
+### ERR-079: Both MikroTik Routers Unreachable — LIVE MT STATUS Shows "Error" on All Customers
+
+**Symptom**: The billing system shows `⚠️ Error` on LIVE MT STATUS for all customers. Production logs show:
+```
+Timeout/Error connecting to Mikrotik API on 192.168.88.2: timed out
+Timeout/Error connecting to Mikrotik API on 192.168.88.1: timed out
+Failed to get active PPPoE users from Mikrotik A: Router unreachable (cached)
+Failed to get active PPPoE users from Mikrotik B: Router unreachable (cached)
+```
+
+**Root Cause Pattern**: The cloud server (DigitalOcean) loses API access to both MikroTik routers because the **office Tailscale subnet router bridge PC** lost its internet connection. The bridge PC connects to the internet via a **WiFi repeater**, and the repeater's LAN port (or the switch port it was plugged into) became faulty/intermittent — causing the Tailscale tunnel to drop.
+
+**Key Diagnostic Clue**: "Was online for X weeks, then started dropping intermittently. Comes back online for a few minutes after restart, then drops again." This pattern = physical LAN port failure on the repeater or switch, NOT a software/Tailscale issue.
+
+**Exact Target**: Office bridge Mini PC → WiFi repeater → LAN cable → switch/router port
+
+**1-Step Fix**: 
+1. Move the repeater's LAN cable to a **different port** on the switch/router
+2. Tailscale reconnects automatically within 30–60 seconds
+3. Router API access restores; LIVE MT STATUS errors clear on next page refresh
+
+**Verification**:
+```bash
+ssh root@143.198.207.144 "docker logs --since 2m gametech-web 2>&1 | grep -i 'timeout\|timed out' | tail -10"
+# Should return empty if routers are back online
+```
+
+**Long-term Prevention**:
+- Run a direct LAN cable from the Mini PC to the switch — eliminate the repeater as a dependency
+- Mark the faulty port with tape so it is never reused
+- If repeater WiFi must be used, set Mini PC network adapter power management to OFF (Device Manager → adapter Properties → Power Management → uncheck "Allow computer to turn off this device to save power")
+
+**Date Logged**: 2026-09-30
