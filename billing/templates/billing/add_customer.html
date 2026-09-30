@@ -384,47 +384,51 @@
 </div>
 
 <!-- Walk-in / Applicant Decline Modal -->
-<div class="modal fade" id="declineWalkinModal" tabindex="-1" aria-labelledby="declineWalkinModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content bg-dark text-white border border-danger">
-            <div class="modal-header border-secondary">
-                <h5 class="modal-title text-danger fw-bold" id="declineWalkinModalLabel">
-                    <i class="fas fa-times-circle me-2"></i> Record Applicant Policy Decline
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+<div class="modal fade" id="declineWalkinModal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="declineWalkinModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered gt-modal-scroll">
+        <div class="modal-content gt-modal-card">
+            <div class="modal-header">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="gt-modal-icon"><i class="fas fa-times-circle"></i></div>
+                    <div>
+                        <h5 class="modal-title" id="declineWalkinModalLabel">Record Applicant Policy Decline</h5>
+                        <div class="gt-field-help mt-1">No customer account is created and nothing is billed.</div>
+                    </div>
+                </div>
+                <button type="button" class="gt-icon-btn" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
             </div>
             <form method="POST" action="{% url 'add_customer' %}">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="decline">
                 {% if prospect %}<input type="hidden" name="prospect_id" value="{{ prospect.id }}">{% endif %}
                 <div class="modal-body">
-                    <p class="small text-muted mb-3">
+                    <p class="gt-field-help mb-3">
                         Use this if the applicant <strong>refuses or fails the requirements</strong>. Their name and reason are saved for your records only &mdash; <strong>no customer account is created</strong> and nothing is billed.
                     </p>
                     <div class="mb-3">
-                        <label class="form-label fw-bold small">Applicant Name</label>
-                        <input type="text" name="applicant_name" id="decline_modal_name" class="form-control bg-dark text-white border-secondary" placeholder="Applicant Name" value="{{ prospect.full_name|default:'' }}">
+                        <label class="form-label" for="decline_modal_name">Applicant Name</label>
+                        <input type="text" name="applicant_name" id="decline_modal_name" class="form-control" placeholder="Applicant Name" value="{{ prospect.full_name|default:'' }}">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold small">Contact Number</label>
-                        <input type="text" name="applicant_phone" id="decline_modal_phone" class="form-control bg-dark text-white border-secondary" placeholder="Phone Number" value="{{ prospect.phone|default:'' }}">
+                        <label class="form-label" for="decline_modal_phone">Contact Number</label>
+                        <input type="text" name="applicant_phone" id="decline_modal_phone" class="form-control" placeholder="Phone Number" value="{{ prospect.phone|default:'' }}">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold small">Verification Method</label>
-                        <select name="checklist_method" class="form-select bg-dark text-white border-secondary">
+                        <label class="form-label" for="decline_modal_method">Verification Method</label>
+                        <select name="checklist_method" id="decline_modal_method" class="form-select">
                             <option value="in_person" selected>In-Person (Walk-In)</option>
                             <option value="phone">Phone Call</option>
                             <option value="chat">Online Chat</option>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold small">Why were they declined? <span class="text-danger">*</span></label>
-                        <textarea name="decline_reason" class="form-control bg-dark text-white border-secondary" rows="3" placeholder="e.g. Applicant refused the monthly fee, or did not meet the ID requirements..." required></textarea>
+                        <label class="form-label" for="decline_reason">Why were they declined? <span class="req">*</span></label>
+                        <textarea name="decline_reason" id="decline_reason" class="form-control" rows="3" placeholder="e.g. Applicant refused the monthly fee, or did not meet the ID requirements..." required></textarea>
                     </div>
                 </div>
-                <div class="modal-footer border-secondary">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger fw-bold">Save Decline</button>
+                <div class="modal-footer">
+                    <button type="button" class="gt-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="gt-btn-danger">Save Decline</button>
                 </div>
             </form>
         </div>

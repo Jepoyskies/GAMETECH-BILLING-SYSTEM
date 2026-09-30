@@ -1,26 +1,20 @@
 <!-- Modal: Quick File Repair / Request Service Ticket for Customer -->
-<div class="modal fade" id="modal-customer-repair" tabindex="-1" aria-labelledby="modalCustomerRepairLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content shadow-lg" style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 16px; color: var(--text-primary);">
-            <div class="modal-header" style="border-bottom: 1px solid var(--border-subtle); padding: 18px 24px;">
+<div class="modal fade" id="modal-customer-repair" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="modalCustomerRepairLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg gt-modal-scroll">
+        <div class="modal-content gt-modal-card">
+            <div class="modal-header">
                 <div class="d-flex align-items-center gap-3">
-                    <div style="width: 40px; height: 40px; border-radius: 10px; background: var(--section-accent-tint); display: flex; align-items: center; justify-content: center; color: var(--section-accent);">
-                        <i class="fas fa-screwdriver-wrench"></i>
-                    </div>
+                    <div class="gt-modal-icon"><i class="fas fa-screwdriver-wrench"></i></div>
                     <div>
-                        <h5 class="modal-title fw-bold mb-0" id="modalCustomerRepairLabel" style="color: var(--text-primary); font-size: 1.1rem;">
-                            Request Service
-                        </h5>
-                        <div class="text-muted" style="font-size: 0.78rem;">
-                            Dispatch Queue Integration &bull; Technical, Installation &amp; Field Concerns
-                        </div>
+                        <h5 class="modal-title" id="modalCustomerRepairLabel">Request Service</h5>
+                        <div class="gt-field-help mt-1">Dispatch Queue Integration &bull; Technical, Installation &amp; Field Concerns</div>
                     </div>
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="gt-icon-btn" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
             </div>
 
             <form id="form-customer-repair">
-                <div class="modal-body p-3 p-md-4">
+                <div class="modal-body">
                     <input type="hidden" id="cr-customer-id" value="{{ customer.id }}">
                     <input type="hidden" id="cr-client-name" value="{{ customer.full_name }}">
                     <input type="hidden" id="cr-contact-number" value="{{ customer.phone|default:'' }}">
@@ -34,41 +28,39 @@
 
                     <!-- Active Order Warning Banner -->
                     {% if active_ticket %}
-                    <div class="p-3 mb-3 rounded-3 d-flex align-items-center justify-content-between flex-wrap gap-2" style="background: var(--badge-warning-bg); border: 1px solid var(--badge-warning-text); color: var(--badge-warning-text);">
+                    <div class="gt-callout gt-callout--warning mb-3 justify-content-between flex-wrap gap-2">
                         <div class="d-flex align-items-center gap-2">
                             <i class="fas fa-exclamation-triangle"></i>
-                            <span style="font-size: 0.85rem; font-weight: 500;">
-                                This customer already has an active order: <strong>{{ active_ticket.ticket_number }}</strong>
-                            </span>
+                            <span>This customer already has an active order: <strong>{{ active_ticket.ticket_number }}</strong></span>
                         </div>
-                        <a href="{% url 'dispatch_dashboard' %}?q={{ active_ticket.ticket_number }}" target="_blank" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-1" style="font-size: 0.75rem; font-weight: 600;">
+                        <a href="{% url 'dispatch_dashboard' %}?q={{ active_ticket.ticket_number }}" target="_blank" class="gt-btn-secondary gt-btn-sm">
                             View Active Order <i class="fas fa-arrow-up-right-from-square ms-1"></i>
                         </a>
                     </div>
                     {% endif %}
 
                     <!-- Target Subscriber Summary Card -->
-                    <div class="p-3 mb-3 rounded-3" style="background: var(--surface-subtle); border: 1px solid var(--border-divider);">
+                    <div class="gt-summary-card mb-3">
                         <div class="row g-2 align-items-center">
                             <div class="col-12 col-md-6">
-                                <span class="text-uppercase fw-bold text-muted" style="font-size: 0.72rem; letter-spacing: 0.5px;">Target Subscriber</span>
-                                <div class="fw-bold" style="font-size: 1rem; color: var(--text-primary);">{{ customer.full_name }}</div>
-                                <div class="text-muted" style="font-size: 0.8rem;">
-                                    PPPoE: <span class="font-monospace text-primary fw-semibold">{{ customer.pppoe_username|default:"N/A" }}</span> &bull; Phone: {{ customer.phone|default:"No Contact" }}
+                                <span class="gt-summary-label">Target Subscriber</span>
+                                <div class="gt-summary-total-value" style="font-size: var(--gt-fs-md);">{{ customer.full_name }}</div>
+                                <div class="gt-field-help mb-0">
+                                    PPPoE: <span class="font-monospace">{{ customer.pppoe_username|default:"N/A" }}</span> &bull; Phone: {{ customer.phone|default:"No Contact" }}
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 text-md-end">
-                                <div class="d-inline-flex align-items-center gap-1">
-                                    <span class="status-badge status-badge--neutral">
+                                <div class="d-inline-flex align-items-center gap-1 flex-wrap">
+                                    <span class="badge bg-secondary-subtle text-secondary border">
                                         Plan: {{ customer.plan.name|default:"Unassigned" }}
                                     </span>
                                     {% if customer.barangay %}
-                                    <span class="status-badge status-badge--neutral">
+                                    <span class="badge bg-secondary-subtle text-secondary border">
                                         {{ customer.barangay.name }}
                                     </span>
                                     {% endif %}
                                 </div>
-                                <div class="text-muted text-truncate mt-1" style="font-size: 0.8rem;">{{ customer.address|default:"No address" }}</div>
+                                <div class="gt-field-help text-truncate mt-1 mb-0">{{ customer.address|default:"No address" }}</div>
                             </div>
                         </div>
                     </div>
@@ -76,45 +68,43 @@
                     <!-- Ticket Classification & Urgency -->
                     <div class="row g-3 mb-3">
                         <div class="col-12 col-md-6">
-                            <label class="form-label text-uppercase fw-bold text-secondary" style="font-size: 12px;">Order / Ticket Type <span class="text-danger">*</span></label>
-                            <select class="form-select" id="cr-ticket-type" required style="height: 40px; border-radius: 8px; border: 1px solid var(--input-border); background-color: var(--input-bg); color: var(--text-primary);">
-                                <option value="REPAIR" selected>🔧 Repair / Technical Issue</option>
-                                <option value="INSTALLATION">⚡ New Installation</option>
-                                <option value="SITE_VISIT">🔍 Site Visit / Ocular Inspection</option>
-                                <option value="RELOCATION">🚚 Transfer / Relocation</option>
-                                <option value="RECONNECTION">🔌 Line Reconnection</option>
-                                <option value="DISCONNECTION">❌ Disconnection / Pull Out</option>
+                            <label class="form-label" for="cr-ticket-type">Order / Ticket Type <span class="req">*</span></label>
+                            <select class="form-select" id="cr-ticket-type" required>
+                                <option value="REPAIR" selected>&#128295; Repair / Technical Issue</option>
+                                <option value="INSTALLATION">&#9889; New Installation</option>
+                                <option value="SITE_VISIT">&#128269; Site Visit / Ocular Inspection</option>
+                                <option value="RELOCATION">&#128666; Transfer / Relocation</option>
+                                <option value="RECONNECTION">&#128268; Line Reconnection</option>
+                                <option value="DISCONNECTION">&#10060; Disconnection / Pull Out</option>
                             </select>
                         </div>
                         <div class="col-12 col-md-6">
-                            <label class="form-label text-uppercase fw-bold text-secondary" style="font-size: 12px;">Priority / SLA <span class="text-danger">*</span></label>
-                            <select class="form-select" id="cr-priority" style="height: 40px; border-radius: 8px; border: 1px solid var(--input-border); background-color: var(--input-bg); color: var(--text-primary);">
-                                <option value="LOW">🔵 Low (Within 48 hours)</option>
-                                <option value="NORMAL" selected>🟡 Normal (Within 24 hours)</option>
-                                <option value="HIGH">🟠 High (Urgent / Same Day)</option>
-                                <option value="URGENT">🔴 Critical / Outage (Immediate)</option>
+                            <label class="form-label" for="cr-priority">Priority / SLA <span class="req">*</span></label>
+                            <select class="form-select" id="cr-priority">
+                                <option value="LOW">Low (Within 48 hours)</option>
+                                <option value="NORMAL" selected>Normal (Within 24 hours)</option>
+                                <option value="HIGH">High (Urgent / Same Day)</option>
+                                <option value="URGENT">Critical / Outage (Immediate)</option>
                             </select>
                         </div>
                     </div>
 
                     <!-- Reported Concern -->
                     <div class="mb-3">
-                        <label class="form-label text-uppercase fw-bold text-secondary" style="font-size: 12px;">
-                            Reported Issue / Customer Concern <span class="text-danger">*</span>
-                        </label>
-                        <textarea class="form-control" id="cr-concern" rows="3" required placeholder="e.g. Red LOS blinking on modem after storm, no internet connection since this morning." style="border-radius: 8px; border: 1px solid var(--input-border); background-color: var(--input-bg); color: var(--text-primary);"></textarea>
+                        <label class="form-label" for="cr-concern">Reported Issue / Customer Concern <span class="req">*</span></label>
+                        <textarea class="form-control" id="cr-concern" rows="3" required placeholder="e.g. Red LOS blinking on modem after storm, no internet connection since this morning."></textarea>
                     </div>
 
                     <!-- Dispatch Instructions / Remarks -->
                     <div class="mb-2">
-                        <label class="form-label text-uppercase fw-bold text-secondary" style="font-size: 12px;">Special Field Instructions (Optional)</label>
-                        <input type="text" class="form-control" id="cr-remarks" placeholder="e.g. Bring extra fiber patch cord, subscriber is available after 1:00 PM." style="height: 40px; border-radius: 8px; border: 1px solid var(--input-border); background-color: var(--input-bg); color: var(--text-primary);">
+                        <label class="form-label" for="cr-remarks">Special Field Instructions <span class="gt-optional-tag">Optional</span></label>
+                        <input type="text" class="form-control" id="cr-remarks" placeholder="e.g. Bring extra fiber patch cord, subscriber is available after 1:00 PM.">
                     </div>
                 </div>
 
-                <div class="modal-footer d-flex justify-content-between" style="border-top: 1px solid var(--border-subtle); padding: 14px 24px;">
-                    <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal" style="border-radius: 8px; border: 1px solid var(--border-subtle); color: var(--text-secondary); background: transparent;">Cancel</button>
-                    <button type="submit" class="btn btn-primary px-4 fw-semibold" id="btn-submit-customer-repair" style="border-radius: 8px; background: var(--color-primary); border: none; color: white;">
+                <div class="modal-footer">
+                    <button type="button" class="gt-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="gt-btn-primary" id="btn-submit-customer-repair">
                         <i class="fas fa-paper-plane me-1"></i> Send to Dispatch Queue
                     </button>
                 </div>
