@@ -15,20 +15,24 @@
         </div>
         <div>
           <h5 class="fw-bold mb-0" style="color: var(--text-main);">
-            {{ technician.name|default:"Technician" }}
+            {% if viewing_all %}All Field Technicians{% else %}{{ technician.name|default:"Technician" }}{% endif %}
           </h5>
           <span class="text-muted small">
-            <i class="fas fa-users-gear me-1"></i> {{ technician.team.name|default:"No Team Assigned" }}
+            <i class="fas fa-users-gear me-1"></i> {% if viewing_all %}Fleet-wide Field Execution Board{% else %}{{ technician.team.name|default:"No Team Assigned" }}{% endif %}
           </span>
         </div>
       </div>
 
       <div class="text-end">
+        {% if viewing_all %}
+        <span class="badge bg-success text-white px-2 py-1" style="font-size: 0.75rem; border-radius: 6px;">Field Fleet</span>
+        {% else %}
         <span class="badge {% if technician.is_available %}bg-success text-white{% else %}bg-secondary text-white{% endif %} px-2 py-1" style="font-size: 0.75rem; border-radius: 6px;">
           {% if technician.is_available %}On Duty{% else %}Off Duty{% endif %}
         </span>
+        {% endif %}
         <div class="small text-muted mt-1" style="font-size: 0.72rem;">
-          {{ tickets|length }} Assigned Job{{ tickets|length|pluralize }}
+          {{ tickets|length }} Active Job{{ tickets|length|pluralize }}
         </div>
       </div>
     </div>
@@ -39,6 +43,7 @@
         <span class="text-warning"><i class="fas fa-eye me-1"></i> Staff Previewing:</span>
         <form method="GET" class="d-inline-flex gap-2">
           <select name="tech_id" class="form-select form-select-sm" onchange="this.form.submit()" style="width: auto;">
+            <option value="">All Technicians</option>
             {% for t in all_techs %}
               <option value="{{ t.id }}" {% if technician.id == t.id %}selected{% endif %}>{{ t.name }}</option>
             {% endfor %}
@@ -71,6 +76,11 @@
               {% endif %}
               {% if t.status == 'IN_PROGRESS' %}
                 <span class="badge bg-warning text-dark"><i class="fas fa-clock fa-spin me-1"></i> On Site / Active</span>
+              {% endif %}
+              {% if viewing_all %}
+                <span class="badge bg-secondary text-white">
+                  <i class="fas fa-user-gear me-1"></i>{% for tn in t.technicians.all %}{{ tn.name }}{% if not forloop.last %}, {% endif %}{% empty %}Unassigned{% endfor %}
+                </span>
               {% endif %}
             </div>
             <span class="fw-bold font-monospace small" style="color: var(--text-muted);">{{ t.ticket_number }}</span>
@@ -160,8 +170,16 @@
     <!-- Zero Assigned Jobs Placeholder -->
     <div class="card border-0 shadow-sm p-5 text-center" style="background: var(--surface-card); border-radius: 14px; border: 1px solid var(--border-subtle) !important;">
       <i class="fas fa-clipboard-check text-muted fa-3x mb-3"></i>
-      <h5 class="fw-bold mb-1" style="color: var(--text-main);">No Jobs Assigned Right Now</h5>
-      <p class="text-muted small mb-0">Technicians cannot pick or claim unassigned jobs. All incoming orders and repairs are scheduled by the Dispatch team.</p>
+      <h5 class="fw-bold mb-1" style="color: var(--text-main);">
+        {% if viewing_all %}No Active Field Jobs Fleet-Wide{% else %}No Jobs Assigned Right Now{% endif %}
+      </h5>
+      <p class="text-muted small mb-0">
+        {% if viewing_all %}
+          No job ticket is currently in ASSIGNED or IN_PROGRESS. Open <a href="{% url 'dispatch_queue' %}">Dispatch Queue</a> to assign or schedule work.
+        {% else %}
+          Technicians cannot pick or claim unassigned jobs. All incoming orders and repairs are scheduled by the Dispatch team.
+        {% endif %}
+      </p>
     </div>
   {% endif %}
 

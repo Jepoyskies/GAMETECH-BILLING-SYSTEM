@@ -30,26 +30,21 @@ def technician_mobile_view(request):
     else:
         tech = Technician.objects.filter(user=request.user).first()
 
-    if not tech and is_staff:
-        tech_id = request.GET.get('tech_id')
-        if tech_id:
-            tech = Technician.objects.filter(id=tech_id).first()
-        if not tech:
-            tech = Technician.objects.first()
+    # Staff/Admin default = fleet-wide Field Execution board (all active jobs).
+    # Only narrow to a single technician when a tech_id is explicitly requested.
+    if not tech and is_staff and request.GET.get('tech_id'):
+        tech = Technician.objects.filter(id=request.GET['tech_id']).first()
 
     if not tech and not is_staff:
         messages.error(request, "Access restricted: You do not have an active Technician profile.")
         return redirect('dispatch_dashboard')
 
+    active_qs = JobTicket.objects.filter(
+        status__in=['ASSIGNED', 'IN_PROGRESS'],
+    ).select_related('customer', 'team').prefetch_related('call_attempts', 'technicians')
     if tech:
-        assigned_tickets = JobTicket.objects.filter(
-            technicians=tech,
-            status__in=['ASSIGNED', 'IN_PROGRESS'],
-        ).select_related('customer', 'team').prefetch_related('call_attempts').order_by('scheduled_date', 'scheduled_time')
-    else:
-        assigned_tickets = JobTicket.objects.filter(
-            status__in=['ASSIGNED', 'IN_PROGRESS']
-        ).select_related('customer', 'team').prefetch_related('call_attempts').order_by('scheduled_date', 'scheduled_time')
+        active_qs = active_qs.filter(technicians=tech)
+    assigned_tickets = active_qs.order_by('scheduled_date', 'scheduled_time')
 
     active_ticket_id = request.GET.get('ticket_id')
     active_ticket = None
@@ -66,6 +61,7 @@ def technician_mobile_view(request):
         'ticket': active_ticket,
         'is_staff_preview': is_staff and not hasattr(request.user, 'technician'),
         'all_techs': all_techs,
+        'viewing_all': bool(is_staff and not hasattr(request.user, 'technician') and tech is None),
     })
 
 
