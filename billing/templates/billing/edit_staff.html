@@ -231,9 +231,9 @@
                 <label class="plan-form-label">Current Password</label>
                 <div class="d-flex align-items-center gap-2">
                     <span class="gt-pw-masked font-monospace plan-form-control d-inline-flex align-items-center"
-                          data-pw="{{ staff.password_plaintext|escapejs }}">••••••••</span>
+                          data-pw="{{ staff.password_plaintext }}">••••••••</span>
                     <button type="button" class="btn btn-outline-secondary btn-sm" title="Show Password" onclick="gtTogglePw(this)"><i class="far fa-eye"></i></button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" title="Copy Password" onclick="gtCopyPw('{{ staff.password_plaintext|escapejs }}', this)"><i class="far fa-copy"></i></button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" title="Copy Password" onclick="gtCopyPwFrom(this)"><i class="far fa-copy"></i></button>
                 </div>
             </div>
             {% endif %}
@@ -276,7 +276,13 @@ function gtTogglePw(btn) {
   span.textContent = masked ? (span.getAttribute('data-pw') || '—') : '••••••••';
   btn.innerHTML = masked ? '<i class="far fa-eye-slash"></i>' : '<i class="far fa-eye"></i>';
 }
-function gtCopyPw(text, btn) {
+function gtCopyPwFrom(btn) {
+  // Read the password from the DOM instead of embedding it in a JS string.
+  // Inline JS context would need JS-escaping (which mangles '-' and '='), whereas
+  // data-pw is auto-escaped for HTML and the browser decodes it correctly.
+  var span = btn.parentNode.querySelector('.gt-pw-masked');
+  if (!span) return;
+  var text = span.getAttribute('data-pw');
   if (!text) return;
   navigator.clipboard.writeText(text).then(function() {
     var orig = btn.innerHTML;
