@@ -25,10 +25,14 @@
   * `customer_portal`: Subscriber self-service dashboard (account balance, payment instructions, invoices, support tickets).
   * `dispatch`: Technician dispatch operations, installation pipelines, field job ticketing, outage and maintenance tracking.
 * **How to Run Tests**:
-  * **Run Tests on Production Droplet Container** (isolated test DB):
+  * **DO NOT run the test suite inside the `gametech-web` production container.** The droplet is 1 vCPU / 1.9 GB and already hosts Postgres, Redis, Celery and Celery Beat. Building a test database in that container is enough to destabilise it, leaving `gametech-web` down and the site offline (see ERR-082). This instruction previously told AI tools to do exactly that.
+  * **Run tests on a local dev machine, or in a dedicated throwaway container** that is not serving production.
+  * **Cheap production sanity check only** (safe, does not build a test DB):
     ```bash
-    ssh root@143.198.207.144 "docker exec gametech-web python manage.py test <app_or_test_path> --keepdb"
+    ssh root@143.198.207.144 "docker exec gametech-web python manage.py check"
+    ssh root@143.198.207.144 "docker exec gametech-web python manage.py migrate --check"
     ```
+  * **Verify a single view renders** (cheap, read-only) using the RequestFactory pattern in Rule 29b.
   * **Local AST Python Syntax Validation** (Zero dependencies on Windows host):
     ```powershell
     python -m py_compile path/to/file.py
