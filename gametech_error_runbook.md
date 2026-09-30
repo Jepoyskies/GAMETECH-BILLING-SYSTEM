@@ -1587,3 +1587,18 @@ Gotchas when writing this sweep:
 
 **Detection**: grep every `{#` in `billing/templates/` and confirm the closing `#}` is on the **same line**. Any multi-line occurrence is a live text leak. All other `{# #}` comments in this repo are single-line and safe.
 
+---
+
+### ERR-078: Server Error (500) on Cignal Dashboard (`TemplateSyntaxError: 'block' tag with name 'content' appears more than once`)
+
+**Symptom**: Navigating to `/cignal-dashboard/` results in a `Server Error (500)`. The traceback shows `django.template.exceptions.TemplateSyntaxError: 'block' tag with name 'content' appears more than once`.
+
+**Root Cause**: During a design system migration, the old `{% block content %}` section (using legacy `cignal-hero` classes) was not removed before adding the new `{% block content %}` section (using `gt-` design system classes). Django's template parser forbids duplicate block names at the same level.
+
+**Exact Target Files**:
+- `billing/templates/billing/cignal_dashboard.html`
+
+**1-Step Fix**: Remove the old duplicate `{% block content %}...{% endblock %}` section. Keep only the new section that uses the current `gt-` design system classes.
+
+**Detection**: Run `grep -n "block content" billing/templates/billing/cignal_dashboard.html` — if more than one match exists, the duplicate must be removed.
+
