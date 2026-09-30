@@ -1570,3 +1570,20 @@ Gotchas when writing this sweep:
 - Seed arg converters with real ids (`Customer.objects.values_list("id", flat=True).first()`), and skip routes whose converter has no seed -- those surface as 404, not 500.
 - Expect benign non-500s: 302 (auth wall), 404 (seeded id absent), 405 (POST-only endpoint hit with GET).
 
+### ERR-077: Multi-Line `{# #}` Template Comment Renders as Raw Text on the Page
+
+**Symptom**: A line of raw text appears at the very top of the rendered page (above the sidebar/chrome), ending with a visible `#}` delimiter. In this case: *"…Live Monitoring is permanently frozen - it must never receive the Login rebrand. Restores its pre-rebrand token values. #}"* on `/live-monitoring/`.
+
+**Root Cause**: Django's `{# #}` comment syntax is **single-line only**. The lexer regex (`tag_re` in `django/template/base.py`) does not match across newlines, so a comment opened on one line and closed on the next is never tokenized as a comment -- the entire text, including the closing `#}`, is rendered verbatim. No error is raised; the page returns 200.
+
+**Exact Target Files**:
+- `billing/templates/billing/base.html` (this case: the AGENTS.md Rule 39 note inside the `{% if url_name == 'live_monitoring' %}` block)
+
+**1-Step Fix**: Use the `{% comment %} … {% endcomment %}` template tag for any comment spanning multiple lines:
+```django
+{% comment %}AGENTS.md Rule 39: Live Monitoring is permanently frozen - it must never
+   receive the Login rebrand. Restores its pre-rebrand token values.{% endcomment %}
+```
+
+**Detection**: grep every `{#` in `billing/templates/` and confirm the closing `#}` is on the **same line**. Any multi-line occurrence is a live text leak. All other `{# #}` comments in this repo are single-line and safe.
+
