@@ -1,12 +1,16 @@
 <!-- Unified Cignal Play & Box Activation Modal with Initial Payment & First Due Date Tracking -->
-<div class="modal fade" id="{% if modal_suffix %}{{ modal_id|default:'cignalAppModal_' }}{{ modal_suffix }}{% else %}{{ modal_id|default:'cignalModal' }}{% endif %}" tabindex="-1" aria-labelledby="cignalModalLabel_{{ modal_suffix|default:'single' }}" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content gt-modal-content" style="border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1);">
-      <div class="modal-header border-bottom-0 pb-0">
-        <h5 class="modal-title fw-bold" id="cignalModalLabel_{{ modal_suffix|default:'single' }}">
-          <i class="fas fa-clipboard-check text-primary me-2"></i> Record Cignal Enrollment
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<div class="modal fade" id="{% if modal_suffix %}{{ modal_id|default:'cignalAppModal_' }}{{ modal_suffix }}{% else %}{{ modal_id|default:'cignalModal' }}{% endif %}" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="cignalModalLabel_{{ modal_suffix|default:'single' }}" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered gt-modal-scroll">
+    <div class="modal-content gt-modal-card">
+      <div class="modal-header">
+        <div class="d-flex align-items-center gap-3">
+          <div class="gt-modal-icon"><i class="fas fa-clipboard-check"></i></div>
+          <div>
+            <h5 class="modal-title" id="cignalModalLabel_{{ modal_suffix|default:'single' }}">Record Cignal Enrollment</h5>
+            <div class="gt-field-help mt-1">Record the account numbers and due date to track this subscriber in Gametech.</div>
+          </div>
+        </div>
+        <button type="button" class="gt-icon-btn" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
       </div>
       <form action="{% url 'apply_cignal_addon' %}" method="post" onsubmit="return validateCignalSubmission_{{ modal_suffix|default:'single' }}(this);">
         {% csrf_token %}
@@ -14,283 +18,163 @@
         {% if target_request %}
         <input type="hidden" name="request_id" value="{{ target_request.id }}">
         {% endif %}
-        <div class="modal-body py-3">
-          <!-- Pure Tracking Guidance Tip -->
-          <div class="p-2.5 mb-3 rounded-3 d-flex align-items-center gap-2" style="background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(14, 165, 233, 0.2); font-size: 0.78rem; color: #bae6fd;">
-            <i class="fas fa-info-circle text-info fs-6"></i>
-            <span><strong>Manual Tracking:</strong> Cignal accounts are loaded & activated externally. Record the account numbers and due date below to track this subscriber in Gametech.</span>
-          </div>
+        <div class="modal-body">
 
           <!-- Subscriber Summary Banner -->
-          <div class="p-3 mb-3 rounded-3" style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25);">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-              <strong class="text-primary fw-bold" style="font-size: 0.96rem;">
-                <i class="fas fa-user-check me-1"></i> {% if target_customer %}{{ target_customer.full_name|default:target_customer.pppoe_username }}{% elif customer %}{{ customer.full_name|default:customer.pppoe_username }}{% else %}Subscriber{% endif %}
-              </strong>
-              {% if target_request %}
+          <div class="gt-callout gt-callout--info mb-3">
+            <i class="fas fa-user-check"></i>
+            <div class="d-flex justify-content-between align-items-center flex-grow-1 flex-wrap gap-2">
+              <strong>{% if target_customer %}{{ target_customer.full_name|default:target_customer.pppoe_username }}{% elif customer %}{{ customer.full_name|default:customer.pppoe_username }}{% else %}Subscriber{% endif %}</strong>
+              <span class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="gt-text-muted small"><i class="fas fa-network-wired me-1"></i>PPPoE: <strong>{% if target_customer %}{{ target_customer.pppoe_username|default:"None" }}{% elif customer %}{{ customer.pppoe_username|default:"None" }}{% else %}None{% endif %}</strong></span>
+                {% if target_request %}
                 <span class="badge bg-warning text-dark">{{ target_request.status }}</span>
-              {% else %}
+                {% else %}
                 <span class="badge bg-info-subtle text-info">New Activation</span>
-              {% endif %}
-            </div>
-            <div class="small text-muted d-flex flex-wrap gap-2 align-items-center">
-              <span><i class="fas fa-network-wired me-1"></i> PPPoE: <strong>{% if target_customer %}{{ target_customer.pppoe_username|default:"None" }}{% elif customer %}{{ customer.pppoe_username|default:"None" }}{% else %}None{% endif %}</strong></span>
-              {% if target_request %}
-                &bull; <span><i class="fas fa-clock me-1"></i> Requested: {{ target_request.requested_at|date:"M d, Y h:i A" }}</span>
-              {% endif %}
+                {% endif %}
+              </span>
             </div>
           </div>
 
           <!-- SECTION 1: Device / Account Details -->
-          <div class="p-3 mb-3 border rounded-3 border-secondary border-opacity-25 bg-dark bg-opacity-25">
-            <div class="d-flex align-items-center gap-2 mb-3 pb-1 border-bottom border-secondary border-opacity-25">
-              <i class="fas fa-satellite-dish text-primary"></i>
-              <h6 class="text-uppercase small fw-bold mb-0 text-muted" style="letter-spacing: 0.05em;">Section 1: Subscription Accounts</h6>
+          <div class="gt-form-section">
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <span class="gt-section-badge">1</span>
+              <h6 class="gt-section-title">Subscription Accounts</h6>
             </div>
 
-            <!-- Two Inputs: Cignal Play No & Cignal Box No -->
-            <div class="row g-2 mb-2">
+            <div class="row g-3">
               <div class="col-md-6">
-                <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
-                  <i class="fas fa-play-circle text-info me-1"></i> Cignal Play No.
-                </label>
-                <input type="text" class="form-control font-monospace fw-bold" name="cignal_play_no" id="modalCignalPlayNo_{{ modal_suffix|default:'single' }}" value="{% if target_customer %}{{ target_customer.cignalplay_no|default:'' }}{% elif customer %}{{ customer.cignalplay_no|default:'' }}{% endif %}" placeholder="e.g. 1002345678">
-                <div class="form-text text-muted small">Website / Mobile App account.</div>
+                <label class="form-label" for="modalCignalPlayNo_{{ modal_suffix|default:'single' }}">Cignal Play No. <span class="req">*</span></label>
+                <input type="text" class="form-control gt-input-mono" name="cignal_play_no" id="modalCignalPlayNo_{{ modal_suffix|default:'single' }}" value="{% if target_customer %}{{ target_customer.cignalplay_no|default:'' }}{% elif customer %}{{ customer.cignalplay_no|default:'' }}{% endif %}" placeholder="e.g. 1002345678">
+                <div class="gt-field-help">Website / Mobile App account.</div>
               </div>
               <div class="col-md-6">
-                <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
-                  <i class="fas fa-tv text-warning me-1"></i> Cignal Box No. <span class="text-muted fw-normal text-capitalize" style="font-size:0.72rem; letter-spacing:0;">(Optional)</span>
-                </label>
-                <input type="text" class="form-control font-monospace fw-bold" name="cignal_box_no" id="modalCignalBoxNo_{{ modal_suffix|default:'single' }}" value="{% if target_customer %}{{ target_customer.cignalbox_no|default:'' }}{% elif customer %}{{ customer.cignalbox_no|default:'' }}{% endif %}" placeholder="e.g. BOX-8892341 (Optional)">
-                <div class="form-text text-muted small">Physical STB serial / code (leave blank if App only).</div>
+                <label class="form-label" for="modalCignalBoxNo_{{ modal_suffix|default:'single' }}">Cignal Box No. <span class="gt-optional-tag">Optional</span></label>
+                <input type="text" class="form-control gt-input-mono" name="cignal_box_no" id="modalCignalBoxNo_{{ modal_suffix|default:'single' }}" value="{% if target_customer %}{{ target_customer.cignalbox_no|default:'' }}{% elif customer %}{{ customer.cignalbox_no|default:'' }}{% endif %}" placeholder="e.g. BOX-8892341">
+                <div class="gt-field-help">Physical STB serial / code (leave blank if App only).</div>
+              </div>
+              <div class="col-12">
+                <label class="form-label" for="modalAccountName_{{ modal_suffix|default:'single' }}">Subscription / Device Label <span class="req">*</span></label>
+                <input type="text" class="form-control" name="account_name" id="modalAccountName_{{ modal_suffix|default:'single' }}" placeholder="e.g. Living Room TV, Master Bedroom, 2nd Floor" value="{% if target_customer %}{{ target_customer.full_name }} Cignal{% elif customer %}{{ customer.full_name }} Cignal{% else %}Cignal Subscription{% endif %}" required>
+                <div class="gt-field-help">A friendly label to distinguish multiple boxes or subscriptions for this customer.</div>
               </div>
             </div>
-            <div class="text-muted small mb-3 fst-italic" style="font-size: 0.76rem;">
-              <i class="fas fa-info-circle text-info me-1"></i> Both can belong to this same subscription. Provide at least one (Box is optional if customer only uses the App).
-            </div>
-
-            <!-- Device / Subscription Label -->
-            <div class="mb-1">
-              <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">Subscription / Device Label <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" name="account_name" id="modalAccountName_{{ modal_suffix|default:'single' }}" placeholder="e.g. Living Room TV, Master Bedroom, 2nd Floor" value="{% if target_customer %}{{ target_customer.full_name }} Cignal{% elif customer %}{{ customer.full_name }} Cignal{% else %}Cignal Subscription{% endif %}" required>
-              <div class="form-text text-muted small">A friendly label to distinguish multiple boxes or subscriptions for this customer.</div>
-            </div>
+            <div class="gt-field-help mt-2"><i class="fas fa-info-circle me-1"></i>Both can belong to this same subscription. Provide at least one (Box is optional if customer only uses the App).</div>
           </div>
 
           <!-- SECTION 2: Payment & Auditing -->
-          <div class="p-3 mb-3 border rounded-3 border-secondary border-opacity-25 bg-dark bg-opacity-25">
-            <div class="d-flex align-items-center gap-2 mb-3 pb-1 border-bottom border-secondary border-opacity-25">
-              <i class="fas fa-receipt text-warning"></i>
-              <h6 class="text-uppercase small fw-bold mb-0 text-muted" style="letter-spacing: 0.05em;">Section 2: Payment & Auditing</h6>
+          <div class="gt-form-section">
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <span class="gt-section-badge">2</span>
+              <h6 class="gt-section-title">Payment & Auditing</h6>
             </div>
 
-            <!-- Hardware & Load Plan Split Selection -->
-            <div class="row g-2 mb-3">
+            <div class="row g-3">
               <div class="col-md-6">
-                <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
-                  <i class="fas fa-box text-warning me-1"></i> Hardware Setup <span class="text-danger">*</span>
-                </label>
-                <select name="hardware_payment_type" id="modalHardwareType_{{ modal_suffix|default:'single' }}" class="form-select fw-semibold" onchange="calculateActivationTotal_{{ modal_suffix|default:'single' }}()">
+                <label class="form-label" for="modalHardwareType_{{ modal_suffix|default:'single' }}">Hardware Setup <span class="req">*</span></label>
+                <select name="hardware_payment_type" id="modalHardwareType_{{ modal_suffix|default:'single' }}" class="form-select" onchange="calculateActivationTotal_{{ modal_suffix|default:'single' }}()">
                   <option value="none" data-cost="0" {% if target_request and 'box' not in target_request.addon_type|lower %}selected{% endif %}>No Box / App Only (₱0)</option>
                   <option value="installment" data-cost="250" {% if not target_request or 'box' in target_request.addon_type|lower %}selected{% endif %}>12-Mo Installment (₱250/mo)</option>
                   <option value="cashout" data-cost="3000">Cashout (₱3,000)</option>
                 </select>
-                <div class="form-text text-muted small">Box acquisition model.</div>
+                <div class="gt-field-help">Box acquisition model.</div>
               </div>
-
               <div class="col-md-6">
-                <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
-                  <i class="fas fa-satellite-dish text-info me-1"></i> Initial Load Plan <span class="text-danger">*</span>
-                </label>
-                <select name="monthly_load_plan" id="modalLoadPlan_{{ modal_suffix|default:'single' }}" class="form-select fw-semibold" onchange="calculateActivationTotal_{{ modal_suffix|default:'single' }}()">
+                <label class="form-label" for="modalLoadPlan_{{ modal_suffix|default:'single' }}">Initial Load Plan <span class="req">*</span></label>
+                <select name="monthly_load_plan" id="modalLoadPlan_{{ modal_suffix|default:'single' }}" class="form-select" onchange="calculateActivationTotal_{{ modal_suffix|default:'single' }}()">
                   <option value="149" data-cost="149" selected>42 Channels (₱149)</option>
                   <option value="399" data-cost="399">62 Channels (₱399)</option>
                 </select>
-                <div class="form-text text-muted small">First month subscription channels.</div>
+                <div class="gt-field-help">First month subscription channels.</div>
               </div>
             </div>
 
-            <!-- Total Due Today Display -->
-            <div class="p-3 mb-3 rounded-3 d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.25);">
-              <div>
-                <span class="small text-uppercase fw-bold text-success" style="letter-spacing: 0.05em;">
-                  <i class="fas fa-calculator me-1"></i> Total Due Today:
-                </span>
-                <div class="small text-muted" id="modalCalcBreakdown_{{ modal_suffix|default:'single' }}">₱250 (Installment) + ₱149 (Load)</div>
+            <!-- Total Due Today Summary -->
+            <div class="gt-summary-card mt-3">
+              <div class="gt-summary-row">
+                <span class="gt-summary-label">Total due today</span>
+                <span class="gt-summary-value" id="modalTotalDueDisplay_{{ modal_suffix|default:'single' }}">₱399.00</span>
               </div>
-              <div class="d-flex align-items-center gap-2">
-                <span class="fs-4 fw-bold text-success font-monospace" id="modalTotalDueDisplay_{{ modal_suffix|default:'single' }}">₱399.00</span>
-                <input type="hidden" name="initial_amount" id="modalInitialAmount_{{ modal_suffix|default:'single' }}" value="399.00">
-                <select name="payment_method" class="form-select form-select-sm" style="max-width: 130px;">
+              <div class="gt-summary-row">
+                <span class="gt-summary-label">Breakdown</span>
+                <span class="gt-summary-value" id="modalCalcBreakdown_{{ modal_suffix|default:'single' }}">₱250 (Installment) + ₱149 (Load)</span>
+              </div>
+              <div class="gt-summary-row">
+                <label class="form-label mb-0" for="modalPaymentMethod_{{ modal_suffix|default:'single' }}">Payment Method</label>
+                <select name="payment_method" id="modalPaymentMethod_{{ modal_suffix|default:'single' }}" class="form-select">
                   <option value="Cash" selected>Cash</option>
                   <option value="GCash">GCash</option>
                   <option value="Bank Transfer">Bank</option>
                 </select>
               </div>
+              <input type="hidden" name="initial_amount" id="modalInitialAmount_{{ modal_suffix|default:'single' }}" value="399.00">
             </div>
 
-            <!-- NEW Auditing Fields: Reference No. & Remarks / Notes -->
-            <div class="row g-2">
-              <div class="col-md-6 mb-2">
-                <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
-                  <i class="fas fa-barcode text-muted me-1"></i> Reference No.
-                </label>
+            <div class="row g-3 mt-3">
+              <div class="col-md-6">
+                <label class="form-label" for="modalReferenceNo_{{ modal_suffix|default:'single' }}">Reference No.</label>
                 <input type="text" class="form-control" name="reference_no" id="modalReferenceNo_{{ modal_suffix|default:'single' }}" placeholder="e.g. OR-889123 / GCash Ref">
               </div>
-              <div class="col-md-6 mb-2">
-                <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
-                  <i class="fas fa-comment-alt text-muted me-1"></i> Remarks / Notes
-                </label>
+              <div class="col-md-6">
+                <label class="form-label" for="modalNotes_{{ modal_suffix|default:'single' }}">Remarks / Notes</label>
                 <input type="text" class="form-control" name="notes" id="modalNotes_{{ modal_suffix|default:'single' }}" placeholder="e.g. Initial hardware cashout / reload">
               </div>
             </div>
-            <div class="form-text text-muted small">An official payment transaction will be recorded automatically upon activation.</div>
+            <div class="gt-field-help mt-2">An official payment transaction will be recorded automatically upon activation.</div>
           </div>
 
           <!-- SECTION 3: Timeline -->
-          <div class="p-3 mb-2 border rounded-3 border-secondary border-opacity-25 bg-dark bg-opacity-25">
-            <div class="d-flex align-items-center gap-2 mb-3 pb-1 border-bottom border-secondary border-opacity-25">
-              <i class="far fa-calendar-alt text-info"></i>
-              <h6 class="text-uppercase small fw-bold mb-0 text-muted" style="letter-spacing: 0.05em;">Section 3: Timeline & Dates</h6>
+          <div class="gt-form-section">
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <span class="gt-section-badge">3</span>
+              <h6 class="gt-section-title">Timeline & Dates</h6>
             </div>
 
-            <!-- Dates Row: Activation Date & First Due Date -->
-            <div class="row g-2">
-              <div class="col-md-6 mb-2">
-                <label class="form-label fw-bold small text-uppercase" style="letter-spacing: 0.04em;">
-                  <i class="far fa-calendar-alt text-info me-1"></i> Date Applied <span class="text-danger">*</span>
-                </label>
-                <input type="date" class="form-control fw-semibold" name="cignalplay_date" id="modalCignalDate_{{ modal_suffix|default:'single' }}" value="{% if target_request %}{{ target_request.requested_at|date:'Y-m-d' }}{% elif target_customer and target_customer.cignalplay_date %}{{ target_customer.cignalplay_date|date:'Y-m-d' }}{% elif customer and customer.cignalplay_date %}{{ customer.cignalplay_date|date:'Y-m-d' }}{% endif %}" required>
-                <div class="form-text text-muted" style="font-size: 0.72rem;">Date when the customer first applied.</div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="modalCignalDate_{{ modal_suffix|default:'single' }}">Date Applied <span class="req">*</span></label>
+                <input type="date" class="form-control" name="cignalplay_date" id="modalCignalDate_{{ modal_suffix|default:'single' }}" value="{% if target_request %}{{ target_request.requested_at|date:'Y-m-d' }}{% elif target_customer and target_customer.cignalplay_date %}{{ target_customer.cignalplay_date|date:'Y-m-d' }}{% elif customer and customer.cignalplay_date %}{{ customer.cignalplay_date|date:'Y-m-d' }}{% endif %}" required>
+                <div class="gt-field-help">Date when the customer first applied.</div>
               </div>
-
-              <!-- First Due Date / Expiration Date -->
-              <div class="col-md-6 mb-2">
+              <div class="col-md-6">
                 <div class="d-flex justify-content-between align-items-center mb-1">
-                  <label class="form-label fw-bold small text-uppercase mb-0" style="letter-spacing: 0.04em;">
-                    First Due Date <span class="text-danger">*</span>
-                  </label>
+                  <label class="form-label mb-0" for="modalFirstDueDate_{{ modal_suffix|default:'single' }}">First Due Date <span class="req">*</span></label>
                   <div class="d-flex gap-1">
-                    <button type="button" class="btn btn-link p-0 small text-decoration-none text-info" onclick="addActivationDays_{{ modal_suffix|default:'single' }}(30)" style="font-size: 0.72rem;">
-                      +30d
-                    </button>
-                    <span class="text-muted" style="font-size: 0.72rem;">|</span>
-                    <button type="button" class="btn btn-link p-0 small text-decoration-none text-success" onclick="addActivationDays_{{ modal_suffix|default:'single' }}(60)" style="font-size: 0.72rem;">
-                      +60d
-                    </button>
+                    <button type="button" class="gt-btn-ghost gt-btn-sm" onclick="addActivationDays_{{ modal_suffix|default:'single' }}(30)">+30d</button>
+                    <span class="gt-text-muted">|</span>
+                    <button type="button" class="gt-btn-ghost gt-btn-sm" onclick="addActivationDays_{{ modal_suffix|default:'single' }}(60)">+60d</button>
                   </div>
                 </div>
-                <input type="date" class="form-control fw-semibold" name="expiration_date" id="modalFirstDueDate_{{ modal_suffix|default:'single' }}" required>
-                <div class="form-text text-muted" style="font-size: 0.72rem;">Next renewal deadline (+30 days).</div>
+                <input type="date" class="form-control" name="expiration_date" id="modalFirstDueDate_{{ modal_suffix|default:'single' }}" required>
+                <div class="gt-field-help">Next renewal deadline (+30 days).</div>
               </div>
             </div>
           </div>
 
-          <script>
-          function validateCignalSubmission_{{ modal_suffix|default:'single' }}(form) {
-              var play = form.querySelector('[name="cignal_play_no"]');
-              var box = form.querySelector('[name="cignal_box_no"]');
-              var playVal = play ? play.value.trim() : '';
-              var boxVal = box ? box.value.trim() : '';
-              if (!playVal && !boxVal) {
-                  alert('Please enter at least one account number: Cignal Play No. (Website/App) or Cignal Box No. (Physical Box).');
-                  if (play) play.focus();
-                  return false;
-              }
-              return true;
-          }
-
-          function calculateActivationTotal_{{ modal_suffix|default:'single' }}() {
-              var hwSelect = document.getElementById('modalHardwareType_{{ modal_suffix|default:'single' }}');
-              var loadSelect = document.getElementById('modalLoadPlan_{{ modal_suffix|default:'single' }}');
-              var totalEl = document.getElementById('modalTotalDueDisplay_{{ modal_suffix|default:'single' }}');
-              var amountInput = document.getElementById('modalInitialAmount_{{ modal_suffix|default:'single' }}');
-              var breakdownEl = document.getElementById('modalCalcBreakdown_{{ modal_suffix|default:'single' }}');
-
-              if (!hwSelect || !loadSelect) return;
-              var hwOpt = hwSelect.options[hwSelect.selectedIndex];
-              var loadOpt = loadSelect.options[loadSelect.selectedIndex];
-
-              var hwCost = parseFloat(hwOpt ? hwOpt.getAttribute('data-cost') || 0 : 0);
-              var loadCost = parseFloat(loadOpt ? loadOpt.getAttribute('data-cost') || 0 : 0);
-              var total = hwCost + loadCost;
-
-              if (totalEl) totalEl.textContent = '₱' + total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-              if (amountInput) amountInput.value = total.toFixed(2);
-              if (breakdownEl && hwOpt && loadOpt) {
-                  var hwLabel = hwOpt.value === 'cashout' ? '₱3,000 (Cashout)' : (hwOpt.value === 'installment' ? '₱250 (Installment)' : '₱0 (No Box)');
-                  var loadLabel = '₱' + loadCost + ' (' + loadOpt.value + ' Plan)';
-                  breakdownEl.textContent = hwLabel + ' + ' + loadLabel;
-              }
-          }
-
-          function addActivationDays_{{ modal_suffix|default:'single' }}(days, fromToday) {
-              var dueInput = document.getElementById('modalFirstDueDate_{{ modal_suffix|default:'single' }}');
-              var actDateInput = document.getElementById('modalCignalDate_{{ modal_suffix|default:'single' }}');
-              if (!dueInput) return;
-              var baseDate = new Date();
-              if (!fromToday && dueInput.value) {
-                  var parts = dueInput.value.split('-');
-                  if (parts.length === 3) baseDate = new Date(parts[0], parts[1] - 1, parts[2]);
-              } else if (actDateInput && actDateInput.value) {
-                  var parts = actDateInput.value.split('-');
-                  if (parts.length === 3) baseDate = new Date(parts[0], parts[1] - 1, parts[2]);
-              }
-              baseDate.setDate(baseDate.getDate() + Number(days));
-              var y = baseDate.getFullYear();
-              var m = String(baseDate.getMonth() + 1).padStart(2, '0');
-              var d = String(baseDate.getDate()).padStart(2, '0');
-              dueInput.value = y + '-' + m + '-' + d;
-          }
-
-          // Initialize default First Due Date (+30 days) and Activation Date on modal render
-          (function() {
-              var dueInput = document.getElementById('modalFirstDueDate_{{ modal_suffix|default:'single' }}');
-              if (dueInput && !dueInput.value) {
-                  var d = new Date();
-                  d.setDate(d.getDate() + 30);
-                  var y = d.getFullYear();
-                  var m = String(d.getMonth() + 1).padStart(2, '0');
-                  var day = String(d.getDate()).padStart(2, '0');
-                  dueInput.value = y + '-' + m + '-' + day;
-              }
-              var actDate = document.getElementById('modalCignalDate_{{ modal_suffix|default:'single' }}');
-              if (actDate && !actDate.value) {
-                  var today = new Date();
-                  var ty = today.getFullYear();
-                  var tm = String(today.getMonth() + 1).padStart(2, '0');
-                  var td = String(today.getDate()).padStart(2, '0');
-                  actDate.value = ty + '-' + tm + '-' + td;
-              }
-              if (typeof calculateActivationTotal_{{ modal_suffix|default:'single' }} === 'function') {
-                  calculateActivationTotal_{{ modal_suffix|default:'single' }}();
-              }
-          })();
-          </script>
         </div>
-        <div class="modal-footer border-top-0 pt-0 gt-modal-footer d-flex justify-content-between align-items-center flex-wrap gap-2">
-          <div class="d-flex align-items-center gap-2">
+        <div class="modal-footer">
+          <div class="d-flex align-items-center gap-2 flex-wrap">
             {% if target_request %}
             <button type="button"
-              class="btn btn-outline-danger btn-sm rounded-pill px-2.5"
-              style="font-size: 0.8rem;"
+              class="gt-btn-danger gt-btn-sm"
               onclick="if (typeof confirmCancelCignalApp === 'function') { confirmCancelCignalApp('{{ target_request.id }}', '{% if target_customer %}{{ target_customer.full_name|escapejs }}{% elif customer %}{{ customer.full_name|escapejs }}{% endif %}', '{{ target_request.addon_type|escapejs }}', true); } else if (typeof cancelCustomerCignalAddon === 'function') { cancelCustomerCignalAddon('{{ target_request.id }}', '{{ target_request.addon_type|escapejs }}', true); }">
               <i class="fas fa-trash-alt me-1"></i> Cancel Request
             </button>
             {% endif %}
             {% if from_dashboard %}
-              <a href="{% if target_customer %}{% url 'view_customer' target_customer.id %}{% elif customer %}{% url 'view_customer' customer.id %}{% else %}#{% endif %}" class="btn btn-outline-secondary btn-sm" style="border-radius: 10px;">
+              <a href="{% if target_customer %}{% url 'view_customer' target_customer.id %}{% elif customer %}{% url 'view_customer' customer.id %}{% else %}#{% endif %}" class="gt-btn-secondary gt-btn-sm">
                 <i class="fas fa-external-link-alt me-1"></i> View Profile
               </a>
             {% else %}
-              <a href="{% url 'cignal_dashboard' %}{% if target_customer %}?highlight_customer={{ target_customer.id }}{% elif customer %}?highlight_customer={{ customer.id }}{% endif %}" class="btn btn-outline-info btn-sm" style="border-radius: 10px;">
+              <a href="{% url 'cignal_dashboard' %}{% if target_customer %}?highlight_customer={{ target_customer.id }}{% elif customer %}?highlight_customer={{ customer.id }}{% endif %}" class="gt-btn-secondary gt-btn-sm">
                 <i class="fas fa-satellite-dish me-1"></i> Cignal Dashboard
               </a>
             {% endif %}
           </div>
           <div class="d-flex gap-2">
-            <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="border-radius: 10px;">Close</button>
-            <button type="submit" class="btn btn-primary fw-bold shadow-sm" style="border-radius: 10px;">
+            <button type="button" class="gt-btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="submit" class="gt-btn-primary">
               <i class="fas fa-clipboard-check me-1"></i> Record Enrollment
             </button>
           </div>
@@ -298,4 +182,85 @@
       </form>
     </div>
   </div>
-</div>
+
+<script>
+function validateCignalSubmission_{{ modal_suffix|default:'single' }}(form) {
+    var play = form.querySelector('[name="cignal_play_no"]');
+    var box = form.querySelector('[name="cignal_box_no"]');
+    var playVal = play ? play.value.trim() : '';
+    var boxVal = box ? box.value.trim() : '';
+    if (!playVal && !boxVal) {
+        alert('Please enter at least one account number: Cignal Play No. (Website/App) or Cignal Box No. (Physical Box).');
+        if (play) play.focus();
+        return false;
+    }
+    return true;
+}
+
+function calculateActivationTotal_{{ modal_suffix|default:'single' }}() {
+    var hwSelect = document.getElementById('modalHardwareType_{{ modal_suffix|default:'single' }}');
+    var loadSelect = document.getElementById('modalLoadPlan_{{ modal_suffix|default:'single' }}');
+    var totalEl = document.getElementById('modalTotalDueDisplay_{{ modal_suffix|default:'single' }}');
+    var amountInput = document.getElementById('modalInitialAmount_{{ modal_suffix|default:'single' }}');
+    var breakdownEl = document.getElementById('modalCalcBreakdown_{{ modal_suffix|default:'single' }}');
+
+    if (!hwSelect || !loadSelect) return;
+    var hwOpt = hwSelect.options[hwSelect.selectedIndex];
+    var loadOpt = loadSelect.options[loadSelect.selectedIndex];
+
+    var hwCost = parseFloat(hwOpt ? hwOpt.getAttribute('data-cost') || 0 : 0);
+    var loadCost = parseFloat(loadOpt ? loadOpt.getAttribute('data-cost') || 0 : 0);
+    var total = hwCost + loadCost;
+
+    if (totalEl) totalEl.textContent = '₱' + total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    if (amountInput) amountInput.value = total.toFixed(2);
+    if (breakdownEl && hwOpt && loadOpt) {
+        var hwLabel = hwOpt.value === 'cashout' ? '₱3,000 (Cashout)' : (hwOpt.value === 'installment' ? '₱250 (Installment)' : '₱0 (No Box)');
+        var loadLabel = '₱' + loadCost + ' (' + loadOpt.value + ' Plan)';
+        breakdownEl.textContent = hwLabel + ' + ' + loadLabel;
+    }
+}
+
+function addActivationDays_{{ modal_suffix|default:'single' }}(days, fromToday) {
+    var dueInput = document.getElementById('modalFirstDueDate_{{ modal_suffix|default:'single' }}');
+    var actDateInput = document.getElementById('modalCignalDate_{{ modal_suffix|default:'single' }}');
+    if (!dueInput) return;
+    var baseDate = new Date();
+    if (!fromToday && dueInput.value) {
+        var parts = dueInput.value.split('-');
+        if (parts.length === 3) baseDate = new Date(parts[0], parts[1] - 1, parts[2]);
+    } else if (actDateInput && actDateInput.value) {
+        var parts = actDateInput.value.split('-');
+        if (parts.length === 3) baseDate = new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+    baseDate.setDate(baseDate.getDate() + Number(days));
+    var y = baseDate.getFullYear();
+    var m = String(baseDate.getMonth() + 1).padStart(2, '0');
+    var d = String(baseDate.getDate()).padStart(2, '0');
+    dueInput.value = y + '-' + m + '-' + d;
+}
+
+// Initialize default First Due Date (+30 days) and Activation Date on modal render
+(function() {
+    var dueInput = document.getElementById('modalFirstDueDate_{{ modal_suffix|default:'single' }}');
+    if (dueInput && !dueInput.value) {
+        var d = new Date();
+        d.setDate(d.getDate() + 30);
+        var y = d.getFullYear();
+        var m = String(d.getMonth() + 1).padStart(2, '0');
+        var day = String(d.getDate()).padStart(2, '0');
+        dueInput.value = y + '-' + m + '-' + day;
+    }
+    var actDate = document.getElementById('modalCignalDate_{{ modal_suffix|default:'single' }}');
+    if (actDate && !actDate.value) {
+        var today = new Date();
+        var ty = today.getFullYear();
+        var tm = String(today.getMonth() + 1).padStart(2, '0');
+        var td = String(today.getDate()).padStart(2, '0');
+        actDate.value = ty + '-' + tm + '-' + td;
+    }
+    if (typeof calculateActivationTotal_{{ modal_suffix|default:'single' }} === 'function') {
+        calculateActivationTotal_{{ modal_suffix|default:'single' }}();
+    }
+})();
+</script>
