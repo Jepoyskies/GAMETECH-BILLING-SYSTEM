@@ -16,6 +16,7 @@
 8. **Business Spec**: `docs/SPEC.md` (dispatch flow, agent rules, billing logic)
 9. **Frozen Pages**: `PAGE_FREEZE_REGISTRY.md` (never edit these)
 10. **Decision Log**: `DECISION_LOG.md` (architectural decisions — don't re-litigate)
+11. **Unfinished Work**: `docs/ai_tracking/HANDOFF.md` (read FIRST if it exists — what the last session left open)
 
 ---
 
@@ -52,3 +53,4 @@ ssh root@143.198.207.144 "docker exec gametech-redis redis-cli KEYS 'pattern*'"
 | New feature | `gametech_filing_index.md` Recipes | Start from scratch |
 | Business logic | `docs/SPEC.md` | Guess the rules |
 | Frozen pages | `PAGE_FREEZE_REGISTRY.md` | Edit frozen files |
+| Picking up unfinished work | `docs/ai_tracking/HANDOFF.md` | Re-do what the last session already shipped |

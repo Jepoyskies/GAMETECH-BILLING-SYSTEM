@@ -166,6 +166,16 @@ def manage_roles(request):
             can_access_administration
         )
 
+        # parse_subtabs() rebuilds the dict from scratch, which would DROP the
+        # action-level permissions living under subtab_permissions["_actions"].
+        # Preserve that key across every role edit (Phase 2 permission work).
+        if action in ("edit", "create") and role_id:
+            existing = StaffRole.objects.filter(id=role_id).first()
+            if existing and isinstance(existing.subtab_permissions, dict):
+                prior_actions = existing.subtab_permissions.get("_actions")
+                if isinstance(prior_actions, dict) and prior_actions:
+                    subtab_perms["_actions"] = prior_actions
+
         if action == "delete" and role_id:
             role = StaffRole.objects.filter(id=role_id).first()
             if role:
