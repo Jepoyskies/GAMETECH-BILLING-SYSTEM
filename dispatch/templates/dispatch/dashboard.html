@@ -72,15 +72,15 @@
           <div class="dash-kpi-sub">{{ operational_overview.ongoing.installs }} Install &middot; {{ operational_overview.ongoing.repairs }} Repair</div>
         </div>
       </div>
-      <!-- Closed -->
+      <!-- Total Records -->
       <div class="gt-kpi-card">
         <div class="gt-kpi-icon" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border-color: rgba(16, 185, 129, 0.25);">
           <i class="fas fa-check-circle"></i>
         </div>
         <div>
-          <div class="gt-kpi-val">{{ operational_overview.closed.total }}</div>
-          <div class="gt-kpi-lbl">Total Closed</div>
-          <div class="dash-kpi-sub">{{ operational_overview.closed.installs }} Install &middot; {{ operational_overview.closed.repairs }} Repair</div>
+          <div class="gt-kpi-val">{{ operational_overview.total_records.total }}</div>
+          <div class="gt-kpi-lbl">Total Records</div>
+          <div class="dash-kpi-sub">{{ operational_overview.total_records.installs }} Install &middot; {{ operational_overview.total_records.repairs }} Repair</div>
         </div>
       </div>
       <!-- Cancelled -->
@@ -318,7 +318,39 @@
     </div>
   </div>
 
-  <!-- 4. Technician Productivity & Leaderboard -->
+  <!-- 4. Monthly Install Targets Bar Chart -->
+  <div class="dash-section">
+    <div class="dash-section-heading">
+      <i class="fas fa-chart-bar text-primary"></i> Monthly Install Targets
+    </div>
+    <div class="monthly-targets-card">
+      <div class="monthly-bars-row">
+        {% for m in monthly_targets.months %}
+        <div class="monthly-bar-group">
+          <div class="monthly-bar-pair">
+            <div class="monthly-bar actual" style="height: {% widthratio m.actual monthly_targets.avg_target 150 %}px;" title="Actual: {{ m.actual }}"></div>
+            <div class="monthly-bar target" style="height: {% widthratio m.target monthly_targets.avg_target 150 %}px;" title="Target: {{ m.target }}"></div>
+          </div>
+          <span class="monthly-bar-label">{{ m.month_name }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="monthly-pct-row">
+        {% for m in monthly_targets.months %}
+        <div class="monthly-pct-item">
+          <div class="monthly-pct-val {% if m.pct >= 100 %}green{% elif m.pct >= 50 %}yellow{% else %}red{% endif %}">{{ m.pct }}%</div>
+          <div class="monthly-pct-lbl">{{ m.month_name }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="monthly-legend">
+        <div class="monthly-legend-item"><span class="monthly-legend-dot" style="background:#3b82f6;"></span> Actual</div>
+        <div class="monthly-legend-item"><span class="monthly-legend-dot" style="background:#94a3b8;"></span> Target</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Technician Productivity & Leaderboard -->
   <div class="dash-section">
     <div class="dash-section-heading">
       <i class="fas fa-users-cog text-primary"></i> Field Productivity &amp; Close Rate
@@ -329,17 +361,18 @@
           <thead>
             <tr>
               <th class="leaderboard-th" style="width: 55px;">Rank</th>
-              <th class="leaderboard-th">Field Technician / Team</th>
-              <th class="leaderboard-th">Handled</th>
-              <th class="leaderboard-th">Completed</th>
-              <th class="leaderboard-th">Ongoing</th>
-              <th class="leaderboard-th">Cancelled</th>
-              <th class="leaderboard-th">Avg Turnaround</th>
-              <th class="leaderboard-th">Close Rate</th>
+              <th class="leaderboard-th">Technician</th>
+              <th class="leaderboard-th">Installs</th>
+              <th class="leaderboard-th">Repairs</th>
+              <th class="leaderboard-th">Total</th>
+              <th class="leaderboard-th">Target/Day</th>
+              <th class="leaderboard-th">Target/Month</th>
+              <th class="leaderboard-th">% of Target</th>
+              <th class="leaderboard-th">Per Day (Avg)</th>
             </tr>
           </thead>
           <tbody>
-            {% for row in tech_report %}
+            {% for row in tech_report.by_staff %}
               <tr>
                 <td class="leaderboard-td">
                   <span class="rank-badge {% if forloop.counter == 1 %}gold{% elif forloop.counter == 2 %}silver{% elif forloop.counter == 3 %}bronze{% endif %}">
@@ -350,20 +383,21 @@
                   {{ row.name }}
                   {% if row.team_name %}<span class="text-muted small">({{ row.team_name }})</span>{% endif %}
                 </td>
-                <td class="leaderboard-td">{{ row.handled }}</td>
-                <td class="leaderboard-td text-success fw-bold">{{ row.closed }}</td>
-                <td class="leaderboard-td text-primary">{{ row.ongoing }}</td>
-                <td class="leaderboard-td text-danger">{{ row.cancelled }}</td>
-                <td class="leaderboard-td font-monospace small">{{ row.avg_turnaround_str|default:"—" }}</td>
+                <td class="leaderboard-td">{{ row.installs }}</td>
+                <td class="leaderboard-td">{{ row.repairs }}</td>
+                <td class="leaderboard-td fw-bold">{{ row.total }}</td>
+                <td class="leaderboard-td">{{ row.target_day }}</td>
+                <td class="leaderboard-td">{{ row.target_month }}</td>
                 <td class="leaderboard-td">
-                  <span class="pill-rate {% if row.close_rate >= 70 %}pill-green{% elif row.close_rate >= 40 %}pill-yellow{% else %}pill-red{% endif %}">
-                    {{ row.close_rate }}%
+                  <span class="pill-rate {% if row.pct_product >= 100 %}pill-green{% elif row.pct_product >= 50 %}pill-yellow{% else %}pill-red{% endif %}">
+                    {{ row.pct_product }}%
                   </span>
                 </td>
+                <td class="leaderboard-td font-monospace small">{{ row.per_day_avg }}</td>
               </tr>
             {% empty %}
               <tr>
-                <td colspan="8" class="text-center py-4 text-muted small">
+                <td colspan="9" class="text-center py-4 text-muted small">
                   No field activity recorded for this period.
                 </td>
               </tr>
@@ -374,7 +408,66 @@
     </div>
   </div>
 
-  <!-- 5. Collapsible ERP Pipeline Stepper -->
+  <!-- 6. Admin Stats (CSR Performance) -->
+  <div class="dash-section">
+    <div class="dash-section-heading">
+      <i class="fas fa-user-tie text-primary"></i> Admin Stats
+    </div>
+    <div class="admin-stats-card">
+      <div class="table-responsive">
+        <table class="admin-stats-table">
+          <thead>
+            <tr>
+              <th class="admin-stats-th" style="width: 55px;">Rank</th>
+              <th class="admin-stats-th">CSR</th>
+              <th class="admin-stats-th">Assigned</th>
+              <th class="admin-stats-th">Dispatch Handled</th>
+              <th class="admin-stats-th">Dispatch Closed</th>
+              <th class="admin-stats-th">Close Rate</th>
+              <th class="admin-stats-th">Concerns Handled</th>
+              <th class="admin-stats-th">Concerns Closed</th>
+              <th class="admin-stats-th">Concern Close Rate</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in csr_report.rows %}
+              <tr>
+                <td class="admin-stats-td">
+                  <span class="rank-badge {% if forloop.counter == 1 %}gold{% elif forloop.counter == 2 %}silver{% elif forloop.counter == 3 %}bronze{% endif %}">
+                    {{ forloop.counter }}
+                  </span>
+                </td>
+                <td class="admin-stats-td fw-semibold text-dark">{{ row.name }}</td>
+                <td class="admin-stats-td">{{ row.total_handled }}</td>
+                <td class="admin-stats-td">{{ row.disp_handled }}</td>
+                <td class="admin-stats-td">{{ row.disp_closed }}</td>
+                <td class="admin-stats-td">
+                  <span class="pill-rate {% if row.disp_rate >= 70 %}pill-green{% elif row.disp_rate >= 40 %}pill-yellow{% else %}pill-red{% endif %}">
+                    {{ row.disp_rate }}%
+                  </span>
+                </td>
+                <td class="admin-stats-td">{{ row.concern_handled }}</td>
+                <td class="admin-stats-td">{{ row.concern_closed }}</td>
+                <td class="admin-stats-td">
+                  <span class="pill-rate {% if row.concern_rate >= 70 %}pill-green{% elif row.concern_rate >= 40 %}pill-yellow{% else %}pill-red{% endif %}">
+                    {{ row.concern_rate }}%
+                  </span>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="9" class="text-center py-4 text-muted small">
+                  No CSR activity recorded for this period.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. Collapsible ERP Pipeline Stepper -->
   <div class="dash-section">
     <div class="erp-pipeline-toggle" data-bs-toggle="collapse" data-bs-target="#erpStepperCollapse" aria-expanded="false">
       <span><i class="fas fa-stream text-primary me-2"></i> ERP 5-Stage Pipeline &amp; Provisioning Console</span>

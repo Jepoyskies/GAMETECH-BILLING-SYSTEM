@@ -28,6 +28,10 @@ def get_operational_overview_stats():
     pending_r = records.exclude(id__in=closed_r).exclude(id__in=cancelled_r).exclude(id__in=ongoing_r)
 
     # 3. Synchronized totals
+    total_all = pending_t.count() + pending_r.count() + ongoing_t.count() + ongoing_r.count() + closed_t.count() + closed_r.count() + cancelled_t.count() + cancelled_r.count()
+    total_installs = pending_t.exclude(ticket_type='REPAIR').count() + pending_r.filter(tab_type='INTERNET_INSTALL').count() + ongoing_t.exclude(ticket_type='REPAIR').count() + ongoing_r.filter(tab_type='INTERNET_INSTALL').count() + closed_t.exclude(ticket_type='REPAIR').count() + closed_r.filter(tab_type='INTERNET_INSTALL').count() + cancelled_t.exclude(ticket_type='REPAIR').count() + cancelled_r.filter(tab_type='INTERNET_INSTALL').count()
+    total_repairs = pending_t.filter(ticket_type='REPAIR').count() + pending_r.filter(tab_type='CLIENT_CONCERNS').count() + ongoing_t.filter(ticket_type='REPAIR').count() + ongoing_r.filter(tab_type='CLIENT_CONCERNS').count() + closed_t.filter(ticket_type='REPAIR').count() + closed_r.filter(tab_type='CLIENT_CONCERNS').count() + cancelled_t.filter(ticket_type='REPAIR').count() + cancelled_r.filter(tab_type='CLIENT_CONCERNS').count()
+
     return {
         'for_dispatch': {
             'total': pending_t.count() + pending_r.count(),
@@ -39,10 +43,10 @@ def get_operational_overview_stats():
             'installs': ongoing_t.exclude(ticket_type='REPAIR').count() + ongoing_r.filter(tab_type='INTERNET_INSTALL').count(),
             'repairs': ongoing_t.filter(ticket_type='REPAIR').count() + ongoing_r.filter(tab_type='CLIENT_CONCERNS').count(),
         },
-        'closed': {
-            'total': closed_t.count() + closed_r.count(),
-            'installs': closed_t.exclude(ticket_type='REPAIR').count() + closed_r.filter(tab_type='INTERNET_INSTALL').count(),
-            'repairs': closed_t.filter(ticket_type='REPAIR').count() + closed_r.filter(tab_type='CLIENT_CONCERNS').count(),
+        'total_records': {
+            'total': total_all,
+            'installs': total_installs,
+            'repairs': total_repairs,
         },
         'cancelled': {
             'total': cancelled_t.count() + cancelled_r.count(),
