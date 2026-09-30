@@ -1,0 +1,109 @@
+{% comment %}
+Draft Autosave for /customers/add/
+Restores form entries after refresh or accidental tab close.
+Pure client-side (localStorage) - no model, no migration, no view changes.
+Expire: 12 hours.  Auto-clear if a submit was older than 2 min (means it went through).
+{% endcomment %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const form = document.getElementById('add-customer-form');
+    if (!form) return;
+
+    const KEY = 'gt_add_customer_draft';
+    const MAX_AGE = 12 * 60 * 60 * 1000;   // 12 hours
+    const SUBMIT_GRACE = 2 * 60 * 1000;    // 2 min - after this, last submit succeeded
+    const SKIP = ['csrfmiddlewaretoken', 'action', 'next', 'prospect_id', 'pppoe_password'];
+
+    function read() {
+        try {
+            const raw = localStorage.getItem(KEY);
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) { return null; }
+    }
+
+    function clearDraft() {
+        try { localStorage.removeItem(KEY); } catch (e) {}
+    }
+
+    // If staff returned long after a submit, that submit went through -> drop the stale draft.
+    const saved = read();
+    if (saved) {
+        const age = Date.now() - (saved.ts || 0);
+        if (age > MAX_AGE || (saved.submittedAt && age > SUBMIT_GRACE)) clearDraft();
+    }
+
+    function collect() {
+        const data = {};
+        form.querySelectorAll('[name]').forEach(el => {
+            if (SKIP.includes(el.name)) return;
+            if (el.type === 'checkbox') data[el.name] = el.checked;
+            else if (el.type === 'radio') { if (el.checked) data[el.name] = el.value; }
+            else data[el.name] = el.value;
+        });
+        data.ts = Date.now();
+        return data;
+    }
+
+    function save() {
+        try { localStorage.setItem(KEY, JSON.stringify(collect())); } catch (e) {}
+    }
+
+    function restore(data) {
+        let touched = 0;
+        form.querySelectorAll('[name]').forEach(el => {
+            if (!(el.name in data) || SKIP.includes(el.name)) return;
+            const val = data[el.name];
+            if (el.type === 'checkbox') {
+                if (el.checked !== !!val) touched++;
+                el.checked = !!val;
+            } else if (el.type === 'radio') {
+                if (el.value === val) el.checked = true;
+            } else {
+                if (el.value !== val) touched++;
+                el.value = val;
+                if (el.tomselect) el.tomselect.setValue(val);   // keep TomSelect in sync
+            }
+            // Re-fire so the dependent UI (checklist counter, setup cards, plan text) recalculates
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        return touched;
+    }
+
+    const banner = document.createElement('div');
+    banner.className = 'alert alert-info d-flex justify-content-between align-items-center py-2 mb-3';
+    banner.innerHTML = '<span><i class="fas fa-undo me-2"></i>Unsaved entries from earlier were restored.</span>';
+    const discard = document.createElement('button');
+    discard.type = 'button';
+    discard.className = 'btn btn-sm btn-outline-secondary';
+    discard.textContent = 'Start Blank';
+    discard.addEventListener('click', function() {
+        clearDraft();
+        form.reset();
+        window.location.reload();
+    });
+    banner.appendChild(discard);
+    form.parentNode.insertBefore(banner, form);
+
+    // Restore after other scripts (TomSelect, map, listeners) have finished wiring up.
+    setTimeout(function() {
+        const data = read();
+        if (data && restore(data) > 0) form.parentNode.insertBefore(banner, form);
+    }, 300);
+
+    let timer;
+    form.addEventListener('input', function() {
+        clearTimeout(timer);
+        timer = setTimeout(save, 400);
+    });
+    form.addEventListener('change', function() {
+        clearTimeout(timer);
+        timer = setTimeout(save, 400);
+    });
+
+    form.addEventListener('submit', function() {
+        const data = collect();
+        data.submittedAt = Date.now();
+        try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {}
+    });
+});
+</script>
