@@ -1863,3 +1863,44 @@ have. All containers had also stopped, which hid the failure until restart.
 `billing/views/staff.py` (`edit_staff`)
 
 **Date Logged**: 2026-09-30
+
+---
+
+### ERR-085: Plaintext Password Mirrors Removed (Security Hardening)
+
+**Symptom**: Discovery finding, not a runtime error. `SystemAdmin.password_plaintext`
+and `Customer.portal_password_plaintext` stored every staff login and every
+subscriber portal login in clear text alongside the PBKDF2 hash. A database dump
+or read-only SQL access yielded all of them.
+
+**Root Cause**: Both columns existed only so staff could *read back* a password
+instead of resetting it (added in migrations `0062`/`0063`). Both authentication
+paths already used the hash, and `reset_customer_portal_password` already SMSeed
+the temp password to the subscriber and held it in the session for a one-time
+display. The mirrors were therefore redundant as well as a liability.
+
+**Fix**: Migration `billing/migrations/0064_drop_plaintext_password_columns.py`
+drops both columns. Removed the read-back UI (`Current Password` block on Edit
+Staff, the password column on the staff list, the portal-password reveal on the
+customer profile) and the dead `gtTogglePw`/`gtCopyPwFrom` helpers. Staff reset
+via the existing Override Password field; subscribers use Forgot Password.
+
+**Deliberately NOT changed**: `Customer.pppoe_password` and
+`MikrotikDevice.api_password` stay plaintext. A MikroTik secret cannot be hashed
+- the router must authenticate with the literal value - and the PPPoE secret is
+the password the subscriber already shares with their own household.
+
+**Backup**: `pg_dump` taken before the drop at
+`/root/backups/pre_plaintext_drop_20260930_2105.sql`.
+
+**Lesson**: Never add a plaintext mirror "so staff can see it". If a password
+must be shown once, show it once at generation time (SMS/session), never persist
+it. The reset flow is the only legitimate read path.
+
+**Files**: `billing/models.py`, `billing/views/staff.py`,
+`billing/management/commands/reset_all_portal_passwords.py`,
+`billing/templates/billing/edit_staff.html`,
+`billing/templates/billing/staff_and_admins.html`,
+`billing/templates/billing/view_customer/_info_cards.html`
+
+**Date Logged**: 2026-09-30
