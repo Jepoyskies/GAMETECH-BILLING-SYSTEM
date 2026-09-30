@@ -34,8 +34,10 @@
 | **ERR-074** | Table rows shifted one column vs header; empty-state `colspan` wrong | `payment_logs.html` (any table with a gated `<th>`) | Frontend (Table) |
 | **ERR-075** | All containers gone, every page returns `000`, `No such container` | `/root/GAMETECH-BILLING-SYSTEM`, `docker-compose.yml` | Deployment / Outage |
 | **ERR-076** | Bare `NameError: name 'XForm' is not defined` on a few pages only; rest of app healthy | view module's import block, e.g. `billing/views/settings.py` | Python / Views |
+| **ERR-080** | DB Backup button redirects to Settings instead of downloading a file | `billing/views/settings.py` (`backup_database_view`) | Backend / Backup |
 | **ERR-065** | Blinding White Cards on Dispatch Dashboard in Dark Mode & Table Contrast Degradation | `dispatch/dashboard.html`, `_monitoring_page_styles.html`, `_gt_design_system.html` | Frontend (Theme/CSS) |
 | **ERR-066** | Broken Light Theme, Overlapping Badges, Solid Blue Router Pill, and Unsynced Runtime Charts | `_gt_design_system.html`, `customer_list/_table.html`, `_scripts.html`, `tokens_and_base.css` | Frontend (Theme/CSS) |
+| **ERR-077** | DB Backup button redirects to Settings instead of downloading a file | `billing/views/settings.py` (`backup_database_view`) | Backend / Backup |
 
 ---
 
@@ -1635,6 +1637,23 @@ ssh root@143.198.207.144 "docker logs --since 2m gametech-web 2>&1 | grep -i 'ti
 - Run a direct LAN cable from the Mini PC to the switch — eliminate the repeater as a dependency
 - Mark the faulty port with tape so it is never reused
 - If repeater WiFi must be used, set Mini PC network adapter power management to OFF (Device Manager → adapter Properties → Power Management → uncheck "Allow computer to turn off this device to save power")
+
+**Date Logged**: 2026-09-30
+
+---
+
+### ERR-080: DB Backup Button Redirects to Settings Instead of Downloading a File
+
+**Symptom**: Clicking "DB Backup" on the Settings or Admin Panel page redirects back to the Settings page with no file downloaded.
+
+**Root Cause**: The `backup_database_view` in `billing/views/settings.py` tried to read `settings.DATABASES["default"]["NAME"]` as a file path and serve it via `FileResponse`. On production (PostgreSQL), `NAME` is just a database name string (e.g. `gametech_db`), not a file path. `os.path.exists()` always returned `False`, so the view always hit the `messages.error` + `redirect("settings")` fallback.
+
+**Exact Target Files**:
+- `billing/views/settings.py` (`backup_database_view`)
+
+**1-Step Fix**: Branch on `settings.DATABASES["default"]["ENGINE"]`:
+- For SQLite: serve the file directly (existing behavior)
+- For PostgreSQL: use `subprocess.run(["pg_dump", ...])` with `PGPASSWORD` env var, write to a temp file, serve via `FileResponse`, then delete the temp file
 
 **Date Logged**: 2026-09-30
 

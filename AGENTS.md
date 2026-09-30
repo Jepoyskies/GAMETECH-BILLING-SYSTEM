@@ -1,6 +1,13 @@
 # AGENTS.md — Global AI Assistant & Token Conservation Protocol for Gametech Unli Fiber
 
-> **BEFORE ANY WORK**: read `docs/WORKING_RULES.md` in full and follow it completely, including Rule 0 (Logic Freeze) and Rule 1 (Scope Lock). Then read `docs/SPEC.md` for the business requirements, `docs/BUILD_LOG.md` (tail) for what has been built so far, and `docs/FEATURE_INVENTORY.md` before touching any page's UI or actions. These four files are the single source of truth for this project across all AI tools (Antigravity, OpenCode, or any other). Do not duplicate their content here; always read the live files.
+> **BEFORE ANY WORK**: read `SESSION_STARTUP.md` for 30-second orientation, then `docs/WORKING_RULES.md` in full and follow it completely, including Rule 0 (Logic Freeze) and Rule 1 (Scope Lock). Then read `docs/SPEC.md` for the business requirements, `docs/BUILD_LOG.md` (tail) for what has been built so far, and `docs/FEATURE_INVENTORY.md` before touching any page's UI or actions. These files are the single source of truth for this project across all AI tools (Antigravity, OpenCode, or any other). Do not duplicate their content here; always read the live files.
+
+> **NEW DOCUMENTATION** (added 2026-09-30):
+> - `SESSION_STARTUP.md` — 30-second AI session orientation checklist
+> - `PAGE_FREEZE_REGISTRY.md` — Single source of truth for frozen pages
+> - `DECISION_LOG.md` — Architectural decisions (don't re-litigate)
+> - `COMMON_TASKS.md` — Copy-paste recipes for common tasks
+> - `gametech_error_runbook.md` — Now includes ERR-080 (DB Backup fix)
 
 ---
 
