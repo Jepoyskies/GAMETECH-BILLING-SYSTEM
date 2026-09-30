@@ -324,7 +324,6 @@ def add_staff(request):
                     role=role_name,
                     status=status,
                     password_hash=make_password(raw_password),
-                    password_plaintext=raw_password,
                 )
 
             success_msg = f"Staff member '{full_name}' added successfully!"
@@ -436,7 +435,6 @@ def edit_staff(request, pk):
                         staff.password_hash = user.password
                     else:
                         staff.password_hash = make_password(raw_password)
-                    staff.password_plaintext = raw_password
 
                 staff.save()
 

@@ -146,16 +146,10 @@
                     <li>
                         <span class="info-label">Portal Access <i class="fas fa-shield-alt text-primary ms-1" title="Customer Portal Login Security"></i></span>
                         <span class="info-value d-inline-flex align-items-center gap-2">
-                            {% if customer.portal_password_plaintext %}
-                                <span class="password-masked font-monospace" data-pw="{{ customer.portal_password_plaintext }}">••••••</span>
-                                <button type="button" class="btn btn-sm btn-link p-0 text-muted pw-toggle-btn" title="Show/Hide Password" onclick="togglePasswordVisibility(this)">
-                                    <i class="far fa-eye"></i>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-link p-0 text-muted" title="Copy Password" onclick="copyPasswordText('{{ customer.portal_password_plaintext|escapejs }}', this)">
-                                    <i class="far fa-copy"></i>
-                                </button>
-                            {% else %}
+                            {% if customer.portal_password_hash %}
                                 <span class="badge bg-secondary font-monospace" style="font-size:0.75rem;"><i class="fas fa-lock me-1"></i>Hashed</span>
+                            {% else %}
+                                <span class="text-muted" style="font-size:0.8rem;">Not set</span>
                             {% endif %}
                             <form method="post" action="{% url 'reset_customer_portal_password' customer.id %}" class="d-inline m-0" onsubmit="return confirm('Generate a new 7-day temporary portal password and send via SMS to {{ customer.phone|default:'customer' }}?');">
                                 {% csrf_token %}

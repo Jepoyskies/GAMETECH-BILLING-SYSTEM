@@ -1,6 +1,7 @@
 """
 Bulk-reset portal passwords for all customers.
-Generates a new temp password for each, storing both hash and staff-visible plaintext.
+Generates a new temp password for each, storing only the PBKDF2 hash.
+Existing subscribers must use "Forgot Password" to receive it.
 """
 
 from django.core.management.base import BaseCommand
@@ -10,7 +11,7 @@ from django.utils import timezone
 
 
 class Command(BaseCommand):
-    help = "Reset portal passwords for all customers (populates plaintext field for staff visibility)"
+    help = "Reset portal passwords for all customers (stores hash only; customers must use Forgot Password)"
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -37,7 +38,6 @@ class Command(BaseCommand):
             customer.save(update_fields=[
                 "portal_password_hash",
                 "portal_password",
-                "portal_password_plaintext",
                 "must_change_password",
                 "temp_password_created_at",
             ])

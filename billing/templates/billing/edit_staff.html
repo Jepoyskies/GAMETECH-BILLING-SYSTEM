@@ -226,22 +226,11 @@
             </div>
 
             {% if request.user.role == 'Admin' %}
-            {% if staff.password_plaintext %}
-            <div class="mb-4">
-                <label class="plan-form-label">Current Password</label>
-                <div class="d-flex align-items-center gap-2">
-                    <span class="gt-pw-masked font-monospace plan-form-control d-inline-flex align-items-center"
-                          data-pw="{{ staff.password_plaintext }}">••••••••</span>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" title="Show Password" onclick="gtTogglePw(this)"><i class="far fa-eye"></i></button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" title="Copy Password" onclick="gtCopyPwFrom(this)"><i class="far fa-copy"></i></button>
-                </div>
-            </div>
-            {% endif %}
             <div class="mb-4">
                 <label class="plan-form-label">Override Password</label>
                 <input type="password" name="password" class="plan-form-control"
                     placeholder="Enter new password" autocomplete="new-password">
-                <div class="small text-muted mt-1"><i class="fas fa-info-circle"></i> Leave blank to keep the current password.</div>
+                <div class="small text-muted mt-1"><i class="fas fa-info-circle"></i> Staff passwords are stored hashed and can never be displayed. Leave blank to keep the current password, or set a new one here and hand it to the user directly.</div>
             </div>
             {% endif %}
 
@@ -267,28 +256,4 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-// Password reveal + copy helpers (Admin only)
-function gtTogglePw(btn) {
-  var span = btn.parentNode.querySelector('.gt-pw-masked');
-  if (!span) return;
-  var masked = span.textContent === '••••••••';
-  span.textContent = masked ? (span.getAttribute('data-pw') || '—') : '••••••••';
-  btn.innerHTML = masked ? '<i class="far fa-eye-slash"></i>' : '<i class="far fa-eye"></i>';
-}
-function gtCopyPwFrom(btn) {
-  // Read the password from the DOM instead of embedding it in a JS string.
-  // Inline JS context would need JS-escaping (which mangles '-' and '='), whereas
-  // data-pw is auto-escaped for HTML and the browser decodes it correctly.
-  var span = btn.parentNode.querySelector('.gt-pw-masked');
-  if (!span) return;
-  var text = span.getAttribute('data-pw');
-  if (!text) return;
-  navigator.clipboard.writeText(text).then(function() {
-    var orig = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-check text-success"></i>';
-    setTimeout(function() { btn.innerHTML = orig; }, 1200);
-  });
-}
-</script>
 {% endblock %}

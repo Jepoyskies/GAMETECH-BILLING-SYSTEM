@@ -242,21 +242,15 @@ class SystemAdmin(models.Model):
     role = models.CharField(max_length=50, default="Agent")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="Active")
     password_hash = models.CharField(max_length=255)  # We will hash this securely!
-    # Plaintext mirror so Admins can view the password (mirrors Customer.portal_password_plaintext)
-    password_plaintext = models.CharField(
-        max_length=255, blank=True, null=True,
-        help_text="Plaintext mirror of password_hash so Admins can view/reuse it",
-    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.full_name
 
     def set_password(self, raw_password):
-        """Hashes into password_hash AND stores the plaintext mirror for Admin display."""
+        """Hashes into password_hash. Never stored in plaintext - Admins reset, not read."""
         from django.contrib.auth.hashers import make_password
         self.password_hash = make_password(raw_password)
-        self.password_plaintext = raw_password
 
 
 class Barangay(models.Model):
@@ -346,7 +340,6 @@ class Customer(models.Model):
     )
     portal_password = models.CharField(max_length=50, blank=True, null=True, help_text="Legacy field - blanked after migration to portal_password_hash")
     portal_password_hash = models.CharField(max_length=255, blank=True, null=True, help_text="PBKDF2/Argon2 secure password hash for customer portal")
-    portal_password_plaintext = models.CharField(max_length=50, blank=True, null=True, help_text="Staff-visible plaintext portal password (for display only, not used for auth)")
     temp_password_created_at = models.DateTimeField(null=True, blank=True, help_text="Timestamp when temporary password was generated (valid 7 days)")
     must_change_password = models.BooleanField(default=True)
 
@@ -474,11 +467,11 @@ class Customer(models.Model):
         return f'<span class="badge badge-{self.status}">{self.get_status_display()}</span>'
 
     def set_portal_password(self, raw_password):
-        """Hashes raw_password into portal_password_hash; stores plaintext in portal_password_plaintext for staff display."""
+        """Hashes raw_password into portal_password_hash. The plaintext is never persisted;
+        callers deliver it once (e.g. SMS) or ask the customer to reset."""
         from django.contrib.auth.hashers import make_password
         self.portal_password_hash = make_password(raw_password)
         self.portal_password = None
-        self.portal_password_plaintext = raw_password
 
     def check_portal_password(self, raw_password):
         """Verifies raw_password against portal_password_hash."""
@@ -535,13 +528,11 @@ class Customer(models.Model):
         # If legacy plaintext password exists and hash does not, hash it immediately
         if self.portal_password and not self.portal_password_hash:
             self.portal_password_hash = make_password(self.portal_password)
-            self.portal_password_plaintext = self.portal_password
             self.portal_password = None
         elif not self.portal_password_hash and not self.portal_password:
             from billing.validators import generate_temp_password
             temp_pw = generate_temp_password()
             self.portal_password_hash = make_password(temp_pw)
-            self.portal_password_plaintext = temp_pw
             self.temp_password_created_at = timezone.now()
             self.must_change_password = True
             self.portal_password = None

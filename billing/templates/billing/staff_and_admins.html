@@ -114,15 +114,7 @@
             </td>
             {% if request.user.role == 'Admin' %}
             <td>
-              {% if staff.password_plaintext %}
-              <div class="d-flex align-items-center gap-1">
-                <span class="gt-pw-masked font-monospace" data-pw="{{ staff.password_plaintext }}">••••••••</span>
-                <button type="button" class="btn btn-link p-0 text-muted" title="Show Password" onclick="gtTogglePw(this)"><i class="far fa-eye"></i></button>
-                <button type="button" class="btn btn-link p-0 text-muted" title="Copy Password" onclick="gtCopyPwFrom(this)"><i class="far fa-copy"></i></button>
-              </div>
-              {% else %}
-              <span class="text-muted" style="font-size:0.8rem;"><i class="far fa-eye-slash"></i> Set on next reset</span>
-              {% endif %}
+              <span class="text-muted" style="font-size:0.8rem;"><i class="far fa-eye-slash"></i> Hashed &mdash; not viewable</span>
             </td>
             {% endif %}
             <td><span class="text-muted" style="font-size:0.82rem;">{{ staff.created_at|date:"M d, Y" }}</span></td>
@@ -161,28 +153,7 @@
 <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
 <script>
-// Admin-only password reveal + copy helpers (mirrors the customer portal pattern)
-function gtTogglePw(btn) {
-  var span = btn.parentNode.querySelector('.gt-pw-masked');
-  if (!span) return;
-  var masked = span.textContent === '••••••••';
-  span.textContent = masked ? (span.getAttribute('data-pw') || '—') : '••••••••';
-  btn.innerHTML = masked ? '<i class="far fa-eye-slash"></i>' : '<i class="far fa-eye"></i>';
-}
-function gtCopyPwFrom(btn) {
-  // Read the password from the DOM instead of embedding it in a JS string.
-  // Inline JS context would need JS-escaping (which mangles '-' and '='), whereas
-  // data-pw is auto-escaped for HTML and the browser decodes it correctly.
-  var span = btn.parentNode.querySelector('.gt-pw-masked');
-  if (!span) return;
-  var text = span.getAttribute('data-pw');
-  if (!text) return;
-  navigator.clipboard.writeText(text).then(function() {
-    var orig = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-check text-success"></i>';
-    setTimeout(function() { btn.innerHTML = orig; }, 1200);
-  });
-}
+// Staff passwords are stored hashed only, so there is nothing to reveal.
 $(document).ready(function() {
   $('#staffTable').DataTable({
     responsive: true,
