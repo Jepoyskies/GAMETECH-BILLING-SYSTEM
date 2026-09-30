@@ -197,7 +197,11 @@ body.dark-mode .text-dark, body.dark-mode .text-black {
 .modal-header { border-radius: var(--gt-radius-lg) var(--gt-radius-lg) 0 0 !important; }
 .modal-footer { border-radius: 0 0 var(--gt-radius-lg) var(--gt-radius-lg) !important; }
 .modal-title { font-weight: 700; letter-spacing: var(--gt-ls-tight); }
-.modal-backdrop.show { opacity: 0.7; }
+.modal-backdrop.show {
+  opacity: 0.7;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
 html.dark-mode .btn-close,
 body.dark-mode .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
 html:not(.dark-mode) .btn-close { filter: none; }
@@ -306,3 +310,330 @@ html.dark-mode .gt-notif-body { background: var(--surface-card) !important; }
 /* ── Progress ───────────────────────────────────────────── */
 .progress { background-color: var(--surface-subtle); border-radius: var(--gt-radius-pill); }
 .progress-bar { background: var(--gt-gold-gradient); color: var(--gt-gold-ink); font-weight: 700; }
+
+/* ============================================================
+   SHARED MODAL SHELL — same gradient / border / radius / shadow
+   as the Customers table card (.gt-table-card). Reused by every
+   modal that opts in via .gt-modal-card + .gt-modal-scroll.
+   ============================================================ */
+.gt-modal-card {
+  background: var(--surface-card-gradient) !important;
+  border: var(--gt-border-card) !important;
+  border-radius: var(--gt-radius-card) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+.gt-modal-card .modal-header {
+  border-radius: var(--gt-radius-card) var(--gt-radius-card) 0 0 !important;
+}
+.gt-modal-card .modal-footer {
+  border-radius: 0 0 var(--gt-radius-card) var(--gt-radius-card) !important;
+}
+
+/* Scrollable modal: header + footer stay fixed, body scrolls.
+   Fits 1366x768 without the page scrolling behind (overscroll-contain
+   stops scroll chaining; Bootstrap's .modal-open locks body scroll). */
+.modal-dialog.gt-modal-scroll {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 0;
+  max-height: calc(100dvh - 3rem);
+}
+.modal-dialog.gt-modal-scroll .modal-content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: calc(100dvh - 3rem);
+  overflow: hidden;
+}
+.modal-dialog.gt-modal-scroll .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Mobile: full-screen sheet */
+@media (max-width: 575.98px) {
+  .modal-dialog.gt-modal-scroll {
+    margin: 0;
+    max-height: 100dvh;
+    min-height: 100dvh;
+  }
+  .modal-dialog.gt-modal-scroll .modal-content {
+    max-height: 100dvh;
+    min-height: 100dvh;
+    border-radius: 0 !important;
+    border: none !important;
+  }
+  .modal-dialog.gt-modal-scroll .modal-header {
+    border-radius: 0 !important;
+  }
+  .modal-dialog.gt-modal-scroll .modal-footer {
+    border-radius: 0 !important;
+  }
+}
+
+/* Circular gold icon badge for modal headers */
+.gt-modal-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gt-gold-soft);
+  border: 1px solid var(--gt-gold-border);
+  color: var(--gt-gold-text);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   FORM SECTIONS — divider-separated blocks with a numbered
+   circle badge + uppercase eyebrow title (one accent style).
+   ============================================================ */
+.gt-form-section { padding: 1.1rem 0; }
+.gt-form-section + .gt-form-section { border-top: 1px solid var(--border-divider); }
+
+.gt-section-badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gt-gold-soft);
+  border: 1px solid var(--gt-gold-border);
+  color: var(--gt-gold-text);
+  font-size: 0.72rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.gt-section-title {
+  font-size: var(--gt-fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--gt-ls-label);
+  color: var(--section-accent-text);
+  margin: 0;
+}
+
+/* Neutral count pill (e.g. "N customers available") */
+.gt-count-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--gt-text-muted);
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--gt-radius-pill);
+  padding: 0.2rem 0.65rem;
+  white-space: nowrap;
+}
+
+/* Small muted "Optional" tag — replaces "(Optional)" in label text */
+.gt-optional-tag {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gt-text-subtle);
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--gt-radius-pill);
+  padding: 0.05rem 0.45rem;
+  margin-left: 0.35rem;
+  vertical-align: middle;
+}
+
+/* Initials avatar circle */
+.gt-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gt-gold-soft);
+  border: 1px solid var(--gt-gold-border);
+  color: var(--gt-gold-text);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+/* Clear button inside the search pill */
+.gt-search--clear .form-control { padding-right: 2.2rem; }
+.gt-search-clear {
+  position: absolute;
+  right: 0.4rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface-subtle);
+  color: var(--gt-text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6rem;
+  cursor: pointer;
+  padding: 0;
+  z-index: 2;
+}
+.gt-search-clear:hover {
+  background: var(--badge-danger-bg);
+  color: var(--badge-danger-text);
+}
+
+/* Monospace modifier for account / box numbers */
+.gt-input-mono {
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+/* Error state — danger border + ring (never color alone;
+   messages carry an icon via .gt-field-error in markup) */
+.gt-input-error {
+  border-color: var(--badge-danger-text) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--badge-danger-text) 18%, transparent) !important;
+}
+
+/* ============================================================
+   CUSTOMER PICKER — searchable list of customer rows
+   (avatar + name + PPPoE/phone, Select / Selected badge)
+   ============================================================ */
+.enroll-picker-list {
+  max-height: 160px;
+  overflow-y: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--gt-radius-input);
+  padding: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  background: var(--surface-subtle);
+}
+.enroll-cust-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--gt-radius-input);
+  background: var(--surface-card);
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.enroll-cust-card:hover {
+  border-color: var(--gt-gold-border);
+  background: var(--surface-hover);
+}
+.enroll-cust-card:focus-visible {
+  outline: 2px solid var(--section-accent);
+  outline-offset: 1px;
+}
+.enroll-cust-card--selected {
+  border-color: var(--gt-gold);
+  box-shadow: 0 0 0 3px var(--gt-gold-soft);
+  background: var(--gt-gold-soft);
+}
+.badge.enroll-check-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--gt-radius-pill);
+  background: var(--surface-subtle);
+  color: var(--gt-text-muted);
+  border: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+.badge.enroll-check-badge--selected {
+  background: var(--gt-gold-gradient);
+  color: var(--gt-gold-ink);
+  border-color: var(--gt-gold-border);
+  font-weight: 700;
+}
+.enroll-empty {
+  padding: 1.25rem 1rem;
+  text-align: center;
+  color: var(--gt-text-muted);
+  font-size: var(--gt-fs-sm);
+}
+.enroll-selected-banner {
+  margin-top: 0.6rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: var(--gt-radius-input);
+  border: 1px solid var(--gt-gold-border);
+  background: var(--gt-gold-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* ============================================================
+   SUMMARY CARD — slim live total breakdown (box + load = total)
+   ============================================================ */
+.gt-summary-card {
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--gt-radius-md);
+  padding: 0.85rem 1.1rem;
+}
+.gt-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: var(--gt-fs-sm);
+  padding: 0.15rem 0;
+}
+.gt-summary-label { color: var(--gt-text-muted); }
+.gt-summary-value {
+  font-weight: 600;
+  color: var(--gt-text-title);
+  font-variant-numeric: tabular-nums;
+}
+.gt-summary-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-top: 1px solid var(--border-divider);
+  margin-top: 0.45rem;
+  padding-top: 0.55rem;
+}
+.gt-summary-total-label {
+  font-size: var(--gt-fs-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--gt-ls-label);
+  color: var(--gt-text-title);
+}
+.gt-summary-total-value {
+  font-size: var(--gt-fs-xl);
+  font-weight: 800;
+  color: var(--gt-gold-text);
+  letter-spacing: var(--gt-ls-tight);
+  font-variant-numeric: tabular-nums;
+}
+.gt-summary-balance {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+  font-size: var(--gt-fs-xs);
+  font-weight: 600;
+  padding: 0.35rem 0.7rem;
+  border-radius: var(--gt-radius-pill);
+  background: var(--badge-warning-bg);
+  color: var(--badge-warning-text);
+  border: 1px solid color-mix(in srgb, var(--badge-warning-text) 30%, transparent);
+}

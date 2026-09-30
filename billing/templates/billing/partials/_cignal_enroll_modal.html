@@ -1,174 +1,175 @@
 <!-- Enroll Existing Customer in Cignal Modal -->
-<div class="modal fade" id="enrollCignalModal" tabindex="-1" aria-labelledby="enrollCignalModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content gt-modal-content" style="border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.12); background: #0f172a; color: #f8fafc; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);">
-      <div class="modal-header border-bottom border-secondary border-opacity-25 pb-3">
-        <div>
-          <h5 class="modal-title fw-bold text-light mb-0" id="enrollCignalModalLabel">
-            <i class="fas fa-user-plus text-danger me-2"></i> Enroll Customer in Cignal
-          </h5>
-          <small class="text-muted">Select an existing customer to activate their Cignal Play and Box subscription.</small>
+<div class="modal fade" id="enrollCignalModal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="enrollCignalModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg gt-modal-scroll">
+    <div class="modal-content gt-modal-card">
+      <div class="modal-header">
+        <div class="d-flex align-items-center gap-3">
+          <div class="gt-modal-icon"><i class="fas fa-tv"></i></div>
+          <div>
+            <h5 class="modal-title" id="enrollCignalModalLabel">Enroll Customer in Cignal</h5>
+            <div class="gt-field-help mt-1">Select an existing customer to activate their Cignal Play and Box subscription.</div>
+          </div>
         </div>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="gt-icon-btn" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
       </div>
 
       <form action="{% url 'apply_cignal_addon' %}" method="post" id="enrollCignalForm" onsubmit="return validateEnrollCignalForm(this);">
         {% csrf_token %}
         <input type="hidden" name="customer_id" id="enrollSelectedCustomerId" value="">
 
-        <div class="modal-body py-3">
-          
-          <!-- STEP 1: Find & Select Existing Customer -->
-          <div class="p-3 mb-3 border rounded-3 border-secondary border-opacity-25 bg-dark bg-opacity-40">
-            <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom border-secondary border-opacity-25">
-              <span class="text-uppercase small fw-bold text-info" style="letter-spacing: 0.05em;">
-                <i class="fas fa-search me-1"></i> Step 1: Select Customer
-              </span>
-              <span class="badge bg-secondary bg-opacity-50 text-light" id="enrollCustCountBadge">{{ all_customers|length }} Customers Available</span>
+        <div class="modal-body">
+
+          <!-- SECTION 1: Find & Select Existing Customer -->
+          <div class="gt-form-section">
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+              <div class="d-flex align-items-center gap-2">
+                <span class="gt-section-badge">1</span>
+                <h6 class="gt-section-title">Select Customer</h6>
+              </div>
+              <span class="gt-count-badge" id="enrollCustCountBadge">{{ all_customers|length }} customer{{ all_customers|length|pluralize }} available</span>
             </div>
 
-            <!-- Search input filter -->
-            <div class="input-group input-group-sm mb-2">
-              <span class="input-group-text bg-dark border-secondary text-muted"><i class="fas fa-search"></i></span>
-              <input type="text" id="enrollCustFilterInput" class="form-control bg-dark text-light border-secondary" placeholder="Search by subscriber name, PPPoE username, or phone..." oninput="filterEnrollCustomers(this.value)">
-              <button class="btn btn-outline-secondary" type="button" onclick="document.getElementById('enrollCustFilterInput').value=''; filterEnrollCustomers('');"><i class="fas fa-times"></i></button>
+            <div class="gt-search gt-search--clear mb-2">
+              <i class="fas fa-search gt-search-icon"></i>
+              <input type="text" id="enrollCustFilterInput" class="form-control" placeholder="Search by subscriber name, PPPoE username, or phone…" oninput="filterEnrollCustomers(this.value)" aria-label="Search customers">
+              <button type="button" class="gt-search-clear" id="enrollCustClear" aria-label="Clear search"><i class="fas fa-times"></i></button>
             </div>
 
-            <!-- Scrollable Customer Cards Picker -->
-            <div class="overflow-auto border border-secondary border-opacity-25 rounded p-1 mb-2" id="enrollCustomerPickerList" style="max-height: 150px; background: rgba(0, 0, 0, 0.25);">
+            <div class="enroll-picker-list" id="enrollCustomerPickerList">
               {% for cust in all_customers %}
-                <div class="enroll-cust-card p-2 rounded mb-1 border border-secondary border-opacity-25 d-flex align-items-center justify-content-between cursor-pointer" style="cursor: pointer; transition: all 0.2s;" data-id="{{ cust.id }}" data-name="{{ cust.full_name|default:cust.pppoe_username }}" data-pppoe="{{ cust.pppoe_username|default:'' }}" data-phone="{{ cust.phone|default:'' }}" data-play="{{ cust.cignalplay_no|default:'' }}" data-box="{{ cust.cignalbox_no|default:'' }}" onclick="selectEnrollCustomer(this)">
+                <div class="enroll-cust-card" data-id="{{ cust.id }}" data-name="{{ cust.full_name|default:cust.pppoe_username }}" data-pppoe="{{ cust.pppoe_username|default:'' }}" data-phone="{{ cust.phone|default:'' }}" data-play="{{ cust.cignalplay_no|default:'' }}" data-box="{{ cust.cignalbox_no|default:'' }}" onclick="selectEnrollCustomer(this)" role="button" tabindex="0">
                   <div class="d-flex align-items-center gap-2">
-                    <i class="fas fa-user-circle fs-5 text-secondary enroll-cust-icon"></i>
+                    <span class="gt-avatar enroll-cust-avatar" data-name="{{ cust.full_name|default:cust.pppoe_username }}" aria-hidden="true"></span>
                     <div>
-                      <strong class="text-light d-block small">{{ cust.full_name|default:cust.pppoe_username }}</strong>
-                      <small class="text-muted font-monospace" style="font-size: 0.7rem;">
-                        <i class="fas fa-network-wired me-1"></i>{{ cust.pppoe_username|default:"No PPPoE" }}
-                        {% if cust.phone %} &bull; <i class="fas fa-phone me-1"></i>{{ cust.phone }}{% endif %}
+                      <strong class="d-block">{{ cust.full_name|default:cust.pppoe_username }}</strong>
+                      <small class="gt-text-muted d-block">
+                        <span class="enroll-cust-pppoe">{{ cust.pppoe_username|default:"No PPPoE" }}</span>
+                        {% if cust.phone %}<span class="enroll-cust-phone"> &bull; {{ cust.phone }}</span>{% endif %}
                       </small>
                     </div>
                   </div>
-                  <div>
-                    <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-25 enroll-check-badge" style="font-size: 0.65rem;">Select</span>
-                  </div>
+                  <span class="badge enroll-check-badge">Select</span>
                 </div>
               {% empty %}
-                <div class="p-3 text-center text-muted small">No customers found.</div>
+                <div class="enroll-empty">No customers found.</div>
               {% endfor %}
             </div>
 
-            <!-- Selected Customer Confirmation Banner -->
-            <div id="enrollSelectedBanner" class="p-2 rounded border border-info border-opacity-25 bg-info bg-opacity-10 d-none align-items-center justify-content-between">
+            <div class="gt-field-error d-none" id="enrollErrorCustomer"><i class="fas fa-exclamation-circle me-1"></i> Please select a customer from the list.</div>
+
+            <div id="enrollSelectedBanner" class="enroll-selected-banner d-none">
               <div class="d-flex align-items-center gap-2">
-                <i class="fas fa-check-circle text-success fs-5"></i>
+                <i class="fas fa-check-circle"></i>
                 <div>
-                  <span class="text-secondary small">Selected Subscriber:</span>
-                  <strong class="text-info d-block" id="enrollSelectedName">—</strong>
+                  <span class="gt-text-muted small">Selected Subscriber:</span>
+                  <strong class="d-block" id="enrollSelectedName">—</strong>
                 </div>
               </div>
-              <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25" id="enrollSelectedPppoe">PPPoE Ready</span>
+              <span class="badge enroll-check-badge--selected" id="enrollSelectedPppoe">PPPoE Ready</span>
             </div>
           </div>
 
-          <!-- STEP 2: Device Numbers & Label -->
-          <div class="p-3 mb-3 border rounded-3 border-secondary border-opacity-25 bg-dark bg-opacity-40">
-            <div class="d-flex align-items-center gap-2 mb-2 pb-1 border-bottom border-secondary border-opacity-25">
-              <span class="text-uppercase small fw-bold text-info" style="letter-spacing: 0.05em;">
-                <i class="fas fa-tv me-1"></i> Step 2: Device Identifiers
-              </span>
+          <!-- SECTION 2: Device Numbers & Label -->
+          <div class="gt-form-section">
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <span class="gt-section-badge">2</span>
+              <h6 class="gt-section-title">Device Identifiers</h6>
             </div>
-            <div class="row g-2 mb-2">
+            <div class="row g-3">
               <div class="col-md-6">
-                <label class="form-label small fw-bold text-light mb-1">
-                  <i class="fas fa-play-circle text-info me-1"></i> Cignal Play No. (App Account)
-                </label>
-                <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary font-monospace" name="cignal_play_no" id="enrollCignalPlayNo" placeholder="e.g. 2509150732550890812">
+                <label class="form-label" for="enrollCignalPlayNo">Cignal Play No. <span class="req">*</span></label>
+                <input type="text" class="form-control gt-input-mono" name="cignal_play_no" id="enrollCignalPlayNo" placeholder="Cignal Play account number">
+                <div class="gt-field-help">e.g. 2505150732550890812</div>
               </div>
               <div class="col-md-6">
-                <label class="form-label small fw-bold text-light mb-1">
-                  <i class="fas fa-cube text-warning me-1"></i> Cignal Box No. <span class="text-secondary fw-normal">(Optional)</span>
-                </label>
-                <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary font-monospace" name="cignal_box_no" id="enrollCignalBoxNo" placeholder="e.g. BOX-8892341 (Optional)">
+                <label class="form-label" for="enrollCignalBoxNo">Cignal Box No. <span class="gt-optional-tag">Optional</span></label>
+                <input type="text" class="form-control gt-input-mono" name="cignal_box_no" id="enrollCignalBoxNo" placeholder="Box serial number">
+                <div class="gt-field-help">e.g. BOX-8892341</div>
               </div>
               <div class="col-12">
-                <label class="form-label small text-secondary mb-1">Device Label / Account Name (Optional)</label>
-                <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary" name="account_name" id="enrollAccountName" value="Cignal Subscription" placeholder="e.g. Living Room TV or Master Bedroom">
+                <label class="form-label" for="enrollAccountName">Device Label / Account Name <span class="gt-optional-tag">Optional</span></label>
+                <input type="text" class="form-control" name="account_name" id="enrollAccountName" value="Cignal Subscription" placeholder="Which TV or room this box is for">
+                <div class="gt-field-help">e.g. Living Room TV or Master Bedroom</div>
               </div>
             </div>
+            <div class="gt-field-error d-none" id="enrollErrorDevice"><i class="fas fa-exclamation-circle me-1"></i> Please provide at least one Cignal account number (Play No. or Box No.).</div>
           </div>
 
-          <!-- STEP 3: Hardware Setup & TV Load Plan -->
-          <div class="p-3 mb-3 border rounded-3 border-secondary border-opacity-25 bg-dark bg-opacity-40">
-            <div class="d-flex align-items-center gap-2 mb-2 pb-1 border-bottom border-secondary border-opacity-25">
-              <span class="text-uppercase small fw-bold text-info" style="letter-spacing: 0.05em;">
-                <i class="fas fa-boxes-packing me-1"></i> Step 3: Hardware & Load Plan
-              </span>
+          <!-- SECTION 3: Hardware Setup & TV Load Plan -->
+          <div class="gt-form-section">
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <span class="gt-section-badge">3</span>
+              <h6 class="gt-section-title">Hardware & Load Plan</h6>
             </div>
-            
-            <div class="row g-2 mb-2">
-              <!-- Hardware Option -->
+            <div class="row g-3">
               <div class="col-md-6">
-                <label class="form-label small fw-bold text-light mb-1">Hardware Setup</label>
-                <select name="hardware_payment_type" id="enrollHwType" class="form-select form-select-sm bg-dark text-light border-secondary" onchange="onEnrollHwChange(this.value)">
+                <label class="form-label" for="enrollHwType">Hardware Setup</label>
+                <select name="hardware_payment_type" id="enrollHwType" class="form-select" onchange="onEnrollHwChange(this.value)">
                   <option value="installment" selected>12-Mo Installment (₱250/mo)</option>
                   <option value="cashout">Fully Paid Cashout (₱3,000)</option>
                   <option value="none">App Only (No Box Hardware)</option>
                 </select>
               </div>
-
-              <!-- Monthly TV Load Plan -->
               <div class="col-md-6">
-                <label class="form-label small fw-bold text-light mb-1">Monthly TV Load Plan</label>
-                <select name="monthly_load_plan" id="enrollLoadPlan" class="form-select form-select-sm bg-dark text-light border-secondary" onchange="updateEnrollAmountPreview()">
+                <label class="form-label" for="enrollLoadPlan">Monthly TV Load Plan</label>
+                <select name="monthly_load_plan" id="enrollLoadPlan" class="form-select" onchange="updateEnrollAmountPreview()">
                   <option value="149" selected>42 Channels (₱149/mo)</option>
                   <option value="399">62 Channels (₱399/mo)</option>
                 </select>
               </div>
-
-              <!-- First Due Date -->
               <div class="col-md-6">
-                <label class="form-label small fw-bold text-light mb-1">
-                  <i class="far fa-calendar-alt text-success me-1"></i> First Due / Expiration Date
-                </label>
-                <input type="date" class="form-control form-control-sm bg-dark text-light border-secondary" name="expiration_date" id="enrollExpirationDate" value="{{ default_cignal_due_date }}">
+                <label class="form-label" for="enrollExpirationDate">First Due / Expiration Date</label>
+                <input type="date" class="form-control" name="expiration_date" id="enrollExpirationDate" value="{{ default_cignal_due_date }}">
+                <div class="gt-field-help">Controls the Cignal subscription's due date — the initial payment is recorded against it.</div>
               </div>
-
-              <!-- Initial Payment Amount -->
               <div class="col-md-6">
-                <label class="form-label small fw-bold text-light mb-1">
-                  <i class="fas fa-coins text-warning me-1"></i> Initial Payment Collected (₱)
-                </label>
-                <div class="input-group input-group-sm">
-                  <span class="input-group-text bg-dark text-light border-secondary">₱</span>
-                  <input type="number" step="0.01" class="form-control bg-dark text-light border-secondary fw-bold" name="initial_amount" id="enrollInitialAmount" value="399.00">
+                <label class="form-label" for="enrollInitialAmount">Initial Payment Collected</label>
+                <div class="input-group">
+                  <span class="input-group-text">₱</span>
+                  <input type="number" step="0.01" class="form-control" name="initial_amount" id="enrollInitialAmount" value="399.00">
                 </div>
-                <div class="form-text text-muted" style="font-size: 0.68rem;" id="enrollAmountHelp">₱250 Box Installment + ₱149 Load = ₱399.00</div>
+                <div class="gt-field-help" id="enrollAmountHelp">₱250 Box Installment + ₱149 Load = ₱399.00</div>
               </div>
-            </div>
-
-            <!-- Optional Payment Method & Notes -->
-            <div class="row g-2 pt-2 border-top border-secondary border-opacity-25">
               <div class="col-md-6">
-                <label class="form-label small text-secondary mb-1">Payment Method</label>
-                <select name="payment_method" class="form-select form-select-sm bg-dark text-light border-secondary">
+                <label class="form-label" for="enrollPaymentMethod">Payment Method</label>
+                <select name="payment_method" id="enrollPaymentMethod" class="form-select">
                   <option value="Cash" selected>Cash</option>
                   <option value="GCash">GCash</option>
                   <option value="Bank Transfer">Bank Transfer</option>
                 </select>
               </div>
               <div class="col-md-6">
-                <label class="form-label small text-secondary mb-1">Reference No / Notes</label>
-                <input type="text" name="notes" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Optional notes or receipt no.">
+                <label class="form-label" for="enrollNotes">Reference No / Notes <span class="gt-optional-tag">Optional</span></label>
+                <input type="text" class="form-control" name="notes" id="enrollNotes" placeholder="Receipt no. or notes">
+              </div>
+            </div>
+
+            <!-- Live summary: same calculation as updateEnrollAmountPreview() -->
+            <div class="gt-summary-card mt-3">
+              <div class="gt-summary-row">
+                <span class="gt-summary-label">Box installment</span>
+                <span class="gt-summary-value" id="enrollSummaryBox">₱250</span>
+              </div>
+              <div class="gt-summary-row">
+                <span class="gt-summary-label">TV load plan</span>
+                <span class="gt-summary-value" id="enrollSummaryLoad">₱149</span>
+              </div>
+              <div class="gt-summary-total">
+                <span class="gt-summary-total-label">Total due</span>
+                <span class="gt-summary-total-value" id="enrollSummaryTotal">₱399</span>
+              </div>
+              <div id="enrollSummaryBalance" class="d-none">
+                <span class="gt-summary-balance"><i class="fas fa-exclamation-circle"></i> <span id="enrollSummaryBalanceText"></span></span>
               </div>
             </div>
           </div>
 
         </div>
 
-        <div class="modal-footer border-top border-secondary border-opacity-25 py-2">
-          <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-sm btn-danger rounded-pill px-4 fw-bold gt-btn text-white">
-            <i class="fas fa-check-circle me-1"></i> Activate & Save Cignal Customer
+        <div class="modal-footer">
+          <button type="button" class="gt-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="gt-btn-primary" id="enrollSubmitBtn" disabled>
+            <i class="fas fa-check-circle me-1"></i> Activate &amp; Save Cignal Customer
           </button>
         </div>
       </form>
@@ -198,23 +199,26 @@ function filterEnrollCustomers(val) {
         }
     });
     var badge = document.getElementById('enrollCustCountBadge');
-    if (badge) badge.innerText = visible + ' Matches';
+    if (badge) {
+        var noun = visible + ' customer' + (visible !== 1 ? 's' : '');
+        badge.innerText = query ? noun + ' match' + (visible !== 1 ? 'es' : '') : noun + ' available';
+    }
 }
 
 function selectEnrollCustomer(card) {
     document.querySelectorAll('#enrollCustomerPickerList .enroll-cust-card').forEach(function(c) {
-        c.classList.remove('border-primary', 'bg-primary', 'bg-opacity-20');
+        c.classList.remove('enroll-cust-card--selected');
         var b = c.querySelector('.enroll-check-badge');
         if (b) {
-            b.className = 'badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-25 enroll-check-badge';
+            b.className = 'badge enroll-check-badge';
             b.innerText = 'Select';
         }
     });
 
-    card.classList.add('border-primary', 'bg-primary', 'bg-opacity-20');
+    card.classList.add('enroll-cust-card--selected');
     var badge = card.querySelector('.enroll-check-badge');
     if (badge) {
-        badge.className = 'badge bg-success text-white enroll-check-badge';
+        badge.className = 'badge enroll-check-badge enroll-check-badge--selected';
         badge.innerText = '✓ Selected';
     }
 
@@ -227,7 +231,7 @@ function selectEnrollCustomer(card) {
     document.getElementById('enrollSelectedCustomerId').value = cid;
     document.getElementById('enrollSelectedName').innerText = cname;
     document.getElementById('enrollSelectedPppoe').innerText = cpppoe ? 'PPPoE: ' + cpppoe : 'No PPPoE';
-    
+
     var banner = document.getElementById('enrollSelectedBanner');
     banner.classList.remove('d-none');
     banner.classList.add('d-flex');
@@ -276,4 +280,138 @@ function validateEnrollCignalForm(form) {
     }
     return true;
 }
+</script>
+
+<script>
+/* Enroll modal — presentation layer only. All element IDs, form names and
+   JS hooks above are untouched; this block only wires shared components. */
+(function () {
+    var modalEl = document.getElementById('enrollCignalModal');
+    var form = document.getElementById('enrollCignalForm');
+    var submitBtn = document.getElementById('enrollSubmitBtn');
+    var filterInput = document.getElementById('enrollCustFilterInput');
+    var clearBtn = document.getElementById('enrollCustClear');
+    var playNo = document.getElementById('enrollCignalPlayNo');
+    var boxNo = document.getElementById('enrollCignalBoxNo');
+    var hwType = document.getElementById('enrollHwType');
+    var loadPlan = document.getElementById('enrollLoadPlan');
+    var initialAmount = document.getElementById('enrollInitialAmount');
+    var errCustomer = document.getElementById('enrollErrorCustomer');
+    var errDevice = document.getElementById('enrollErrorDevice');
+
+    /* Avatar initials from the customer name */
+    document.querySelectorAll('.enroll-cust-avatar').forEach(function (el) {
+        var name = (el.getAttribute('data-name') || '?').trim();
+        var parts = name.split(/\s+/);
+        var initials = (parts[0].charAt(0) || '') + (parts.length > 1 ? parts[parts.length - 1].charAt(0) : '');
+        el.textContent = initials.toUpperCase() || '?';
+    });
+
+    function isCustomerValid() {
+        return document.getElementById('enrollSelectedCustomerId').value !== '';
+    }
+    function isDeviceValid() {
+        return playNo.value.trim() !== '' || boxNo.value.trim() !== '';
+    }
+    function refreshSubmitState() {
+        var valid = isCustomerValid() && isDeviceValid();
+        submitBtn.disabled = !valid;
+        if (valid) {
+            errCustomer.classList.add('d-none');
+            errDevice.classList.add('d-none');
+            playNo.classList.remove('gt-input-error');
+            boxNo.classList.remove('gt-input-error');
+        }
+    }
+
+    /* Live summary card — same calculation as updateEnrollAmountPreview():
+       installment 250 + load, cashout 3000 + load, app-only load. */
+    function updateSummary() {
+        var hw = hwType.value;
+        var load = parseFloat(loadPlan.value) || 149;
+        var box = hw === 'installment' ? 250 : (hw === 'cashout' ? 3000 : 0);
+        var total = box + load;
+        document.getElementById('enrollSummaryBox').textContent = '₱' + box.toLocaleString('en-PH');
+        document.getElementById('enrollSummaryLoad').textContent = '₱' + load.toLocaleString('en-PH');
+        document.getElementById('enrollSummaryTotal').textContent = '₱' + total.toLocaleString('en-PH');
+        var paid = parseFloat(initialAmount.value);
+        var balanceWrap = document.getElementById('enrollSummaryBalance');
+        var balanceText = document.getElementById('enrollSummaryBalanceText');
+        if (!isNaN(paid) && paid !== total) {
+            var diff = total - paid;
+            balanceText.textContent = diff > 0
+                ? 'Remaining balance: ₱' + diff.toFixed(2)
+                : 'Overpaid by ₱' + Math.abs(diff).toFixed(2);
+            balanceWrap.classList.remove('d-none');
+        } else {
+            balanceWrap.classList.add('d-none');
+        }
+    }
+
+    /* Wire shared components — existing inline handlers stay untouched */
+    playNo.addEventListener('input', refreshSubmitState);
+    boxNo.addEventListener('input', refreshSubmitState);
+    document.getElementById('enrollCustomerPickerList').addEventListener('click', refreshSubmitState);
+    hwType.addEventListener('change', updateSummary);
+    loadPlan.addEventListener('change', updateSummary);
+    initialAmount.addEventListener('input', updateSummary);
+
+    /* Clear button inside the search pill */
+    function clearSearch() {
+        filterInput.value = '';
+        filterEnrollCustomers('');
+        filterInput.focus();
+    }
+    clearBtn.addEventListener('click', clearSearch);
+    filterInput.addEventListener('input', function () {
+        clearBtn.classList.toggle('d-none', filterInput.value === '');
+    });
+
+    /* Keyboard: Enter / Space on a customer row selects it */
+    document.getElementById('enrollCustomerPickerList').addEventListener('keydown', function (e) {
+        if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('enroll-cust-card')) {
+            e.preventDefault();
+            selectEnrollCustomer(e.target);
+        }
+    });
+
+    /* Inline errors on submit attempt. Capture phase at document level runs
+       BEFORE the form's inline onsubmit hook, so an invalid submit never
+       reaches it; a valid submit passes through untouched. */
+    document.addEventListener('submit', function (e) {
+        if (e.target !== form) return;
+        if (isCustomerValid() && isDeviceValid()) {
+            submitBtn.classList.add('gt-btn-loading');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="gt-spinner"></span> Activating…';
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isCustomerValid()) {
+            errCustomer.classList.remove('d-none');
+        }
+        if (!isDeviceValid()) {
+            errDevice.classList.remove('d-none');
+            playNo.classList.add('gt-input-error');
+            boxNo.classList.add('gt-input-error');
+        }
+    }, true);
+
+    /* Restore the primary button when the modal closes */
+    modalEl.addEventListener('hidden.bs.modal', function () {
+        submitBtn.classList.remove('gt-btn-loading');
+        submitBtn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Activate &amp; Save Cignal Customer';
+        refreshSubmitState();
+    });
+    modalEl.addEventListener('shown.bs.modal', function () {
+        refreshSubmitState();
+        updateSummary();
+    });
+
+    /* Init */
+    filterInput.dispatchEvent(new Event('input'));
+    updateSummary();
+    refreshSubmitState();
+})();
 </script>
