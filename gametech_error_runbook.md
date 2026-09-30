@@ -1825,13 +1825,14 @@ break. Run `makemigrations --check --dry-run` before every deploy.
 ### ERR-084: Revealed Passwords Showed `csr-12345678` / `ImportError` Took Down the Whole Site
 
 **Symptom (A)**: On **Edit Staff Member** and **View Customer**, clicking the eye
-icon revealed `csr-12345678` instead of `csr-12345678`. The user could not
-change it back.
+icon revealed `csr-12345678` instead of `csr-12345678` (a hyphen turned into a
+literal `\` `u` `0` `0` `2` `d`). The user could not change it back.
 
 **Root Cause (A)**: `|escapejs` was used inside an **HTML attribute**
 (`data-pw="{{ customer.pppoe_password|escapejs }}"`). `escapejs` is for *JS string
-literals* and escapes `-` to `-`, `=` to `=`, `'` to `'`. Inside an attribute
-the browser decodes HTML but **not** the `\uXXXX` sequences, so the mangled text
+literals* and escapes the hyphen `-` as the six characters `\` `u` `0` `0` `2` `d`
+(same for `=` and `'`). Inside an attribute
+the browser decodes HTML but **not** the `\` `uXXXX` sequences, so the mangled text
 was what got revealed and copied. The database was always correct.
 
 **Fix (A)**: Drop `|escapejs` from `data-pw` attributes (Django autoescape
