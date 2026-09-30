@@ -5,8 +5,10 @@ from django.utils import timezone
 from billing.models import Customer, SubscriptionPlan
 from network_manager.models import MikrotikDevice
 from dispatch.models import JobTicket, Team, Technician, JobTicketHistory
+from billing.decorators import role_required
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def dispatch_verification(request):
     """
     Step 1: Staff sees pending Agent prospects, assigns PPPoE, Date/Time,
@@ -135,6 +137,7 @@ def dispatch_verification(request):
     })
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def dispatch_assignment(request):
     """
     Step 2: Assign Tech/Team to the generated Job Ticket.
@@ -185,6 +188,7 @@ def dispatch_assignment(request):
     })
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def dispatch_undispatch(request, ticket_id):
     """
     Undispatch: Bounces an Assigned or In-Progress JobTicket back to Pending.
@@ -280,6 +284,7 @@ def technician_mobile_ui(request):
     })
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def dispatch_qa(request):
     """
     Step 4: QA Check (Staff) - reviews technician's form, 

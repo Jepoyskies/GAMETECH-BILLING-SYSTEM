@@ -11,6 +11,7 @@ from django.utils import timezone
 from django.db.models import Q, Max
 from django.core.paginator import Paginator
 from billing.models import Customer
+from billing.decorators import role_required
 from network_manager.models import MikrotikDevice
 
 from .models import (
@@ -30,16 +31,14 @@ logger = logging.getLogger(__name__)
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def dispatch_index_view(request):
-    if hasattr(request.user, "agent_profile") and not request.user.is_staff:
-        return redirect('agent_dashboard')
     return redirect('dispatch_dashboard')
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def dashboard_view(request):
-    if hasattr(request.user, "agent_profile") and not request.user.is_staff:
-        return redirect('agent_dashboard')
     today = timezone.now().date()
     
     # Pipeline KPI statistics
@@ -224,6 +223,7 @@ def dashboard_view(request):
 # ─────────────────────────────────────────────
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_tickets_list(request):
     status_filter = request.GET.get('status', 'ALL')
     type_filter = request.GET.get('type', 'ALL')
@@ -277,6 +277,7 @@ def api_tickets_list(request):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_ticket_detail(request, ticket_id):
     ticket = JobTicket.objects.select_related('customer', 'team', 'mikrotik_device', 'created_by', 'sales_agent').filter(id=ticket_id).first()
     record = None
@@ -525,6 +526,7 @@ def api_ticket_detail(request, ticket_id):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_create_ticket(request):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
@@ -621,6 +623,7 @@ def api_create_ticket(request):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_assign_ticket(request, ticket_id):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
@@ -660,6 +663,7 @@ def api_assign_ticket(request, ticket_id):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_update_status(request, ticket_id):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
@@ -697,6 +701,7 @@ def api_update_status(request, ticket_id):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_undispatch_ticket(request, ticket_id):
     """
     API endpoint: Reverts an Assigned or In-Progress JobTicket back to Pending.
@@ -736,6 +741,7 @@ def api_undispatch_ticket(request, ticket_id):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_update_location(request, ticket_id):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
@@ -762,6 +768,7 @@ def api_update_location(request, ticket_id):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_complete_job(request, ticket_id):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
@@ -825,6 +832,7 @@ def api_complete_job(request, ticket_id):
 # ─────────────────────────────────────────────
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def dispatch_monitoring_view(request):
     if request.method == 'POST':
         form = DispatchRecordForm(request.POST)
@@ -1003,21 +1011,25 @@ def _handle_monitoring_view(request, tab_type, template_name):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def internet_install_view(request):
     return _handle_monitoring_view(request, 'INTERNET_INSTALL', 'dispatch/internet_install.html')
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def cignal_install_view(request):
     return _handle_monitoring_view(request, 'CIGNAL_PLAY', 'dispatch/cignal_install.html')
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def client_concerns_view(request):
     return _handle_monitoring_view(request, 'CLIENT_CONCERNS', 'dispatch/client_concerns.html')
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def complete_job_view(request, record_id):
     record = get_object_or_404(MonitoringRecord, id=record_id)
     job_detail, created = JobDetail.objects.get_or_create(record=record)
@@ -1094,6 +1106,7 @@ def complete_job_view(request, record_id):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def audit_log_view(request):
     action_filter = request.GET.get('action', 'ALL').strip().upper()
     entity_filter = request.GET.get('entity', 'ALL').strip()
@@ -1140,6 +1153,7 @@ def audit_log_view(request):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def dispatch_customers_view(request):
     if hasattr(request.user, "agent_profile") and not request.user.is_staff:
         return redirect('agent_dashboard')
@@ -1181,6 +1195,7 @@ def dispatch_customers_view(request):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def dispatch_customer_detail_view(request, customer_id):
     """Per-customer detail page replicating CustomerDashboard.tsx: info, stats, job history."""
     if hasattr(request.user, "agent_profile") and not request.user.is_staff:
@@ -1274,6 +1289,7 @@ def dispatch_customer_detail_view(request, customer_id):
     })
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def export_tickets_csv(request):
     """
     Export Dispatch tickets to CSV matching legacy DMS columns:
@@ -1356,6 +1372,7 @@ def export_tickets_csv(request):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 @require_POST
 def api_delete_ticket(request, ticket_id):
     ticket = get_object_or_404(JobTicket, id=ticket_id)
@@ -1369,6 +1386,7 @@ def api_delete_ticket(request, ticket_id):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 @require_POST
 def api_delete_record(request, record_id):
     record = get_object_or_404(MonitoringRecord, id=record_id)
@@ -1384,6 +1402,7 @@ def api_delete_record(request, record_id):
 # --- Phase 3 APIs: Customer Autofill & Duplicate Name Lockout ---
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_customer_search(request):
     """
     Live customer search endpoint for real-time autofill.
@@ -1426,6 +1445,7 @@ def api_customer_search(request):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_customer_check_name(request):
     """
     Real-time duplicate customer name verification.
@@ -1457,6 +1477,7 @@ def api_customer_check_name(request):
 # ---------------------------------------------------------------------------
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_log_contact_attempt(request, ticket_id):
     """
     POST /dispatch/api/tickets/<id>/contact-attempt/
@@ -1486,6 +1507,7 @@ def api_log_contact_attempt(request, ticket_id):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_mark_unreachable(request, ticket_id):
     """
     POST /dispatch/api/tickets/<id>/mark-unreachable/
@@ -1577,6 +1599,7 @@ def _send_installation_welcome_sms(ticket):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_send_welcome_sms(request, ticket_id):
     """
     POST /dispatch/api/tickets/<id>/send-welcome-sms/
@@ -1660,6 +1683,7 @@ def job_order_print_view(request, ticket_id=None):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def job_order_print_record_view(request, record_id):
     """
     Fallback printable view for legacy MonitoringRecord entries.
@@ -1888,6 +1912,7 @@ def api_monitoring_done(request, record_id):
 # ─── Dispatch Log Export (CSV) ───────────────────────────────────────────────────
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def export_dispatches_csv(request):
     """Export DispatchRecord log to CSV matching legacy DMS export columns."""
     qs = DispatchRecord.objects.select_related('status_option', 'type_option', 'chat_type_option', 'csr', 'customer').prefetch_related('teams')
@@ -1990,6 +2015,7 @@ def export_dispatches_csv(request):
 # ─── Excel Export ──────────────────────────────────────────────────────────────
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def export_dispatches_excel(request):
     """Export DispatchLog to Excel (.xlsx) matching legacy DMS export columns."""
     try:
@@ -2124,6 +2150,7 @@ def export_dispatches_excel(request):
 # ─── Geographic Map ────────────────────────────────────────────────────────────
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def geo_map_view(request):
     """Geographic map showing NAP boxes and customer locations with drag-and-drop positioning."""
     from network_manager.models import NapBox
@@ -2142,6 +2169,7 @@ def geo_map_view(request):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_update_nap_position(request):
     """AJAX endpoint to update NAP box position."""
     if request.method != 'POST':
@@ -2173,6 +2201,7 @@ def api_update_nap_position(request):
 # ─── Receipt Generation ────────────────────────────────────────────────────────
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def receipt_view(request, payment_id):
     """Generate a printable receipt for a payment."""
     from billing.models import Payment
@@ -2183,6 +2212,7 @@ def receipt_view(request, payment_id):
 # ─── Backup & Restore ───────────────────────────────────────────────────────────
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 @require_POST
 def api_backup_create(request):
     """Create a full database backup (JSON dump of all dispatch + billing data)."""
@@ -2211,6 +2241,7 @@ def api_backup_create(request):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 @require_POST
 def api_backup_restore(request):
     """Restore database from a JSON backup file."""

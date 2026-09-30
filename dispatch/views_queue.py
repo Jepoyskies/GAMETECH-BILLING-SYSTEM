@@ -11,11 +11,13 @@ from django.contrib.auth.models import User
 from dispatch.models import JobTicket, JobTicketHistory, Team, Technician, AuditLog
 from dispatch.utils import log_audit
 from billing.models import Customer, Notification
+from billing.decorators import role_required
 
 logger = logging.getLogger(__name__)
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def dispatch_queue_view(request):
     """
     Main Dispatch Queue:
@@ -92,6 +94,7 @@ def dispatch_queue_view(request):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_assign_ticket(request, ticket_id):
     """
     POST /dispatch/api/tickets/<id>/assign/
@@ -191,6 +194,7 @@ def api_assign_ticket(request, ticket_id):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_toggle_technician_duty(request, tech_id):
     """
     POST /dispatch/api/technicians/<tech_id>/toggle-duty/
@@ -217,6 +221,7 @@ def api_toggle_technician_duty(request, tech_id):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_correct_timer(request, ticket_id):
     """
     POST /dispatch/api/tickets/<ticket_id>/correct-timer/
@@ -297,6 +302,7 @@ def api_correct_timer(request, ticket_id):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_undispatch_ticket(request, ticket_id):
     """
     POST /dispatch/api/tickets/<ticket_id>/undispatch/

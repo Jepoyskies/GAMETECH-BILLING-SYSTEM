@@ -16,6 +16,7 @@ from django.utils import timezone
 from billing.models import Customer, Notification
 from dispatch.models import CallAttemptLog, JobTicket, JobTicketHistory, TicketBounceHistory
 from dispatch.views import log_audit
+from billing.decorators import role_required
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,7 @@ def is_qa_user(user):
 # ═══════════════════════════════════════════════════════════════════════════
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def dispatch_qa(request):
     """
     Renders the QA Review cockpit for Dispatchers / Staff.
@@ -75,6 +77,7 @@ def dispatch_qa(request):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_qa_review(request, ticket_id):
     """
     POST /dispatch/api/tickets/<ticket_id>/qa-review/
@@ -382,6 +385,7 @@ def api_admin_approve(request, ticket_id):
 # ═══════════════════════════════════════════════════════════════════════════
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def dispatch_admin_summary(request):
     """
     Renders Quality Assurance & Bounce Patterns summary for Administrators.
@@ -453,6 +457,7 @@ def dispatch_admin_summary(request):
 # ═══════════════════════════════════════════════════════════════════════════
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_close_unreachable(request, ticket_id):
     """
     POST /dispatch/api/tickets/<ticket_id>/close-unreachable/
@@ -516,6 +521,7 @@ def api_close_unreachable(request, ticket_id):
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_reopen_onboarding(request, customer_id):
     """
     POST /dispatch/api/customers/<customer_id>/reopen-onboarding/

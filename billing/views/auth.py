@@ -11,7 +11,7 @@ from django.contrib.auth.decorators import (
 )
 from django.views.decorators.http import require_POST
 from django.contrib.auth import authenticate, login, logout
-from billing.decorators import role_required
+from billing.decorators import role_required, action_required
 from django.contrib import messages
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -44,6 +44,8 @@ import calendar
 
 
 @login_required
+@role_required(["Admin", "Editor", "CSR"])
+@action_required("dispatch", "view", subtab="agents")
 def agent_list(request):
     from django.db.models import Count
     agents = Agent.objects.annotate(
@@ -69,7 +71,8 @@ def agent_list(request):
 
 
 @login_required
-@role_required(["Admin", "Editor"])
+@role_required(["Admin"])
+@action_required("dispatch", "create", subtab="agents")
 def add_agent(request):
     if request.method == "POST":
         name = request.POST.get("name")
@@ -98,7 +101,8 @@ def add_agent(request):
 
 
 @login_required
-@role_required(["Admin", "Editor"])
+@role_required(["Admin"])
+@action_required("dispatch", "edit", subtab="agents")
 def edit_agent(request, agent_id):
     agent = get_object_or_404(Agent, id=agent_id)
     if request.method == "POST":
@@ -114,7 +118,8 @@ def edit_agent(request, agent_id):
 
 
 @login_required
-@role_required(["Admin", "Editor"])
+@role_required(["Admin"])
+@action_required("dispatch", "delete", subtab="agents")
 def delete_agent(request, agent_id):
     if request.method == "POST":
         agent = get_object_or_404(Agent, id=agent_id)
@@ -124,6 +129,8 @@ def delete_agent(request, agent_id):
 
 
 @login_required
+@role_required(["Admin", "Editor", "CSR"])
+@action_required("dispatch", "view", subtab="agents")
 def view_agent(request, agent_id):
     agent = get_object_or_404(Agent, id=agent_id)
     from billing.models import Customer

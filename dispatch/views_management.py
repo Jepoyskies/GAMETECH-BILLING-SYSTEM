@@ -9,6 +9,7 @@ from django.db.models import Max
 from .models import Team, Technician, ConfigOption, AuditLog
 from .utils import log_audit
 from billing.models import StaffRole
+from billing.decorators import role_required
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +17,7 @@ LOCKED_SYSTEM_LABELS = {'done', 'cancelled', 'pending', 'installation', 'repair'
 
 
 @login_required
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def management_view(request):
     User = get_user_model()
 
@@ -70,6 +72,7 @@ def management_view(request):
 
 @login_required
 @require_POST
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_team_create(request):
     if not (request.user.is_staff or request.user.is_superuser):
         return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
@@ -86,6 +89,7 @@ def api_team_create(request):
 
 @login_required
 @require_POST
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_team_update(request, team_id):
     if not (request.user.is_staff or request.user.is_superuser):
         return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
@@ -105,6 +109,7 @@ def api_team_update(request, team_id):
 
 @login_required
 @require_POST
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_team_delete(request, team_id):
     if not (request.user.is_staff or request.user.is_superuser):
         return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
@@ -121,6 +126,7 @@ def api_team_delete(request, team_id):
 
 @login_required
 @require_POST
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_technician_create(request):
     if not (request.user.is_staff or request.user.is_superuser):
         return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
@@ -163,6 +169,7 @@ def api_technician_create(request):
 
 @login_required
 @require_POST
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_technician_update(request, tech_id):
     if not (request.user.is_staff or request.user.is_superuser):
         return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
@@ -217,6 +224,7 @@ def api_technician_update(request, tech_id):
 
 @login_required
 @require_POST
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_technician_delete(request, tech_id):
     if not (request.user.is_staff or request.user.is_superuser):
         return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
@@ -229,6 +237,7 @@ def api_technician_delete(request, tech_id):
 
 @login_required
 @require_POST
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_technician_targets_update(request, tech_id):
     if not (request.user.is_staff or request.user.is_superuser):
         return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
@@ -258,6 +267,7 @@ def api_technician_targets_update(request, tech_id):
 
 @login_required
 @require_POST
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_config_options_create(request):
     if not (request.user.is_staff or request.user.is_superuser):
         return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
@@ -303,6 +313,7 @@ def api_config_options_create(request):
 
 @login_required
 @require_POST
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_config_options_update(request, option_id):
     if not (request.user.is_staff or request.user.is_superuser):
         return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
@@ -344,6 +355,7 @@ def api_config_options_update(request, option_id):
 
 @login_required
 @require_POST
+@role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"])
 def api_config_options_delete(request, option_id):
     if not (request.user.is_staff or request.user.is_superuser):
         return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)

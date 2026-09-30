@@ -52,6 +52,12 @@ class BillingConfig(AppConfig):
                 def has_subtab_perm(self, module, subtab):
                     return True
 
+                def has_action_perm(self, module, action):
+                    return True
+
+                def get_action_perm(self, module, action, fallback=True):
+                    return True
+
                 @property
                 def subtabs(self):
                     return AllSubtabsMap()
@@ -64,6 +70,12 @@ class BillingConfig(AppConfig):
                 can_access_administration = False
 
                 def has_subtab_perm(self, module, subtab):
+                    return False
+
+                def has_action_perm(self, module, action):
+                    return False
+
+                def get_action_perm(self, module, action, fallback=True):
                     return False
 
                 @property

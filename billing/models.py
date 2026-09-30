@@ -181,6 +181,31 @@ class StaffRole(models.Model):
                 return subtab in module_subtabs
         return True
 
+    # ── Action-level scoping (Phase 2) ──────────────────────────────────
+    # Lives inside subtab_permissions["_actions"] so it needs NO migration.
+    # Shape: {"_actions": {"agents": {"view": true, "create": false}}}
+    # Absent key  -> fall back to the subtab grant (backwards compatible).
+    def has_action_perm(self, module, action):
+        """action in view | create | edit | delete. Unknown action -> deny."""
+        if self.name.lower() == "admin":
+            return True
+        if action not in ("view", "create", "edit", "delete"):
+            return False
+        if not isinstance(self.subtab_permissions, dict):
+            return False
+        actions = self.subtab_permissions.get("_actions")
+        if not isinstance(actions, dict):
+            return None  # not configured -> caller falls back
+        scope = actions.get(module)
+        if not isinstance(scope, dict) or action not in scope:
+            return None
+        return bool(scope[action])
+
+    def get_action_perm(self, module, action, fallback=True):
+        """Resolved boolean. Defaults to `fallback` when not configured."""
+        result = self.has_action_perm(module, action)
+        return fallback if result is None else result
+
     @property
     def subtabs(self):
         class SubtabMap(dict):
