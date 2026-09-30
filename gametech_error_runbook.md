@@ -38,6 +38,7 @@
 | **ERR-065** | Blinding White Cards on Dispatch Dashboard in Dark Mode & Table Contrast Degradation | `dispatch/dashboard.html`, `_monitoring_page_styles.html`, `_gt_design_system.html` | Frontend (Theme/CSS) |
 | **ERR-066** | Broken Light Theme, Overlapping Badges, Solid Blue Router Pill, and Unsynced Runtime Charts | `_gt_design_system.html`, `customer_list/_table.html`, `_scripts.html`, `tokens_and_base.css` | Frontend (Theme/CSS) |
 | **ERR-077** | DB Backup button redirects to Settings instead of downloading a file | `billing/views/settings.py` (`backup_database_view`) | Backend / Backup |
+| **ERR-086** | Peso sign renders as `â‚±` (mojibake) on tiles, tables, receipts | 6 template files (see detailed entry) | Frontend (Encoding) |
 
 ---
 
@@ -1903,4 +1904,24 @@ it. The reset flow is the only legitimate read path.
 `billing/templates/billing/staff_and_admins.html`,
 `billing/templates/billing/view_customer/_info_cards.html`
 
+**Date Logged**: 2026-09-30
+
+### ERR-086: Peso Sign Renders as `â‚±` (Double-Encoding Mojibake) on Tiles, Tables & Receipts
+* **Symptoms**:
+  * The peso sign `₱` displays as `â‚±` (three glyphs) on the Cignal dashboard revenue tile, addon plan prices, payout stats, plan list, edit-payment-log label, and agent stats.
+  * Only SOME templates affected; models.py, services.py, portal statement and dispatch receipt render `₱` correctly.
+* **Root Cause**:
+  * Classic double-encoding mojibake baked into the template SOURCE. `₱` (U+20B1, UTF-8 bytes `E2 82 B1`) was decoded as Latin-1/Windows-1252 somewhere in the past → `â` `‚` `±` → saved as UTF-8. `base.html` correctly declares `<meta charset="UTF-8">`, so the file bytes themselves were wrong (not a charset-meta issue).
+* **Exact Target Files** (21 occurrences across 6 templates):
+  * `billing/templates/billing/cignal_dashboard.html` (revenue tile)
+  * `billing/templates/billing/addon_plans_list.html` (3 sites)
+  * `billing/templates/billing/agents/_stats.html`
+  * `billing/templates/billing/edit_payment_log.html`
+  * `billing/templates/billing/payouts/index.html` (13 sites)
+  * `billing/templates/billing/plan_list.html` (2 sites)
+* **1-Step Fix**:
+  * Source-level replace of the mojibake sequence (U+00E2 U+201A U+00B1) with the correct `₱` (U+20B1) in those 6 files. No backend/charset changes needed. Verify with `grep` for the mojibake sequence repo-wide afterward.
+* **Lesson**: When a currency/symbol shows as multiple weird glyphs, suspect double-encoding in the source file BEFORE touching charset headers or backend encoding. Check the actual bytes (e.g. Python `bytes` / `char` codepoints) rather than guessing from the rendered output.
+
+**Files**: the 6 templates listed above
 **Date Logged**: 2026-09-30
