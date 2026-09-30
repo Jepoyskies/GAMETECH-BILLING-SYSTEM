@@ -1,7 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, Http404
 from django.contrib.auth.decorators import login_required
-from billing.decorators import role_required
+from django.views.decorators.cache import never_cache
+from billing.decorators import role_required, action_required
 from django.contrib import messages
 from django.contrib.auth.models import User, Group
 from django.contrib.auth.hashers import make_password
@@ -14,6 +15,8 @@ from billing.validators import validate_password_policy
 
 
 @login_required
+@role_required(["Admin", "Editor", "CSR"])
+@action_required("administration", "view", subtab="admin_panel")
 def staff_list(request):
     """
     List all staff and system admins with auto-sync from Django auth_user.
@@ -118,6 +121,7 @@ ROLE_MODULE_SPECS = [
 
 
 @login_required
+@role_required(["Admin"])
 def manage_roles(request):
     if request.method == "POST":
         action = request.POST.get("action")
@@ -338,6 +342,9 @@ def add_staff(request):
     return render(request, "billing/add_staff.html", {"available_roles": available_roles})
 
 
+# never_cache: this page displays the staff password. A browser-cached copy shows
+# stale/wrong credentials after an override, so it must always be re-fetched.
+@never_cache
 @role_required(["Admin"])
 @login_required
 def edit_staff(request, pk):
