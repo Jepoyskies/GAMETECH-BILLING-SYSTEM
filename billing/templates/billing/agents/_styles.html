@@ -1,7 +1,40 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
 <style>
-  .av-indigo {
-    background: linear-gradient(135deg, #4338ca, #6366f1);
+  /* ── /agents/ light+dark corrections (page-scoped) ──────────────────
+     Rule 5: tokens only, no hardcoded hex. These three fixes are kept
+     local to this page on purpose; each one is a symptom of the same
+     shared-design-system bug and belongs in static/css/gt/ when that
+     change is signed off, so no other page can regress from here. */
+
+  /* 1. Gold surfaces hardcode --gt-gold-gradient behind --color-primary-ink.
+        That ink is #FFFFFF in light mode, so the active page number and the
+        "Save Agent" button rendered white-on-gold (1.0:1). --color-primary-bg
+        is the theme-aware pairing: indigo + white ink in light mode,
+        gold + dark ink in dark mode. */
+  .gt-table-card .pagination .page-item.active .page-link,
+  .btn-premium.btn-p-primary {
+    background: var(--color-primary-bg) !important;
+    color: var(--color-primary-ink) !important;
   }
+
+  /* 2. The peso column used Bootstrap .text-warning (#ffc107), which is
+        1.6:1 on a light card. --gt-gold-text is the token built for
+        readable gold text and flips per theme. */
+  .gt-gold-amount { color: var(--gt-gold-text) !important; }
+
+  /* 3. Disabled pagination leaned on opacity 0.45, which blends the label
+        into the card and leaves it at ~1.5:1. Disabled controls are exempt
+        from WCAG, but an unreadable "Previous" just looks broken - so drop
+        the opacity and use the readable secondary text token instead. */
+  .gt-table-card .pagination .page-item.disabled .page-link {
+    opacity: 1;
+    color: var(--gt-text-secondary) !important;
+  }
+
+  /* 4. The row count and the column headers both inherited --gt-text-muted
+        (#94a3b8), which is 4.4:1 on the light card - just under AA for the
+        12px uppercase labels. */
+  .gt-table-card .dataTables_info,
+  .gt-table-card .gt-table thead th { color: var(--gt-text-secondary) !important; }
 </style>
