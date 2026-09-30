@@ -39,6 +39,14 @@
         if (localStorage.getItem('theme') === 'dark') {
             document.documentElement.classList.add('dark-mode');
         }
+        // Keep Bootstrap 5.3's own dark theme in sync with our custom class.
+        // Without data-bs-theme every native component (modal, dropdown,
+        // form-select, table, alert, pagination, toast) keeps light colors
+        // in dark mode.
+        document.documentElement.setAttribute(
+            'data-bs-theme',
+            localStorage.getItem('theme') === 'dark' ? 'dark' : 'light'
+        );
     </script>
 </head>
 <body class="bg-light{% if request.resolver_match.url_name == 'live_monitoring' %} gt-frozen-chrome{% endif %}">
