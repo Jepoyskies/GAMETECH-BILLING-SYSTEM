@@ -4,140 +4,133 @@
 {% block title %}Cignal Play Plans | Gametech{% endblock %}
 
 {% block extra_css %}
-{% include "billing/cignal_dashboard/_styles.html" %}
+<style>
+  :root {
+    --section-accent: #ef4444;
+  }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4 px-3 px-md-4">
 
   <!-- Page Header -->
-  <div class="cignal-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 animate-fade-in">
+  <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
     <div class="d-flex align-items-center gap-3">
-      <div class="cignal-header-icon"><i class="fas fa-tv"></i></div>
+      <div class="gt-header-icon">
+        <i class="fas fa-tv"></i>
+      </div>
       <div>
-        <div class="d-flex align-items-center gap-2 mb-1">
-          <span class="badge rounded-pill px-3 py-1 fw-semibold" style="background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase;">
-            <i class="fas fa-satellite-dish me-1"></i> Cignal Play
-          </span>
+        <div class="gt-header-eyebrow mb-1">
+          <i class="fas fa-satellite-dish me-1"></i> Cignal Play
         </div>
-        <h1 class="cignal-header-title mb-0">Cignal Play Plans</h1>
-        <p class="cignal-header-sub mb-0">Manage and track Cignal Play subscriptions per customer</p>
+        <h1 class="gt-header-title">Cignal Play Plans</h1>
+        <p class="gt-header-sub">Manage and track Cignal Play subscriptions per customer</p>
       </div>
     </div>
-    <a href="{% url 'cignal_dashboard' %}" class="btn-cignal-glass">
-      <i class="fas fa-arrow-left"></i> Dashboard
+    <a href="{% url 'cignal_dashboard' %}" class="btn btn-outline-secondary btn-sm fw-bold">
+      <i class="fas fa-arrow-left me-1"></i> Dashboard
     </a>
   </div>
 
   <!-- Filter Bar -->
-  <div class="cignal-filter-bar animate-fade-in animate-delay-1">
-    <form method="get" class="row g-3 align-items-end">
-      <div class="col-12 col-md-9">
-        <label class="cignal-filter-label"><i class="fas fa-search me-1"></i> Search Customer</label>
-        <input type="text" name="search" class="form-control cignal-filter-input"
-               placeholder="Search customer, username, Cignal Play no..." value="{{ search }}">
-      </div>
-      <div class="col-6 col-md-2">
-        <button type="submit" class="btn-cignal-submit w-100 justify-content-center">
-          <i class="fas fa-search"></i> Search
-        </button>
-      </div>
-      <div class="col-6 col-md-1">
-        <a href="{% url 'cignal_play_list' %}" class="btn-cignal-ghost w-100">Clear</a>
-      </div>
-    </form>
+  <div class="gt-table-card mb-4">
+    <div class="gt-table-toolbar">
+      <form method="get" class="d-flex flex-wrap align-items-center gap-2 w-100">
+        <div class="flex-grow-1" style="min-width: 220px;">
+          <label class="gt-header-eyebrow mb-1" style="font-size: 0.65rem;">
+            <i class="fas fa-search me-1"></i> Search Customer
+          </label>
+          <input type="text" name="search" class="form-control"
+                 placeholder="Search customer, username, Cignal Play no..." value="{{ search }}"
+                 style="background: var(--surface-card); border: var(--gt-border-card); color: var(--gt-text-title);">
+        </div>
+        <div class="d-flex gap-2 align-items-end">
+          <button type="submit" class="btn btn-primary btn-sm fw-bold px-3">
+            <i class="fas fa-search me-1"></i> Search
+          </button>
+          <a href="{% url 'cignal_play_list' %}" class="btn btn-outline-secondary btn-sm fw-bold">Clear</a>
+        </div>
+      </form>
+    </div>
   </div>
 
-  <!-- Table Card -->
-  <div class="cignal-glass-card animate-fade-in animate-delay-2">
-    <div class="cignal-card-header d-flex justify-content-between align-items-center">
-      <h6 class="mb-0"><i class="fas fa-satellite-dish header-icon-danger"></i> Cignal Play Subscribers</h6>
-      <span class="cignal-badge-neutral">{{ page_obj.paginator.count }} total</span>
+  <!-- Subscribers Table Card -->
+  <div class="gt-table-card">
+    <div class="gt-table-toolbar">
+      <h5 class="fw-bold mb-0" style="font-size: 1rem;">
+        <i class="fas fa-satellite-dish me-2" style="color: var(--section-accent);"></i> Cignal Play Subscribers
+      </h5>
+      <span class="badge bg-secondary bg-opacity-30 text-white">{{ page_obj.paginator.count }} total</span>
     </div>
+
     <div class="table-responsive">
-      <table class="cignal-table">
+      <table class="gt-table table align-middle mb-0" style="width:100%">
         <thead>
           <tr>
-            <th class="text-center ps-3">Actions</th>
-            <th>Created At</th>
-            <th>Username</th>
-            <th>Cignal Play No.</th>
-            <th>Adjusted By</th>
-            <th>Full Name</th>
-            <th>Account Type</th>
-            <th>Address</th>
+            <th class="text-center" style="font-size: 11px; text-transform: uppercase;">Actions</th>
+            <th style="font-size: 11px; text-transform: uppercase;">Created At</th>
+            <th style="font-size: 11px; text-transform: uppercase;">Username</th>
+            <th style="font-size: 11px; text-transform: uppercase;">Cignal Play No.</th>
+            <th style="font-size: 11px; text-transform: uppercase;">Adjusted By</th>
+            <th style="font-size: 11px; text-transform: uppercase;">Full Name</th>
+            <th style="font-size: 11px; text-transform: uppercase;">Account Type</th>
+            <th style="font-size: 11px; text-transform: uppercase;">Address</th>
           </tr>
         </thead>
         <tbody>
           {% for customer in page_obj %}
           <tr>
-            <td class="text-center ps-3">
+            <td class="text-center">
               <div class="d-flex justify-content-center gap-1">
-                <a href="{% url 'edit_customer' customer.id %}" class="cig-action-btn cig-btn-view" title="Edit Customer">
+                <a href="{% url 'edit_customer' customer.id %}" class="btn btn-sm btn-outline-primary fw-bold px-2 py-1" title="Edit Customer" style="font-size: 0.72rem;">
                   <i class="fas fa-edit"></i>
                 </a>
-                <a href="{% url 'cignalplay_form' customer.id %}" class="cig-action-btn cig-btn-pay" title="Payment">
+                <a href="{% url 'cignalplay_form' customer.id %}" class="btn btn-sm btn-outline-success fw-bold px-2 py-1" title="Payment" style="font-size: 0.72rem;">
                   <i class="fas fa-money-bill"></i>
                 </a>
-                <a href="{% url 'user_cignal_logs' customer.id %}" class="cig-action-btn cig-btn-log" title="Transaction Logs">
+                <a href="{% url 'user_cignal_logs' customer.id %}" class="btn btn-sm btn-outline-secondary fw-bold px-2 py-1" title="Transaction Logs" style="font-size: 0.72rem;">
                   <i class="fas fa-receipt"></i>
                 </a>
               </div>
             </td>
-            <td>
-              <div style="font-size:0.82rem; color:#94a3b8;">{{ customer.created_at|date:"M d, Y" }}</div>
-            </td>
+            <td class="text-muted small">{{ customer.created_at|date:"M d, Y" }}</td>
             <td>
               {% if customer.username %}
-                <span class="cignal-acct-chip"><i class="fas fa-user" style="font-size:0.62rem;"></i> {{ customer.username }}</span>
+                <span class="badge bg-primary bg-opacity-20 text-primary fw-bold px-2 py-1" style="font-size: 0.78rem;">
+                  <i class="fas fa-user me-1" style="font-size: 0.62rem;"></i> {{ customer.username }}
+                </span>
               {% else %}
-                <span class="cignal-badge-neutral">Not Connected</span>
+                <span class="badge bg-secondary bg-opacity-30 text-white-50" style="font-size: 0.78rem;">Not Connected</span>
               {% endif %}
             </td>
             <td>
-              <span class="cignal-no-chip"><i class="fas fa-tv" style="font-size:0.65rem;"></i> {{ customer.cignalplay_no }}</span>
+              <span class="badge bg-danger bg-opacity-20 text-danger fw-bold px-2 py-1" style="font-size: 0.78rem;">
+                <i class="fas fa-tv me-1" style="font-size: 0.62rem;"></i> {{ customer.cignalplay_no }}
+              </span>
             </td>
+            <td class="text-muted small">{{ customer.cignalplay_adjustedby|default:"&mdash;" }}</td>
             <td>
-              <span style="font-size:0.82rem; color:#64748b;">{{ customer.cignalplay_adjustedby|default:"&mdash;" }}</span>
+              <strong class="text-white" style="font-size: 0.87rem;">{{ customer.full_name }}</strong>
             </td>
-            <td>
-              <span class="fw-semibold" style="color:#e2e8f0; font-size:0.87rem;">{{ customer.full_name }}</span>
-            </td>
-            <td>
-              <span style="font-size:0.82rem; color:#64748b;">{{ customer.account_type|default:"&mdash;" }}</span>
-            </td>
-            <td>
-              <span style="font-size:0.82rem; color:#64748b;">{{ customer.address|default:"&mdash;" }}</span>
-            </td>
+            <td class="text-muted small">{{ customer.account_type|default:"&mdash;" }}</td>
+            <td class="text-muted small">{{ customer.address|default:"&mdash;" }}</td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="8" class="border-0 p-0">
-              <div class="cignal-empty-state">
-                <div class="cignal-empty-icon"><i class="fas fa-tv"></i></div>
-                <div class="cignal-empty-title">No Cignal Play Customers Found</div>
-                <div class="cignal-empty-sub">No customers with Cignal Play subscriptions match your search.</div>
-              </div>
+            <td colspan="8" class="text-center py-5 text-muted">
+              <i class="fas fa-tv fa-2x mb-2 d-block" style="opacity: 0.3;"></i>
+              <div class="fw-semibold">No Cignal Play Customers Found</div>
+              <div class="small">No customers with Cignal Play subscriptions match your search.</div>
             </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+
     {% include 'billing/partials/pagination.html' with page_obj=page_obj query_params=query_params %}
   </div>
 
 </div>
-
-<style>
-.cig-action-btn {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 30px; height: 30px; border-radius: 8px; color: #fff; border: none;
-    font-size: 0.78rem; transition: transform 0.15s, box-shadow 0.15s; text-decoration: none;
-}
-.cig-action-btn:hover { transform: scale(1.1); color: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-.cig-btn-view { background: linear-gradient(135deg,#0369a1,#0ea5e9); }
-.cig-btn-pay  { background: linear-gradient(135deg,#065f46,#10b981); }
-.cig-btn-log  { background: linear-gradient(135deg,#334155,#64748b); }
-</style>
 {% endblock %}
