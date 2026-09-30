@@ -58,6 +58,7 @@ This workspace strictly adheres to the protocols defined in:
 26. **Queryset Priority Ordering**: Views listing customers (`/customers/`, `/subscriptions/`) annotate `status_order` pushing critical actionable states (Outages, Active but Offline) to rank 0. See AGENTS.md Rule #36.
 27. **Subscriber Provisioning & Router Import Protocol**: Any customer creation point must explicitly declare `installation_status`. Router imports (MikroTik Sync & Bulk Import) MUST set `installation_status='installed'`. See AGENTS.md Rule #37.
 28. **Full-Stack Atomic Batching Standard**: Group full-stack tasks into 3 stages: Stage 1 (Backend & DB), Stage 2 (Frontend & Templates), Stage 3 (Deploy & Verify) to prevent token drain and turn latency. See AGENTS.md Rule #38.
+29. **Live Monitoring & Login Freeze Law**: `billing/templates/billing/login.html` and `billing/templates/billing/live_monitoring/` (entire directory) are PERMANENTLY FROZEN. Never edit, restyle, or touch as a side-effect of any task. See AGENTS.md Rule #39. Verify with `git diff --stat -- billing/templates/billing/login.html billing/templates/billing/live_monitoring/` before committing.
 
 ---
 

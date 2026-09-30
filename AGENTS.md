@@ -412,3 +412,35 @@ Instead, the AI MUST silently perform this internal translation step BEFORE taki
 4. **Execute Sniper Fix**: The AI jumps directly to the target file.
 
 If the AI asks the user *"Which file is that in?"* or *"Can you point me to the endpoint?"*, **the AI has failed**. The indexes already contain all the answers.
+
+---
+
+## 39. **THE LIVE MONITORING & LOGIN FREEZE LAW (Permanently Protected Pages)**
+
+> **THE PRINCIPLE**: Live Monitoring and the Login page are finished, hand-authored designs owned by the project owner. They are **visual baselines that must never be modified** under any circumstances — not for "unification", not for "cleanup", not for "fixing" another page.
+
+### 🔒 Protected Files — ABSOLUTE FREEZE
+
+| Page | Protected Paths |
+|---|---|
+| **Login Page** | `billing/templates/billing/login.html`, `billing/views/auth.py` (login view only), any CSS scoped exclusively to the login page |
+| **Live Monitoring** | `billing/templates/billing/live_monitoring/` (entire directory), `billing/views/live_monitoring.py`, `billing/views/api/network.py` (monitoring endpoints only) |
+
+### ❌ FORBIDDEN (for both pages)
+
+* Editing, "cleaning up", re-tokenizing, re-fonting, or restyling any file in the above paths
+* Swapping colors, gradients, fonts, spacing, border-radii, or animations — even for an "obvious improvement"
+* Refactoring JS, removing polling intervals, or changing layout structure
+* Touching these pages as a side-effect of a "system-wide unification" task
+
+### ✅ ALLOWED
+
+* Reading these pages to extract design values (blue `#3533cd`, gold `#fbae1a`, mascot assets) and reproducing them on **other** pages
+* Fixing a confirmed production 500 error **pinpointed by docker logs** to an exact line in these files (backend logic only — never templates/CSS)
+
+### 🔍 VERIFY BEFORE COMMITTING
+
+```bash
+# Must be EMPTY for any UI task — if not, revert before pushing:
+git diff --stat -- billing/templates/billing/login.html billing/templates/billing/live_monitoring/
+```
