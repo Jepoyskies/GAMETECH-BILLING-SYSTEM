@@ -250,9 +250,14 @@ def add_staff(request):
         raw_password = request.POST.get("password", "")
 
         if not username or not full_name or not email or not role_name or not raw_password:
-            err_msg = "Please fill in all required fields."
+            missing = [
+                name for name, val in
+                (("username", username), ("full_name", full_name), ("email", email),
+                 ("role", role_name), ("password", raw_password)) if not val
+            ]
+            err_msg = "Please fill in all required fields." if len(missing) > 1 else "This field is required."
             if is_ajax:
-                return JsonResponse({"status": "error", "message": err_msg}, status=400)
+                return JsonResponse({"status": "error", "message": err_msg, "field": missing[0]}, status=400)
             messages.error(request, err_msg)
             return render(request, "billing/add_staff.html", {"available_roles": available_roles, "form_data": request.POST})
 
@@ -261,7 +266,7 @@ def add_staff(request):
         except ValidationError as e:
             err_msg = "; ".join(e.messages) if hasattr(e, "messages") else str(e)
             if is_ajax:
-                return JsonResponse({"status": "error", "message": err_msg}, status=400)
+                return JsonResponse({"status": "error", "message": err_msg, "field": "password"}, status=400)
             messages.error(request, err_msg)
             return render(request, "billing/add_staff.html", {"available_roles": available_roles, "form_data": request.POST})
 
@@ -271,7 +276,7 @@ def add_staff(request):
         ):
             err_msg = "That username is already taken."
             if is_ajax:
-                return JsonResponse({"status": "error", "message": err_msg}, status=400)
+                return JsonResponse({"status": "error", "message": err_msg, "field": "username"}, status=400)
             messages.error(request, err_msg)
             return render(request, "billing/add_staff.html", {"available_roles": available_roles, "form_data": request.POST})
 
@@ -281,7 +286,7 @@ def add_staff(request):
         ):
             err_msg = "That email is already registered."
             if is_ajax:
-                return JsonResponse({"status": "error", "message": err_msg}, status=400)
+                return JsonResponse({"status": "error", "message": err_msg, "field": "email"}, status=400)
             messages.error(request, err_msg)
             return render(request, "billing/add_staff.html", {"available_roles": available_roles, "form_data": request.POST})
 

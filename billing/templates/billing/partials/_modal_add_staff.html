@@ -123,10 +123,39 @@
   const btnIcon = document.getElementById('addStaffBtnIcon');
   const btnText = document.getElementById('addStaffBtnText');
 
+  // Field-level error highlight
+  const styleTag = document.createElement('style');
+  styleTag.textContent = '.gt-field-invalid{border-color:#ef4444!important;box-shadow:0 0 0 .15rem rgba(239,68,68,.25)!important;}'
+    + '.gt-field-hint{color:#fca5a5;font-size:.75rem;margin-top:.25rem;}';
+  document.head.appendChild(styleTag);
+
+  function clearFieldErrors() {
+    form.querySelectorAll('.gt-field-invalid').forEach(function(el) {
+      el.classList.remove('gt-field-invalid', 'is-invalid');
+    });
+    form.querySelectorAll('.gt-field-hint').forEach(function(el) {
+      el.remove();
+    });
+  }
+
+  function markFieldError(fieldName, message) {
+    clearFieldErrors();
+    if (!fieldName) return;
+    var input = form.querySelector('[name="' + fieldName + '"]');
+    if (!input) return;
+    input.classList.add('gt-field-invalid', 'is-invalid');
+    var hint = document.createElement('div');
+    hint.className = 'gt-field-hint invalid-feedback d-block';
+    hint.textContent = message;
+    input.parentNode.insertBefore(hint, input.nextSibling);
+    input.focus();
+  }
+
   if (form) {
     form.addEventListener('submit', function(e) {
       e.preventDefault();
 
+      clearFieldErrors();
       if (errorBox) {
         errorBox.classList.add('d-none');
         errorBox.classList.remove('d-flex');
@@ -148,29 +177,51 @@
         body: formData
       })
       .then(async function(response) {
-        const data = await response.json().catch(function() { return {}; });
+        const raw = await response.text();
+        let data = {};
+        try { data = JSON.parse(raw); } catch (err) { /* non-JSON response */ }
+
         if (response.ok && data.status === 'success') {
           // Success! Reload page to display new staff member
           window.location.reload();
-        } else {
-          const errMsg = data.message || 'Error creating staff member. Please check input.';
-          if (errorBox && errorText) {
-            errorText.textContent = errMsg;
-            errorBox.classList.remove('d-none');
-            errorBox.classList.add('d-flex');
+          return;
+        }
+
+        let errMsg = data.message;
+        if (!errMsg) {
+          // Server returned HTML (500 traceback / 502 nginx / 403 CSRF) — surface the real cause
+          if (response.status === 403) {
+            errMsg = 'Permission denied or session expired (HTTP 403). Please log out and log back in, then retry.';
+          } else if (response.status === 502 || response.status === 504) {
+            errMsg = 'The server is temporarily down (HTTP ' + response.status + '). The staff record was NOT created. Please try again in a moment.';
+          } else if (response.status >= 500) {
+            errMsg = 'Server error (HTTP ' + response.status + '). The staff record was NOT created. Please contact the administrator.';
+          } else if (response.status === 401) {
+            errMsg = 'Your session expired. Please log in again.';
           } else {
-            alert(errMsg);
+            errMsg = 'Request failed (HTTP ' + response.status + '). Please check your input and try again.';
           }
-          if (submitBtn) {
-            submitBtn.disabled = false;
-            if (btnIcon) btnIcon.className = 'fas fa-user-plus me-1';
-            if (btnText) btnText.textContent = 'Add Staff';
-          }
+        }
+
+        if (data.field) {
+          markFieldError(data.field, errMsg);
+        } else if (errorBox && errorText) {
+          errorText.textContent = errMsg;
+          errorBox.classList.remove('d-none');
+          errorBox.classList.add('d-flex');
+        } else {
+          alert(errMsg);
+        }
+
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          if (btnIcon) btnIcon.className = 'fas fa-user-plus me-1';
+          if (btnText) btnText.textContent = 'Add Staff';
         }
       })
       .catch(function(err) {
         if (errorBox && errorText) {
-          errorText.textContent = 'Network or server error. Please try again.';
+          errorText.textContent = 'Network error — could not reach the server. Check your connection and try again.';
           errorBox.classList.remove('d-none');
           errorBox.classList.add('d-flex');
         }
