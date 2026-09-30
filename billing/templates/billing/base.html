@@ -19,13 +19,18 @@
     {% include "billing/base/_styles.html" %}
     <link rel="stylesheet" href="{% static 'css/theme.css' %}?v=2.2">
     {% if request.resolver_match.url_name != 'dashboard' %}
-    <link rel="stylesheet" href="{% static 'css/gt/tokens.css' %}?v=3.0">
-    <link rel="stylesheet" href="{% static 'css/gt/data.css' %}?v=3.0">
+    <link rel="stylesheet" href="{% static 'css/gt/tokens.css' %}?v=3.1">
+    <link rel="stylesheet" href="{% static 'css/gt/data.css' %}?v=3.1">
     {% block gt_theme %}
-    <link rel="stylesheet" href="{% static 'css/gt/components.css' %}?v=3.0">
-    <link rel="stylesheet" href="{% static 'css/gt/surfaces.css' %}?v=3.0">
-    <link rel="stylesheet" href="{% static 'css/gt/legacy.css' %}?v=3.0">
+    <link rel="stylesheet" href="{% static 'css/gt/components.css' %}?v=3.1">
+    <link rel="stylesheet" href="{% static 'css/gt/surfaces.css' %}?v=3.1">
+    <link rel="stylesheet" href="{% static 'css/gt/legacy.css' %}?v=3.1">
     {% endblock %}
+    {% if request.resolver_match.url_name == 'live_monitoring' %}
+    {# AGENTS.md Rule 39: Live Monitoring is permanently frozen - it must never
+       receive the Login rebrand. Restores its pre-rebrand token values. #}
+    <link rel="stylesheet" href="{% static 'css/gt/freeze_live_monitoring.css' %}?v=1.0">
+    {% endif %}
     {% endif %}
     {% block extra_css %}{% endblock %}
     
@@ -36,7 +41,7 @@
         }
     </script>
 </head>
-<body class="bg-light">
+<body class="bg-light{% if request.resolver_match.url_name == 'live_monitoring' %} gt-frozen-chrome{% endif %}">
 
 {% include "billing/base/_sidebar.html" %}
 
