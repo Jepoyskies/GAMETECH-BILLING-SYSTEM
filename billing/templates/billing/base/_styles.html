@@ -114,6 +114,32 @@ h1, h2, h3, h4, h5, h6, .card-title, .modal-title {
 .sidebar nav { flex: 1 1 auto; }
 .sidebar ul { list-style: none; margin: 0; padding: 0; }
 .sidebar ul li { margin: 0.2rem 0; }
+
+/* Thinned scrollbar for the nav rail. The global 6px webkit rule still
+   applies, but a transparent track + a token-coloured thumb means the rail
+   reads as clean in both themes instead of showing a hard grey bar. */
+.sidebar nav { scrollbar-width: thin; scrollbar-color: var(--border-subtle) transparent; }
+.sidebar nav::-webkit-scrollbar { width: 5px; }
+.sidebar nav::-webkit-scrollbar-track { background: transparent; }
+.sidebar nav::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 10px; }
+.sidebar nav::-webkit-scrollbar-thumb:hover { background: var(--gt-gold-border); }
+
+/* ONE group label for every submenu section (Mikrotik / Connectivity /
+   System). Previously three copies of the same inline style, which is how
+   the Dispatch "System" label drifted out of line with the others. */
+.gt-sidebar-group-label {
+    padding: 0.5rem 0 0.25rem 1.25rem;
+    margin: 0.6rem 0 0.2rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gt-text-subtle);
+    opacity: 0.75;
+    border-top: 1px solid var(--border-divider);
+}
+.gt-sidebar-group-label:first-child { border-top: none; margin-top: 0.2rem; }
 .sidebar .menu-link {
     display: flex; align-items: center; color: #4b5563;
     padding: 0.85rem 1.25rem; transition: background 0.2s, color 0.2s;
@@ -159,10 +185,19 @@ h1, h2, h3, h4, h5, h6, .card-title, .modal-title {
     opacity: 0.95;
     background: transparent !important;
 }
+/* Active sub-item uses the SAME tokens as the parent .menu-link.active —
+   gold left bar, accent text, gold-tinted surface. It used to hardcode
+   #0349cb text and #fbae1a with !important, so in dark mode it rendered
+   a light-mode blue and looked like a different system. */
 .sub-menu-link.active {
-    background: rgba(3, 73, 203, 0.05) !important;
-    border-left: 4px solid #fbae1a !important;
-    color: #0349cb !important;
+    background: var(--gt-gold-soft) !important;
+    border-left: 4px solid var(--gt-gold) !important;
+    color: var(--section-accent-text) !important;
+    font-weight: 600;
+}
+.sub-menu-link:focus-visible {
+    outline: 2px solid var(--section-accent);
+    outline-offset: -2px;
 }
 .dropdown-toggle::after {
     margin-left: auto;
@@ -351,6 +386,38 @@ html.dark-mode .hamburger-button div { background-color: #eceef3; }
     /* ============================================================
        3. TACTILE BUTTON & CARD MICRO-INTERACTIONS
        ============================================================ */
+    /* "Need Changes?" — ONE style on every page. Replaces the old
+       inline background + onmouseover gold swap, which made the button
+       read blue in light mode and gold in dark mode. It is a secondary
+       action, so it wears the secondary treatment, not the primary CTA. */
+    .gt-improvement-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        background: var(--surface-subtle);
+        color: var(--gt-text-title);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--gt-radius-pill);
+        padding: 0.4rem 0.9rem;
+        font-size: var(--gt-fs-sm);
+        font-weight: 600;
+        white-space: nowrap;
+        box-shadow: none;
+        transition: background-color 0.2s ease, color 0.2s ease,
+                    border-color 0.2s ease, transform 0.2s ease;
+    }
+    .gt-improvement-btn:hover {
+        background: var(--gt-gold-soft);
+        color: var(--gt-gold-text);
+        border-color: var(--gt-gold-border);
+        transform: translateY(-1px);
+    }
+    .gt-improvement-btn:focus-visible {
+        outline: 2px solid var(--section-accent);
+        outline-offset: 2px;
+    }
+    .gt-improvement-btn:active { transform: translateY(0); }
+
     .gt-btn,
     .btn-primary,
     .gt-cl-card {

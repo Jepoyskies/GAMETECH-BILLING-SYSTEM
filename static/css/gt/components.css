@@ -643,3 +643,38 @@ html:not(.dark-mode) .text-primary { color: var(--gt-indigo) !important; }
   box-shadow: 0 0 0 4px var(--gt-gold-soft);
 }
 .gt-step--current .gt-step-label { color: var(--section-accent-text); font-weight: 700; }
+
+/* Pending = not started yet. Explicit so pages can style the "not reached"
+   state explicitly instead of relying on the neutral default. */
+.gt-step--pending .gt-step-dot {
+  background: var(--surface-subtle);
+  border-color: var(--border-subtle);
+  border-style: dashed;
+  color: var(--gt-text-subtle);
+  box-shadow: none;
+}
+.gt-step--pending .gt-step-label { color: var(--gt-text-subtle); font-weight: 600; }
+
+/* Alert = a stage that is blocked / needs intervention. Never colour-alone:
+   the dot keeps the icon and the label turns to the danger text token. */
+.gt-step--alert .gt-step-dot {
+  background: var(--badge-danger-bg);
+  border-color: color-mix(in srgb, var(--badge-danger-text) 45%, transparent);
+  color: var(--badge-danger-text);
+  box-shadow: 0 0 0 4px var(--badge-danger-bg);
+}
+.gt-step--alert .gt-step-label { color: var(--badge-danger-text); font-weight: 700; }
+
+/* Clickable step (renders as <a>): needs a real focus ring for keyboard
+   users, since the dot is the only visible target on small screens. */
+.gt-step--link {
+  text-decoration: none;
+  border-radius: var(--gt-radius-md);
+  transition: background 0.2s ease;
+}
+.gt-step--link:hover { background: var(--surface-hover); }
+.gt-step--link:focus-visible {
+  outline: 2px solid var(--section-accent);
+  outline-offset: 2px;
+}
+.gt-step--link:hover .gt-step-dot { border-color: var(--gt-gold); color: var(--gt-gold-text); }

@@ -1,0 +1,70 @@
+{% comment %}
+  ============================================================
+  THE ONE STEPPER STEP  (shared component)
+  ============================================================
+  Renders a single stage inside the shared .gt-stepper — the same
+  component the Operations Lifecycle tracker uses on the customer
+  profile, the Dispatch Queue pipeline, QA Review and Admin Approval.
+
+  Wrap it in the standard chrome (identical on every page):
+    <div class="gt-table-card">
+      <div class="gt-table-toolbar">
+        <div class="gt-table-toolbar-title"><i class="..."></i> Title</div>
+        <span class="status-badge status-badge--info">...</span>
+      </div>
+      <div class="p-3 p-md-4"><div class="gt-stepper"> ...steps... </div></div>
+    </div>
+
+  Params:
+    state  completed | active | pending | alert | cancelled | walkin
+           (also accepts done/current aliases; anything else = pending)
+    label  stage name, rendered uppercase by .gt-step-label
+    sub    short meta line under the label
+    icon   Font Awesome class used while the stage is pending
+    href   OPTIONAL. When set the step renders as <a class="gt-step--link">
+           and keeps a visible focus ring for keyboard users.
+  ============================================================
+{% endcomment %}
+{% if state == 'completed' or state == 'done' %}
+  <div class="gt-step gt-step--done">
+    <div class="gt-step-dot"><i class="fas fa-check"></i></div>
+    <div class="gt-step-label">{{ label }}</div>
+    <div class="gt-step-date">{{ sub }}</div>
+  </div>
+{% elif state == 'active' or state == 'current' %}
+  <div class="gt-step gt-step--current">
+    <div class="gt-step-dot"><i class="fas {{ icon }}"></i></div>
+    <div class="gt-step-label">{{ label }}</div>
+    <div class="gt-step-date">{{ sub }}</div>
+  </div>
+{% elif state == 'alert' %}
+  <div class="gt-step gt-step--alert">
+    <div class="gt-step-dot"><i class="fas fa-triangle-exclamation"></i></div>
+    <div class="gt-step-label">{{ label }}</div>
+    <div class="gt-step-date">{{ sub }}</div>
+  </div>
+{% elif state == 'cancelled' %}
+  <div class="gt-step">
+    <div class="gt-step-dot"><i class="fas fa-xmark"></i></div>
+    <div class="gt-step-label">{{ label }}</div>
+    <div class="gt-step-date">{{ sub }}</div>
+  </div>
+{% elif state == 'walkin' %}
+  <div class="gt-step">
+    <div class="gt-step-dot"><i class="fas fa-user-slash"></i></div>
+    <div class="gt-step-label">{{ label }}</div>
+    <div class="gt-step-date">{{ sub }}</div>
+  </div>
+{% elif href %}
+  <a href="{{ href }}" class="gt-step gt-step--pending gt-step--link text-decoration-none">
+    <div class="gt-step-dot"><i class="fas {{ icon }}"></i></div>
+    <div class="gt-step-label">{{ label }}</div>
+    <div class="gt-step-date">{{ sub }}</div>
+  </a>
+{% else %}
+  <div class="gt-step gt-step--pending">
+    <div class="gt-step-dot"><i class="fas {{ icon }}"></i></div>
+    <div class="gt-step-label">{{ label }}</div>
+    <div class="gt-step-date">{{ sub }}</div>
+  </div>
+{% endif %}

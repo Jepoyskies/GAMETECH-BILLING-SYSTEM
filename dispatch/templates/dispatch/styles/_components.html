@@ -21,7 +21,7 @@
         position: absolute;
         top: 0; left: 0; right: 0;
         height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(59,130,246,0.4), transparent);
+        background: linear-gradient(90deg, transparent, var(--gt-gold-glow), transparent);
     }
 
     /* ─── Header Action Buttons & Date Filter ──────── */
@@ -47,10 +47,10 @@
         color: var(--d-text-heading);
     }
     .dispatch-date-filter-btn.active {
-        background: #2563eb !important;
-        color: #ffffff !important;
+        background: var(--color-primary) !important;
+        color: var(--color-primary-ink) !important;
         font-weight: 700;
-        box-shadow: 0 2px 8px rgba(37,99,235,0.25);
+        box-shadow: var(--color-primary-shadow);
     }
 
     .dispatch-header-action-btn {
@@ -87,19 +87,17 @@
         transform: translateY(-1px);
     }
 
-    .gt-cl-card {
-        background: var(--d-bg-card);
-        border: 1px solid var(--d-border);
-        border-radius: 14px;
-        box-shadow: var(--d-card-shadow);
-        transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
-    }
-    .gt-cl-card:hover {
-        box-shadow: var(--d-card-hover);
-        transform: translateY(-1px);
-    }
+    /* The shared .gt-cl-card in static/css/gt/legacy.css is the system card
+       and is what the topbar changelog dropdown already uses. Dispatch used
+       to redeclare it here, which restyled the changelog cards on every
+       Dispatch page only. Deleted — use .gt-cl-card or .gt-table-card. */
 
     /* ─── Pipeline Stage Stepper ──────────────────── */
+    /* DEPRECATED — the product has ONE stepper: .gt-stepper in
+       static/css/gt/components.css (used by the Operations Lifecycle
+       tracker on the customer profile and by the Dispatch Queue).
+       These .dispatch-stepper / .ds-step rules are token-only now and
+       disappear entirely once the last page is converted. */
     .dispatch-stepper {
         display: flex;
         align-items: center;
@@ -143,20 +141,20 @@
     .ds-step__title { font-size: 0.78rem; font-weight: 700; white-space: nowrap; color: var(--d-text-heading); }
     .ds-step__sub   { font-size: 0.63rem; white-space: nowrap; color: var(--d-muted); }
 
-    .ds-step--done   .ds-step__num { background: rgba(16,185,129,0.12); color: #059669; border: 1.5px solid rgba(16,185,129,0.3); }
+    .ds-step--done   .ds-step__num { background: var(--badge-success-bg); color: var(--badge-success-text); border: 1.5px solid color-mix(in srgb, var(--badge-success-text) 30%, transparent); }
     .ds-step--done   .ds-step__title { color: var(--d-muted); }
     .ds-step--done   .ds-step__sub   { color: var(--d-muted); opacity: 0.8; }
 
-    .ds-step--active .ds-step__num  { background: linear-gradient(135deg, #2563eb, #4f46e5); color: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,0.22); }
+    .ds-step--active .ds-step__num  { background: var(--gt-gold-gradient); color: var(--color-primary-ink); box-shadow: 0 0 0 3px var(--gt-gold-soft); }
     .ds-step--active .ds-step__title { color: var(--d-text-heading); }
     .ds-step--active .ds-step__sub   { color: var(--d-muted); }
-    .ds-step--active { background: rgba(37,99,235,0.06); border: 1px solid rgba(37,99,235,0.2); }
+    .ds-step--active { background: var(--gt-gold-soft); border: 1px solid var(--gt-gold-border); }
 
-    .ds-step--alert  .ds-step__num  { background: rgba(245,158,11,0.15); color: #d97706; border: 1.5px solid rgba(245,158,11,0.35); animation: stepper-pulse 1.8s infinite; }
-    .ds-step--alert  .ds-step__title { color: #d97706; }
-    .ds-step--alert  .ds-step__sub   { color: #b45309; }
+    .ds-step--alert  .ds-step__num  { background: var(--badge-danger-bg); color: var(--badge-danger-text); border: 1.5px solid color-mix(in srgb, var(--badge-danger-text) 35%, transparent); animation: stepper-pulse 1.8s infinite; }
+    .ds-step--alert  .ds-step__title { color: var(--badge-danger-text); }
+    .ds-step--alert  .ds-step__sub   { color: var(--badge-danger-text); }
 
-    .ds-step--disabled .ds-step__num { background: rgba(100,116,139,0.1); color: var(--d-muted); border: 1px solid var(--d-border); }
+    .ds-step--disabled .ds-step__num { background: var(--surface-subtle); color: var(--d-muted); border: 1px solid var(--d-border); }
     .ds-step--disabled .ds-step__title { color: var(--d-muted); }
     .ds-step--disabled { cursor: default; }
 
@@ -186,15 +184,15 @@
         font-weight: 700;
         letter-spacing: 0.04em;
         text-transform: uppercase;
-        color: #059669;
-        background: rgba(16,185,129,0.08);
-        border: 1px solid rgba(16,185,129,0.2);
+        color: var(--badge-success-text);
+        background: var(--badge-success-bg);
+        border: 1px solid color-mix(in srgb, var(--badge-success-text) 25%, transparent);
         border-radius: 999px;
         padding: 0.25rem 0.7rem;
     }
     .ds-live-dot {
         width: 6px; height: 6px;
-        background: #10b981;
+        background: var(--badge-success-text);
         border-radius: 50%;
         animation: live-dot-pulse 1.4s ease infinite;
     }
@@ -211,8 +209,8 @@
         font-family: 'Inter', sans-serif !important;
     }
     .dispatch-filter-select:focus {
-        border-color: #3b82f6 !important;
-        box-shadow: 0 0 0 3px rgba(59,130,246,0.12) !important;
+        border-color: var(--section-accent) !important;
+        box-shadow: 0 0 0 3px var(--section-accent-subtle) !important;
         outline: none !important;
     }
     .dispatch-filter-select option {
@@ -230,8 +228,8 @@
     }
     .dispatch-search-input::placeholder { color: var(--d-muted) !important; opacity: 0.7; }
     .dispatch-search-input:focus {
-        border-color: #3b82f6 !important;
-        box-shadow: 0 0 0 3px rgba(59,130,246,0.12) !important;
+        border-color: var(--section-accent) !important;
+        box-shadow: 0 0 0 3px var(--section-accent-subtle) !important;
         outline: none !important;
     }
     .dispatch-search-addon {
@@ -243,30 +241,17 @@
     }
 
     /* ─── Status Badges & Pills ───────────────────── */
-    .status-badge {
-        font-size: 0.72rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        padding: 0.3rem 0.7rem;
-        border-radius: 9999px;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        white-space: nowrap;
-    }
-    .status-badge::before {
-        content: '';
-        width: 5px; height: 5px;
-        border-radius: 50%;
-        background: currentColor;
-        flex-shrink: 0;
-    }
-    .status-badge.status-pending     { background: rgba(245,158,11,0.12); color: #d97706; border: 1px solid rgba(245,158,11,0.25); }
-    .status-badge.status-assigned    { background: rgba(59,130,246,0.12); color: #2563eb; border: 1px solid rgba(59,130,246,0.25); }
-    .status-badge.status-in_progress { background: rgba(6,182,212,0.12); color: #0891b2; border: 1px solid rgba(6,182,212,0.3); }
-    .status-badge.status-completed   { background: rgba(16,185,129,0.12); color: #059669; border: 1px solid rgba(16,185,129,0.25); }
-    .status-badge.status-cancelled   { background: rgba(100,116,139,0.12); color: var(--text-secondary, #475569); border: 1px solid rgba(100,116,139,0.2); }
+    /* The .status-badge base (size, radius, font, colours) comes from the
+       shared system in static/css/gt/components.css. The old Dispatch
+       override forced uppercase + a ::before dot, which is why badges here
+       looked smaller and lower-contrast than the Customers page. The five
+       Dispatch state modifiers below now map onto the shared badge tokens
+       instead of hardcoded light-mode rgba. */
+    .status-badge.status-pending     { background-color: var(--badge-warning-bg)  !important; color: var(--badge-warning-text)  !important; border-color: color-mix(in srgb, var(--badge-warning-text) 25%, transparent) !important; }
+    .status-badge.status-assigned    { background-color: var(--badge-info-bg)     !important; color: var(--badge-info-text)     !important; border-color: color-mix(in srgb, var(--badge-info-text) 25%, transparent)    !important; }
+    .status-badge.status-in_progress { background-color: var(--badge-info-bg)     !important; color: var(--badge-info-text)     !important; border-color: color-mix(in srgb, var(--badge-info-text) 25%, transparent)    !important; }
+    .status-badge.status-completed   { background-color: var(--badge-success-bg)  !important; color: var(--badge-success-text)  !important; border-color: color-mix(in srgb, var(--badge-success-text) 25%, transparent) !important; }
+    .status-badge.status-cancelled   { background-color: var(--badge-danger-bg)   !important; color: var(--badge-danger-text)   !important; border-color: color-mix(in srgb, var(--badge-danger-text) 25%, transparent)  !important; }
 
     .priority-pill {
         font-size: 0.68rem;
@@ -276,10 +261,10 @@
         padding: 0.18rem 0.55rem;
         border-radius: 5px;
     }
-    .priority-pill.urgent { background: rgba(239,68,68,0.12);  color: #dc2626; border: 1px solid rgba(239,68,68,0.2); }
-    .priority-pill.high   { background: rgba(245,158,11,0.12); color: #d97706; border: 1px solid rgba(245,158,11,0.2); }
-    .priority-pill.normal { background: rgba(59,130,246,0.1);  color: #2563eb; border: 1px solid rgba(59,130,246,0.18); }
-    .priority-pill.low    { background: rgba(100,116,139,0.1); color: var(--text-secondary, #475569); border: 1px solid rgba(100,116,139,0.18); }
+    .priority-pill.urgent { background: var(--badge-danger-bg);  color: var(--badge-danger-text);  border: 1px solid color-mix(in srgb, var(--badge-danger-text) 25%, transparent); }
+    .priority-pill.high   { background: var(--badge-warning-bg); color: var(--badge-warning-text); border: 1px solid color-mix(in srgb, var(--badge-warning-text) 25%, transparent); }
+    .priority-pill.normal { background: var(--badge-info-bg);    color: var(--badge-info-text);    border: 1px solid color-mix(in srgb, var(--badge-info-text) 25%, transparent); }
+    .priority-pill.low    { background: var(--badge-neutral-bg); color: var(--badge-neutral-text); border: 1px solid color-mix(in srgb, var(--badge-neutral-text) 25%, transparent); }
 
     .d-realtime-chip {
         display: inline-flex;
@@ -289,9 +274,9 @@
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.06em;
-        color: #059669;
-        background: rgba(16,185,129,0.08);
-        border: 1px solid rgba(16,185,129,0.2);
+        color: var(--badge-success-text);
+        background: var(--badge-success-bg);
+        border: 1px solid color-mix(in srgb, var(--badge-success-text) 25%, transparent);
         border-radius: 999px;
         padding: 0.2rem 0.6rem;
     }
@@ -299,7 +284,7 @@
         content: '';
         width: 5px; height: 5px;
         border-radius: 50%;
-        background: #10b981;
+        background: var(--badge-success-text);
         animation: live-dot-pulse 1.4s ease infinite;
     }
 </style>

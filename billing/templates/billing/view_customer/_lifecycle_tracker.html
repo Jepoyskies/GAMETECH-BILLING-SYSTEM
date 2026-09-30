@@ -2,7 +2,8 @@
 {% comment %}
   Uses the shared .gt-stepper component (static/css/gt/components.css):
   completed = gold filled, active = gold ring, pending = muted.
-  Each stage renders through the small reusable partial _step.html.
+  Each stage renders through billing/partials/_step.html — the single
+  shared step partial, also used by the Dispatch pipeline pages.
 {% endcomment %}
 <div class="gt-table-card animate-fade-in mb-4">
     <div class="gt-table-toolbar">
@@ -43,50 +44,50 @@
 
         <div class="gt-stepper">
             {% with sub=lifecycle_tracker.agent_name|truncatechars:14|default:"Direct" %}
-                {% include "billing/view_customer/_step.html" with state=lifecycle_tracker.step1 label="Agent Intake" icon="fa-walking" %}
+                {% include "billing/partials/_step.html" with state=lifecycle_tracker.step1 label="Agent Intake" icon="fa-walking" %}
             {% endwith %}
 
             {% with sub=customer.created_at|date:"M d, Y" %}
-                {% include "billing/view_customer/_step.html" with state=lifecycle_tracker.step2 label="Customer CRM" icon="fa-address-card" %}
+                {% include "billing/partials/_step.html" with state=lifecycle_tracker.step2 label="Customer CRM" icon="fa-address-card" %}
             {% endwith %}
 
             {% if active_ticket and active_ticket.team %}
                 {% with sub=active_ticket.team.name|truncatechars:14 %}
-                    {% include "billing/view_customer/_step.html" with state=lifecycle_tracker.step3 label="Dispatch" icon="fa-truck-ramp-box" %}
+                    {% include "billing/partials/_step.html" with state=lifecycle_tracker.step3 label="Dispatch" icon="fa-truck-ramp-box" %}
                 {% endwith %}
             {% else %}
                 {% with sub="Awaiting dispatch" %}
-                    {% include "billing/view_customer/_step.html" with state=lifecycle_tracker.step3 label="Dispatch" icon="fa-truck-ramp-box" %}
+                    {% include "billing/partials/_step.html" with state=lifecycle_tracker.step3 label="Dispatch" icon="fa-truck-ramp-box" %}
                 {% endwith %}
             {% endif %}
 
             {% if active_ticket and active_ticket.technicians.exists %}
                 {% with sub=active_ticket.technicians.first.name|truncatechars:14 %}
-                    {% include "billing/view_customer/_step.html" with state=lifecycle_tracker.step4 label="Field Tech" icon="fa-hard-hat" %}
+                    {% include "billing/partials/_step.html" with state=lifecycle_tracker.step4 label="Field Tech" icon="fa-hard-hat" %}
                 {% endwith %}
             {% else %}
                 {% with sub="Unassigned" %}
-                    {% include "billing/view_customer/_step.html" with state=lifecycle_tracker.step4 label="Field Tech" icon="fa-hard-hat" %}
+                    {% include "billing/partials/_step.html" with state=lifecycle_tracker.step4 label="Field Tech" icon="fa-hard-hat" %}
                 {% endwith %}
             {% endif %}
 
             {% if active_ticket and active_ticket.signal_level %}
                 {% with sub=active_ticket.signal_level|cut:" dBm"|cut:"dBm"|add:" dBm" %}
-                    {% include "billing/view_customer/_step.html" with state=lifecycle_tracker.step5 label="QA Review" icon="fa-clipboard-check" %}
+                    {% include "billing/partials/_step.html" with state=lifecycle_tracker.step5 label="QA Review" icon="fa-clipboard-check" %}
                 {% endwith %}
             {% else %}
                 {% with sub="No reading" %}
-                    {% include "billing/view_customer/_step.html" with state=lifecycle_tracker.step5 label="QA Review" icon="fa-clipboard-check" %}
+                    {% include "billing/partials/_step.html" with state=lifecycle_tracker.step5 label="QA Review" icon="fa-clipboard-check" %}
                 {% endwith %}
             {% endif %}
 
             {% if customer.installation_status == 'installed' %}
                 {% with sub="Line installed" %}
-                    {% include "billing/view_customer/_step.html" with state=lifecycle_tracker.step6 label="Admin Sign-off" icon="fa-shield-halved" %}
+                    {% include "billing/partials/_step.html" with state=lifecycle_tracker.step6 label="Admin Sign-off" icon="fa-shield-halved" %}
                 {% endwith %}
             {% else %}
                 {% with sub="Not installed" %}
-                    {% include "billing/view_customer/_step.html" with state=lifecycle_tracker.step6 label="Admin Sign-off" icon="fa-shield-halved" %}
+                    {% include "billing/partials/_step.html" with state=lifecycle_tracker.step6 label="Admin Sign-off" icon="fa-shield-halved" %}
                 {% endwith %}
             {% endif %}
         </div>

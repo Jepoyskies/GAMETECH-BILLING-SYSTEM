@@ -8,16 +8,18 @@
     ═══════════════════════════════════════════════════════════ */
 
     .content, .dispatch-header, .dispatch-card, .dispatch-stepper,
-    .dispatch-table, .gt-cl-card, .dispatch-tab-btn, .ds-step {
+    .dispatch-table, .dispatch-tab-btn, .ds-step {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
     :root {
-        /* Section Accent for Dispatch */
-        --section-accent:    #8b5cf6;
-        --color-primary:     #3533cd;
-
-        /* LIGHT MODE (Default) - Crisp, Clean, High Contrast */
+        /* Section Accent for Dispatch.
+           This block used to declare --section-accent: #8b5cf6 and
+           --color-primary: #3533cd, which is why every Dispatch page
+           rendered a purple accent bar, purple CTA and purple focus ring.
+           Dispatch now inherits the brand accent from gt/tokens.css like
+           every other app. Do NOT re-declare --section-accent or
+           --color-primary in this file. */
         --d-bg-page:         var(--surface-page, #f1f5f9);
         --d-bg-card:         var(--surface-card, #ffffff);
         --d-bg-card-sub:     var(--surface-subtle, #f8fafc);
@@ -44,21 +46,21 @@
         --d-cyan:            #06b6d4;
         --d-amber:           #f59e0b;
         --d-green:           #10b981;
-        --d-purple:          #8b5cf6;
         --d-rose:            #ef4444;
         --d-blue:            #3b82f6;
         --d-slate:           #64748b;
     }
 
     html.dark-mode, body.dark-mode {
-        /* DARK MODE - Matching Customers & Cignal Play */
-        --section-accent:    #8b5cf6;
+        /* DARK MODE - Matching Customers & Cignal Play.
+           --section-accent is deliberately NOT redeclared: the dark value
+           in gt/tokens.css is the single source of truth. */
         --d-bg-page:         var(--surface-page, #0a0f1e);
         --d-bg-card:         var(--surface-card, #1e293b);
         --d-bg-card-sub:     var(--surface-subtle, #0f172a);
         --d-border:          rgba(255, 255, 255, 0.08);
         --d-border-subtle:   rgba(255, 255, 255, 0.05);
-        --d-border-h:        rgba(139, 92, 246, 0.4);
+        --d-border-h:        var(--gt-gold-border);
         --d-text:            var(--text-secondary, #cbd5e1);
         --d-text-heading:    var(--text-primary, #f8fafc);
         --d-muted:           var(--text-muted, #94a3b8);
@@ -78,14 +80,11 @@
         --d-table-row-hover: rgba(255, 255, 255, 0.04);
     }
 
-    /* ─── Universal Light Mode Overrides for Dispatch Elements ─── */
+    /* ─── Universal Light Mode Overrides for Dispatch Elements ───
+       .gt-cl-card was removed from these selectors: it is a SHARED class
+       used by the topbar changelog dropdown, so restyling it here leaked
+       Dispatch colours into the topbar on every Dispatch page. */
     html:not(.dark-mode) .dispatch-header h1,
-    html:not(.dark-mode) .content .gt-cl-card h1,
-    html:not(.dark-mode) .content .gt-cl-card h2,
-    html:not(.dark-mode) .content .gt-cl-card h3,
-    html:not(.dark-mode) .content .gt-cl-card h4,
-    html:not(.dark-mode) .content .gt-cl-card h5,
-    html:not(.dark-mode) .content .gt-cl-card h6,
     html:not(.dark-mode) .content .dispatch-card h1,
     html:not(.dark-mode) .content .dispatch-card h2,
     html:not(.dark-mode) .content .dispatch-card h3,
@@ -93,7 +92,6 @@
     html:not(.dark-mode) .content .dispatch-card h5,
     html:not(.dark-mode) .content .dispatch-card h6,
     html:not(.dark-mode) .content .dispatch-header .text-white,
-    html:not(.dark-mode) .content .gt-cl-card .text-white,
     html:not(.dark-mode) .content .dispatch-card .text-white,
     html:not(.dark-mode) .content .metric-hero-card .text-white,
     html:not(.dark-mode) #chartCenterCount {
@@ -105,7 +103,6 @@
         color: var(--text-primary, #0f172a) !important;
     }
 
-    html:not(.dark-mode) .content .gt-cl-card .bg-dark,
     html:not(.dark-mode) .content .dispatch-card .bg-dark,
     html:not(.dark-mode) .content .chart-category-group.bg-dark {
         background-color: var(--surface-subtle, #f1f5f9) !important;
@@ -113,49 +110,35 @@
         color: var(--text-secondary, #475569) !important;
     }
 
-    /* ─── Standard Subtle Badges & Cards ─── */
-    .badge-subtle-amber {
-        background: #fffbeb;
-        color: #b45309;
-        border: 1px solid #fde68a;
+    /* ─── Standard Subtle Badges & Cards ───────────────────────
+       .badge-subtle-{amber,blue,green,red} were Dispatch-local
+       re-implementations of the shared .status-badge, hardcoded to
+       light-mode hexes. They now alias the shared badge tokens so a
+       Dispatch badge and a Customers badge are literally the same
+       colours in light and dark. */
+    .badge-subtle-amber,
+    .status-badge--warning {
+        background: var(--badge-warning-bg);
+        color: var(--badge-warning-text);
+        border: 1px solid color-mix(in srgb, var(--badge-warning-text) 25%, transparent);
     }
-    html.dark-mode .badge-subtle-amber {
-        background: rgba(245, 158, 11, 0.15);
-        color: #fbbf24;
-        border-color: rgba(245, 158, 11, 0.3);
+    .badge-subtle-blue,
+    .status-badge--info {
+        background: var(--badge-info-bg);
+        color: var(--badge-info-text);
+        border: 1px solid color-mix(in srgb, var(--badge-info-text) 25%, transparent);
     }
-
-    .badge-subtle-blue {
-        background: #eff6ff;
-        color: #1d4ed8;
-        border: 1px solid #bfdbfe;
+    .badge-subtle-green,
+    .status-badge--success {
+        background: var(--badge-success-bg);
+        color: var(--badge-success-text);
+        border: 1px solid color-mix(in srgb, var(--badge-success-text) 25%, transparent);
     }
-    html.dark-mode .badge-subtle-blue {
-        background: rgba(59, 130, 246, 0.15);
-        color: #60a5fa;
-        border-color: rgba(59, 130, 246, 0.3);
-    }
-
-    .badge-subtle-green {
-        background: #ecfdf5;
-        color: #047857;
-        border: 1px solid #a7f3d0;
-    }
-    html.dark-mode .badge-subtle-green {
-        background: rgba(16, 185, 129, 0.15);
-        color: #34d399;
-        border-color: rgba(16, 185, 129, 0.3);
-    }
-
-    .badge-subtle-red {
-        background: #fef2f2;
-        color: #b91c1c;
-        border: 1px solid #fecaca;
-    }
-    html.dark-mode .badge-subtle-red {
-        background: rgba(239, 68, 68, 0.15);
-        color: #f87171;
-        border-color: rgba(239, 68, 68, 0.3);
+    .badge-subtle-red,
+    .status-badge--danger {
+        background: var(--badge-danger-bg);
+        color: var(--badge-danger-text);
+        border: 1px solid color-mix(in srgb, var(--badge-danger-text) 25%, transparent);
     }
 
     .clickable-pill {

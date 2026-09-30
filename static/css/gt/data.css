@@ -216,6 +216,101 @@ body.dark-mode table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-contro
   color: var(--gt-text-subtle) !important;
 }
 
+/* ============================================================
+   TABLE FOOTER  —  "Showing X to Y of Z" + page buttons
+   ============================================================
+   The one place a table says how much data it is showing. Lives
+   below .gt-table inside a .gt-table-card, or standalone.
+   .gt-page-btn mirrors the .pagination .page-link look so pages
+   that render their own buttons (no Django Paginator) match the
+   ones that use billing/partials/pagination.html. */
+.gt-table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--gt-sp-3);
+  padding: 0.85rem 1.5rem;
+  border-top: var(--gt-border-divider);
+  background: var(--surface-card);
+}
+.gt-table-footer .gt-table-count {
+  font-size: var(--gt-fs-sm);
+  color: var(--gt-text-muted);
+  margin: 0;
+}
+.gt-table-footer .gt-table-count strong { color: var(--gt-text-title); font-weight: 700; }
+.gt-table-pager { display: flex; align-items: center; gap: 0.25rem; flex-wrap: wrap; }
+
+.gt-page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.1rem;
+  min-height: 2.1rem;
+  padding: 0.35rem 0.65rem;
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--gt-radius-sm);
+  color: var(--gt-text-secondary);
+  font-size: var(--gt-fs-sm);
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.gt-page-btn:hover {
+  background-color: var(--surface-hover);
+  color: var(--section-accent-text);
+  border-color: var(--gt-gold-border);
+}
+.gt-page-btn:focus-visible {
+  outline: 2px solid var(--section-accent);
+  outline-offset: 2px;
+}
+.gt-page-btn[aria-current="page"],
+.gt-page-btn.is-active {
+  background: var(--gt-gold-gradient);
+  border-color: var(--gt-gold-border);
+  color: var(--color-primary-ink);
+  font-weight: 700;
+}
+.gt-page-btn[aria-disabled="true"],
+.gt-page-btn:disabled {
+  opacity: 0.45;
+  background-color: var(--surface-subtle);
+  color: var(--gt-text-subtle);
+  cursor: not-allowed;
+}
+.gt-page-btn:disabled:hover { background-color: var(--surface-subtle); color: var(--gt-text-subtle); border-color: var(--border-subtle); }
+
+/* ── Table row state tints ──────────────────────────────────
+   Shared so every list in the product tints a "needs action" row the
+   same way. Tokens only, so light and dark stay AA.
+   Never rely on the tint alone: pair it with a status-badge that
+   carries an icon or a word (see AGENTS.md rule 35). */
+.gt-row--danger  > td { background: var(--badge-danger-bg)  !important; }
+.gt-row--warning > td { background: var(--badge-warning-bg) !important; }
+.gt-row--info    > td { background: var(--badge-info-bg)    !important; }
+.gt-row--muted   { opacity: 0.7; }
+.gt-row--danger:hover > td,
+.gt-row--warning:hover > td,
+.gt-row--info:hover > td {
+  filter: brightness(0.97);
+}
+html.dark-mode .gt-row--danger:hover > td,
+body.dark-mode .gt-row--danger:hover > td,
+html.dark-mode .gt-row--warning:hover > td,
+body.dark-mode .gt-row--warning:hover > td,
+html.dark-mode .gt-row--info:hover > td,
+body.dark-mode .gt-row--info:hover > td { filter: brightness(1.25); }
+
+/* A 3px leading accent bar so the state reads without colour. */
+.gt-row--danger > td:first-child  { box-shadow: inset 3px 0 0 0 var(--badge-danger-text); }
+.gt-row--warning > td:first-child { box-shadow: inset 3px 0 0 0 var(--badge-warning-text); }
+.gt-row--info > td:first-child    { box-shadow: inset 3px 0 0 0 var(--badge-info-text); }
+
 /* ── Select2 ────────────────────────────────────────────── */
 .select2-container--bootstrap-5 .select2-selection {
   background-color: var(--gt-input-bg) !important;
