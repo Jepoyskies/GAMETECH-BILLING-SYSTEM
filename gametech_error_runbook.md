@@ -1819,3 +1819,46 @@ but `makemigrations --check` is clean, you have drift — a future rebuild will
 break. Run `makemigrations --check --dry-run` before every deploy.
 
 **Date Logged**: 2026-09-30
+
+---
+
+### ERR-084: Revealed Passwords Showed `csr-12345678` / `ImportError` Took Down the Whole Site
+
+**Symptom (A)**: On **Edit Staff Member** and **View Customer**, clicking the eye
+icon revealed `csr-12345678` instead of `csr-12345678`. The user could not
+change it back.
+
+**Root Cause (A)**: `|escapejs` was used inside an **HTML attribute**
+(`data-pw="{{ customer.pppoe_password|escapejs }}"`). `escapejs` is for *JS string
+literals* and escapes `-` to `-`, `=` to `=`, `'` to `'`. Inside an attribute
+the browser decodes HTML but **not** the `\uXXXX` sequences, so the mangled text
+was what got revealed and copied. The database was always correct.
+
+**Fix (A)**: Drop `|escapejs` from `data-pw` attributes (Django autoescape
+already handles the HTML context). Reading the value out of the DOM in JS
+(`getAttribute`) means no JS escaping is needed at all.
+
+**Symptom (B)**: Every page 500'd with
+`ImportError: cannot import name 'action_required' from 'billing.decorators'`.
+
+**Root Cause (B)**: Commit `58a86d3` added `@action_required` to the views **and**
+the function to `billing/decorators.py`, but only the view half had been pushed.
+Production ran views that imported a symbol the deployed decorators.py did not
+have. All containers had also stopped, which hid the failure until restart.
+
+**Fix (B)**: Pushed `58a86d3` and restarted the stack via `docker compose up -d`.
+
+**Lesson**:
+- Never use `|escapejs` in an HTML attribute. `data-*` attributes are read with
+  `getAttribute()` and need no JS escaping; `escapejs` only belongs *inside* a
+  real JS string literal (`onclick="fn('{{ x|escapejs }}')"`).
+- Before restarting a downed droplet, run `git log origin/main..HEAD` locally.
+  An unpushed commit holding half a refactor is the usual cause of
+  "import name not found" on prod.
+- Pages that display credentials must be `@never_cache`, otherwise the browser
+  keeps showing a stale (possibly wrong) password after an override.
+
+**Files**: `billing/templates/billing/view_customer/_info_cards.html`,
+`billing/views/staff.py` (`edit_staff`)
+
+**Date Logged**: 2026-09-30
