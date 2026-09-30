@@ -33,6 +33,7 @@
 | **ERR-073** | Feature page is built and renders but nothing in the UI can open it; dead partials left behind | `base/_sidebar.html`, `settings.html`, `admin_panel.html` | Navigation (Dead Ends) |
 | **ERR-074** | Table rows shifted one column vs header; empty-state `colspan` wrong | `payment_logs.html` (any table with a gated `<th>`) | Frontend (Table) |
 | **ERR-075** | All containers gone, every page returns `000`, `No such container` | `/root/GAMETECH-BILLING-SYSTEM`, `docker-compose.yml` | Deployment / Outage |
+| **ERR-076** | Bare `NameError: name 'XForm' is not defined` on a few pages only; rest of app healthy | view module's import block, e.g. `billing/views/settings.py` | Python / Views |
 | **ERR-065** | Blinding White Cards on Dispatch Dashboard in Dark Mode & Table Contrast Degradation | `dispatch/dashboard.html`, `_monitoring_page_styles.html`, `_gt_design_system.html` | Frontend (Theme/CSS) |
 | **ERR-066** | Broken Light Theme, Overlapping Badges, Solid Blue Router Pill, and Unsynced Runtime Charts | `_gt_design_system.html`, `customer_list/_table.html`, `_scripts.html`, `tokens_and_base.css` | Frontend (Theme/CSS) |
 
@@ -1528,4 +1529,44 @@ curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/login/   # must be 
 ```bash
 WEB=$(docker ps --filter "label=com.docker.compose.service=web" --format '{{.Names}}' | head -1)
 ```
+
+
+---
+
+### ERR-076: Views Use a Name They Never Imported (NameError -> 500 on those pages only)
+
+**Symptom**: A handful of pages return HTTP 500 while the rest of the app is healthy, and the traceback is a bare `NameError: name 'XForm' is not defined` with no line context that points at the import block.
+
+**Real instance**: `billing/views/settings.py` imported only `AddonPlanForm`:
+```python
+from billing.forms import AddonPlanForm          # WRONG
+```
+but used `AccountTypeForm` (4 call sites) and `BarangayForm` (3 call sites). So every Account Type and Barangay create/edit page 500'd:
+```
+/settings/account-types/add/     500
+/settings/account-types/edit/1/   500
+/settings/barangays/add/         500
+/settings/barangays/edit/1/      500
+```
+
+**Root Cause**: A form class was used in a view module without ever being added to that module's import list. Nothing at import time detects this -- the module loads fine and the app boots. It only explodes when that specific view renders.
+
+**Exact Target Files**:
+- `billing/views/settings.py` (this case)
+- `billing/admin.py` had the sibling variant: `list_display` / `date_hierarchy` referenced model fields that do not exist (`MessageTemplateAdmin` -> `is_active`, `updated_at`; `CustomerAgentHistoryAdmin` -> `date_hierarchy="changed_at"` when the field is `created_at`). Django admin raises `FieldError` on those pages only.
+
+**1-Step Fix**: `python -m py_compile` will NOT catch this (the name is only resolved at call time). Use an authenticated render sweep instead -- see below.
+
+**Detection (this is the reusable part)**: a route-resolution check (`curl` -> 302) is **not** enough, because an auth wall hides 500s on protected pages. Walk every resolvable route through Django's test `Client` as a staff user:
+```python
+from django.test import Client
+from django.contrib.auth import get_user_model
+c = Client(); c.force_login(User.objects.filter(is_staff=True).first())
+r = c.get(url)          # real routing + real middleware
+assert r.status_code != 500
+```
+Gotchas when writing this sweep:
+- Use `test.Client`, **not** `RequestFactory`. `RequestFactory` skips middleware, so any view calling `messages.success()` raises `MessageFailure: You cannot add messages without installing django.contrib.messages.middleware.MessageMiddleware` -- a false positive. It also does not pass URL kwargs to the view, producing 30 bogus `TypeError: view() missing 1 required positional argument`.
+- Seed arg converters with real ids (`Customer.objects.values_list("id", flat=True).first()`), and skip routes whose converter has no seed -- those surface as 404, not 500.
+- Expect benign non-500s: 302 (auth wall), 404 (seeded id absent), 405 (POST-only endpoint hit with GET).
 
