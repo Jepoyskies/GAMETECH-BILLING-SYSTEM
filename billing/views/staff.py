@@ -11,6 +11,7 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from billing.models import SystemAdmin, StaffRole
 from billing.validators import validate_password_policy
+from billing.utils import ROLE_DEFAULT_PASSWORDS
 
 
 @login_required
@@ -39,6 +40,7 @@ def staff_list(request):
         request, "billing/staff_and_admins.html", {
             "staff_members": staff_members,
             "available_roles": available_roles,
+            "role_default_passwords": ROLE_DEFAULT_PASSWORDS,
         }
     )
 
@@ -259,7 +261,7 @@ def add_staff(request):
             if is_ajax:
                 return JsonResponse({"status": "error", "message": err_msg, "field": missing[0]}, status=400)
             messages.error(request, err_msg)
-            return render(request, "billing/add_staff.html", {"available_roles": available_roles, "form_data": request.POST})
+            return render(request, "billing/add_staff.html", {"available_roles": available_roles, "role_default_passwords": ROLE_DEFAULT_PASSWORDS, "form_data": request.POST})
 
         try:
             validate_password_policy(raw_password, identifier=username)
@@ -268,7 +270,7 @@ def add_staff(request):
             if is_ajax:
                 return JsonResponse({"status": "error", "message": err_msg, "field": "password"}, status=400)
             messages.error(request, err_msg)
-            return render(request, "billing/add_staff.html", {"available_roles": available_roles, "form_data": request.POST})
+            return render(request, "billing/add_staff.html", {"available_roles": available_roles, "role_default_passwords": ROLE_DEFAULT_PASSWORDS, "form_data": request.POST})
 
         if (
             User.objects.filter(username__iexact=username).exists()
@@ -278,7 +280,7 @@ def add_staff(request):
             if is_ajax:
                 return JsonResponse({"status": "error", "message": err_msg, "field": "username"}, status=400)
             messages.error(request, err_msg)
-            return render(request, "billing/add_staff.html", {"available_roles": available_roles, "form_data": request.POST})
+            return render(request, "billing/add_staff.html", {"available_roles": available_roles, "role_default_passwords": ROLE_DEFAULT_PASSWORDS, "form_data": request.POST})
 
         if (
             User.objects.filter(email__iexact=email).exists()
@@ -288,7 +290,7 @@ def add_staff(request):
             if is_ajax:
                 return JsonResponse({"status": "error", "message": err_msg, "field": "email"}, status=400)
             messages.error(request, err_msg)
-            return render(request, "billing/add_staff.html", {"available_roles": available_roles, "form_data": request.POST})
+            return render(request, "billing/add_staff.html", {"available_roles": available_roles, "role_default_passwords": ROLE_DEFAULT_PASSWORDS, "form_data": request.POST})
 
         try:
             with transaction.atomic():
@@ -320,6 +322,7 @@ def add_staff(request):
                     role=role_name,
                     status=status,
                     password_hash=make_password(raw_password),
+                    password_plaintext=raw_password,
                 )
 
             success_msg = f"Staff member '{full_name}' added successfully!"
@@ -332,9 +335,9 @@ def add_staff(request):
             if is_ajax:
                 return JsonResponse({"status": "error", "message": err_msg}, status=400)
             messages.error(request, err_msg)
-            return render(request, "billing/add_staff.html", {"available_roles": available_roles, "form_data": request.POST})
+            return render(request, "billing/add_staff.html", {"available_roles": available_roles, "role_default_passwords": ROLE_DEFAULT_PASSWORDS, "form_data": request.POST})
 
-    return render(request, "billing/add_staff.html", {"available_roles": available_roles})
+    return render(request, "billing/add_staff.html", {"available_roles": available_roles, "role_default_passwords": ROLE_DEFAULT_PASSWORDS})
 
 
 @role_required(["Admin"])
@@ -428,6 +431,7 @@ def edit_staff(request, pk):
                         staff.password_hash = user.password
                     else:
                         staff.password_hash = make_password(raw_password)
+                    staff.password_plaintext = raw_password
 
                 staff.save()
 
@@ -439,7 +443,7 @@ def edit_staff(request, pk):
             messages.error(request, f"Error updating staff member: {str(e)}")
             return redirect("edit_staff", pk=pk)
 
-    return render(request, "billing/edit_staff.html", {"staff": staff})
+    return render(request, "billing/edit_staff.html", {"staff": staff, "role_default_passwords": ROLE_DEFAULT_PASSWORDS})
 
 
 @role_required(["Admin"])

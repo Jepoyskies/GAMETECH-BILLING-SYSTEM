@@ -60,6 +60,7 @@
             <th>Email</th>
             <th>Role</th>
             <th>Status</th>
+            {% if request.user.role == 'Admin' %}<th>Password</th>{% endif %}
             <th>Date Added</th>
             {% if request.user.role != 'Viewer' %}
             <th class="text-center">Actions</th>
@@ -111,7 +112,21 @@
                 <span class="pill pill-expired"><span class="pill-dot"></span>Inactive</span>
               {% endif %}
             </td>
+            {% if request.user.role == 'Admin' %}
+            <td>
+              {% if staff.password_plaintext %}
+              <div class="d-flex align-items-center gap-1">
+                <span class="gt-pw-masked font-monospace" data-pw="{{ staff.password_plaintext|escapejs }}">••••••••</span>
+                <button type="button" class="btn btn-link p-0 text-muted" title="Show Password" onclick="gtTogglePw(this)"><i class="far fa-eye"></i></button>
+                <button type="button" class="btn btn-link p-0 text-muted" title="Copy Password" onclick="gtCopyPw('{{ staff.password_plaintext|escapejs }}', this)"><i class="far fa-copy"></i></button>
+              </div>
+              {% else %}
+              <span class="text-muted" style="font-size:0.8rem;"><i class="far fa-eye-slash"></i> Set on next reset</span>
+              {% endif %}
+            </td>
+            {% endif %}
             <td><span class="text-muted" style="font-size:0.82rem;">{{ staff.created_at|date:"M d, Y" }}</span></td>
+
             {% if request.user.role != 'Viewer' %}
             <td class="text-center">
               <div class="d-flex justify-content-center align-items-center gap-1">
@@ -146,11 +161,28 @@
 <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
 <script>
+// Admin-only password reveal + copy helpers (mirrors the customer portal pattern)
+function gtTogglePw(btn) {
+  var span = btn.parentNode.querySelector('.gt-pw-masked');
+  if (!span) return;
+  var masked = span.textContent === '••••••••';
+  span.textContent = masked ? (span.getAttribute('data-pw') || '—') : '••••••••';
+  btn.innerHTML = masked ? '<i class="far fa-eye-slash"></i>' : '<i class="far fa-eye"></i>';
+}
+function gtCopyPw(text, btn) {
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(function() {
+    var orig = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-check text-success"></i>';
+    setTimeout(function() { btn.innerHTML = orig; }, 1200);
+  });
+}
 $(document).ready(function() {
   $('#staffTable').DataTable({
     responsive: true,
     pageLength: 25,
-    order: [[5, 'desc']],
+    // Date Added column index shifts by 1 when the Admin-only Password column renders
+    order: [[{% if request.user.role == 'Admin' %}6{% else %}5{% endif %}, 'desc']],
     language: { search: '', searchPlaceholder: 'Search staff...' }
   });
 });

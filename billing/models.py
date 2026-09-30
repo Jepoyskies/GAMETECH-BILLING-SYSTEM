@@ -217,10 +217,20 @@ class SystemAdmin(models.Model):
     role = models.CharField(max_length=50, default="Agent")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="Active")
     password_hash = models.CharField(max_length=255)  # We will hash this securely!
+    # Plaintext mirror so Admins can view the password (mirrors Customer.portal_password_plaintext)
+    password_plaintext = models.CharField(
+        max_length=255, blank=True, null=True,
+        help_text="Plaintext mirror of password_hash so Admins can view/reuse it",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.full_name
+
+    def set_password(self, raw_password):
+        """Hashes into password_hash AND stores the plaintext mirror for Admin display."""
+        self.password_hash = make_password(raw_password)
+        self.password_plaintext = raw_password
 
 
 class Barangay(models.Model):

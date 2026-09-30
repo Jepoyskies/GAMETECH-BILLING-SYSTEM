@@ -1,6 +1,23 @@
 import json
 from .models import SystemLog
 
+# ---------------------------------------------------------------------------
+# Single source of truth for the default password offered per staff role.
+# Change it HERE ONLY - never hardcode these strings in templates or views.
+# WARNING: these are shared, well-known starter passwords. They exist for
+# counter convenience, so the system also keeps a plaintext mirror of each
+# staff password (SystemAdmin.password_plaintext) for Admin visibility.
+# ---------------------------------------------------------------------------
+ROLE_DEFAULT_PASSWORDS = {
+    "CSR": "csr-12345678",
+    "Technician": "tech-12345678",
+    "Agent": "angent-12345678",
+    "Admin": "admin-12345678",
+    "Viewer": "viewer-12345678",
+}
+
+DEFAULT_STAFF_PASSWORD = "gametech-12345678"
+
 
 def log_system_action(
     table_name,
