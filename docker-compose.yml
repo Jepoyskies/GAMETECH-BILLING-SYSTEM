@@ -14,11 +14,20 @@ x-app-env: &app-env
   DEBUG: ${DEBUG:-False}
   ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
 
+# Cap container logs so a chatty worker cannot silently fill the 48G disk.
+# 2026-09-30: one container log had reached 34M with no rotation.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   db:
     image: postgres:15-alpine
     container_name: gametech-db
     restart: unless-stopped
+    logging: *default-logging
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
@@ -35,6 +44,7 @@ services:
     image: redis:7-alpine
     container_name: gametech-redis
     restart: unless-stopped
+    logging: *default-logging
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -48,6 +58,7 @@ services:
     image: gametech-web
     container_name: gametech-web
     restart: unless-stopped
+    logging: *default-logging
     command: /app/docker/start_web.sh
     volumes:
       - .:/app
@@ -59,6 +70,14 @@ services:
       redis:
         condition: service_healthy
     environment: *app-env
+    # Exec form (no shell) so there is no quoting to get wrong. /login/ is
+    # deliberately DB-independent: a database blip must not restart the web tier.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/login/',timeout=5).status==200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   celery:
     build:
@@ -67,6 +86,7 @@ services:
     image: gametech-web
     container_name: gametech-celery
     restart: unless-stopped
+    logging: *default-logging
     command: /app/docker/start_celery.sh
     volumes:
       - .:/app
@@ -84,6 +104,7 @@ services:
     image: gametech-web
     container_name: gametech-celery-beat
     restart: unless-stopped
+    logging: *default-logging
     command: /app/docker/start_celerybeat.sh
     volumes:
       - .:/app
