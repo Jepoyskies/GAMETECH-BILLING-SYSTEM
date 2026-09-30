@@ -1637,3 +1637,80 @@ ssh root@143.198.207.144 "docker logs --since 2m gametech-web 2>&1 | grep -i 'ti
 - If repeater WiFi must be used, set Mini PC network adapter power management to OFF (Device Manager → adapter Properties → Power Management → uncheck "Allow computer to turn off this device to save power")
 
 **Date Logged**: 2026-09-30
+
+---
+
+## ERR-042: Add Staff Modal Shows Generic "Please check input" Instead Of The Real Reason
+
+**Symptom**: Submitting the "Add Staff Member" modal on `/staff/` always shows
+`Error creating staff member. Please check input.` regardless of the actual cause.
+The user cannot tell what is wrong with the form.
+
+**Root Cause (TWO separate bugs, both must be fixed)**:
+
+1. **Silent fallback swallowed every real message.** In
+   `billing/templates/billing/partials/_modal_add_staff.html` the fetch handler did
+   `await response.json().catch(() => ({}))`. When the server returned a **non-JSON**
+   body (nginx 502 HTML page, Django 500 traceback page, or a 403 CSRF HTML page),
+   `data` became `{}`, so `data.message` was `undefined` and the hardcoded fallback
+   string was displayed. The real HTTP status was never surfaced.
+
+2. **The form POSTed during a container restart.** nginx logged
+   `"POST /staff/add/" 502` with `connect() failed (111): Connection refused` /
+   `upstream prematurely closed connection`. The web container was down/restarting,
+   so nginx had no upstream to talk to. Because of bug #1, the 502 looked like a
+   form validation problem instead of a server outage.
+
+**Confirmed Real Validation Rule (for this exact payload)**:
+username `Vince` + password `Vince_12345` is **rejected** by
+`billing/validators.py::validate_password_policy`:
+> `Password must not contain or match your username, full name, or phone number.`
+
+Reason: the policy rejects any password where the identifier appears as a substring
+(`if len(val) >= 3 and val in pw_lower`). So `vince` inside `vince_12345` fails.
+This is intended behaviour, not a bug.
+
+**1-Step Fix**:
+- `billing/views/staff.py` (`add_staff`): every `JsonResponse` error now includes a
+  `"field"` key (`password`, `username`, `email`, or the specific missing field) so the
+  frontend knows exactly which input to highlight. Empty-form responses report the
+  first missing field instead of a generic "fill in all required fields."
+- `billing/templates/billing/partials/_modal_add_staff.html`: replaced
+  `response.json().catch(() => ({}))` with `await response.text()` + `JSON.parse` in a
+  try/catch, then built an explicit message per HTTP status (401 / 403 / 502 / 504 /
+  5xx / other). Added `markFieldError()` which adds `.gt-field-invalid` to the offending
+  input, injects an inline red hint under it, focuses it, and clears on resubmit.
+
+**Verification** (run the following Python block through the container shell):
+```python
+import django, os
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "gametech_core.settings")
+django.setup()
+from django.test import Client
+from django.contrib.auth import get_user_model
+u = get_user_model().objects.filter(is_superuser=True).first()
+c = Client(); c.force_login(u)
+r = c.post("/staff/add/", {"username":"Vince","full_name":"Vince Macarandan",
+    "email":"vince@gmail.com","role":"Agent","status":"Active","password":"Vince_12345"},
+    HTTP_X_REQUESTED_WITH="XMLHttpRequest", HTTP_REFERER="http://testserver/staff/")
+print(r.status_code, r.content.decode())
+# Expect: 400 {"status": "error", ..., "field": "password"}
+```
+
+**Companion Gotcha - `docker restart` can leave a zombie container**:
+If `gametech-web` disappears from `docker ps` but `docker exec` reports
+`No such container`, the container is stuck in `created` state and a plain
+`docker restart` will fail. Also, a new empty `gametech-billing_postgres_data`
+volume gets created alongside the live one. Heal with:
+```bash
+ssh root@143.198.207.144 "docker rm gametech-web; cd /root/GAMETECH-BILLING-SYSTEM && docker compose up -d"
+```
+Always confirm the pre-existing DB volume is reused (check `docker inspect gametech-db`
+mounts) so live subscriber data is never orphaned behind a fresh empty volume.
+
+**Lesson**: Never `catch` a JSON parse failure into an empty object when the response
+status matters. Read text, parse defensively, and always branch on the HTTP status so
+infrastructure failures (502/504) are never misreported as user input errors.
+
+**Date Logged**: 2026-09-30
+
