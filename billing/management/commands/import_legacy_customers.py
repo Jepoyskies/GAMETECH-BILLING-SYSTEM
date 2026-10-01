@@ -2,6 +2,7 @@ import csv
 import io
 import json
 import os
+import re
 import secrets
 import string
 from datetime import timedelta
@@ -43,6 +44,73 @@ PLAN_MAPPING = {
 
 # Zero-date customers are flagged for review instead of given a default expiry
 
+INSERT_RE = re.compile(r"^INSERT\s+INTO\s+`?([A-Za-z0-9_]+)`?")
+
+
+def split_value_tuples(payload):
+    """Split a mysqldump VALUES payload into individual "(...)" tuple strings.
+
+    mysqldump emits extended inserts -- one INSERT line holding every row:
+        INSERT INTO `t` VALUES ('1','a'),('2','b');
+    A naive split on "," or "),(" corrupts any value containing those
+    characters, so this walks the string tracking quote state and paren depth.
+    Handles both \' and '' escaping.
+    """
+    tuples = []
+    buf = []
+    depth = 0
+    in_str = False
+    i = 0
+    n = len(payload)
+    while i < n:
+        ch = payload[i]
+
+        if in_str:
+            buf.append(ch)
+            if ch == "\\" and i + 1 < n:          # backslash escape
+                buf.append(payload[i + 1])
+                i += 2
+                continue
+            if ch == "'":
+                if i + 1 < n and payload[i + 1] == "'":   # doubled quote
+                    buf.append(payload[i + 1])
+                    i += 2
+                    continue
+                in_str = False
+            i += 1
+            continue
+
+        if ch == "'":
+            in_str = True
+            buf.append(ch)
+            i += 1
+            continue
+
+        if ch == "(":
+            if depth == 0:
+                buf = []
+            depth += 1
+            if depth > 1:
+                buf.append(ch)
+            i += 1
+            continue
+
+        if ch == ")":
+            depth -= 1
+            if depth == 0:
+                tuples.append("(" + "".join(buf) + ")")
+                buf = []
+            else:
+                buf.append(ch)
+            i += 1
+            continue
+
+        if depth > 0:
+            buf.append(ch)   # keep the commas separating values
+        i += 1
+
+    return tuples
+
 
 class Command(BaseCommand):
     help = "Imports legacy customers from a MySQL dump file, preserving PPPoE credentials, status, and expiry dates."
@@ -60,6 +128,28 @@ class Command(BaseCommand):
             help="Parse and validate without writing to the database",
         )
 
+    def iter_insert_rows(self, sql_file_path):
+        """Yield (table_name, row_list) for every row in every INSERT statement.
+
+        Handles both extended inserts (many tuples on one line, the mysqldump
+        default) and one-tuple-per-line dumps.
+        """
+        with open(sql_file_path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                stripped = line.strip()
+                m = INSERT_RE.match(stripped)
+                if not m:
+                    continue
+                vidx = stripped.upper().find("VALUES")
+                if vidx == -1:
+                    continue
+                table = m.group(1)
+                payload = stripped[vidx + len("VALUES"):].strip().rstrip(";").strip()
+                for tup in split_value_tuples(payload):
+                    row = self.parse_sql_line(tup)
+                    if row:
+                        yield table, row
+
     def parse_sql_line(self, line):
         line = line.strip()
         if line.startswith("("):
@@ -68,6 +158,10 @@ class Command(BaseCommand):
             line = line[:-2]
         elif line.endswith("),"):
             line = line[:-2]
+        elif line.endswith(")"):
+            # split_value_tuples() already balanced the parens, so a trailing ")"
+            # here is always the tuple's own closing paren, never part of a value.
+            line = line[:-1]
 
         reader = csv.reader(io.StringIO(line), quotechar="'", skipinitialspace=True)
         try:
@@ -188,73 +282,28 @@ class Command(BaseCommand):
 
             # PASS 1: Read PPPoE credentials
             self.stdout.write(self.style.SUCCESS("Pass 1: Extracting PPPoE credentials..."))
-            with open(sql_file_path, "r", encoding="utf-8", errors="replace") as f:
-                current_table = None
-                for line in f:
-                    if line.startswith("INSERT INTO `pppoe_users`"):
-                        current_table = "pppoe_users"
-                        continue
-                    elif line.startswith("INSERT INTO"):
-                        current_table = None
-                        continue
-
-                    if current_table == "pppoe_users":
-                        if not line.strip().startswith("("):
-                            if line.strip() == "" or line.strip().startswith("--") or line.strip().startswith("/*!"):
-                                pass
-                            else:
-                                current_table = None
-                            continue
-
-                        row = self.parse_sql_line(line)
-                        if row and len(row) >= 3:
-                            pppoe_username = row[1]
-                            pppoe_password = row[2]
-                            if pppoe_username:
-                                pppoe_creds[pppoe_username] = pppoe_password
+            for table, row in self.iter_insert_rows(sql_file_path):
+                if table == "pppoe_users" and len(row) >= 3:
+                    pppoe_username = row[1]
+                    pppoe_password = row[2]
+                    if pppoe_username:
+                        pppoe_creds[pppoe_username] = pppoe_password
 
             self.stdout.write(f"  Found {len(pppoe_creds)} PPPoE credentials")
+            if not pppoe_creds:
+                self.stdout.write(self.style.ERROR(
+                    "  No PPPoE credentials found -- passwords will NOT be imported."
+                ))
 
             # PASS 2: Import devices, account types, plans, and customers
             self.stdout.write(self.style.SUCCESS("Pass 2: Importing data..."))
-            with open(sql_file_path, "r", encoding="utf-8", errors="replace") as f:
-                current_table = None
-                for line in f:
-                    if line.startswith("INSERT INTO `mikrotik_devices`"):
-                        current_table = "mikrotik_devices"
-                        continue
-                    elif line.startswith("INSERT INTO `service_plans`"):
-                        current_table = "service_plans"
-                        continue
-                    elif line.startswith("INSERT INTO `customers`"):
-                        current_table = "customers"
-                        continue
-                    elif line.startswith("INSERT INTO `account_type`"):
-                        current_table = "account_type"
-                        continue
-                    elif line.startswith("INSERT INTO"):
-                        current_table = None
-                        continue
-
-                    if not current_table:
-                        continue
-
-                    if not line.strip().startswith("("):
-                        if line.strip() == "" or line.strip().startswith("--") or line.strip().startswith("/*!"):
-                            pass
-                        else:
-                            current_table = None
-                        continue
-
-                    row = self.parse_sql_line(line)
-                    if not row:
-                        continue
-
+            processed_customers = 0
+            for table, row in self.iter_insert_rows(sql_file_path):
                     # Field mapping below is POSITIONAL (row[N]), so a dump with a
                     # different column count would either IndexError or silently
                     # shift values into the wrong fields. Pad to the expected width
                     # so short rows are safe, and shout once if the width is off.
-                    if current_table == "customers":
+                    if table == "customers":
                         if not warned_shape:
                             warned_shape = True
                             if len(row) != 27:
@@ -266,7 +315,7 @@ class Command(BaseCommand):
                         if len(row) < 27:
                             row = list(row) + [None] * (27 - len(row))
 
-                    if current_table == "mikrotik_devices" and len(row) >= 6:
+                    if table == "mikrotik_devices" and len(row) >= 6:
                         device_name = row[1]
                         ip_address = row[2]
                         if not dry_run:
@@ -277,7 +326,7 @@ class Command(BaseCommand):
                         else:
                             self.stdout.write(f"  [DRY] Would create device: {device_name}")
 
-                    elif current_table == "account_type" and len(row) >= 2:
+                    elif table == "account_type" and len(row) >= 2:
                         type_name = row[1]
                         if not dry_run:
                             acct = self.get_or_create_account_type(account_type_map, type_name)
@@ -285,11 +334,12 @@ class Command(BaseCommand):
                         else:
                             self.stdout.write(f"  [DRY] Would create account type: {type_name}")
 
-                    elif current_table == "service_plans" and len(row) >= 3:
+                    elif table == "service_plans" and len(row) >= 3:
                         # Legacy service_plans table - we use PLAN_MAPPING instead
                         pass
 
-                    elif current_table == "customers" and len(row) >= 10:
+                    elif table == "customers" and len(row) >= 10:
+                        processed_customers += 1
                         username = row[1]
                         full_name = row[5]
                         email = row[6] if row[6] else None
@@ -389,12 +439,21 @@ class Command(BaseCommand):
                         else:
                             self.stdout.write(f"  Updated: {username or full_name}")
 
-            self.stdout.write(self.style.SUCCESS("Import complete!"))
+            if processed_customers == 0:
+                self.stdout.write(self.style.ERROR(
+                    "NO customers were parsed out of this file. Nothing was imported. "
+                    "Check that the dump contains an 'INSERT INTO `customers`' statement."
+                ))
+            else:
+                self.stdout.write(self.style.SUCCESS(
+                    f"Import complete! {processed_customers} customers processed."
+                ))
 
             # Save import report for the web interface
             report = {
                 "timestamp": timezone.now().isoformat(),
-                "total_customers": len(all_rows),
+                "total_customers": processed_customers,
+                "pppoe_credentials": len(pppoe_creds),
                 "zero_date_customers": zero_date_customers,
                 "devices_created": list(device_map.keys()),
                 "plans_used": list(plan_map.keys()),
