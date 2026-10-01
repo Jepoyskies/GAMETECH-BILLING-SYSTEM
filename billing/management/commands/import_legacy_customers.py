@@ -1,8 +1,5 @@
-import csv
-import io
 import json
 import os
-import re
 import secrets
 import string
 from datetime import timedelta
@@ -15,6 +12,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.utils.timezone import make_aware
 
+from billing.legacy_import import iter_rows
 from billing.models import Customer, SubscriptionPlan, AccountType
 from billing.signals import sync_customer_to_mikrotik
 from network_manager.models import MikrotikDevice
@@ -44,118 +42,6 @@ PLAN_MAPPING = {
 
 # Zero-date customers are flagged for review instead of given a default expiry
 
-INSERT_RE = re.compile(r"^INSERT\s+INTO\s+`?([A-Za-z0-9_]+)`?")
-COLUMN_LIST_RE = re.compile(r"^\s*\(([^)]*)\)\s*VALUES", re.I)
-CREATE_TABLE_RE = re.compile(
-    r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`?([A-Za-z0-9_]+)`?\s*\((.*?)\n\)\s*ENGINE",
-    re.I | re.S,
-)
-
-
-def columns_from_create_table(sql_file_path):
-    """Map table -> ordered column names, from the CREATE TABLE statements.
-
-    Only needed as a fallback for dumps that omit the column list in their
-    INSERT statements (plain mysqldump). phpMyAdmin dumps always include it.
-    """
-    cols = {}
-    with open(sql_file_path, "r", encoding="utf-8", errors="replace") as f:
-        for line in f:
-            if not line.lstrip().upper().startswith("CREATE TABLE"):
-                continue
-            # CREATE TABLE wraps across lines. Read until a line that is just the
-            # closing paren -- stopping on the first ")" would trip over
-            # "varchar(50)" and cut the block short.
-            block = [line]
-            while not re.search(r"^\s*\)\s*(ENGINE|;|$)", block[-1], re.M | re.I):
-                nxt = f.readline()
-                if not nxt:
-                    break
-                block.append(nxt)
-            m = CREATE_TABLE_RE.search("".join(block))
-            if not m:
-                continue
-            names = re.findall(r"^\s*`([A-Za-z0-9_]+)`", m.group(2), re.M)
-            if names:
-                cols[m.group(1)] = names
-    return cols
-
-
-def split_value_tuples(payload):
-    """Split a mysqldump VALUES payload into individual "(...)" tuple strings.
-
-    mysqldump emits extended inserts -- one INSERT line holding every row:
-        INSERT INTO `t` VALUES ('1','a'),('2','b');
-    A naive split on "," or "),(" corrupts any value containing those
-    characters, so this walks the string tracking quote state and paren depth.
-    Handles both MySQL backslash escaping and '' doubling. Returns tuples that
-    are safe to hand to csv.reader.
-    """
-    tuples = []
-    buf = []
-    depth = 0
-    in_str = False
-    i = 0
-    n = len(payload)
-    while i < n:
-        ch = payload[i]
-
-        if in_str:
-            if ch == "\\" and i + 1 < n:
-                nxt = payload[i + 1]
-                if nxt == "'":
-                    # MySQL escapes an apostrophe as \'. Python's csv module knows
-                    # nothing about MySQL escaping and would read that quote as a
-                    # field/quote toggle, shattering "Eddie\'s Compound, ..." into
-                    # four fields. Double it instead: csv then decodes it back to
-                    # a single apostrophe. The backslash itself is dropped.
-                    buf.append("''")
-                else:
-                    buf.append(nxt)
-                i += 2
-                continue
-            buf.append(ch)
-            if ch == "'":
-                if i + 1 < n and payload[i + 1] == "'":   # doubled quote
-                    buf.append(payload[i + 1])
-                    i += 2
-                    continue
-                in_str = False
-            i += 1
-            continue
-
-        if ch == "'":
-            in_str = True
-            buf.append(ch)
-            i += 1
-            continue
-
-        if ch == "(":
-            if depth == 0:
-                buf = []
-            depth += 1
-            if depth > 1:
-                buf.append(ch)
-            i += 1
-            continue
-
-        if ch == ")":
-            depth -= 1
-            if depth == 0:
-                tuples.append("(" + "".join(buf) + ")")
-                buf = []
-            else:
-                buf.append(ch)
-            i += 1
-            continue
-
-        if depth > 0:
-            buf.append(ch)   # keep the commas separating values
-        i += 1
-
-    return tuples
-
-
 class Command(BaseCommand):
     help = "Imports legacy customers from a MySQL dump file, preserving PPPoE credentials, status, and expiry dates."
 
@@ -171,90 +57,6 @@ class Command(BaseCommand):
             action="store_true",
             help="Parse and validate without writing to the database",
         )
-
-    def iter_insert_rows(self, sql_file_path):
-        """Yield (table_name, {column_name: value}) for every row in the dump.
-
-        Handles both dump layouts:
-          * mysqldump  -- ``INSERT INTO `t` VALUES (..),(..);`` all on one line
-          * phpMyAdmin -- ``INSERT INTO `t` (`c1`,`c2`) VALUES`` then one
-                         tuple per following line, terminated by ';'
-
-        Rows are keyed by COLUMN NAME, never by position. The legacy schema
-        gained a column mid-project (barangay_id at index 9), which silently
-        shifted every positional field after it; name mapping makes that
-        class of corruption impossible.
-        """
-        fallback_cols = columns_from_create_table(sql_file_path)
-
-        with open(sql_file_path, "r", encoding="utf-8", errors="replace") as f:
-            for line in f:
-                stripped = line.strip()
-                m = INSERT_RE.match(stripped)
-                if not m:
-                    continue
-                table = m.group(1)
-
-                # The column list (if any) sits AFTER `INSERT INTO `table``.
-                after_table = stripped[m.end():]
-                cm = COLUMN_LIST_RE.match(after_table)
-                if cm:
-                    names = [c.strip().strip("`") for c in cm.group(1).split(",")]
-                    start = m.end() + cm.end()
-                else:
-                    names = fallback_cols.get(table)
-                    vidx = stripped.upper().find("VALUES")
-                    if vidx == -1 or not names:
-                        continue
-                    start = vidx + len("VALUES")
-
-                # Tuples may continue on following lines (phpMyAdmin style).
-                # Accumulate in a list: repeated string += on a multi-megabyte
-                # statement is quadratic and will get the process OOM-killed.
-                parts = [stripped[start:]]
-                found_end = ";" in parts[0]
-                while not found_end:
-                    nxt = f.readline()
-                    if not nxt:
-                        break
-                    nxt = nxt.rstrip()
-                    parts.append(nxt)
-                    found_end = ";" in nxt
-                buffer = "\n".join(parts)
-
-                payload = buffer.strip().rstrip(";").strip()
-                for tup in split_value_tuples(payload):
-                    values = self.parse_sql_line(tup)
-                    if not values:
-                        continue
-                    if len(values) != len(names):
-                        raise ValueError(
-                            f"Table `{table}`: header lists {len(names)} columns "
-                            f"but a row has {len(values)}. Dump is malformed -- "
-                            f"refusing to import rather than guess."
-                        )
-                    yield table, dict(zip(names, values))
-
-    def parse_sql_line(self, line):
-        line = line.strip()
-        if line.startswith("("):
-            line = line[1:]
-        if line.endswith(");"):
-            line = line[:-2]
-        elif line.endswith("),"):
-            line = line[:-2]
-        elif line.endswith(")"):
-            # split_value_tuples() already balanced the parens, so a trailing ")"
-            # here is always the tuple's own closing paren, never part of a value.
-            line = line[:-1]
-
-        reader = csv.reader(io.StringIO(line), quotechar="'", skipinitialspace=True)
-        try:
-            row = next(reader)
-        except StopIteration:
-            return []
-
-        return [None if col == "NULL" else col for col in row]
 
     def parse_datetime_safe(self, dt_str):
         if not dt_str or dt_str.upper() == "NULL" or dt_str == "0000-00-00 00:00:00":
@@ -340,6 +142,58 @@ class Command(BaseCommand):
 
         return None
 
+    def print_cutover_summary(self, created_count, updated_count, pppoe_creds):
+        """Plain-language report so nobody has to count rows by hand."""
+        now = timezone.now()
+        all_c = Customer.objects.all()
+
+        self.stdout.write("")
+        self.stdout.write(self.style.SUCCESS("=" * 62))
+        self.stdout.write(self.style.SUCCESS("  CUTOVER SUMMARY"))
+        self.stdout.write(self.style.SUCCESS("=" * 62))
+        self.stdout.write(f"  New customers added     : {created_count}")
+        self.stdout.write(f"  Existing updated        : {updated_count}")
+        self.stdout.write(f"  Customers in system now : {all_c.count()}")
+        self.stdout.write("")
+        self.stdout.write(f"  PPPoE passwords matched : {len(pppoe_creds)}")
+        self.stdout.write(f"  Still valid (paid)      : {all_c.filter(expires_at__gt=now).count()}")
+        self.stdout.write(f"  Lapsed (needs review)   : {all_c.filter(expires_at__lt=now).count()}")
+
+        no_expiry = all_c.filter(expires_at__isnull=True, installation_status="installed") \
+                         .exclude(status__in=["pending", "closed_not_installed"])
+        self.stdout.write(f"  NO expiry date on file  : {no_expiry.count()}")
+
+        no_plan = all_c.filter(plan__isnull=True).count()
+        no_pass = all_c.exclude(pppoe_password="").exclude(pppoe_password__isnull=True).count()
+        self.stdout.write(f"  Passwords on file      : {no_pass}")
+        self.stdout.write(f"  Missing a plan         : {no_plan}")
+        self.stdout.write(f"  Routers registered     : {MikrotikDevice.objects.count()}")
+
+        # Attention flags -- the only things a human must actually decide.
+        self.stdout.write("")
+        if no_plan:
+            self.stdout.write(self.style.WARNING(
+                f"  ! {no_plan} customers have no plan. Billing price may be wrong."
+            ))
+        if no_expiry.exists():
+            self.stdout.write(self.style.WARNING(
+                f"  ! {no_expiry.count()} customers have NO expiry date. They can never be"
+            ))
+            self.stdout.write(self.style.WARNING(
+                "    auto-suspended or auto-renewed. Visible at /customers/?filter=no_expiry"
+            ))
+        stale = MikrotikDevice.objects.filter(customer__isnull=True)
+        if stale.exists():
+            self.stdout.write(self.style.WARNING(
+                f"  ! {stale.count()} router(s) with no customers attached: "
+                f"{', '.join(d.device_name for d in stale)}"
+            ))
+            self.stdout.write(self.style.WARNING(
+                "    Delete them at /devices/devices/ so nothing polls dead hardware."
+            ))
+        self.stdout.write(self.style.SUCCESS("=" * 62))
+        self.stdout.write("")
+
     def handle(self, *args, **kwargs):
         sql_file_path = kwargs["sql_file"]
         create_missing_plans = kwargs["create_missing_plans"]
@@ -367,7 +221,7 @@ class Command(BaseCommand):
             # Parse the dump ONCE. Re-reading a multi-megabyte file three times
             # was slow enough to get the process killed on a 1 vCPU host.
             self.stdout.write(self.style.SUCCESS("Parsing dump..."))
-            all_rows = list(self.iter_insert_rows(sql_file_path))
+            all_rows = list(iter_rows(sql_file_path))
             self.stdout.write(f"  Parsed {len(all_rows)} rows from {sql_file_path}")
 
             # PASS 1: Read PPPoE credentials
@@ -387,6 +241,8 @@ class Command(BaseCommand):
             # PASS 2: Import devices, account types, plans, and customers
             self.stdout.write(self.style.SUCCESS("Importing data..."))
             processed_customers = 0
+            created_count = 0
+            updated_count = 0
 
             # Devices FIRST. Rows arrive in file order and a dump happily emits
             # `customers` before `mikrotik_devices`, which would leave every
@@ -527,9 +383,9 @@ class Command(BaseCommand):
                             )
 
                         if created:
-                            self.stdout.write(f"  Created: {username or full_name}")
+                            created_count += 1
                         else:
-                            self.stdout.write(f"  Updated: {username or full_name}")
+                            updated_count += 1
 
             if processed_customers == 0:
                 self.stdout.write(self.style.ERROR(
@@ -540,6 +396,9 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS(
                     f"Import complete! {processed_customers} customers processed."
                 ))
+
+            if not dry_run:
+                self.print_cutover_summary(created_count, updated_count, pppoe_creds)
 
             # Save import report for the web interface
             report = {
