@@ -7,14 +7,18 @@ from pathlib import Path
 
 from django.contrib.auth.hashers import make_password
 from django.core.management.base import BaseCommand
-from django.db.models.signals import post_save
+from django.db.models.signals import post_delete, post_save
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.utils.timezone import make_aware
 
 from billing.legacy_import import iter_rows
 from billing.models import Customer, SubscriptionPlan, AccountType
-from billing.signals import sync_customer_to_mikrotik
+from billing.signals import (
+    sync_customer_to_mikrotik,
+    sync_plan_on_save,
+    sync_plan_on_delete,
+)
 from network_manager.models import MikrotikDevice
 
 
@@ -259,9 +263,13 @@ class Command(BaseCommand):
         if dry_run:
             self.stdout.write(self.style.WARNING("DRY RUN MODE — no database changes will be made."))
 
-        # Disconnect the post_save signal to prevent router spam during import
-        self.stdout.write(self.style.WARNING("Disconnecting Mikrotik post_save signals..."))
+        # Disconnect the router sync signals. Every plan the import creates would
+        # otherwise fire a save signal that tries to reach all routers, each with
+        # a connection timeout -- that is what got the container OOM-killed.
+        self.stdout.write(self.style.WARNING("Disconnecting Mikrotik sync signals..."))
         post_save.disconnect(sync_customer_to_mikrotik, sender=Customer)
+        post_save.disconnect(sync_plan_on_save, sender=SubscriptionPlan)
+        post_delete.disconnect(sync_plan_on_delete, sender=SubscriptionPlan)
 
         try:
             plan_map = {}
@@ -497,5 +505,7 @@ class Command(BaseCommand):
 
         finally:
             # Reconnect the signals
-            self.stdout.write(self.style.WARNING("Reconnecting Mikrotik post_save signals..."))
+            self.stdout.write(self.style.WARNING("Reconnecting Mikrotik sync signals..."))
             post_save.connect(sync_customer_to_mikrotik, sender=Customer)
+            post_save.connect(sync_plan_on_save, sender=SubscriptionPlan)
+            post_delete.connect(sync_plan_on_delete, sender=SubscriptionPlan)
