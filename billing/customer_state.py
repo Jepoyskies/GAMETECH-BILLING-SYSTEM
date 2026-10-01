@@ -186,14 +186,23 @@ LIFECYCLES = {
 
 # The filter pills, in display order. Each maps to exactly ONE lifecycle key
 # except "all", so the pills are mutually exclusive and sum to the total.
+# The filter pills, in display order. Every lifecycle key MUST appear here
+# exactly once, or the KPI cards stop summing to the total -- that is how
+# "Paid, Status Unknown" (the blind bucket) went missing and left 1,991
+# customers uncounted on the page.
 FILTERS = [
     ("connected_unpaid", "Connected, Unpaid", "fa-plug-circle-exclamation", "warning"),
     ("paid_offline", "Paid but Offline", "fa-triangle-exclamation", "danger"),
     ("expiring", "Expiring", "fa-clock", "warning"),
     ("connected_paid", "Connected, Paid", "fa-circle-check", "success"),
+    # Shown whenever we cannot reach the routers, so the totals still add up
+    # and staff can see these are "unmeasured", not "fine".
+    ("paid_unknown", "Status Unknown", "fa-eye-slash", "neutral"),
     ("no_expiry", "No Expiry Date", "fa-calendar-xmark", "warning"),
     ("pending_install", "Pending Install", "fa-screwdriver-wrench", "info"),
     ("lapsed_offline", "Lapsed, Offline", "fa-ban", "neutral"),
+    ("suspended", "Suspended", "fa-lock", "warning"),
+    ("inactive", "Inactive", "fa-power-off", "neutral"),
     ("pulled_out", "Pulled Out", "fa-plug-circle-xmark", "neutral"),
 ]
 
@@ -225,6 +234,27 @@ def network_visibility():
     if active is None:
         return False, None
     return True, {str(u).lower() for u in active if u}
+
+
+def _assert_filters_cover_all_states():
+    """Every lifecycle must be filterable, or the KPI strip stops reconciling.
+
+    This is a cheap import-time guard. The bug it prevents is real: adding a
+    new Lifecycle without adding it to FILTERS left 1,991 customers invisible
+    in the totals, and nothing on the page said so.
+    """
+    missing = sorted(set(LIFECYCLES) - {k for k, _, _, _ in FILTERS})
+    unknown = sorted({k for k, _, _, _ in FILTERS} - set(LIFECYCLES))
+    if missing or unknown:
+        raise RuntimeError(
+            "billing.customer_state.FILTERS is out of sync with LIFECYCLES. "
+            f"Not filterable: {missing}. Not a real state: {unknown}. "
+            "Every state needs exactly one filter entry or the customer "
+            "totals will not add up."
+        )
+
+
+_assert_filters_cover_all_states()
 
 
 def billing_state(customer, now=None):
