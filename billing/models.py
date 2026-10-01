@@ -741,32 +741,49 @@ class Customer(models.Model):
             return 'Offline'
         from django.core.cache import cache
         from billing.diagnostics import get_bridge_status
+
+        # Per-request memo. The customers page touches this once per row, and
+        # each miss was 3 cache round trips plus a scan of the router list.
+        if not hasattr(self, "_router_status_cache"):
+            self._router_status_cache = {}
+        if self.mikrotik_device_id in self._router_status_cache:
+            return self._router_status_cache[self.mikrotik_device_id]
+
+        result = 'Offline'
         if cache.get(f'router_unreachable_{self.mikrotik_device.id}'):
-            return 'Unknown'
-        # Our own bridge is down -> we are blind, not the router. Never report
-        # "Offline" from a vantage point we cannot see from.
-        if get_bridge_status()['status'] != 'Online':
-            return 'Unknown'
-        live_data = cache.get('live_monitoring_data') or {}
-        for router in live_data.get('routers', []):
-            if router.get('device_name') == self.mikrotik_device.device_name:
-                return 'Online' if router.get('internet_online') else 'Offline'
-        return 'Offline'
+            result = 'Unknown'
+        elif get_bridge_status()['status'] != 'Online':
+            # Our own bridge is down -> we are blind, not the router. Never
+            # report "Offline" from a vantage point we cannot see from.
+            result = 'Unknown'
+        else:
+            live_data = cache.get('live_monitoring_data') or {}
+            for router in live_data.get('routers', []):
+                if router.get('device_name') == self.mikrotik_device.device_name:
+                    result = 'Online' if router.get('internet_online') else 'Offline'
+                    break
+        self._router_status_cache[self.mikrotik_device_id] = result
+        return result
 
     @property
     def connection_status(self):
-        """Returns 'Online' if the customer's PPPoE session is active (internet reaching them), 'Offline' if not, or 'Unknown' if we cannot see the router."""
+        """Returns 'Online' if the customer's PPPoE session is active, 'Offline' if not, or 'Unknown' if we cannot see the router."""
         if not self.pppoe_username:
             return 'Offline'
-        from django.core.cache import cache
-        from billing.diagnostics import get_bridge_status
-        if self.mikrotik_device and cache.get(f'router_unreachable_{self.mikrotik_device.id}'):
-            return 'Unknown'
-        # Same blindness guard: no fresh poll means no verdict on the session.
-        if get_bridge_status()['status'] != 'Online':
-            return 'Unknown'
-        active_users = cache.get('active_pppoe_usernames_set') or set()
-        return 'Online' if self.pppoe_username.lower() in {str(u).lower() for u in active_users} else 'Offline'
+        from billing.customer_state import hardware_state
+        from billing.customer_state import network_visibility
+
+        # Delegate to the shared resolver instead of re-deriving it here. This
+        # property used to rebuild a lowercased set of every active user for
+        # EVERY row on the page, so rendering 2,041 customers did ~2,041 x
+        # 2,041 string operations. That single line took the customers page
+        # from ~1s to ~40s and was a main cause of the web container being
+        # OOM-killed.
+        if not hasattr(self, "_lifecycle_hw_cache"):
+            self._lifecycle_hw_cache = network_visibility()
+        connected = self._lifecycle_hw_cache[1]
+        state = hardware_state(self, connected)
+        return {'connected': 'Online', 'offline': 'Offline'}.get(state, 'Unknown')
 
     @property
     def is_expired(self):
