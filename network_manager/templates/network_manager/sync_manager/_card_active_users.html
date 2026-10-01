@@ -44,6 +44,7 @@
                         <th>Customer Name</th>
                         <th>Barangay</th>
                         <th>Profile</th>
+                        <th>Router</th>
                         <th>Status</th>
                         <th class="text-end">Actions</th>
                     </tr>
@@ -69,10 +70,22 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% if user.is_active %}
-                            <span class="gametech-pill pill-success" title="Active connection on this router"><span class="status-dot dot-online"></span> Active</span>
+                            {% comment %}
+                              Router truth. Before ERR-094 this field was never
+                              read off the MikroTik, so "enabled" and "cut off"
+                              looked identical.
+                            {% endcomment %}
+                            {% if user.router_disabled %}
+                            <span class="gametech-pill pill-danger" title="Secret is DISABLED on the router"><span class="status-dot dot-offline"></span> Cut Off</span>
                             {% else %}
-                            <span class="gametech-pill pill-secondary" title="Secret synced in database and router, but no active PPPoE session on this router"><span class="status-dot dot-offline"></span> Synced</span>
+                            <span class="gametech-pill pill-success" title="Secret is ENABLED on the router"><span class="status-dot dot-online"></span> Enabled</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.is_active %}
+                            <span class="gametech-pill pill-success" title="A live PPPoE session exists right now"><span class="status-dot dot-online"></span> Session Up</span>
+                            {% else %}
+                            <span class="gametech-pill pill-secondary" title="No live PPPoE session on this router right now"><span class="status-dot dot-offline"></span> No Session</span>
                             {% endif %}
                         </td>
                         <td class="text-end">

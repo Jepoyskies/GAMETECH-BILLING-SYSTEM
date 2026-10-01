@@ -1,0 +1,125 @@
+<!--
+  NEEDS REVIEW - the deliberate-decision queue.
+
+  Everything here is a disagreement between what the SYSTEM intends and what
+  the ROUTER actually has. Nothing here is fixed automatically, because every
+  row is a business decision:
+
+    Connected, Unpaid  system says lapsed/suspended, router secret is still
+                       ENABLED. The old PHP system could not represent this, so
+                       these customers were invisible and kept paying cash.
+                       -> COLLECT. Do NOT suspend.
+    Paid, Cut Off      system says fine and paid, router secret is DISABLED.
+                       -> A paying customer has no internet. Reconnect.
+    Drift              password or profile on the router no longer matches the
+                       system. -> Confirm which side is right before writing.
+
+  The enabled/disabled column is read straight off the MikroTik
+  `/ppp/secret` resource. Before ERR-094 that field was dropped, so a cut-off
+  customer and a live one looked identical here.
+-->
+<div class="card sync-card border-0 mb-4">
+    <div class="card-header warning-header d-flex justify-content-between align-items-center border-0">
+        <h5 class="mb-0"><i class="fas fa-clipboard-check me-2"></i> Needs Review ({{ needs_review|length }})</h5>
+        <small>System and router disagree &mdash; a human decides</small>
+    </div>
+    <div class="card-body p-0 table-responsive">
+        {% if not needs_review %}
+        <div class="p-4 text-center text-muted">
+            <i class="fas fa-check-double fa-2x mb-2"></i>
+            <p class="mb-0">Nothing to review. Every matched account agrees with the router.</p>
+        </div>
+        {% else %}
+        <table class="table table-hover mb-0 datatable" id="reviewTable">
+            <thead>
+                <tr>
+                    <th>PPPoE Username</th>
+                    <th>Customer</th>
+                    <th>On Router</th>
+                    <th>System Says</th>
+                    <th>What Differs</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in needs_review %}
+                <tr class="{% if user.connected_but_unpaid %}table-row-collect{% elif user.state_mismatch %}table-row-pending-install{% endif %}">
+                    <td><span class="fw-bold">{{ user.name }}</span></td>
+                    <td>
+                        {{ user.customer.full_name|default:"-" }}
+                        {% if user.customer.barangay %}<small class="d-block text-muted">{{ user.customer.barangay.name }}</small>{% endif %}
+                    </td>
+
+                    {# ---- GROUND TRUTH FROM THE ROUTER ---- #}
+                    <td>
+                        {% if user.router_disabled %}
+                            <span class="gametech-pill pill-danger" title="The MikroTik has this secret DISABLED, so the customer cannot connect.">
+                                <span class="status-dot dot-offline"></span> Cut Off
+                            </span>
+                        {% else %}
+                            <span class="gametech-pill pill-success" title="The MikroTik has this secret ENABLED.">
+                                <span class="status-dot dot-online"></span> Enabled
+                            </span>
+                        {% endif %}
+                        {% if user.is_active %}
+                            <span class="gametech-pill pill-primary d-block mt-1" title="A live PPPoE session exists right now.">Session Up</span>
+                        {% endif %}
+                    </td>
+
+                    {# ---- WHAT THE BILLING SYSTEM BELIEVES ---- #}
+                    <td>
+                        {% if user.customer %}
+                            <span class="gametech-pill pill-secondary">{{ user.customer.get_status_display }}</span>
+                            {% if user.customer.expires_at %}
+                                <small class="d-block text-muted mt-1">Exp {{ user.customer.expires_at|date:"M d, Y" }}</small>
+                            {% else %}
+                                <small class="d-block text-warning mt-1">No expiry date</small>
+                            {% endif %}
+                        {% else %}-{% endif %}
+                    </td>
+
+                    {# ---- THE ACTUAL VERDICT ---- #}
+                    <td>
+                        {% if user.connected_but_unpaid %}
+                            <span class="gametech-pill pill-warning" title="Past due in the system but the router secret is still enabled. Collect payment - do not auto-suspend.">
+                                <i class="fas fa-hand-holding-dollar me-1"></i> Connected, Unpaid
+                            </span>
+                            <small class="d-block text-muted mt-1">Collect payment. Do not suspend.</small>
+                        {% elif user.router_disabled %}
+                            <span class="gametech-pill pill-danger" title="System thinks this customer is fine and paid, but the router has them cut off.">
+                                <i class="fas fa-scissors me-1"></i> Paid, Cut Off
+                            </span>
+                            <small class="d-block text-muted mt-1">Reconnect, or check why they were cut.</small>
+                        {% endif %}
+                        {% if user.drift_fields %}
+                            <small class="d-block text-warning mt-1">
+                                Drift: {{ user.drift_fields|join:", " }}
+                            </small>
+                        {% endif %}
+                        {% if user.is_suspicious %}
+                            <small class="d-block text-danger mt-1">{{ user.suspicious_reasons }}</small>
+                        {% endif %}
+                    </td>
+
+                    <td class="text-end">
+                        {% if user.customer %}
+                        <div class="d-flex justify-content-end gap-1">
+                            <a href="{% url 'view_customer' user.customer.id %}" class="btn btn-sm btn-outline-secondary" title="Open the customer record and decide there.">
+                                <i class="fas fa-external-link-alt"></i> View
+                            </a>
+                            {% if user.customer.plan %}
+                            <button type="submit" formnovalidate formaction="{% url 'sync_autofix_user' device.id %}" formmethod="POST" name="pppoe_username" value="{{ user.name }}" class="btn btn-sm btn-outline-primary"
+                                    title="Write this system's plan and profile to the router now. This is a real router write." onclick="return confirm('Write this account to the router now?\n\nThis will set the profile and password on {{ device.device_name }}.\n\nOnly do this if the SYSTEM is right.');">
+                                <i class="fas fa-upload"></i> Push
+                            </button>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+</div>
