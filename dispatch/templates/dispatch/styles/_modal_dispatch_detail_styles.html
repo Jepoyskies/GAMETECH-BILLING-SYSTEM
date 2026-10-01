@@ -2,6 +2,22 @@
     /* ═══════════════════════════════════════════════════════════
        DISPATCH DETAIL MODAL (1:1 LIVE PARITY STYLES)
     ═══════════════════════════════════════════════════════════ */
+    /* --d-* namespace was ported from the React design system but never
+       defined in CSS, so every var(--d-*, fallback) below silently resolved
+       to its hardcoded light-mode hex — this modal was light-only. Mapping
+       the namespace onto the shared Gametech tokens restores light/dark
+       parity. Scoped to the modal so it cannot leak. */
+    #modal-dispatch-detail {
+        --d-bg-card: var(--surface-card);
+        --d-card-border: var(--border-subtle);
+        --d-text-heading: var(--text-primary);
+        --d-text-body: var(--text-secondary);
+        --d-muted: var(--text-muted);
+        --d-input-bg: var(--surface-subtle);
+        --d-input-border: var(--border-subtle);
+        --d-table-hover: var(--surface-subtle);
+        --d-accent: var(--section-accent);
+    }
     .dispatch-detail-modal-content {
         background-color: var(--d-bg-card, #ffffff);
         color: var(--d-text-heading, #1e293b);
@@ -17,10 +33,10 @@
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.06em;
-        color: #2563eb;
+        color: var(--d-accent);
         margin-bottom: 0.75rem;
         padding-bottom: 0.35rem;
-        border-bottom: 1.5px solid rgba(37, 99, 235, 0.2);
+        border-bottom: 1.5px solid color-mix(in srgb, var(--d-accent) 20%, transparent);
     }
     .dispatch-modal-label {
         font-size: 0.78rem;
@@ -40,9 +56,9 @@
     }
     .dispatch-modal-input:focus {
         background-color: var(--d-bg-card, #ffffff) !important;
-        border-color: #2563eb !important;
-        color: var(--d-text-heading, #1e293b) !important;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18) !important;
+        border-color: var(--d-accent) !important;
+        color: var(--d-text-heading) !important;
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--d-accent) 18%, transparent) !important;
     }
     .dispatch-modal-input:disabled,
     .dispatch-modal-input[readonly] {
@@ -53,8 +69,8 @@
     }
     .dispatch-modal-input:not([readonly]):not(:disabled) {
         background-color: var(--d-bg-card, #ffffff) !important;
-        border-color: #3b82f6 !important;
-        box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.25) !important;
+        border-color: var(--d-accent) !important;
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--d-accent) 25%, transparent) !important;
     }
     .dispatch-team-group {
         background: var(--d-table-hover, #f8fafc);
@@ -78,7 +94,7 @@
     }
     .dispatch-select-all-btn {
         font-size: 0.75rem;
-        color: #2563eb;
+        color: var(--d-accent);
         text-decoration: none;
         font-weight: 600;
         cursor: pointer;
