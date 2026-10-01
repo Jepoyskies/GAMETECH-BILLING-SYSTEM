@@ -67,26 +67,42 @@ def sync_manager(request, device_id):
                 have_profile = ru.get('profile')
                 have_pw = ru.get('password')
                 want_pw = dc.pppoe_password if dc else None
-                has_drift = bool(
-                    dc and (
-                        (want_profile and have_profile and want_profile != have_profile)
-                        or (want_pw and have_pw and str(want_pw) != str(have_pw))
-                    )
-                )
-                ru['drift'] = has_drift
+                drift_fields = []
+                if want_profile and have_profile and want_profile != have_profile:
+                    drift_fields.append('profile')
+                if want_pw and have_pw and str(want_pw) != str(have_pw):
+                    drift_fields.append('password')
+                ru['drift'] = bool(drift_fields)
                 ru['want_profile'] = want_profile
                 ru['have_profile'] = have_profile
-                ru['drift_fields'] = []
-                if dc:
-                    if want_profile and have_profile and want_profile != have_profile:
-                        ru['drift_fields'].append('profile')
-                    if want_pw and have_pw and str(want_pw) != str(have_pw):
-                        ru['drift_fields'].append('password')
-                if dc and dc.status in ('suspended', 'expired', 'inactive', 'past_due'):
-                    ru['should_be_disabled'] = True
-                else:
-                    ru['should_be_disabled'] = False
-                if ru['drift'] or ru['should_be_disabled']:
+                ru['drift_fields'] = drift_fields
+
+                # The router's own enabled/disabled flag is the ground truth
+                # for "is this customer actually cut off?". Without it a
+                # lapsed record and a live line look identical, which is
+                # exactly the question a collections review has to answer.
+                router_disabled = bool(ru.get('disabled'))
+                ru['router_disabled'] = router_disabled
+                ru['router_enabled'] = not router_disabled
+
+                # Cross-domain disagreement, in both directions:
+                #   system says lapsed, router says still enabled
+                #     -> "Connected but Unpaid": collect, do NOT suspend.
+                #   system says fine, router says disabled
+                #     -> a paying customer is cut off. Reconnect.
+                system_thinks_off = bool(
+                    dc and (
+                        dc.status in ('suspended', 'expired', 'inactive', 'past_due')
+                        or (dc.expires_at and dc.expires_at <= timezone.now())
+                    )
+                )
+                ru['connected_but_unpaid'] = bool(system_thinks_off and not router_disabled)
+                ru['should_be_disabled'] = system_thinks_off
+                ru['state_mismatch'] = bool(
+                    ru['connected_but_unpaid']
+                    or (router_disabled and not system_thinks_off)
+                )
+                if ru['drift'] or ru['state_mismatch']:
                     needs_review.append(ru)
                 else:
                     synced.append(ru)

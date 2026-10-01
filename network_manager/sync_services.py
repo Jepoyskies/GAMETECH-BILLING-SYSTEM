@@ -83,7 +83,7 @@ class MikrotikAPI:
             import re
             # Only allow alphanumeric, dashes, dots, and underscores
             suspicious_pattern = re.compile(r'[^a-zA-Z0-9\.\-\_]')
-            
+
             # Format the output to strictly match requirements
             formatted_users = []
             secret_usernames = set()
@@ -92,9 +92,19 @@ class MikrotikAPI:
                 profile = s.get("profile", "")
                 comment = s.get("comment", "")
                 secret_usernames.add(name)
-                
+
                 is_active = name in active_usernames
-                
+
+                # `disabled` is the ONE field that tells us whether the old
+                # system actually cut this customer off or kept them online.
+                # It was never read, so the Sync Manager showed every secret as
+                # if it were in the same state and could not answer "is this
+                # person connected or suspended?" -- the exact question a
+                # collections review needs. MikroTik returns the string
+                # "true"/"false", so normalise it.
+                raw_disabled = s.get("disabled")
+                is_disabled = str(raw_disabled).strip().lower() in ("true", "yes", "1")
+
                 # A user is suspicious if:
                 # 1. Name has weird characters
                 # 2. Profile is 'default'
@@ -103,7 +113,10 @@ class MikrotikAPI:
                 has_weird_chars = bool(suspicious_pattern.search(name))
                 is_default_profile = profile.lower() == 'default'
                 is_missing_info = not comment or '|' not in comment
-                
+                # A secret with no profile and no password can never
+                # authenticate, no matter what the comment says.
+                is_unusable = not s.get("profile") and not s.get("password")
+
                 suspicious_reasons = []
                 if has_weird_chars:
                     suspicious_reasons.append("Invalid Characters")
@@ -111,14 +124,19 @@ class MikrotikAPI:
                     suspicious_reasons.append("Default Profile")
                 if is_missing_info:
                     suspicious_reasons.append("Missing/Invalid Comment")
-                    
+                if is_unusable:
+                    suspicious_reasons.append("No Profile or Password - cannot authenticate")
+
                 is_suspicious = bool(suspicious_reasons)
-                
+
                 formatted_users.append({
                     "name": name,
                     "password": s.get("password", ""),
                     "profile": profile,
                     "comment": comment,
+                    # Real state, straight from the router.
+                    "disabled": is_disabled,
+                    "is_enabled": not is_disabled,
                     "is_active": is_active,
                     "is_suspicious": is_suspicious,
                     "suspicious_reasons": ", ".join(suspicious_reasons)
