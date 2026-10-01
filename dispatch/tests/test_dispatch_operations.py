@@ -15,7 +15,7 @@ class DispatchOperationsTestCase(TestCase):
     Automated test suite for Phase 4A Dispatch Operations:
     1. Allowed and forbidden status transitions.
     2. Technicians cannot see or accept unassigned jobs (no self-pick).
-    3. Off-duty technicians not offered in assignments; duty toggle endpoint.
+    3. Duty toggle endpoint; duty status never blocks an assignment.
     4. Arrived timer with optional GPS and Done timer calculation.
     5. Dispatcher timer correction with mandatory logged reason.
     6. 3-contact attempt rule and return-to-dispatch workflow.
@@ -145,8 +145,8 @@ class DispatchOperationsTestCase(TestCase):
         self.assertEqual(unassigned_ticket.status, "PENDING")
         self.assertEqual(unassigned_ticket.technicians.count(), 0)
 
-    def test_off_duty_technicians_not_offered(self):
-        """Off-duty technicians are excluded from job assignment; duty toggle endpoint works."""
+    def test_duty_status_does_not_block_assignment(self):
+        """Duty toggle still works, but an off-duty technician remains assignable."""
         self.client.force_login(self.dispatcher_user)
 
         # Toggle Oscar off-duty
@@ -163,15 +163,16 @@ class DispatchOperationsTestCase(TestCase):
             client_name="Repair Client",
         )
 
-        # Attempt to assign only the off-duty technician
+        # Assigning an off-duty technician is allowed -- dispatch knows who's around.
         assign_resp = self.client.post(
             reverse("api_dispatch_assign_ticket", args=[ticket.id]),
             {"technician_ids": [self.tech_oscar.id]},
             content_type="application/json",
         )
-        self.assertEqual(assign_resp.status_code, 400)
+        self.assertEqual(assign_resp.status_code, 200)
         ticket.refresh_from_db()
-        self.assertEqual(ticket.status, "PENDING")
+        self.assertEqual(ticket.status, "ASSIGNED")
+        self.assertIn(self.tech_oscar, ticket.technicians.all())
 
         # Assign active technician Tim -> succeeds
         valid_assign = self.client.post(

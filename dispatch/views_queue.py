@@ -69,13 +69,9 @@ def dispatch_queue_view(request):
         status__in=['COMPLETED', 'QA_PASSED', 'APPROVED', 'CANCELLED']
     ).order_by('-updated_at')[:60]
 
-    # Available teams and ALL technicians for assignment (off-duty shown greyed so
-    # dispatchers can see WHO is missing from a team instead of guessing).
-    teams = Team.objects.annotate(
-        total_members=Count('members'),
-        on_duty_members=Count('members', filter=Q(members__is_available=True)),
-    ).order_by('name')
-    on_duty_technicians = Technician.objects.filter(is_available=True).select_related('team')
+    # Available teams and ALL technicians for assignment. Duty status is only a
+    # visual hint now -- it never gates who can be assigned.
+    teams = Team.objects.annotate(total_members=Count('members')).order_by('name')
     all_technicians = Technician.objects.select_related('team').order_by('team__name', 'name')
 
     context = {
@@ -88,7 +84,6 @@ def dispatch_queue_view(request):
         'attention_count': attention_tickets.count(),
         'completed_count': completed_tickets.count(),
         'teams': teams,
-        'on_duty_technicians': on_duty_technicians,
         'all_technicians': all_technicians,
         'ticket_type_filter': ticket_type_filter,
         'search_query': search_query,
@@ -102,8 +97,8 @@ def dispatch_queue_view(request):
 def api_assign_ticket(request, ticket_id):
     """
     POST /dispatch/api/tickets/<id>/assign/
-    Assigns ticket to a Team (auto-assigns on-duty members) or individual on-duty technicians.
-    Off-duty technicians are strictly excluded.
+    Assigns ticket to a Team and/or individual technicians, from any team.
+    Duty status is informational only and never blocks an assignment.
     Technicians are prohibited from self-assigning / picking jobs.
     """
     if request.method != 'POST':
@@ -138,39 +133,32 @@ def api_assign_ticket(request, ticket_id):
                 'error': f"Cannot transition ticket from '{old_status}' to 'ASSIGNED'."
             }, status=400)
 
-        # 1. Resolve Team and Technicians (off-duty technicians are never assignable)
+        # 1. Resolve Team + Technicians. Duty status is a manual roster toggle that
+        #    is often stale, so it never blocks an assignment -- dispatch just picks
+        #    whoever they want, from any team.
         assigned_techs = []
         borrowed_techs = []
         if team_id:
-            team = get_object_or_404(Team, id=team_id)
-            ticket.team = team
+            ticket.team = get_object_or_404(Team, id=team_id)
 
         if tech_ids:
-            # Explicit selection is authoritative: this lets the dispatcher drop a
-            # team member and borrow an on-duty technician from a DIFFERENT team.
-            # Off-duty ids are silently filtered out (they are disabled in the UI).
-            selected_techs = list(
-                Technician.objects.filter(id__in=tech_ids, is_available=True).select_related('team')
+            # Explicit selection is authoritative: lets dispatch drop a team member
+            # and pull someone from a DIFFERENT team.
+            assigned_techs = list(
+                Technician.objects.filter(id__in=tech_ids).select_related('team')
             )
-            assigned_techs = selected_techs
             if team_id:
-                borrowed_techs = [t for t in selected_techs if t.team_id != int(team_id)]
+                borrowed_techs = [t for t in assigned_techs if t.team_id != int(team_id)]
         elif team_id:
-            # No explicit picks -> auto-assign every ON-DUTY member of the team.
-            assigned_techs = list(Team.objects.get(id=team_id).members.filter(is_available=True))
+            # No explicit picks -> auto-assign every member of the team.
+            assigned_techs = list(Team.objects.get(id=team_id).members.all())
         else:
             ticket.team = None
-
-        if not assigned_techs and not team_id:
-            return JsonResponse({
-                'success': False,
-                'error': 'No on-duty technicians selected. Tick at least one on-duty technician.'
-            }, status=400)
 
         if not assigned_techs:
             return JsonResponse({
                 'success': False,
-                'error': 'None of the selected technicians are on duty. Toggle their duty status first.'
+                'error': 'No technicians selected. Tick at least one technician.'
             }, status=400)
 
         ticket.technicians.set(assigned_techs)

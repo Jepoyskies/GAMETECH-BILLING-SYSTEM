@@ -17,7 +17,7 @@ class Technician(models.Model):
     target_per_day = models.IntegerField(default=0)
     target_per_month = models.IntegerField(default=0)
     team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True, blank=True, related_name='members')
-    is_available = models.BooleanField(default=True, help_text="Checked if the technician is on duty and available for assignment")
+    is_available = models.BooleanField(default=True, help_text="Manual duty-status hint shown in the roster. Does NOT restrict assignment.")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
