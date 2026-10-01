@@ -14,11 +14,41 @@ class Command(BaseCommand):
         parser.add_argument(
             "--dry-run",
             action="store_true",
-            help="Report what WOULD change on each router without writing anything.",
+            help="Report what WOULD change on each router without writing anything. This is the default.",
+        )
+        parser.add_argument(
+            "--apply",
+            action="store_true",
+            help="DANGER: actually create/update PPPoE secrets on the routers. Deliberate, human-initiated only.",
         )
 
     def handle(self, *args, **kwargs):
+        # SAFETY: unattended router writes are opt-in only.
+        #
+        # This command used to be driven by Celery Beat every 30 minutes with
+        # no arguments, so it would create and overwrite PPPoE secrets on live
+        # routers with nobody watching. On a freshly imported database that
+        # means pushing thousands of accounts to the routers by surprise.
+        #
+        # A reconcile must now be a deliberate act. `--apply` is required to
+        # write anything; without it this is a read-only report. That makes
+        # the default (and the scheduled call) safe, while a human can still
+        # force it from the Sync Manager when they mean it.
         dry_run = kwargs.get("dry_run", False)
+        apply_changes = kwargs.get("apply", False)
+
+        if not dry_run and not apply_changes:
+            self.stdout.write(
+                self.style.WARNING(
+                    "REFUSING TO WRITE. Reconcile is now opt-in:\n"
+                    "  --dry-run   report only, change nothing (default)\n"
+                    "  --apply     actually push to the routers\n"
+                    "No router was modified."
+                )
+            )
+            return
+
+        dry_run = dry_run and not apply_changes
         devices = MikrotikDevice.objects.all()
 
         if not devices.exists():

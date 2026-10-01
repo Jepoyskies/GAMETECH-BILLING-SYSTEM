@@ -35,30 +35,25 @@ class Command(BaseCommand):
                 continue
 
             try:
-                # Triggering save() will fire the post_save signal which contains the robust sync logic
-                customer.save()
+                # Retry by re-staging, NOT by writing to the router.
+                #
+                # This used to call customer.save() and let the post_save signal
+                # push the secret, meaning a customer the router rejected once
+                # would be re-pushed every 5 minutes forever by a cron job.
+                # Router writes are now deliberate: this only makes sure the
+                # row is visible in the Sync Manager queue for a human.
+                customer.push_to_router = False
+                customer.save(update_fields=["sync_status"])
+                customer.sync_status = "Pending"
+                customer.save(update_fields=["sync_status"])
 
-                # Check if it succeeded after the signal runs
-                customer.refresh_from_db()
-                if customer.sync_status == "Synced":
-                    synced_count += 1
-                    self.stdout.write(
-                        self.style.SUCCESS(
-                            f"[SUCCESS] Successfully synced {customer.full_name} to {customer.mikrotik_device.device_name}."
-                        )
+                synced_count += 1
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"[QUEUED] {customer.full_name} needs a manual push to "
+                        f"{customer.mikrotik_device.device_name}. Not written to the router."
                     )
-                elif customer.sync_status == "Blocked":
-                    self.stdout.write(
-                        self.style.WARNING(
-                            f"[BLOCKED] Sync blocked by ROUTER_MODE=read_only for {customer.full_name}."
-                        )
-                    )
-                else:
-                    self.stdout.write(
-                        self.style.ERROR(
-                            f"[FAILED] Failed to sync {customer.full_name}. Router might still be offline."
-                        )
-                    )
+                )
             except Exception as e:
                 self.stdout.write(
                     self.style.ERROR(

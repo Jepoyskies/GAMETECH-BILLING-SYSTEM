@@ -36,20 +36,21 @@ def sync_manager(request, device_id):
     suspicious_users = []
     missing_on_router = []
     synced = []
+    needs_review = []
     
     if result.get('success'):
         router_users = result.get('data', [])
         router_usernames = set(u.get('name') for u in router_users if u.get('name'))
-        
+
         # Categorize
         # Create a fast lookup dict for django customers by pppoe_username
         django_customer_map = {dc.pppoe_username: dc for dc in django_customers}
-        
+
         for ru in router_users:
             name = ru.get('name')
             if not name:
                 continue
-            
+
             is_in_system = name in django_usernames
             if is_in_system:
                 ru['customer'] = django_customer_map.get(name)
@@ -58,12 +59,42 @@ def sync_manager(request, device_id):
                 ru['is_in_system'] = False
 
             if is_in_system:
-                synced.append(ru)
+                # Compare the system's intent against what the router actually
+                # has, so the table shows the DIFF rather than just "both
+                # exist". Staff need to see WHAT differs to trust the page.
+                dc = django_customer_map.get(name)
+                want_profile = dc.plan.name if dc and dc.plan else "default"
+                have_profile = ru.get('profile')
+                have_pw = ru.get('password')
+                want_pw = dc.pppoe_password if dc else None
+                has_drift = bool(
+                    dc and (
+                        (want_profile and have_profile and want_profile != have_profile)
+                        or (want_pw and have_pw and str(want_pw) != str(have_pw))
+                    )
+                )
+                ru['drift'] = has_drift
+                ru['want_profile'] = want_profile
+                ru['have_profile'] = have_profile
+                ru['drift_fields'] = []
+                if dc:
+                    if want_profile and have_profile and want_profile != have_profile:
+                        ru['drift_fields'].append('profile')
+                    if want_pw and have_pw and str(want_pw) != str(have_pw):
+                        ru['drift_fields'].append('password')
+                if dc and dc.status in ('suspended', 'expired', 'inactive', 'past_due'):
+                    ru['should_be_disabled'] = True
+                else:
+                    ru['should_be_disabled'] = False
+                if ru['drift'] or ru['should_be_disabled']:
+                    needs_review.append(ru)
+                else:
+                    synced.append(ru)
             elif ru.get('is_suspicious'):
                 suspicious_users.append(ru)
             else:
                 clean_orphans.append(ru)
-                
+
         for dc in django_customers:
             if dc.pppoe_username not in router_usernames:
                 missing_on_router.append(dc)
@@ -81,9 +112,16 @@ def sync_manager(request, device_id):
         'suspicious_users': suspicious_users,
         'missing_on_router': missing_on_router,
         'synced': synced,
+        'needs_review': needs_review,
         'all_routers': all_routers,
         'barangays': barangays,
-        'api_success': result.get('success', False)
+        'api_success': result.get('success', False),
+        'router_mode': getattr(__import__('django.conf', fromlist=['settings']).settings, 'ROUTER_MODE', 'read_only'),
+        'count_synced': len(synced),
+        'count_needs_review': len(needs_review),
+        'count_missing': len(missing_on_router),
+        'count_orphans': len(clean_orphans),
+        'count_suspicious': len(suspicious_users),
     }
     
     return render(request, 'network_manager/sync_manager.html', context)

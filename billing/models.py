@@ -298,13 +298,19 @@ class Customer(models.Model):
         ("closed_not_installed", "Closed - Not Installed"),
     )
 
+    # "Unverified" is the honest default: a customer we have never actually
+    # checked against a router must not claim to be "Synced". The legacy
+    # importer hardcoded "Synced" on all 2,041 imported rows, which made an
+    # unverified import look like a verified one.
     SYNC_CHOICES = (
+        ("Unverified", "Unverified"),
+        ("Pending", "Pending Push"),
         ("Synced", "Synced"),
         ("Failed", "Failed"),
         ("Blocked", "Blocked"),
     )
     sync_status = models.CharField(
-        max_length=20, choices=SYNC_CHOICES, default="Synced"
+        max_length=20, choices=SYNC_CHOICES, default="Unverified"
     )
 
     # --- THE SUPERPOWER: Foreign Keys tying the system together ---

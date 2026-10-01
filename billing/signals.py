@@ -34,13 +34,76 @@ def track_customer_changes(sender, instance, **kwargs):
         instance._original_state = None
 
 
+def _stage_pending(instance):
+    """Mark a customer as needing a deliberate push. Never touches the router.
+
+    Only router-relevant fields count. Saving a phone number or a Cignal
+    number must NOT make a customer look unsynced, otherwise the queue fills
+    with noise and staff stop trusting it.
+    """
+    fields = (
+        "full_name",
+        "status",
+        "plan_id",
+        "mikrotik_device_id",
+        "pppoe_username",
+        "pppoe_password",
+    )
+    orig = getattr(instance, "_original_state", None)
+
+    if orig:
+        new_state = {
+            "Full Name": instance.full_name,
+            "Status": instance.status,
+            "Plan": instance.plan.name if instance.plan else "None",
+            "Router": (
+                instance.mikrotik_device.device_name
+                if instance.mikrotik_device
+                else "None"
+            ),
+            "Username": instance.pppoe_username,
+            "Password": instance.pppoe_password,
+        }
+        if all(
+            str(orig.get(k)) == str(v) for k, v in new_state.items()
+        ):
+            return  # Nothing the router cares about changed.
+
+    # `Blocked` is more urgent than `Pending` (it means write mode was off),
+    # so never downgrade it here.
+    if instance.sync_status == "Blocked":
+        return
+
+    Customer.objects.filter(pk=instance.pk).exclude(
+        sync_status__in=["Blocked", "Failed"]
+    ).update(sync_status="Pending")
+
+    logger.info(
+        f"[STAGED] {instance.pppoe_username} needs a deliberate push from the "
+        f"Sync Manager. No router write was made."
+    )
+
+
 @receiver(post_save, sender=Customer)
 def sync_customer_to_mikrotik(sender, instance, created, **kwargs):
+    """
+    PUSH-TO-ROUTER: opt-in, never automatic.
+
+    This used to fire on every single Customer save, so the instant staff
+    pressed "Save" the PPPoE secret was written to the live router. That is
+    dangerous: a typo in a name, a wrong router, or a half-filled form
+    becomes a real customer cut off or a real secret on the wrong box, with
+    no confirmation step and no undo.
+
+    Now the signal only *stages* the work. A customer whose router-relevant
+    details changed is marked "Pending" and a human pushes it from the Sync
+    Manager, where the diff is visible first. Set
+    `instance.push_to_router = True` to keep the old one-shot behaviour for
+    a deliberate, single, confirmed action (used by the reconnect flow).
+    """
     if kwargs.get("raw"):
         return
-    """
-    Syncs the customer's PPPoE secret to their assigned Mikrotik device when saved.
-    """
+
     if (
         getattr(instance, "is_test_data", False)
         or not instance.mikrotik_device
@@ -48,6 +111,11 @@ def sync_customer_to_mikrotik(sender, instance, created, **kwargs):
         or not instance.pppoe_password
     ):
         return  # Skip test accounts or missing critical info
+
+    # --- OPT-OUT: staging only, a human pushes from the Sync Manager ---
+    if not getattr(instance, "push_to_router", False):
+        _stage_pending(instance)
+        return
 
     # --- NEW LOGIC: Skip sync if no Mikrotik-relevant fields changed ---
     if (

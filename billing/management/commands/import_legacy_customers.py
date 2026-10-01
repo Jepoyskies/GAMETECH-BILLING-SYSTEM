@@ -295,7 +295,10 @@ class Command(BaseCommand):
                             # the legacy column would reintroduce plaintext passwords.
                             "portal_password_hash": keep_portal_hash,
                             "portal_password": None,
-                            "sync_status": "Synced",
+                            # Imported from a SQL file, never checked against a
+                            # router. Claiming "Synced" here is what made 2,041
+                            # unverified accounts look verified.
+                            "sync_status": "Unverified",
                         }
 
                         # A human decision always beats the export. If someone has

@@ -239,11 +239,18 @@ CACHES = {
 # Celery Beat Schedule
 from celery.schedules import crontab
 
+# Celery Beat Schedule
+#
+# SAFETY RULE: nothing on this schedule may WRITE to a router unattended.
+# Provisioning, suspension and reconnection are deliberate human actions made
+# from the Sync Manager, where the diff is visible first. Two jobs used to run
+# here (auto-suspend-hourly and auto-reconcile-routers-30min) and both wrote to
+# live routers on a timer -- which meant a config change or a bad import could
+# disconnect or re-provision the whole customer base with nobody watching.
+# Both are now opt-in commands and are run by hand.
+from celery.schedules import crontab
+
 CELERY_BEAT_SCHEDULE = {
-    "auto-suspend-hourly": {
-        "task": "billing.tasks.auto_suspend_task",
-        "schedule": crontab(minute="0"),  # Run at the top of every hour
-    },
     "auto-sms-daily": {
         "task": "billing.tasks.auto_sms_task",
         "schedule": crontab(hour="9", minute="0"),  # Run daily at 9:00 AM
@@ -251,10 +258,6 @@ CELERY_BEAT_SCHEDULE = {
     "auto-sync-failed-5min": {
         "task": "billing.tasks.auto_sync_failed_task",
         "schedule": crontab(minute="*/5"),  # Run every 5 minutes
-    },
-    "auto-reconcile-routers-30min": {
-        "task": "billing.tasks.auto_reconcile_routers_task",
-        "schedule": crontab(minute="*/30"),  # Run every 30 minutes
     },
     "fetch-live-monitoring-10sec": {
         "task": "billing.tasks.fetch_live_monitoring_data_task",
