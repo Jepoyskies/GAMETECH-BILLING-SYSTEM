@@ -12,6 +12,7 @@ from django.contrib.auth.decorators import (
 from django.views.decorators.http import require_POST
 from django.contrib.auth import authenticate, login, logout
 from billing.decorators import role_required, action_required
+from billing.security import log_sensitive_operation
 from django.contrib import messages
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -198,14 +199,17 @@ def view_agent(request, agent_id):
         agent.password_hash = user.password
         agent.save()
 
-        try:
-            SystemLog.objects.create(
-                user=request.user.username if request.user.is_authenticated else "Staff",
-                action=f"Configured Portal Login for Agent '{agent.name}' (Username: {username})",
-                ip_address=request.META.get("REMOTE_ADDR", ""),
-            )
-        except Exception:
-            pass
+        # Was SystemLog.objects.create(user=..., ip_address=...) inside a bare
+        # `except: pass`. SystemLog has neither field, so this raised TypeError
+        # and was silently swallowed -- the agent portal login audit trail was
+        # never written. See ERR-089.
+        log_sensitive_operation(
+            "AGENT_PORTAL_LOGIN",
+            "Agent",
+            agent.id,
+            request.user.username if request.user.is_authenticated else "Staff",
+            f"Configured portal login for agent '{agent.name}' (username: {username}).",
+        )
 
         # Store in session to display once on confirmation view without printing secrets to flash/logs
         request.session["agent_temp_credentials"] = {
