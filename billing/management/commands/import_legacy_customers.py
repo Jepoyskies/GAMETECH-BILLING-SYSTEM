@@ -66,13 +66,13 @@ def columns_from_create_table(sql_file_path):
             # CREATE TABLE wraps across lines. Read until a line that is just the
             # closing paren -- stopping on the first ")" would trip over
             # "varchar(50)" and cut the block short.
-            block = line
-            while not re.search(r"^\s*\)\s*(ENGINE|;|$)", block, re.M | re.I):
+            block = [line]
+            while not re.search(r"^\s*\)\s*(ENGINE|;|$)", block[-1], re.M | re.I):
                 nxt = f.readline()
                 if not nxt:
                     break
-                block += nxt
-            m = CREATE_TABLE_RE.search(block)
+                block.append(nxt)
+            m = CREATE_TABLE_RE.search("".join(block))
             if not m:
                 continue
             names = re.findall(r"^\s*`([A-Za-z0-9_]+)`", m.group(2), re.M)
@@ -209,12 +209,18 @@ class Command(BaseCommand):
                     start = vidx + len("VALUES")
 
                 # Tuples may continue on following lines (phpMyAdmin style).
-                buffer = stripped[start:]
-                while ";" not in buffer:
+                # Accumulate in a list: repeated string += on a multi-megabyte
+                # statement is quadratic and will get the process OOM-killed.
+                parts = [stripped[start:]]
+                found_end = ";" in parts[0]
+                while not found_end:
                     nxt = f.readline()
                     if not nxt:
                         break
-                    buffer += "\n" + nxt.rstrip()
+                    nxt = nxt.rstrip()
+                    parts.append(nxt)
+                    found_end = ";" in nxt
+                buffer = "\n".join(parts)
 
                 payload = buffer.strip().rstrip(";").strip()
                 for tup in split_value_tuples(payload):
@@ -358,9 +364,14 @@ class Command(BaseCommand):
             pppoe_creds = {}
             zero_date_customers = []
 
+            # Parse the dump ONCE. Re-reading a multi-megabyte file three times
+            # was slow enough to get the process killed on a 1 vCPU host.
+            self.stdout.write(self.style.SUCCESS("Parsing dump..."))
+            all_rows = list(self.iter_insert_rows(sql_file_path))
+            self.stdout.write(f"  Parsed {len(all_rows)} rows from {sql_file_path}")
+
             # PASS 1: Read PPPoE credentials
-            self.stdout.write(self.style.SUCCESS("Pass 1: Extracting PPPoE credentials..."))
-            for table, row in self.iter_insert_rows(sql_file_path):
+            for table, row in all_rows:
                 if table == "pppoe_users":
                     pppoe_username = row.get("username")
                     pppoe_password = row.get("password")
@@ -374,13 +385,13 @@ class Command(BaseCommand):
                 ))
 
             # PASS 2: Import devices, account types, plans, and customers
-            self.stdout.write(self.style.SUCCESS("Pass 2: Importing data..."))
+            self.stdout.write(self.style.SUCCESS("Importing data..."))
             processed_customers = 0
 
             # Devices FIRST. Rows arrive in file order and a dump happily emits
             # `customers` before `mikrotik_devices`, which would leave every
             # customer with mikrotik_device=NULL (and invisible to router sync).
-            for table, row in self.iter_insert_rows(sql_file_path):
+            for table, row in all_rows:
                 if table == "mikrotik_devices" and not dry_run:
                     self.get_or_create_device(
                         device_map,
@@ -396,7 +407,7 @@ class Command(BaseCommand):
             if device_map:
                 self.stdout.write(f"  Devices ready: {', '.join(device_map)}")
 
-            for table, row in self.iter_insert_rows(sql_file_path):
+            for table, row in all_rows:
                     if table == "service_plans":
                         # Legacy service_plans table - we use PLAN_MAPPING instead
                         continue
