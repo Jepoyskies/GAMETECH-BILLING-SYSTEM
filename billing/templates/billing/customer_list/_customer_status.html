@@ -1,18 +1,30 @@
 {% comment %}
   Unified Customer Status Cell
   ----------------------------------------------------------------------------
-  One PRIMARY status badge (the billing lifecycle state), plus small state
-  DOTS for the orthogonal hardware/router facts. Billing, hardware and
-  installation are three independent domains (AGENTS.md rule 35) and must
-  never be collapsed into a single colour.
+  ONE badge, driven by customer.lifecycle (billing/customer_state.py), which
+  combines the billing axis and the hardware axis into a single state staff
+  can act on. Billing, hardware and installation stay three separate domains
+  internally (AGENTS.md rule 35) -- they are just presented as one verdict so
+  the row is readable at a glance.
+
+  The label is the whole point. "Active" alone was ambiguous: it could mean
+  paid, online, or merely flagged active in a legacy export. Now the label
+  always states BOTH facts, e.g. "Connected, Unpaid" or "Paid, Offline".
+
+  The two dots stay separate on purpose: router reachability and the
+  customer's own session are different faults with different fixes.
+  "Unknown" is rendered as a neutral dot, never as a red "offline" dot --
+  we must not accuse a customer of an outage we cannot actually see.
 
   Usage: {% include "billing/customer_list/_customer_status.html" with customer=customer %}
 {% endcomment %}
+{% with lc=customer.lifecycle %}
 <span class="d-inline-flex align-items-center" style="gap: 0.5rem;">
 
-    {# ---------- PRIMARY: billing lifecycle ---------- #}
-    <span class="status-badge cust-base-badge status-badge--{% if customer.is_paid_offline %}danger{% elif customer.installation_status == 'pending' or customer.status == 'pending' or customer.is_pending_install %}info{% elif customer.status == 'active' %}success{% elif customer.status == 'suspended' %}warning{% elif customer.status == 'expired' %}danger{% else %}neutral{% endif %}">
-        <span class="status-dot"></span>{% if customer.is_paid_offline %}Paid, Offline{% elif customer.installation_status == 'pending' or customer.status == 'pending' or customer.is_pending_install %}Pending Install{% else %}{{ customer.get_status_display }}{% endif %}
+    {# ---------- PRIMARY: the one resolved lifecycle state ---------- #}
+    <span class="status-badge cust-base-badge status-badge--{{ lc.tone }}{% if lc.key == 'connected_unpaid' %} gt-status--collect{% endif %}"
+          title="{{ lc.hint }}">
+        <span class="status-dot"></span>{{ lc.label }}
     </span>
 
     {% comment %}
@@ -21,20 +33,13 @@
     The status-badge--* modifier drives the dot colour.
     {% endcomment %}
     <span class="d-inline-flex align-items-center" style="gap: 0.4rem;">
-        <span class="unified-status-badge unified-router-badge gt-conn-dot gt-conn-dot--{% if customer.router_status == 'Online' %}online{% else %}offline{% endif %} status-badge--{% if customer.router_status == 'Online' %}success{% else %}neutral{% endif %}"
-              title="MikroTik Router: {{ customer.router_status }}"
+        <span class="unified-status-badge unified-router-badge gt-conn-dot gt-conn-dot--{% if customer.router_status == 'Online' %}online{% elif customer.router_status == 'Unknown' %}unknown{% else %}offline{% endif %} status-badge--{% if customer.router_status == 'Online' %}success{% elif customer.router_status == 'Unknown' %}neutral{% else %}neutral{% endif %}"
+              title="MikroTik Router: {{ customer.router_status }}{% if customer.router_status == 'Unknown' %} (we cannot see the router right now){% endif %}"
               aria-label="MikroTik Router {{ customer.router_status }}"></span>
-        <span class="unified-status-badge unified-connection-badge gt-conn-dot gt-conn-dot--{% if customer.connection_status == 'Online' %}online{% elif customer.connection_status == 'Pending' or customer.connection_status == 'Connecting' %}warning{% else %}offline{% endif %} status-badge--{% if customer.connection_status == 'Online' %}success{% else %}danger{% endif %}"
-              title="Customer Connection: {{ customer.connection_status }}"
+        <span class="unified-status-badge unified-connection-badge gt-conn-dot gt-conn-dot--{% if customer.connection_status == 'Online' %}online{% elif customer.connection_status == 'Unknown' %}unknown{% elif customer.connection_status == 'Pending' or customer.connection_status == 'Connecting' %}warning{% else %}offline{% endif %} status-badge--{% if customer.connection_status == 'Online' %}success{% elif customer.connection_status == 'Unknown' %}neutral{% else %}danger{% endif %}"
+              title="Customer Connection: {{ customer.connection_status }}{% if customer.connection_status == 'Unknown' %} (not measured -- router not visible){% endif %}"
               aria-label="Customer Connection {{ customer.connection_status }}"></span>
     </span>
-
-    {# ---------- Payment only when it disagrees with billing state ---------- #}
-    {% if customer.payment_status != 'Paid' and not customer.is_paid_offline %}
-        <span class="status-badge status-badge--danger" title="Outstanding payment">
-            <i class="fa-solid fa-peso-sign"></i>{{ customer.payment_status }}
-        </span>
-    {% endif %}
 
     {# ---------- Dispatch only when a ticket is in flight ---------- #}
     {% if customer.dispatch_status %}
@@ -43,3 +48,4 @@
         </span>
     {% endif %}
 </span>
+{% endwith %}

@@ -56,126 +56,90 @@ def customer_list(request):
     seven_days_from_now = now + timedelta(days=7)
     seven_days_ago = now - timedelta(days=7)
 
-    # Dynamic counts for Top Stat Pills
-    stats = Customer.objects.exclude(status="closed_not_installed").aggregate(
-        total=Count("id"),
-        active=Count("id", filter=Q(expires_at__gt=seven_days_from_now, status="active", installation_status="installed")),
-        expiring=Count("id", filter=Q(expires_at__gt=now, expires_at__lte=seven_days_from_now, status="active", installation_status="installed")),
-        expired=Count("id", filter=(Q(expires_at__lte=now, expires_at__gt=seven_days_ago) | Q(status="expired")) & Q(installation_status="installed") & ~Q(status="pending")),
-        inactive=Count("id", filter=(Q(status__in=["suspended", "inactive", "pull out"]) | Q(expires_at__lte=seven_days_ago)) & Q(installation_status="installed") & ~Q(status="pending")),
-        offline=Count("id", filter=(Q(status__in=["suspended", "inactive", "pull out", "expired"]) | (Q(expires_at__lte=now) & Q(installation_status="installed"))) & ~Q(status="pending")),
-        # Installed accounts with no expiry date = broken data (legacy zero-dates).
-        # Pending installs are excluded on purpose: no expiry is CORRECT for them.
-        no_expiry=Count("id", filter=Q(expires_at__isnull=True, installation_status="installed") & ~Q(status__in=["pending", "closed_not_installed"])),
+    # Total is the only count computed in SQL. Every other KPI is derived from
+    # the single resolve() pass below, so the pills are mutually exclusive and
+    # always sum to the total. The old overlapping Q() filters double-counted
+    # and did not reconcile (852+388+1240+402+389+16 = 2,047 vs 2,041 total).
+    stats = {
+        "total": Customer.objects.exclude(status="closed_not_installed").count(),
+        # Placeholders overwritten by the resolve() pass.
+        "active": 0, "expiring": 0, "expired": 0, "inactive": 0,
+        "no_expiry": 0, "paid_offline": 0, "paid_but_offline": 0,
+    }
+
+    # --- Connectivity, honestly measured ---------------------------------
+    # `network_visibility()` returns connected_usernames=None when we cannot
+    # see the routers. That None is what stops a router outage from being
+    # reported as "every paid customer is offline" (it once showed 1,240).
+    from billing.customer_state import (
+        FILTERS,
+        LIFECYCLES,
+        annotate as annotate_lifecycle,
+        network_visibility,
+        resolve,
     )
 
-    # MikroTik Live Connectivity for Paid but Offline metric
-    from django.core.cache import cache
-    from network_manager.services import MikrotikAPI
+    network_visible, connected_usernames = network_visibility()
 
-    connected_usernames = cache.get("active_pppoe_usernames_set")
-    if connected_usernames is None:
-        # Check existing live monitoring or API payload cache first (0ms lookup)
-        live_data = cache.get("live_monitoring_data")
-        api_payload = cache.get("api_active_pppoe_usernames_payload")
-        if live_data and "users" in live_data:
-            connected_usernames = {u["user"] for u in live_data["users"] if u.get("user")}
-            cache.set("active_pppoe_usernames_set", connected_usernames, 30)
-        elif api_payload and "active_usernames" in api_payload:
-            connected_usernames = set(api_payload.get("active_usernames", []))
-            cache.set("active_pppoe_usernames_set", connected_usernames, 30)
-        else:
-            # Use cached live monitoring data instead of making individual API calls
-            live_data = cache.get("live_monitoring_data")
-            connected_usernames = set()
-            if live_data and "active_usernames" in live_data:
-                connected_usernames = set(live_data.get("active_usernames", []))
-            cache.set("active_pppoe_usernames_set", connected_usernames, 45)
-
-    # Calculate Paid but Offline subscribers (active billing status with active expiration, but disconnected from router)
-    # Brand new accounts (pending install) have installation_status='pending', expires_at=None, or status='pending' and are excluded.
-    active_paid_customers = (
-        Customer.objects.filter(expires_at__gt=now, status="active")
-        .exclude(expires_at__isnull=True)
-        .exclude(installation_status="pending")
-        .exclude(status__in=["pending", "closed_not_installed"])
-        .values("id", "pppoe_username")
-    )
-
-    # Normalize to lowercase set for case-insensitive comparison
-    connected_usernames_lower = {u.lower() for u in connected_usernames if u}
-    paid_but_offline_ids = [
-        c["id"]
-        for c in active_paid_customers
-        if c["pppoe_username"] and c["pppoe_username"].lower() not in connected_usernames_lower
-    ]
-    stats["paid_but_offline"] = len(paid_but_offline_ids)
-
-    customers = (
+    base_customers = list(
         Customer.objects.select_related(
             "plan", "agent", "barangay", "mikrotik_device"
         )
         .exclude(status="closed_not_installed")
-        .all()
     )
+
+    # Resolve every customer's state once, then derive both the KPI counts
+    # and the filter from that same pass. Counts and rows can never disagree.
+    resolved = [resolve(c, connected_usernames, now) for c in base_customers]
+    by_key = {c.id: lc for c, lc in zip(base_customers, resolved)}
+
+    # One pass, one truth. Counts come from the same Lifecycle objects the
+    # table rows render, so a KPI can never disagree with its own list.
+    for key in LIFECYCLES:
+        stats[key] = 0
+    for lc in by_key.values():
+        stats[lc.key] += 1
+
+    # (key, label, icon, tone, count) -- the template renders counts directly
+    # rather than doing a dict lookup, which needs a custom filter.
+    lifecycle_filters = [
+        (key, label, icon, tone, stats.get(key, 0))
+        for key, label, icon, tone in FILTERS
+    ]
+
+    # Legacy aliases so existing templates/JS do not break.
+    stats["paid_but_offline"] = stats["paid_offline"]
+    stats["active"] = stats["connected_paid"]
+    stats["expiring"] = stats["expiring"]
+    stats["no_expiry"] = stats["no_expiry"]
+    # `expired`/`inactive` remain meaningful totals for legacy consumers.
+    stats["expired"] = stats["connected_unpaid"] + stats["lapsed_offline"]
+    stats["inactive"] = stats["suspended"] + stats["inactive"] + stats["pulled_out"]
+    stats["network_visible"] = network_visible
 
     filter_type = request.GET.get("filter", "all")
 
-    if filter_type == "active":
-        customers = customers.filter(
-            expires_at__gt=seven_days_from_now, status="active", installation_status="installed"
-        )
-    elif filter_type == "expiring":
-        customers = customers.filter(
-            expires_at__gt=now, expires_at__lte=seven_days_from_now, status="active", installation_status="installed"
-        )
-    elif filter_type in ["paid_offline", "paid_but_offline"]:
-        customers = customers.filter(id__in=paid_but_offline_ids)
-    elif filter_type == "expired":
-        customers = customers.filter(
-            (Q(expires_at__lte=now, expires_at__gt=seven_days_ago) | Q(status="expired"))
-            & Q(installation_status="installed")
-        ).exclude(status="pending")
-    elif filter_type == "inactive":
-        customers = customers.filter(
-            (Q(status__in=["suspended", "inactive", "pull out"]) | Q(expires_at__lte=seven_days_ago))
-            & Q(installation_status="installed")
-        ).exclude(status="pending")
-    elif filter_type in ["no_expiry", "no_expiration"]:
-        # Data-integrity review queue: live lines that can never be auto-suspended
-        # or auto-renewed because billing has no date to act on.
-        customers = customers.filter(
-            expires_at__isnull=True, installation_status="installed"
-        ).exclude(status__in=["pending", "closed_not_installed"])
+    valid_filter_keys = {k for k, _, _, _ in FILTERS}
+    if filter_type not in valid_filter_keys and filter_type not in ("all",):
+        filter_type = "all"
 
-    customers = customers.annotate(
-        is_paid_offline=Case(
-            When(id__in=paid_but_offline_ids, then=Value(True)),
-            default=Value(False),
-            output_field=BooleanField(),
-        ),
-        is_no_expiry=Case(
-            When(expires_at__isnull=True, installation_status="installed", then=Value(True)),
-            default=Value(False),
-            output_field=BooleanField(),
-        ),
-        status_order=Case(
-            When(id__in=paid_but_offline_ids, then=Value(0)),  # Top Priority: Active accounts offline
-            # Next: installed lines with no expiry date -- nothing to bill or
-            # auto-suspend against, so they need a human decision.
-            When(expires_at__isnull=True, installation_status="installed", then=Value(1)),
-            When(status="active", installation_status="installed", then=Value(2)),
-            When(installation_status="pending", then=Value(3)),
-            When(status="pending", then=Value(3)),
-            When(status="suspended", then=Value(4)),
-            When(status="expired", then=Value(5)),
-            When(status="inactive", then=Value(6)),
-            When(status="pull out", then=Value(7)),
-            When(status="closed_not_installed", then=Value(9)),
-            default=Value(8),
-            output_field=IntegerField(),
-        ),
-    ).order_by("status_order", "full_name")
+    if filter_type != "all":
+        keep = {cid for cid, lc in by_key.items() if lc.key == filter_type}
+        base_customers = [c for c in base_customers if c.id in keep]
+
+    # Lifecycle was already resolved onto each row. Sort by that same
+    # resolution so the most urgent rows are physically first, then by name.
+    # This replaces the old overlapping Case/When status_order, which ranked
+    # "paid but offline" first even when we were blind and that verdict was
+    # not real.
+    customers.sort(key=lambda c: (c.lifecycle.priority, (c.full_name or "").lower()))
+
+    # Backwards-compatible flags for templates that still test them.
+    for c in customers:
+        c.is_paid_offline = c.lifecycle.key == "paid_offline"
+        c.is_connected_unpaid = c.lifecycle.key == "connected_unpaid"
+        c.is_no_expiry = c.lifecycle.key == "no_expiry"
+        c.status_order = c.lifecycle.priority
 
     # NOTE: do NOT reintroduce server-side pagination here.
     # The table is a client-side DataTable, so capping the queryset server-side
@@ -200,6 +164,8 @@ def customer_list(request):
             "barangays": barangays,
             "filter_type": filter_type,
             "stats": stats,
+            "lifecycle_filters": lifecycle_filters,
+            "network_visible": network_visible,
             "inactive_count": stats.get("inactive", 0),
             "customer_logs": customer_logs,
         },

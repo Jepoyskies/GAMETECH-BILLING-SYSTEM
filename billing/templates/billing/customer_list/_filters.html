@@ -1,24 +1,21 @@
-<!-- Base Partial: Modern Toggle Filters -->
+<!--
+  Lifecycle filters. Driven by billing.customer_state.FILTERS so the pills and
+  the KPI cards can never drift apart, and so each pill is exactly one
+  mutually exclusive bucket.
+
+  "Connected, Unpaid" is new and is the state the old PHP system could not
+  represent: past due on paper, still online in reality. That is a
+  collections queue, not an outage, and it must never be auto-suspended.
+-->
 <div class="gt-filter-pills-row animate-fade-in animate-delay-1">
     <a href="?filter=all" class="gt-filter-pill {% if filter_type == 'all' or not filter_type %}active{% endif %}">
         <i class="fas fa-layer-group"></i> All Subscribers
     </a>
-    <a href="?filter=active" class="gt-filter-pill {% if filter_type == 'active' %}active{% endif %}">
-        <i class="fas fa-wifi text-success"></i> Active
+    {% for key, label, icon, tone, count in lifecycle_filters %}
+    <a href="?filter={{ key }}" class="gt-filter-pill {% if filter_type == key %}active{% endif %}"
+       title="{{ label }}">
+        <i class="fas {{ icon }} text-{{ tone }}"></i> {{ label }}
+        {% if count %}<span class="badge bg-secondary rounded-pill ms-1">{{ count }}</span>{% endif %}
     </a>
-    <a href="?filter=expiring" class="gt-filter-pill {% if filter_type == 'expiring' %}active{% endif %}">
-        <i class="fas fa-clock text-warning"></i> Expiring (&le; 7d)
-    </a>
-    <a href="?filter=paid_offline" class="gt-filter-pill {% if filter_type == 'paid_offline' or filter_type == 'paid_but_offline' %}active{% endif %}">
-        <i class="fas fa-triangle-exclamation text-warning"></i> Paid but Offline
-    </a>
-    <a href="?filter=expired" class="gt-filter-pill {% if filter_type == 'expired' %}active{% endif %}">
-        <i class="fas fa-ban text-danger"></i> Expired (&le; 7d)
-    </a>
-    <a href="?filter=inactive" class="gt-filter-pill {% if filter_type == 'inactive' %}active{% endif %}">
-        <i class="fas fa-power-off text-secondary"></i> Inactive (&gt; 7d)
-    </a>
-    <a href="?filter=no_expiry" class="gt-filter-pill {% if filter_type == 'no_expiry' or filter_type == 'no_expiration' %}active{% endif %}">
-        <i class="fas fa-calendar-xmark text-warning"></i> No Expiry Date{% if stats.no_expiry %} ({{ stats.no_expiry }}){% endif %}
-    </a>
+    {% endfor %}
 </div>

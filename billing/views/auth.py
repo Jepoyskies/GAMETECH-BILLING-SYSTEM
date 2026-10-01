@@ -266,18 +266,22 @@ def resolve_landing_url(user):
     Persona shells stay thin: they are a HOME, not a permission bypass. The Role
     Editor matrix (`role_required` / `action_required`) still governs which
     modules each role may open.
+
+    ORDER MATTERS — role is tested BEFORE is_staff, because the Staff & Admins
+    page lets an admin create an Agent or Technician who is also is_staff=True.
+    Those users must reach their persona portal, not the main system. Only a
+    superuser is hard-pinned to the main dashboard.
     """
-    if user.is_staff or user.is_superuser:
+    if user.is_superuser:
         return "dashboard"
-    if hasattr(user, "agent_profile"):
+
+    role = (getattr(user, "role", "") or "").strip()
+
+    # `role` is injected at runtime from the SystemAdmin mirror table, so it is
+    # always a string here (defaults to "Viewer" for users with no mirror row).
+    if role == "Agent" or hasattr(user, "agent_profile"):
         return "agent_dashboard"
-
-    from dispatch.models import Technician
-
-    if (
-        getattr(user, "role", "") == "Technician"
-        or Technician.objects.filter(user=user).exists()
-    ):
+    if role == "Technician" or hasattr(user, "technician"):
         return "technician_dashboard"
 
     return "dashboard"

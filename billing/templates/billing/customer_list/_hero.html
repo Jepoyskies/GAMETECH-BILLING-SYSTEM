@@ -70,7 +70,17 @@
     </div>
 </div>
 
-<!-- Dynamic Top Stat KPI Cards (Dashboard KPI style) -->
+<!--
+  Lifecycle KPI strip.
+
+  Every card below maps to exactly ONE lifecycle state, so the numbers are
+  mutually exclusive and always add up to "Total". The previous strip used
+  overlapping Q() filters and did not reconcile (852+388+1240+402+389+16 =
+  2,047 against a total of 2,041), which made the numbers impossible to trust.
+
+  Order is urgency order, not billing order: what needs a human first is on
+  the left.
+-->
 <div class="row g-3 mb-4 animate-fade-in">
     <div class="col-6 col-md-4 col-xl-2">
         <a href="?filter=all" class="gt-kpi-card gt-kpi-card--compact h-100 {% if filter_type == 'all' or not filter_type %}is-active{% endif %}">
@@ -81,70 +91,39 @@
             </div>
         </a>
     </div>
+
+    {% comment %}
+      Blind-mode banner. When we cannot reach the routers, every hardware
+      verdict is "unknown", and saying so is the whole point -- previously
+      the page showed "1,240 Paid/Offline" while every router was timing out.
+    {% endcomment %}
+    {% if not network_visible %}
+    <div class="col-12">
+        <div class="gt-alert gt-alert--warning d-flex align-items-center gap-2 mb-0" role="status">
+            <i class="fa-solid fa-eye-slash"></i>
+            <span>
+                <strong>Cannot see the routers right now.</strong>
+                Connectivity columns show <em>Unknown</em> instead of
+                <em>Offline</em>. Billing states below are still accurate &mdash;
+                do <strong>not</strong> dispatch technicians from this page until
+                the network is reachable.
+            </span>
+        </div>
+    </div>
+    {% endif %}
+
+    {% for key, label, icon, tone, count in lifecycle_filters %}
     <div class="col-6 col-md-4 col-xl-2">
-        <a href="?filter=active" class="gt-kpi-card gt-kpi-card--compact h-100 {% if filter_type == 'active' %}is-active{% endif %}">
-            <div class="gt-kpi-icon" style="background: var(--badge-success-bg); border-color: color-mix(in srgb, var(--badge-success-text) 30%, transparent); color: var(--badge-success-text);">
-                <i class="fa-solid fa-circle" style="font-size: 0.6rem;"></i>
+        <a href="?filter={{ key }}" class="gt-kpi-card gt-kpi-card--compact h-100 {% if filter_type == key %}is-active{% endif %}"
+           title="{{ label }}">
+            <div class="gt-kpi-icon gt-kpi-icon--{{ tone }}">
+                <i class="fa-solid {{ icon }}"></i>
             </div>
             <div>
-                <div class="gt-kpi-val">{{ stats.active|default:"0" }}</div>
-                <div class="gt-kpi-lbl">Active</div>
+                <div class="gt-kpi-val">{{ count }}</div>
+                <div class="gt-kpi-lbl">{{ label }}</div>
             </div>
         </a>
     </div>
-    <div class="col-6 col-md-4 col-xl-2">
-        <a href="?filter=expiring" class="gt-kpi-card gt-kpi-card--compact h-100 {% if filter_type == 'expiring' %}is-active{% endif %}">
-            <div class="gt-kpi-icon" style="background: var(--badge-warning-bg); border-color: color-mix(in srgb, var(--badge-warning-text) 30%, transparent); color: var(--badge-warning-text);">
-                <i class="fa-solid fa-clock"></i>
-            </div>
-            <div>
-                <div class="gt-kpi-val">{{ stats.expiring|default:"0" }}</div>
-                <div class="gt-kpi-lbl">Due &le;7D</div>
-            </div>
-        </a>
-    </div>
-    <div class="col-6 col-md-4 col-xl-2">
-        <a href="?filter=paid_offline" class="gt-kpi-card gt-kpi-card--compact h-100 {% if filter_type == 'paid_offline' or filter_type == 'paid_but_offline' %}is-active{% endif %}">
-            <div class="gt-kpi-icon" style="background: var(--badge-warning-bg); border-color: color-mix(in srgb, var(--badge-warning-text) 30%, transparent); color: var(--badge-warning-text);">
-                <i class="fa-solid fa-triangle-exclamation"></i>
-            </div>
-            <div>
-                <div class="gt-kpi-val">{{ stats.paid_but_offline|default:"0" }}</div>
-                <div class="gt-kpi-lbl">Paid / Offline</div>
-            </div>
-        </a>
-    </div>
-    <div class="col-6 col-md-4 col-xl-2">
-        <a href="?filter=expired" class="gt-kpi-card gt-kpi-card--compact h-100 {% if filter_type == 'expired' %}is-active{% endif %}">
-            <div class="gt-kpi-icon" style="background: var(--badge-danger-bg); border-color: color-mix(in srgb, var(--badge-danger-text) 30%, transparent); color: var(--badge-danger-text);">
-                <i class="fa-solid fa-ban"></i>
-            </div>
-            <div>
-                <div class="gt-kpi-val">{{ stats.expired|default:"0" }}</div>
-                <div class="gt-kpi-lbl">Expired</div>
-            </div>
-        </a>
-    </div>
-    <div class="col-6 col-md-4 col-xl-2">
-        <a href="?filter=inactive" class="gt-kpi-card gt-kpi-card--compact h-100 {% if filter_type == 'inactive' %}is-active{% endif %}">
-            <div class="gt-kpi-icon" style="background: var(--badge-neutral-bg); border-color: color-mix(in srgb, var(--badge-neutral-text) 25%, transparent); color: var(--badge-neutral-text);">
-                <i class="fa-solid fa-power-off"></i>
-            </div>
-            <div>
-                <div class="gt-kpi-val">{{ stats.inactive|default:"0" }}</div>
-                <div class="gt-kpi-lbl">Inactive</div>
-            </div>
-        </a>
-    </div>
-    <div class="col-6 col-md-4 col-xl-2">
-        <a href="?filter=no_expiry" class="gt-kpi-card gt-kpi-card--compact h-100 {% if filter_type == 'no_expiry' or filter_type == 'no_expiration' %}is-active{% endif %}">
-            <div class="gt-kpi-icon" style="background: var(--badge-warning-bg); border-color: color-mix(in srgb, var(--badge-warning-text) 30%, transparent); color: var(--badge-warning-text);">
-                <i class="fa-solid fa-calendar-xmark"></i>
-            </div>
-            <div>
-                <div class="gt-kpi-val">{{ stats.no_expiry|default:"0" }}</div>
-                <div class="gt-kpi-lbl">No Expiry</div>
-            </div>
-        </a>
-    </div>
+    {% endfor %}
 </div>
