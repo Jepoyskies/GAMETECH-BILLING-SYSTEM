@@ -8,20 +8,37 @@ This file is a pointer only. When a session ends, move the previous handoff into
 
 ---
 
-## Open Task (start here)
+## Recently completed
 
-### Role Editor UI — expose the action-level permissions ⬅️
+### Role Editor UI — action-level permission toggles ✅ DONE (`d902c28`)
 
-The backend already supports view/create/edit/delete permissions via
-`action_required` and `StaffRole.has_action_perm()`. The Edit Roles screen
-(`billing/templates/billing/manage_roles.html`) does not yet render those
-toggles, so the capability is invisible.
+`manage_roles.html` now renders per-module **View / Create / Edit / Delete**
+toggles alongside the module + subtab checkboxes, with All/None shortcuts and
+denied tiles painted red. Saved into `subtab_permissions["_actions"]`.
 
-**Files:** `manage_roles.html` · `billing/views/staff.py` (`manage_roles` +
-`ROLE_MODULE_SPECS`) · `billing/models.py` (`has_action_perm`)
+**Storage shape is keyed by MODULE, not subtab:**
 
-**Do not remove** the `_actions` preservation guard added in `manage_roles` —
-without it every role edit wipes the action permissions.
+```json
+{"_actions": {"dispatch": {"view": true, "create": false,
+                           "edit": false, "delete": false}}}
+```
+
+The older comment in `models.py` and this file showed a subtab key
+(`{"agents": {...}}`) — that key is **never read** by `has_action_perm()`.
+Corrected in `billing/models.py:184-203`. Subtab granularity is already
+handled separately by `has_subtab_perm()`.
+
+`manage_roles` only rewrites `_actions` when the POST actually carried
+`act_<module>_<verb>` fields; otherwise the prior block is preserved verbatim.
+
+### ⚠️ Next: the permission matrix is barely enforced
+
+`module_required` is used **zero** times outside its own docstring. All 59
+dispatch guards are `@role_required(["Admin","Editor","Staff","CSR","Dispatch"])`
+— a flat name list, so they ignore the matrix. Only 6 `action_required` sites
+exist (5 on `dispatch/agents`, 1 on `administration/admin_panel`). The Role
+Editor now writes real data, but subtab-level changes still won't gate most
+screens until views are converted to `module_required`.
 
 ---
 
@@ -48,3 +65,13 @@ without it every role edit wipes the action permissions.
   `dispatch/templates/dispatch/pipeline/tech_mobile.html`.
 - `Agent.objects.count() == 0` — the Agent Portal has never been tested against
   real data.
+- **Do NOT exercise `manage_roles` POST against a real `StaffRole` row.** The
+  view has no dry-run and writes immediately. During the Session 15 test pass
+  the `CSR` role was overwritten (all modules off, all subtabs false) and had
+  to be restored by hand from `/root/backups/pre_plaintext_drop_20260930_2105.sql`.
+  Create a throwaway `ZZ_TMP_*` role instead, as done in that session.
+- **`docker restart gametech-web` restarts only web.** The whole stack
+  (`db`, `redis`, `celery`, `celery-beat`) was observed recreating itself
+  several times in one session — containers destroyed then created, ~10s apart,
+  no OOM, memory fine. If a container vanishes mid-command, wait ~20s and
+  re-check `docker ps` rather than assuming the deploy failed.
