@@ -167,8 +167,8 @@ class CustomerPortalSecurityTestCase(TestCase):
         )
         self.assertIsNone(self.client.session.get('customer_id'))
 
-    def test_reset_and_resend_never_logs_plaintext(self):
-        """Staff resetting portal password dispatches SMS with masked body and never writes plaintext to logs."""
+    def test_reset_shows_password_once_and_never_logs_plaintext(self):
+        """Staff reset shows the temp password on screen, sends no SMS, and never writes plaintext to logs."""
         self.client.force_login(self.staff_user)
 
         reset_resp = self.client.post(
@@ -192,15 +192,23 @@ class CustomerPortalSecurityTestCase(TestCase):
         self.assertIsNotNone(self.customer.temp_password_created_at)
         self.assertIsNone(self.customer.portal_password)
 
-        # Check SmsLog: must contain [REDACTED] and NEVER the generated plain password
-        sms = SmsLog.objects.filter(phone=self.customer.phone).order_by('-id').first()
-        self.assertIsNotNone(sms)
-        self.assertIn("[REDACTED]", sms.message)
-        self.assertNotIn(generated_pw, sms.message)
+        # No SMS may be dispatched: this is a per-call cost with no benefit,
+        # since the password is already rendered on screen for staff to relay.
+        self.assertFalse(
+            SmsLog.objects.filter(message__icontains=generated_pw).exists(),
+            "Plaintext password must never reach the SMS log.",
+        )
+
+        # The password IS shown on screen exactly once.
+        self.assertContains(view_resp, generated_pw)
+
+        # ...and it is never persisted in plaintext.
+        self.customer.refresh_from_db()
+        self.assertIsNone(self.customer.portal_password)
 
         # Check SystemLog: must NEVER contain the generated plain password
         logs = SystemLog.objects.filter(record_id=str(self.customer.id), action="RESET_PORTAL_PASSWORD")
         self.assertTrue(logs.exists())
-        for log in logs:
-            self.assertNotIn(generated_pw, log.old_data or "")
-            self.assertNotIn(generated_pw, log.new_data or "")
+        for entry in logs:
+            self.assertNotIn(generated_pw, entry.old_data or "")
+            self.assertNotIn(generated_pw, entry.new_data or "")
