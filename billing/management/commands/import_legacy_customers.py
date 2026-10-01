@@ -111,17 +111,71 @@ class Command(BaseCommand):
         account_type_map[type_name] = obj
         return obj
 
-    def get_or_create_plan(self, plan_map, legacy_plan_name, create_missing=False):
+    @staticmethod
+    def _mbps(value):
+        """Normalise a speed to a float: '20 Mbps', '20M', '20' -> 20.0."""
+        if value is None:
+            return None
+        digits = "".join(ch for ch in str(value) if ch.isdigit() or ch == ".")
+        try:
+            return float(digits)
+        except ValueError:
+            return None
+
+    def get_or_create_plan(self, plan_map, legacy_plan_name, create_missing=False, spec=None):
+        """Resolve a legacy plan_name to a SubscriptionPlan using the export's
+        own speed and price -- not a hand-maintained guess table.
+
+        The catalogue is a product matrix where two lines share a price:
+            P1,000 -> GTipid Fiber 1000 (20 Mbps) | GIMI Home Fiber 1000 (50 Mbps)
+            P1,300 -> GTipid Fiber 1300 (30 Mbps) | GIMI Home Fiber 1300 (75 Mbps)
+            P1,500 -> GTipid Fiber 1500 (50 Mbps) | GIMI Home Fiber 1500 (100 Mbps)
+        So price alone is not enough to identify a product -- the speed decides
+        which of the two lines it is. Matching on (price, speed) is what keeps
+        a 50 Mbps / P1,000 subscriber on GIMI rather than GTipid.
+        """
+        if not legacy_plan_name:
+            return None
         if legacy_plan_name in plan_map:
             return plan_map[legacy_plan_name]
 
-        # Try direct match first
+        # 1. Exact name -- a plan already created from a previous import.
         plan = SubscriptionPlan.objects.filter(name__iexact=legacy_plan_name).first()
         if plan:
             plan_map[legacy_plan_name] = plan
             return plan
 
-        # Try mapped name
+        spec = spec or {}
+        want_price = spec.get("price")
+        want_down = self._mbps(spec.get("speed_down")) or self._mbps(spec.get("speed_up"))
+
+        # 2. Match on (price, speed) against the live catalogue.
+        if want_price is not None:
+            try:
+                price_val = float(want_price)
+            except (TypeError, ValueError):
+                price_val = None
+            if price_val is not None:
+                scored = []
+                for candidate in SubscriptionPlan.objects.filter(price=price_val):
+                    cand_down = self._mbps(candidate.speed_down) or self._mbps(candidate.speed_up)
+                    if want_down is None or cand_down is None:
+                        distance = 0.0
+                    else:
+                        distance = abs(cand_down - want_down)
+                    if want_down is not None and cand_down is not None and distance > 0.01:
+                        continue
+                    # Prefer the real product catalogue over plans that were
+                    # themselves created from a legacy export, then the closest
+                    # speed. Ordering must be explicit or the match is arbitrary.
+                    is_legacy = candidate.name.lower().startswith("pppoe")
+                    scored.append((is_legacy, distance, candidate.name, candidate))
+                if scored:
+                    scored.sort(key=lambda t: (t[0], t[1], t[2]))
+                    plan_map[legacy_plan_name] = scored[0][3]
+                    return scored[0][3]
+
+        # 3. Legacy fallback for plan names the export no longer lists.
         mapped_name = PLAN_MAPPING.get(legacy_plan_name)
         if mapped_name:
             plan = SubscriptionPlan.objects.filter(name__iexact=mapped_name).first()
@@ -129,13 +183,25 @@ class Command(BaseCommand):
                 plan_map[legacy_plan_name] = plan
                 return plan
 
-        # Create if flag is set
-        if create_missing and legacy_plan_name:
+        # 4. Create from the export's real numbers, never at price 0.
+        if create_missing:
+            up = self._mbps(spec.get("speed_up"))
+            down = self._mbps(spec.get("speed_down"))
+            try:
+                price_val = float(want_price) if want_price is not None else 0.00
+            except (TypeError, ValueError):
+                price_val = 0.00
+            try:
+                validity = int(spec.get("validity_days") or 30)
+            except (TypeError, ValueError):
+                validity = 30
             plan = SubscriptionPlan.objects.create(
                 name=legacy_plan_name,
-                price=0.00,
-                validity_days=30,
-                description=f"Auto-created from legacy import: {legacy_plan_name}",
+                speed_up=f"{up:g} Mbps" if up else "",
+                speed_down=f"{down:g} Mbps" if down else "",
+                price=price_val,
+                validity_days=validity,
+                description=f"Restored from legacy export: {legacy_plan_name}",
             )
             plan_map[legacy_plan_name] = plan
             return plan
@@ -224,6 +290,15 @@ class Command(BaseCommand):
             all_rows = list(iter_rows(sql_file_path))
             self.stdout.write(f"  Parsed {len(all_rows)} rows from {sql_file_path}")
 
+            # The export is the source of truth. Build plan_name -> real
+            # (speed, price) from the dump's own service_plans table so we match
+            # on actual data instead of a hand-maintained guess table.
+            plan_specs = {}
+            for t, r in all_rows:
+                if t == "service_plans" and r.get("plan_name"):
+                    plan_specs[r["plan_name"]] = r
+            self.stdout.write(f"  Plan catalogue from export: {len(plan_specs)} plans")
+
             # PASS 1: Read PPPoE credentials
             for table, row in all_rows:
                 if table == "pppoe_users":
@@ -280,7 +355,10 @@ class Command(BaseCommand):
                         # Get or create related objects
                         if not dry_run:
                             acct_obj = self.get_or_create_account_type(account_type_map, acct_type_str) if acct_type_str else None
-                            plan_obj = self.get_or_create_plan(plan_map, plan_name_str, create_missing_plans)
+                            plan_obj = self.get_or_create_plan(
+                                plan_map, plan_name_str, create_missing_plans,
+                                spec=plan_specs.get(plan_name_str),
+                            )
                             device_obj = device_map.get(device_name_str) if device_name_str else None
                             if not device_obj and device_name_str:
                                 device_obj = MikrotikDevice.objects.filter(device_name=device_name_str).first()
