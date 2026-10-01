@@ -64,6 +64,9 @@ def customer_list(request):
         expired=Count("id", filter=(Q(expires_at__lte=now, expires_at__gt=seven_days_ago) | Q(status="expired")) & Q(installation_status="installed") & ~Q(status="pending")),
         inactive=Count("id", filter=(Q(status__in=["suspended", "inactive", "pull out"]) | Q(expires_at__lte=seven_days_ago)) & Q(installation_status="installed") & ~Q(status="pending")),
         offline=Count("id", filter=(Q(status__in=["suspended", "inactive", "pull out", "expired"]) | (Q(expires_at__lte=now) & Q(installation_status="installed"))) & ~Q(status="pending")),
+        # Installed accounts with no expiry date = broken data (legacy zero-dates).
+        # Pending installs are excluded on purpose: no expiry is CORRECT for them.
+        no_expiry=Count("id", filter=Q(expires_at__isnull=True, installation_status="installed") & ~Q(status__in=["pending", "closed_not_installed"])),
     )
 
     # MikroTik Live Connectivity for Paid but Offline metric
@@ -138,6 +141,12 @@ def customer_list(request):
             (Q(status__in=["suspended", "inactive", "pull out"]) | Q(expires_at__lte=seven_days_ago))
             & Q(installation_status="installed")
         ).exclude(status="pending")
+    elif filter_type in ["no_expiry", "no_expiration"]:
+        # Data-integrity review queue: live lines that can never be auto-suspended
+        # or auto-renewed because billing has no date to act on.
+        customers = customers.filter(
+            expires_at__isnull=True, installation_status="installed"
+        ).exclude(status__in=["pending", "closed_not_installed"])
 
     customers = customers.annotate(
         is_paid_offline=Case(
@@ -145,17 +154,25 @@ def customer_list(request):
             default=Value(False),
             output_field=BooleanField(),
         ),
+        is_no_expiry=Case(
+            When(expires_at__isnull=True, installation_status="installed", then=Value(True)),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
         status_order=Case(
             When(id__in=paid_but_offline_ids, then=Value(0)),  # Top Priority: Active accounts offline
-            When(status="active", installation_status="installed", then=Value(1)),
-            When(installation_status="pending", then=Value(2)),
-            When(status="pending", then=Value(2)),
-            When(status="suspended", then=Value(3)),
-            When(status="expired", then=Value(4)),
-            When(status="inactive", then=Value(5)),
-            When(status="pull out", then=Value(6)),
-            When(status="closed_not_installed", then=Value(8)),
-            default=Value(7),
+            # Next: installed lines with no expiry date -- nothing to bill or
+            # auto-suspend against, so they need a human decision.
+            When(expires_at__isnull=True, installation_status="installed", then=Value(1)),
+            When(status="active", installation_status="installed", then=Value(2)),
+            When(installation_status="pending", then=Value(3)),
+            When(status="pending", then=Value(3)),
+            When(status="suspended", then=Value(4)),
+            When(status="expired", then=Value(5)),
+            When(status="inactive", then=Value(6)),
+            When(status="pull out", then=Value(7)),
+            When(status="closed_not_installed", then=Value(9)),
+            default=Value(8),
             output_field=IntegerField(),
         ),
     ).order_by("status_order", "full_name")
