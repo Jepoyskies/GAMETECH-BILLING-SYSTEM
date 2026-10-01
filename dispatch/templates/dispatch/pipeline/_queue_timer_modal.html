@@ -1,43 +1,52 @@
 <!-- Dispatch Timer Correction Modal -->
 <div class="modal fade" id="modalCorrectTimer" tabindex="-1" aria-labelledby="modalCorrectTimerLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content shadow-lg border-0" style="background: var(--surface-card); color: var(--text-main); border-radius: 14px;">
-      <div class="modal-header border-bottom" style="border-color: var(--border-subtle) !important;">
-        <h5 class="modal-title d-flex align-items-center gap-2" id="modalCorrectTimerLabel">
-          <span class="status-badge status-badge--warning"><i class="fas fa-stopwatch"></i></span>
-          <span>Correct Job Timer: <strong id="timerTicketNumber" class="text-primary">-</strong></span>
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+  <div class="modal-dialog modal-dialog-centered gt-modal-scroll">
+    <div class="modal-content gt-modal-card">
+      <div class="modal-header">
+        <div class="d-flex align-items-center gap-3">
+          <div class="gt-modal-icon"><i class="fas fa-stopwatch"></i></div>
+          <div>
+            <h5 class="modal-title" id="modalCorrectTimerLabel">
+              Correct Job Timer <span class="gt-count-badge" id="timerTicketNumber">-</span>
+            </h5>
+            <div class="gt-field-help mt-1">Adjust the arrival and completion timestamps recorded for this job.</div>
+          </div>
+        </div>
+        <button type="button" class="gt-icon-btn" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
       </div>
 
       <form id="correctTimerForm" onsubmit="submitTimerCorrection(event)">
         <input type="hidden" id="timerTicketId" name="ticket_id" value="">
-        <div class="modal-body p-4">
-          <div class="alert alert-warning small py-2 mb-3">
-            <i class="fas fa-exclamation-triangle me-1"></i>
-            Manual timer adjustments are logged in the permanent audit trail. A valid operational reason is mandatory.
+        <div class="modal-body">
+          <div class="gt-callout gt-callout--warning mb-3">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>Manual timer adjustments are logged in the permanent audit trail. A valid operational reason is mandatory.</span>
           </div>
 
-          <div class="mb-3">
-            <label class="form-label fw-bold small text-uppercase">Arrived / Start Timestamp</label>
-            <input type="datetime-local" id="timerArrivedAt" name="arrived_at" class="form-control">
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label fw-bold small text-uppercase">Done / Finish Timestamp</label>
-            <input type="datetime-local" id="timerFinishedAt" name="finished_at" class="form-control">
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label" for="timerArrivedAt">Arrived / Start Timestamp</label>
+              <input type="datetime-local" id="timerArrivedAt" name="arrived_at" class="form-control">
+              <div class="gt-field-help">When the technician began work on site.</div>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label" for="timerFinishedAt">Done / Finish Timestamp</label>
+              <input type="datetime-local" id="timerFinishedAt" name="finished_at" class="form-control">
+              <div class="gt-field-help">When the job was marked complete.</div>
+            </div>
           </div>
 
           <div class="mb-2">
-            <label class="form-label fw-bold small text-uppercase">Reason for Correction <span class="text-danger">*</span></label>
+            <label class="form-label" for="timerReason">Reason for Correction <span class="text-danger">*</span></label>
             <textarea id="timerReason" name="reason" class="form-control" rows="3" required placeholder="e.g. Technician had no cellular coverage on site; arrived at 2:00 PM and finished at 3:15 PM verified via customer call."></textarea>
+            <div class="gt-field-help">Explain what the original timestamps got wrong.</div>
           </div>
         </div>
 
-        <div class="modal-footer border-top" style="border-color: var(--border-subtle) !important;">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <div class="modal-footer">
+          <button type="button" class="gt-btn-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="submit" id="btnSubmitTimer" class="gt-btn-primary">
-            <i class="fas fa-save"></i> Save Timer Correction
+            <i class="fas fa-save me-1"></i> Save Timer Correction
           </button>
         </div>
       </form>
