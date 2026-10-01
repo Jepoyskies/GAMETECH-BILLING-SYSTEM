@@ -45,6 +45,40 @@ PLAN_MAPPING = {
 # Zero-date customers are flagged for review instead of given a default expiry
 
 INSERT_RE = re.compile(r"^INSERT\s+INTO\s+`?([A-Za-z0-9_]+)`?")
+COLUMN_LIST_RE = re.compile(r"^\s*\(([^)]*)\)\s*VALUES", re.I)
+CREATE_TABLE_RE = re.compile(
+    r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`?([A-Za-z0-9_]+)`?\s*\((.*?)\n\)\s*ENGINE",
+    re.I | re.S,
+)
+
+
+def columns_from_create_table(sql_file_path):
+    """Map table -> ordered column names, from the CREATE TABLE statements.
+
+    Only needed as a fallback for dumps that omit the column list in their
+    INSERT statements (plain mysqldump). phpMyAdmin dumps always include it.
+    """
+    cols = {}
+    with open(sql_file_path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            if not line.lstrip().upper().startswith("CREATE TABLE"):
+                continue
+            # CREATE TABLE wraps across lines. Read until a line that is just the
+            # closing paren -- stopping on the first ")" would trip over
+            # "varchar(50)" and cut the block short.
+            block = line
+            while not re.search(r"^\s*\)\s*(ENGINE|;|$)", block, re.M | re.I):
+                nxt = f.readline()
+                if not nxt:
+                    break
+                block += nxt
+            m = CREATE_TABLE_RE.search(block)
+            if not m:
+                continue
+            names = re.findall(r"^\s*`([A-Za-z0-9_]+)`", m.group(2), re.M)
+            if names:
+                cols[m.group(1)] = names
+    return cols
 
 
 def split_value_tuples(payload):
@@ -129,26 +163,61 @@ class Command(BaseCommand):
         )
 
     def iter_insert_rows(self, sql_file_path):
-        """Yield (table_name, row_list) for every row in every INSERT statement.
+        """Yield (table_name, {column_name: value}) for every row in the dump.
 
-        Handles both extended inserts (many tuples on one line, the mysqldump
-        default) and one-tuple-per-line dumps.
+        Handles both dump layouts:
+          * mysqldump  -- ``INSERT INTO `t` VALUES (..),(..);`` all on one line
+          * phpMyAdmin -- ``INSERT INTO `t` (`c1`,`c2`) VALUES`` then one
+                         tuple per following line, terminated by ';'
+
+        Rows are keyed by COLUMN NAME, never by position. The legacy schema
+        gained a column mid-project (barangay_id at index 9), which silently
+        shifted every positional field after it; name mapping makes that
+        class of corruption impossible.
         """
+        fallback_cols = columns_from_create_table(sql_file_path)
+
         with open(sql_file_path, "r", encoding="utf-8", errors="replace") as f:
             for line in f:
                 stripped = line.strip()
                 m = INSERT_RE.match(stripped)
                 if not m:
                     continue
-                vidx = stripped.upper().find("VALUES")
-                if vidx == -1:
-                    continue
                 table = m.group(1)
-                payload = stripped[vidx + len("VALUES"):].strip().rstrip(";").strip()
+
+                # The column list (if any) sits AFTER `INSERT INTO `table``.
+                after_table = stripped[m.end():]
+                cm = COLUMN_LIST_RE.match(after_table)
+                if cm:
+                    names = [c.strip().strip("`") for c in cm.group(1).split(",")]
+                    start = m.end() + cm.end()
+                else:
+                    names = fallback_cols.get(table)
+                    vidx = stripped.upper().find("VALUES")
+                    if vidx == -1 or not names:
+                        continue
+                    start = vidx + len("VALUES")
+
+                # Tuples may continue on following lines (phpMyAdmin style).
+                buffer = stripped[start:]
+                while ";" not in buffer:
+                    nxt = f.readline()
+                    if not nxt:
+                        break
+                    buffer += "\n" + nxt.rstrip()
+
+                payload = buffer.strip().rstrip(";").strip()
                 for tup in split_value_tuples(payload):
-                    row = self.parse_sql_line(tup)
-                    if row:
-                        yield table, row
+                    values = self.parse_sql_line(tup)
+                    if not values:
+                        continue
+                    if len(values) != len(names):
+                        raise ValueError(
+                            f"Table `{table}`: header lists {len(names)} columns "
+                            f"but a row has {len(values)}. Dump is malformed -- "
+                            f"refusing to import rather than guess."
+                        )
+                    yield table, dict(zip(names, values))
 
     def parse_sql_line(self, line):
         line = line.strip()
@@ -278,14 +347,13 @@ class Command(BaseCommand):
             account_type_map = {}
             pppoe_creds = {}
             zero_date_customers = []
-            warned_shape = False
 
             # PASS 1: Read PPPoE credentials
             self.stdout.write(self.style.SUCCESS("Pass 1: Extracting PPPoE credentials..."))
             for table, row in self.iter_insert_rows(sql_file_path):
-                if table == "pppoe_users" and len(row) >= 3:
-                    pppoe_username = row[1]
-                    pppoe_password = row[2]
+                if table == "pppoe_users":
+                    pppoe_username = row.get("username")
+                    pppoe_password = row.get("password")
                     if pppoe_username:
                         pppoe_creds[pppoe_username] = pppoe_password
 
@@ -299,71 +367,38 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS("Pass 2: Importing data..."))
             processed_customers = 0
 
-            # Devices FIRST. Rows arrive in file order and a mysqldump happily
-            # emits `customers` before `mikrotik_devices`, which would leave every
+            # Devices FIRST. Rows arrive in file order and a dump happily emits
+            # `customers` before `mikrotik_devices`, which would leave every
             # customer with mikrotik_device=NULL (and invisible to router sync).
             for table, row in self.iter_insert_rows(sql_file_path):
-                if table == "mikrotik_devices" and len(row) >= 6 and not dry_run:
+                if table == "mikrotik_devices" and not dry_run:
                     self.get_or_create_device(
-                        device_map, row[1], row[2], row[3], row[4], row[5]
+                        device_map,
+                        row.get("device_name"),
+                        row.get("ip_address"),
+                        row.get("api_username"),
+                        row.get("api_password"),
+                        row.get("api_port"),
                     )
-                elif table == "account_type" and len(row) >= 2 and not dry_run:
-                    self.get_or_create_account_type(account_type_map, row[1])
+                elif table == "account_type" and not dry_run:
+                    self.get_or_create_account_type(account_type_map, row.get("type_name"))
 
             if device_map:
                 self.stdout.write(f"  Devices ready: {', '.join(device_map)}")
 
             for table, row in self.iter_insert_rows(sql_file_path):
-                    # Field mapping below is POSITIONAL (row[N]), so a dump with a
-                    # different column count would either IndexError or silently
-                    # shift values into the wrong fields. Pad to the expected width
-                    # so short rows are safe, and shout once if the width is off.
-                    if table == "customers":
-                        if not warned_shape:
-                            warned_shape = True
-                            if len(row) != 27:
-                                self.stdout.write(self.style.WARNING(
-                                    f"  customers rows have {len(row)} columns, expected 27. "
-                                    f"Field mapping is positional -- VERIFY the CREATE TABLE "
-                                    f"column order before trusting this import."
-                                ))
-                        if len(row) < 27:
-                            row = list(row) + [None] * (27 - len(row))
-
-                    if table == "mikrotik_devices" and len(row) >= 6:
-                        device_name = row[1]
-                        ip_address = row[2]
-                        if not dry_run:
-                            device = self.get_or_create_device(
-                                device_map, device_name, ip_address, row[3], row[4], row[5]
-                            )
-                            self.stdout.write(f"  Device: {device_name} ({'created' if device not in device_map.values() else 'exists'})")
-                        else:
-                            self.stdout.write(f"  [DRY] Would create device: {device_name}")
-
-                    elif table == "account_type" and len(row) >= 2:
-                        type_name = row[1]
-                        if not dry_run:
-                            acct = self.get_or_create_account_type(account_type_map, type_name)
-                            self.stdout.write(f"  AccountType: {type_name}")
-                        else:
-                            self.stdout.write(f"  [DRY] Would create account type: {type_name}")
-
-                    elif table == "service_plans" and len(row) >= 3:
+                    if table == "service_plans":
                         # Legacy service_plans table - we use PLAN_MAPPING instead
-                        pass
+                        continue
 
-                    elif table == "customers" and len(row) >= 10:
+                    elif table == "customers":
                         processed_customers += 1
-                        username = row[1]
-                        full_name = row[5]
-                        email = row[6] if row[6] else None
-                        if email == "":
-                            email = None
-
-                        acct_type_str = row[2]
-                        plan_name_str = row[3]
-                        device_name_str = row[16] if len(row) > 16 else None
+                        username = row.get("username")
+                        full_name = row.get("full_name")
+                        email = row.get("email") or None
+                        acct_type_str = row.get("account_type")
+                        plan_name_str = row.get("plan_name")
+                        device_name_str = row.get("device_name")
 
                         # Get or create related objects
                         if not dry_run:
@@ -380,7 +415,7 @@ class Command(BaseCommand):
                             device_obj = None
 
                         # Parse and convert expiry
-                        expires_at = self.parse_datetime_safe(row[4])
+                        expires_at = self.parse_datetime_safe(row.get("expires_at"))
                         if expires_at:
                             expires_at = self.convert_timezone(expires_at)
                         else:
@@ -392,7 +427,8 @@ class Command(BaseCommand):
                         password = pppoe_creds.get(username, None)
 
                         # Parse status
-                        status_val = str(row[9]).lower() if row[9] else "active"
+                        raw_status = row.get("status")
+                        status_val = str(raw_status).lower() if raw_status else "active"
 
                         # Portal password. PBKDF2 at ~1M iterations costs ~1s per
                         # customer, which is what made the first full import take 8
@@ -429,22 +465,22 @@ class Command(BaseCommand):
                             "mikrotik_device": device_obj,
                             "expires_at": expires_at,
                             "full_name": full_name,
-                            "phone": row[7],
-                            "address": row[8],
+                            "phone": row.get("phone"),
+                            "address": row.get("address"),
                             "status": status_val,
-                            "created_at": self.parse_datetime_safe(row[10]) or timezone.now(),
-                            "latitude": float(row[11]) if row[11] else None,
-                            "longitude": float(row[12]) if row[12] else None,
-                            "adjusted_by_router": row[13],
-                            # row[14] (legacy `adjusted_by_referral`) has no matching
-                            # field on the current Customer model -- deliberately dropped.
-                            "sms_sent_at": self.parse_datetime_safe(row[17]),
-                            "mac_address": row[18],
-                            "referral_received": row[20] if row[20] else "",
-                            "created_form_by": row[23] if row[23] else "",
-                            "cignalplay_no": row[24],
-                            "cignalplay_date": self.parse_date_safe(row[25]),
-                            "cignalplay_adjustedby": row[26],
+                            "created_at": self.parse_datetime_safe(row.get("created_at")) or timezone.now(),
+                            "latitude": float(row["latitude"]) if row.get("latitude") else None,
+                            "longitude": float(row["longitude"]) if row.get("longitude") else None,
+                            "adjusted_by_router": row.get("adjusted_by_router"),
+                            # legacy `adjusted_by_referral` has no matching field on
+                            # the current Customer model -- deliberately dropped.
+                            "sms_sent_at": self.parse_datetime_safe(row.get("sms_sent_at")),
+                            "mac_address": row.get("mac_address"),
+                            "referral_received": row.get("referral_received") or "",
+                            "created_form_by": row.get("created_form_by") or "",
+                            "cignalplay_no": row.get("cignalplay_no"),
+                            "cignalplay_date": self.parse_date_safe(row.get("cignalplay_date")),
+                            "cignalplay_adjustedby": row.get("cignalplay_adjustedby"),
                             "pppoe_password": password,
                             "installation_status": "installed",
                             # Preserve the original install date across re-imports.
