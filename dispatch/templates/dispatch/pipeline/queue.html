@@ -263,21 +263,109 @@ function openAssignModal(ticketId, ticketNumber, clientName, address, concern, t
   // Reset fields
   document.getElementById('assignTeamSelect').value = '';
   document.querySelectorAll('.tech-checkbox').forEach(cb => cb.checked = false);
+  document.querySelectorAll('.tech-item').forEach(el => el.classList.remove('tech-item--picked', 'tech-item--borrowed'));
+  const st = document.getElementById('assignTechSearch');
+  if (st) st.value = '';
+  filterTechList('');
+  updateAssignSummary();
 
   const modal = new bootstrap.Modal(document.getElementById('modalAssignTicket'));
   modal.show();
 }
 
-function onTeamSelectChanged(selectElem) {
-  const selectedTeamId = selectElem.value;
-  // If team chosen, automatically check all techs belonging to that team
-  document.querySelectorAll('.tech-checkbox').forEach(cb => {
-    if (selectedTeamId && cb.getAttribute('data-team') === selectedTeamId) {
-      cb.checked = true;
-    } else if (selectedTeamId) {
-      cb.checked = false;
-    }
+function selectedTechCheckboxes() {
+  return Array.from(document.querySelectorAll('.tech-checkbox:checked'));
+}
+
+/* Tick/untick every on-duty technician of one team. exclusive=true means untick
+   everyone else first (default); otherwise just toggle that group additively.
+   Team key '' / 'none' / '0' all mean "technicians with no team". */
+function toggleTeamTechs(teamId, exclusive) {
+  const norm = t => (!t || t === 'none' ? '' : t);
+  const key = norm(teamId);
+  const boxes = Array.from(document.querySelectorAll('.tech-checkbox'));
+  const target = boxes.filter(cb => norm(cb.getAttribute('data-team')) === key);
+  if (!target.length) return;
+  const makeChecked = target.some(cb => !cb.checked);
+  if (exclusive) boxes.forEach(cb => cb.checked = false);
+  target.forEach(cb => { if (!cb.disabled) cb.checked = makeChecked; });
+  paintTechStates();
+  updateAssignSummary();
+}
+
+function tickAllOnDuty() {
+  document.querySelectorAll('.tech-checkbox').forEach(cb => { if (!cb.disabled) cb.checked = true; });
+  paintTechStates();
+  updateAssignSummary();
+}
+
+function clearTechSelection() {
+  document.querySelectorAll('.tech-checkbox').forEach(cb => cb.checked = false);
+  paintTechStates();
+  updateAssignSummary();
+}
+
+function filterTechList(term) {
+  const q = (term || '').trim().toLowerCase();
+  document.querySelectorAll('#assignTechList .tech-cell').forEach(cell => {
+    const name = cell.getAttribute('data-tech-name') || '';
+    cell.style.display = (!q || name.includes(q)) ? '' : 'none';
   });
+  document.querySelectorAll('#assignTechList .tech-group').forEach(group => {
+    const anyVisible = Array.from(group.querySelectorAll('.tech-cell')).some(c => c.style.display !== 'none');
+    group.style.display = anyVisible ? '' : 'none';
+  });
+}
+
+/* Colour-code each picker card: solid = own team, dashed = borrowed from another team. */
+function paintTechStates() {
+  const teamId = document.getElementById('assignTeamSelect').value;
+  document.querySelectorAll('.tech-item').forEach(el => {
+    const cb = el.querySelector('.tech-checkbox');
+    el.classList.toggle('tech-item--picked', cb.checked && (!teamId || cb.getAttribute('data-team') === teamId));
+    el.classList.toggle('tech-item--borrowed', cb.checked && teamId && cb.getAttribute('data-team') !== teamId);
+  });
+}
+
+function updateAssignSummary() {
+  const el = document.getElementById('assignSummary');
+  if (!el) return;
+  const teamSel = document.getElementById('assignTeamSelect');
+  const opt = teamSel.options[teamSel.selectedIndex];
+  const teamId = teamSel.value;
+  const picked = selectedTechCheckboxes();
+
+  // Warn when the chosen team has nobody on duty and no borrowed tech yet.
+  if (teamId && opt && opt.dataset.onDuty === '0' && picked.length === 0) {
+    el.innerHTML = '<i class="fas fa-triangle-exclamation text-warning me-1"></i> ' +
+      'This team has <strong>0 technicians on duty</strong>. Tick someone below from another team to cover this job.';
+    el.className = 'mt-2 small text-warning';
+    return;
+  }
+
+  if (!picked.length) {
+    el.innerHTML = '<i class="fas fa-circle-info me-1"></i> No technicians ticked yet.';
+    el.className = 'mt-2 small text-muted';
+    return;
+  }
+
+  const borrowed = picked.filter(cb => teamId && cb.getAttribute('data-team') !== teamId);
+  const names = picked.map(cb => (cb.closest('.tech-item') || {}).querySelector('label strong').textContent.trim());
+  let html = '<i class="fas fa-user-check text-success me-1"></i> Assigning ' + names.length +
+             ' technician' + (names.length === 1 ? '' : 's') + ': <strong>' + names.join(', ') + '</strong>';
+  if (borrowed.length) {
+    html += ' <span class="text-warning ms-1">(' + borrowed.length + ' borrowed from another team)</span>';
+  }
+  el.innerHTML = html;
+  el.className = 'mt-2 small text-success';
+}
+
+function onTeamSelectChanged(selectElem) {
+  // Additive: only (re)tick the chosen team's on-duty members. Anything already
+  // ticked from other teams is left alone so a missing member can be backfilled.
+  if (selectElem.value) toggleTeamTechs(selectElem.value, true);
+  paintTechStates();
+  updateAssignSummary();
 }
 
 function submitTicketAssignment(event) {
@@ -288,8 +376,12 @@ function submitTicketAssignment(event) {
   const schedTime = document.getElementById('assignSchedTime').value;
   const remarks = document.getElementById('assignRemarks').value;
 
-  const techIds = [];
-  document.querySelectorAll('.tech-checkbox:checked').forEach(cb => techIds.push(cb.value));
+  const techIds = selectedTechCheckboxes().map(cb => cb.value);
+
+  if (!teamId && techIds.length === 0) {
+    alert('Select a team or tick at least one on-duty technician before confirming.');
+    return;
+  }
 
   const btn = document.getElementById('btnSubmitAssign');
   btn.disabled = true;

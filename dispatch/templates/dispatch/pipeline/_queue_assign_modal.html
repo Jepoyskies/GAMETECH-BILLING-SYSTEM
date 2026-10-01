@@ -1,3 +1,21 @@
+<style>
+/* Scoped to the assign modal only. */
+#modalAssignTicket .tech-item { transition: border-color .15s ease, box-shadow .15s ease; }
+#modalAssignTicket .tech-item--off { opacity: .45; }
+#modalAssignTicket .tech-item--picked {
+  border-color: var(--section-accent, var(--badge-success-text)) !important;
+  box-shadow: 0 0 0 1px var(--section-accent, var(--badge-success-text)) inset;
+}
+#modalAssignTicket .tech-item--borrowed {
+  border-style: dashed;
+  border-color: var(--status-warning, #f59e0b) !important;
+}
+#modalAssignTicket .tech-group + .tech-group { border-top: 1px solid var(--border-subtle); padding-top: .5rem; }
+#modalAssignTicket .gt-search { position: relative; }
+#modalAssignTicket .gt-search-icon { position: absolute; left: .6rem; top: 50%; transform: translateY(-50%); opacity: .5; }
+#modalAssignTicket .gt-search .form-control { padding-left: 2rem; }
+</style>
+
 <!-- Team & Technician Assignment Modal -->
 <div class="modal fade" id="modalAssignTicket" tabindex="-1" aria-labelledby="modalAssignTicketLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -30,12 +48,14 @@
             <div class="col-md-6">
               <label class="form-label fw-bold small text-uppercase">1. Assign by Team</label>
               <select id="assignTeamSelect" name="team_id" class="form-select" onchange="onTeamSelectChanged(this)">
-                <option value="">-- Select Team (Auto-assigns on-duty techs) --</option>
+                <option value="">-- No Team (pick technicians manually) --</option>
                 {% for team in teams %}
-                  <option value="{{ team.id }}">{{ team.name }} ({{ team.members.count }} techs)</option>
+                  <option value="{{ team.id }}" data-on-duty="{{ team.on_duty_members }}" data-total="{{ team.total_members }}">
+                    {{ team.name }} — {{ team.on_duty_members }} on duty / {{ team.total_members }} members
+                  </option>
                 {% endfor %}
               </select>
-              <div class="form-text small">Selecting a team automatically schedules all active on-duty members.</div>
+              <div class="form-text small">Team members are ticked automatically. You can still untick a member and borrow an on-duty technician from another team below.</div>
             </div>
 
             <div class="col-md-3">
@@ -53,34 +73,78 @@
             </div>
           </div>
 
-          <!-- Individual On-Duty Technicians Picker -->
+          <!-- Technician Picker: On-Duty (selectable) + Off-Duty (greyed, so you can see who's missing) -->
           <div class="mb-3">
             <label class="form-label fw-bold small text-uppercase d-flex justify-content-between align-items-center">
-              <span>2. Individual Technicians (On-Duty Only)</span>
+              <span>2. Technicians <span class="text-muted fw-normal text-lowercase">(tick to add, any team)</span></span>
               <span class="status-badge status-badge--success" style="font-size: 0.72rem;">
                 {{ on_duty_technicians|length }} On Duty
               </span>
             </label>
-            <div class="p-3 border rounded-3" style="background: var(--surface-bg, rgba(0,0,0,0.02)); border-color: var(--border-subtle) !important; max-height: 180px; overflow-y: auto;">
-              {% if on_duty_technicians %}
-                <div class="row g-2">
-                  {% for tech in on_duty_technicians %}
-                  <div class="col-sm-6 col-md-4">
-                    <div class="form-check form-check-inline p-2 border rounded-2 w-100 m-0" style="border-color: var(--border-subtle) !important; background: var(--surface-card);">
-                      <input class="form-check-input tech-checkbox" type="checkbox" name="technician_ids" value="{{ tech.id }}" id="techCheck{{ tech.id }}" data-team="{{ tech.team_id|default:'' }}">
-                      <label class="form-check-label small ms-1 d-flex flex-column" for="techCheck{{ tech.id }}">
-                        <strong class="text-truncate">{{ tech.name }}</strong>
-                        <span class="text-muted" style="font-size:0.7rem;">{{ tech.team.name|default:"No Team" }}</span>
-                      </label>
-                    </div>
+
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+              <div class="gt-search flex-grow-1">
+                <i class="fas fa-search gt-search-icon"></i>
+                <input type="text" id="assignTechSearch" class="form-control form-control-sm" placeholder="Filter technicians..." oninput="filterTechList(this.value)">
+              </div>
+              <div class="btn-group btn-group-sm" role="group" aria-label="Team pick shortcuts">
+                <button type="button" class="btn btn-outline-secondary" onclick="toggleTeamTechs(document.getElementById('assignTeamSelect').value)">
+                  <i class="fas fa-users me-1"></i> Tick My Team
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="tickAllOnDuty()">
+                  <i class="fas fa-check-double me-1"></i> All On Duty
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="clearTechSelection()">
+                  <i class="fas fa-eraser me-1"></i> Clear
+                </button>
+              </div>
+            </div>
+
+            <div id="assignTechList" class="p-3 border rounded-3" style="background: var(--surface-bg, rgba(0,0,0,0.02)); border-color: var(--border-subtle) !important; max-height: 240px; overflow-y: auto;">
+              {% regroup all_technicians by team as team_groups %}
+              {% for group in team_groups %}
+                <div class="tech-group mb-2" data-tech-group="{{ group.grouper.id|default:'none' }}">
+                  <div class="d-flex justify-content-between align-items-center px-1 mb-1">
+                    <span class="small fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:.04em;">
+                      <i class="fas fa-layer-group me-1"></i>{{ group.grouper.name|default:"Unassigned (No Team)" }}
+                    </span>
+                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" style="font-size:0.7rem;"
+                            onclick="toggleTeamTechs('{{ group.grouper.id|default:'none' }}', true)">
+                      tick / untick all
+                    </button>
                   </div>
-                  {% endfor %}
+                  <div class="row g-2">
+                    {% for tech in group.list %}
+                    <div class="col-sm-6 col-md-4 tech-cell" data-tech-name="{{ tech.name|lower }}">
+                      <div class="form-check form-check-inline p-2 border rounded-2 w-100 m-0 tech-item {% if not tech.is_available %}tech-item--off{% endif %}"
+                           style="border-color: var(--border-subtle) !important; background: var(--surface-card);">
+                        <input class="form-check-input tech-checkbox" type="checkbox" name="technician_ids"
+                               value="{{ tech.id }}" id="techCheck{{ tech.id }}"
+                               data-team="{{ tech.team_id|default:'' }}"
+                               data-duty="{{ tech.is_available|yesno:'1,0' }}"
+                               {% if not tech.is_available %}disabled title="Off duty — toggle duty status in the roster panel first"{% endif %}
+                               onchange="updateAssignSummary()">
+                        <label class="form-check-label small ms-1 d-flex flex-column" for="techCheck{{ tech.id }}">
+                          <strong class="text-truncate">{{ tech.name }}</strong>
+                          <span style="font-size:0.68rem;" class="{% if tech.is_available %}text-muted{% else %}text-warning{% endif %}">
+                            {% if tech.is_available %}On Duty{% else %}Off Duty — not assignable{% endif %}
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                    {% endfor %}
+                  </div>
                 </div>
-              {% else %}
+              {% empty %}
                 <div class="text-center py-3 text-muted small">
-                  <i class="fas fa-user-slash text-warning me-1"></i> No technicians currently on duty. Toggle on-duty status below to assign.
+                  <i class="fas fa-user-slash text-warning me-1"></i> No technicians registered yet.
                 </div>
-              {% endif %}
+              {% endfor %}
+            </div>
+
+            <!-- Live summary + validation -->
+            <div id="assignSummary" class="mt-2 small text-muted">
+              <i class="fas fa-circle-info me-1"></i> No technicians ticked yet.
             </div>
           </div>
 

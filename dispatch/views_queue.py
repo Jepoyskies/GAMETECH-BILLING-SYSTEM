@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.contrib import messages
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.contrib.auth.models import User
 
 from dispatch.models import JobTicket, JobTicketHistory, Team, Technician, AuditLog
@@ -69,10 +69,14 @@ def dispatch_queue_view(request):
         status__in=['COMPLETED', 'QA_PASSED', 'APPROVED', 'CANCELLED']
     ).order_by('-updated_at')[:60]
 
-    # Available teams and ON-DUTY technicians for assignment
-    teams = Team.objects.prefetch_related('members').all()
+    # Available teams and ALL technicians for assignment (off-duty shown greyed so
+    # dispatchers can see WHO is missing from a team instead of guessing).
+    teams = Team.objects.annotate(
+        total_members=Count('members'),
+        on_duty_members=Count('members', filter=Q(members__is_available=True)),
+    ).order_by('name')
     on_duty_technicians = Technician.objects.filter(is_available=True).select_related('team')
-    all_technicians = Technician.objects.select_related('team').all()
+    all_technicians = Technician.objects.select_related('team').order_by('team__name', 'name')
 
     context = {
         'unassigned_tickets': unassigned_tickets,
@@ -134,28 +138,39 @@ def api_assign_ticket(request, ticket_id):
                 'error': f"Cannot transition ticket from '{old_status}' to 'ASSIGNED'."
             }, status=400)
 
-        # 1. Resolve Team and Technicians (Filter strictly by is_available=True)
+        # 1. Resolve Team and Technicians (off-duty technicians are never assignable)
         assigned_techs = []
+        borrowed_techs = []
         if team_id:
             team = get_object_or_404(Team, id=team_id)
             ticket.team = team
-            # Auto-assign all ON-DUTY members of the team
-            on_duty_team_members = team.members.filter(is_available=True)
-            assigned_techs = list(on_duty_team_members)
-        else:
-            ticket.team = None
 
         if tech_ids:
-            # If specific technicians selected, ensure they are ON-DUTY
-            selected_techs = Technician.objects.filter(id__in=tech_ids, is_available=True)
-            for t in selected_techs:
-                if t not in assigned_techs:
-                    assigned_techs.append(t)
+            # Explicit selection is authoritative: this lets the dispatcher drop a
+            # team member and borrow an on-duty technician from a DIFFERENT team.
+            # Off-duty ids are silently filtered out (they are disabled in the UI).
+            selected_techs = list(
+                Technician.objects.filter(id__in=tech_ids, is_available=True).select_related('team')
+            )
+            assigned_techs = selected_techs
+            if team_id:
+                borrowed_techs = [t for t in selected_techs if t.team_id != int(team_id)]
+        elif team_id:
+            # No explicit picks -> auto-assign every ON-DUTY member of the team.
+            assigned_techs = list(Team.objects.get(id=team_id).members.filter(is_available=True))
+        else:
+            ticket.team = None
 
         if not assigned_techs and not team_id:
             return JsonResponse({
                 'success': False,
-                'error': 'No on-duty technicians available in the selection. Please select an active team or on-duty technician.'
+                'error': 'No on-duty technicians selected. Tick at least one on-duty technician.'
+            }, status=400)
+
+        if not assigned_techs:
+            return JsonResponse({
+                'success': False,
+                'error': 'None of the selected technicians are on duty. Toggle their duty status first.'
             }, status=400)
 
         ticket.technicians.set(assigned_techs)
@@ -173,6 +188,9 @@ def api_assign_ticket(request, ticket_id):
 
         tech_names = ", ".join([t.name for t in assigned_techs]) if assigned_techs else "Team"
         note = f"Assigned to {ticket.team.name if ticket.team else ''} ({tech_names}) by {request.user.get_full_name() or request.user.username}"
+        if borrowed_techs:
+            borrowed = ", ".join(f"{t.name} ({t.team.name if t.team else 'No Team'})" for t in borrowed_techs)
+            note += f" [Cross-team support: {borrowed}]"
         JobTicketHistory.objects.create(
             job_ticket=ticket,
             actor=request.user,

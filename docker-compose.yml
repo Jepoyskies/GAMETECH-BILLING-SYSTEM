@@ -70,14 +70,13 @@ services:
       redis:
         condition: service_healthy
     environment: *app-env
-    # Exec form (no shell) so there is no quoting to get wrong. /login/ is
-    # deliberately DB-independent: a database blip must not restart the web tier.
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/login/',timeout=5).status==200 else 1)"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+    # NOTE: no healthcheck here on purpose.
+    # Snap-confined dockerd allows only ONE concurrent healthcheck session
+    # ("transport: Error while dialing: only one connection allowed"). With
+    # db + redis + web all probing, dockerd fails the probes and recreates
+    # containers, which is the suspected cause of the gametech-web flapping.
+    # Nothing depends_on web:service_healthy, so dropping it is safe.
+    # Monitor with: curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/login/
 
   celery:
     build:
