@@ -118,8 +118,12 @@ def sync_customer_to_mikrotik(sender, instance, created, **kwargs):
         return
 
     # --- NEW LOGIC: Skip sync if no Mikrotik-relevant fields changed ---
+    # An explicit push_to_router means "write this now", so it bypasses this
+    # optimisation. Without that, a deliberate re-push of an unchanged
+    # customer would silently do nothing.
     if (
         not created
+        and not getattr(instance, "push_to_router", False)
         and hasattr(instance, "_original_state")
         and instance._original_state
     ):
