@@ -17,6 +17,7 @@ from billing.models import (
     IncentiveSetting,
 )
 from billing.validators import normalize_ph_phone, check_customer_or_prospect_duplicate
+from billing.security import log_sensitive_operation
 from billing.services.incentives import (
     get_agent_incentive_summary,
     get_customer_qualifying_paid_total,
@@ -334,14 +335,19 @@ def agent_request_cashout(request):
             notification_type="payment",
             link=f"/agents/view/{agent.id}/",
         )
-        try:
-            SystemLog.objects.create(
-                user=request.user.username,
-                action=f"Agent '{agent.name}' submitted cash-out request for ₱{agent.claimable_commission:,.2f}",
-                ip_address=request.META.get("REMOTE_ADDR", ""),
-            )
-        except Exception:
-            pass
+        # Was SystemLog.objects.create(user=..., ip_address=...) inside a bare
+        # `except: pass`. SystemLog has neither field, so it raised TypeError and
+        # was swallowed -- a cash-out request had NO audit trail at all, which is
+        # a cash/ledger gap. See ERR-089 / ERR-091.
+        log_sensitive_operation(
+            "AGENT_CASHOUT_REQUEST",
+            "Agent",
+            agent.id,
+            request.user.username,
+            f"Agent '{agent.name}' requested cash-out of "
+            f"PHP {agent.claimable_commission:,.2f} from IP "
+            f"{request.META.get('REMOTE_ADDR', '')}.",
+        )
 
         messages.success(request, f"Cash-out request for ₱{agent.claimable_commission:,.2f} submitted to Admin!")
         return redirect("agent_dashboard")

@@ -78,6 +78,10 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--strict", action="store_true", help="Exit non-zero if problems are found.")
         parser.add_argument("--path", default="", help="Limit the scan to one top-level app directory.")
+        parser.add_argument(
+            "--show-dynamic", action="store_true",
+            help="Also list action= values built at runtime (need manual length review).",
+        )
 
     # ------------------------------------------------------------------ helpers
 
@@ -182,25 +186,26 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR("No matching directory to scan."))
             return
 
-        findings, scanned, errors, dynamic = [], 0, 0, 0
+        findings, scanned, dyn = [], 0, []
         for root in roots:
             for path in root.rglob("*.py"):
                 if any(part in SKIP_DIRS for part in path.parts):
                     continue
                 scanned += 1
-                found = self._scan_file(path, base)
-                for f in found:
-                    if f["kind"] == "ACTION DYNAMIC":
-                        dynamic += 1
-                        continue
-                    findings.append(f)
-                errors += sum(1 for f in found if f["kind"] != "ACTION DYNAMIC")
+                for f in self._scan_file(path, base):
+                    (dyn if f["kind"] == "ACTION DYNAMIC" else findings).append(f)
 
         self.stdout.write(self.style.NOTICE(f"Scanned {scanned} python file(s) under {len(roots)} app(s)."))
 
+        if options["show_dynamic"] and dyn:
+            self.stdout.write(self.style.WARNING(f"\n{len(dyn)} dynamic action(s) to review manually:\n"))
+            for f in dyn:
+                self.stdout.write(f"  {f['file']}:{f['line']}")
+            self.stdout.write("")
+
         if not findings:
             self.stdout.write(self.style.SUCCESS(
-                f"OK: no definite SystemLog defects. ({dynamic} dynamic action(s) flagged for manual review.)"
+                f"OK: no definite SystemLog defects. ({len(dyn)} dynamic action(s) pending manual review.)"
             ))
             return
 
@@ -212,7 +217,7 @@ class Command(BaseCommand):
         self.stdout.write(
             "These are SILENT failures: a bare `except: pass` swallows the TypeError /\n"
             "DB error, so the audit entry is never written. See ERR-089.\n"
-            f"({dynamic} additional dynamic action(s) need manual review.)\n"
+            f"({len(dyn)} additional dynamic action(s) need manual review.)\n"
         )
         if options["strict"]:
             raise SystemExit(1)
