@@ -53,6 +53,31 @@ screens until views are converted to `module_required`.
 
 ---
 
+## Recently completed (do not redo)
+
+### Persona landing router + own portals for Agents & Technicians ✅
+`resolve_landing_url()` in `billing/views/auth.py` is the single authority for
+where a user lands after login. Role is tested **before** `is_staff` (Martin and
+Merk are both `is_staff=True`). New mobile-first Technician Field Portal at
+`dispatch/templates/dispatch/pipeline/{portal_base_tech,tech_dashboard}.html`.
+The Agent Portal shell already existed — a dead duplicate
+`billing/agent_dashboard.html` was deleted (ERR-088).
+
+### Two safety fixes ✅
+- `seed --clear` now refuses to run on a non-DEBUG database (ERR-090). It would
+  otherwise delete every customer, payment, agent, router and persona role.
+  `seed.py` was also the whole file duplicated; dead copy removed.
+- Agent cash-out requests had **no audit trail** (ERR-091). Both silently-broken
+  `SystemLog` sites now use `log_sensitive_operation()`.
+
+### New commands
+| Command | Purpose |
+|---|---|
+| `link_persona_profiles` | Create missing Agent/Technician profiles. Dry run by default, `--apply`, `--unlink`. |
+| `audit_systemlog_calls` | AST-scan for `SystemLog.create()` calls that silently die. `--strict`, `--show-dynamic`, `--path`. |
+
+---
+
 ## Standing warnings
 
 - Do **not** run `manage.py test` inside the production `gametech-web`
@@ -63,8 +88,10 @@ screens until views are converted to `module_required`.
 - Purple still remains in the shared base template (`gt-cl-purple` changelog
   cards, dashboard chart palette) and in
   `dispatch/templates/dispatch/pipeline/tech_mobile.html`.
-- `Agent.objects.count() == 0` — the Agent Portal has never been tested against
-  real data.
+- ~~`Agent.objects.count() == 0`~~ **RESOLVED 2026-10-01.** Agent + Technician
+  profiles now exist and are linked (Martin -> Agent id 19, Merk -> Technician
+  id 10, team unassigned). Both portals verified rendering 200. See ERR-089 and
+  `python manage.py link_persona_profiles`.
 - **Do NOT exercise `manage_roles` POST against a real `StaffRole` row.** The
   view has no dry-run and writes immediately. During the Session 15 test pass
   the `CSR` role was overwritten (all modules off, all subtabs false) and had

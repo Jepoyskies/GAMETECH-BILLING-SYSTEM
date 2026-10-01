@@ -2098,3 +2098,112 @@ profile row is linked to the User.
 `billing/management/commands/link_persona_profiles.py`
 **See also**: `DECISION_LOG.md` "Persona Landing Router"
 **Date Logged**: 2026-10-01
+
+---
+
+### ERR-090: `manage.py seed --clear` Had No Production Guard — It Would Wipe Every Customer and Payment
+
+**Symptom**: None yet. This is a **preventive** entry. A single mistyped
+`python manage.py seed --clear` on the droplet destroys the business.
+
+**Root Cause**: `seed.py` `--clear` ran, with no confirmation, no environment
+check and no transaction:
+```python
+SystemLog.objects.all().delete()
+SystemAdmin.objects.all().delete()      # every persona role
+Payment.objects.all().delete()          # every receipt
+Customer.objects.all().delete()         # 2,041 subscribers
+MikrotikDevice.objects.all().delete()
+Barangay / SubscriptionPlan / AccountType .delete()
+Agent.objects.all().delete()            # Martin's agent profile
+User.objects.filter(is_superuser=False).delete()   # Martin, Merk, all logins
+```
+None of those tables have a soft-delete, so there is **no undo**. And because
+`SystemAdmin` holds every persona role, running it would also silently strip
+`role=Agent` / `role=Technician` from Martin and Merk (who are no longer
+`is_staff=True`, so they would **not** be re-synced by `staff_list`).
+
+**Extra hazard found in the same file**: `seed.py` was the **entire file
+duplicated** — two `class Command` definitions (807 lines). Python uses the
+last one, so the first ~233 lines were a stale, truncated draft that was
+completely dead code, and it was what made the real command hard to find and
+edit.
+
+**Fix**:
+- Removed the dead duplicate: 807 -> 573 lines, one `Command` class.
+- Added `_guard_clear()`, called as the FIRST statement of `handle()`. It
+  returns immediately when `settings.DEBUG` is True (normal dev workflow) and
+  otherwise **always** aborts, telling the operator to drop and recreate the
+  database by hand. `--i-am-sure` deliberately does NOT unlock production: it
+  exists only to make the abort message explicit.
+
+**Verification** (guard called directly, never reaching the delete block):
+```
+DEBUG in production = False
+  ack=False: correctly aborted -> Aborted. Database: gametech_db
+  ack=True:  correctly aborted -> Aborted. Database: gametech_db
+SystemLog rows before/after: 22153 / 22153
+customers still present: 2041
+```
+
+**Lesson**: A destructive management command is a production incident waiting
+to happen. Guard it at the top of `handle()`, before any side effect, and make
+the guard testable in isolation. Never test it by running the real thing.
+
+**Files**: `billing/management/commands/seed.py`
+**Date Logged**: 2026-10-01
+
+---
+
+### ERR-091: Agent Cash-Out Requests Had NO Audit Trail (Silent `SystemLog` Failure)
+
+**Symptom**: An agent requests a commission cash-out, the staff bell notification
+fires and the success message shows — but nothing lands in the audit log, so
+there is no record of who asked for what amount.
+
+**Root Cause**: `billing/views/agents.py` did:
+```python
+try:
+    SystemLog.objects.create(
+        user=request.user.username,                                  # not a field
+        action=f"Agent '{agent.name}' submitted cash-out request for PHP ...",  # >50 chars
+        ip_address=request.META.get("REMOTE_ADDR", ""),              # not a field
+    )
+except Exception:
+    pass
+```
+`SystemLog` has **no** `user` and **no** `ip_address` field, and `action` is
+`CharField(max_length=50)`. So Django raised `TypeError` before touching the DB
+and the bare `except` swallowed it. The entry was never written, not once. This
+is a direct cash/ledger audit gap (AGENTS.md Rule 39).
+
+**The same bug existed in `billing/views/auth.py`** (the "Configured Portal
+Login for Agent" audit entry) — see ERR-089.
+
+**How to find these without guessing**: `python manage.py audit_systemlog_calls`.
+It AST-parses every `SystemLog.objects.create(...)` in the repo and reports
+unknown field names, missing required fields, and `action` literals longer than
+50. It executes nothing and touches no data. `--strict` for CI, `--show-dynamic`
+to list the `action=` values built at runtime (8 remain, all needing a manual
+length check).
+
+**Current state**: both confirmed-broken sites are fixed. The auditor reports
+`OK: no definite SystemLog defects. (8 dynamic action(s) pending manual review.)`
+across 195 files in 14 apps.
+
+**Fix pattern** — reuse the existing helper instead of hand-rolling kwargs:
+```python
+from billing.security import log_sensitive_operation
+log_sensitive_operation("AGENT_CASHOUT_REQUEST", "Agent", agent.id,
+                        request.user.username, "full sentence goes in details")
+```
+`action` stays a short verb; the human-readable text goes in `new_data`.
+
+**Lesson**: A bare `except: pass` around an audit write converts a loud bug into
+an invisible one. Audit writes should either succeed or be logged as an error
+(`log_sensitive_operation` does `logger.error`) — never silently dropped. And
+when auditing money movement, the audit write is the feature, not a side effect.
+
+**Files**: `billing/views/agents.py`, `billing/views/auth.py`,
+`billing/management/commands/audit_systemlog_calls.py`, `billing/security.py`
+**Date Logged**: 2026-10-01
