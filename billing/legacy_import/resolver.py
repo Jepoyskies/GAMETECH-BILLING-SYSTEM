@@ -97,7 +97,7 @@ def resolve_plan(plan_map, legacy_plan_name, spec=None):
     return plan
 
 
-def cutover_lines(created_count, updated_count, pppoe_count):
+def cutover_lines(created_count, updated_count, pppoe_count, preserved_count=0):
     """Human-readable import summary. Only flags what needs a decision."""
     now = timezone.now()
     all_c = Customer.objects.all()
@@ -121,6 +121,8 @@ def cutover_lines(created_count, updated_count, pppoe_count):
     out.append(f"  Passwords on file      : {no_pass}")
     out.append(f"  Missing a plan         : {no_plan}")
     out.append(f"  Routers registered     : {MikrotikDevice.objects.count()}")
+    if preserved_count:
+        out.append(f"  Human-reviewed, kept   : {preserved_count} (import did not overwrite)")
 
     out.append("")
     if no_plan:

@@ -352,6 +352,12 @@ class Customer(models.Model):
     # Audit & Testing
     is_test_data = models.BooleanField(default=False, help_text="Flags test accounts to safely ignore without hard-deleting")
 
+    # Human review of a legacy-imported record. When set, a re-import will NOT
+    # overwrite status or expires_at -- Sir Rom's decision outranks the export.
+    # Cleared from the import page so a cutover-day import can refresh dates.
+    legacy_reviewed_at = models.DateTimeField(null=True, blank=True)
+    legacy_review_note = models.CharField(max_length=255, blank=True, default="")
+
     CONNECTION_STATUS_CHOICES = (
         ("Offline", "Offline"),
         ("Low", "Low"),

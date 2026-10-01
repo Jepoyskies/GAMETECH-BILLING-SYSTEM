@@ -166,6 +166,7 @@ class Command(BaseCommand):
             processed_customers = 0
             created_count = 0
             updated_count = 0
+            preserved_count = 0
 
             # Devices FIRST. Rows arrive in file order and a dump happily emits
             # `customers` before `mikrotik_devices`, which would leave every
@@ -245,7 +246,7 @@ class Command(BaseCommand):
                             else {"full_name": full_name, "email": email}
                         )
                         existing = Customer.objects.filter(**lookup).only(
-                            "id", "portal_password_hash", "installed_at"
+                            "id", "portal_password_hash", "installed_at", "legacy_reviewed_at"
                         ).first()
 
                         if dry_run:
@@ -267,11 +268,9 @@ class Command(BaseCommand):
                             "account_type": acct_obj,
                             "plan": plan_obj,
                             "mikrotik_device": device_obj,
-                            "expires_at": expires_at,
                             "full_name": full_name,
                             "phone": row.get("phone"),
                             "address": row.get("address"),
-                            "status": status_val,
                             "created_at": self.parse_datetime_safe(row.get("created_at")) or timezone.now(),
                             "latitude": float(row["latitude"]) if row.get("latitude") else None,
                             "longitude": float(row["longitude"]) if row.get("longitude") else None,
@@ -296,6 +295,14 @@ class Command(BaseCommand):
                             "portal_password": None,
                             "sync_status": "Synced",
                         }
+
+                        # A human decision always beats the export. If someone has
+                        # reviewed this record, a re-import must not undo their work
+                        # by resetting status or wiping an expiry date back to NULL.
+                        if existing and existing.legacy_reviewed_at:
+                            defaults["expires_at"] = existing.expires_at
+                            defaults["status"] = existing.status
+                            preserved_count += 1
 
                         if username:
                             defaults["email"] = email
@@ -324,7 +331,7 @@ class Command(BaseCommand):
                 ))
 
             if not dry_run:
-                for line in cutover_lines(created_count, updated_count, len(pppoe_creds)):
+                for line in cutover_lines(created_count, updated_count, len(pppoe_creds), preserved_count):
                     self.stdout.write(line)
 
             # Save import report for the web interface

@@ -15,7 +15,7 @@ from django.utils.dateparse import parse_datetime
 from billing.models import Customer, SystemLog
 
 # Hard delete is deliberately not offered. Archiving is reversible.
-ACTIONS = {"archive", "activate", "set_expiry", "clear_expiry"}
+ACTIONS = {"archive", "activate", "set_expiry", "clear_expiry", "unreview"}
 
 
 def _log(user, action, customer, old, new):
@@ -52,13 +52,24 @@ def handle_issue_action(request):
                 old = {
                     "status": customer.status,
                     "expires_at": str(customer.expires_at) if customer.expires_at else None,
+                    "reviewed": str(customer.legacy_reviewed_at) if customer.legacy_reviewed_at else None,
                 }
-                if action == "archive":
+                if action == "unreview":
+                    # Hand the record back to the export, so a cutover-day
+                    # re-import refreshes its dates and status.
+                    customer.legacy_reviewed_at = None
+                    customer.legacy_review_note = ""
+                    customer.save(update_fields=["legacy_reviewed_at", "legacy_review_note"])
+                elif action == "archive":
                     customer.status = "inactive"
-                    customer.save(update_fields=["status"])
+                    customer.legacy_reviewed_at = timezone.now()
+                    customer.legacy_review_note = "Archived from import review"
+                    customer.save(update_fields=["status", "legacy_reviewed_at", "legacy_review_note"])
                 elif action == "activate":
                     customer.status = "active"
-                    customer.save(update_fields=["status"])
+                    customer.legacy_reviewed_at = timezone.now()
+                    customer.legacy_review_note = "Kept active from import review"
+                    customer.save(update_fields=["status", "legacy_reviewed_at", "legacy_review_note"])
                 elif action == "set_expiry":
                     raw = request.POST.get("expires_at", "").strip()
                     parsed = parse_datetime(raw) if raw else None
@@ -67,14 +78,19 @@ def handle_issue_action(request):
                     if parsed is not None and timezone.is_naive(parsed):
                         parsed = timezone.make_aware(parsed)
                     customer.expires_at = parsed
-                    customer.save(update_fields=["expires_at"])
+                    customer.legacy_reviewed_at = timezone.now()
+                    customer.legacy_review_note = "Expiry set from import review"
+                    customer.save(update_fields=["expires_at", "legacy_reviewed_at", "legacy_review_note"])
                 elif action == "clear_expiry":
                     customer.expires_at = None
-                    customer.save(update_fields=["expires_at"])
+                    customer.legacy_reviewed_at = timezone.now()
+                    customer.legacy_review_note = "Expiry cleared from import review"
+                    customer.save(update_fields=["expires_at", "legacy_reviewed_at", "legacy_review_note"])
 
                 new = {
                     "status": customer.status,
                     "expires_at": str(customer.expires_at) if customer.expires_at else None,
+                    "reviewed": str(customer.legacy_reviewed_at) if customer.legacy_reviewed_at else None,
                 }
                 _log(request.user, f"issue_{action}", customer, old, new)
                 count += 1
@@ -89,7 +105,12 @@ def handle_issue_action(request):
     elif action == "activate":
         msg = f"Reactivated {count} customer(s)."
     elif action == "set_expiry":
-        msg = f"Set the expiration date on {count} customer(s)."
+        msg = f"Set the expiration date on {count} customer(s). Re-imports will not undo this."
+    elif action == "unreview":
+        msg = (
+            f"Handed {count} customer(s) back to the export. The next import will "
+            f"refresh their date and status from the file."
+        )
     else:
         msg = (
             f"Cleared the expiration date on {count} customer(s). They will show "

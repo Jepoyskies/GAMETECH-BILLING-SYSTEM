@@ -13,7 +13,25 @@ from datetime import timedelta
 
 from django.utils import timezone
 
-from billing.models import Customer
+from billing.models import Customer, SubscriptionPlan
+
+
+def _mbps(value):
+    if value is None:
+        return None
+    digits = "".join(ch for ch in str(value) if ch.isdigit() or ch == ".")
+    try:
+        return float(digits)
+    except ValueError:
+        return None
+
+
+def _speeds_differ(plan):
+    """True when a plan's upload and download are not the same number."""
+    up, down = _mbps(plan.speed_up), _mbps(plan.speed_down)
+    if up is None or down is None:
+        return False
+    return abs(up - down) > 0.01
 
 # Anything dated further out than this is almost certainly junk written by the
 # old system rather than a real subscription. 2030/2031 dates were seen in the
@@ -31,6 +49,15 @@ def get_issue_buckets():
     """Return {key: (label, queryset, why_it_matters)} for every problem bucket."""
     now = timezone.now()
     horizon = now + timedelta(days=FUTURE_DATE_THRESHOLD_DAYS)
+
+    # Asymmetric speeds, e.g. a custom SME line at 100 up / 1000 down. Every
+    # other plan in the export is symmetric, so this is worth a second look --
+    # but it is flagged, never altered. A real custom product is legitimate.
+    asymmetric = [
+        p for p in SubscriptionPlan.objects.all()
+        if _speeds_differ(p)
+    ]
+    asymmetric_ids = [p.id for p in asymmetric]
 
     buckets = [
         (
@@ -68,6 +95,19 @@ def get_issue_buckets():
             "No PPPoE password",
             Customer.objects.filter(pppoe_password__isnull=True) | Customer.objects.filter(pppoe_password=""),
             "Cannot authenticate on the router.",
+        ),
+        (
+            "asymmetric_plan",
+            "Custom / asymmetric plan",
+            Customer.objects.filter(plan_id__in=asymmetric_ids),
+            "Upload and download differ on this plan. Legitimate for a custom "
+            "business line -- just confirm the speed is what was sold.",
+        ),
+        (
+            "reviewed",
+            "Human-reviewed (import will not undo)",
+            Customer.objects.filter(legacy_reviewed_at__isnull=False),
+            "A person has already ruled on these. A re-import leaves them alone.",
         ),
     ]
 
