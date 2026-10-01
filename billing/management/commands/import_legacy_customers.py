@@ -88,7 +88,8 @@ def split_value_tuples(payload):
         INSERT INTO `t` VALUES ('1','a'),('2','b');
     A naive split on "," or "),(" corrupts any value containing those
     characters, so this walks the string tracking quote state and paren depth.
-    Handles both \' and '' escaping.
+    Handles both MySQL backslash escaping and '' doubling. Returns tuples that
+    are safe to hand to csv.reader.
     """
     tuples = []
     buf = []
@@ -100,11 +101,20 @@ def split_value_tuples(payload):
         ch = payload[i]
 
         if in_str:
-            buf.append(ch)
-            if ch == "\\" and i + 1 < n:          # backslash escape
-                buf.append(payload[i + 1])
+            if ch == "\\" and i + 1 < n:
+                nxt = payload[i + 1]
+                if nxt == "'":
+                    # MySQL escapes an apostrophe as \'. Python's csv module knows
+                    # nothing about MySQL escaping and would read that quote as a
+                    # field/quote toggle, shattering "Eddie\'s Compound, ..." into
+                    # four fields. Double it instead: csv then decodes it back to
+                    # a single apostrophe. The backslash itself is dropped.
+                    buf.append("''")
+                else:
+                    buf.append(nxt)
                 i += 2
                 continue
+            buf.append(ch)
             if ch == "'":
                 if i + 1 < n and payload[i + 1] == "'":   # doubled quote
                     buf.append(payload[i + 1])
