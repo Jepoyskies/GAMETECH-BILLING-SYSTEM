@@ -8,7 +8,11 @@ name: gametech
 x-app-env: &app-env
   DATABASE_URL: postgres://gametech_user:gametech_pass@db:5432/gametech_db
   CELERY_BROKER_URL: redis://redis:6379/0
-  ROUTER_MODE: live
+  # read_only: reads real router sockets (status/uptime) but BLOCKS all writes.
+  # Required while migrating legacy customers, so the 30-min auto_reconcile task
+  # cannot overwrite production PPPoE passwords/profiles from the imported dump.
+  # Flip to 'live' only after router credentials are confirmed correct.
+  ROUTER_MODE: read_only
   SEMAPHORE_API_KEY: ${SEMAPHORE_API_KEY:-}
   SECRET_KEY: ${SECRET_KEY:-}
   DEBUG: ${DEBUG:-False}
