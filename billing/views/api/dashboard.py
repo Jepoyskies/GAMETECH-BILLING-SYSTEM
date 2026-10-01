@@ -115,36 +115,30 @@ def subscription_plans_data_api(request):
     if device_filter:
         customers = customers.filter(mikrotik_device__device_name=device_filter)
 
-    # 5. Fetch MT Data
-    connected_usernames = {}
+    # 5. MikroTik data -- read from cache, never live.
+    #
+    # This used to open a fresh API connection to EVERY router on every single
+    # dashboard load (get_active_pppoe_users + get_ppp_secrets each), inside the
+    # request. On a 1 vCPU box that is 4+ blocking socket calls per page view,
+    # which is a large part of why the web container kept getting OOM-killed
+    # and the request timed out. The Celery task
+    # `fetch_live_monitoring_data_task` already refreshes this every 10s, so
+    # the cache is both fresh enough and free.
+    from billing.customer_state import network_visibility, resolve
+
+    network_visible, connected_set = network_visibility()
+    connected_usernames = set() if connected_set is None else set(connected_set)
+
     ppp_users_status = {}
-
-    devices = MikrotikDevice.objects.all()
-    for device in devices:
-        try:
-            api = MikrotikAPI(device)
-            # Active Users
-            active_users = api.get_active_pppoe_users()
-            for au in active_users:
-                name = au.get("name")
-                if name:
-                    connected_usernames[name] = {
-                        "uptime": au.get("uptime", ""),
-                        "address": au.get("address", ""),
-                        "caller_id": au.get("caller-id", ""),
-                    }
-
-            # PPP Secrets
-            secrets = api.get_ppp_secrets()
-            for sec in secrets:
-                name = sec.get("name")
-                if name:
-                    ppp_users_status[name] = {
-                        "profile": sec.get("profile", ""),
-                        "last_logged_out": sec.get("last-logged-out", ""),
-                    }
-        except Exception:
-            pass
+    live_data = cache.get("live_monitoring_data") or {}
+    for r in live_data.get("routers") or []:
+        for s in r.get("secrets") or []:
+            name = s.get("name")
+            if name:
+                ppp_users_status[name] = {
+                    "profile": s.get("profile", ""),
+                    "last_logged_out": s.get("last_logged_out", "") or s.get("last-logged-out", ""),
+                }
 
     # Evaluate all customers within search/device scope for top metrics
     all_customers = list(customers.order_by(sort_field))
@@ -152,41 +146,49 @@ def subscription_plans_data_api(request):
     # Calculate NOC / Dispatch Summaries
     count_active = 0           # Active accounts (> 7 days from expiration)
     count_expiring = 0         # Expiring soon (within 7 days)
-    paid_but_offline_count = 0 # Paid but Offline (Active/Expiring & Disconnected)
+    paid_but_offline_count = 0 # Paid but Offline (real, measured outages only)
     active_online_count = 0    # Online & Active
     count_expired = 0          # Expired (<= 7 days past or no expires_at)
     count_inactive = 0         # Inactive (> 7 days past or suspended)
     count_connected = 0        # Total connected to router
     count_not_connected = 0    # Total offline/disconnected from router
+    count_connected_unpaid = 0 # Lapsed on paper, still online. The old system's blind spot.
+    count_unknown = 0          # We cannot see the network. Never counted as offline.
 
     for c in all_customers:
-        is_conn = c.pppoe_username in connected_usernames
-        if is_conn:
-            count_connected += 1
-        else:
-            count_not_connected += 1
+        # Single source of truth, with the blindness guard built in. A None
+        # connected-set yields "unknown", never "offline" -- otherwise a router
+        # outage reported every single customer as disconnected.
+        lc = resolve(c, connected_set, now)
 
-        if c.status in ["suspended", "inactive"]:
-            count_inactive += 1
-        elif c.status == "expired" or not c.expires_at:
-            count_expired += 1
-        elif c.expires_at <= one_week_ago:
-            count_inactive += 1
-        elif c.expires_at <= now:
-            count_expired += 1
-        elif c.expires_at <= soon:
-            count_expiring += 1
-            if not is_conn:
-                paid_but_offline_count += 1
-            else:
-                active_online_count += 1
+        if lc.hardware == "connected":
+            count_connected += 1
+        elif lc.hardware == "offline":
+            count_not_connected += 1
         else:
-            # Active (expires_at > soon)
+            count_unknown += 1
+
+        if lc.key == "connected_unpaid":
+            count_connected_unpaid += 1
+
+        if lc.billing in ("suspended", "inactive", "pulled_out"):
+            count_inactive += 1
+        elif lc.billing == "no_expiry":
+            count_expired += 1
+        elif lc.billing == "paid":
             count_active += 1
-            if not is_conn:
-                paid_but_offline_count += 1
-            else:
+            if lc.hardware == "connected":
                 active_online_count += 1
+            elif lc.hardware == "offline":
+                paid_but_offline_count += 1
+        elif lc.billing == "expiring":
+            count_expiring += 1
+            if lc.hardware == "connected":
+                active_online_count += 1
+            elif lc.hardware == "offline":
+                paid_but_offline_count += 1
+        else:  # lapsed
+            count_expired += 1
 
     # Filter customer_list based on status_filter and connection_filter
     customer_list = all_customers
@@ -225,14 +227,21 @@ def subscription_plans_data_api(request):
             if c.status in ["suspended", "inactive"] or (c.expires_at and c.expires_at <= one_week_ago)
         ]
 
-    if connection_filter == "Connected":
-        customer_list = [
-            c for c in customer_list if c.pppoe_username in connected_usernames
-        ]
-    elif connection_filter == "Not Connected":
-        customer_list = [
-            c for c in customer_list if c.pppoe_username not in connected_usernames
-        ]
+    # Connection filters must not lie. When we are blind, "Not Connected"
+    # would return every single customer, so the filter is refused outright
+    # rather than returning a confidently wrong list.
+    if connection_filter in ("Connected", "Not Connected") and not network_visible:
+        connection_filter_applied = False
+    else:
+        connection_filter_applied = True
+        if connection_filter == "Connected":
+            customer_list = [
+                c for c in customer_list if c.pppoe_username.lower() in connected_usernames
+            ]
+        elif connection_filter == "Not Connected":
+            customer_list = [
+                c for c in customer_list if c.pppoe_username.lower() not in connected_usernames
+            ]
 
     # 6. Pagination
     per_page = int(request.GET.get("per_page", 35))
@@ -282,6 +291,10 @@ def subscription_plans_data_api(request):
         "count_expired": count_expired,
         "count_inactive": count_inactive,
         "count_connected": count_connected,
+        "count_connected_unpaid": count_connected_unpaid,
+        "count_unknown": count_unknown,
+        "network_visible": network_visible,
+        "connection_filter_applied": connection_filter_applied,
         "count_not_connected": count_not_connected,
         "now": now,
         "soon": soon,
