@@ -204,6 +204,7 @@ FILTERS = [
     ("suspended", "Suspended", "fa-lock", "warning"),
     ("inactive", "Inactive", "fa-power-off", "neutral"),
     ("pulled_out", "Pulled Out", "fa-plug-circle-xmark", "neutral"),
+    ("unclassified", "Unclassified", "fa-circle-question", "neutral"),
 ]
 
 
