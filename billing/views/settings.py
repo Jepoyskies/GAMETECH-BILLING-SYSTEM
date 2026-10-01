@@ -295,6 +295,7 @@ def import_legacy_data_view(request):
     from django.core.management import call_command
     from django.http import HttpResponseRedirect
     from django.urls import reverse
+    from billing.legacy_import import get_issue_buckets
 
     if request.method == "POST":
         sql_file = request.FILES.get("sql_file")
@@ -335,6 +336,9 @@ def import_legacy_data_view(request):
         "zero_date_customers": zero_date_customers,
         "total_imported": total_imported,
         "report_timestamp": report_timestamp,
+        # Every customer needing a human decision, live from the database --
+        # not only the ones the last import happened to flag.
+        "issue_buckets": get_issue_buckets(),
     })
 
 

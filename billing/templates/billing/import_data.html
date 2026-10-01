@@ -33,6 +33,87 @@
         </div>
     </div>
 
+    {% if issue_buckets %}
+    <div class="gt-table-card mt-4">
+        <div class="gt-table-toolbar">
+            <div class="gt-table-toolbar-left">
+                <span class="gt-status-badge gt-status-badge--warning"><span class="gt-status-dot"></span> Needs Your Decision &mdash; nothing here has been deleted</span>
+            </div>
+        </div>
+        <div class="p-4">
+            <p class="mb-3">
+                The old system is the source of truth, so nothing here has been removed or
+                &ldquo;fixed&rdquo; behind your back. Each group below is a customer that
+                needs a human call: keep it active, give it a date, or archive it.
+            </p>
+
+            <div class="row g-2 mb-4">
+                {% for key, b in issue_buckets.items %}
+                    {% if b.count %}
+                    <div class="col-6 col-md-4 col-xl-3">
+                        <div class="border rounded p-2 h-100" style="border-color: var(--border-divider) !important;">
+                            <div class="fs-4 fw-bold" style="color: var(--text-title);">{{ b.count }}</div>
+                            <div class="small text-muted">{{ b.label }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            {% for key, b in issue_buckets.items %}
+                {% if b.count %}
+                <div class="mb-4">
+                    <h6 class="fw-semibold mb-1">
+                        {{ b.label }} <span class="badge bg-secondary">{{ b.count }}</span>
+                    </h6>
+                    <p class="small text-muted mb-2">{{ b.why }}</p>
+                    <div class="table-responsive">
+                        <table class="gt-table table-striped table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Customer</th>
+                                    <th>PPPoE</th>
+                                    <th>Expires</th>
+                                    <th>Plan</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Open</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for c in b.queryset %}
+                                <tr>
+                                    <td>{{ c.full_name }}</td>
+                                    <td><code>{{ c.pppoe_username|default:"&mdash;" }}</code></td>
+                                    <td>
+                                        {% if c.expires_at %}
+                                            {{ c.expires_at|date:"Y-m-d" }}
+                                        {% else %}
+                                            <span class="text-danger fw-semibold">none</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ c.plan.name|default:"&mdash;" }}</td>
+                                    <td>{{ c.status }}</td>
+                                    <td class="text-end">
+                                        <a href="{% url 'view_customer' c.id %}" class="gt-btn-secondary" style="padding:3px 9px;font-size:.75rem;">Review</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if b.truncated %}
+                        <p class="small text-muted mt-1 mb-0">
+                            Showing the first 200. {{ b.truncated }} more &mdash;
+                            <a href="{% url 'customer_list' %}?filter=all">see all in the customer list</a>.
+                        </p>
+                    {% endif %}
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     {% if zero_date_customers %}
     <div class="gt-table-card mt-4">
         <div class="gt-table-toolbar">
