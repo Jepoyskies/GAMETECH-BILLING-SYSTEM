@@ -438,6 +438,11 @@ def api_customer_mikrotik_status(request, customer_id):
     data["payment_status"] = customer.payment_status
     data["is_expired"] = customer.is_expired
 
+    # --- Three-layer link diagnosis (Mini PC -> MikroTik -> Home Router) ---
+    # Tells staff whose fault it is and what to check, instead of a bare
+    # Online/Offline guess. See billing/diagnostics.py.
+    data["link_diagnosis"] = customer.link_diagnosis
+
     from django.http import JsonResponse
 
     return JsonResponse(data)

@@ -1,0 +1,74 @@
+<!-- Base Partial: Three-Layer Link Chain (rows 1-3 of the info list) -->
+{% comment %}
+  Renders the escalation ladder for "customer has no internet":
+      1. Mini PC bridge   (our side — if this is down we are blind)
+      2. MikroTik router  (Unreachable vs No Internet are different faults)
+      3. Home router      (the customer's own PPPoE session)
+
+  Expects `link` in context (customer.link_diagnosis). Polled live by _scripts.html.
+  Live status lives in #link-verdict (see _link_verdict.html).
+{% endcomment %}
+<li id="live-mt-status-row" style="transition: all 0.3s ease;">
+    <span class="info-label">
+        Link Chain
+        <i class="fas fa-question-circle text-muted ms-1" style="cursor:help;" data-bs-toggle="tooltip" data-bs-html="true" title="<div class='text-start p-1' style='font-size: 0.85rem; line-height: 1.4;'><div class='mb-2'>Read <b>top-down</b>. The first broken link is the real fault &mdash; everything below it is meaningless.</div><div class='mb-2'><b>1. Mini PC (Bridge)</b> &mdash; the office PC + Tailscale tunnel the cloud polls the routers through. If this is down we are <b>blind</b>, and no customer status can be trusted.</div><div class='mb-2'><b>2. MikroTik</b> &mdash; <i>Unreachable</i> = cannot reach the router at all (bridge or cable). <i>No Internet</i> = router answers but cannot reach 8.8.8.8 (its WAN/uplink is down).</div><div><b>3. Home Router</b> &mdash; the customer's own ONT/router. <i>Offline</i> means the PPPoE session is not up, so the fault is between the MikroTik and their house.</div></div>"></i>
+    </span>
+    <span class="info-value" id="mt-status-container">
+        {% if link.verdict == 'healthy' %}
+            <span class="text-success fw-semibold"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>All Links Healthy</span>
+        {% elif link.layer == 'bridge' %}
+            <span class="status-badge status-badge--danger d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;">
+                <i class="fas fa-eye-slash"></i> We Are Blind
+            </span>
+        {% elif link.layer == 'router' %}
+            <span class="status-badge status-badge--danger d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;">
+                <i class="fas fa-triangle-exclamation"></i> Fault Above Customer
+            </span>
+        {% else %}
+            <span class="status-badge status-badge--warning d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;">
+                <i class="fas fa-house-circle-exclamation"></i> Customer Side Fault
+            </span>
+        {% endif %}
+    </span>
+</li>
+<li id="link-row-bridge">
+    <span class="info-label"><span class="badge status-badge--neutral" style="font-size:0.6rem;">1</span> Mini PC</span>
+    <span class="info-value" id="link-bridge">
+        {% if link.bridge == 'Online' %}
+            <span class="text-success fw-semibold"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Online</span>
+            <small class="text-muted ms-1">{% if link.bridge_total %}{{ link.bridge_reached }}/{{ link.bridge_total }} routers answered {{ link.bridge_age }}s ago{% endif %}</small>
+        {% elif link.bridge == 'Stale' %}
+            <span class="status-badge status-badge--warning py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-clock"></i> Stale {{ link.bridge_age }}s</span>
+        {% elif link.bridge == 'Offline' %}
+            <span class="status-badge status-badge--danger py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-circle"></i> Offline {{ link.bridge_age }}s</span>
+        {% else %}
+            <span class="status-badge status-badge--neutral py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-question-circle"></i> Waiting for first poll</span>
+        {% endif %}
+    </span>
+</li>
+<li id="link-row-router">
+    <span class="info-label"><span class="badge status-badge--neutral" style="font-size:0.6rem;">2</span> MikroTik</span>
+    <span class="info-value" id="link-router">
+        {% if link.router == 'Online' %}
+            <span class="text-success fw-semibold"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Online</span>
+        {% elif link.router == 'No Internet' %}
+            <span class="status-badge status-badge--danger py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-plug-circle-xmark"></i> No Internet</span>
+        {% elif link.router == 'Unreachable' %}
+            <span class="status-badge status-badge--danger py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-unlink"></i> Unreachable</span>
+        {% else %}
+            <span class="status-badge status-badge--neutral py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-question-circle"></i> Unknown</span>
+        {% endif %}
+    </span>
+</li>
+<li id="link-row-home">
+    <span class="info-label"><span class="badge status-badge--neutral" style="font-size:0.6rem;">3</span> Home Router</span>
+    <span class="info-value" id="link-home">
+        {% if link.home == 'Online' %}
+            <span class="text-success fw-semibold"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Online</span>
+        {% elif link.home == 'Offline' %}
+            <span class="status-badge status-badge--danger py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-circle"></i> Offline</span>
+        {% else %}
+            <span class="status-badge status-badge--neutral py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-question-circle"></i> Unknown</span>
+        {% endif %}
+    </span>
+</li>

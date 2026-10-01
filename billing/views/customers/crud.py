@@ -1034,6 +1034,8 @@ def view_customer(request, customer_id):
         "last_logged_out": last_logged_out,
         "temp_password_info": request.session.pop("customer_temp_password_display", None),
         "router_mode": getattr(settings, "ROUTER_MODE", "live").lower().strip(),
+        # Three-layer link diagnosis: whose fault is it, and what to check.
+        "link": customer.link_diagnosis,
     }
     return render(request, "billing/view_customer.html", context)
 

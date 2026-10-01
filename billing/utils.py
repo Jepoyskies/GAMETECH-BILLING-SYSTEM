@@ -31,6 +31,8 @@ def log_system_action(
 
 def get_live_monitoring_data_sync():
     import logging
+    import time
+    from django.core.cache import cache
     from network_manager.models import MikrotikDevice
     from billing.models import Customer
     from network_manager.services import MikrotikAPI
@@ -147,6 +149,20 @@ def get_live_monitoring_data_sync():
             api.connection.disconnect()
         except Exception as e:
             logger.error(f"Error connecting to Mikrotik {device.device_name}: {e}")
+
+    # --- Mini PC bridge health -----------------------------------------------
+    # We poll the routers THROUGH the office Mini PC (Tailscale subnet router).
+    # A router only lands in `routers` if it actually answered, so if none of
+    # them did, the fault is upstream of all of them: our bridge. Recording this
+    # lets the UI say "we are blind" instead of accusing every subscriber.
+    cache.set(
+        "bridge_link_status",
+        {"reached": len(response_data["routers"]), "total": devices.count()},
+        300,
+    )
+    if response_data["routers"]:
+        # Only refreshed on success, so its age = "time since we had eyes".
+        cache.set("bridge_last_ok", time.time(), 600)
 
     return response_data
 

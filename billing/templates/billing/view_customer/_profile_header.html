@@ -1,6 +1,6 @@
 <!-- Base Partial: Profile Header -->
 {% comment %}
-  Preserved JS/BS hooks: hdr-router-badge, hdr-conn-badge,
+  Preserved JS/BS hooks: hdr-bridge-badge, hdr-router-badge, hdr-home-badge,
   requestServiceDropdown, moreActionsDropdown, openRequestServiceModal(),
   confirmAction() and every modal target below are load-bearing.
   Do not rename or remove them.
@@ -31,14 +31,18 @@
                 </span>
                 {% endif %}
 
-                {# ---------- SECONDARY: live router / connection as tooltip dots ---------- #}
+                {# ---------- SECONDARY: the three-layer link chain as tooltip dots ---------- #}
+                {# Order matters: Mini PC (our side) -> MikroTik -> Customer's home router. #}
                 <span class="d-inline-flex align-items-center" style="gap: 0.4rem;">
-                    <span id="hdr-router-badge" class="status-badge gt-conn-dot gt-conn-dot--{% if customer.router_status == 'Online' %}online{% else %}offline{% endif %} status-badge--{% if customer.router_status == 'Online' %}success{% else %}danger{% endif %}"
+                    <span id="hdr-bridge-badge" class="status-badge gt-conn-dot gt-conn-dot--{% if link.bridge == 'Online' %}online{% else %}offline{% endif %} status-badge--{% if link.bridge == 'Online' %}success{% else %}danger{% endif %}"
+                          title="Mini PC bridge — our side of the tunnel to the routers"
+                          aria-label="Mini PC Bridge {{ link.bridge }}"></span>
+                    <span id="hdr-router-badge" class="status-badge gt-conn-dot gt-conn-dot--{% if link.router == 'Online' %}online{% else %}offline{% endif %} status-badge--{% if link.router == 'Online' %}success{% else %}danger{% endif %}"
                           title="MikroTik router is reachable and has internet uplink"
-                          aria-label="MikroTik Router {{ customer.router_status }}"></span>
-                    <span id="hdr-conn-badge" class="status-badge gt-conn-dot gt-conn-dot--{% if customer.connection_status == 'Online' %}online{% else %}offline{% endif %} status-badge--{% if customer.connection_status == 'Online' %}success{% else %}danger{% endif %}"
-                          title="Customer's PPPoE session is active"
-                          aria-label="Customer Connection {{ customer.connection_status }}"></span>
+                          aria-label="MikroTik Router {{ link.router }}"></span>
+                    <span id="hdr-home-badge" class="status-badge gt-conn-dot gt-conn-dot--{% if link.home == 'Online' %}online{% else %}offline{% endif %} status-badge--{% if link.home == 'Online' %}success{% else %}danger{% endif %}"
+                          title="Customer's home router — is their PPPoE session up?"
+                          aria-label="Home Router {{ link.home }}"></span>
                 </span>
 
                 {# Payment + dispatch only when they add information #}

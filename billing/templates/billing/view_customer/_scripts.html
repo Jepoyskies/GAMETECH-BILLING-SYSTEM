@@ -243,51 +243,92 @@ document.addEventListener("DOMContentLoaded", function() {
             .then(data => {
                 const statusContainer = document.getElementById('mt-status-container');
                 const liveMtRow = document.getElementById('live-mt-status-row');
-                if (statusContainer) {
-                    const routerOn = data.router_status === 'Online';
-                    const connOn = data.connection_status === 'Online';
-                    const unknown = data.router_status === 'Unknown' || data.connection_status === 'Unknown';
+                const verdictBox = document.getElementById('link-verdict');
+                const link = data.link_diagnosis || {};
 
-                    if (unknown) {
-                        if (liveMtRow) liveMtRow.classList.remove('active-offline-row-highlight');
-                        statusContainer.innerHTML = '<span class="status-badge status-badge--neutral d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-question-circle"></i>Checking...</span>';
-                    } else if (routerOn && connOn) {
-                        if (liveMtRow) liveMtRow.classList.remove('active-offline-row-highlight');
-                        statusContainer.innerHTML = '<span class="text-success fw-semibold"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Fully Online</span>';
-                    } else if (routerOn && !connOn) {
-                        if (liveMtRow) liveMtRow.classList.add('active-offline-row-highlight');
-                        statusContainer.innerHTML = '<span class="status-badge status-badge--warning d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-triangle-exclamation"></i>Router Online, Connection Offline</span>';
-                    } else if (!routerOn && connOn) {
-                        if (liveMtRow) liveMtRow.classList.add('active-offline-row-highlight');
-                        statusContainer.innerHTML = '<span class="status-badge status-badge--warning d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-triangle-exclamation"></i>Router Offline, Connection Online</span>';
+                const dot = '<i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>';
+                const badge = (cls, icon, text) =>
+                    '<span class="status-badge status-badge--' + cls + ' py-0 px-2" style="font-size:0.75rem;"><i class="fas ' + icon + '"></i> ' + text + '</span>';
+                const OK = 'success', BAD = 'danger', WARN = 'warning', NEU = 'neutral';
+
+                // --- Layer 1: Mini PC bridge (our side). Is our view even live?
+                const bridgeEl = document.getElementById('link-bridge');
+                if (bridgeEl) {
+                    if (link.bridge === 'Online') {
+                        const seen = link.bridge_total
+                            ? link.bridge_reached + '/' + link.bridge_total + ' routers answered ' + link.bridge_age + 's ago'
+                            : '';
+                        bridgeEl.innerHTML = '<span class="text-success fw-semibold">' + dot + 'Online</span>' +
+                            (seen ? '<small class="text-muted ms-1">' + seen + '</small>' : '');
+                    } else if (link.bridge === 'Stale') {
+                        bridgeEl.innerHTML = badge(WARN, 'fa-clock', 'Stale ' + link.bridge_age + 's');
+                    } else if (link.bridge === 'Offline') {
+                        bridgeEl.innerHTML = badge(BAD, 'fa-circle', 'Offline ' + link.bridge_age + 's');
                     } else {
-                        if (liveMtRow) liveMtRow.classList.add('active-offline-row-highlight');
-                        statusContainer.innerHTML = '<span class="status-badge status-badge--danger d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Fully Offline</span>';
+                        bridgeEl.innerHTML = badge(NEU, 'fa-question-circle', 'Waiting for first poll');
                     }
                 }
 
-                // Update Profile Header status DOTS in Real-Time.
-                // These render as small state dots (not stacked badges); the id
-                // is the JS hook, so only className/innerHTML change.
-                const hdrRouterBadge = document.getElementById('hdr-router-badge');
-                if (hdrRouterBadge) {
-                    const rOn = data.router_status === 'Online';
-                    const rWarn = data.router_status === 'Unknown';
-                    hdrRouterBadge.className = 'status-badge gt-conn-dot gt-conn-dot--' + (rOn ? 'online' : (rWarn ? 'warning' : 'offline')) +
-                        ' status-badge--' + (rOn ? 'success' : (rWarn ? 'warning' : 'danger'));
-                    hdrRouterBadge.title = 'MikroTik Router: ' + data.router_status;
-                    hdrRouterBadge.innerHTML = '';
+                // --- Layer 2: MikroTik. Unreachable vs No Internet are DIFFERENT faults.
+                const routerEl = document.getElementById('link-router');
+                if (routerEl) {
+                    if (link.router === 'Online') routerEl.innerHTML = '<span class="text-success fw-semibold">' + dot + 'Online</span>';
+                    else if (link.router === 'No Internet') routerEl.innerHTML = badge(BAD, 'fa-plug-circle-xmark', 'No Internet');
+                    else if (link.router === 'Unreachable') routerEl.innerHTML = badge(BAD, 'fa-unlink', 'Unreachable');
+                    else routerEl.innerHTML = badge(NEU, 'fa-question-circle', 'Unknown');
                 }
 
-                const hdrConnBadge = document.getElementById('hdr-conn-badge');
-                if (hdrConnBadge) {
-                    const cOn = data.connection_status === 'Online';
-                    const cWarn = data.connection_status === 'Unknown';
-                    hdrConnBadge.className = 'status-badge gt-conn-dot gt-conn-dot--' + (cOn ? 'online' : (cWarn ? 'warning' : 'offline')) +
-                        ' status-badge--' + (cOn ? 'success' : (cWarn ? 'warning' : 'danger'));
-                    hdrConnBadge.title = 'Customer Connection: ' + data.connection_status;
-                    hdrConnBadge.innerHTML = '';
+                // --- Layer 3: the customer's own router (PPPoE session).
+                const homeEl = document.getElementById('link-home');
+                if (homeEl) {
+                    if (link.home === 'Online') homeEl.innerHTML = '<span class="text-success fw-semibold">' + dot + 'Online</span>';
+                    else if (link.home === 'Offline') homeEl.innerHTML = badge(BAD, 'fa-circle', 'Offline');
+                    else homeEl.innerHTML = badge(NEU, 'fa-question-circle', 'Unknown');
                 }
+
+                if (statusContainer) {
+                    if (link.verdict === 'healthy') {
+                        statusContainer.innerHTML = '<span class="text-success fw-semibold">' + dot + 'All Links Healthy</span>';
+                    } else if (link.layer === 'bridge') {
+                        statusContainer.innerHTML = badge(BAD, 'fa-eye-slash', 'We Are Blind');
+                    } else if (link.layer === 'router') {
+                        statusContainer.innerHTML = badge(BAD, 'fa-triangle-exclamation', 'Fault Above Customer');
+                    } else {
+                        statusContainer.innerHTML = badge(WARN, 'fa-house-circle-exclamation', 'Customer Side Fault');
+                    }
+                    if (liveMtRow) liveMtRow.classList.toggle('active-offline-row-highlight', link.verdict !== 'healthy');
+
+                    // Repaint the verdict card in place so it matches the chain.
+                    const sev = link.severity || NEU;
+                    if (verdictBox) {
+                        verdictBox.style.borderLeftColor = 'var(--status-' + sev + ')';
+                        const head = verdictBox.querySelector('.link-verdict-headline');
+                        if (head) { head.textContent = link.headline || ''; head.style.color = 'var(--status-' + sev + ')'; }
+                        const act = verdictBox.querySelector('.link-verdict-action');
+                        if (act) act.textContent = link.action || '';
+                        const iconEl = verdictBox.querySelector('i');
+                        if (iconEl) iconEl.style.color = 'var(--status-' + sev + ')';
+                        const ol = verdictBox.querySelector('.link-verdict-check');
+                        if (ol) ol.innerHTML = (link.check || []).map(function (i) { return '<li>' + i + '</li>'; }).join('');
+                    }
+                }
+
+                // Header dots: same three layers, same order as the chain.
+                // They render as small state dots (not stacked badges); the id
+                // is the JS hook, so only className/title change.
+                const dotFor = (elId, state, label) => {
+                    const el = document.getElementById(elId);
+                    if (!el) return;
+                    const ok = state === 'Online';
+                    const murky = state === 'Unknown' || state === 'Stale';
+                    el.className = 'status-badge gt-conn-dot gt-conn-dot--' + (ok ? 'online' : (murky ? 'warning' : 'offline')) +
+                        ' status-badge--' + (ok ? OK : (murky ? WARN : BAD));
+                    el.title = label + ': ' + (state || 'Unknown');
+                    el.innerHTML = '';
+                };
+                dotFor('hdr-bridge-badge', link.bridge, 'Mini PC bridge (our side)');
+                dotFor('hdr-router-badge', link.router, 'MikroTik router');
+                dotFor('hdr-home-badge', link.home, "Customer's home router");
 
                 const macEl = document.getElementById('mt-live-mac');
                 if (macEl) macEl.innerText = data.live_mac || 'N/A';

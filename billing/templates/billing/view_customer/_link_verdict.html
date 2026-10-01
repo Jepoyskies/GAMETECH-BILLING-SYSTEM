@@ -1,0 +1,23 @@
+<!-- Base Partial: Link Diagnosis Verdict -->
+{% comment %}
+  Plain-English answer to "whose fault is it?" plus the ordered checklist.
+  Read top-down: the FIRST broken link is the real fault, everything below it
+  is meaningless. Repainted live by _scripts.html from data.link_diagnosis.
+{% endcomment %}
+<div id="link-verdict"
+     class="p-3 rounded-3 mt-3"
+     style="background: var(--surface-subtle); border: 1px solid var(--border-subtle); border-left: 4px solid var(--status-{{ link.severity }});">
+    <div class="d-flex align-items-start gap-2 mb-2">
+        <i class="fas {% if link.verdict == 'healthy' %}fa-circle-check{% elif link.severity == 'warning' %}fa-house-circle-exclamation{% else %}fa-triangle-exclamation{% endif %} mt-1"
+           style="color: var(--status-{{ link.severity }});"></i>
+        <div>
+            <h6 class="link-verdict-headline fw-bold mb-1" style="font-size:0.88rem; color: var(--status-{{ link.severity }});">{{ link.headline }}</h6>
+            <p class="link-verdict-action mb-0" style="font-size:0.8rem; color: var(--text-secondary);">{{ link.action }}</p>
+        </div>
+    </div>
+    <hr class="my-2" style="border-color: var(--border-subtle); opacity: 1;">
+    <div class="fw-bold mb-1 text-uppercase" style="font-size:0.68rem; letter-spacing:0.05em; color: var(--text-muted);">What to check</div>
+    <ol class="link-verdict-check mb-0 ps-3" style="font-size:0.8rem; color: var(--text-secondary);">
+        {% for item in link.check %}<li>{{ item }}</li>{% endfor %}
+    </ol>
+</div>

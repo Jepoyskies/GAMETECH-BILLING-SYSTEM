@@ -710,12 +710,27 @@ class Customer(models.Model):
         return 'Unpaid'
 
     @property
+    def link_diagnosis(self):
+        """Three-layer link diagnosis (Mini PC -> MikroTik -> Home Router).
+
+        Returns the FIRST broken link plus a plain-English verdict telling staff
+        whose fault it is and exactly what to check. See billing/diagnostics.py.
+        """
+        from billing.diagnostics import diagnose_link
+        return diagnose_link(self)
+
+    @property
     def router_status(self):
-        """Returns 'Online' if the MikroTik router is reachable and has uplink, 'Offline' if not, or 'Unknown' if router is unreachable."""
+        """Returns 'Online' if the MikroTik router is reachable and has uplink, 'Offline' if not, or 'Unknown' if we cannot tell."""
         if not self.mikrotik_device:
             return 'Offline'
         from django.core.cache import cache
+        from billing.diagnostics import get_bridge_status
         if cache.get(f'router_unreachable_{self.mikrotik_device.id}'):
+            return 'Unknown'
+        # Our own bridge is down -> we are blind, not the router. Never report
+        # "Offline" from a vantage point we cannot see from.
+        if get_bridge_status()['status'] != 'Online':
             return 'Unknown'
         live_data = cache.get('live_monitoring_data') or {}
         for router in live_data.get('routers', []):
@@ -725,11 +740,15 @@ class Customer(models.Model):
 
     @property
     def connection_status(self):
-        """Returns 'Online' if the customer's PPPoE session is active (internet reaching them), 'Offline' if not, or 'Unknown' if router is unreachable."""
+        """Returns 'Online' if the customer's PPPoE session is active (internet reaching them), 'Offline' if not, or 'Unknown' if we cannot see the router."""
         if not self.pppoe_username:
             return 'Offline'
         from django.core.cache import cache
+        from billing.diagnostics import get_bridge_status
         if self.mikrotik_device and cache.get(f'router_unreachable_{self.mikrotik_device.id}'):
+            return 'Unknown'
+        # Same blindness guard: no fresh poll means no verdict on the session.
+        if get_bridge_status()['status'] != 'Online':
             return 'Unknown'
         active_users = cache.get('active_pppoe_usernames_set') or set()
         return 'Online' if self.pppoe_username.lower() in {str(u).lower() for u in active_users} else 'Offline'
