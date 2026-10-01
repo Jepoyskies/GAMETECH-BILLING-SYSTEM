@@ -186,11 +186,8 @@ class Command(BaseCommand):
                 is_test_data=False,
             )
             self._normalise_user(user, name)
-            SystemLog.objects.create(
-                user="Staff",
-                action=f"Created Agent profile '{name}' and linked portal login (Username: {user.username})",
-                ip_address="",
-            )
+            self._log("billing_agent", agent.id, name, user.username,
+                      f"Created Agent profile and linked portal login for {user.username} <{email}>")
             return True, f"created Agent id={agent.id} '{name}' <{email}> -> {user.username}"
         return True, f"would create Agent '{name}' <{email}> -> {user.username}"
 
@@ -221,13 +218,28 @@ class Command(BaseCommand):
                 is_available=True,
             )
             self._normalise_user(user, name)
-            SystemLog.objects.create(
-                user="Staff",
-                action=f"Created Technician profile '{name}' and linked portal login (Username: {user.username})",
-                ip_address="",
-            )
+            self._log("dispatch_technician", tech.id, name, user.username,
+                      f"Created Technician profile and linked portal login for {user.username} (team unassigned)")
             return True, f"created Technician id={tech.id} '{name}' -> {user.username} (team unassigned)"
         return True, f"would create Technician '{name}' -> {user.username} (team unassigned)"
+
+    def _log(self, table_name, record_id, target_name, changed_by, detail):
+        """
+        SystemLog.action is a CharField(max_length=50) holding a verb like
+        ADD/UPDATE/DELETE, so the human-readable detail belongs in new_data.
+        Audit logging must never abort the migration, so failures are swallowed.
+        """
+        try:
+            SystemLog.objects.create(
+                table_name=table_name,
+                record_id=str(record_id),
+                action="CREATE",
+                changed_by=changed_by,
+                target_name=target_name,
+                new_data=detail,
+            )
+        except Exception as exc:  # pragma: no cover - audit is best-effort
+            self.stderr.write(self.style.WARNING(f"  (SystemLog write skipped: {exc})"))
 
     def _normalise_user(self, user, name):
         """
