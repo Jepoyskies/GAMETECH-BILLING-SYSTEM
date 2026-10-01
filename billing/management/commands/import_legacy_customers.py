@@ -454,10 +454,6 @@ class Command(BaseCommand):
                         existing = Customer.objects.filter(**lookup).only(
                             "id", "portal_password_hash", "installed_at"
                         ).first()
-                        if existing and existing.portal_password_hash:
-                            keep_portal_hash = existing.portal_password_hash
-                        else:
-                            keep_portal_hash = make_password(self.generate_portal_password())
 
                         if dry_run:
                             masked_user = username[:3] + "***" if username and len(username) > 3 else username
@@ -469,6 +465,11 @@ class Command(BaseCommand):
                             continue
 
                         # Build defaults for update_or_create
+                        if existing and existing.portal_password_hash:
+                            keep_portal_hash = existing.portal_password_hash
+                        else:
+                            keep_portal_hash = make_password(self.generate_portal_password())
+
                         defaults = {
                             "account_type": acct_obj,
                             "plan": plan_obj,
