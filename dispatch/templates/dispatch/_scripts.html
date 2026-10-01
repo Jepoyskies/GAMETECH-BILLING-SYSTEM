@@ -782,7 +782,9 @@
         }
 
         // -------------------------------------------------------------
-        // FEATURE: Generate portal credentials (no SMS — shown once for staff)
+        // FEATURE: Post-Installation Welcome SMS (one-time, at install only)
+        //   Sends the SMS, and also shows the credentials on screen so staff
+        //   can read them out if the text does not arrive.
         // -------------------------------------------------------------
         document.addEventListener('click', function(e) {
             const btn = e.target.closest('.btn-send-welcome-sms');
@@ -791,8 +793,7 @@
                 const ticketId = btn.dataset.id;
                 const client = btn.dataset.client || 'customer';
 
-                if (!confirm('Generate a new 7-day temporary portal password for ' + client +
-                             '? It will be shown once so you can relay it. No SMS will be sent.')) return;
+                if (!confirm('Send portal login credentials via SMS to ' + client + '?')) return;
 
                 btn.disabled = true;
                 const originalHtml = btn.innerHTML;
@@ -808,12 +809,13 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Generated';
+                        btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Welcome SMS Sent';
+                        showBriefToast('Welcome SMS sent to ' + client + '!');
                         showPortalCredentialModal(data);
                     } else {
                         btn.disabled = false;
                         btn.innerHTML = originalHtml;
-                        alert('Failed: ' + (data.error || 'Unknown error'));
+                        alert('SMS failed: ' + (data.error || 'Unknown error'));
                     }
                 })
                 .catch(err => {
@@ -839,7 +841,7 @@
                           <div class="gt-modal-icon"><i class="fas fa-key"></i></div>
                           <div>
                             <h5 class="modal-title">Temporary Portal Password</h5>
-                            <div class="gt-field-help mt-1">Relay these credentials to ${data.customer_name || 'the customer'}.</div>
+                            <div class="gt-field-help mt-1">SMS sent. Read these out if the text does not arrive.</div>
                           </div>
                         </div>
                         <button type="button" class="gt-icon-btn" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
@@ -848,6 +850,9 @@
                         <div class="gt-callout gt-callout--warning flex-wrap mb-3">
                           <i class="fas fa-exclamation-triangle"></i>
                           <span class="flex-grow-1">Shown once and never stored in plain text. Copy it now — closing this dialog discards it.</span>
+                        </div>
+                        <div class="gt-callout gt-callout--info flex-wrap mb-3">
+                          <i class="fas fa-sms"></i>
                         </div>
                         <div class="mb-3">
                           <label class="form-label">Username</label>
