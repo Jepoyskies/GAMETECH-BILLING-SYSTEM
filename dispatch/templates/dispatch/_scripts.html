@@ -782,7 +782,7 @@
         }
 
         // -------------------------------------------------------------
-        // FEATURE: Post-Installation Welcome SMS
+        // FEATURE: Generate portal credentials (no SMS — shown once for staff)
         // -------------------------------------------------------------
         document.addEventListener('click', function(e) {
             const btn = e.target.closest('.btn-send-welcome-sms');
@@ -791,9 +791,12 @@
                 const ticketId = btn.dataset.id;
                 const client = btn.dataset.client || 'customer';
 
+                if (!confirm('Generate a new 7-day temporary portal password for ' + client +
+                             '? It will be shown once so you can relay it. No SMS will be sent.')) return;
+
                 btn.disabled = true;
                 const originalHtml = btn.innerHTML;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Sending...';
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Generating...';
 
                 fetch(`/dispatch/api/tickets/${ticketId}/send-welcome-sms/`, {
                     method: 'POST',
@@ -805,14 +808,12 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        btn.disabled = true;
-                        btn.className = btn.className.replace('btn-outline-success', 'btn-success').replace('btn-primary', 'btn-success');
-                        btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Welcome SMS Sent';
-                        showBriefToast('Welcome SMS sent successfully to ' + client + '!');
+                        btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Generated';
+                        showPortalCredentialModal(data);
                     } else {
                         btn.disabled = false;
                         btn.innerHTML = originalHtml;
-                        alert('SMS failed: ' + (data.error || 'Unknown error'));
+                        alert('Failed: ' + (data.error || 'Unknown error'));
                     }
                 })
                 .catch(err => {
@@ -822,6 +823,67 @@
                 });
             }
         });
+
+        // One-shot on-screen reveal of the generated portal password.
+        function showPortalCredentialModal(data) {
+            const existing = document.getElementById('gtPortalCredentialModal');
+            if (existing) existing.remove();
+
+            const wrap = document.createElement('div');
+            wrap.innerHTML = `
+                <div class="modal fade" id="gtPortalCredentialModal" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-dialog-centered gt-modal-scroll">
+                    <div class="modal-content gt-modal-card">
+                      <div class="modal-header">
+                        <div class="d-flex align-items-center gap-3">
+                          <div class="gt-modal-icon"><i class="fas fa-key"></i></div>
+                          <div>
+                            <h5 class="modal-title">Temporary Portal Password</h5>
+                            <div class="gt-field-help mt-1">Relay these credentials to ${data.customer_name || 'the customer'}.</div>
+                          </div>
+                        </div>
+                        <button type="button" class="gt-icon-btn" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
+                      </div>
+                      <div class="modal-body">
+                        <div class="gt-callout gt-callout--warning flex-wrap mb-3">
+                          <i class="fas fa-exclamation-triangle"></i>
+                          <span class="flex-grow-1">Shown once and never stored in plain text. Copy it now — closing this dialog discards it.</span>
+                        </div>
+                        <div class="mb-3">
+                          <label class="form-label">Username</label>
+                          <div class="font-monospace fw-bold" id="gtCredUser">${data.username || ''}</div>
+                        </div>
+                        <div class="mb-2">
+                          <label class="form-label">Temporary Password</label>
+                          <div class="font-monospace fw-bold fs-5" id="gtCredPass">${data.temp_password || ''}</div>
+                          <div class="gt-field-help">Valid 7 days. The customer is prompted to set a new password on first login.</div>
+                        </div>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="gt-btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="gt-btn-primary" id="gtCredCopy">
+                          <i class="far fa-copy me-1"></i>Copy Credentials
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>`;
+            document.body.appendChild(wrap);
+
+            const modalEl = document.getElementById('gtPortalCredentialModal');
+            const credText = 'Username: ' + (data.username || '') + '\nPassword: ' + (data.temp_password || '');
+
+            document.getElementById('gtCredCopy').addEventListener('click', function () {
+                navigator.clipboard.writeText(credText);
+            });
+
+            // Destroy on close so the password is purged from the DOM.
+            modalEl.addEventListener('hidden.bs.modal', function () {
+                modalEl.remove();
+            });
+
+            new bootstrap.Modal(modalEl).show();
+        }
     });
 
     // ─────────────────────────────────────────────
