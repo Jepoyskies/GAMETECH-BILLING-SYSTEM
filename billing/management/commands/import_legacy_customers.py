@@ -298,6 +298,21 @@ class Command(BaseCommand):
             # PASS 2: Import devices, account types, plans, and customers
             self.stdout.write(self.style.SUCCESS("Pass 2: Importing data..."))
             processed_customers = 0
+
+            # Devices FIRST. Rows arrive in file order and a mysqldump happily
+            # emits `customers` before `mikrotik_devices`, which would leave every
+            # customer with mikrotik_device=NULL (and invisible to router sync).
+            for table, row in self.iter_insert_rows(sql_file_path):
+                if table == "mikrotik_devices" and len(row) >= 6 and not dry_run:
+                    self.get_or_create_device(
+                        device_map, row[1], row[2], row[3], row[4], row[5]
+                    )
+                elif table == "account_type" and len(row) >= 2 and not dry_run:
+                    self.get_or_create_account_type(account_type_map, row[1])
+
+            if device_map:
+                self.stdout.write(f"  Devices ready: {', '.join(device_map)}")
+
             for table, row in self.iter_insert_rows(sql_file_path):
                     # Field mapping below is POSITIONAL (row[N]), so a dump with a
                     # different column count would either IndexError or silently

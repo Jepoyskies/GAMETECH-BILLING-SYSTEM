@@ -10,7 +10,15 @@ logger = logging.getLogger(__name__)
 class Command(BaseCommand):
     help = "Automatically reconciles Mikrotik routers with the Django database source of truth."
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Report what WOULD change on each router without writing anything.",
+        )
+
     def handle(self, *args, **kwargs):
+        dry_run = kwargs.get("dry_run", False)
         devices = MikrotikDevice.objects.all()
 
         if not devices.exists():
@@ -18,6 +26,14 @@ class Command(BaseCommand):
                 self.style.WARNING("No routers found. Skipping reconciliation.")
             )
             return
+
+        if dry_run:
+            self.stdout.write(
+                self.style.WARNING(
+                    "DRY RUN -- no router writes will be made. Review the plan, "
+                    "then re-run without --dry-run."
+                )
+            )
 
         for device in devices:
             self.stdout.write(
@@ -62,6 +78,12 @@ class Command(BaseCommand):
 
                     if uname not in router_dict:
                         # MISSING ON ROUTER -> PUSH
+                        if dry_run:
+                            self.stdout.write(
+                                f"[DRY] Would create on router: {uname} "
+                                f"(profile={target_profile})"
+                            )
+                            continue
                         res = api.add_pppoe_user(
                             name=uname,
                             password=customer.pppoe_password,
@@ -97,6 +119,18 @@ class Command(BaseCommand):
                         # but if profile or password changes, we push the full update.
 
                         if needs_update:
+                            if dry_run:
+                                drift = []
+                                if r_user.get("password") != customer.pppoe_password:
+                                    drift.append("password")
+                                if r_user.get("profile") != target_profile:
+                                    drift.append("profile")
+                                self.stdout.write(
+                                    self.style.WARNING(
+                                        f"[DRY] Would OVERWRITE {', '.join(drift)} on router: {uname}"
+                                    )
+                                )
+                                continue
                             res = api.add_pppoe_user(
                                 name=uname,
                                 password=customer.pppoe_password,
