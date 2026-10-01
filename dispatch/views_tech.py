@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.contrib import messages
 from django.utils import timezone
+from django.db.models import Q
 
 from dispatch.models import JobTicket, JobTicketHistory, Technician, CallAttemptLog, AuditLog
 from dispatch.utils import log_audit
@@ -63,6 +64,66 @@ def technician_mobile_view(request):
         'all_techs': all_techs,
         'viewing_all': bool(is_staff and not hasattr(request.user, 'technician') and tech is None),
     })
+
+
+@login_required
+def technician_dashboard(request):
+    """
+    Per-technician Field Dashboard (mobile-first landing page after login).
+
+    Isolation contract: a technician only ever sees a job order once staff has
+    confirmed the dispatch ticket AND picked the team + the specific person
+    (i.e. the ticket appears in the ticket's `technicians` M2M). Uses the exact
+    same filter as technician_mobile_view so the dashboard and the job list can
+    never drift apart. Technicians cannot see, claim, or self-assign anything.
+
+    Staff/Admin may preview any technician with ?tech_id=<id>.
+    """
+    tech = None
+    is_staff = request.user.is_staff or request.user.is_superuser
+
+    if hasattr(request.user, 'technician'):
+        tech = request.user.technician
+    else:
+        tech = Technician.objects.filter(user=request.user).first()
+
+    if not tech and is_staff and request.GET.get('tech_id'):
+        tech = Technician.objects.filter(id=request.GET['tech_id']).first()
+
+    if not tech and not is_staff:
+        messages.error(request, "Access restricted: You do not have an active Technician profile.")
+        return redirect("dashboard")
+
+    my_tickets = JobTicket.objects.filter(technicians=tech).select_related('customer')
+
+    today = timezone.localdate()
+    active = my_tickets.filter(status__in=['ASSIGNED', 'IN_PROGRESS'])
+
+    context = {
+        'technician': tech,
+        'is_staff_preview': is_staff and not hasattr(request.user, 'technician'),
+        'all_techs': Technician.objects.all() if is_staff else None,
+
+        # KPI tiles
+        'kpi_active': active.count(),
+        'kpi_today': active.filter(scheduled_date=today).count(),
+        'kpi_overdue': active.filter(scheduled_date__lt=today).count(),
+        'kpi_in_progress': active.filter(status='IN_PROGRESS').count(),
+        'kpi_done_today': my_tickets.filter(
+            Q(status__in=['COMPLETED', 'QA_PASSED', 'APPROVED'])
+            & (Q(finished_at__date=today) | Q(done_at__date=today))
+        ).count(),
+        'kpi_awaiting_qa': my_tickets.filter(status='COMPLETED').count(),
+
+        # Lists
+        'today_tickets': active.filter(scheduled_date=today).order_by('scheduled_time'),
+        'upcoming_tickets': active.filter(scheduled_date__gt=today).order_by('scheduled_date', 'scheduled_time'),
+        'overdue_tickets': active.filter(scheduled_date__lt=today).order_by('scheduled_date'),
+        'recent_done': my_tickets.filter(
+            status__in=['COMPLETED', 'QA_PASSED', 'APPROVED']
+        ).order_by('-finished_at')[:5],
+    }
+    return render(request, "dispatch/pipeline/tech_dashboard.html", context)
 
 
 @login_required

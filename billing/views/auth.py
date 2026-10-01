@@ -255,6 +255,34 @@ def view_agent(request, agent_id):
     )
 
 
+def resolve_landing_url(user):
+    """
+    Per-persona landing router used by every post-login redirect.
+
+    - Staff / Admin / CSR / Dispatch  -> main system dashboard.
+    - Agent                           -> own Agent Portal (own shell, own page).
+    - Technician                      -> own Field dashboard (own shell, own page).
+
+    Persona shells stay thin: they are a HOME, not a permission bypass. The Role
+    Editor matrix (`role_required` / `action_required`) still governs which
+    modules each role may open.
+    """
+    if user.is_staff or user.is_superuser:
+        return "dashboard"
+    if hasattr(user, "agent_profile"):
+        return "agent_dashboard"
+
+    from dispatch.models import Technician
+
+    if (
+        getattr(user, "role", "") == "Technician"
+        or Technician.objects.filter(user=user).exists()
+    ):
+        return "technician_dashboard"
+
+    return "dashboard"
+
+
 @login_required
 def profile_view(request):
     return render(request, "billing/profile.html")
@@ -270,9 +298,7 @@ def unified_login_view(request):
     import re
 
     if request.user.is_authenticated:
-        if hasattr(request.user, "agent_profile") and not request.user.is_staff:
-            return redirect("agent_dashboard")
-        return redirect("dashboard")
+        return redirect(resolve_landing_url(request.user))
     if request.session.get("customer_id"):
         return redirect("customer_portal:portal_dashboard")
 
@@ -296,11 +322,8 @@ def unified_login_view(request):
         if user is not None:
             clear_login_failures(u, ip)
             login(request, user)
-            if hasattr(user, "agent_profile") and not user.is_staff:
-                next_url = request.POST.get("next") or request.GET.get("next")
-                return redirect(next_url if next_url else "agent_dashboard")
             next_url = request.POST.get("next") or request.GET.get("next")
-            return redirect(next_url if next_url else "dashboard")
+            return redirect(next_url if next_url else resolve_landing_url(user))
 
         # 2. Try Customer Login (username or phone ONLY; no full_name; check portal_password_hash)
         clean_digits = re.sub(r"\D", "", u)

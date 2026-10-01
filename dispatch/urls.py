@@ -28,6 +28,7 @@ urlpatterns = [
     path('pipeline/2-assignment/undispatch/<int:ticket_id>/', views_queue.api_undispatch_ticket, name='dispatch_undispatch'),
     path('pipeline/3-mobile-tech/', views_tech.technician_mobile_view, name='technician_mobile_ui'),
     path('my-jobs/', views_tech.technician_mobile_view, name='technician_my_jobs'),
+    path('tech-dashboard/', views_tech.technician_dashboard, name='technician_dashboard'),
     path('pipeline/4-qa/', views_approval.dispatch_qa, name='dispatch_qa'),
     path('pipeline/5-approval/', views_approval.dispatch_approval, name='dispatch_approval'),
     path('admin-summary/', views_approval.dispatch_admin_summary, name='dispatch_admin_summary'),

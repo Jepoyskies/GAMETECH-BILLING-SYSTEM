@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>{% block title %}Field Portal | Gametech Unli Fiber{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ft-gold: #fbae1a;
+            --ft-blue: #3533cd;
+            --ft-bg: #0f172a;
+            --ft-card: #1e293b;
+            --ft-border: rgba(255, 255, 255, 0.08);
+            --ft-text: #f8fafc;
+            --ft-muted: #94a3b8;
+        }
+        body {
+            background: var(--ft-bg);
+            color: var(--ft-text);
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            padding-bottom: 88px;
+        }
+        .ft-header {
+            background: rgba(30, 41, 59, 0.9);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--ft-border);
+            position: sticky; top: 0; z-index: 1000;
+        }
+        .ft-card {
+            background: var(--ft-card);
+            border: 1px solid var(--ft-border);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+        }
+        /* KPI tiles - large tap-friendly numbers readable in daylight */
+        .kpi-tile {
+            background: var(--ft-card);
+            border: 1px solid var(--ft-border);
+            border-radius: 16px;
+            padding: 1rem;
+            height: 100%;
+        }
+        .kpi-tile .kpi-value {
+            font-size: 2rem; font-weight: 800; line-height: 1; letter-spacing: -1px;
+        }
+        .kpi-tile .kpi-label {
+            font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;
+            color: var(--ft-muted); font-weight: 600; margin-top: 0.4rem;
+        }
+        /* Big thumb-sized action buttons for gloved / outdoor use */
+        .ft-btn {
+            border: none; border-radius: 14px; font-weight: 700; color: #fff;
+            padding: 14px 18px; width: 100%; font-size: 1rem;
+            transition: transform .15s ease, opacity .15s ease;
+        }
+        .ft-btn:active { transform: scale(0.97); }
+        .ft-btn-gold { background: linear-gradient(135deg, #fbae1a 0%, #f97316 100%); color: #1a1206; }
+        .ft-btn-blue { background: linear-gradient(135deg, #3533cd 0%, #4f46e5 100%); }
+        .ft-btn-ghost {
+            background: transparent; border: 1px solid var(--ft-border); color: var(--ft-text);
+        }
+        .job-row {
+            border-left: 4px solid var(--ft-gold);
+        }
+        .job-row.in-progress { border-left-color: #3b82f6; }
+        .job-row.overdue { border-left-color: #ef4444; }
+        .job-row.done { border-left-color: #22c55e; }
+        /* Bottom tab bar - thumb reach on phones */
+        .ft-tabbar {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 1030;
+            background: rgba(30, 41, 59, 0.97);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid var(--ft-border);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .ft-tabbar .ft-tab {
+            flex: 1; text-align: center; padding: 10px 4px; text-decoration: none;
+            color: var(--ft-muted); font-size: 0.68rem; font-weight: 600;
+        }
+        .ft-tab i { display: block; font-size: 1.15rem; margin-bottom: 3px; }
+        .ft-tab.active { color: var(--ft-gold); }
+        .badge-soft { font-weight: 600; padding: 5px 11px; border-radius: 20px; font-size: 0.75rem; }
+        a { color: var(--ft-gold); }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <header class="ft-header py-3 px-3 mb-3">
+        <div class="container d-flex justify-content-between align-items-center">
+            <a href="{% url 'technician_dashboard' %}" class="text-decoration-none d-flex align-items-center gap-2">
+                <div class="rounded-3 d-flex align-items-center justify-content-center text-white" style="width: 38px; height: 38px; background: linear-gradient(135deg, #3533cd, #4f46e5);">
+                    <i class="fas fa-screwdriver-wrench fs-5"></i>
+                </div>
+                <div>
+                    <div class="fw-bold text-white fs-6 lh-1">GAMETECH</div>
+                    <span class="badge bg-dark text-warning border border-warning" style="font-size: 0.62rem;">FIELD PORTAL</span>
+                </div>
+            </a>
+            <div class="d-flex align-items-center gap-2">
+                <div class="text-end d-none d-sm-block">
+                    <div class="fw-bold text-white small lh-1">{{ technician.name|default:request.user.username }}</div>
+                    <span class="text-muted" style="font-size: 0.72rem;">Field Technician</span>
+                </div>
+                {% if technician.is_available %}
+                    <span class="badge bg-success badge-soft d-none d-md-inline">On Duty</span>
+                {% else %}
+                    <span class="badge bg-secondary badge-soft d-none d-md-inline">Off Duty</span>
+                {% endif %}
+                <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm rounded-pill px-3" title="Sign Out">
+                    <i class="fas fa-sign-out-alt me-1"></i><span class="d-none d-sm-inline">Logout</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container px-3">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show border-2 rounded-3 shadow-sm mb-3" role="alert">
+                    <i class="fas {% if message.tags == 'error' %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %} me-2"></i>
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <nav class="ft-tabbar d-flex">
+        <a class="ft-tab {% block tab_dashboard %}active{% endblock %}" href="{% url 'technician_dashboard' %}">
+            <i class="fas fa-gauge"></i>Dashboard
+        </a>
+        <a class="ft-tab {% block tab_jobs %}active{% endblock %}" href="{% url 'technician_my_jobs' %}">
+            <i class="fas fa-list-check"></i>My Jobs
+        </a>
+        <a class="ft-tab" href="{% url 'profile' %}">
+            <i class="fas fa-user"></i>Profile
+        </a>
+    </nav>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
