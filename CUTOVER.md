@@ -36,11 +36,48 @@ It prints a **CUTOVER SUMMARY** at the end. That summary is the whole checklist.
 
 ```
 ! N customers have no plan        -> billing price may be wrong
-! N customers have NO expiry date -> see /customers/?filter=no_expiry
-! N router(s) with no customers   -> delete at /devices/devices/
+! N customers have NO expiry date -> see /settings/import/
+! N router(s) with no customers   -> check /devices/devices/
 ```
 
 These are the **only** things needing a human decision. Everything else is done.
+
+---
+
+## The review queue: `/settings/import/`
+
+The same page has a **"Needs Your Decision"** panel listing every customer with
+something questionable, grouped by kind:
+
+| Group | What it means |
+|---|---|
+| No expiration date | Cannot be auto-suspended or auto-renewed |
+| Suspicious future date | Expiry years out - usually junk from the old system |
+| Lapsed | Past due - normal churn, worth a look before going live |
+| No plan assigned | No price, so billing cannot compute a charge |
+| Not linked to a router | Cannot be verified against any MikroTik |
+| No PPPoE password | Cannot authenticate |
+
+**Nothing is ever auto-deleted.** The old system is the source of truth, so every
+record stays until a human decides: keep it active, give it a date, or archive it.
+Pending installs are excluded on purpose - no expiry date is correct for them.
+
+---
+
+## Plans come from the export, not a guess table
+
+Plans are resolved from the export's own `service_plans` rows using **price and
+speed together**, because the catalogue is a product matrix where two lines
+share a price:
+
+| Price | GTipid | GIMI |
+|---|---|---|
+| P1,000 | 20 Mbps | 50 Mbps |
+| P1,300 | 30 Mbps | 75 Mbps |
+| P1,500 | 50 Mbps | 100 Mbps |
+
+Anything with no catalogue match is created from the export's real speed and
+price. **No plan is ever created at P0.00.**
 
 ---
 

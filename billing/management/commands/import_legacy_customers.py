@@ -12,7 +12,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.utils.timezone import make_aware
 
-from billing.legacy_import import iter_rows
+from billing.legacy_import import cutover_lines, iter_rows, resolve_plan
 from billing.models import Customer, SubscriptionPlan, AccountType
 from billing.signals import (
     delete_plan_on_mikrotik,
@@ -34,14 +34,16 @@ from network_manager.models import MikrotikDevice
 # a product correctly.
 
 class Command(BaseCommand):
-    help = "Imports legacy customers from a MySQL dump file, preserving PPPoE credentials, status, and expiry dates."
+    help = ("Imports legacy customers from a MySQL/phpMyAdmin dump, preserving PPPoE "
+            "credentials, plans, status and expiry dates. Safe to re-run.")
 
     def add_arguments(self, parser):
         parser.add_argument("sql_file", type=str, help="Path to the legacy MySQL dump file")
         parser.add_argument(
             "--create-missing-plans",
             action="store_true",
-            help="Create SubscriptionPlan records for legacy plans that don't exist in the current system",
+            help="(No longer needed. Plans are always created from the export's own "
+                 "speed and price. Flag kept so existing scripts still run.)",
         )
         parser.add_argument(
             "--dry-run",
@@ -101,154 +103,6 @@ class Command(BaseCommand):
         obj, created = AccountType.objects.get_or_create(type_name=type_name)
         account_type_map[type_name] = obj
         return obj
-
-    @staticmethod
-    def _mbps(value):
-        """Normalise a speed to a float: '20 Mbps', '20M', '20' -> 20.0."""
-        if value is None:
-            return None
-        digits = "".join(ch for ch in str(value) if ch.isdigit() or ch == ".")
-        try:
-            return float(digits)
-        except ValueError:
-            return None
-
-    def get_or_create_plan(self, plan_map, legacy_plan_name, create_missing=False, spec=None):
-        """Resolve a legacy plan_name to a SubscriptionPlan using the export's
-        own speed and price -- not a hand-maintained guess table.
-
-        The catalogue is a product matrix where two lines share a price:
-            P1,000 -> GTipid Fiber 1000 (20 Mbps) | GIMI Home Fiber 1000 (50 Mbps)
-            P1,300 -> GTipid Fiber 1300 (30 Mbps) | GIMI Home Fiber 1300 (75 Mbps)
-            P1,500 -> GTipid Fiber 1500 (50 Mbps) | GIMI Home Fiber 1500 (100 Mbps)
-        So price alone is not enough to identify a product -- the speed decides
-        which of the two lines it is. Matching on (price, speed) is what keeps
-        a 50 Mbps / P1,000 subscriber on GIMI rather than GTipid.
-        """
-        if not legacy_plan_name:
-            return None
-        if legacy_plan_name in plan_map:
-            return plan_map[legacy_plan_name]
-
-        # 1. Exact name -- a plan already created from a previous import.
-        plan = SubscriptionPlan.objects.filter(name__iexact=legacy_plan_name).first()
-        if plan:
-            plan_map[legacy_plan_name] = plan
-            return plan
-
-        spec = spec or {}
-        want_price = spec.get("price")
-        want_down = self._mbps(spec.get("speed_down")) or self._mbps(spec.get("speed_up"))
-
-        # 2. Match on (price, speed) against the live catalogue.
-        if want_price is not None:
-            try:
-                price_val = float(want_price)
-            except (TypeError, ValueError):
-                price_val = None
-            if price_val is not None:
-                scored = []
-                for candidate in SubscriptionPlan.objects.filter(price=price_val):
-                    cand_down = self._mbps(candidate.speed_down) or self._mbps(candidate.speed_up)
-                    if want_down is None or cand_down is None:
-                        distance = 0.0
-                    else:
-                        distance = abs(cand_down - want_down)
-                    if want_down is not None and cand_down is not None and distance > 0.01:
-                        continue
-                    # Prefer the real product catalogue over plans that were
-                    # themselves created from a legacy export, then the closest
-                    # speed. Ordering must be explicit or the match is arbitrary.
-                    is_legacy = candidate.name.lower().startswith("pppoe")
-                    scored.append((is_legacy, distance, candidate.name, candidate))
-                if scored:
-                    scored.sort(key=lambda t: (t[0], t[1], t[2]))
-                    plan_map[legacy_plan_name] = scored[0][3]
-                    return scored[0][3]
-
-        # 3. No hand-maintained mapping. The export is the source of truth, so a
-        #    legacy plan with no catalogue match is created from the export's own
-        #    speed and price rather than guessed at. PLAN_MAPPING used to stand
-        #    in here and it was wrong: it sent pppoe-15m_800 (15 Mbps, P800) to
-        #    "GTipid Fiber 1300" (30 Mbps, P1,300) and pppoe-15m_700 (10 Mbps,
-        #    P700) to "GTipid Fiber 1000" (20 Mbps, P1,000).
-        if spec:
-            up = self._mbps(spec.get("speed_up"))
-            down = self._mbps(spec.get("speed_down"))
-            try:
-                price_val = float(want_price) if want_price is not None else 0.00
-            except (TypeError, ValueError):
-                price_val = 0.00
-            try:
-                validity = int(spec.get("validity_days") or 30)
-            except (TypeError, ValueError):
-                validity = 30
-            plan, _ = SubscriptionPlan.objects.get_or_create(
-                name=legacy_plan_name,
-                defaults={
-                    "speed_up": f"{up:g} Mbps" if up else "",
-                    "speed_down": f"{down:g} Mbps" if down else "",
-                    "price": price_val,
-                    "validity_days": validity,
-                    "description": f"Restored from legacy export: {legacy_plan_name}",
-                },
-            )
-            plan_map[legacy_plan_name] = plan
-            return plan
-
-        return None
-
-    def print_cutover_summary(self, created_count, updated_count, pppoe_creds):
-        """Plain-language report so nobody has to count rows by hand."""
-        now = timezone.now()
-        all_c = Customer.objects.all()
-
-        self.stdout.write("")
-        self.stdout.write(self.style.SUCCESS("=" * 62))
-        self.stdout.write(self.style.SUCCESS("  CUTOVER SUMMARY"))
-        self.stdout.write(self.style.SUCCESS("=" * 62))
-        self.stdout.write(f"  New customers added     : {created_count}")
-        self.stdout.write(f"  Existing updated        : {updated_count}")
-        self.stdout.write(f"  Customers in system now : {all_c.count()}")
-        self.stdout.write("")
-        self.stdout.write(f"  PPPoE passwords matched : {len(pppoe_creds)}")
-        self.stdout.write(f"  Still valid (paid)      : {all_c.filter(expires_at__gt=now).count()}")
-        self.stdout.write(f"  Lapsed (needs review)   : {all_c.filter(expires_at__lt=now).count()}")
-
-        no_expiry = all_c.filter(expires_at__isnull=True, installation_status="installed") \
-                         .exclude(status__in=["pending", "closed_not_installed"])
-        self.stdout.write(f"  NO expiry date on file  : {no_expiry.count()}")
-
-        no_plan = all_c.filter(plan__isnull=True).count()
-        no_pass = all_c.exclude(pppoe_password="").exclude(pppoe_password__isnull=True).count()
-        self.stdout.write(f"  Passwords on file      : {no_pass}")
-        self.stdout.write(f"  Missing a plan         : {no_plan}")
-        self.stdout.write(f"  Routers registered     : {MikrotikDevice.objects.count()}")
-
-        # Attention flags -- the only things a human must actually decide.
-        self.stdout.write("")
-        if no_plan:
-            self.stdout.write(self.style.WARNING(
-                f"  ! {no_plan} customers have no plan. Billing price may be wrong."
-            ))
-        if no_expiry.exists():
-            self.stdout.write(self.style.WARNING(
-                f"  ! {no_expiry.count()} customers have NO expiry date. They can never be"
-            ))
-            self.stdout.write(self.style.WARNING(
-                "    auto-suspended or auto-renewed. Visible at /customers/?filter=no_expiry"
-            ))
-        stale = MikrotikDevice.objects.filter(customer__isnull=True)
-        if stale.exists():
-            self.stdout.write(self.style.WARNING(
-                f"  ! {stale.count()} router(s) with no customers attached: "
-                f"{', '.join(d.device_name for d in stale)}"
-            ))
-            self.stdout.write(self.style.WARNING(
-                "    Delete them at /devices/devices/ so nothing polls dead hardware."
-            ))
-        self.stdout.write(self.style.SUCCESS("=" * 62))
-        self.stdout.write("")
 
     def handle(self, *args, **kwargs):
         sql_file_path = kwargs["sql_file"]
@@ -349,8 +203,8 @@ class Command(BaseCommand):
                         # Get or create related objects
                         if not dry_run:
                             acct_obj = self.get_or_create_account_type(account_type_map, acct_type_str) if acct_type_str else None
-                            plan_obj = self.get_or_create_plan(
-                                plan_map, plan_name_str, create_missing_plans,
+                            plan_obj = resolve_plan(
+                                plan_map, plan_name_str,
                                 spec=plan_specs.get(plan_name_str),
                             )
                             device_obj = device_map.get(device_name_str) if device_name_str else None
@@ -470,7 +324,8 @@ class Command(BaseCommand):
                 ))
 
             if not dry_run:
-                self.print_cutover_summary(created_count, updated_count, pppoe_creds)
+                for line in cutover_lines(created_count, updated_count, len(pppoe_creds)):
+                    self.stdout.write(line)
 
             # Save import report for the web interface
             report = {
