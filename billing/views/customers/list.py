@@ -15,7 +15,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.contrib.auth.models import User
 from django.db.models import Count, Sum, Q, Max
-from django.core.paginator import Paginator
+
 import json
 from datetime import timedelta, datetime
 from billing.models import (
@@ -177,10 +177,11 @@ def customer_list(request):
         ),
     ).order_by("status_order", "full_name")
 
-    # Pagination
-    paginator = Paginator(customers, 25)
-    page_number = request.GET.get("page")
-    page_obj = paginator.get_page(page_number)
+    # NOTE: do NOT reintroduce server-side pagination here.
+    # The table is a client-side DataTable, so capping the queryset server-side
+    # silently limited search (and the router/barangay column filters) to those
+    # 25 rows -- "Juan Dela Cruz" could not be found among 2,041 customers.
+    # DataTables already pages client-side; feed it every row.
 
     devices = MikrotikDevice.objects.all().order_by("device_name")
     from billing.models import Barangay, SystemLog
@@ -194,7 +195,7 @@ def customer_list(request):
         request,
         "billing/customer_list.html",
         {
-            "customers": page_obj,
+            "customers": customers,
             "devices": devices,
             "barangays": barangays,
             "filter_type": filter_type,
