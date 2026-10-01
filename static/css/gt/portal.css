@@ -1,0 +1,494 @@
+/* =====================================================================
+   Gametech Portal Theme Layer  (Agent Portal + Technician Field Portal)
+   =====================================================================
+   WHY THIS FILE EXISTS
+   The Agent and Technician portals are standalone shells (no admin
+   sidebar) but they must still LOOK like Gametech. Previously each one
+   hand-rolled its own dark palette, which meant:
+     - wrong font (Plus Jakarta Sans instead of Poppins)
+     - wrong dark surface (#1e293b grey-slate instead of #141a3d
+       indigo-navy, which tokens.css explicitly calls out as "NOT grey-slate")
+     - dark-only, so unreadable for field staff in daylight
+     - an off-system accent (agent sky-blue) and stray purple
+
+   This file consumes the real tokens from gt/tokens.css so both portals
+   inherit the system theme, and layers ONLY the shell chrome (topbar, tab
+   bar, KPI tiles, persona stripe) on top.
+
+   Loaded AFTER tokens.css. Consumes tokens only - never redefines them.
+
+   PERSONA ACCENT
+   One shared look; a thin accent stripe keeps the two portals
+   distinguishable on a phone. Agent = gold, Technician = indigo.
+   ===================================================================== */
+
+/* ---------- 1. Persona accent ---------------------------------------- */
+
+.portal {
+  /* Agent = Gametech gold. Technician = Gametech indigo. */
+  --persona-accent:        var(--gt-gold);
+  --persona-accent-strong: var(--gt-gold-bright);
+  --persona-accent-ink:    var(--gt-gold-ink);
+  --persona-accent-soft:   var(--gt-gold-soft);
+  --persona-accent-border: var(--gt-gold-border);
+
+  /* Shell geometry, from the system scale (not invented). */
+  --pt-radius:      var(--gt-radius-card);
+  --pt-radius-sm:   var(--gt-radius-md);
+  --pt-radius-pill: var(--gt-radius-pill);
+
+  /* Back-compat aliases so existing markup using the old shell variable
+     names (--ft-*, --gt-primary/--gt-card-bg/--gt-bg-card) resolves to real
+     theme tokens instead of a hand-picked colour. This is what lets the
+     dashboards keep their inline var() references while still theming. */
+  --ft-gold:   var(--gt-gold);
+  --ft-blue:   var(--gt-indigo);
+  --ft-bg:     var(--surface-page);
+  --ft-card:   var(--surface-card);
+  --ft-border: var(--border-subtle);
+  --ft-text:   var(--text-primary);
+  --ft-muted:  var(--text-muted);
+
+  --gt-primary:     var(--persona-accent);
+  --gt-primary-dark:var(--persona-accent-strong);
+  --gt-bg:          var(--surface-page);
+  --gt-card-bg:     var(--surface-card);
+  --gt-text:        var(--text-primary);
+  --gt-border:      var(--border-subtle);
+}
+
+.portal[data-persona="technician"] {
+  --persona-accent:        var(--gt-indigo);
+  --persona-accent-strong: var(--gt-navy-mid);
+  --persona-accent-ink:    #FFFFFF;
+  --persona-accent-soft:   rgba(27, 73, 237, 0.12);
+  --persona-accent-border: rgba(27, 73, 237, 0.38);
+}
+
+/* ---------- 2. Page + typography ------------------------------------- */
+
+body.portal {
+  background: var(--surface-page);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  /* Room for the fixed thumb tab bar. */
+  padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  -webkit-text-size-adjust: 100%;
+}
+
+body.portal h1, body.portal h2, body.portal h3,
+body.portal h4, body.portal h5, body.portal h6 {
+  font-family: var(--font-heading);
+  color: var(--text-primary);
+  letter-spacing: var(--gt-ls-tight);
+}
+
+body.portal a { color: var(--gt-navy-mid); }
+html.dark-mode body.portal a { color: var(--gt-gold-bright); }
+
+/* ---------- 3. Persona stripe ---------------------------------------- */
+/* The one distinguishing flourish. Thin bar under the topbar. */
+
+.portal-stripe {
+  height: 4px;
+  background: var(--persona-accent);
+  width: 100%;
+}
+
+/* ---------- 4. Cards -------------------------------------------------- */
+
+.pt-card,
+.agent-card,
+.ft-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--pt-radius);
+  box-shadow: var(--shadow-card);
+  color: var(--text-primary);
+}
+
+.pt-card-pad { padding: var(--gt-sp-5); }
+
+/* Accent-edged card (the "this is my portal" cue). */
+.pt-card-accent { border-left: 4px solid var(--persona-accent); }
+
+/* ---------- 5. KPI tiles --------------------------------------------- */
+
+.pt-kpi {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--pt-radius);
+  padding: var(--gt-sp-4);
+  height: 100%;
+}
+
+.pt-kpi-label {
+  font-size: var(--gt-fs-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--gt-ls-label);
+  color: var(--text-muted);
+  font-weight: 700;
+  margin-top: var(--gt-sp-1);
+}
+
+/* Big display numeral, per the Dashboard's numeral treatment. */
+.pt-kpi-value {
+  font-size: var(--gt-fs-2xl);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.5px;
+  color: var(--text-primary);
+}
+
+.pt-kpi-accent   .pt-kpi-value { color: var(--persona-accent); }
+.pt-kpi-success  .pt-kpi-value { color: var(--accent-green-text); }
+.pt-kpi-danger   .pt-kpi-value { color: var(--accent-red-text); }
+.pt-kpi-info     .pt-kpi-value { color: var(--gt-navy-mid); }
+html.dark-mode .pt-kpi-success .pt-kpi-value { color: var(--accent-green); }
+html.dark-mode .pt-kpi-danger  .pt-kpi-value { color: var(--accent-red); }
+html.dark-mode .pt-kpi-info    .pt-kpi-value { color: #60A5FA; }
+
+/* ---------- 6. Buttons ------------------------------------------------ */
+
+.pt-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: var(--gt-radius-input);
+  font-weight: 700;
+  font-size: var(--gt-fs-base);
+  padding: 13px 18px;
+  width: 100%;
+  cursor: pointer;
+  transition: transform .15s ease, opacity .15s ease, box-shadow .15s ease;
+}
+.pt-btn:active { transform: scale(.975); }
+.pt-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.pt-btn-accent {
+  background: var(--gt-gold-gradient);
+  color: var(--gt-gold-ink);
+  box-shadow: 0 2px 10px -1px var(--gt-gold-glow);
+}
+.pt-btn-accent:hover { opacity: .95; color: var(--gt-gold-ink); }
+
+.portal[data-persona="technician"] .pt-btn-accent {
+  background: var(--gt-hero-gradient);
+  color: #fff;
+  box-shadow: 0 2px 10px -1px rgba(27, 73, 237, .35);
+}
+
+.pt-btn-ghost {
+  background: transparent;
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+.pt-btn-ghost:hover { background: var(--surface-hover); color: var(--text-primary); }
+
+/* Auto-width variant for header actions. */
+.pt-btn-inline { width: auto; }
+
+/* ---------- 7. Top bar ------------------------------------------------ */
+
+.pt-header {
+  background: var(--surface-card);
+  border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+}
+
+.pt-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.pt-brand-mark {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--gt-radius-md);
+  background: var(--gt-hero-gradient);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  flex: 0 0 auto;
+}
+
+.pt-brand-name {
+  font-weight: 800;
+  font-size: var(--gt-fs-md);
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+.pt-portal-tag {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: var(--gt-radius-pill);
+  color: var(--persona-accent);
+  background: var(--persona-accent-soft);
+  border: 1px solid var(--persona-accent-border);
+}
+
+.pt-identity-name {
+  font-weight: 700;
+  font-size: var(--gt-fs-sm);
+  line-height: 1.1;
+  color: var(--text-primary);
+}
+.pt-identity-role {
+  font-size: var(--gt-fs-xs);
+  color: var(--text-muted);
+}
+
+/* Theme toggle - mirrors the admin topbar control. */
+.pt-theme-toggle {
+  border: 1px solid var(--border-strong);
+  background: var(--surface-subtle);
+  color: var(--text-primary);
+  border-radius: var(--gt-radius-pill);
+  padding: 6px 12px;
+  font-size: var(--gt-fs-xs);
+  font-weight: 700;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pt-theme-toggle:hover { background: var(--surface-hover); }
+html.dark-mode .pt-theme-toggle .icon-sun  { display: inline; }
+html.dark-mode .pt-theme-toggle .icon-moon { display: none; }
+.pt-theme-toggle .icon-sun  { display: none; }
+.pt-theme-toggle .icon-moon { display: inline; }
+
+/* ---------- 8. Bottom tab bar (thumb reach) -------------------------- */
+
+.pt-tabbar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 1040;
+  background: var(--surface-card);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.pt-tab {
+  flex: 1;
+  text-align: center;
+  padding: 9px 4px;
+  text-decoration: none;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.pt-tab i { display: block; font-size: 1.1rem; margin-bottom: 2px; }
+.pt-tab.active { color: var(--persona-accent); }
+.pt-tab:hover { color: var(--text-primary); }
+
+/* ---------- 9. Job / list rows --------------------------------------- */
+
+.pt-row {
+  display: block;
+  text-decoration: none;
+  color: var(--text-primary);
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-divider);
+  border-left: 4px solid var(--persona-accent);
+  border-radius: var(--gt-radius-md);
+  padding: var(--gt-sp-3);
+  margin-bottom: var(--gt-sp-2);
+}
+.pt-row:hover { background: var(--surface-hover); color: var(--text-primary); }
+
+.pt-row-info     { border-left-color: #38BDF8; }
+.pt-row-progress { border-left-color: var(--gt-navy-mid); }
+.pt-row-overdue  { border-left-color: var(--accent-red); }
+.pt-row-done     { border-left-color: var(--accent-green); }
+
+.pt-row-title { font-weight: 700; font-size: var(--gt-fs-base); }
+.pt-row-meta  { color: var(--text-muted); font-size: var(--gt-fs-sm); }
+
+/* ---------- 10. Badges / pills ---------------------------------------- */
+
+.pt-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--gt-fs-xs);
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--gt-radius-pill);
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.pt-badge-accent  { background: var(--persona-accent-soft); color: var(--persona-accent); border-color: var(--persona-accent-border); }
+.pt-badge-success { background: var(--accent-green-subtle); color: var(--accent-green-text); }
+.pt-badge-danger  { background: var(--accent-red-subtle);   color: var(--accent-red-text); }
+.pt-badge-warning { background: var(--gt-gold-soft);        color: var(--gt-gold-text); }
+.pt-badge-info    { background: rgba(27,73,237,.12);        color: var(--gt-navy-mid); }
+.pt-badge-muted   { background: var(--surface-subtle);      color: var(--text-muted); border-color: var(--border-divider); }
+
+html.dark-mode .pt-badge-success { color: var(--accent-green); }
+html.dark-mode .pt-badge-danger  { color: var(--accent-red); }
+html.dark-mode .pt-badge-warning { color: var(--gt-gold-bright); }
+html.dark-mode .pt-badge-info    { color: #93A5FB; }
+
+/* ---------- 11. Progress ---------------------------------------------- */
+
+.pt-progress {
+  height: 8px;
+  border-radius: var(--gt-radius-pill);
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-divider);
+  overflow: hidden;
+}
+.pt-progress-bar {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--gt-gold-gradient);
+}
+.portal[data-persona="technician"] .pt-progress-bar { background: var(--gt-hero-gradient); }
+
+/* ---------- 12. Forms ------------------------------------------------- */
+
+body.portal .form-control,
+body.portal .form-select {
+  background: var(--surface-card);
+  border: 1px solid var(--border-strong);
+  color: var(--text-primary);
+  border-radius: var(--gt-radius-input);
+  padding: 10px 14px;
+}
+body.portal .form-control:focus,
+body.portal .form-select:focus {
+  border-color: var(--persona-accent);
+  box-shadow: 0 0 0 3px var(--persona-accent-soft);
+    color: var(--text-primary);
+}
+body.portal label { color: var(--text-secondary); font-weight: 600; }
+body.portal .form-text { color: var(--text-muted); }
+
+/* Select2 / TomSelect options must not render white-on-white. */
+body.portal .ts-dropdown,
+body.portal .select2-container--default .select2-results__option { background: var(--surface-card); color: var(--text-primary); }
+body.portal .ts-dropdown .active,
+body.portal .select2-container--default .select2-results__option--highlighted[aria-selected] { background: var(--persona-accent-soft); color: var(--text-primary); }
+
+/* ---------- 13. Tables ------------------------------------------------ */
+
+body.portal .table { --bs-table-bg: transparent; --bs-table-color: var(--text-primary); }
+body.portal .table > :not(caption) > * > * { border-bottom-color: var(--border-divider); }
+
+/* =====================================================================
+   14. LEGACY BRIDGE
+   ---------------------------------------------------------------------
+   The portal templates were written dark-only and lean on Bootstrap
+   colour utilities for that (text-white, bg-dark, text-muted). Rather
+   than rewrite every line of markup, remap those utilities to theme
+   tokens INSIDE the .portal scope.
+
+   `!important` is required because Bootstrap utilities are also
+   !important. Scope is strictly `.portal`, so the admin pages are
+   untouched. Retire these as portal markup is modernised.
+   ===================================================================== */
+
+body.portal .text-white      { color: var(--text-primary) !important; }
+body.portal .text-muted      { color: var(--text-muted) !important; }
+body.portal .text-secondary  { color: var(--text-secondary) !important; }
+body.portal .bg-dark         { background-color: var(--surface-subtle) !important; }
+body.portal .bg-light        { background-color: var(--surface-subtle) !important; }
+body.portal .border-secondary,
+body.portal .border-secondary * { border-color: var(--border-divider) !important; }
+body.portal .table-dark      { --bs-table-bg: transparent; --bs-table-color: var(--text-primary); }
+body.portal .alert-success { background: var(--accent-green-subtle); border-color: var(--accent-green); color: var(--accent-green-text); }
+body.portal .alert-danger  { background: var(--accent-red-subtle);   border-color: var(--accent-red);   color: var(--accent-red-text); }
+body.portal .alert-warning { background: var(--gt-gold-soft);        border-color: var(--gt-gold-border); color: var(--gt-gold-text); }
+body.portal .btn-outline-secondary { color: var(--text-secondary); border-color: var(--border-strong); }
+
+/* Kill the stray purple the old agent dashboard hard-coded. */
+body.portal .wallet-icon {
+  background: var(--gt-gold-soft) !important;
+  color: var(--gt-gold-text) !important;
+}
+html.dark-mode body.portal .wallet-icon { color: var(--gt-gold-bright) !important; }
+
+/* ---------- 15. Back-compat aliases ---------------------------------- */
+/* The two dashboards were written against the old shells' inline <style>
+   blocks. Aliasing them here lets both pages render correctly on the new
+   theme without a risky markup rewrite. Retire as the markup modernises. */
+
+.portal .btn-primary-gt {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  background: var(--gt-gold-gradient); color: var(--gt-gold-ink); border: none;
+  font-weight: 700; border-radius: var(--gt-radius-input); padding: 12px 18px;
+  box-shadow: 0 2px 10px -1px var(--gt-gold-glow);
+}
+.portal .btn-primary-gt:hover { opacity: .95; color: var(--gt-gold-ink); }
+.portal .btn-outline-primary { border-color: var(--persona-accent); color: var(--persona-accent); }
+.portal .btn-outline-primary:hover { background: var(--persona-accent-soft); color: var(--persona-accent); }
+
+.portal .kpi-tile {
+  background: var(--surface-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--pt-radius); padding: var(--gt-sp-4); height: 100%;
+}
+.portal .kpi-value {
+  font-size: var(--gt-fs-2xl); font-weight: 800; line-height: 1;
+  letter-spacing: -0.5px; color: var(--text-primary);
+}
+.portal .kpi-label {
+  font-size: var(--gt-fs-xs); text-transform: uppercase;
+  letter-spacing: var(--gt-ls-label); color: var(--text-muted);
+  font-weight: 700; margin-top: var(--gt-sp-1);
+}
+
+.portal .ft-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: 1px solid transparent; border-radius: var(--gt-radius-input);
+  font-weight: 700; color: var(--text-primary); padding: 13px 18px;
+  width: 100%; transition: transform .15s ease, opacity .15s ease;
+}
+.portal .ft-btn:active { transform: scale(.975); }
+.portal .ft-btn-gold { background: var(--gt-gold-gradient); color: var(--gt-gold-ink); }
+.portal .ft-btn-blue { background: var(--gt-hero-gradient); color: #fff; }
+.portal .ft-btn-ghost { background: transparent; border-color: var(--border-strong); color: var(--text-primary); }
+
+.portal .job-row {
+  display: block; text-decoration: none; color: var(--text-primary);
+  background: var(--surface-subtle); border: 1px solid var(--border-divider);
+  border-left: 4px solid var(--persona-accent); border-radius: var(--gt-radius-md);
+  padding: var(--gt-sp-3); margin-bottom: var(--gt-sp-2);
+}
+.portal .job-row:hover { background: var(--surface-hover); color: var(--text-primary); }
+.portal .job-row.in-progress { border-left-color: #38BDF8; }
+.portal .job-row.overdue     { border-left-color: var(--accent-red); }
+.portal .job-row.done        { border-left-color: var(--accent-green); }
+
+.portal .badge-soft {
+  display: inline-flex; align-items: center; font-weight: 700;
+  padding: 4px 10px; border-radius: var(--gt-radius-pill);
+  font-size: var(--gt-fs-xs); white-space: nowrap;
+}
+
+/* ---------- 16. Small screens ----------------------------------------- */
+
+@media (max-width: 575.98px) {
+  .pt-btn { font-size: 0.95rem; padding: 12px 16px; }
+  .pt-card-pad { padding: var(--gt-sp-4); }
+}
+
+@media print {
+  .pt-header, .pt-tabbar, .pt-theme-toggle { display: none !important; }
+  body.portal { padding-bottom: 0; }
+}
