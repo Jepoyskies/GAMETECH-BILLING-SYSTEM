@@ -82,6 +82,10 @@ class MikrotikBase:
                 try:
                     api = self.connection.get_api()
                     cache.delete(cache_key)
+                    # Router is healthy again: reset the backoff so a later
+                    # outage starts at the short interval instead of inheriting
+                    # a 15-minute penalty from a previous one.
+                    cache.delete(cache_key + "_n")
                     if self.is_read_only:
                         return ReadOnlyApiWrapper(api, self.device.device_name)
                     return api
@@ -107,6 +111,7 @@ class MikrotikBase:
                         )
                         api = self.connection.get_api()
                         cache.delete(cache_key)
+                        cache.delete(cache_key + "_n")
                         if self.is_read_only:
                             return ReadOnlyApiWrapper(api, self.device.device_name)
                         return api
@@ -114,13 +119,31 @@ class MikrotikBase:
                         socket.setdefaulttimeout(old_timeout)
                 except Exception as retry_e:
                     self._connection_failed = True
-                    cache.set(cache_key, True, 45)
+                    self._trip_breaker(cache_key)
                     logger.error(f"Legacy Auth Failed for {self.device.device_name}: {retry_e}")
                     raise ConnectionError(f"Could not authenticate to {self.device.device_name} API. Check credentials.") from retry_e
-                    
+
             except Exception as e:
                 self._connection_failed = True
-                cache.set(cache_key, True, 45)
+                self._trip_breaker(cache_key)
                 logger.error(f"Timeout/Error connecting to Mikrotik API on {self.device.ip_address}: {e}")
                 raise ConnectionError(f"Could not connect to {self.device.device_name} API. Check IP/Port and credentials.") from e
+
+        def _trip_breaker(self, cache_key):
+            """Remember a dead router for progressively longer, and heal on success.
+
+            The TTL used to be a flat 45s. With four routers on a LAN, every
+            45 seconds the next page view re-paid a 2s socket timeout per dead
+            router, and a page that touched all of them stalled for ~8s. Worse,
+            the retry cost fell on a real user waiting for a page.
+
+            These are LAN devices: one that is unreachable stays unreachable
+            until someone physically fixes it. So the breaker now escalates
+            30s -> 2m -> 5m -> 15m (capped) and resets the moment the router
+            answers again, so recovery is still automatic and immediate.
+            """
+            attempts = (cache.get(cache_key + "_n") or 0) + 1
+            cache.set(cache_key + "_n", attempts, 900)
+            ttl = min(30 * (2 ** (attempts - 1)) if attempts < 6 else 900, 900)
+            cache.set(cache_key, True, ttl)
 
