@@ -7,6 +7,7 @@ import string
 from datetime import timedelta
 from pathlib import Path
 
+from django.contrib.auth.hashers import make_password
 from django.core.management.base import BaseCommand
 from django.db.models.signals import post_save
 from django.utils import timezone
@@ -318,7 +319,7 @@ class Command(BaseCommand):
                             masked_user = username[:3] + "***" if username and len(username) > 3 else username
                             self.stdout.write(
                                 f"  [DRY] Would import: {masked_user}, status={status_val}, "
-                                f"expires={expires_at.strftime('%Y-%m-%d %H:%M')}, "
+                                f"expires={expires_at.strftime('%Y-%m-%d %H:%M') if expires_at else 'NONE (zero-date)'}, "
                                 f"plan={plan_name_str}, device={device_name_str}"
                             )
                             continue
@@ -348,7 +349,10 @@ class Command(BaseCommand):
                             "pppoe_password": password,
                             "installation_status": "installed",
                             "is_verified": True,
-                            "portal_password": portal_password,
+                            # Hash-only storage (b756059). Storing the raw value in
+                            # the legacy column would reintroduce plaintext passwords.
+                            "portal_password_hash": make_password(portal_password),
+                            "portal_password": None,
                             "sync_status": "Synced",
                         }
 
