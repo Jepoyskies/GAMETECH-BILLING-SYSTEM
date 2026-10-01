@@ -1641,6 +1641,12 @@ ssh root@143.198.207.144 "docker logs --since 2m gametech-web 2>&1 | grep -i 'ti
 
 **Date Logged**: 2026-09-30
 
+**See it on screen now**: The customer detail page (`/customers/view/<id>/`) shows this as
+**Link Chain → 1. Mini PC = "We Are Blind"**, with `0/2 routers answered Ns ago`. Check that
+before reading logs. Before 2026-10-01 this failure made *every* subscriber display as
+**Fully Offline**, because an empty poll was read as "everyone is down" — a false accusation.
+See `billing/diagnostics.py`.
+
 ---
 
 ### ERR-080: DB Backup Button Redirects to Settings Instead of Downloading a File
