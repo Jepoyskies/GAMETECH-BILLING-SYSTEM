@@ -19,28 +19,15 @@ from network_manager.models import MikrotikDevice
 
 
 # Legacy plan name -> current SubscriptionPlan name mapping
-# Based on profiling of backup-2026-03-20_06-21-43.sql
-PLAN_MAPPING = {
-    'pppoe-20m': '20 Mbps Plan',
-    'pppoe-50m': '50 Mbps Plan',
-    'pppoe-30m': '30 Mbps Plan',
-    'pppoe-15m_800': 'GTipid Fiber 1300',
-    'pppoe-10m': '10Mbps',
-    'pppoe-15m_700': 'GTipid Fiber 1000',
-    'pppoe-50m-speedboost100': '50 Mbps Plan',
-    'pppoe-100m': '100 Mbps Plan',
-    'pppoe-50m_1300': 'GTipid Fiber 1300',
-    'pppoe-50m_1200': 'GTipid Fiber 1300',
-    'pppoe-15m_600': '5Mbps',
-    'pppoe-30m_1200': '30 Mbps Plan',
-    'pppoe-5m': '5Mbps',
-    'pppoe-50m_1400': '50 Mbps Plan',
-    'pppoe-30m-speedboost80': '30 Mbps Plan',
-    'pppoe-200m': 'Business 200 Mbps',
-    'pppoe-120m': 'Business 100 Mbps',
-}
-
 # Zero-date customers are flagged for review instead of given a default expiry
+#
+# There is deliberately NO legacy-plan mapping table here. Plans are resolved
+# from the export's own service_plans rows (real speed + real price), and
+# anything with no catalogue match is created from those same real numbers.
+# A hand-maintained table was tried and it was wrong: the catalogue is a
+# product matrix where GTipid and GIMI share a price at different speeds
+# (P1,000 = GTipid 20 Mbps | GIMI 50 Mbps), so only (price, speed) identifies
+# a product correctly.
 
 class Command(BaseCommand):
     help = "Imports legacy customers from a MySQL dump file, preserving PPPoE credentials, status, and expiry dates."
@@ -175,16 +162,13 @@ class Command(BaseCommand):
                     plan_map[legacy_plan_name] = scored[0][3]
                     return scored[0][3]
 
-        # 3. Legacy fallback for plan names the export no longer lists.
-        mapped_name = PLAN_MAPPING.get(legacy_plan_name)
-        if mapped_name:
-            plan = SubscriptionPlan.objects.filter(name__iexact=mapped_name).first()
-            if plan:
-                plan_map[legacy_plan_name] = plan
-                return plan
-
-        # 4. Create from the export's real numbers, never at price 0.
-        if create_missing:
+        # 3. No hand-maintained mapping. The export is the source of truth, so a
+        #    legacy plan with no catalogue match is created from the export's own
+        #    speed and price rather than guessed at. PLAN_MAPPING used to stand
+        #    in here and it was wrong: it sent pppoe-15m_800 (15 Mbps, P800) to
+        #    "GTipid Fiber 1300" (30 Mbps, P1,300) and pppoe-15m_700 (10 Mbps,
+        #    P700) to "GTipid Fiber 1000" (20 Mbps, P1,000).
+        if spec:
             up = self._mbps(spec.get("speed_up"))
             down = self._mbps(spec.get("speed_down"))
             try:
@@ -195,13 +179,15 @@ class Command(BaseCommand):
                 validity = int(spec.get("validity_days") or 30)
             except (TypeError, ValueError):
                 validity = 30
-            plan = SubscriptionPlan.objects.create(
+            plan, _ = SubscriptionPlan.objects.get_or_create(
                 name=legacy_plan_name,
-                speed_up=f"{up:g} Mbps" if up else "",
-                speed_down=f"{down:g} Mbps" if down else "",
-                price=price_val,
-                validity_days=validity,
-                description=f"Restored from legacy export: {legacy_plan_name}",
+                defaults={
+                    "speed_up": f"{up:g} Mbps" if up else "",
+                    "speed_down": f"{down:g} Mbps" if down else "",
+                    "price": price_val,
+                    "validity_days": validity,
+                    "description": f"Restored from legacy export: {legacy_plan_name}",
+                },
             )
             plan_map[legacy_plan_name] = plan
             return plan
@@ -340,7 +326,7 @@ class Command(BaseCommand):
 
             for table, row in all_rows:
                     if table == "service_plans":
-                        # Legacy service_plans table - we use PLAN_MAPPING instead
+                        # Handled up front: these rows are the plan catalogue.
                         continue
 
                     elif table == "customers":
