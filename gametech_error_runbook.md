@@ -2031,3 +2031,70 @@ persona split was the Technician, plus a landing router — see
 
 **Files**: `billing/views/agents.py`, `billing/templates/billing/agent_portal/`
 **Date Logged**: 2026-10-01
+
+---
+
+### ERR-089: "Role = Agent" on the Staff & Admins Page Does NOT Create an Agent — Persona Users Were Bounced Back to the Main Dashboard
+
+**Symptom**: An Agent or Technician logs in, is routed to their own portal,
+and is immediately redirected back to the main billing dashboard with
+"Your account is not linked to an Agent profile." The role badge on the Staff &
+Admins page clearly says `Agent`.
+
+**Root Cause — two parallel identity systems**:
+1. `auth_user` (Django auth) — the real login, password, `is_staff`.
+2. `SystemAdmin` (`username / full_name / email / role / status`) — the table
+   the **Staff & Admins page actually lists** (`billing/views/staff.py:39`), and
+   the source `user.role` resolves from.
+
+`user.role` is **not a field on User** — verify with:
+```python
+"role" in [f.name for f in User._meta.get_fields()]   # -> False
+```
+It is injected at runtime, with a `SystemAdmin` lookup fallback in
+`_role_allows()` (`billing/decorators.py:236-239`) and
+`has_dispatch_permission()`.
+
+The trap: the role LABEL is what `resolve_landing_url()` and `_role_allows()`
+read, but it does **not** create the business profile that actually holds work:
+- `Agent` (`User.agent_profile`) — prospects, commission ledger, payout batches
+- `Technician` (`User.technician`) — the `JobTicket.technicians` M2M assignment
+
+So `hasattr(user, "agent_profile")` is False, the view's
+`except Agent.DoesNotExist` fires, and the user is bounced.
+
+**Confirm with**:
+```python
+from billing.models import Agent
+from dispatch.models import Technician
+print(Agent.objects.count(), Agent.objects.filter(user__isnull=False).count())
+print(Technician.objects.count(), Technician.objects.filter(user__isnull=False).count())
+```
+
+**Fix**: `python manage.py link_persona_profiles` (dry run by default,
+`--apply` to write, `--unlink` to reverse). Idempotent; only touches users whose
+`SystemAdmin.role` is exactly `Agent` or `Technician`; never guesses a phone and
+never touches a password.
+
+**Two related traps found in the same pass**:
+- `is_staff` is the ONLY thing that grants `/admin/` (Django admin is routed at
+  `gametech_core/urls.py:22`). Agent and Technician accounts created as staff
+  could reach full Django admin. `link_persona_profiles` forces
+  `is_staff = False`, matching `views/auth.py:191-192`. This breaks nothing:
+  `_role_allows()` keys off `is_superuser` + `role`, never `is_staff`;
+  `staff.py` lists `SystemAdmin` rows so they stay on the Staff & Admins page.
+- `SystemLog` is `(table_name, record_id, action[max_length=50], changed_by)`.
+  `views/auth.py:204` passes `user=` / `ip_address=` and a >50 char `action`
+  inside a bare `try/except`, so **that audit entry silently never writes**.
+  Put the human-readable text in `new_data`, keep `action` a verb like `CREATE`.
+
+**Lesson**: In this codebase "role" is a label in a mirror table and a profile
+is a real row. Never treat the Staff & Admins role badge as proof that an
+Agent/Technician profile exists. A persona user is only real once the business
+profile row is linked to the User.
+
+**Files**: `billing/models.py` (`Agent`, `SystemAdmin`, `SystemLog`),
+`billing/views/auth.py`, `billing/decorators.py`, `billing/views/staff.py`,
+`billing/management/commands/link_persona_profiles.py`
+**See also**: `DECISION_LOG.md` "Persona Landing Router"
+**Date Logged**: 2026-10-01
