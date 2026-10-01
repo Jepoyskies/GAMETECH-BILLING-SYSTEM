@@ -4,6 +4,13 @@ from datetime import timedelta
 from billing.models import Customer, SystemLog, Payment
 from network_manager.services import MikrotikAPI
 
+# Above this many past-due accounts, auto-suspend refuses to run and waits
+# for a human. A handful of genuine late payers is normal and gets handled
+# automatically; hundreds means the data is wrong (bulk import, migration),
+# and a cron job must not be the thing that disconnects a third of the
+# customer base at 3am.
+BULK_SUSPEND_THRESHOLD = 50
+
 
 class Command(BaseCommand):
     help = "Auto-suspends PPPoE users whose expiration date has passed, or auto-renews them if they have Advance Payment"
@@ -15,6 +22,60 @@ class Command(BaseCommand):
         due_customers = Customer.objects.filter(
             expires_at__lte=now, status="active", installation_status="installed"
         ).exclude(status__in=["pending", "closed_not_installed"])
+
+        # --- SAFETY VALVE -------------------------------------------------
+        # A legacy import can leave hundreds of accounts flagged 'active'
+        # with a long-past expiry, because the old PHP system kept paying
+        # customers connected by hand and never cleaned up. Suspending all of
+        # them in one pass is a mass outage, not a collections action.
+        #
+        # So above BULK_SUSPEND_THRESHOLD we refuse and demand a human. Staff
+        # resolve the backlog through the "Connected, Unpaid" queue in the
+        # customers list, which is a deliberate action, not a cron accident.
+        # Below the threshold this behaves exactly as before.
+        count = due_customers.count()
+        if count > BULK_SUSPEND_THRESHOLD:
+            self.stdout.write(
+                self.style.ERROR(
+                    f"ABORTED: {count} active accounts are past due, above the "
+                    f"auto-suspend limit of {BULK_SUSPEND_THRESHOLD}.\n"
+                    f"  Nothing was suspended and nothing was changed.\n"
+                    f"  This is almost always a bulk import or a lapsed migration, "
+                    f"not {count} individual late payers.\n"
+                    f"  Review them in Customers -> 'Connected, Unpaid' and "
+                    f"reconnect or suspend them deliberately."
+                )
+            )
+            SystemLog.objects.create(
+                table_name="Customer",
+                record_id="0",
+                action="AUTO_SUSPEND_ABORTED",
+                changed_by="System (Auto-Suspend)",
+                target_name="auto_suspend",
+                old_data="",
+                new_data=(
+                    f"Aborted: {count} accounts past due exceeds the limit of "
+                    f"{BULK_SUSPEND_THRESHOLD}. No customers were suspended."
+                ),
+            )
+            return
+
+        # --- CONNECTIVITY GATE -------------------------------------------
+        # Never suspend a customer we cannot actually see. If the routers are
+        # unreachable we have no idea who is really online, and cutting people
+        # off blind is exactly the failure this guards against.
+        from billing.customer_state import network_visibility
+
+        network_visible, _ = network_visibility()
+        if not network_visible:
+            self.stdout.write(
+                self.style.WARNING(
+                    "ABORTED: the routers are not reachable, so we cannot tell "
+                    "who is genuinely online. Suspending blind would cut off "
+                    "paying customers. No customers were suspended."
+                )
+            )
+            return
 
         suspended_count = 0
         renewed_count = 0
