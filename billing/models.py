@@ -155,6 +155,7 @@ class StaffRole(models.Model):
     can_access_network_ops = models.BooleanField(default=False)
     can_access_cignal_play = models.BooleanField(default=False)
     can_access_dispatch = models.BooleanField(default=False)
+    can_access_agents = models.BooleanField(default=False)
     can_access_administration = models.BooleanField(default=False)
     subtab_permissions = models.JSONField(default=dict, blank=True)
 
@@ -169,6 +170,7 @@ class StaffRole(models.Model):
             "network_ops": self.can_access_network_ops,
             "cignal_play": self.can_access_cignal_play,
             "dispatch": self.can_access_dispatch,
+            "agents": self.can_access_agents,
             "administration": self.can_access_administration,
         }
         if not module_perm_map.get(module, False):
@@ -219,7 +221,8 @@ class StaffRole(models.Model):
         subtab_specs = {
             "billing": ["dashboard", "customers", "subscriptions", "plans", "payments", "payment_logs"],
             "network_ops": ["live_monitoring", "devices", "active_users", "geomap", "winbox", "downdetector", "speedtest"],
-            "dispatch": ["dispatch_dashboard", "dispatch_operation", "dispatch_monitoring", "internet_install", "cignal_install", "client_concerns", "agents", "management", "audit_log", "geo_map"],
+            "dispatch": ["dispatch_dashboard", "dispatch_operation", "dispatch_monitoring", "internet_install", "cignal_install", "client_concerns", "management", "audit_log", "geo_map"],
+            "agents": ["agents"],
             "cignal_play": ["cignal_dashboard", "cignal_applications", "cignal_logs"],
             "administration": ["logs", "settings", "admin_panel", "improvement_requests"],
         }

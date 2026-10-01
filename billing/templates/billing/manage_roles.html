@@ -356,12 +356,15 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Module master switch reveals BOTH the subtab panel and the action panel.
     // data-target may hold a space-separated list of panel selectors.
-    document.querySelectorAll('.module-toggle').forEach(function(toggle) {
-        toggle.addEventListener('change', function() {
-            (this.getAttribute('data-target') || '').split(/\s+/).filter(Boolean).forEach(function(sel) {
-                document.querySelectorAll(sel).forEach(function(panel) {
-                    panel.style.display = this.checked ? 'block' : 'none';
-                }, this);
+    // Delegated on document so it also works for elements rendered later,
+    // and `toggle` is captured in the closure — `this` is NOT the checkbox
+    // inside the nested forEach callbacks.
+    document.addEventListener('change', function(e) {
+        var toggle = e.target.closest ? e.target.closest('.module-toggle') : null;
+        if (!toggle) { return; }
+        (toggle.getAttribute('data-target') || '').split(/\s+/).filter(Boolean).forEach(function(sel) {
+            document.querySelectorAll(sel).forEach(function(panel) {
+                panel.style.display = toggle.checked ? 'block' : 'none';
             });
         });
     });

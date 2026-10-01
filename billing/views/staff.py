@@ -108,10 +108,18 @@ ROLE_MODULE_SPECS = [
             ("internet_install", "Internet Install", "fa-plug"),
             ("cignal_install", "Cignal Install", "fa-tv"),
             ("client_concerns", "Client Concerns", "fa-headset"),
-            ("agents", "Agents", "fa-user-tie"),
             ("management", "Management", "fa-sliders"),
             ("audit_log", "Audit Log", "fa-history"),
             ("geo_map", "Field Map", "fa-map-marked-alt"),
+        ]
+    },
+    {
+        "key": "agents",
+        "name": "Agents",
+        "icon": "fa-user-tie",
+        "flag": "can_access_agents",
+        "subtabs": [
+            ("agents", "Sales Agents", "fa-user-tie"),
         ]
     },
     {
@@ -151,14 +159,16 @@ def manage_roles(request):
         can_access_network_ops = "can_access_network_ops" in request.POST
         can_access_cignal_play = "can_access_cignal_play" in request.POST
         can_access_dispatch = "can_access_dispatch" in request.POST
+        can_access_agents = "can_access_agents" in request.POST
         can_access_administration = "can_access_administration" in request.POST
 
-        def parse_subtabs(post_data, can_bill, can_net, can_cig, can_disp, can_adm):
+        def parse_subtabs(post_data, can_bill, can_net, can_cig, can_disp, can_agents, can_adm):
             module_flags = {
                 "billing": can_bill,
                 "network_ops": can_net,
                 "cignal_play": can_cig,
                 "dispatch": can_disp,
+                "agents": can_agents,
                 "administration": can_adm,
             }
             res = {}
@@ -183,6 +193,7 @@ def manage_roles(request):
             can_access_network_ops,
             can_access_cignal_play,
             can_access_dispatch,
+            can_access_agents,
             can_access_administration
         )
 
@@ -216,6 +227,7 @@ def manage_roles(request):
             "network_ops": can_access_network_ops,
             "cignal_play": can_access_cignal_play,
             "dispatch": can_access_dispatch,
+            "agents": can_access_agents,
             "administration": can_access_administration,
         }
 
@@ -259,6 +271,7 @@ def manage_roles(request):
                         can_access_network_ops=can_access_network_ops,
                         can_access_cignal_play=can_access_cignal_play,
                         can_access_dispatch=can_access_dispatch,
+                        can_access_agents=can_access_agents,
                         can_access_administration=can_access_administration,
                         subtab_permissions=subtab_perms
                     )
@@ -274,6 +287,7 @@ def manage_roles(request):
                         role.can_access_network_ops = can_access_network_ops
                         role.can_access_cignal_play = can_access_cignal_play
                         role.can_access_dispatch = can_access_dispatch
+                        role.can_access_agents = can_access_agents
                         role.can_access_administration = can_access_administration
                         role.subtab_permissions = subtab_perms
                         role.save()

@@ -297,8 +297,8 @@ class CustomerAgentHistoryAdmin(admin.ModelAdmin):
 
 @admin.register(StaffRole)
 class StaffRoleAdmin(admin.ModelAdmin):
-    list_display = ("name", "can_access_billing", "can_access_network_ops", "can_access_cignal_play", "can_access_dispatch", "can_access_administration")
-    list_filter = ("can_access_billing", "can_access_network_ops", "can_access_cignal_play", "can_access_dispatch", "can_access_administration")
+    list_display = ("name", "can_access_billing", "can_access_network_ops", "can_access_cignal_play", "can_access_dispatch", "can_access_agents", "can_access_administration")
+    list_filter = ("can_access_billing", "can_access_network_ops", "can_access_cignal_play", "can_access_dispatch", "can_access_agents", "can_access_administration")
     search_fields = ("name",)
 
 

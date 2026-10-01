@@ -54,7 +54,7 @@ def action_required(module, action, subtab=None, extra_roles=None):
     When a role has no `_actions` block configured it falls back to the
     subtab grant, so existing roles keep working untouched.
 
-        @action_required("dispatch", "create", subtab="agents")
+        @action_required("agents", "create", subtab="agents")
         def add_agent(request): ...
     """
     def decorator(view_func):

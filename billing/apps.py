@@ -47,6 +47,7 @@ class BillingConfig(AppConfig):
                 can_access_network_ops = True
                 can_access_cignal_play = True
                 can_access_dispatch = True
+                can_access_agents = True
                 can_access_administration = True
 
                 def has_subtab_perm(self, module, subtab):
@@ -67,6 +68,7 @@ class BillingConfig(AppConfig):
                 can_access_network_ops = False
                 can_access_cignal_play = False
                 can_access_dispatch = False
+                can_access_agents = False
                 can_access_administration = False
 
                 def has_subtab_perm(self, module, subtab):
