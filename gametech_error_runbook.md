@@ -2207,3 +2207,148 @@ when auditing money movement, the audit write is the feature, not a side effect.
 **Files**: `billing/views/agents.py`, `billing/views/auth.py`,
 `billing/management/commands/audit_systemlog_calls.py`, `billing/security.py`
 **Date Logged**: 2026-10-01
+
+### ERR-092: "1,240 Paid but Offline" Was A False Alarm - A Router Outage Masqueraded As 1,240 Customer Outages
+
+**Symptom**: The Customers Directory KPI strip showed **Paid/Offline = 1240** and
+every visible row was badged "Paid, Offline". That reads as "almost your whole
+customer base is down", and the correct staff reaction is to dispatch 1,240
+technicians.
+
+**It was false. Not one customer was actually offline.** All three production
+routers were timing out at the time, so zero PPPoE sessions existed to observe.
+
+**Root cause** — `billing/views/customers/list.py` compared `pppoe_username`
+against the `active_pppoe_usernames_set` cache and treated *any* username not in
+that set as "offline". When the routers are unreachable the set is **empty**, so
+the empty set was read as "nobody is online" instead of "we could not look".
+
+Two secondary defects compounded it:
+- The seven KPI cards used independent `Q()` filters that **overlapped**, so
+  they did not reconcile: 852 + 388 + 1240 + 402 + 389 + 16 = **2,047** against
+  a total of **2,041**.
+- `customer.connection_status` / `router_status` already had a blindness guard in
+  `billing/models.py`, but the KPI counters bypassed the properties entirely and
+  never got that guard.
+
+**Fix**: new `billing/customer_state.py` is now the single source of truth.
+`network_visibility()` returns `connected_usernames = None` when we cannot see
+the network, and `hardware_state()` maps `None` to `"unknown"`, never
+`"offline"`. One resolve pass produces both the counts and the rows, so a KPI
+can never disagree with its own list. The page shows a banner while blind.
+
+**Guard against recurrence**: `_assert_filters_cover_all_states()` raises at
+import time if any `Lifecycle` lacks a `FILTERS` entry. That guard caught a real
+regression during this work - `paid_unknown` had no filter, so 1,991 customers
+vanished from the totals. It now fails loudly at startup instead of silently
+misreporting.
+
+**Verify**: KPI cards must sum to Total. Currently `SUM=2041 TOTAL=2041`.
+
+**Files**: `billing/customer_state.py`, `billing/views/customers/list.py`,
+`billing/templates/billing/customer_list/_hero.html`,
+`billing/templates/billing/customer_list/_filters.html`,
+`billing/templates/billing/customer_list/_customer_status.html`
+**Date Logged**: 2026-10-02
+
+### ERR-093: Routers Were Written To Unattended - Cron Suspended 751 Customers And Reconcile Pushed Secrets Every 30 Min
+
+**Symptom**: After importing 2,038 customers from the legacy phpMyAdmin dump, two
+scheduled jobs were one config flip away from a mass outage:
+
+1. `auto-suspend` ran **hourly** and targeted every account with
+   `expires_at <= now AND status='active'`. That matched **751** customers
+   (739 on `patag`, 12 on `uptown`). Only `ROUTER_MODE=read_only` was stopping it.
+2. `auto-reconcile-routers` ran **every 30 minutes** with no arguments and would
+   create/overwrite PPPoE secrets on live routers unattended.
+3. Separately, `billing/signals.py` pushed a customer to their router on **every
+   `post_save`** - so the instant staff pressed Save, the secret was written to
+   the live router. No confirmation, no diff, no undo.
+
+**Why the 751 was the real danger**: the legacy export marked all 751 as
+`status='active'` while their expiry was already past. The old PHP system had no
+way to represent "expired on paper, still connected" - staff kept taking cash and
+never cleaned up. Those are most likely **paying customers**. Suspending them is
+a collections action, not a cron side effect.
+
+**Note the trap**: `Payment` had 1 row and `outstanding_balance` was 0 for all
+2,041 customers. That is *missing* data, not *zero* debt. And the importer
+hardcoded `is_verified=True` and `sync_status="Synced"` (lines 293/298), so
+unverified rows looked verified. Never read those flags as payment evidence.
+
+**Fix**
+- Removed `auto-suspend-hourly` and `auto-reconcile-routers-30min` from
+  `CELERY_BEAT_SCHEDULE`. Nothing on the schedule may write to a router.
+- `auto_suspend` now aborts above `BULK_SUSPEND_THRESHOLD = 50` and logs
+  `AUTO_SUSPEND_ABORTED`, and refuses outright when `network_visibility()` is
+  false. Verified: it reports
+  `ABORTED: 751 ... No customers were suspended.`
+- `auto_reconcile_routers` requires `--apply`. Bare invocation is a read-only
+  report; the old unattended cron call became a no-op.
+- `sync_customer_to_mikrotik` is now **opt-in**. Without
+  `instance.push_to_router = True` it calls `_stage_pending()` and writes
+  nothing. Verified with a spy: plain create = 0 router writes; explicit push = 1.
+- `sync_status` gained `Unverified` and `Pending`, and the default is now
+  `Unverified` (migration `0067`) which reset the 1,290 falsely-"Synced" rows.
+
+**Deliberate staff actions are unaffected**: suspend, reconnect, router transfer
+and payment-activate all call the router API directly rather than relying on
+`save()`, so they still write immediately.
+
+**Files**: `gametech_core/settings.py`, `billing/signals.py`,
+`billing/models.py`, `billing/management/commands/auto_suspend.py`,
+`billing/management/commands/auto_reconcile_routers.py`,
+`billing/management/commands/auto_sync_failed.py`,
+`billing/migrations/0067_customer_sync_status_unverified.py`
+**Date Logged**: 2026-10-02
+
+### ERR-094: The Router's `disabled` Flag Was Never Read - The Sync Manager Could Not Tell A Cut-Off Customer From A Live One
+
+**Symptom**: The Sync Manager listed router secrets with profile, comment,
+password and an "Active" indicator, but no enabled/disabled state. Every secret
+looked equally healthy, so the one question that matters for collections - "is
+this person actually cut off?" - had no answer on the page.
+
+**Root cause**: `MikrotikAPI.get_all_pppoe_users()` in
+`network_manager/sync_services.py` built its output dict from `name`, `password`,
+`profile`, `comment`, `is_active`, `is_suspicious` and **never read
+`s.get("disabled")`**, even though the MikroTik `/ppp/secret` resource returns it
+as the string `"true"`/`"false"`.
+
+`is_active` was also the wrong signal for this question: it reflects
+`/ppp/active`, i.e. *who is dialled in right now*, which is empty at 3am. A
+customer who is suspended and a customer who is quietly paying both show as
+"not active".
+
+**Proof from the live router** (`Mikrotik A`, 192.168.88.2) after the fix:
+
+| name | enabled | disabled | active | profile |
+|---|---|---|---|---|
+| jane_pppoe | False | True | False | default |
+| john_pppoe | False | True | False | default |
+| Jillian | True | False | False | default |
+| delacruz_juan | True | False | **True** | GTipid Fiber 1000 |
+
+Before the fix all four rows were indistinguishable.
+
+**Fix**
+- `get_all_pppoe_users()` now normalises `disabled` to booleans and returns both
+  `disabled` and `is_enabled`.
+- Added a `No Profile or Password - cannot authenticate` suspicious reason.
+  `Jillian` is enabled but has **neither** a profile nor a password, so it can
+  never authenticate no matter what its comment claims.
+- `sync_manager` now computes `router_disabled`, `connected_but_unpaid` and
+  `state_mismatch`, splitting matched users into `synced` vs `needs_review`:
+  - system says lapsed, router says enabled -> **Connected, Unpaid**. Collect.
+    Do NOT suspend. This is the state the old PHP system could not represent.
+  - system says fine, router says disabled -> a paying customer is cut off.
+    Reconnect.
+
+**Caveat on comments**: `delacruz_juan` carries the old system's comment format
+(`paid Sep 23, 2026 exp Nov 19`) and is flagged `Missing/Invalid Comment`
+because the heuristic expects `Name | Barangay`. That flag is a false positive
+here - the comment is real data from the legacy router and is worth reading
+before "fixing" it.
+
+**Files**: `network_manager/sync_services.py`, `network_manager/views/sync.py`
+**Date Logged**: 2026-10-02
