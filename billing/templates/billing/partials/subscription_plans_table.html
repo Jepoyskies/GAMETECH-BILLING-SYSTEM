@@ -119,9 +119,16 @@
           {# col 2 – Client #}
           <td class="subs-td">
             <div class="fw-semibold" style="font-size: 14px; color: var(--text-primary);">{{ customer.full_name }}</div>
-            <div class="text-muted" style="font-size: 12px; margin-top: 2px;">@{{ customer.pppoe_username|default:"—" }}</div>
-            {% if customer.account_type %}
-              <div class="text-muted" style="font-size: 12px; margin-top: 2px;">{{ customer.account_type.type_name }}</div>
+            <div class="text-muted" style="font-size: 12px; margin-top: 2px;">@{{ customer.pppoe_username|default:"—" }}{% if customer.account_type %} · {{ customer.account_type.type_name }}{% endif %}</div>
+            {% if customer.phone %}
+              <div class="text-muted" style="font-size: 12px; margin-top: 2px;">
+                <i class="fas fa-phone" style="width:12px; opacity:0.5;"></i> {{ customer.phone }}
+              </div>
+            {% endif %}
+            {% if customer.address %}
+              <div class="text-muted" style="font-size: 11px; margin-top: 2px; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ customer.address }}">
+                <i class="fas fa-map-marker-alt" style="width:12px; opacity:0.5;"></i> {{ customer.address }}
+              </div>
             {% endif %}
           </td>
 
@@ -141,6 +148,7 @@
             <div class="text-muted" style="font-size: 13px; margin-top: 4px;">
               {% if customer.plan %}
                 {{ customer.plan.name }}
+                <span style="color: var(--text-muted); font-size: 11px;">— ₱{{ customer.plan.price|floatformat:0 }}/mo</span>
               {% else %}
                 <span class="fst-italic">No Plan</span>
               {% endif %}
@@ -166,15 +174,29 @@
                 <span class="status-badge status-badge--neutral"><span class="status-dot"></span> Offline</span>
               {% endif %}
             </div>
-            <div class="text-muted" style="font-size: 12px; margin-top: 2px;">
-              {% if customer.mt_connected %}
-                {% if customer.mt_uptime %}Up {{ customer.mt_uptime }}{% else %}Connected{% endif %}
-              {% elif not customer.mt_downtime or "1970" in customer.mt_downtime %}
-                Never connected
-              {% else %}
-                Down: {{ customer.mt_downtime }}
+            {% if customer.mt_connected %}
+              {% if customer.mt_ip %}
+                <div class="text-muted" style="font-size: 11px; margin-top: 3px; font-family: monospace;">
+                  <i class="fas fa-network-wired" style="width:12px; opacity:0.5;"></i> {{ customer.mt_ip }}
+                </div>
               {% endif %}
-            </div>
+              {% if customer.mt_mac %}
+                <div class="text-muted" style="font-size: 11px; margin-top: 1px; font-family: monospace;">
+                  <i class="fas fa-ethernet" style="width:12px; opacity:0.5;"></i> {{ customer.mt_mac }}
+                </div>
+              {% endif %}
+              <div class="text-muted" style="font-size: 11px; margin-top: 1px;">
+                {% if customer.mt_uptime %}Up {{ customer.mt_uptime }}{% else %}Connected{% endif %}
+              </div>
+            {% else %}
+              <div class="text-muted" style="font-size: 12px; margin-top: 2px;">
+                {% if not customer.mt_downtime or "1970" in customer.mt_downtime %}
+                  Never connected
+                {% else %}
+                  Down: {{ customer.mt_downtime }}
+                {% endif %}
+              </div>
+            {% endif %}
           </td>
 
           {# col 5 – Actions #}

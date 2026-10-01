@@ -66,7 +66,7 @@ def subscription_plans_data_api(request):
     """Customer Subscriptions Dashboard API Data (Returns HTML Partial)."""
     # 1. Base Query
     customers = (
-        Customer.objects.select_related("plan", "mikrotik_device")
+        Customer.objects.select_related("plan", "mikrotik_device", "account_type")
         .filter(
             pppoe_username__isnull=False,
         )
@@ -128,7 +128,11 @@ def subscription_plans_data_api(request):
             for au in active_users:
                 name = au.get("name")
                 if name:
-                    connected_usernames[name] = {"uptime": au.get("uptime", "")}
+                    connected_usernames[name] = {
+                        "uptime": au.get("uptime", ""),
+                        "address": au.get("address", ""),
+                        "caller_id": au.get("caller-id", ""),
+                    }
 
             # PPP Secrets
             secrets = api.get_ppp_secrets()
@@ -239,7 +243,10 @@ def subscription_plans_data_api(request):
     # Append MT data to page objects
     for c in page_obj:
         c.mt_connected = c.pppoe_username in connected_usernames
-        c.mt_uptime = connected_usernames.get(c.pppoe_username, {}).get("uptime", "")
+        mt_info = connected_usernames.get(c.pppoe_username, {})
+        c.mt_uptime = mt_info.get("uptime", "")
+        c.mt_ip = mt_info.get("address", "")
+        c.mt_mac = mt_info.get("caller_id", "")
         c_secret = ppp_users_status.get(c.pppoe_username, {})
         c.mt_profile = c_secret.get("profile", "")
         c.mt_last_logged_out = c_secret.get("last_logged_out", "")
