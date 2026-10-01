@@ -405,7 +405,8 @@ class Command(BaseCommand):
                             "latitude": float(row[11]) if row[11] else None,
                             "longitude": float(row[12]) if row[12] else None,
                             "adjusted_by_router": row[13],
-                            "adjusted_by_referral": row[14],
+                            # row[14] (legacy `adjusted_by_referral`) has no matching
+                            # field on the current Customer model -- deliberately dropped.
                             "sms_sent_at": self.parse_datetime_safe(row[17]),
                             "mac_address": row[18],
                             "referral_received": row[20] if row[20] else "",
@@ -415,6 +416,7 @@ class Command(BaseCommand):
                             "cignalplay_adjustedby": row[26],
                             "pppoe_password": password,
                             "installation_status": "installed",
+                            "installed_at": timezone.now(),
                             "is_verified": True,
                             # Hash-only storage (b756059). Storing the raw value in
                             # the legacy column would reintroduce plaintext passwords.
