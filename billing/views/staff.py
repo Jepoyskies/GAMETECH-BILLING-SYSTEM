@@ -46,6 +46,26 @@ def staff_list(request):
     )
 
 
+# Canonical action verbs rendered as toggles in the Role Editor and stored in
+# subtab_permissions["_actions"][<module key>]. Must stay in sync with the
+# `action not in (...)` allow-list in StaffRole.has_action_perm.
+ROLE_ACTION_KEYS = ["view", "create", "edit", "delete"]
+
+ROLE_ACTION_LABELS = {
+    "view": "View",
+    "create": "Create",
+    "edit": "Edit",
+    "delete": "Delete",
+}
+
+ROLE_ACTION_ICONS = {
+    "view": "fa-eye",
+    "create": "fa-plus",
+    "edit": "fa-pen",
+    "delete": "fa-trash-alt",
+}
+
+
 ROLE_MODULE_SPECS = [
     {
         "key": "billing",
@@ -166,15 +186,59 @@ def manage_roles(request):
             can_access_administration
         )
 
-        # parse_subtabs() rebuilds the dict from scratch, which would DROP the
-        # action-level permissions living under subtab_permissions["_actions"].
-        # Preserve that key across every role edit (Phase 2 permission work).
-        if action in ("edit", "create") and role_id:
+        def parse_actions(post_data, module_flags):
+            """
+            Rebuild the _actions block from the per-module action checkboxes.
+
+            Keyed by MODULE (not subtab) — has_action_perm() reads
+            subtab_permissions["_actions"][module][action]; subtab
+            granularity is already handled by has_subtab_perm().
+
+            A module with its master switch OFF is written as an explicit
+            all-True block rather than being skipped. That keeps the block
+            complete and means re-enabling the module later does not silently
+            inherit a half-written deny set.
+            """
+            res = {}
+            for mod in ROLE_MODULE_SPECS:
+                m_key = mod["key"]
+                res[m_key] = {
+                    act: (
+                        (True if not module_flags.get(m_key, False)
+                         else f"act_{m_key}_{act}" in post_data)
+                    )
+                    for act in ROLE_ACTION_KEYS
+                }
+            return res
+
+        module_flags = {
+            "billing": can_access_billing,
+            "network_ops": can_access_network_ops,
+            "cignal_play": can_access_cignal_play,
+            "dispatch": can_access_dispatch,
+            "administration": can_access_administration,
+        }
+
+        # Only rewrite _actions when the form actually submitted action
+        # checkboxes. If none are present (an older cached page, a partial
+        # post, or a scripted call) the prior block is preserved verbatim so
+        # a save can never silently wipe action permissions.
+        action_fields_posted = any(
+            f"act_{m['key']}_{act}" in request.POST
+            for m in ROLE_MODULE_SPECS
+            for act in ROLE_ACTION_KEYS
+        )
+        if action_fields_posted:
+            subtab_perms["_actions"] = parse_actions(request.POST, module_flags)
+        elif action == "edit" and role_id:
             existing = StaffRole.objects.filter(id=role_id).first()
-            if existing and isinstance(existing.subtab_permissions, dict):
-                prior_actions = existing.subtab_permissions.get("_actions")
-                if isinstance(prior_actions, dict) and prior_actions:
-                    subtab_perms["_actions"] = prior_actions
+            prior_actions = (
+                existing.subtab_permissions.get("_actions")
+                if existing and isinstance(existing.subtab_permissions, dict)
+                else None
+            )
+            if isinstance(prior_actions, dict) and prior_actions:
+                subtab_perms["_actions"] = prior_actions
 
         if action == "delete" and role_id:
             role = StaffRole.objects.filter(id=role_id).first()
@@ -232,6 +296,19 @@ def manage_roles(request):
                     "allowed": allowed,
                     "field_name": f"subtab_{m_key}_{s_key}",
                 })
+            # Action toggles for this module. Default True so a role with no
+            # _actions block yet renders fully-granted, matching
+            # get_action_perm(..., fallback=True).
+            action_toggles = [
+                {
+                    "key": act,
+                    "label": ROLE_ACTION_LABELS[act],
+                    "icon": ROLE_ACTION_ICONS[act],
+                    "field_name": f"act_{m_key}_{act}",
+                    "allowed": r.get_action_perm(m_key, act, fallback=True),
+                }
+                for act in ROLE_ACTION_KEYS
+            ]
             r.subtabs_data.append({
                 "key": m_key,
                 "name": mod["name"],
@@ -239,13 +316,39 @@ def manage_roles(request):
                 "flag": mod["flag"],
                 "is_active": is_active,
                 "subtabs": subs,
+                "actions": action_toggles,
+                "active_actions_count": sum(1 for a in action_toggles if a["allowed"]),
                 "active_subs_count": sum(1 for s in subs if s["allowed"]),
                 "total_subs_count": len(subs),
             })
 
+    # Add-role form has no stored role yet, so actions default to granted,
+    # mirroring the parse_actions() all-True default for untouched modules.
+    add_module_specs = [
+        {
+            "key": mod["key"],
+            "name": mod["name"],
+            "icon": mod["icon"],
+            "flag": mod["flag"],
+            "subtabs": mod["subtabs"],
+            "actions": [
+                {
+                    "key": act,
+                    "label": ROLE_ACTION_LABELS[act],
+                    "icon": ROLE_ACTION_ICONS[act],
+                    "field_name": f"act_{mod['key']}_{act}",
+                    "allowed": True,
+                }
+                for act in ROLE_ACTION_KEYS
+            ],
+        }
+        for mod in ROLE_MODULE_SPECS
+    ]
+
     return render(request, "billing/manage_roles.html", {
         "roles": roles,
-        "module_specs": ROLE_MODULE_SPECS,
+        "module_specs": add_module_specs,
+        "action_keys": ROLE_ACTION_KEYS,
     })
 
 

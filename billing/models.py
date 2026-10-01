@@ -183,8 +183,11 @@ class StaffRole(models.Model):
 
     # ── Action-level scoping (Phase 2) ──────────────────────────────────
     # Lives inside subtab_permissions["_actions"] so it needs NO migration.
-    # Shape: {"_actions": {"agents": {"view": true, "create": false}}}
-    # Absent key  -> fall back to the subtab grant (backwards compatible).
+    # Shape: {"_actions": {"dispatch": {"view": true, "create": false}}}
+    #
+    # NOTE: keyed by MODULE, not subtab. has_subtab_perm() already handles
+    # subtab granularity, and @action_required passes the subtab separately.
+    # Absent key -> fall back to the subtab grant (backwards compatible).
     def has_action_perm(self, module, action):
         """action in view | create | edit | delete. Unknown action -> deny."""
         if self.name.lower() == "admin":

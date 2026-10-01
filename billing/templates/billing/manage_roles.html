@@ -48,6 +48,23 @@
         .role-chip i { font-size: 0.62rem; opacity: 0.8; }
         .role-chip-wrap::-webkit-scrollbar { width: 6px; }
         .role-chip-wrap::-webkit-scrollbar-thumb { background: rgba(127, 140, 160, 0.5); border-radius: 3px; }
+        .role-act { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.66rem; font-weight: 600; border-radius: 999px; padding: 0.16rem 0.5rem; border: 1px solid transparent; }
+        .role-act--on { background: rgba(22, 163, 74, 0.13); color: #15803d; border-color: rgba(22, 163, 74, 0.3); }
+        .role-act--off { background: rgba(220, 38, 38, 0.07); color: #b91c1c; border-color: rgba(220, 38, 38, 0.22); text-decoration: line-through; }
+        .role-act-wrap { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed rgba(15, 23, 42, 0.18); }
+        .role-act-panel { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08); }
+        .role-act-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: 0.4rem; margin-top: 0.5rem; }
+        .role-act-tile { display: flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.5rem; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); font-size: 0.74rem; cursor: pointer; user-select: none; transition: background 0.15s ease, border-color 0.15s ease; }
+        .role-act-tile:hover { background: rgba(255,255,255,0.07); }
+        .role-act-tile .form-check-input { margin: 0; flex-shrink: 0; cursor: pointer; }
+        .role-act-tile--deny { background: rgba(220, 38, 38, 0.09); border-color: rgba(220, 38, 38, 0.28); color: #fca5a5; }
+        .role-act-tile--deny:hover { background: rgba(220, 38, 38, 0.15); }
+        .role-act-warn { display: flex; gap: 0.45rem; align-items: flex-start; padding: 0.6rem 0.7rem; border-radius: 9px; background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); color: #ca8a04; font-size: 0.74rem; line-height: 1.45; margin-bottom: 1rem; }
+        .role-act-warn i { margin-top: 0.15rem; flex-shrink: 0; }
+        html.dark-mode .role-act--on, .dark-mode .role-act--on { background: rgba(34, 197, 94, 0.16); color: #4ade80; border-color: rgba(34, 197, 94, 0.35); }
+        html.dark-mode .role-act--off, .dark-mode .role-act--off { background: rgba(248, 113, 113, 0.1); color: #f87171; border-color: rgba(248, 113, 113, 0.3); }
+        html.dark-mode .role-act-wrap, .dark-mode .role-act-wrap { border-top-color: rgba(255, 255, 255, 0.12); }
+        html.dark-mode .role-act-warn, .dark-mode .role-act-warn { background: rgba(234, 179, 8, 0.12); border-color: rgba(234, 179, 8, 0.32); color: #fde047; }
         html.dark-mode .roles-grid .role-card, .dark-mode .roles-grid .role-card { background: rgba(30, 41, 59, 0.55); border-color: rgba(255, 255, 255, 0.07); box-shadow: none; backdrop-filter: blur(10px); }
         html.dark-mode .roles-grid .role-name, .dark-mode .roles-grid .role-name { color: #ffffff; }
         html.dark-mode .role-mod, .dark-mode .role-mod { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.09); }
@@ -124,6 +141,13 @@
                                     {% endif %}
                                 {% endfor %}
                             </div>
+                            <div class="role-act-wrap" title="Action-level permissions for {{ mod.name }}">
+                                {% for a in mod.actions %}
+                                <span class="role-act {% if a.allowed %}role-act--on{% else %}role-act--off{% endif %}">
+                                    <i class="fas {{ a.icon }}"></i>{{ a.label }}
+                                </span>
+                                {% endfor %}
+                            </div>
                             {% endif %}
                         </div>
                         {% endfor %}
@@ -153,10 +177,15 @@
                                 <label class="form-label fw-semibold">Role Name</label>
                                 <input type="text" name="name" class="form-control bg-dark text-white border-secondary" value="{{ role.name }}" required>
                             </div>
-                            
+
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h6 class="fw-bold mb-0"><i class="fas fa-layer-group text-primary me-2"></i>Module & Subtab Permissions</h6>
                                 <span class="text-muted text-xs">Toggle modules and configure granular subtabs</span>
+                            </div>
+
+                            <div class="role-act-warn">
+                                <i class="fas fa-circle-info"></i>
+                                <span>Action permissions apply <strong>per module</strong>, not per subtab. Unchecking everything on a module blocks every View/Create/Edit/Delete inside it. Only a handful of screens currently enforce these — see the flag noted on each module.</span>
                             </div>
 
                             <div class="d-flex flex-column gap-3">
@@ -170,7 +199,7 @@
                                             <span class="fw-semibold">{{ mod.name }}</span>
                                         </div>
                                         <div class="form-check form-switch mb-0">
-                                            <input class="form-check-input module-toggle" type="checkbox" name="{{ mod.flag }}" id="edit_{{ role.id }}_{{ mod.key }}" {% if mod.is_active %}checked{% endif %} data-target="#subs_{{ role.id }}_{{ mod.key }}">
+                                            <input class="form-check-input module-toggle" type="checkbox" name="{{ mod.flag }}" id="edit_{{ role.id }}_{{ mod.key }}" {% if mod.is_active %}checked{% endif %} data-target="#subs_{{ role.id }}_{{ mod.key }} #acts_{{ role.id }}_{{ mod.key }}">
                                         </div>
                                     </div>
 
@@ -189,6 +218,25 @@
                                                     </div>
                                                 </div>
                                             </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+
+                                    <!-- Action-level permissions -->
+                                    <div class="role-act-panel action-panel" id="acts_{{ role.id }}_{{ mod.key }}" style="{% if not mod.is_active %}display: none;{% endif %}">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="text-muted text-xs text-uppercase fw-semibold" style="letter-spacing: 0.5px;">Allowed Actions</div>
+                                            <div class="d-flex gap-2">
+                                                <button type="button" class="btn btn-sm btn-link p-0 text-xs act-all" data-panel="acts_{{ role.id }}_{{ mod.key }}">All</button>
+                                                <button type="button" class="btn btn-sm btn-link p-0 text-xs act-none" data-panel="acts_{{ role.id }}_{{ mod.key }}">None</button>
+                                            </div>
+                                        </div>
+                                        <div class="role-act-grid">
+                                            {% for a in mod.actions %}
+                                            <label class="role-act-tile" for="act_{{ role.id }}_{{ a.field_name }}">
+                                                <input class="form-check-input action-toggle" type="checkbox" name="{{ a.field_name }}" id="act_{{ role.id }}_{{ a.field_name }}" {% if a.allowed %}checked{% endif %}>
+                                                <span><i class="fas {{ a.icon }} me-1"></i>{{ a.label }}</span>
+                                            </label>
                                             {% endfor %}
                                         </div>
                                     </div>
@@ -228,10 +276,15 @@
                         <label class="form-label fw-semibold">Role Name</label>
                         <input type="text" name="name" class="form-control bg-dark text-white border-secondary" placeholder="e.g. CSR Senior" required>
                     </div>
-                    
+
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h6 class="fw-bold mb-0"><i class="fas fa-layer-group text-primary me-2"></i>Module & Subtab Permissions</h6>
                         <span class="text-muted text-xs">Toggle modules and select allowable subtabs</span>
+                    </div>
+
+                    <div class="role-act-warn">
+                        <i class="fas fa-circle-info"></i>
+                        <span>Action permissions apply <strong>per module</strong>, not per subtab. A module switched off is stored as fully granted, so enabling it later does not inherit a partial deny set.</span>
                     </div>
 
                     <div class="d-flex flex-column gap-3">
@@ -245,7 +298,7 @@
                                     <span class="fw-semibold">{{ mod.name }}</span>
                                 </div>
                                 <div class="form-check form-switch mb-0">
-                                    <input class="form-check-input module-toggle" type="checkbox" name="{{ mod.flag }}" id="add_{{ mod.key }}" data-target="#add_subs_{{ mod.key }}">
+                                    <input class="form-check-input module-toggle" type="checkbox" name="{{ mod.flag }}" id="add_{{ mod.key }}" data-target="#add_subs_{{ mod.key }} #add_acts_{{ mod.key }}">
                                 </div>
                             </div>
 
@@ -267,6 +320,25 @@
                                     {% endfor %}
                                 </div>
                             </div>
+
+                            <!-- Action-level permissions -->
+                            <div class="role-act-panel action-panel" id="add_acts_{{ mod.key }}" style="display: none;">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="text-muted text-xs text-uppercase fw-semibold" style="letter-spacing: 0.5px;">Allowed Actions</div>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-sm btn-link p-0 text-xs act-all" data-panel="add_acts_{{ mod.key }}">All</button>
+                                        <button type="button" class="btn btn-sm btn-link p-0 text-xs act-none" data-panel="add_acts_{{ mod.key }}">None</button>
+                                    </div>
+                                </div>
+                                <div class="role-act-grid">
+                                    {% for a in mod.actions %}
+                                    <label class="role-act-tile" for="add_act_{{ a.field_name }}">
+                                        <input class="form-check-input action-toggle" type="checkbox" name="{{ a.field_name }}" id="add_act_{{ a.field_name }}" checked>
+                                        <span><i class="fas {{ a.icon }} me-1"></i>{{ a.label }}</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
                         </div>
                         {% endfor %}
                     </div>
@@ -282,13 +354,40 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Module master switch reveals BOTH the subtab panel and the action panel.
+    // data-target may hold a space-separated list of panel selectors.
     document.querySelectorAll('.module-toggle').forEach(function(toggle) {
         toggle.addEventListener('change', function() {
-            var targetSelector = this.getAttribute('data-target');
-            var panel = document.querySelector(targetSelector);
-            if (panel) {
-                panel.style.display = this.checked ? 'block' : 'none';
-            }
+            (this.getAttribute('data-target') || '').split(/\s+/).filter(Boolean).forEach(function(sel) {
+                document.querySelectorAll(sel).forEach(function(panel) {
+                    panel.style.display = this.checked ? 'block' : 'none';
+                }, this);
+            });
+        });
+    });
+
+    // Paint denied action tiles red so a "view-only" role reads at a glance.
+    function paintTiles(panel) {
+        panel.querySelectorAll('.action-toggle').forEach(function(cb) {
+            var tile = cb.closest('.role-act-tile');
+            if (tile) { tile.classList.toggle('role-act-tile--deny', !cb.checked); }
+        });
+    }
+    document.querySelectorAll('.action-panel').forEach(function(panel) {
+        panel.querySelectorAll('.action-toggle').forEach(function(cb) {
+            cb.addEventListener('change', function() { paintTiles(this.closest('.action-panel')); });
+        });
+        paintTiles(panel);
+    });
+
+    // All / None shortcuts, scoped to a single module's action panel.
+    document.querySelectorAll('.act-all, .act-none').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var on = this.classList.contains('act-all');
+            var panel = document.getElementById(this.getAttribute('data-panel'));
+            if (!panel) { return; }
+            panel.querySelectorAll('.action-toggle').forEach(function(cb) { cb.checked = on; });
+            paintTiles(panel);
         });
     });
 });
