@@ -394,8 +394,24 @@ class Command(BaseCommand):
                         # Parse status
                         status_val = str(row[9]).lower() if row[9] else "active"
 
-                        # Generate portal password
-                        portal_password = self.generate_portal_password()
+                        # Portal password. PBKDF2 at ~1M iterations costs ~1s per
+                        # customer, which is what made the first full import take 8
+                        # minutes and destabilise the host. On a RE-import the
+                        # account already has a hash, so keep it -- this turns a
+                        # cutover-day re-import from minutes into seconds and
+                        # never invalidates a portal password a customer has set.
+                        lookup = (
+                            {"pppoe_username": username}
+                            if username
+                            else {"full_name": full_name, "email": email}
+                        )
+                        existing = Customer.objects.filter(**lookup).only(
+                            "id", "portal_password_hash", "installed_at"
+                        ).first()
+                        if existing and existing.portal_password_hash:
+                            keep_portal_hash = existing.portal_password_hash
+                        else:
+                            keep_portal_hash = make_password(self.generate_portal_password())
 
                         if dry_run:
                             masked_user = username[:3] + "***" if username and len(username) > 3 else username
@@ -431,11 +447,12 @@ class Command(BaseCommand):
                             "cignalplay_adjustedby": row[26],
                             "pppoe_password": password,
                             "installation_status": "installed",
-                            "installed_at": timezone.now(),
+                            # Preserve the original install date across re-imports.
+                            "installed_at": (existing.installed_at if existing and existing.installed_at else timezone.now()),
                             "is_verified": True,
                             # Hash-only storage (b756059). Storing the raw value in
                             # the legacy column would reintroduce plaintext passwords.
-                            "portal_password_hash": make_password(portal_password),
+                            "portal_password_hash": keep_portal_hash,
                             "portal_password": None,
                             "sync_status": "Synced",
                         }
