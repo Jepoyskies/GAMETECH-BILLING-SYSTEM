@@ -1,49 +1,4 @@
-<style>
-/* Customer Autocomplete Suggestions & Duplicate Lockout (Legacy MonitoringForm.tsx Port) */
-.cust-autocomplete-wrapper {
-    position: relative;
-}
-.cust-suggestions-box {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: var(--surface-card);
-    color: var(--text-primary);
-    border: 1px solid var(--border-subtle);
-    border-radius: 8px;
-    max-height: 220px;
-    overflow-y: auto;
-    z-index: 1060;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
-    margin-top: 4px;
-    display: none;
-}
-.cust-suggestion-item {
-    padding: 8px 12px;
-    cursor: pointer;
-    border-bottom: 1px solid var(--border-divider);
-    transition: background 0.15s ease;
-}
-.cust-suggestion-item:last-child {
-    border-bottom: none;
-}
-.cust-suggestion-item:hover, .cust-suggestion-item.active {
-    background: var(--gt-gold-soft);
-}
-.input-duplicate-locked {
-    border-color: var(--badge-danger-text) !important;
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--badge-danger-text) 18%, transparent) !important;
-}
-.duplicate-lockout-msg {
-    color: var(--badge-danger-text);
-    font-size: 0.78rem;
-    margin-top: 4px;
-    display: none;
-}
-</style>
 
-<script>
 class CustomerAutocomplete {
     constructor(inputElement, options = {}) {
         this.input = typeof inputElement === 'string' ? document.querySelector(inputElement) : inputElement;
@@ -329,4 +284,3 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
-</script>
