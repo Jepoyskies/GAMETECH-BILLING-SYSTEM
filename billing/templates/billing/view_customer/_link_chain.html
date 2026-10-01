@@ -16,7 +16,15 @@
     <span class="info-value" id="mt-status-container">
         {% if link.verdict == 'healthy' %}
             <span class="text-success fw-semibold"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>All Links Healthy</span>
-        {% elif link.layer == 'bridge' %}
+        {% elif link.verdict == 'bridge_down' %}
+            <span class="status-badge status-badge--danger d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;">
+                <i class="fas fa-server"></i> Mini PC Offline
+            </span>
+        {% elif link.verdict == 'bridge_lan' %}
+            <span class="status-badge status-badge--danger d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;">
+                <i class="fas fa-network-wired"></i> Mini PC OK, Routers Unreachable
+            </span>
+        {% elif link.verdict == 'blind' %}
             <span class="status-badge status-badge--danger d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size:0.75rem;">
                 <i class="fas fa-eye-slash"></i> We Are Blind
             </span>
@@ -36,13 +44,22 @@
     <span class="info-value" id="link-bridge">
         {% if link.bridge == 'Online' %}
             <span class="text-success fw-semibold"><i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>Online</span>
-            <small class="text-muted ms-1">{% if link.bridge_total %}{{ link.bridge_reached }}/{{ link.bridge_total }} routers answered {{ link.bridge_age }}s ago{% endif %}</small>
+            <small class="text-muted ms-1">
+                {% if link.bridge_hostname %}{{ link.bridge_hostname }} · {% endif %}
+                {% if link.bridge_total %}{{ link.bridge_reached }}/{{ link.bridge_total }} routers answered{% endif %}
+                {% if link.bridge_measured %}
+                    <span class="badge status-badge--success" style="font-size:0.58rem;" title="Reported directly by the Mini PC via Tailscale">measured</span>
+                {% else %}
+                    <span class="badge status-badge--neutral" style="font-size:0.58rem;" title="Inferred from router poll — install the bridge heartbeat for a definitive answer">inferred</span>
+                {% endif %}
+            </small>
         {% elif link.bridge == 'Stale' %}
             <span class="status-badge status-badge--warning py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-clock"></i> Stale {{ link.bridge_age }}s</span>
         {% elif link.bridge == 'Offline' %}
-            <span class="status-badge status-badge--danger py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-circle"></i> Offline {{ link.bridge_age }}s</span>
+            <span class="status-badge status-badge--danger py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-circle"></i> Offline</span>
+            <small class="text-muted ms-1">{% if link.bridge_hostname %}{{ link.bridge_hostname }} not responding · {% endif %}{{ link.bridge_age }}s</small>
         {% else %}
-            <span class="status-badge status-badge--neutral py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-question-circle"></i> Waiting for first poll</span>
+            <span class="status-badge status-badge--neutral py-0 px-2" style="font-size:0.75rem;"><i class="fas fa-question-circle"></i> No heartbeat yet</span>
         {% endif %}
     </span>
 </li>

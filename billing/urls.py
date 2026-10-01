@@ -109,6 +109,8 @@ urlpatterns = [
         name="api_live_monitoring",
     ),
     path("api/network-alerts/", views.api_network_alerts, name="api_network_alerts"),
+    # Office bridge (Mini PC) heartbeat — posted by scripts/bridge_heartbeat.sh
+    path("api/bridge/heartbeat/", views.api_bridge_heartbeat, name="api_bridge_heartbeat"),
     path("api/offline-users/", views.api_offline_users, name="api_offline_users"),
     path("api/router-uplink/", views.api_router_uplink, name="api_router_uplink"),
     path(

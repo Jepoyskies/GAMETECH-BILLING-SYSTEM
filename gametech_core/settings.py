@@ -159,6 +159,12 @@ CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 
+# Shared secret for POST /billing/api/bridge/heartbeat/. The droplet host cron
+# (scripts/bridge_heartbeat.sh) sends the office Mini PC's real Tailscale state.
+# Deliberately defaults to EMPTY so an unconfigured deploy fails closed instead
+# of letting anyone on the internet blind the monitoring system.
+BRIDGE_HEARTBEAT_TOKEN = env("BRIDGE_HEARTBEAT_TOKEN", default="")
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators

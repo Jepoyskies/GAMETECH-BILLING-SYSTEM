@@ -1931,3 +1931,72 @@ it. The reset flow is the only legitimate read path.
 
 **Files**: the 6 templates listed above
 **Date Logged**: 2026-09-30
+
+---
+
+### ERR-087: "All Customers Offline" Was Unresolvable — No Way To Tell A Dead Mini PC From A Dead Office Uplink
+
+**Symptom**: Every subscriber showed **Fully Offline**. The runbook had entries for
+"router unreachable" and "Tailscale bridge drop", but neither the UI nor the logs could
+answer the only question that matters: *is the Mini PC actually broken, or is it fine and
+the LAN to the routers is broken?* Staff were guessing, and guessing wrong means either
+wasted truck rolls or missed outages.
+
+**Root Cause**: The cloud (Celery in `gametech-celery`) opens RouterOS sockets to
+`192.168.88.x:8728` and that traffic rides **through the office Mini PC's Tailscale subnet
+route** (`192.168.88.0/24`). So `0/N routers answered` is genuinely ambiguous — a powered-off
+Mini PC and a powered-on Mini PC with a dead WiFi repeater produce *identical* evidence.
+The old `router_status` compounded it by reporting `Offline` whenever the poll came back
+empty, turning one bridge fault into a false accusation against every customer.
+
+**Exact Target**: `billing/diagnostics.py`, `billing/views/api/bridge.py`,
+`scripts/bridge_heartbeat.sh`, `billing/models.py` (`router_status` / `connection_status`)
+
+**Why the Mini PC cannot self-report from inside a container**: Tailscale's LocalAPI resolves
+peer credentials in the *host* PID namespace, so `GET /localapi/v0/status` over
+`/var/run/tailscale/tailscaled.sock` returns **HTTP 403** to any container caller, even
+`--user root`. Verified on the droplet. The heartbeat therefore runs on the **host**.
+
+**1-Step Fix**: Two independent signals instead of one.
+1. `scripts/bridge_heartbeat.sh` on the host reads real `tailscale status --json`, finds the
+   peer advertising `192.168.88.0/24`, and POSTs it to `/billing/api/bridge/heartbeat/`
+   (token-gated, fails closed with 503 if `BRIDGE_HEARTBEAT_TOKEN` is unset).
+2. `billing/utils.py` keeps recording how many routers answered the last poll.
+
+The pair is decisive:
+| tunnel | routers | verdict |
+|---|---|---|
+| UP | 0 | `bridge_lan` — Mini PC is **fine**; the LAN to the routers is broken |
+| DOWN | 0 | `bridge_down` — our side: Mini PC off, or office uplink/repeater dead |
+| UP | some | judge that router normally |
+
+`router_status` / `connection_status` now return `Unknown` (never `Offline`) while the bridge
+is not `Online`, so the customer list stops accusing everyone.
+
+**Install (droplet, root)**:
+```bash
+# 1. token into docker-compose.yml under web: and celery: environment:
+#      BRIDGE_HEARTBEAT_TOKEN=<generated>
+# 2. copy + enable
+install -m 755 scripts/bridge_heartbeat.sh /root/bridge_heartbeat.sh
+printf '%s' '<same token>' > /root/.bridge_token && chmod 600 /root/.bridge_token
+crontab -e   #  * * * * * /root/bridge_heartbeat.sh >/dev/null 2>&1
+# 3. restart so the env var lands
+docker compose up -d
+# verify
+curl -s -X POST http://127.0.0.1:8000/billing/api/bridge/heartbeat/ \
+  -H "X-Bridge-Token: <token>" -H 'Content-Type: application/json' \
+  -d '{"online":true,"hostname":"DESKTOP-164V38N"}'
+```
+
+**Verification**: On any customer page, **Link Chain ? 1. Mini PC** must show a
+`measured` badge (not `inferred`). `inferred` means the host cron is not installed yet and the
+ladder is running on router-poll evidence alone.
+
+**Lesson**: One signal cannot localise a fault when every downstream signal passes through
+the thing that might be broken. When "A unreachable" could mean "A is dead" *or* "the only
+path to A is dead", you need a second, independent observation of A itself before you can
+tell staff where to drive.
+
+**Files**: `billing/diagnostics.py`, `billing/views/api/bridge.py`, `scripts/bridge_heartbeat.sh`, `billing/models.py`
+**Date Logged**: 2026-10-01

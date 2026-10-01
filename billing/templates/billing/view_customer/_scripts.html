@@ -251,21 +251,25 @@ document.addEventListener("DOMContentLoaded", function() {
                     '<span class="status-badge status-badge--' + cls + ' py-0 px-2" style="font-size:0.75rem;"><i class="fas ' + icon + '"></i> ' + text + '</span>';
                 const OK = 'success', BAD = 'danger', WARN = 'warning', NEU = 'neutral';
 
-                // --- Layer 1: Mini PC bridge (our side). Is our view even live?
+                // --- Layer 1: Mini PC bridge. 'measured' = the Mini PC reported in
+                // itself via Tailscale; 'inferred' = we only know from the router poll.
                 const bridgeEl = document.getElementById('link-bridge');
                 if (bridgeEl) {
+                    const tag = link.bridge_measured
+                        ? '<span class="badge status-badge--success" style="font-size:0.58rem;">measured</span>'
+                        : '<span class="badge status-badge--neutral" style="font-size:0.58rem;">inferred</span>';
                     if (link.bridge === 'Online') {
-                        const seen = link.bridge_total
-                            ? link.bridge_reached + '/' + link.bridge_total + ' routers answered ' + link.bridge_age + 's ago'
-                            : '';
+                        const who = link.bridge_hostname ? link.bridge_hostname + ' · ' : '';
+                        const seen = link.bridge_total ? link.bridge_reached + '/' + link.bridge_total + ' routers answered' : '';
                         bridgeEl.innerHTML = '<span class="text-success fw-semibold">' + dot + 'Online</span>' +
-                            (seen ? '<small class="text-muted ms-1">' + seen + '</small>' : '');
+                            '<small class="text-muted ms-1">' + who + seen + ' ' + tag + '</small>';
                     } else if (link.bridge === 'Stale') {
                         bridgeEl.innerHTML = badge(WARN, 'fa-clock', 'Stale ' + link.bridge_age + 's');
                     } else if (link.bridge === 'Offline') {
-                        bridgeEl.innerHTML = badge(BAD, 'fa-circle', 'Offline ' + link.bridge_age + 's');
+                        bridgeEl.innerHTML = badge(BAD, 'fa-circle', 'Offline') +
+                            '<small class="text-muted ms-1">' + (link.bridge_hostname || 'Mini PC') + ' not responding</small>';
                     } else {
-                        bridgeEl.innerHTML = badge(NEU, 'fa-question-circle', 'Waiting for first poll');
+                        bridgeEl.innerHTML = badge(NEU, 'fa-question-circle', 'No heartbeat yet');
                     }
                 }
 
@@ -289,7 +293,11 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (statusContainer) {
                     if (link.verdict === 'healthy') {
                         statusContainer.innerHTML = '<span class="text-success fw-semibold">' + dot + 'All Links Healthy</span>';
-                    } else if (link.layer === 'bridge') {
+                    } else if (link.verdict === 'bridge_down') {
+                        statusContainer.innerHTML = badge(BAD, 'fa-server', 'Mini PC Offline');
+                    } else if (link.verdict === 'bridge_lan') {
+                        statusContainer.innerHTML = badge(BAD, 'fa-network-wired', 'Mini PC OK, Routers Unreachable');
+                    } else if (link.verdict === 'blind') {
                         statusContainer.innerHTML = badge(BAD, 'fa-eye-slash', 'We Are Blind');
                     } else if (link.layer === 'router') {
                         statusContainer.innerHTML = badge(BAD, 'fa-triangle-exclamation', 'Fault Above Customer');
