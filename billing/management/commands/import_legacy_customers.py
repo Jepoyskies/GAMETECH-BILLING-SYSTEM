@@ -184,6 +184,7 @@ class Command(BaseCommand):
             account_type_map = {}
             pppoe_creds = {}
             zero_date_customers = []
+            warned_shape = False
 
             # PASS 1: Read PPPoE credentials
             self.stdout.write(self.style.SUCCESS("Pass 1: Extracting PPPoE credentials..."))
@@ -248,6 +249,22 @@ class Command(BaseCommand):
                     row = self.parse_sql_line(line)
                     if not row:
                         continue
+
+                    # Field mapping below is POSITIONAL (row[N]), so a dump with a
+                    # different column count would either IndexError or silently
+                    # shift values into the wrong fields. Pad to the expected width
+                    # so short rows are safe, and shout once if the width is off.
+                    if current_table == "customers":
+                        if not warned_shape:
+                            warned_shape = True
+                            if len(row) != 27:
+                                self.stdout.write(self.style.WARNING(
+                                    f"  customers rows have {len(row)} columns, expected 27. "
+                                    f"Field mapping is positional -- VERIFY the CREATE TABLE "
+                                    f"column order before trusting this import."
+                                ))
+                        if len(row) < 27:
+                            row = list(row) + [None] * (27 - len(row))
 
                     if current_table == "mikrotik_devices" and len(row) >= 6:
                         device_name = row[1]
