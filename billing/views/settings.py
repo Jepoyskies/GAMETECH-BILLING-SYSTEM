@@ -295,9 +295,15 @@ def import_legacy_data_view(request):
     from django.core.management import call_command
     from django.http import HttpResponseRedirect
     from django.urls import reverse
-    from billing.legacy_import import get_issue_buckets
+    from billing.legacy_import import get_issue_buckets, handle_issue_action
 
     if request.method == "POST":
+        # Review decisions on flagged customers take priority over the upload form.
+        if request.POST.get("issue_action"):
+            _, (msg, level) = handle_issue_action(request)
+            getattr(messages, level)(request, msg)
+            return HttpResponseRedirect(reverse("import_legacy_data"))
+
         sql_file = request.FILES.get("sql_file")
         if not sql_file:
             messages.error(request, "Please upload a SQL file.")
