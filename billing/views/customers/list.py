@@ -110,9 +110,7 @@ def customer_list(request):
     # Legacy aliases so existing templates/JS do not break.
     stats["paid_but_offline"] = stats["paid_offline"]
     stats["active"] = stats["connected_paid"]
-    stats["expiring"] = stats["expiring"]
-    stats["no_expiry"] = stats["no_expiry"]
-    # `expired`/`inactive` remain meaningful totals for legacy consumers.
+    # `expired`/`inactive` remain meaningful roll-ups for legacy consumers.
     stats["expired"] = stats["connected_unpaid"] + stats["lapsed_offline"]
     stats["inactive"] = stats["suspended"] + stats["inactive"] + stats["pulled_out"]
     stats["network_visible"] = network_visible
@@ -127,11 +125,11 @@ def customer_list(request):
         keep = {cid for cid, lc in by_key.items() if lc.key == filter_type}
         base_customers = [c for c in base_customers if c.id in keep]
 
-    # Lifecycle was already resolved onto each row. Sort by that same
-    # resolution so the most urgent rows are physically first, then by name.
-    # This replaces the old overlapping Case/When status_order, which ranked
-    # "paid but offline" first even when we were blind and that verdict was
-    # not real.
+    # Attach the resolved Lifecycle to every row, then sort by it so the most
+    # urgent rows come first. This replaces the old overlapping Case/When
+    # status_order, which ranked "paid but offline" first even when we were
+    # blind and that verdict was not real.
+    customers = annotate_lifecycle(base_customers, connected_usernames, now)
     customers.sort(key=lambda c: (c.lifecycle.priority, (c.full_name or "").lower()))
 
     # Backwards-compatible flags for templates that still test them.
