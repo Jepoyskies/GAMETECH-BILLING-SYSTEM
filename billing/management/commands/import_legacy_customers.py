@@ -15,9 +15,9 @@ from django.utils.timezone import make_aware
 from billing.legacy_import import iter_rows
 from billing.models import Customer, SubscriptionPlan, AccountType
 from billing.signals import (
+    delete_plan_on_mikrotik,
     sync_customer_to_mikrotik,
     sync_plan_on_save,
-    sync_plan_on_delete,
 )
 from network_manager.models import MikrotikDevice
 
@@ -269,7 +269,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.WARNING("Disconnecting Mikrotik sync signals..."))
         post_save.disconnect(sync_customer_to_mikrotik, sender=Customer)
         post_save.disconnect(sync_plan_on_save, sender=SubscriptionPlan)
-        post_delete.disconnect(sync_plan_on_delete, sender=SubscriptionPlan)
+        post_delete.disconnect(delete_plan_on_mikrotik, sender=SubscriptionPlan)
 
         try:
             plan_map = {}
@@ -508,4 +508,4 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("Reconnecting Mikrotik sync signals..."))
             post_save.connect(sync_customer_to_mikrotik, sender=Customer)
             post_save.connect(sync_plan_on_save, sender=SubscriptionPlan)
-            post_delete.connect(sync_plan_on_delete, sender=SubscriptionPlan)
+            post_delete.connect(delete_plan_on_mikrotik, sender=SubscriptionPlan)
