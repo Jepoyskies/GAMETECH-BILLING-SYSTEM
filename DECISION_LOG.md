@@ -83,3 +83,53 @@
 **Decision**: First payment triggers welcome SMS with portal credentials via existing SMS wrapper.
 **Rationale**: Customers need portal access info immediately after paying.
 **Consequences**: SMS uses message templates with `{portal_username}`, `{temp_password}`, `{portal_address}` tags. Password shown once on payment-success screen.
+
+---
+
+## 2026-10-01 - Persona Landing Router (Agents & Technicians Get Their Own Home)
+
+**Decision**: `billing.views.auth.resolve_landing_url(user)` is the single
+authority for where a logged-in user lands. It is used by every post-login
+redirect in `unified_login_view` (both the "already authenticated" GET branch
+and the successful-authenticate POST branch). One function, no per-view special
+cases.
+
+| Persona | Lands on | Shell |
+|---|---|---|
+| Staff / Admin / CSR / Dispatch | `dashboard` (main system) | `billing/base.html` |
+| Agent | `agent_dashboard` | `billing/agent_portal/base_agent.html` |
+| Technician | `technician_dashboard` | `dispatch/pipeline/portal_base_tech.html` |
+| Customer | `customer_portal:portal_dashboard` | customer portal |
+
+**Rationale**: Agents and technicians were landing in the main billing system
+because the login view had no branch for them. Their *pages* were already
+correctly permission-gated, but their *home* was not. A persona shell is a home,
+not a permission bypass.
+
+**Consequences**:
+- The role matrix is UNCHANGED. `role_required` / `action_required` still
+  govern which modules each role may open. Editing roles in the admin Role
+  Editor still works exactly as before.
+- An Agent given the `agents` module does NOT get raw Edit/Delete Agent. On
+  their own page their only creation action is **Submit New Referral**
+  (`agent_add_prospect`), which is the dispatch-flow equivalent of "add their own
+  customer". Editing agent records stays Admin/Staff only.
+- A Technician sees a job order only once staff has confirmed the dispatch
+  ticket AND selected the team + the specific person. The `technicians=<me>` M2M
+  filter is the single isolation gate, shared by `technician_dashboard` and
+  `technician_mobile_view` so the two can never disagree. Technicians cannot
+  see, claim, or self-assign unassigned work.
+- Staff/Admin can preview any technician's board with `?tech_id=<id>`.
+- Mobile-first was chosen for the Technician shell: thumb tab bar, large
+  tap targets, overdue-first triage ordering.
+
+**Not done (deliberately)**: Dispatcher and CSR personas were left on the main
+system. They are cross-cutting internal roles, not field personas. If they ever
+need their own landing page, add a branch to `resolve_landing_url` — do not
+special-case it inside a view.
+
+**Files**: `billing/views/auth.py`, `dispatch/views_tech.py`, `dispatch/urls.py`,
+`dispatch/templates/dispatch/pipeline/portal_base_tech.html`,
+`dispatch/templates/dispatch/pipeline/tech_dashboard.html`
+**See also**: ERR-081 (concurrent deploy sessions bounce the stack),
+ERR-088 (dead duplicate Agent Portal template).

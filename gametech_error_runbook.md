@@ -2000,3 +2000,34 @@ tell staff where to drive.
 
 **Files**: `billing/diagnostics.py`, `billing/views/api/bridge.py`, `scripts/bridge_heartbeat.sh`, `billing/models.py`
 **Date Logged**: 2026-10-01
+---
+
+### ERR-088: Agent Portal Had a Dead Duplicate Template — Edits Were Going Into a File Nobody Renders
+
+**Symptom**: An agent-facing page "looks" like it exists in two places. You open
+`billing/templates/billing/agent_dashboard.html`, fix a bug, push, and nothing
+changes in production. The bug is still there and you have no idea why.
+
+**Root Cause**: `billing.views.agents.agent_dashboard` renders
+**`billing/agent_portal/dashboard.html`**, not the top-level
+`billing/agent_dashboard.html`. The top-level file is an orphan left from an
+earlier iteration. It still contained a full Bootstrap/FontAwesome table, its own
+header, and even referenced context variables (`qualified_count`, `target_count`)
+that the view never sets — so it could not have rendered correctly even if wired.
+
+**Fix**: Deleted `billing/templates/billing/agent_dashboard.html`. The live Agent
+Portal is the `agent_portal/` folder: `base_agent.html` (own shell),
+`dashboard.html`, `submit_prospect.html`, `edit_prospect.html`.
+
+**Lesson**: Before editing any template, confirm the view's `render(request,
+"...")` string points at it. Two templates for one view is a silent trap, and
+Django will not warn you. Use `grep_search` for the filename across all
+templates to check it is not orphaned before you trust it.
+
+**Related**: The Agent Portal already had its own stripped-down shell
+(`agent_portal/base_agent.html`) and its own dashboard. The missing half of the
+persona split was the Technician, plus a landing router — see
+`DECISION_LOG.md` "Persona Landing Router".
+
+**Files**: `billing/views/agents.py`, `billing/templates/billing/agent_portal/`
+**Date Logged**: 2026-10-01
