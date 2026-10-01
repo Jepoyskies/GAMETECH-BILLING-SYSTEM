@@ -54,19 +54,36 @@ def add_one_month(dt: datetime) -> datetime:
 def calculate_new_expiration_date(
     current_expiration_date: datetime, payment_amount: float, plan_monthly_price: float
 ) -> datetime:
+    """Work out the new expiry after a payment.
+
+    Anchors on TODAY when the line is already lapsed. Without this, a customer
+    who fell four months behind paid a full month and was handed back a date
+    that was still three months in the past -- money taken, service still cut.
+    A still-running line extends from its existing expiry as before, so an
+    early renewal keeps the days already paid for.
+    """
     if plan_monthly_price <= 0 or payment_amount <= 0:
         return current_expiration_date
 
+    # Anchor on today if the line already lapsed, so a payment always buys
+    # service from now rather than extending a date that is already past.
+    anchor = current_expiration_date
+    now = timezone.now()
+    if timezone.is_naive(anchor):
+        anchor = timezone.make_aware(anchor)
+    if anchor < now:
+        anchor = now
+
     # 1. Full Month Exception
     if payment_amount == plan_monthly_price:
-        return add_one_month(current_expiration_date)
+        return add_one_month(anchor)
 
     # 2. Price Per Day Calculation
     price_per_day = plan_monthly_price / 30.0
 
     # 3. Prorated Days Granted
     days_granted = payment_amount / price_per_day
-    return current_expiration_date + timedelta(days=days_granted)
+    return anchor + timedelta(days=days_granted)
 
 
 def send_semaphore_sms(phone, message):
