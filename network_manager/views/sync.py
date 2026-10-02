@@ -23,21 +23,45 @@ def sync_manager(request, device_id):
     django_usernames = set(django_customers.values_list('pppoe_username', flat=True))
     
     # 2. Fetch Router Users using the Sync API
-    api = MikrotikSyncAPI(
-        ip_address=device.ip_address,
-        username=device.api_username,
-        password=device.api_password,
-        port=device.api_port
-    )
-    
-    result = api.get_all_pppoe_users()
-    
+    #
+    # Respect the circuit breaker BEFORE dialling. Opening this page on a
+    # router we already know is dead used to block for ~15s on the socket
+    # timeout, every single visit, which reads as "the site is broken". The
+    # breaker already knows; say so immediately instead of waiting to find out.
+    from django.core.cache import cache
+
+    # ?force=1 lets an operator re-test a router they just fixed, instead of
+    # waiting out the breaker's backoff.
+    if request.GET.get("force") == "1":
+        cache.delete(f"router_unreachable_{device.id}")
+        cache.delete(f"router_unreachable_{device.id}_n")
+
+    known_down = bool(cache.get(f"router_unreachable_{device.id}"))
+    if known_down:
+        result = {
+            "success": False,
+            "error": (
+                f"{device.device_name} did not answer the last check, so its "
+                f"secrets cannot be compared right now. This is a known, "
+                f"cached outage - we are not retrying on every page load. "
+                f"Check the cable, power and IP, then use Retry now."
+            ),
+        }
+    else:
+        api = MikrotikSyncAPI(
+            ip_address=device.ip_address,
+            username=device.api_username,
+            password=device.api_password,
+            port=device.api_port
+        )
+        result = api.get_all_pppoe_users()
+
     clean_orphans = []
     suspicious_users = []
     missing_on_router = []
     synced = []
     needs_review = []
-    
+
     if result.get('success'):
         router_users = result.get('data', [])
         router_usernames = set(u.get('name') for u in router_users if u.get('name'))
@@ -132,6 +156,8 @@ def sync_manager(request, device_id):
         'all_routers': all_routers,
         'barangays': barangays,
         'api_success': result.get('success', False),
+        'router_error': '' if result.get('success') else result.get('error', ''),
+        'known_down': known_down,
         'router_mode': getattr(__import__('django.conf', fromlist=['settings']).settings, 'ROUTER_MODE', 'read_only'),
         'count_synced': len(synced),
         'count_needs_review': len(needs_review),

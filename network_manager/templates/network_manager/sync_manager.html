@@ -22,8 +22,20 @@
     {% include "network_manager/sync_manager/_hero.html" %}
 
     {% if not api_success %}
-    <div class="alert alert-danger shadow-sm">
-        <i class="fas fa-exclamation-triangle me-2"></i> Failed to connect to the Mikrotik API. Please ensure the device is online and API credentials are correct.
+    <div class="alert alert-danger shadow-sm d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <span>
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            {% if router_error %}{{ router_error }}
+            {% else %}Failed to connect to the Mikrotik API. Please ensure the device is online and API credentials are correct.{% endif %}
+        </span>
+        {% comment %}
+          A cached "unreachable" must never become a dead end: the operator
+          fixes the cable and needs a way to re-test immediately rather than
+          waiting out the circuit breaker's backoff.
+        {% endcomment %}
+        <a href="{% url 'sync_manager' device.id %}?force=1" class="btn btn-sm btn-outline-light">
+            <i class="fas fa-rotate-right me-1"></i> Retry now
+        </a>
     </div>
     {% else %}
     <div class="row">
