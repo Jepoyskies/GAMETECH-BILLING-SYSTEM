@@ -25,12 +25,14 @@ roots = [root / "billing" / "templates", root / "network_manager" / "templates",
 files = []
 for r in roots:
     if r.exists():
-        files += [p for p in r.rglob("*.html")]
+        files += [(r, p) for p in r.rglob("*.html")]
 
 bad = []
 dj = engines["django"]
-for p in sorted(files):
-    rel = p.relative_to(root)
+for tmpl_root, p in sorted(files, key=lambda x: str(x[1])):
+    # Loader names are the path under the app's templates/ dir, e.g.
+    # "billing/customer_list/_table.html", so strip "<app>/templates/".
+    rel = p.relative_to(tmpl_root)
     name = str(rel).replace("\\", "/")
     try:
         dj.get_template(name)
