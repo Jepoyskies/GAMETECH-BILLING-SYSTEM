@@ -149,11 +149,19 @@ def customer_list(request):
         for r in (live.get("routers") or [])
     }
 
+    # Read each router's unreachable flag ONCE, not once per customer. There
+    # are only a handful of routers but thousands of customers, so the old
+    # per-row `cache.get` was ~2,000 redundant Redis round trips.
+    router_down = {}
+    if devices_prefetched := list(MikrotikDevice.objects.values("id")):
+        for row in devices_prefetched:
+            router_down[row["id"]] = bool(cache.get(f"router_unreachable_{row['id']}"))
+
     def _router_state(customer):
         dev = customer.mikrotik_device
         if not dev:
             return "Offline"
-        if cache.get(f"router_unreachable_{dev.id}"):
+        if router_down.get(dev.id):
             return "Unknown"
         if not bridge_ok:
             # Blind. Never accuse the router from a vantage point we lack.
