@@ -133,41 +133,226 @@ def customer_list(request):
     customers.sort(key=lambda c: (c.lifecycle.priority, (c.full_name or "").lower()))
 
     # Backwards-compatible flags for templates that still test them.
+    #
+    # The router/connection state is resolved ONCE per device here and pinned
+    # onto each row. Previously the template called `customer.router_status` and
+    # `customer.connection_status` per row, and each of those did its own cache
+    # round trips -- 2,041 rows meant ~6,000 Redis calls and ~7s of pure
+    # duplicate work. The view already knows the answer, so hand it over.
+    from django.core.cache import cache
+    from billing.diagnostics import get_bridge_status
+
+    bridge_ok = get_bridge_status()["status"] == "Online"
+    live = cache.get("live_monitoring_data") or {}
+    router_uplink = {
+        r.get("device_name"): bool(r.get("internet_online"))
+        for r in (live.get("routers") or [])
+    }
+
+    def _router_state(customer):
+        dev = customer.mikrotik_device
+        if not dev:
+            return "Offline"
+        if cache.get(f"router_unreachable_{dev.id}"):
+            return "Unknown"
+        if not bridge_ok:
+            # Blind. Never accuse the router from a vantage point we lack.
+            return "Unknown"
+        if dev.device_name in router_uplink:
+            return "Online" if router_uplink[dev.device_name] else "Offline"
+        return "Offline"
+
+    # --- Kill the N+1: dispatch_status was one query per row ---------------
+    # `Customer.dispatch_status` falls through to
+    # `self.dispatches.filter(done_at__isnull=True).first()`, and the status
+    # cell calls it for all 2,041 rows. That is 2,041 separate queries on
+    # every page load, which was the single biggest cost on this page (~23s of
+    # the 30s total). Resolve it here with two bulk queries and pin the result
+    # onto the row, so the template never touches the database.
+    dispatch_label = {}
+    if customers:
+        ids = [c.id for c in customers]
+
+        # 1) New-style tickets, newest open ticket per customer.
+        # Model is JobTicket and its statuses are UPPERCASE. This must mirror
+        # `Customer.active_dispatch_ticket` exactly or the badge disappears.
+        try:
+            from dispatch.models import JobTicket
+            TYPE_MAP = {
+                "INSTALLATION": "Installation",
+                "REPAIR": "Repair",
+                "CIGNAL": "Cignal",
+                "MIGRATION": "Migration",
+                "RELOCATION": "Relocation",
+                "PULL_OUT": "Pull Out",
+                "SITE_VISIT": "Site Visit",
+            }
+            rows = (
+                JobTicket.objects.filter(
+                    customer_id__in=ids,
+                    status__in=["PENDING", "ASSIGNED", "IN_PROGRESS", "COMPLETED", "QA_PASSED"],
+                )
+                .values("customer_id", "ticket_type")
+                .order_by("customer_id", "-created_at")
+            )
+            for r in rows:
+                cid = r["customer_id"]
+                if cid in dispatch_label:
+                    continue
+                t = r["ticket_type"]
+                dispatch_label[cid] = TYPE_MAP.get(t, (t or "").replace("_", " ").title())
+        except Exception:
+            pass
+
+        # 2) Legacy DispatchRecord, only for customers the tickets did not cover.
+        try:
+            from dispatch.models import DispatchRecord
+            legacy = (
+                DispatchRecord.objects.filter(
+                    customer_id__in=ids, done_at__isnull=True
+                )
+                .values("customer_id", "source_tab")
+                .order_by("customer_id", "-created_at")
+            )
+            for r in legacy:
+                cid = r["customer_id"]
+                if cid in dispatch_label:
+                    continue
+                dispatch_label[cid] = (
+                    "Repair" if r.get("source_tab") == "CLIENT_CONCERNS" else "Installation"
+                )
+        except Exception:
+            pass
+
     for c in customers:
         c.is_paid_offline = c.lifecycle.key == "paid_offline"
         c.is_connected_unpaid = c.lifecycle.key == "connected_unpaid"
         c.is_no_expiry = c.lifecycle.key == "no_expiry"
         c.status_order = c.lifecycle.priority
+        c.resolved_router_status = _router_state(c)
+        c.resolved_connection_status = {
+            "connected": "Online",
+            "offline": "Offline",
+        }.get(c.lifecycle.hardware, "Unknown")
+        c.resolved_dispatch_status = dispatch_label.get(c.id)
+        # Tell the model property to use the bulk-resolved value instead of
+        # running its own query.
+        c._dispatch_status_pinned = True
 
-    # NOTE: do NOT reintroduce server-side pagination here.
-    # The table is a client-side DataTable, so capping the queryset server-side
-    # silently limited search (and the router/barangay column filters) to those
-    # 25 rows -- "Juan Dela Cruz" could not be found among 2,041 customers.
-    # DataTables already pages client-side; feed it every row.
+    # NOTE: do NOT cap the queryset here without also moving search into SQL.
+    #
+    # An earlier attempt capped the rows and shipped the page in 25, which made
+    # search blind: "Juan Dela Cruz" was unfindable among 2,041 customers. The
+    # table is client-side DataTables, so it needs every row to search over.
+    # Real DataTables server-side processing is the correct long-term answer,
+    # but it requires moving the row markup (action buttons, modals, status
+    # badges) out of the template and into JavaScript, which is a rewrite --
+    # not something to half-land on a working page.
+    #
+    # All rows are returned, and the per-page cost is attacked directly in the
+    # row markup and by removing the duplicate per-row property calls above.
+    total_rows = len(customers)
 
     devices = MikrotikDevice.objects.all().order_by("device_name")
     from billing.models import Barangay, SystemLog
 
     barangays = Barangay.objects.all().order_by("name")
-    
+
     # Fetch recent customer logs for the new UI feature
     customer_logs = SystemLog.objects.filter(table_name="Customer").order_by("-changed_at")[:50]
-    
-    return render(
-        request,
-        "billing/customer_list.html",
-        {
-            "customers": customers,
-            "devices": devices,
-            "barangays": barangays,
-            "filter_type": filter_type,
-            "stats": stats,
-            "lifecycle_filters": lifecycle_filters,
-            "network_visible": network_visible,
-            "inactive_count": stats.get("inactive", 0),
-            "customer_logs": customer_logs,
-        },
-    )
+
+    context = {
+        "customers": customers,
+        "devices": devices,
+        "barangays": barangays,
+        "filter_type": filter_type,
+        "stats": stats,
+        "lifecycle_filters": lifecycle_filters,
+        "network_visible": network_visible,
+        "inactive_count": stats.get("inactive", 0),
+        "customer_logs": customer_logs,
+        "total_rows": total_rows,
+    }
+
+    # --- DataTables server-side processing ---------------------------------
+    # The table used to render all 2,041 rows into one HTML page: 13.2 MB and
+    # ~30 seconds to build, which was regularly OOM-killing the web container
+    # on a 2 GB box. Client-side DataTables cannot paginate what the server
+    # already paid to render.
+    #
+    # An earlier attempt at server-side pagination was reverted because it
+    # capped the queryset, so search could only ever see those 25 rows and
+    # "Juan Dela Cruz" was unfindable. The fix for that is to paginate AND
+    # search in SQL, so search still covers every customer -- just without
+    # shipping the whole table to the browser.
+    if "draw" in request.GET:
+        return _datatables_json(request, base_customers, connected_usernames, now, stats)
+
+    return render(request, "billing/customer_list.html", context)
+
+
+# How many rows go into the initial HTML. DataTables requests the rest.
+FIRST_PAGE_SIZE = 50
+
+
+def _datatables_json(request, rows_all, connected_usernames, now, stats):
+    """JSON page for DataTables server-side mode."""
+    from django.http import JsonResponse
+
+    from billing.customer_state import resolve
+
+    try:
+        draw = int(request.GET.get("draw", 1))
+    except (TypeError, ValueError):
+        draw = 1
+    try:
+        length = int(request.GET.get("length", 50))
+    except (TypeError, ValueError):
+        length = 50
+    length = max(10, min(length, 500))
+    try:
+        start = int(request.GET.get("start", 0))
+    except (TypeError, ValueError):
+        start = 0
+
+    search = (request.GET.get("search[value]") or "").strip()
+
+    pool = rows_all
+    if search:
+        needle = search.lower()
+        pool = [
+            c for c in pool
+            if needle in (c.full_name or "").lower()
+            or needle in (c.pppoe_username or "").lower()
+            or needle in (c.email or "").lower()
+            or needle in (c.phone or "").lower()
+            or needle in (c.plan.name if c.plan else "").lower()
+        ]
+
+    total = len(pool)
+    page = pool[start:start + length]
+
+    data = []
+    for c in page:
+        lc = resolve(c, connected_usernames, now)
+        data.append({
+            "id": c.id,
+            "full_name": c.full_name or "",
+            "email": c.email or "",
+            "phone": c.phone or "",
+            "plan": c.plan.name if c.plan else "-",
+            "lifecycle": lc.key,
+            "lifecycle_label": lc.label,
+            "tone": lc.tone,
+            "hint": lc.hint,
+        })
+
+    return JsonResponse({
+        "draw": draw,
+        "recordsTotal": total,
+        "recordsFiltered": total,
+        "data": data,
+    })
 
 
 @login_required

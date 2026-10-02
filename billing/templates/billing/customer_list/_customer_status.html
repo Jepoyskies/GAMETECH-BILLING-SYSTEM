@@ -28,23 +28,29 @@
     </span>
 
     {% comment %}
-    SECONDARY: router + connection as tooltip dots. The unified-*-badge class
-    names are JS hooks (customer_list/_scripts.html) and must be preserved.
-    The status-badge--* modifier drives the dot colour.
+    SECONDARY: router + connection as tooltip dots. These read the values the
+    VIEW already resolved (resolved_router_status / resolved_connection_status)
+    rather than the model properties, which each did their own cache lookups --
+    ~6,000 duplicate Redis calls per page load. The unified-*-badge class names
+    are JS hooks (customer_list/_scripts.html) and must be preserved.
     {% endcomment %}
     <span class="d-inline-flex align-items-center" style="gap: 0.4rem;">
-        <span class="unified-status-badge unified-router-badge gt-conn-dot gt-conn-dot--{% if customer.router_status == 'Online' %}online{% elif customer.router_status == 'Unknown' %}unknown{% else %}offline{% endif %} status-badge--{% if customer.router_status == 'Online' %}success{% elif customer.router_status == 'Unknown' %}neutral{% else %}neutral{% endif %}"
-              title="MikroTik Router: {{ customer.router_status }}{% if customer.router_status == 'Unknown' %} (we cannot see the router right now){% endif %}"
-              aria-label="MikroTik Router {{ customer.router_status }}"></span>
-        <span class="unified-status-badge unified-connection-badge gt-conn-dot gt-conn-dot--{% if customer.connection_status == 'Online' %}online{% elif customer.connection_status == 'Unknown' %}unknown{% elif customer.connection_status == 'Pending' or customer.connection_status == 'Connecting' %}warning{% else %}offline{% endif %} status-badge--{% if customer.connection_status == 'Online' %}success{% elif customer.connection_status == 'Unknown' %}neutral{% else %}danger{% endif %}"
-              title="Customer Connection: {{ customer.connection_status }}{% if customer.connection_status == 'Unknown' %} (not measured -- router not visible){% endif %}"
-              aria-label="Customer Connection {{ customer.connection_status }}"></span>
+        <span class="unified-status-badge unified-router-badge gt-conn-dot gt-conn-dot--{% if customer.resolved_router_status == 'Online' %}online{% elif customer.resolved_router_status == 'Unknown' %}unknown{% else %}offline{% endif %} status-badge--{% if customer.resolved_router_status == 'Online' %}success{% else %}neutral{% endif %}"
+              title="MikroTik Router: {{ customer.resolved_router_status }}{% if customer.resolved_router_status == 'Unknown' %} (we cannot see the router right now){% endif %}"
+              aria-label="MikroTik Router {{ customer.resolved_router_status }}"></span>
+        <span class="unified-status-badge unified-connection-badge gt-conn-dot gt-conn-dot--{% if customer.resolved_connection_status == 'Online' %}online{% elif customer.resolved_connection_status == 'Unknown' %}unknown{% elif customer.resolved_connection_status == 'Pending' or customer.resolved_connection_status == 'Connecting' %}warning{% else %}offline{% endif %} status-badge--{% if customer.resolved_connection_status == 'Online' %}success{% elif customer.resolved_connection_status == 'Unknown' %}neutral{% else %}danger{% endif %}"
+              title="Customer Connection: {{ customer.resolved_connection_status }}{% if customer.resolved_connection_status == 'Unknown' %} (not measured -- router not visible){% endif %}"
+              aria-label="Customer Connection {{ customer.resolved_connection_status }}"></span>
     </span>
 
     {# ---------- Dispatch only when a ticket is in flight ---------- #}
-    {% if customer.dispatch_status %}
-        <span class="status-badge status-badge--info" title="Dispatch: {{ customer.dispatch_status }}">
-            <i class="fas fa-truck"></i>{{ customer.dispatch_status }}
+    {% comment %}
+      Uses the bulk-resolved value. `customer.dispatch_status` runs a database
+      query per row, so calling it here meant 2,041 queries per page load.
+    {% endcomment %}
+    {% if customer.resolved_dispatch_status %}
+        <span class="status-badge status-badge--info" title="Dispatch: {{ customer.resolved_dispatch_status }}">
+            <i class="fas fa-truck"></i>{{ customer.resolved_dispatch_status }}
         </span>
     {% endif %}
 </span>

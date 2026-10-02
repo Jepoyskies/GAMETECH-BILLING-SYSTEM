@@ -696,6 +696,12 @@ class Customer(models.Model):
     @property
     def dispatch_status(self):
         """Returns the active dispatch type display: Repair, Installation, Relocation, etc., or None."""
+        # A list view can resolve this in bulk and pin it, avoiding one query
+        # per row. Honour the pinned value when present.
+        pinned = getattr(self, "_dispatch_status_pinned", False)
+        if pinned:
+            return getattr(self, "resolved_dispatch_status", None)
+
         ticket = self.active_dispatch_ticket
         if ticket:
             type_map = {
