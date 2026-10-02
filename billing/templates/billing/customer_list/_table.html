@@ -14,19 +14,54 @@
             <col style="width: 17%;">
             <col style="width: 10%;">
         </colgroup>
+        {% comment %}
+          Server-side search / filter / sort / paginate. The table used to
+          render all 2,041 rows into one document (13 MB, ~11s) and used
+          client-side DataTables, which meant the browser had to receive the
+          entire customer base to find anyone. Search and filtering now run in
+          the view, so the browser receives one page and search still covers
+          every customer.
+        {% endcomment %}
+        <form method="GET" id="customerSearchForm" class="gt-filter-pills-row animate-fade-in">
+            {% if filter_type != 'all' %}<input type="hidden" name="filter" value="{{ filter_type }}">{% endif %}
+            {% if sort != 'priority' %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+            <input type="search" name="search" class="form-control" style="max-width: 320px;"
+                   placeholder="Search name, username, email, phone, plan, barangay or router..."
+                   value="{{ search }}" aria-label="Search customers">
+            <select name="router" class="form-select gt-select-filter" style="width: auto; min-width: 160px;" aria-label="Filter by router">
+                <option value="">All Routers</option>
+                {% for device in devices %}
+                <option value="{{ device.device_name }}" {% if router_filter == device.device_name %}selected{% endif %}>{{ device.device_name }}</option>
+                {% endfor %}
+            </select>
+            <select name="barangay" class="form-select gt-select-filter" style="width: auto; min-width: 160px;" aria-label="Filter by barangay">
+                <option value="">All Barangays</option>
+                {% for brgy in barangays %}
+                <option value="{{ brgy.name }}" {% if barangay_filter == brgy.name %}selected{% endif %}>{{ brgy.name }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-magnifying-glass me-1"></i> Search</button>
+            {% if search or router_filter or barangay_filter %}
+            <a href="?{% if filter_type != 'all' %}filter={{ filter_type }}{% endif %}" class="btn btn-sm btn-outline-secondary">Clear</a>
+            {% endif %}
+            <span class="text-muted small align-self-center ms-2">
+                {{ total_rows }} customer{{ total_rows|pluralize }} match{{ total_rows|pluralize:"es" }}
+                {%- if paginator.num_pages > 1 %} &mdash; page {{ page_obj.number }} of {{ paginator.num_pages }}{% endif %}
+            </span>
+        </form>
         <thead>
             <tr>
                 <th class="all" style="text-align: center;">
                     <input type="checkbox" id="selectAllCheckbox" class="form-check-input shadow-sm" style="cursor: pointer;">
                 </th>
-                <th class="all">Full Name</th>
+                <th class="all"><a class="gt-sort-link" href="?{% if search %}search={{ search|urlencode }}&amp;{% endif %}{% if filter_type != 'all' %}filter={{ filter_type }}&amp;{% endif %}{% if router_filter %}router={{ router_filter|urlencode }}&amp;{% endif %}{% if barangay_filter %}barangay={{ barangay_filter|urlencode }}&amp;{% endif %}sort={% if sort == 'name' %}priority{% else %}name{% endif %}">Full Name</a></th>
                 <th class="min-tablet">Email</th>
                 <th class="min-tablet">Phone</th>
                 <th class="min-tablet">Plan</th>
                 <th class="min-tablet">Agent</th>
                 <th class="min-tablet">Barangay</th>
                 <th class="min-tablet">Router</th>
-                <th class="all">Status</th>
+                <th class="all"><a class="gt-sort-link" href="?{% if search %}search={{ search|urlencode }}&amp;{% endif %}{% if filter_type != 'all' %}filter={{ filter_type }}&amp;{% endif %}{% if router_filter %}router={{ router_filter|urlencode }}&amp;{% endif %}{% if barangay_filter %}barangay={{ barangay_filter|urlencode }}&amp;{% endif %}sort={% if sort == 'expiry' %}priority{% else %}expiry{% endif %}">Status</a></th>
                 <th class="all text-end" style="padding-right: 0.5rem;">Actions</th>
             </tr>
         </thead>
@@ -159,5 +194,34 @@
                 {% endfor %}
             </tbody>
         </table>
+
+        {% if paginator.num_pages > 1 %}
+        {% comment %} Server-side pagination. Keeps every customer reachable
+        without shipping 2,041 rows to the browser. {% endcomment %}
+        <nav class="d-flex flex-wrap align-items-center justify-content-between gap-2 px-3 px-md-4 py-3 border-top" aria-label="Customer pages">
+            <span class="text-muted small">
+                Showing {{ page_obj.start_index }}&ndash;{{ page_obj.end_index }} of {{ paginator.count }}
+            </span>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+                    <a class="page-link" href="?{% if search %}search={{ search|urlencode }}&amp;{% endif %}{% if filter_type != 'all' %}filter={{ filter_type }}&amp;{% endif %}{% if router_filter %}router={{ router_filter|urlencode }}&amp;{% endif %}{% if barangay_filter %}barangay={{ barangay_filter|urlencode }}&amp;{% endif %}{% if sort != 'priority' %}sort={{ sort }}&amp;{% endif %}page={{ page_obj.previous_page_number|default:1 }}">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+                {% for num in paginator.page_range %}
+                    {% if num == page_obj.number %}
+                    <li class="page-item active" aria-current="page"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                    <li class="page-item"><a class="page-link" href="?{% if search %}search={{ search|urlencode }}&amp;{% endif %}{% if filter_type != 'all' %}filter={{ filter_type }}&amp;{% endif %}{% if router_filter %}router={{ router_filter|urlencode }}&amp;{% endif %}{% if barangay_filter %}barangay={{ barangay_filter|urlencode }}&amp;{% endif %}{% if sort != 'priority' %}sort={{ sort }}&amp;{% endif %}page={{ num }}">{{ num }}</a></li>
+                    {% endif %}
+                {% endfor %}
+                <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+                    <a class="page-link" href="?{% if search %}search={{ search|urlencode }}&amp;{% endif %}{% if filter_type != 'all' %}filter={{ filter_type }}&amp;{% endif %}{% if router_filter %}router={{ router_filter|urlencode }}&amp;{% endif %}{% if barangay_filter %}barangay={{ barangay_filter|urlencode }}&amp;{% endif %}{% if sort != 'priority' %}sort={{ sort }}&amp;{% endif %}page={{ page_obj.next_page_number|default:paginator.num_pages }}">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
     </div>
 </div>

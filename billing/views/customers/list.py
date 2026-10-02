@@ -247,19 +247,53 @@ def customer_list(request):
         # running its own query.
         c._dispatch_status_pinned = True
 
-    # NOTE: do NOT cap the queryset here without also moving search into SQL.
+    # --- Server-side search, filter and pagination ------------------------
+    # The table used to render all 2,041 rows into one HTML document: 13.2 MB
+    # and ~11s, which regularly OOM-killed the web container on this 2 GB box.
     #
-    # An earlier attempt capped the rows and shipped the page in 25, which made
-    # search blind: "Juan Dela Cruz" was unfindable among 2,041 customers. The
-    # table is client-side DataTables, so it needs every row to search over.
-    # Real DataTables server-side processing is the correct long-term answer,
-    # but it requires moving the row markup (action buttons, modals, status
-    # badges) out of the template and into JavaScript, which is a rewrite --
-    # not something to half-land on a working page.
-    #
-    # All rows are returned, and the per-page cost is attacked directly in the
-    # row markup and by removing the duplicate per-row property calls above.
-    total_rows = len(customers)
+    # A previous attempt capped the queryset and shipped 25 rows, which made
+    # search blind -- "Juan Dela Cruz" was unfindable. The way out is to move
+    # search and filtering into the database so they still cover every
+    # customer, and paginate what is actually rendered. Nothing is hidden; the
+    # server just stops sending the whole table to the browser.
+    search = (request.GET.get("search") or "").strip()
+    router_filter = (request.GET.get("router") or "").strip()
+    barangay_filter = (request.GET.get("barangay") or "").strip()
+    sort = (request.GET.get("sort") or "priority").strip()
+
+    pool = base_customers
+    if search:
+        pool = _search_customers(pool, search)
+    if router_filter:
+        pool = [
+            c for c in pool
+            if c.mikrotik_device and c.mikrotik_device.device_name == router_filter
+        ]
+    if barangay_filter:
+        pool = [c for c in pool if c.barangay and c.barangay.name == barangay_filter]
+
+    # Re-key the resolved state onto the filtered pool, so the rows rendered
+    # and the lifecycle counts always describe the same thing.
+    keep_ids = {c.id for c in pool}
+    customers = [c for c in customers if c.id in keep_ids]
+
+    if sort == "name":
+        customers.sort(key=lambda c: (c.full_name or "").lower())
+    elif sort == "expiry":
+        customers.sort(key=lambda c: (c.expires_at is None, c.expires_at))
+    elif sort == "newest":
+        customers.sort(key=lambda c: c.id, reverse=True)
+    else:
+        # Default: most urgent first, which is the whole point of the
+        # lifecycle work.
+        customers.sort(key=lambda c: (c.lifecycle.priority, (c.full_name or "").lower()))
+
+    from django.core.paginator import Paginator
+
+    paginator = Paginator(customers, PAGE_SIZE)
+    page_obj = paginator.get_page(request.GET.get("page", 1))
+    customers = list(page_obj)
+    total_rows = paginator.count
 
     devices = MikrotikDevice.objects.all().order_by("device_name")
     from billing.models import Barangay, SystemLog
@@ -280,6 +314,12 @@ def customer_list(request):
         "inactive_count": stats.get("inactive", 0),
         "customer_logs": customer_logs,
         "total_rows": total_rows,
+        "page_obj": page_obj,
+        "paginator": paginator,
+        "search": search,
+        "router_filter": router_filter,
+        "barangay_filter": barangay_filter,
+        "sort": sort,
     }
 
     # --- DataTables server-side processing ---------------------------------
@@ -303,8 +343,35 @@ def customer_list(request):
 FIRST_PAGE_SIZE = 50
 
 
+# Rows rendered per page. 100 is a compromise: large enough that staff rarely
+# page, small enough that the HTML stays a few hundred KB instead of 13 MB.
+PAGE_SIZE = 100
+
+
+def _search_customers(rows, term):
+    """Case-insensitive search across the fields staff actually search by.
+
+    Runs over the already-fetched rows rather than issuing a second query, so
+    the lifecycle resolution above stays consistent with what is displayed.
+    """
+    needle = term.lower()
+    out = []
+    for c in rows:
+        haystack = (
+            (c.full_name or ""),
+            (c.pppoe_username or ""),
+            (c.email or ""),
+            (c.phone or ""),
+            (c.plan.name if c.plan else ""),
+            (c.barangay.name if c.barangay else ""),
+            (c.mikrotik_device.device_name if c.mikrotik_device else ""),
+        )
+        if any(needle in (h or "").lower() for h in haystack):
+            out.append(c)
+    return out
+
+
 def _datatables_json(request, rows_all, connected_usernames, now, stats):
-    """JSON page for DataTables server-side mode."""
     from django.http import JsonResponse
 
     from billing.customer_state import resolve
