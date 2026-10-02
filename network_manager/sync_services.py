@@ -23,46 +23,113 @@ class MikrotikAPI:
             self.port = 8728
 
     def _get_api_connection(self):
-        """Helper to get a fresh connection to the router."""
+        """Helper to get a fresh connection to the router.
+
+        This is a SECOND, independent connection path from
+        `network_manager.services.MikrotikAPI`, and it used to have none of the
+        protections: no circuit breaker, a 5s socket timeout, and a legacy-auth
+        retry on any error. Opening the Sync Manager on a powered-off router
+        therefore blocked for ~15s every single time (two 5s timeouts plus
+        library retries), which reads as a broken site.
+
+        It now shares the same breaker, the same LAN-sized timeout, and the
+        same rule: only retry legacy auth when the router ANSWERED and rejected
+        the credentials. A timeout means it is unreachable, and no auth mode
+        will change that.
+        """
         mode = getattr(settings, "ROUTER_MODE", "live").lower().strip()
         if mode == "dry_run" or (getattr(settings, "ROUTER_DRY_RUN", False) and mode != "live"):
             pool = DryRunConnectionPool(self.ip_address)
             return pool, pool.get_api()
 
-        old_timeout = socket.getdefaulttimeout()
-        socket.setdefaulttimeout(5.0)
-        try:
-            connection = routeros_api.RouterOsApiPool(
-                host=self.ip_address,
-                username=self.username,
-                password=self.password,
-                port=self.port,
-                plaintext_login=True,
-                use_ssl=False
+        from django.core.cache import cache
+
+        # Share ONE breaker key with services/base.py, which keys on the device
+        # id. This class is constructed from raw credentials with no device
+        # object, so resolve the id from the IP -- otherwise the two paths keep
+        # separate opinions about which routers are down and neither trip the
+        # other's breaker.
+        dev = getattr(self, "device", None)
+        if dev is None:
+            try:
+                from network_manager.models import MikrotikDevice
+                dev = MikrotikDevice.objects.filter(ip_address=self.ip_address).first()
+            except Exception:
+                dev = None
+        dev_id = dev.id if dev is not None else self.ip_address
+        cache_key = f"router_unreachable_{dev_id}"
+        if cache.get(cache_key):
+            raise ConnectionError(
+                f"Router {self.ip_address} is currently unreachable (cached)."
             )
-            api = connection.get_api()
-            if mode == "read_only":
-                from network_manager.services.read_only import ReadOnlyApiWrapper
-                api = ReadOnlyApiWrapper(api, self.ip_address)
-            return connection, api
-        except routeros_api.exceptions.RouterOsApiCommunicationError:
-            # Fallback for legacy authentication
+
+        def _unreachable(exc):
+            msg = str(exc).lower()
+            return any(k in msg for k in (
+                "timed out", "timeout", "refused", "unreachable",
+                "no route to host", "network is unreachable",
+                "connection reset", "broken pipe", "eof",
+            ))
+
+        def _trip():
+            attempts = (cache.get(cache_key + "_n") or 0) + 1
+            cache.set(cache_key + "_n", attempts, 900)
+            ttl = min(30 * (2 ** (attempts - 1)) if attempts < 6 else 900, 900)
+            cache.set(cache_key, True, ttl)
+
+        # These are LAN devices on a private subnet. A dead one stops answering
+        # in under a second, so 2s is a generous ceiling and 5s was just making
+        # every failure feel like a hang.
+        old_timeout = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(2.0)
+        try:
             try:
                 connection = routeros_api.RouterOsApiPool(
                     host=self.ip_address,
                     username=self.username,
                     password=self.password,
                     port=self.port,
-                    plaintext_login=False,
+                    plaintext_login=True,
                     use_ssl=False
                 )
                 api = connection.get_api()
+                cache.delete(cache_key)
+                cache.delete(cache_key + "_n")
                 if mode == "read_only":
                     from network_manager.services.read_only import ReadOnlyApiWrapper
                     api = ReadOnlyApiWrapper(api, self.ip_address)
                 return connection, api
-            except Exception as e:
-                raise ConnectionError(f"Authentication failed: {str(e)}")
+            except routeros_api.exceptions.RouterOsApiCommunicationError as e:
+                if _unreachable(e):
+                    _trip()
+                    raise ConnectionError(
+                        f"Could not connect to {self.ip_address}. "
+                        f"Check IP/Port and credentials."
+                    ) from e
+
+                # Fallback for legacy authentication -- only reached when the
+                # router replied and rejected the credentials.
+                try:
+                    connection = routeros_api.RouterOsApiPool(
+                        host=self.ip_address,
+                        username=self.username,
+                        password=self.password,
+                        port=self.port,
+                        plaintext_login=False,
+                        use_ssl=False
+                    )
+                    api = connection.get_api()
+                    cache.delete(cache_key)
+                    cache.delete(cache_key + "_n")
+                    if mode == "read_only":
+                        from network_manager.services.read_only import ReadOnlyApiWrapper
+                        api = ReadOnlyApiWrapper(api, self.ip_address)
+                    return connection, api
+                except Exception as e:
+                    _trip()
+                    raise ConnectionError(
+                        f"Could not authenticate to {self.ip_address}."
+                    ) from e
         finally:
             socket.setdefaulttimeout(old_timeout)
 
