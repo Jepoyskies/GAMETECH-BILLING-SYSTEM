@@ -1,0 +1,64 @@
+# ISOLATED TEST STACK — local verification only.
+#
+# SAFETY: this file is deliberately SELF-CONTAINED. It is NOT an override of
+# docker-compose.yml and it shares NO container names, NO volumes and NO ports
+# with the production stack. Never merge these two files.
+#
+# Purpose: run `manage.py test` against a real PostgreSQL 15 with ROUTER_MODE
+# dry_run, so no socket ever reaches a live MikroTik router and no production
+# subscriber row is read or written.
+#
+# Usage (from repo root):
+#   docker compose -p gametech-test -f docker-compose.test.yml up -d db redis
+#   docker compose -p gametech-test -f docker-compose.test.yml run --rm web python manage.py test billing dispatch
+#   docker compose -p gametech-test -f docker-compose.test.yml down -v
+
+name: gametech-test
+
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: gametech_user
+      POSTGRES_PASSWORD: gametech_pass
+      POSTGRES_DB: gametech_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gametech_user -d gametech_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    # Reuse the locally-built app image instead of `build:`. Docker Hub was
+    # unreachable from this host, and this image already carries the Python
+    # 3.10 environment + installed requirements. The repo is bind-mounted at
+    # /app below, so the working-tree source is always what runs -- only the
+    # interpreter and site-packages come from the image. If you change
+    # requirements.txt, rebuild before trusting a test result:
+    #   docker compose -f docker-compose.yml build web
+    image: gametech-billing-system-web:latest
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://gametech_user:gametech_pass@db:5432/gametech_db
+      CELERY_BROKER_URL: redis://redis:6379/0
+      # dry_run: every MikroTik call is stubbed. No socket is ever opened.
+      ROUTER_MODE: dry_run
+      DEBUG: "False"
+      ALLOWED_HOSTS: "*"
+      SECRET_KEY: test-only-not-a-real-secret
+      # Keep SMS from firing during tests.
+      SEMAPHORE_API_KEY: ""

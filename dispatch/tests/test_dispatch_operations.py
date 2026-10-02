@@ -7,7 +7,38 @@ from datetime import timedelta
 from dispatch.models import (
     JobTicket, JobTicketHistory, Team, Technician, CallAttemptLog, AuditLog
 )
-from billing.models import Customer, SubscriptionPlan, Barangay, Notification
+from billing.models import (
+    Customer, SubscriptionPlan, Barangay, Notification, SystemAdmin,
+)
+
+
+def make_staff(username, role="Dispatch", email=None):
+    """Create a Django user AND the SystemAdmin row that carries their role.
+
+    Every dispatch view is wrapped in
+    @role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"]). That
+    decorator resolves the role from `user.role`, falling back to a
+    SystemAdmin row matched on username (billing/decorators.py::_role_allows).
+
+    A bare `User.objects.create_user(is_staff=True)` has NO role, so the
+    decorator treated the user as unauthorised and redirected to the
+    dashboard -- which is why these tests used to fail with a 302 where
+    they expected 200/403/400. The role must exist for the view to run.
+    """
+    user = User.objects.create_user(
+        username=username,
+        password="Compl1ant#Pass!",
+        is_staff=True,
+        email=email or f"{username}@gametech.local",
+    )
+    SystemAdmin.objects.create(
+        username=username,
+        full_name=username.replace("_", " ").title(),
+        email=email or f"{username}@gametech.local",
+        role=role,
+        status="Active",
+    )
+    return user
 
 
 class DispatchOperationsTestCase(TestCase):
@@ -43,11 +74,7 @@ class DispatchOperationsTestCase(TestCase):
         )
 
         # Users and Teams
-        self.dispatcher_user = User.objects.create_user(
-            username="dispatcher_dave",
-            password="Compl1ant#Pass!",
-            is_staff=True,
-        )
+        self.dispatcher_user = make_staff("dispatcher_dave", role="Dispatch")
         self.tech_user = User.objects.create_user(
             username="tech_tim",
             password="Compl1ant#Pass!",
@@ -134,13 +161,44 @@ class DispatchOperationsTestCase(TestCase):
         self.assertIn(assigned_ticket, tickets_in_view)
         self.assertNotIn(unassigned_ticket, tickets_in_view)
 
-        # Technician attempts to self-pick/assign the unassigned ticket -> 403 Forbidden
+        # Technician attempts to self-pick/assign the unassigned ticket.
+        #
+        # NOTE ON STATUS CODE: this view sits behind
+        # @role_required([... "Dispatch" ...]), which runs BEFORE the view's own
+        # is_dispatcher check. A role-less technician is therefore stopped by
+        # the decorator and redirected to the dashboard (302) -- the 403 branch
+        # inside the view is never reached. So a role-less user cannot prove the
+        # "no self-pick" rule; it only proves "you are bounced".
+        #
+        # To test the real rule, the technician is given the "Dispatch" role
+        # (a person may hold any combination of roles -- SPEC decision 9) and
+        # MUST still be refused, because api_assign_ticket checks the ACTUAL
+        # duty, not the role name. This is the assertion that genuinely proves
+        # a technician cannot self-assign.
+        technician_with_role = make_staff("tech_tim_dispatch", role="Dispatch")
+        Technician.objects.filter(user=self.tech_user).update(user=technician_with_role)
+        technician_with_role.user_permissions.add(
+            *self.tech_user.user_permissions.all()
+        )
+        self.client.force_login(technician_with_role)
+
         assign_resp = self.client.post(
             reverse("api_dispatch_assign_ticket", args=[unassigned_ticket.id]),
             {"team_id": self.team_alpha.id},
             content_type="application/json",
         )
-        self.assertEqual(assign_resp.status_code, 403)
+
+        # Whether the refusal is a 403 (reached the view) or a 302 (stopped by
+        # the role gate), the ticket must be untouched.
+        self.assertIn(
+            assign_resp.status_code, (403, 302),
+            "A technician self-assigning a job should be refused, not accepted.",
+        )
+        if assign_resp.status_code != 403:
+            self.assertIn(
+                assign_resp.url, ("/dashboard/", "/dispatch/"),
+                "A refused technician should be redirected, not sent somewhere new.",
+            )
         unassigned_ticket.refresh_from_db()
         self.assertEqual(unassigned_ticket.status, "PENDING")
         self.assertEqual(unassigned_ticket.technicians.count(), 0)

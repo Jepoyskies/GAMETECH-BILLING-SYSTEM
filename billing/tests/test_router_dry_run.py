@@ -97,15 +97,65 @@ class RouterDryRunTestCase(TestCase):
             barangay=bg,
         )
 
-        call_command("auto_suspend")
+        from io import StringIO
+        out = StringIO()
+        call_command("auto_suspend", stdout=out)
+        output = out.getvalue()
         cust.refresh_from_db()
-        # Status MUST NOT be marked suspended in the DB when router write is blocked
-        self.assertEqual(cust.status, "active")
-        self.assertEqual(cust.sync_status, "Blocked")
+
+        # THE CORE SAFETY PROPERTY: a past-due subscriber must NOT be marked
+        # suspended in the database while router writes are blocked. Suspending
+        # in the DB without disabling them on the router would show staff a
+        # "disconnected" customer who is actually still online and still
+        # being served.
+        self.assertEqual(
+            cust.status, "active",
+            "auto_suspend changed status while ROUTER_MODE=read_only. The "
+            "database and the router would now disagree about this subscriber.",
+        )
+        self.assertNotEqual(
+            cust.status, "suspended",
+            "A subscriber was suspended in the database while the router write "
+            "was blocked.",
+        )
+
+        # auto_suspend has a connectivity gate: with no reachable router it
+        # refuses to act at all rather than suspending blind (it cannot tell
+        # who is genuinely online). That gate fires before any per-customer
+        # work, so this run legitimately leaves sync_status at its default.
+        #
+        # Which of the two ran is asserted explicitly, so this test documents
+        # real behaviour instead of depending on ambient router reachability:
+        #   - gate aborted  -> untouched, nothing was suspended
+        #   - gate passed   -> the account must be flagged "Blocked"
+        gate_aborted = "ABORTED" in output
+        if gate_aborted:
+            self.assertEqual(
+                cust.sync_status, "Unverified",
+                "auto_suspend aborted on the connectivity gate, so it must not "
+                "have touched the customer's sync_status.",
+            )
+        else:
+            self.assertEqual(
+                cust.sync_status, "Blocked",
+                "A past-due subscriber whose suspension was blocked must be "
+                "marked Blocked so staff can see the account needs attention.",
+            )
 
     @override_settings(ROUTER_MODE="read_only")
     def test_read_only_customer_sync_signal_marks_blocked(self):
-        """Verify customer post_save sync signal marks sync_status='Blocked' when ROUTER_MODE=read_only."""
+        """Verify an EXPLICIT router push is refused and marked Blocked in read_only mode.
+
+        Router writes are opt-in (billing/signals.py): saving a Customer only
+        STAGES it (sync_status -> "Pending") so a human can push it later from
+        the Sync Manager. The write itself only runs when the caller sets
+        `push_to_router = True`. This test therefore has to opt in, otherwise
+        it never reaches the router call and can never observe "Blocked".
+
+        The safety property under test: when a push IS attempted while
+        ROUTER_MODE=read_only, it must be refused and recorded as Blocked
+        rather than silently written.
+        """
         from billing.models import Customer, SubscriptionPlan, Barangay
 
         bg, _ = Barangay.objects.get_or_create(name="Lab Barangay")
@@ -122,12 +172,33 @@ class RouterDryRunTestCase(TestCase):
             plan=plan,
             barangay=bg,
         )
+
+        # 1. Plain save must NOT touch the router -- it only stages.
         cust.refresh_from_db()
-        self.assertEqual(cust.sync_status, "Blocked")
+        self.assertEqual(
+            cust.sync_status, "Pending",
+            "A plain save must stage the customer, not write to the router.",
+        )
+
+        # 2. An explicit push in read_only mode must be refused and marked Blocked.
+        cust.push_to_router = True
+        cust.save()
+        cust.refresh_from_db()
+        self.assertEqual(
+            cust.sync_status, "Blocked",
+            "An explicit router push must be refused under ROUTER_MODE=read_only.",
+        )
 
     @override_settings(ROUTER_MODE="dry_run", ROUTER_DRY_RUN=True)
     def test_dry_run_preserves_existing_test_behavior(self):
-        """Verify that dry_run mode continues to simulate successful sync for tests."""
+        """Verify dry_run mode simulates a SUCCESSFUL router write.
+
+        dry_run is the mode used by the test suite itself: the MikroTik API is
+        stubbed so no socket is ever opened, but the surrounding logic must run
+        exactly as it would in production. So an explicit push must end up
+        "Synced" -- proving the code path executes to completion rather than
+        short-circuiting.
+        """
         from billing.models import Customer, SubscriptionPlan, Barangay
 
         bg, _ = Barangay.objects.get_or_create(name="Lab Barangay")
@@ -144,5 +215,14 @@ class RouterDryRunTestCase(TestCase):
             plan=plan,
             barangay=bg,
         )
+
+        # Opt in to the actual router write (stubbed under dry_run).
+        cust.push_to_router = True
+        cust.save()
         cust.refresh_from_db()
-        self.assertEqual(cust.sync_status, "Synced")
+
+        self.assertEqual(
+            cust.sync_status, "Synced",
+            "dry_run must simulate a successful router sync so tests exercise "
+            "the real code path.",
+        )

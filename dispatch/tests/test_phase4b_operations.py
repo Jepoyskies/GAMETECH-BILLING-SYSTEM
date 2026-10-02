@@ -10,10 +10,39 @@ from django.test import TestCase, Client
 from django.urls import reverse
 from django.utils import timezone
 
-from billing.models import Customer, SubscriptionPlan
+from billing.models import Customer, SubscriptionPlan, SystemAdmin
 from dispatch.models import JobTicket, Team, Technician, TicketBounceHistory
 
 User = get_user_model()
+
+
+def make_staff(username, role="Staff", email=None, is_staff=True):
+    """Create a Django user AND the SystemAdmin row that carries their role.
+
+    Every dispatch/QA view is wrapped in
+    @role_required(["Admin", "Editor", "Staff", "CSR", "Dispatch"]). That
+    decorator resolves the role from `user.role`, falling back to a SystemAdmin
+    row matched on username (billing/decorators.py::_role_allows).
+
+    A bare `User.objects.create_user(is_staff=True)` has NO role, so the
+    decorator treated the user as unauthorised and redirected to the dashboard
+    -- which is why these tests used to fail with a 302 where they expected
+    200/400. The role must exist for the view to run at all.
+    """
+    user = User.objects.create_user(
+        username=username,
+        email=email or f"{username}@gametech.local",
+        password="Compl1ant#Pass!",
+        is_staff=is_staff,
+    )
+    SystemAdmin.objects.create(
+        username=username,
+        full_name=username.replace("_", " ").title(),
+        email=email or f"{username}@gametech.local",
+        role=role,
+        status="Active",
+    )
+    return user
 
 
 class Phase4BOperationsTestCase(TestCase):
@@ -27,12 +56,11 @@ class Phase4BOperationsTestCase(TestCase):
             password="AdminPassword123!",
         )
 
-        # QA Staff user
-        self.qa_user = User.objects.create_user(
-            username="test_qa_phase4b",
+        # QA Staff user -- carries the "Staff" role so @role_required lets them in.
+        self.qa_user = make_staff(
+            "test_qa_phase4b",
+            role="Staff",
             email="qa_4b@gametech.local",
-            password="QaPassword123!",
-            is_staff=True,
         )
         qa_perm = Permission.objects.filter(codename="dispatch_qa").first()
         if qa_perm:

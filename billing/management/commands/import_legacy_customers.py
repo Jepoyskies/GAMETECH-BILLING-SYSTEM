@@ -131,6 +131,7 @@ class Command(BaseCommand):
             account_type_map = {}
             pppoe_creds = {}
             zero_date_customers = []
+            missing_password = []
 
             # Parse the dump ONCE. Re-reading a multi-megabyte file three times
             # was slow enough to get the process killed on a 1 vCPU host.
@@ -227,8 +228,15 @@ class Command(BaseCommand):
                             expires_at = None
                             zero_date_customers.append(username or full_name)
 
-                        # Get PPPoE password
+                        # Get PPPoE password.
+                        # A missing/NULL password in the export must NEVER blank a
+                        # working one: PPPoE creds are what a subscriber's router
+                        # secret depends on, so nulling them silently disconnects
+                        # paying customers. Keep the existing value and record the
+                        # account so the owner can chase the legacy source.
                         password = pppoe_creds.get(username, None)
+                        if not password:
+                            missing_password.append(username or full_name)
 
                         # Parse status
                         raw_status = row.get("status")
@@ -246,7 +254,8 @@ class Command(BaseCommand):
                             else {"full_name": full_name, "email": email}
                         )
                         existing = Customer.objects.filter(**lookup).only(
-                            "id", "portal_password_hash", "installed_at", "legacy_reviewed_at"
+                            "id", "portal_password_hash", "installed_at",
+                            "legacy_reviewed_at", "pppoe_password",
                         ).first()
 
                         if dry_run:
@@ -286,7 +295,6 @@ class Command(BaseCommand):
                             "cignalplay_no": row.get("cignalplay_no"),
                             "cignalplay_date": self.parse_date_safe(row.get("cignalplay_date")),
                             "cignalplay_adjustedby": row.get("cignalplay_adjustedby"),
-                            "pppoe_password": password,
                             "installation_status": "installed",
                             # Preserve the original install date across re-imports.
                             "installed_at": (existing.installed_at if existing and existing.installed_at else timezone.now()),
@@ -308,6 +316,17 @@ class Command(BaseCommand):
                             defaults["expires_at"] = existing.expires_at
                             defaults["status"] = existing.status
                             preserved_count += 1
+
+                        # PPPoE password: write it only when the export actually
+                        # supplied one. On a re-import whose export omitted
+                        # pppoe_users, this keeps the subscriber's working
+                        # credential instead of nulling it out.
+                        if password:
+                            defaults["pppoe_password"] = password
+                        elif existing is not None and existing.pppoe_password:
+                            defaults["pppoe_password"] = existing.pppoe_password
+                        else:
+                            defaults["pppoe_password"] = None
 
                         if username:
                             defaults["email"] = email
@@ -345,6 +364,7 @@ class Command(BaseCommand):
                 "total_customers": processed_customers,
                 "pppoe_credentials": len(pppoe_creds),
                 "zero_date_customers": zero_date_customers,
+                "missing_password_customers": missing_password,
                 "devices_created": list(device_map.keys()),
                 "plans_used": list(plan_map.keys()),
             }
@@ -353,6 +373,28 @@ class Command(BaseCommand):
             with open(report_path, "w") as f:
                 json.dump(report, f, indent=2, default=str)
             self.stdout.write(f"  Import report saved to: {report_path}")
+
+            if missing_password:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"\n=== NO PPPoE PASSWORD IN EXPORT ({len(missing_password)}) — CHECK LEGACY SOURCE ==="
+                    )
+                )
+                for name in missing_password[:50]:
+                    self.stdout.write(f"  - {name}")
+                if len(missing_password) > 50:
+                    self.stdout.write(
+                        f"  ... and {len(missing_password) - 50} more"
+                    )
+                self.stdout.write(
+                    self.style.WARNING(
+                        "These accounts had no usable PPPoE password in the export. "
+                        "Any pre-existing password was KEPT, so nobody was "
+                        "disconnected by this import. A genuinely NEW subscriber "
+                        "listed here has no password yet and will not authenticate "
+                        "on the router until one is set."
+                    )
+                )
 
             if zero_date_customers:
                 self.stdout.write(

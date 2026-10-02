@@ -104,12 +104,24 @@ def api_assign_ticket(request, ticket_id):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
 
-    # Permission check: Field technicians without dispatch/staff roles cannot assign/pick tickets
+    # Permission check: Field technicians without dispatch/staff roles cannot assign/pick tickets.
+    #
+    # `is_staff` alone is NOT authority to dispatch. A technician may hold
+    # is_staff=True (and SPEC decision 9 lets one person hold any combination
+    # of roles, so a technician can also hold the "Dispatch" role for
+    # scheduling). Checking is_staff first short-circuited this whole
+    # expression, so the view could never enforce its own no-self-pick rule:
+    # any logged-in staff user passed instantly. SPEC decision 14 requires
+    # that technicians never self-pick, so a user who IS a Technician is
+    # refused FIRST, before any role or permission is considered.
+    is_field_technician = Technician.objects.filter(user=request.user).exists()
     is_dispatcher = (
-        request.user.is_staff or
-        request.user.is_superuser or
-        request.user.has_perm('dispatch.assign_technicians') or
-        getattr(request.user, 'role', '') in ['Admin', 'Staff', 'CSR', 'Dispatch']
+        not is_field_technician and (
+            request.user.is_staff or
+            request.user.is_superuser or
+            request.user.has_perm('dispatch.assign_technicians') or
+            getattr(request.user, 'role', '') in ['Admin', 'Staff', 'CSR', 'Dispatch']
+        )
     )
     if not is_dispatcher:
         return JsonResponse({
