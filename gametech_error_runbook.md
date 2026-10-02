@@ -2352,3 +2352,106 @@ before "fixing" it.
 
 **Files**: `network_manager/sync_services.py`, `network_manager/views/sync.py`
 **Date Logged**: 2026-10-02
+
+### ERR-095: /customers/ Took 40 Seconds and 13 MB - A 2,041-Row N+1 Was OOM-Killing The Web Container
+
+**Symptom**: Opening the Customers Directory took ~40 seconds and produced a
+**13.2 MB** HTML document (~6,800 bytes per row). On a 1 vCPU / 2 GB droplet it
+regularly pushed the web container into the OOM killer -- at 23:05 all five
+containers were SIGKILLed together (`exit 137`) and the site went dark. Two
+separate "the site is down" incidents traced back to this one page.
+
+**Root causes, in order of cost**
+
+1. **N+1 on `dispatch_status`.** `Customer.dispatch_status` falls through to
+   `self.dispatches.filter(done_at__isnull=True).first()` and the status cell
+   calls it per row. That is **2,041 database queries on every page load**,
+   ~23s of the total. Fixed by resolving it in the view with two bulk queries
+   and pinning `_dispatch_status_pinned` onto each row, so the model property
+   and the template both read the batch value.
+2. **No pagination.** All 2,041 rows were rendered into one document so the
+   client-side DataTable could page them. The browser had to receive the entire
+   customer base to search it.
+3. **Duplicate per-row property calls.** The status cell called
+   `customer.router_status` and `customer.connection_status`, and
+   `connection_status` rebuilt a lowercased set of every active user for every
+   row -- an O(n^2) string loop. ~6,000 redundant Redis round trips, ~7s.
+4. **Router reachability read per customer** instead of per device, so a 4-device
+   setup made ~2,000 redundant `cache.get` calls.
+
+**Fix**
+
+- Bulk-resolve dispatch, router and connection state once in the view; the
+  template reads `resolved_*` values. **No per-row queries remain.**
+- **Server-side search / filter / sort / pagination** (`PAGE_SIZE = 100`),
+  searching across name, username, email, phone, plan, barangay and router.
+- DataTables is kept ONLY as the checkbox/row-helper layer, because
+  `customer_list/_scripts_bulk.html` depends on `table.$()` for bulk SMS, email
+  and router transfer. Its own search/ordering/paging are disabled so there is
+  one UI, not two.
+
+**The trap to avoid**: an earlier attempt capped the queryset and shipped 25
+rows, which made search *blind* -- "Juan Dela Cruz" was unfindable among 2,041
+customers. Capping rows is only safe when search moves into the database with
+it. Verified: walking pages 1..21 reaches **2,041 of 2,041** unique customers.
+
+| | before | after |
+|---|---|---|
+| render time | 39.6s | **0.5s** |
+| HTML size | 13.2 MB | **946 KB** |
+| DB queries on the page | ~2,041 | **3** |
+
+**Guard**: `scripts/maintenance/check_templates.py` compiles all 235 templates
+and fails loudly. It exists because two template bugs here (`{%- ... %}` is not
+valid Django, and `page_obj.previous_page_number` *raises* `EmptyPage` on page 1
+instead of returning a falsy value) were each only discoverable as a live 500.
+
+**Files**: `billing/views/customers/list.py`, `billing/models.py`,
+`billing/templates/billing/customer_list/_table.html`,
+`billing/templates/billing/customer_list/_scripts.html`,
+`billing/templates/billing/customer_list/_hero.html`,
+`billing/templates/billing/customer_list/_styles.html`,
+`scripts/maintenance/check_templates.py`
+**Date Logged**: 2026-10-02
+
+### ERR-096: The Sync Manager Had Its OWN Connection Path With No Circuit Breaker - 15s Hang Per Dead Router
+
+**Symptom**: Opening the Sync Manager for a powered-off router blocked for
+~15 seconds on every visit, which reads as "the site is broken".
+
+**Root cause**: `network_manager/sync_services.py` has a **second, independent**
+connection path (`_get_api_connection`) alongside
+`network_manager/services/base.py`. It had **none** of the protections:
+
+- no circuit breaker -- it never checked `router_unreachable_{id}`, so every
+  page load paid the full socket timeout again
+- a 5s socket timeout instead of the 2s the other path uses
+- a legacy-auth retry on **any** `RouterOsApiCommunicationError`, so a router
+  that is simply unplugged was dialled twice
+
+5s x 2 attempts plus library retries = ~15s of dead page.
+
+**Fix**
+- Both paths now share **one** breaker key. `sync_services` resolves the
+  `MikrotikDevice` from the IP so `router_unreachable_<id>` matches; otherwise
+  the two paths keep separate opinions and neither trips the other's breaker.
+- Escalating backoff in `base.py`: 30s -> 2m -> 5m -> 15m, reset the moment the
+  router answers, so recovery is still automatic. These are LAN devices -- one
+  that is down stays down until someone fixes it physically.
+- **Do not retry legacy auth when the router is unreachable.** Auth mode is
+  irrelevant to a host that never answered. The retry now only fires when the
+  router replied and rejected the credentials.
+- The Sync Manager view checks the breaker *before* dialling and shows a
+  **"Retry now"** button (`?force=1`) so a cached outage is never a dead end.
+
+**Measured**: all four routers now load in **0.03-0.53s**. The 15s figure only
+survives on a genuinely cold first hit, which the 10s background poller absorbs.
+
+**Lesson**: two connection paths to the same hardware means two sets of bugs.
+Any new router call must go through `network_manager/services`, not a local
+helper.
+
+**Files**: `network_manager/sync_services.py`, `network_manager/services/base.py`,
+`network_manager/views/sync.py`,
+`network_manager/templates/network_manager/sync_manager.html`
+**Date Logged**: 2026-10-02
