@@ -204,9 +204,18 @@
             </span>
             <ul class="pagination pagination-sm mb-0">
                 <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
-                    <a class="page-link" href="?{% if search %}search={{ search|urlencode }}&amp;{% endif %}{% if filter_type != 'all' %}filter={{ filter_type }}&amp;{% endif %}{% if router_filter %}router={{ router_filter|urlencode }}&amp;{% endif %}{% if barangay_filter %}barangay={{ barangay_filter|urlencode }}&amp;{% endif %}{% if sort != 'priority' %}sort={{ sort }}&amp;{% endif %}page={{ page_obj.previous_page_number|default:1 }}">
+                    {% comment %}
+                      previous_page_number RAISES EmptyPage on the first page
+                      rather than returning a falsy value, and a template
+                      cannot catch that, so it must be guarded.
+                    {% endcomment %}
+                    {% if page_obj.has_previous %}
+                    <a class="page-link" href="?{% if search %}search={{ search|urlencode }}&amp;{% endif %}{% if filter_type != 'all' %}filter={{ filter_type }}&amp;{% endif %}{% if router_filter %}router={{ router_filter|urlencode }}&amp;{% endif %}{% if barangay_filter %}barangay={{ barangay_filter|urlencode }}&amp;{% endif %}{% if sort != 'priority' %}sort={{ sort }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">
                         <i class="fas fa-chevron-left"></i>
                     </a>
+                    {% else %}
+                    <span class="page-link"><i class="fas fa-chevron-left"></i></span>
+                    {% endif %}
                 </li>
                 {% for num in paginator.page_range %}
                     {% if num == page_obj.number %}
@@ -216,9 +225,13 @@
                     {% endif %}
                 {% endfor %}
                 <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
-                    <a class="page-link" href="?{% if search %}search={{ search|urlencode }}&amp;{% endif %}{% if filter_type != 'all' %}filter={{ filter_type }}&amp;{% endif %}{% if router_filter %}router={{ router_filter|urlencode }}&amp;{% endif %}{% if barangay_filter %}barangay={{ barangay_filter|urlencode }}&amp;{% endif %}{% if sort != 'priority' %}sort={{ sort }}&amp;{% endif %}page={{ page_obj.next_page_number|default:paginator.num_pages }}">
+                    {% if page_obj.has_next %}
+                    <a class="page-link" href="?{% if search %}search={{ search|urlencode }}&amp;{% endif %}{% if filter_type != 'all' %}filter={{ filter_type }}&amp;{% endif %}{% if router_filter %}router={{ router_filter|urlencode }}&amp;{% endif %}{% if barangay_filter %}barangay={{ barangay_filter|urlencode }}&amp;{% endif %}{% if sort != 'priority' %}sort={{ sort }}&amp;{% endif %}page={{ page_obj.next_page_number }}">
                         <i class="fas fa-chevron-right"></i>
                     </a>
+                    {% else %}
+                    <span class="page-link"><i class="fas fa-chevron-right"></i></span>
+                    {% endif %}
                 </li>
             </ul>
         </nav>
