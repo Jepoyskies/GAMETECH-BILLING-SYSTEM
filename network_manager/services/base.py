@@ -92,6 +92,35 @@ class MikrotikBase:
                 finally:
                     socket.setdefaulttimeout(old_timeout)
             except routeros_api.exceptions.RouterOsApiCommunicationError as e:
+                # Only fall back to legacy (challenge-response) auth when the
+                # router actually answered and rejected the credentials.
+                #
+                # Previously ANY communication error triggered a second full
+                # connection attempt. For a router that is simply powered off
+                # or unplugged, that doubled the wait for nothing -- two
+                # socket timeouts, ~15s of dead page, then the same result.
+                # A timeout or refused connection tells us nothing about the
+                # auth mode, so trip the breaker immediately instead.
+                msg = str(e).lower()
+                unreachable = any(
+                    k in msg for k in (
+                        "timed out", "timeout", "refused", "unreachable",
+                        "no route to host", "network is unreachable",
+                        "connection reset", "broken pipe", "eof",
+                    )
+                )
+                if unreachable:
+                    self._connection_failed = True
+                    self._trip_breaker(cache_key)
+                    logger.error(
+                        f"Timeout/Error connecting to Mikrotik API on "
+                        f"{self.device.ip_address}: {e}"
+                    )
+                    raise ConnectionError(
+                        f"Could not connect to {self.device.device_name} API. "
+                        f"Check IP/Port and credentials."
+                    ) from e
+
                 # If the error string contains "invalid user name or password (6)" and we were using plaintext login,
                 # it might actually be an older RouterOS version expecting a challenge-response (plaintext_login=False).
                 logger.warning(f"Plaintext login failed for {self.device.device_name}, retrying with legacy authentication...")
