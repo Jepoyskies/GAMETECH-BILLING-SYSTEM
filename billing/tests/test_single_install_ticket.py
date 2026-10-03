@@ -29,6 +29,7 @@ Two open INSTALLATION tickets for one customer means:
 """
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -58,6 +59,18 @@ class SingleInstallTicketTests(TestCase):
                 "status": "Active",
             },
         )
+        self.last_response = None
+        self.last_detail = ""
+        # add_customer is behind @permission_required("billing.add_customer")
+        # as well as @role_required, so a role alone is not enough.
+        add_perm = Permission.objects.filter(
+            content_type__app_label="billing", codename="add_customer",
+        ).first()
+        self.assertIsNotNone(
+            add_perm, "billing.add_customer permission must exist.")
+        self.staff.user_permissions.add(add_perm)
+        self.staff = User.objects.get(pk=self.staff.pk)
+
         self.plan = SubscriptionPlan.objects.create(
             name="Plan 1000",
             speed_up="20 Mbps",
@@ -90,7 +103,28 @@ class SingleInstallTicketTests(TestCase):
             "barangay": self.barangay.id,
             "latitude": "7.0",
             "longitude": "125.0",
+            "installation_status": "pending",
+            "status": "pending",
+            "created_form_by": "walkin",
+            # The checklist confirmation itself
+            "checklist_confirmed": "on",
+            "item_free_install": "on",
+            "item_specific_plan": "on",
+            "item_no_lockin": "on",
+            "item_staggered_lock": "on",
+            "item_same_day_repair": "on",
+            "item_rebates_24h": "on",
+            "confirm_method": "in_person",
         })
+        self.last_response = response
+        if response.status_code == 200:
+            form_errors = [
+                e for e in response.context.get("form", None).errors.as_data().values()
+            ] if getattr(response.context.get("form", None), "errors", None) else []
+            messages_ = [str(m) for m in response.context["messages"]] \
+                if "messages" in response.context else []
+            self.last_detail = "{!r} / form errors: {}".format(
+                messages_, form_errors)
         return response
 
     def test_new_customer_gets_exactly_one_install_ticket(self):
@@ -99,8 +133,12 @@ class SingleInstallTicketTests(TestCase):
 
         cust = Customer.objects.filter(pppoe_username="dup_guard_sub").first()
         self.assertIsNotNone(
-            cust, "The customer was not created, so this test proves nothing. "
-                  "Response was: {}".format(self._last_status()),
+            cust,
+            "The customer was not created, so this test proves nothing. "
+            "status={} detail={}".format(
+                getattr(self.last_response, "status_code", "?"),
+                self.last_detail,
+            ),
         )
 
         tickets = JobTicket.objects.filter(
