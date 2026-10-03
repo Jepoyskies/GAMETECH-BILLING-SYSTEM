@@ -2455,3 +2455,82 @@ helper.
 `network_manager/views/sync.py`,
 `network_manager/templates/network_manager/sync_manager.html`
 **Date Logged**: 2026-10-02
+
+---
+
+### ERR-097: `add_customer` Did NOT Need An Install Ticket - `dispatch/signals.py` Already Created It (Near-Miss Double-Dispatch)
+
+**Symptom**: A new applicant created at `/customers/add/` showed
+"installation order dispatched to the unassigned queue", but no `JobTicket`
+existed for them. Read alone, that looks like a missing dispatch bridge.
+
+**It was not missing.** `dispatch/signals.py` hooks `post_save` on `Customer` and
+already creates the `INSTALLATION` ticket, with a de-duplication guard that looks
+for an existing open `INSTALLATION` ticket first. A raw
+`JobTicket.objects.create(...)` added inside `billing/views/customers/crud.py`
+therefore produced **two** install tickets per applicant -- a technician
+dispatched twice to one address, and the QA bounce-back counter double-counting.
+
+**Why the near-miss was so easy to fall into**: the dispatch bridge is in the
+`dispatch` app, not `billing`. Grepping only `billing/signals.py` for
+`JobTicket.objects.create` returns nothing and reads as "no signal exists".
+
+**Rule**: never create a `JobTicket` from a billing view. Go through the signal
+or the dispatch views. Pinned by `billing/tests/test_single_install_ticket.py`.
+
+**Lesson**: before concluding "this view creates nothing", check the OTHER app's
+signals. Cross-app side effects are the normal case in this codebase.
+
+**Files**: `dispatch/signals.py`, `billing/views/customers/crud.py`,
+`billing/tests/test_single_install_ticket.py`
+**Date Logged**: 2026-10-03
+
+---
+
+### ERR-098: Agent/Technician Portal Light Mode Was Unreadable - Accent Colours, Dead KPI Selectors, And A Rule That Repainted Buttons
+
+Four separate defects made both persona portals fail WCAG AA in light mode while
+looking fine in dark mode. Found by measuring computed contrast in the browser
+(not by reading the CSS).
+
+1. **Accent-on-soft-fill = invisible.** `.pt-portal-tag` and `.pt-badge-accent`
+   painted `--persona-accent` (Gametech gold `#f8a815`) on `--persona-accent-soft`
+   (16% gold): **1.00:1** -- literally unreadable. `--gt-gold-text` (`#8A5A05`)
+   already existed for exactly this. Added a `--persona-accent-text` token
+   (darkened in light, bright in dark) and routed every accent-as-text usage
+   through it. Same bug hit `.pt-tab.active`, `.pt-kpi-accent .kpi-value` and
+   `.btn-outline-primary`.
+2. **The KPI colour modifiers were dead code.** They were written as
+   `.pt-kpi-*  .pt-kpi-value`, but every template renders `class="kpi-value"` --
+   `pt-kpi-value` appears nowhere. All six technician KPI numbers were falling
+   back to plain body text. Renamed the child selector to `.kpi-value`.
+3. **The light-mode modifiers still lost.** `.portal .kpi-value` is declared
+   *later* in the file at equal specificity, so it won. Scoped the modifiers
+   under `.portal` to outrank it.
+4. **The theme repainted Bootstrap buttons.** `body.portal a { color: ... }`
+   (0,1,2) outranks `.btn-outline-danger` (0,1,0), so the Logout button rendered
+   indigo-on-navy at **1.87:1**. Narrowed to `a:not(.btn)`, and added a
+   dark-mode override for `.btn-outline-danger` (Bootstrap's red is 3.73:1 on
+   navy, under the 4.5 AA threshold for 14px text).
+
+Also removed the last hardcoded hex from `tech_dashboard.html` (six inline
+`style="color: #xxxxxx"`), which included a stray `#a78bfa` purple, and added
+`text-warning`/`text-info`/`text-success`/`text-danger` remaps to the existing
+`.portal` legacy bridge so every status pill in both portals themes at once.
+
+**Lesson**: "it renders and the colours look right in the code" is not evidence.
+Alpha compositing matters -- a 16%-opacity fill over white is near-white, so the
+real background is never what `backgroundColor` reports. Measure the composited
+pair.
+
+**Gotcha that cost the most time**: toggling `dark-mode` by hand with
+`classList.add()` and reading `getComputedStyle` in the *same* evaluate call
+returns **stale values** and invents contrast failures that do not exist. Drive
+the theme the way a user does -- `localStorage.setItem("theme","dark")` then a
+real navigation -- and read on a later turn.
+
+**Files**: `static/css/gt/portal.css`,
+`billing/templates/billing/agent_portal/base_agent.html`,
+`dispatch/templates/dispatch/pipeline/portal_base_tech.html`,
+`dispatch/templates/dispatch/pipeline/tech_dashboard.html`
+**Date Logged**: 2026-10-03
