@@ -2702,3 +2702,67 @@ router after creating a customer.
 **Files**: `.env`, `network_manager/services/read_only.py`,
 `network_manager/services/base.py`, `docker-compose.yml`
 **Date Logged**: 2026-10-03
+
+---
+
+### ERR-104: Completing An Install Silently Activated The Subscriber - Activation Must Be Payment-Gated
+
+**The rule the owner actually runs the business on**:
+> after installation juan either pays to the technician or through online, or calls
+> the CSR. The CSR clicks juan's profile, clicks renew/pay, pays the amount, then it
+> gets active with the right due date.
+
+**What the code did**: the technician's **Done** button set `status = 'active'`
+on the customer by itself, with no `Payment` row and `expires_at = None`. End-to-end
+test reproduced it: ticket `COMPLETED`, customer `active`/`installed`,
+`installed_at` set, **`expires_at = None`, zero payments**. That is a subscriber
+live on the network, marked Active in billing, owing nothing and due no date --
+created by a technician clicking a button.
+
+Meanwhile the payment path had the opposite gap: `pay_customer_view` set
+`expires_at` correctly but only promoted `suspended -> active`. A never-paid
+`pending` customer who paid stayed `pending` forever.
+
+**Root cause**: activation had **seven** independent implementations spread across
+completion paths, and "activate" was bundled into "the work is finished".
+
+**Sites that self-activated** (all now guarded):
+- `dispatch/signals.py` `sync_ticket_completion_to_customer` -- technician Done
+- `dispatch/views.py` `complete_job_view` (legacy), DispatchRecord done, MonitoringRecord done
+- `dispatch/views_approval.py` admin final approval
+- `dispatch/pipeline_views.py` final_approve and approve (x2)
+
+**Fix**: one shared rule on the model, so the rule lives in one place:
+
+```python
+@property
+def awaiting_first_payment(self):
+    """Physically installed, but never paid for."""
+    if self.installation_status != "installed":
+        return False
+    if self.expires_at:
+        return False
+    return not self.payments.exists()
+```
+
+Every install-completion site now sets `installation_status = 'installed'` and
+skips `status = 'active'` while `awaiting_first_payment` is True. Admin/QA
+approval confirms the **work**, not the **payment**.
+
+`pay_customer_view` now promotes `pending -> active` in the same transaction
+that sets `expires_at` and `first_payment_date`, so **a due date and an Active
+status can never disagree**.
+
+**Verified** (`archived_scripts/e2e_payment_gated_activation_test.py`, 12/12):
+- technician Done -> `installed` / still `pending` / `expires_at None` / 0 payments
+- CSR pays -> `active` + `expires_at = <one month later>` + `first_payment_date`
+- a customer who has already paid is still activatable (no regression)
+
+**Lesson**: "the job is done" and "the customer is paying" are different facts.
+Anything that conflates them will eventually hand out free service. When a state
+has two independent causes, make ONE of them the only writer.
+
+**Files**: `billing/models.py` (`Customer.awaiting_first_payment`),
+`dispatch/signals.py`, `dispatch/views.py`, `dispatch/views_approval.py`,
+`dispatch/pipeline_views.py`, `billing/views/payments/transactions.py`
+**Date Logged**: 2026-10-03
