@@ -41,7 +41,6 @@ from billing.models import (
 import requests
 from network_manager.models import MikrotikDevice, NapBox
 from network_manager.services import MikrotikAPI
-from dispatch.models import JobTicket
 from django.db import transaction
 import calendar
 from billing.views.services import get_categorized_plans
