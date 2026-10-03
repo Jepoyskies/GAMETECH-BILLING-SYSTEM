@@ -42,8 +42,12 @@ CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=False)
 SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=False)
 SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=0)
 
-# Session idle timeout: logout after 5 minutes of inactivity
-SESSION_COOKIE_AGE = 300  # 5 minutes
+# Session idle timeout. Was hardcoded to 300s (5 minutes), which logged staff out
+# mid-task -- a CSR filling the onboarding checklist or keying a long payment
+# reference would lose the form and be bounced to /login/. Default is one working
+# day; the timer still slides on every request, so it is an IDLE timeout, not a
+# total session limit. Override with SESSION_COOKIE_AGE in .env.
+SESSION_COOKIE_AGE = env.int("SESSION_COOKIE_AGE", default=28800)  # 8 hours
 SESSION_SAVE_EVERY_REQUEST = True  # Reset idle timer on each request
 
 # Security headers (applied by SecurityMiddleware)
