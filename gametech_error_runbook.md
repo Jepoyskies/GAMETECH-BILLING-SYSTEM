@@ -2534,3 +2534,171 @@ real navigation -- and read on a later turn.
 `dispatch/templates/dispatch/pipeline/portal_base_tech.html`,
 `dispatch/templates/dispatch/pipeline/tech_dashboard.html`
 **Date Logged**: 2026-10-03
+
+---
+
+### ERR-099: No CSR Could Ever Create A Customer - `add_customer` Gate Used The Wrong Permission Codename
+
+**Symptom**: `GET /customers/add/` returned **403 Forbidden** for every non-superuser.
+The CSR was bounced from the single most important screen in the product. The
+prospect page's "Run Checklist & Add Customer" button led straight to a dead end.
+
+**Root cause**: two parallel permission systems that never met.
+- The role matrix (`setup_dispatch_permissions.ROLE_PERMISSION_MATRIX`) grants the
+  **custom** permission `billing.create_customer`
+  ("Can convert prospect and create customer") to Staff + CSR.
+- The view was decorated `@permission_required("billing.add_customer")` --
+  Django's **auto-generated** add permission, which **no role group was ever
+  granted**.
+
+So `role_required(["Admin","Staff","CSR","Dispatch"])` passed, and the
+`permission_required` underneath it killed the request one layer down. Only the
+three superuser accounts worked, which is why this survived so long.
+
+**Fix**: the view now gates on `billing.create_customer`.
+
+**The class of bug**: the matrix could only grant the 14 *custom* permissions in
+`DISPATCH_PERMISSIONS` (`perm_objs`), because `group.permissions.set([perm_objs[p]
+for p in perms if p in perm_objs])` silently dropped anything else. Six views were
+gated on auto permissions no role could hold:
+
+| View | Gate | Was reachable by |
+|---|---|---|
+| `add_customer` | `billing.add_customer` | superusers only |
+| `pay_customer_view` | `billing.add_payment` | superusers only |
+| `customer_force_suspend` / `_reactivate` | `billing.change_customer` | superusers only |
+| `customer_rebate_view` | `billing.add_rebate` | superusers only |
+| `customer_rollback_view` | `billing.add_rollback` | **nobody, ever** |
+| `delete_customer` | `billing.delete_customer` | superusers only |
+
+That is: **taking a payment, suspending a customer and recording a rebate were
+all impossible for counter staff.** Fixed by making the matrix resolve Django
+auto permissions too (`AUTO_PERMISSION_CODENAMES`) and by granting the counter
+set to Staff/CSR, with `delete_customer` kept admin-only.
+
+**`billing.add_rollback` does not exist** in `auth_permission` at all -- the
+`Rebate` model only has add/change/delete/view. That gate was permanently
+unsatisfiable. Rollback rewrites the customer's expiry and balance, so it is now
+gated on `change_customer`.
+
+**Safety added**: the command now resolves every permission the matrix names and
+**aborts** rather than writing a partial group, so a typo can never again
+silently strip a role's access.
+
+**Lesson**: when a view stacks `@role_required` and `@permission_required`, the
+two must agree. Grep every `permission_required("...")` string and confirm each
+one is actually granted to the roles the role-list implies.
+
+**Files**: `billing/views/customers/crud.py`, `billing/views/payments/rebates.py`,
+`billing/management/commands/setup_dispatch_permissions.py`
+**Date Logged**: 2026-10-03
+
+---
+
+### ERR-100: Staff Were Logged Out After 5 Minutes Of Inactivity
+
+**Symptom**: users were repeatedly returned to `/login/` mid-task. Reproduced
+constantly while testing the CSR onboarding flow.
+
+**Root cause**: `SESSION_COOKIE_AGE = 300  # 5 minutes` was hardcoded in
+`settings.py`. With `SESSION_SAVE_EVERY_REQUEST = True` this is an *idle*
+timeout, but 5 minutes is far too short for counter work -- filling the onboarding
+checklist, keying a payment reference, or writing a long install address would
+lose the form and bounce the user.
+
+**Fix**: `SESSION_COOKIE_AGE = env.int("SESSION_COOKIE_AGE", default=28800)`
+(8 hours, one working day). Still sliding, still an idle timeout, now tunable
+from `.env`.
+
+**Lesson**: an idle timeout is a business decision, not a constant. Put it in env.
+
+**Files**: `gametech_core/settings.py`
+**Date Logged**: 2026-10-03
+
+---
+
+### ERR-101: Three Of Four Routers Are Unreachable From The Droplet
+
+**Symptom**: reconciliation audit could only read **Mikrotik A**. The other three
+tripped the circuit breaker:
+
+```
+ccr2116.v1 - patag        172.30.120.1  unreachable
+ccr2116.v2 - uptown       172.30.120.2  unreachable
+ccr2116.v3 - patag_carmen 172.30.120.3  unreachable
+Mikrotik A                reachable, 4 PPPoE secrets
+```
+
+**Why**: `172.30.120.0/24` is RFC1918 private space. It is not routable from a
+DigitalOcean public-IP droplet. Those three devices are only reachable from the
+office LAN (or a VPN that is not connected). The circuit breaker is behaving
+correctly -- this is a network topology fact, not a code fault.
+
+**Consequence for reconciliation**: any audit must distinguish
+*"router unreachable"* from *"zero customers"*. `get_active_pppoe_users()` in
+`network_manager/services/users.py:9` swallows every exception and `return []`,
+so a dead router is indistinguishable from an empty one. A reconciliation built on
+it would confidently report the whole estate as offline.
+
+**Fix direction**: have the audit check reachability first and refuse to bucket
+when a router is down (see `archived_scripts/router_crm_reconciliation.py`).
+
+**Files**: `network_manager/services/users.py`, `network_manager/models.py`
+**Date Logged**: 2026-10-03
+
+---
+
+### ERR-102: A Bulk-Wipe Script Deleted Every User Including Staff
+
+**What happened**: `archived_scripts/wipe_operational_data.py` keeps a set of
+staff usernames and deletes the rest. The keep-set was written lowercase
+(`{"jep", "martin", ...}`) but `auth_user.username` stores them capitalised
+(`Jep`, `Martin`). `exclude(username__in=...)` matched nothing, so **all ten users
+were deleted**, including every superuser, plus the Agent and Technician profiles.
+
+**Recovery**: a verified `pg_dump` taken minutes earlier
+(`/root/backups/PRE_WIPE_20261003_084711.dump`, 57 tables with data) restored the
+database in full -- 2,041 customers and all staff. No permanent loss, entirely
+because the backup existed and was verified *before* the destructive step.
+
+**Fixes baked into the script**:
+- keep-set uses exact stored casing, with a comment saying why
+- a `preflight()` that raises `SystemExit` unless every staff account it intends
+  to keep actually exists, and prints exactly which users are about to die
+- a post-condition that raises if any staff went missing
+
+**Lesson**: on a bulk delete, the dangerous part is not the DELETE, it is the
+*filter*. Always assert the survivors first, and never trust a backup you have
+not restored-tested. `auth_user.username` is case-sensitive -- there is no
+`iexact` here.
+
+**Files**: `archived_scripts/wipe_operational_data.py`
+**Date Logged**: 2026-10-03
+
+---
+
+### ERR-103: `ROUTER_MODE=read_only` Silently Skips Provisioning
+
+**Finding**: `.env` on the droplet sets `ROUTER_MODE=read_only`. Every router
+write (`.add()`, `.set()`, `.remove()`) is intercepted by
+`network_manager/services/read_only.py` and logged as a `BLOCKED_WRITE`
+`SystemLog` row; only reads pass through.
+
+**Consequence**: a customer created through the normal flow is **never** given a
+PPPoE secret. Confirmed in the audit -- customer #2128 went through
+Agent -> CSR -> assign -> technician COMPLETED and became `active`/`installed`,
+but bucket **F (no secret on any router)** correctly reported it, and
+`delacruz_juan_e2e` does not exist on Mikrotik A.
+
+So the CRM and the routers are **intentionally** out of sync right now. This is
+the safety interlock described in `docker-compose.yml`, not a bug -- but it means
+the system is **not** ready to provision live subscribers until the mode is
+deliberately changed after router credentials are confirmed.
+
+**Lesson**: `read_only` is safe but must not be mistaken for "working". Before
+go-live, confirm which mode is live and verify a real secret appears on the
+router after creating a customer.
+
+**Files**: `.env`, `network_manager/services/read_only.py`,
+`network_manager/services/base.py`, `docker-compose.yml`
+**Date Logged**: 2026-10-03
