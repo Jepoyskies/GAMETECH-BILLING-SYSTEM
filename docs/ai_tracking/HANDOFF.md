@@ -1,7 +1,6 @@
 # ACTIVE HANDOFF — read this first
 
-> **Latest session: 14 (2026-09-30).**
-> Full detail: [`history/Session_14_2026-09-30/HANDOFF_2026-09-30.md`](history/Session_14_2026-09-30/HANDOFF_2026-09-30.md)
+> **Latest session: 15 (2026-10-03).**
 
 This file is a pointer only. When a session ends, move the previous handoff into
 `history/Session_NN_<date>/` and replace this with a fresh one.
@@ -9,6 +8,90 @@ This file is a pointer only. When a session ends, move the previous handoff into
 ---
 
 ## Recently completed
+
+### Persona portals brought onto the theme + demo credentials reset ✅
+
+**Credentials** were reset so a walkthrough could be done. These are throwaway
+demo passwords shared over chat — rotate them if the system goes live:
+
+| Username | Password | Lands on |
+|---|---|---|
+| `Jep` / `Jill` / `Admin` | `1234` | `/` |
+| `Vince` | `csr-12345678` | `/` |
+| `Martin` | `agent-12345678` | `/agent-dashboard/` |
+| `Merk` | `tech-12345678` | `/dispatch/tech-dashboard/` |
+
+`Cardo` (Viewer) and `test_technician` were left untouched. Passwords live only
+as PBKDF2 hashes, so they can only ever be **reset**, never read back.
+
+**CSR + Viewer no longer reach the admin panel.** `can_access_administration`
+flipped to `False` for both, plus the `administration.admin_panel` subtab. Done
+as **data** in `StaffRole`, not hardcoded, so the Role Editor can grant it back.
+Verified: Vince and Cardo get `302 /` from `/admin-panel/` and `/staff/roles/`;
+Jep still gets `200`.
+
+**Portal UI.** Agent + Technician portals now pass WCAG AA in **both** light and
+dark mode, zero measured failures. Fixes in `static/css/gt/portal.css` (now
+cache-busted to `?v=4.6` in both portal base templates — **bump this string
+whenever portal.css changes** or browsers keep serving the old file):
+- new `--persona-accent-text` token (gold-on-gold was 1.00:1)
+- `.pt-kpi-*` modifiers retargeted `.pt-kpi-value` -> `.kpi-value` (the class
+  templates actually use) and scoped under `.portal` to outrank `.kpi-value`
+- `body.portal a` narrowed to `a:not(.btn)` — it was repainting Bootstrap buttons
+- `text-warning/info/success/danger` remapped in the `.portal` legacy bridge
+- `tech_dashboard.html` lost six hardcoded inline hex colours (incl. a `#a78bfa`
+  purple) in favour of `pt-kpi-*` classes
+
+Full write-up: **ERR-098**. Near-miss that produced a duplicate install ticket:
+**ERR-097**.
+
+---
+
+## Standing warnings
+
+- **The stack recreates itself on its own.** Several times this session all five
+  containers were destroyed and recreated ~10s apart with no deploy of mine in
+  flight — nginx returns 502 until `docker compose up -d`. Not yet root-caused.
+  If a container vanishes mid-command, wait ~20s and re-check `docker ps`.
+- **Do not create a `JobTicket` from a billing view.** `dispatch/signals.py`
+  already auto-creates the `INSTALLATION` ticket off `Customer` post_save, with a
+  de-duplication guard. A raw create in `add_customer` shipped for one commit
+  and double-dispatched every install. See ERR-097.
+- **Do not trust `getComputedStyle` after a manual theme toggle.** Reading in the
+  same evaluate call that adds `dark-mode` returns stale values and invents
+  contrast failures. Use `localStorage.setItem("theme", ...)` + a real
+  navigation, then read on a later turn.
+- **Do NOT exercise `manage_roles` POST against a real `StaffRole` row.** The
+  view has no dry-run and writes immediately. The `CSR` role was overwritten once
+  and had to be restored from a SQL backup. Create a throwaway `ZZ_TMP_*` role.
+- Do **not** run `manage.py test` inside the production `gametech-web` container
+  (ERR-082). Use `check`, `migrate --check`, and the read-only `Client`/`RequestFactory` pattern.
+- `billing/templates/billing/dashboard/` and `billing/templates/billing/live_monitoring/`
+  and `billing/templates/billing/login.html` are frozen — see `PAGE_FREEZE_REGISTRY.md`.
+
+---
+
+## Open issues (not fixed, worth a decision)
+
+1. **The permission matrix is still barely enforced.** `_role_allows()` in
+   `billing/decorators.py` documents a step-3 fallback to the `StaffRole` matrix
+   but the code does not implement it — it compares role NAMES only, plus a
+   special case where `"Admin" in allowed_roles` unlocks via the administration
+   module. All ~59 dispatch guards are flat
+   `@role_required(["Admin","Editor","Staff","CSR","Dispatch"])`, so subtab
+   changes in the Role Editor still won't gate most screens. `module_required()`
+   exists and works but is used **zero** times outside its docstring. Converting
+   dispatch guards to `@module_required("dispatch", "<subtab>")` is the fix; it
+   was left alone deliberately to avoid a 59-site refactor inside a UI task.
+2. **`Agent` role has `can_access_billing=False`.** Confirm agents genuinely
+   must not see billing before go-live.
+3. **Dispatch has almost no live data** — 1 open ticket, 1 real agent, 2
+   technicians (one test), 3 teams. `manage.py seed_dispatch_test_data` exists if
+   a populated demo is wanted.
+
+---
+
+## Historical (session 14 and earlier)
 
 ### Role Editor UI — action-level permission toggles ✅ DONE (`d902c28`)
 
