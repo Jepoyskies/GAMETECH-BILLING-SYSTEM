@@ -41,6 +41,7 @@ from billing.models import (
 import requests
 from network_manager.models import MikrotikDevice, NapBox
 from network_manager.services import MikrotikAPI
+from dispatch.models import JobTicket
 from django.db import transaction
 import calendar
 from billing.views.services import get_categorized_plans
@@ -337,6 +338,32 @@ def add_customer(request):
                     target_name=customer.full_name,
                     old_data="",
                     new_data=f"Name: {customer.full_name}\nPhone: {customer.phone}\nStatus: {customer.status}\nInstallation: {customer.installation_status}\nChecklist: Confirmed 6/6 (v{policy_setting.version}) by {request.user.username}",
+                )
+
+                # --- Dispatch Bridge: real INSTALLATION ticket in the queue ---
+                # Previously this view only claimed the order was dispatched and
+                # created nothing, so every new applicant was stranded in
+                # `pending` until a human manually re-ran the Verification step.
+                # dispatch_verification() links to this ticket instead of making
+                # a duplicate (it looks up INSTALLATION + PENDING/ASSIGNED/IN_PROGRESS).
+                JobTicket.objects.create(
+                    customer=customer,
+                    client_name=customer.full_name,
+                    address=customer.address or "",
+                    contact_number=customer.phone or "",
+                    account_no=customer.pppoe_username or "",
+                    plan_package=plan_obj.name if plan_obj else "",
+                    sales_agent=customer.agent,
+                    is_test_data=customer.is_test_data,
+                    ticket_type="INSTALLATION",
+                    source_tab="INTERNET_INSTALL",
+                    status="PENDING",
+                    priority="NORMAL",
+                    remarks=(
+                        f"Auto-created from Customer #{customer.id}. "
+                        f"Policy checklist confirmed 6/6 (v{policy_setting.version}) by {request.user.username}."
+                    ),
+                    created_by=request.user,
                 )
 
             messages.success(

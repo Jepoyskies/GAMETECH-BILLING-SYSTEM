@@ -1,6 +1,7 @@
 from .actions import ACTIONS, handle_issue_action
 from .issues import get_issue_buckets, issue_summary
 from .parser import columns_from_create_table, iter_rows, parse_row, split_value_tuples
+from .payments import import_legacy_payments
 from .preflight import PreflightReport, build_preflight
 from .resolver import cutover_lines, resolve_plan, to_mbps
 
@@ -12,6 +13,7 @@ __all__ = [
     "cutover_lines",
     "get_issue_buckets",
     "handle_issue_action",
+    "import_legacy_payments",
     "issue_summary",
     "iter_rows",
     "parse_row",

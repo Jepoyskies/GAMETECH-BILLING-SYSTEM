@@ -358,6 +358,44 @@ class Command(BaseCommand):
                 for line in cutover_lines(created_count, updated_count, len(pppoe_creds), preserved_count):
                     self.stdout.write(line)
 
+            # --- PAYMENT LEDGER ---------------------------------------
+            # The export carries 12,571 payments. Without these the new system
+            # has an EMPTY ledger, so outstanding_balance is wrong for
+            # everyone, nobody has advance credit for auto-renew, and the
+            # revenue reports show nothing. Run AFTER customers so the
+            # username -> customer map is warm.
+            #
+            # Payments are NOT recalculated onto balances here: that is a
+            # deliberate decision, not an import side effect (Rule 0).
+            payment_summary = {}
+            try:
+                from billing.legacy_import import import_legacy_payments
+
+                payment_summary = import_legacy_payments(
+                    all_rows, actor="legacy-import", dry_run=dry_run
+                )
+                if payment_summary.get("seen"):
+                    self.stdout.write(self.style.SUCCESS(
+                        "  Payments: {} seen, {} new, {} updated, "
+                        "total PHP {:,.2f}".format(
+                            payment_summary["seen"],
+                            payment_summary["created"],
+                            payment_summary["updated"],
+                            payment_summary["total_amount"],
+                        )
+                    ))
+                    if payment_summary.get("orphan_count"):
+                        self.stdout.write(self.style.WARNING(
+                            "  {} payments had no matching customer. The cash "
+                            "is kept with a reason so it stays visible.".format(
+                                payment_summary["orphan_count"])
+                        ))
+            except Exception as exc:
+                self.stdout.write(self.style.ERROR(
+                    "  Payment import failed: {}. Customers are imported; the "
+                    "LEDGER IS INCOMPLETE until this is re-run.".format(exc)
+                ))
+
             # Save import report for the web interface
             report = {
                 "timestamp": timezone.now().isoformat(),
@@ -367,6 +405,13 @@ class Command(BaseCommand):
                 "missing_password_customers": missing_password,
                 "devices_created": list(device_map.keys()),
                 "plans_used": list(plan_map.keys()),
+                "payments": {
+                    "seen": payment_summary.get("seen", 0),
+                    "created": payment_summary.get("created", 0),
+                    "updated": payment_summary.get("updated", 0),
+                    "orphans": payment_summary.get("orphan_count", 0),
+                    "total_amount": str(payment_summary.get("total_amount", 0)),
+                },
             }
             report_path = Path(__file__).parent.parent.parent / "data" / "last_import_report.json"
             report_path.parent.mkdir(parents=True, exist_ok=True)

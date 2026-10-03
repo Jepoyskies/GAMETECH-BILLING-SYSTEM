@@ -842,6 +842,22 @@ class Payment(models.Model):
 
     adjusted_by = models.CharField(max_length=100, null=True, blank=True)
 
+    # The primary key this row had in the LEGACY system.
+    #
+    # The legacy export carries 12,571 payments. Re-importing the export must
+    # not duplicate money, and there is no other stable key: a subscriber can
+    # legitimately have two identical payments for the same amount on the same
+    # day. The legacy id is unique and immutable, so it is what makes the
+    # payment import idempotent. NULL for payments created in the new system.
+    legacy_id = models.CharField(
+        max_length=64,
+        null=True,
+        blank=True,
+        unique=True,
+        db_index=True,
+        help_text="Payment id from the legacy system. Makes re-import idempotent.",
+    )
+
     # Audit & Testing
     is_test_data = models.BooleanField(default=False, help_text="Flags test payments to exclude from revenue")
 
