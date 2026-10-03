@@ -1,8 +1,41 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import Group, Permission, User
 from django.contrib.contenttypes.models import ContentType
-from billing.models import Prospect, Customer, SystemAdmin
+from billing.models import Prospect, Customer, SystemAdmin, Payment, Rebate
 from dispatch.models import JobTicket
+
+
+# Django's AUTO-generated model permissions ("add_payment", "change_customer",
+# "delete_customer", ...) already exist in auth_permission but were never in
+# DISPATCH_PERMISSIONS, so ROLE_PERMISSION_MATRIX could not grant them. Several
+# views are gated by `@permission_required("billing.add_payment")` etc., which
+# meant every non-superuser got a hard 403 on taking a payment, suspending a
+# customer, recording a rebate or deleting a customer -- while the Role Editor
+# showed those roles as fully permitted.
+#
+# These are listed so the matrix stays the single source of truth and the
+# command can resolve them. They are looked up from auth_permission, NOT
+# created.
+AUTO_PERMISSION_CODENAMES = {
+    "billing.add_payment",
+    "billing.change_customer",
+    "billing.delete_customer",
+    "billing.add_rebate",
+    "billing.add_rollback",
+}
+
+# Counter operations every Staff/CSR must be able to perform.
+COUNTER_PERMISSIONS = [
+    "billing.add_payment",
+    "billing.change_customer",
+    "billing.add_rebate",
+    "billing.add_rollback",
+]
+
+# Destructive: office/admin only, never the counter staff.
+ADMIN_ONLY_PERMISSIONS = [
+    "billing.delete_customer",
+]
 
 
 DISPATCH_PERMISSIONS = {
@@ -48,7 +81,7 @@ ROLE_PERMISSION_MATRIX = {
         "change_agent",
         "change_customer_agent",
         "manage_message_templates",
-    ],
+    ] + COUNTER_PERMISSIONS + ADMIN_ONLY_PERMISSIONS,
     "CSR": [
         "manage_prospects",
         "run_checklist",
@@ -56,8 +89,8 @@ ROLE_PERMISSION_MATRIX = {
         "change_agent",
         "change_customer_agent",
         "manage_message_templates",
-    ],
-    "Admin": list(DISPATCH_PERMISSIONS.keys()),
+    ] + COUNTER_PERMISSIONS,
+    "Admin": list(DISPATCH_PERMISSIONS.keys()) + COUNTER_PERMISSIONS + ADMIN_ONLY_PERMISSIONS,
 }
 
 
@@ -83,10 +116,40 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(f"Verified {len(perm_objs)} named permissions."))
 
+        # 1b. Resolve Django's auto model permissions named in the matrix
+        #     ("billing.add_payment" etc). These already exist; we only look
+        #     them up. Without this the matrix silently drops them.
+        missing_auto = []
+        for label in sorted(AUTO_PERMISSION_CODENAMES):
+            app_label, codename = label.split(".", 1)
+            perm = Permission.objects.filter(
+                codename=codename,
+                content_type__app_label=app_label,
+            ).first()
+            if perm:
+                perm_objs[label] = perm
+            else:
+                missing_auto.append(label)
+        if missing_auto:
+            raise SystemExit(
+                "ABORT: these permissions do not exist in auth_permission, so the "
+                f"role matrix would silently drop them: {missing_auto}. Run "
+                "`manage.py migrate` first so Django creates the model permissions."
+            )
+        self.stdout.write(
+            self.style.SUCCESS(f"Resolved {len(AUTO_PERMISSION_CODENAMES)} auto model permissions.")
+        )
+
         # 2. Create Groups and assign permissions
         for role_name, perms in ROLE_PERMISSION_MATRIX.items():
             group, created = Group.objects.get_or_create(name=role_name)
-            group_perms = [perm_objs[p] for p in perms if p in perm_objs]
+            unresolved = [p for p in perms if p not in perm_objs]
+            if unresolved:
+                raise SystemExit(
+                    f"ABORT: role '{role_name}' references permissions that do not "
+                    f"resolve: {unresolved}. Refusing to write a partial group."
+                )
+            group_perms = [perm_objs[p] for p in perms]
             group.permissions.set(group_perms)
             group.save()
             status_str = "Created" if created else "Updated"

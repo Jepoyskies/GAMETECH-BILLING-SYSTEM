@@ -62,7 +62,13 @@ def _get_add_customer_context(request, prefill_username="", prospect=None, prefi
 
 @login_required
 @role_required(["Admin", "Staff", "CSR", "Dispatch"])
-@permission_required("billing.add_customer", raise_exception=True)
+# Was `billing.add_customer` (Django's auto-generated add permission), which NO
+# role group grants -- so every non-superuser CSR got a hard 403 and could not
+# convert a prospect at all. The gate that actually carries the intent is the
+# custom `create_customer` permission on Prospect
+# ("Can convert prospect and create customer"), granted to Staff + CSR in
+# billing/management/commands/setup_dispatch_permissions.py::ROLE_PERMISSION_MATRIX.
+@permission_required("billing.create_customer", raise_exception=True)
 def add_customer(request):
     if hasattr(request.user, "agent_profile") and not request.user.is_staff:
         messages.error(request, "Agents must submit referrals through the Agent Portal.")
