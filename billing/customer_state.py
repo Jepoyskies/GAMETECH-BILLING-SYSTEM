@@ -182,6 +182,23 @@ LIFECYCLES = {
         priority=11,
         hint="State could not be determined.",
     ),
+    # An imported account with no router assigned. Highest priority after the
+    # genuine outage buckets because it is a SETUP task, not a collection one:
+    # until a router is assigned these accounts can never be provisioned,
+    # verified, suspended or reconnected.
+    "unlinked": Lifecycle(
+        key="unlinked",
+        label="Not Linked to Router",
+        tone="warning",
+        billing="unknown",
+        hardware="unknown",
+        actionable=True,
+        priority=1,
+        hint=(
+            "No router assigned in the system, so this account cannot be "
+            "provisioned or verified. Assign it in the Sync Manager."
+        ),
+    ),
 }
 
 # The filter pills, in display order. Each maps to exactly ONE lifecycle key
@@ -191,6 +208,7 @@ LIFECYCLES = {
 # "Paid, Status Unknown" (the blind bucket) went missing and left 1,991
 # customers uncounted on the page.
 FILTERS = [
+    ("unlinked", "Not Linked to Router", "fa-unlink", "warning"),
     ("connected_unpaid", "Connected, Unpaid", "fa-plug-circle-exclamation", "warning"),
     ("paid_offline", "Paid but Offline", "fa-triangle-exclamation", "danger"),
     ("expiring", "Expiring", "fa-clock", "warning"),
@@ -298,9 +316,31 @@ def hardware_state(customer, connected_usernames):
     return "connected" if str(customer.pppoe_username).lower() in connected_usernames else "offline"
 
 
+def is_router_unlinked(customer):
+    """True when an account cannot be traced to ANY router in the system.
+
+    An imported subscriber with no mikrotik_device cannot be provisioned,
+    reconciled or verified. It exists in the database and may exist on a
+    router, but nothing ties the two together -- so it can never be treated
+    as a connected line. This is what made such accounts invisible on the
+    customers page: with no device there is no uplink, no profile and no way
+    to confirm anything, so they fell through to "unknown" and were buried.
+    """
+    return not customer.mikrotik_device_id
+
+
 def resolve(customer, connected_usernames, now=None):
     """Combine both axes into exactly one Lifecycle."""
     now = now or timezone.now()
+
+    # Unlinked accounts are checked FIRST and short-circuit everything else.
+    # No other lifecycle can be honest about them: we do not know which
+    # router they belong to, so we cannot say they are online, offline,
+    # lapsed or fine. They need a human to assign them, which is exactly
+    # what the Sync Manager's "Not Linked to a Router" queue is for.
+    if is_router_unlinked(customer) and customer.pppoe_username:
+        return LIFECYCLES["unlinked"]
+
     billing = billing_state(customer, now)
     hardware = hardware_state(customer, connected_usernames)
 

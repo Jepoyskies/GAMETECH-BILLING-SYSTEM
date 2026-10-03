@@ -13,6 +13,11 @@
                        -> A paying customer has no internet. Reconnect.
     Drift              password or profile on the router no longer matches the
                        system. -> Confirm which side is right before writing.
+    Not Linked         the account has no router assigned in the system, so it
+                       cannot be traced to a router at all. -> Assign one first.
+    Awaiting Approval  present in BOTH the system and the router, but never
+                       verified against one. Existing in both places is not the
+                       same as a human having approved it. -> Check, then approve.
 
   The enabled/disabled column is read straight off the MikroTik
   `/ppp/secret` resource. Before ERR-094 that field was dropped, so a cut-off
@@ -90,6 +95,17 @@
                                 <i class="fas fa-scissors me-1"></i> Paid, Cut Off
                             </span>
                             <small class="d-block text-muted mt-1">Reconnect, or check why they were cut.</small>
+                        {% endif %}
+                        {% if user.unlinked %}
+                            <span class="gametech-pill pill-warning" title="This account is not assigned to any router in the system, so it cannot be traced to a router at all. Assign one before treating it as connected.">
+                                <i class="fas fa-unlink me-1"></i> Not Linked to a Router
+                            </span>
+                            <small class="d-block text-muted mt-1">Assign a router, then approve.</small>
+                        {% elif user.never_verified %}
+                            <span class="gametech-pill pill-warning" title="This account exists in both places but has never been verified against a router. Present in both is not the same as approved.">
+                                <i class="fas fa-user-clock me-1"></i> Awaiting Approval
+                            </span>
+                            <small class="d-block text-muted mt-1">Check the details match, then approve.</small>
                         {% endif %}
                         {% if user.drift_fields %}
                             <small class="d-block text-warning mt-1">

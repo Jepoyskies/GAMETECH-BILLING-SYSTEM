@@ -126,7 +126,30 @@ def sync_manager(request, device_id):
                     ru['connected_but_unpaid']
                     or (router_disabled and not system_thinks_off)
                 )
-                if ru['drift'] or ru['state_mismatch']:
+
+                # --- THE BOUNCER CHECK -----------------------------------
+                # Existing in both places is NOT the same as APPROVED.
+                #
+                # An account imported from the legacy system exists in the
+                # database and (usually) on the router, but nobody has ever
+                # confirmed the two actually belong together. Treating
+                # "present in both" as "good" let unverified accounts appear
+                # under Active Users the moment a router came online, which is
+                # exactly the automatic approval this page exists to prevent.
+                #
+                # These must all reach a human before they count as connected:
+                #   sync_status Unverified -> never checked against a router
+                #   sync_status Blocked    -> a push was attempted and refused
+                #   no mikrotik_device     -> cannot be traced to a router at all
+                never_verified = dc.sync_status in ("Unverified", "Blocked")
+                unlinked = not dc.mikrotik_device_id
+                ru['never_verified'] = never_verified
+                ru['unlinked'] = unlinked
+                ru['awaiting_approval'] = bool(
+                    never_verified or unlinked or ru['drift'] or ru['state_mismatch']
+                )
+
+                if ru['awaiting_approval'] or ru.get('is_suspicious'):
                     needs_review.append(ru)
                 else:
                     synced.append(ru)

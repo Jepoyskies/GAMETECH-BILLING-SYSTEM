@@ -319,8 +319,67 @@ def import_legacy_data_view(request):
                     tmp.write(chunk)
                 tmp_path = tmp.name
 
-            call_command("import_legacy_customers", tmp_path)
-            messages.success(request, "Legacy data imported successfully!")
+            # --- PRE-FLIGHT (read-only) ------------------------------------
+            # Compare the incoming export against what is already in the system
+            # BEFORE writing anything. The Sync Manager answers system<->router;
+            # this answers export<->system, which nothing else covered. An
+            # operator sees duplicates, missing passwords, zero-date customers
+            # and field drift while the choice is still reversible.
+            preflight = None
+            try:
+                from billing.legacy_import import build_preflight
+                from billing.legacy_import.parser import iter_rows
+
+                rows = list(iter_rows(tmp_path))
+                creds = {}
+                for table, row in rows:
+                    if table == "pppoe_users" and row.get("username"):
+                        creds[row["username"]] = row.get("password")
+                preflight = build_preflight(rows, pppoe_creds=creds)
+            except Exception as e:
+                # A pre-flight failure must NEVER block a legitimate import.
+                preflight = None
+                messages.warning(
+                    request, f"Pre-flight check could not run: {e}"
+                )
+
+            skip_import = request.POST.get("confirm_import") != "yes"
+
+            if preflight is not None and skip_import:
+                # First click: show the comparison and ask for confirmation.
+                request.session["preflight_sql"] = tmp_path
+                request.session["preflight_summary"] = preflight.as_dict()
+                request.session["preflight_blocking"] = preflight.has_blocking_issues
+                messages.info(
+                    request,
+                    "Pre-flight check complete. Review the comparison below, "
+                    "then confirm the import.",
+                )
+                return HttpResponseRedirect(reverse("import_legacy_data"))
+
+            if request.POST.get("confirm_import") == "yes":
+                # Re-use the staged file from the pre-flight step when the
+                # operator confirms, so the import acts on exactly the file
+                # that was reviewed. Falls back to a fresh upload.
+                staged = request.session.get("preflight_sql")
+                target = staged if staged and Path(staged).exists() else tmp_path
+                call_command("import_legacy_customers", target)
+                for key in ("preflight_sql", "preflight_summary",
+                            "preflight_blocking"):
+                    request.session.pop(key, None)
+                if staged and Path(staged).exists():
+                    try:
+                        Path(staged).unlink()
+                    except OSError:
+                        pass
+                messages.success(request, "Legacy data imported successfully!")
+            else:
+                # No pre-flight available (it errored) -- honour the upload.
+                call_command("import_legacy_customers", tmp_path)
+                for key in ("preflight_sql", "preflight_summary",
+                            "preflight_blocking"):
+                    request.session.pop(key, None)
+                messages.success(request, "Legacy data imported successfully!")
         except Exception as e:
             messages.error(request, f"Error during import: {str(e)}")
 
@@ -345,6 +404,10 @@ def import_legacy_data_view(request):
         # Every customer needing a human decision, live from the database --
         # not only the ones the last import happened to flag.
         "issue_buckets": get_issue_buckets(),
+        # Pre-flight comparison from the upload that has NOT been imported yet.
+        "preflight_summary": request.session.get("preflight_summary"),
+        "preflight_blocking": request.session.get("preflight_blocking", False),
+        "preflight_pending": bool(request.session.get("preflight_sql")),
     })
 
 
