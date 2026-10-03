@@ -340,31 +340,20 @@ def add_customer(request):
                     new_data=f"Name: {customer.full_name}\nPhone: {customer.phone}\nStatus: {customer.status}\nInstallation: {customer.installation_status}\nChecklist: Confirmed 6/6 (v{policy_setting.version}) by {request.user.username}",
                 )
 
-                # --- Dispatch Bridge: real INSTALLATION ticket in the queue ---
-                # Previously this view only claimed the order was dispatched and
-                # created nothing, so every new applicant was stranded in
-                # `pending` until a human manually re-ran the Verification step.
-                # dispatch_verification() links to this ticket instead of making
-                # a duplicate (it looks up INSTALLATION + PENDING/ASSIGNED/IN_PROGRESS).
-                JobTicket.objects.create(
-                    customer=customer,
-                    client_name=customer.full_name,
-                    address=customer.address or "",
-                    contact_number=customer.phone or "",
-                    account_no=customer.pppoe_username or "",
-                    plan_package=plan_obj.name if plan_obj else "",
-                    sales_agent=customer.agent,
-                    is_test_data=customer.is_test_data,
-                    ticket_type="INSTALLATION",
-                    source_tab="INTERNET_INSTALL",
-                    status="PENDING",
-                    priority="NORMAL",
-                    remarks=(
-                        f"Auto-created from Customer #{customer.id}. "
-                        f"Policy checklist confirmed 6/6 (v{policy_setting.version}) by {request.user.username}."
-                    ),
-                    created_by=request.user,
-                )
+                # NOTE ON THE INSTALLATION TICKET:
+                # This view deliberately does NOT create one.
+                #
+                # dispatch/signals.py already creates the INSTALLATION ticket
+                # automatically for every new pending customer, and it carries
+                # the de-duplication guard (it looks for an existing open
+                # INSTALLATION ticket before creating). Creating a second one
+                # here bypassed that guard and produced TWO install tickets per
+                # applicant, so dispatchers would handle every job twice.
+                # test_valid_checklist_creates_customer_and_unassigned_dispatch_ticket
+                # caught exactly this (2 != 1).
+                #
+                # If you ever need to create a ticket from here, go through
+                # the signal path or the dispatch views, not a raw create().
 
             messages.success(
                 request,
