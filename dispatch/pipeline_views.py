@@ -299,10 +299,14 @@ def dispatch_qa(request):
             if ticket.status == 'QA_PASSED' or action == 'final_approve':
                 customer = ticket.customer
                 if customer:
-                    customer.status = 'active'
                     customer.installation_status = 'installed'
                     if not customer.installed_at:
                         customer.installed_at = timezone.now()
+                    # Approval confirms the WORK, not the payment. A never-paid
+                    # subscriber stays 'pending' until a CSR records payment.
+                    # See Customer.awaiting_first_payment.
+                    if not customer.awaiting_first_payment:
+                        customer.status = 'active'
                     if customer.agent:
                         customer.agent_lock_until = timezone.now() + timezone.timedelta(days=60)
                     customer.save()
@@ -373,9 +377,13 @@ def dispatch_approval(request):
         if action == 'approve':
             customer = ticket.customer
             if customer:
-                customer.status = 'active'
                 customer.installation_status = 'installed'
                 customer.installed_at = timezone.now()
+                # Approval confirms the WORK, not the payment. A never-paid
+                # subscriber stays 'pending' until a CSR records payment.
+                # See Customer.awaiting_first_payment.
+                if not customer.awaiting_first_payment:
+                    customer.status = 'active'
                 # 60-day lock on staggered payments if referred by an agent
                 if customer.agent:
                     customer.agent_lock_until = timezone.now() + timezone.timedelta(days=60)

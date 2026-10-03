@@ -313,6 +313,31 @@ class Customer(models.Model):
         max_length=20, choices=SYNC_CHOICES, default="Unverified"
     )
 
+    @property
+    def awaiting_first_payment(self):
+        """Physically installed, but never paid for.
+
+        Business rule: completing an install is NOT activation. The fibre being
+        in does not mean the subscriber has paid. They stay 'pending' until a CSR
+        records the payment, and THAT is what sets `expires_at` and promotes them
+        to 'active' together -- so a due date and an active status can never
+        disagree.
+
+        Install-completion paths (technician Done, QA pass, admin approve, legacy
+        complete_job) must therefore skip the `status = 'active'` write when this
+        is True, otherwise the technician's Done button silently creates a free
+        ride with no due date.
+
+        A customer who has any Payment row, or already has an expiry, is NOT
+        awaiting first payment -- re-approving a repair or a returning customer
+        should still be able to set them active.
+        """
+        if self.installation_status != "installed":
+            return False
+        if self.expires_at:
+            return False
+        return not self.payments.exists()
+
     # --- THE SUPERPOWER: Foreign Keys tying the system together ---
     plan = models.ForeignKey("SubscriptionPlan", on_delete=models.SET_NULL, null=True)
     agent = models.ForeignKey("Agent", on_delete=models.SET_NULL, null=True)

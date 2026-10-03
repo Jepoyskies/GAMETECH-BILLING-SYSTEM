@@ -294,14 +294,19 @@ def api_admin_approve(request, ticket_id):
 
             customer = ticket.customer
             if customer:
-                customer.status = 'active'
                 customer.installation_status = 'installed'
                 customer.installed_at = timezone.now()
+                # Admin approval confirms the WORK, not the payment. A never-paid
+                # subscriber stays 'pending' until a CSR records payment, which
+                # sets expires_at + 'active' together.
+                # See Customer.awaiting_first_payment.
+                if not customer.awaiting_first_payment:
+                    customer.status = 'active'
                 if customer.agent:
                     customer.agent_lock_until = timezone.now() + timezone.timedelta(days=60)
                 customer.save()
 
-            note = f"Admin Final Approval granted by {request.user.username}. Customer activated."
+            note = f"Admin Final Approval granted by {request.user.username}. Customer installed."
             JobTicketHistory.objects.create(
                 job_ticket=ticket,
                 actor=request.user,

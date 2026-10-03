@@ -141,8 +141,18 @@ def sync_ticket_completion_to_customer(sender, instance, created, **kwargs):
     """
     Smart CRM Hook (Direction 2: Dispatch -> CRM):
     When a JobTicket with ticket_type='INSTALLATION' is marked 'COMPLETED',
-    automatically transition the linked customer's installation_status to 'installed',
-    set installed_at, promote status to 'active', and record modem MAC/SN if available.
+    transition the linked customer's installation_status to 'installed' and set
+    installed_at.
+
+    It deliberately does NOT promote `status` to 'active'. Completing the job
+    means the FIBRE IS IN, not that the customer has paid. Business flow is:
+    technician finishes -> customer stays 'pending' (installed, awaiting first
+    payment) -> CSR records the payment in pay_customer_view -> THAT sets
+    expires_at and promotes to 'active'.
+
+    This signal used to set status='active' itself, which produced subscribers
+    who were live and 'active' with expires_at=None and no Payment row -- a free
+    ride created by the technician clicking Done.
     """
     if kwargs.get('raw'):
         return
@@ -159,10 +169,6 @@ def sync_ticket_completion_to_customer(sender, instance, created, **kwargs):
             customer.installed_at = instance.done_at or timezone.now()
             fields_to_update.append('installed_at')
 
-        if customer.status == 'pending':
-            customer.status = 'active'
-            fields_to_update.append('status')
-
         if instance.ont_modem_sn and not customer.mac_address:
             customer.mac_address = instance.ont_modem_sn
             fields_to_update.append('mac_address')
@@ -170,6 +176,8 @@ def sync_ticket_completion_to_customer(sender, instance, created, **kwargs):
         if fields_to_update:
             customer.save(update_fields=fields_to_update)
             logger.info(
-                f"[DISPATCH] Promoted Customer {customer.full_name} (ID: {customer.id}) to installed & active from completed ticket {instance.ticket_number}"
+                f"[DISPATCH] Marked Customer {customer.full_name} (ID: {customer.id}) "
+                f"installed from completed ticket {instance.ticket_number}. "
+                f"Billing status left as '{customer.status}' pending first payment."
             )
 

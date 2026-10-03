@@ -254,8 +254,18 @@ def pay_customer_view(request, username):
                 if not locked_customer.agent_lock_until and (locked_customer.agent or locked_customer.original_agent):
                     locked_customer.agent_lock_until = timezone.now() + timezone.timedelta(days=60)
 
-                # 5. Update Status if suspended
+                # 5. Activate the subscriber
+                #    Two cases, both now that we have a due date:
+                #      - was suspended and has now paid -> back to active
+                #      - was 'pending' (installed, awaiting first payment) and has
+                #        now paid -> this is the moment they become active.
+                #        Previously only the suspended case existed, so a brand-new
+                #        install that had been installed but never paid stayed
+                #        'pending' forever with expires_at set, or (worse) was
+                #        flipped to active by the technician's Done click.
                 if was_suspended:
+                    locked_customer.status = "active"
+                elif locked_customer.status == "pending":
                     locked_customer.status = "active"
 
                 locked_customer.save()

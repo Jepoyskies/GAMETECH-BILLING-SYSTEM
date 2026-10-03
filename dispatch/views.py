@@ -799,15 +799,22 @@ def api_complete_job(request, ticket_id):
         ticket.save()
         
         # SMART CRM INTEGRATION:
-        # If this was a New Installation ticket linked to a customer, transition the customer to Installed & Active
+        # If this was a New Installation ticket linked to a customer, mark them
+        # Installed. Completing the job is NOT activation -- if they have never
+        # paid they stay 'pending' until a CSR records the payment, which is what
+        # sets expires_at + 'active' together. See Customer.awaiting_first_payment.
         if ticket.ticket_type == 'INSTALLATION' and ticket.customer:
             cust = ticket.customer
             cust.installation_status = 'installed'
-            cust.status = 'active'
+            if not cust.awaiting_first_payment:
+                cust.status = 'active'
             if ticket.ont_modem_sn and not cust.mac_address:
                 cust.mac_address = ticket.ont_modem_sn
             cust.save(update_fields=['installation_status', 'status', 'mac_address'])
-            logger.info(f"[DISPATCH] Promoted Customer {cust.full_name} (ID: {cust.id}) to Active / Installed upon ticket completion.")
+            logger.info(
+                f"[DISPATCH] Marked Customer {cust.full_name} (ID: {cust.id}) Installed upon "
+                f"ticket completion; billing status '{cust.status}'."
+            )
             
         # Synchronize any matching open MonitoringRecords for this customer
         if ticket.customer:
@@ -1049,7 +1056,9 @@ def complete_job_view(request, record_id):
                 cust = record.customer
                 if record.tab_type == 'INTERNET_INSTALL':
                     cust.installation_status = 'installed'
-                    cust.status = 'active'
+                    # Not activation -- see Customer.awaiting_first_payment.
+                    if not cust.awaiting_first_payment:
+                        cust.status = 'active'
                 if job_detail.ont_modem_sn and not cust.mac_address:
                     cust.mac_address = job_detail.ont_modem_sn
                 cust.save()
@@ -1928,7 +1937,9 @@ def api_monitoring_done(request, record_id):
     if record.customer and record.tab_type == 'INTERNET_INSTALL':
         cust = record.customer
         cust.installation_status = 'installed'
-        cust.status = 'active'
+        # Not activation -- see Customer.awaiting_first_payment.
+        if not cust.awaiting_first_payment:
+            cust.status = 'active'
         cust.save()
 
     log_audit('UPDATE', 'MonitoringRecord', record.id, request.user, summary=f"Marked Done: {record.client_name}")
