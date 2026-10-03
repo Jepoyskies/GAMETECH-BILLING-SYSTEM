@@ -21,15 +21,15 @@ AUTO_PERMISSION_CODENAMES = {
     "billing.change_customer",
     "billing.delete_customer",
     "billing.add_rebate",
-    "billing.add_rollback",
 }
 
 # Counter operations every Staff/CSR must be able to perform.
+# NB: rollback is gated on `change_customer` (it rewrites expiry + balance);
+# there is no `add_rollback` permission in Django at all.
 COUNTER_PERMISSIONS = [
     "billing.add_payment",
     "billing.change_customer",
     "billing.add_rebate",
-    "billing.add_rollback",
 ]
 
 # Destructive: office/admin only, never the counter staff.

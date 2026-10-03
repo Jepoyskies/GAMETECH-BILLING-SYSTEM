@@ -175,7 +175,11 @@ def customer_rebate_view(request, username):
 
 
 @login_required
-@permission_required("billing.add_rollback", raise_exception=True)
+# Was `billing.add_rollback`, which does not exist in auth_permission at all --
+# no role could ever hold it, so rollback was a permanent 403 for everyone but
+# superusers. A rollback rewrites the customer's expiry + outstanding balance,
+# which is exactly `change_customer`.
+@permission_required("billing.change_customer", raise_exception=True)
 def customer_rollback_view(request, username):
     customer = get_object_or_404(Customer, pppoe_username=username)
 
