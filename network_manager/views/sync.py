@@ -6,6 +6,18 @@ from django.http import JsonResponse
 from django.utils import timezone
 from network_manager.models import MikrotikDevice
 from network_manager.services import MikrotikAPI
+from network_manager.sync_helpers import (
+    account_needs_approval,
+    approval_reasons,
+    build_router_comment,
+    desired_profile,
+    mark_synced,
+    router_write_blocked_message,
+)
+
+# Deleting secrets from a live router is irreversible from this screen. Small
+# batches keep a mistake recoverable.
+BULK_DELETE_MAX = 25
 
 @role_required(['Admin', 'Editor', 'CSR'])
 @login_required
@@ -105,7 +117,15 @@ def sync_manager(request, device_id):
                 # for "is this customer actually cut off?". Without it a
                 # lapsed record and a live line look identical, which is
                 # exactly the question a collections review has to answer.
-                router_disabled = bool(ru.get('disabled'))
+                # MikroTik returns disabled as the STRING "true"/"false", so bool() is
+                # useless here: bool("false") is True. Every secret therefore
+                # read as CUT OFF, which pushed paying customers into the review
+                # queue permanently and made "Paid, Cut Off" the default verdict
+                # instead of a real exception. sync_services.py already
+                # normalises this; do the same here.
+                router_disabled = str(ru.get('disabled', '')).strip().lower() in (
+                    "true", "yes", "1",
+                )
                 ru['router_disabled'] = router_disabled
                 ru['router_enabled'] = not router_disabled
 
@@ -141,13 +161,14 @@ def sync_manager(request, device_id):
                 #   sync_status Unverified -> never checked against a router
                 #   sync_status Blocked    -> a push was attempted and refused
                 #   no mikrotik_device     -> cannot be traced to a router at all
-                never_verified = dc.sync_status in ("Unverified", "Blocked")
+                never_verified = account_needs_approval(dc)
                 unlinked = not dc.mikrotik_device_id
                 ru['never_verified'] = never_verified
                 ru['unlinked'] = unlinked
                 ru['awaiting_approval'] = bool(
                     never_verified or unlinked or ru['drift'] or ru['state_mismatch']
                 )
+                ru['approval_reasons'] = approval_reasons(dc)
 
                 if ru['awaiting_approval'] or ru.get('is_suspicious'):
                     needs_review.append(ru)
@@ -209,30 +230,32 @@ def sync_push_user(request, device_id):
             password=device.api_password,
             port=device.api_port
         )
-        
-        profile = customer.plan.name if customer.plan else "default"
-        comment_parts = [customer.full_name]
-        if customer.barangay:
-            comment_parts.append(customer.barangay.name)
-        elif customer.address:
-            comment_parts.append(customer.address[:30] + ('...' if len(customer.address) > 30 else ''))
-        comment = " | ".join(comment_parts)
-        
+
+        # Canonical comment + profile. Single source of truth so a bulk push
+        # can never write a different format from a single push.
+        profile = desired_profile(customer)
+        comment = build_router_comment(customer)
+
         result = api.add_pppoe_user(
             name=customer.pppoe_username,
             password=customer.pppoe_password,
             profile=profile,
             comment=comment
         )
-        
+
         if result.get('success'):
-            if customer.mikrotik_device != device:
-                customer.mikrotik_device = device
-                customer.save(update_fields=['mikrotik_device'])
+            mark_synced(customer, device, request.user)
             messages.success(request, result.get('message'))
+        elif 'read_only' in str(result.get('error', '')).lower():
+            # Do not let a refused write look like a success.
+            customer.sync_status = "Blocked"
+            customer.save(update_fields=["sync_status"])
+            messages.warning(request, router_write_blocked_message())
         else:
+            customer.sync_status = "Failed"
+            customer.save(update_fields=["sync_status"])
             messages.error(request, f"Failed to push user: {result.get('error')}")
-            
+
     return redirect('sync_manager', device_id=device_id)
 
 @role_required(['Admin', 'Editor', 'CSR'])
@@ -255,25 +278,37 @@ def sync_autofix_user(request, device_id):
             port=device.api_port
         )
         
-        profile = customer.plan.name if customer.plan else "default"
-        comment_parts = [customer.full_name]
-        if customer.barangay:
-            comment_parts.append(customer.barangay.name)
-        elif customer.address:
-            comment_parts.append(customer.address[:30] + ('...' if len(customer.address) > 30 else ''))
-        comment = " | ".join(comment_parts)
-        
+        profile = desired_profile(customer)
+        comment = build_router_comment(customer)
+
         result = api.add_pppoe_user(
             name=customer.pppoe_username,
             password=customer.pppoe_password,
             profile=profile,
             comment=comment
         )
-        
+
         if result.get('success'):
-            messages.success(request, f"Successfully Auto-Fixed '{pppoe_username}' on the router!")
+            # ALSO assign the router. Without this an account with no
+            # mikrotik_device stays unlinked after a successful fix, so it
+            # remains invisible on the customers page and keeps appearing in
+            # this queue forever.
+            mark_synced(customer, device, request.user)
+            messages.success(
+                request,
+                f"Auto-Fixed '{pppoe_username}' and linked it to {device.device_name}.",
+            )
+        elif 'read_only' in str(result.get('error', '')).lower():
+            customer.sync_status = "Blocked"
+            customer.save(update_fields=["sync_status"])
+            messages.warning(request, router_write_blocked_message())
         else:
-            messages.error(request, f"Failed to Auto-Fix '{pppoe_username}': {result.get('error')}")
+            customer.sync_status = "Failed"
+            customer.save(update_fields=["sync_status"])
+            messages.error(
+                request,
+                f"Failed to Auto-Fix '{pppoe_username}': {result.get('error')}",
+            )
             
     return redirect('sync_manager', device_id=device_id)
 
@@ -328,33 +363,95 @@ def sync_bulk_action(request, device_id):
         error_count = 0
 
         if action == 'bulk_delete':
+            # Deleting a secret from a live router cuts a customer's internet.
+            # Refuse anything the system recognises as a real subscriber
+            # unless the operator states the intent explicitly, and never
+            # bulk-delete more than a handful without a second signal.
+            known = [
+                u for u in usernames
+                if Customer.objects.filter(pppoe_username=u).exists()
+            ]
+            if known and request.POST.get('confirm_delete_subscribers') != 'yes':
+                messages.error(
+                    request,
+                    "Refused: {} of those accounts exist in the system as real "
+                    "subscribers. Deleting them cuts their internet. Tick the "
+                    "confirmation box to proceed.".format(len(known)),
+                )
+                return redirect('sync_manager', device_id=device_id)
+            if len(usernames) > BULK_DELETE_MAX:
+                messages.error(
+                    request,
+                    "Refused: {} accounts is too many to delete at once. The "
+                    "limit is {}. Delete in reviewed batches so a mistake is "
+                    "recoverable.".format(len(usernames), BULK_DELETE_MAX),
+                )
+                return redirect('sync_manager', device_id=device_id)
+
+            blocked_writes = 0
             for uname in usernames:
                 res = api.delete_pppoe_user(name=uname)
                 if res.get('success'):
                     success_count += 1
                 else:
                     error_count += 1
-            messages.success(request, f"Bulk Delete: {success_count} deleted, {error_count} failed.")
+                    if 'read_only' in str(res.get('error', '')).lower():
+                        blocked_writes += 1
+            if blocked_writes:
+                messages.warning(
+                    request,
+                    "Bulk Delete: {} deleted, {} failed. {} were refused by "
+                    "ROUTER_MODE=read_only -- nothing was removed."
+                    .format(success_count, error_count, blocked_writes),
+                )
+            else:
+                messages.success(
+                    request, f"Bulk Delete: {success_count} deleted, {error_count} failed.")
 
         elif action == 'bulk_push':
+            # Same canonical comment as the single-account path. Passing a bare
+            # name here produced secrets the system could not recognise, which
+            # is what "Missing/Invalid Comment" actually was.
+            blocked_writes = 0
             for uname in usernames:
                 customer = Customer.objects.filter(pppoe_username=uname).first()
-                if customer:
-                    profile = customer.plan.name if customer.plan else "default"
-                    res = api.add_pppoe_user(
-                        name=customer.pppoe_username,
-                        password=customer.pppoe_password,
-                        profile=profile,
-                        comment=customer.full_name
-                    )
-                    if res.get('success'):
-                        if customer.mikrotik_device != device:
-                            customer.mikrotik_device = device
-                            customer.save(update_fields=['mikrotik_device'])
-                        success_count += 1
+                if not customer:
+                    error_count += 1
+                    continue
+                res = api.add_pppoe_user(
+                    name=customer.pppoe_username,
+                    password=customer.pppoe_password,
+                    profile=desired_profile(customer),
+                    comment=build_router_comment(customer),
+                )
+                if res.get('success'):
+                    # Record the approval, not just the write. Otherwise the
+                    # account still reads Unverified and never leaves the queue.
+                    mark_synced(customer, device, request.user)
+                    success_count += 1
+                else:
+                    error_count += 1
+                    if 'read_only' in str(res.get('error', '')).lower():
+                        blocked_writes += 1
+                        customer.sync_status = "Blocked"
+                        customer.save(update_fields=["sync_status"])
                     else:
-                        error_count += 1
-            messages.success(request, f"Bulk Push: {success_count} pushed, {error_count} failed.")
+                        customer.sync_status = "Failed"
+                        customer.save(update_fields=["sync_status"])
+
+            if blocked_writes:
+                messages.warning(
+                    request,
+                    "Bulk Push: {} approved, {} failed. {} were refused by "
+                    "ROUTER_MODE=read_only and are now marked Blocked -- they "
+                    "stay in the queue for when writes are enabled."
+                    .format(success_count, error_count, blocked_writes),
+                )
+            else:
+                messages.success(
+                    request,
+                    f"Bulk Push: {success_count} approved and written, "
+                    f"{error_count} failed.")
 
         elif action == 'bulk_import':
             if not (request.user.is_superuser or request.user.has_perm("billing.import_router_subscribers")):

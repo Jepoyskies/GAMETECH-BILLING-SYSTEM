@@ -97,15 +97,20 @@
                             <small class="d-block text-muted mt-1">Reconnect, or check why they were cut.</small>
                         {% endif %}
                         {% if user.unlinked %}
-                            <span class="gametech-pill pill-warning" title="This account is not assigned to any router in the system, so it cannot be traced to a router at all. Assign one before treating it as connected.">
+                            <span class="gametech-pill pill-warning" title="This account is not assigned to any router in the system, so it cannot be traced to a router at all.">
                                 <i class="fas fa-unlink me-1"></i> Not Linked to a Router
                             </span>
-                            <small class="d-block text-muted mt-1">Assign a router, then approve.</small>
+                            <small class="d-block text-muted mt-1">Approving will link it to {{ device.device_name }}.</small>
                         {% elif user.never_verified %}
                             <span class="gametech-pill pill-warning" title="This account exists in both places but has never been verified against a router. Present in both is not the same as approved.">
                                 <i class="fas fa-user-clock me-1"></i> Awaiting Approval
                             </span>
                             <small class="d-block text-muted mt-1">Check the details match, then approve.</small>
+                        {% endif %}
+                        {% if user.approval_reasons %}
+                            <small class="d-block text-muted mt-1">
+                                {{ user.approval_reasons|join:"; " }}
+                            </small>
                         {% endif %}
                         {% if user.drift_fields %}
                             <small class="d-block text-warning mt-1">
@@ -123,11 +128,19 @@
                             <a href="{% url 'view_customer' user.customer.id %}" class="btn btn-sm btn-outline-secondary" title="Open the customer record and decide there.">
                                 <i class="fas fa-external-link-alt"></i> View
                             </a>
-                            {% if user.customer.plan %}
-                            <button type="submit" formnovalidate formaction="{% url 'sync_autofix_user' device.id %}" formmethod="POST" name="pppoe_username" value="{{ user.name }}" class="btn btn-sm btn-outline-primary"
-                                    title="Write this system's plan and profile to the router now. This is a real router write." onclick="return confirm('Write this account to the router now?\n\nThis will set the profile and password on {{ device.device_name }}.\n\nOnly do this if the SYSTEM is right.');">
-                                <i class="fas fa-upload"></i> Push
+                            {% if user.customer %}
+                            {% if router_mode == 'read_only' %}
+                            <button type="button" class="btn btn-sm btn-outline-warning" disabled
+                                    title="Router writes are switched off (ROUTER_MODE=read_only). Review the details now; an admin must enable writes before this can be approved.">
+                                <i class="fas fa-lock"></i> Writes Off
                             </button>
+                            {% else %}
+                            <button type="submit" formnovalidate formaction="{% url 'sync_autofix_user' device.id %}" formmethod="POST" name="pppoe_username" value="{{ user.name }}" class="btn btn-sm btn-outline-primary"
+                                    title="Approve this account: write the system's profile, password and comment to the router, and link it to {{ device.device_name }}."
+                                    onclick="return confirm('Approve {{ user.name|escapejs }}?\n\nThis writes to the REAL router {{ device.device_name }}:\n  profile  {{ user.want_profile }}\n  comment  {{ user.customer.full_name }}{% if user.customer.barangay %} | {{ user.customer.barangay.name }}{% endif %}\n\nAfter approving, the account is linked to this router and marked Synced.\n\nOnly approve if the SYSTEM details are correct.');">
+                                <i class="fas fa-user-check"></i> Approve
+                            </button>
+                            {% endif %}
                             {% endif %}
                         </div>
                         {% endif %}
