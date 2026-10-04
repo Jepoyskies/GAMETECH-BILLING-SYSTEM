@@ -130,9 +130,21 @@ def add_customer(request):
         email = (request.POST.get("email") or "").strip()
         phone = (request.POST.get("phone") or "").strip()
         pppoe_username = (request.POST.get("pppoe_username") or "").strip()
+        pppoe_password = (request.POST.get("pppoe_password") or "").strip()
         installation_status = request.POST.get("installation_status", "pending")
         if not installation_status:
             installation_status = "pending"
+
+        # PPPoE credentials are mandatory — required for MikroTik router provisioning
+        if not pppoe_username:
+            messages.error(request, "PPPoE Username is required for router provisioning.")
+            context = _get_add_customer_context(request, pppoe_username, prospect, agent_id_param)
+            return render(request, "billing/add_customer.html", context)
+
+        if not pppoe_password:
+            messages.error(request, "PPPoE Password is required for router provisioning.")
+            context = _get_add_customer_context(request, pppoe_username, prospect, agent_id_param)
+            return render(request, "billing/add_customer.html", context)
 
         # Duplicate checks
         if phone and Customer.objects.filter(phone=phone).exists():

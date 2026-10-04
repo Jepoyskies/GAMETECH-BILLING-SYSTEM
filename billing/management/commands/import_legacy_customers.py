@@ -3,10 +3,12 @@ import os
 import secrets
 import string
 from datetime import timedelta
+from functools import wraps
 from pathlib import Path
 
 from django.contrib.auth.hashers import make_password
 from django.core.management.base import BaseCommand
+from django.db import transaction
 from django.db.models.signals import post_delete, post_save
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -20,6 +22,25 @@ from billing.signals import (
     sync_plan_on_save,
 )
 from network_manager.models import MikrotikDevice
+
+
+def all_or_nothing(func):
+    """Run the import as a single transaction.
+
+    The 2,041-row cutover import used to commit row by row with no rollback.
+    If the process dies partway -- and it has, twice: the comment about
+    "OOM-killed" below is one of those incidents -- the database is left holding
+    a partial subscriber base with no import report, and nobody can tell how far
+    it got. A half-import is worse than no import: the staff would start billing
+    real customers against a silently incomplete account list.
+
+    With this, the import either completes fully or changes nothing.
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        with transaction.atomic():
+            return func(*args, **kwargs)
+    return wrapper
 
 
 # Legacy `customers.status` enum -> Customer.STATUS_CHOICES value.
@@ -121,6 +142,7 @@ class Command(BaseCommand):
         account_type_map[type_name] = obj
         return obj
 
+    @all_or_nothing
     def handle(self, *args, **kwargs):
         sql_file_path = kwargs["sql_file"]
         create_missing_plans = kwargs["create_missing_plans"]
