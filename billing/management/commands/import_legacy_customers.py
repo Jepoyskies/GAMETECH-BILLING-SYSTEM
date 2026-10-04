@@ -22,6 +22,23 @@ from billing.signals import (
 from network_manager.models import MikrotikDevice
 
 
+# Legacy `customers.status` enum -> Customer.STATUS_CHOICES value.
+# The legacy enum is: active, inactive, suspended, pending, pull out, expired,
+# past_due. Only `past_due` has no counterpart in the new model, and it means
+# "owed money but not yet cut off", which is exactly what `expired` describes
+# for our purposes (the collections view surfaces it, the router is not touched).
+# Any status NOT in this map is reported rather than silently stored.
+LEGACY_STATUS_MAP = {
+    "active": "active",
+    "inactive": "inactive",
+    "suspended": "suspended",
+    "pending": "pending",
+    "pull out": "pull out",
+    "expired": "expired",
+    "past_due": "expired",
+}
+
+
 # Legacy plan name -> current SubscriptionPlan name mapping
 # Zero-date customers are flagged for review instead of given a default expiry
 #
@@ -132,6 +149,7 @@ class Command(BaseCommand):
             pppoe_creds = {}
             zero_date_customers = []
             missing_password = []
+            unmapped_statuses = {}
 
             # Parse the dump ONCE. Re-reading a multi-megabyte file three times
             # was slow enough to get the process killed on a 1 vCPU host.
@@ -239,8 +257,23 @@ class Command(BaseCommand):
                             missing_password.append(username or full_name)
 
                         # Parse status
+                        #
+                        # The legacy enum is: active, inactive, suspended, pending,
+                        # pull out, expired, past_due. 'past_due' has NO equivalent in
+                        # Customer.STATUS_CHOICES, and status was previously copied
+                        # through verbatim -- so such a row would be stored with a value
+                        # the UI has no badge or label for, and the outage-first triage
+                        # on /customers/ would not classify it at all. Map the legacy
+                        # spelling onto a real choice and record anything unmapped so
+                        # the import report can list it instead of hiding it.
                         raw_status = row.get("status")
-                        status_val = str(raw_status).lower() if raw_status else "active"
+                        status_val = str(raw_status).strip().lower() if raw_status else "active"
+                        if status_val not in LEGACY_STATUS_MAP:
+                            unmapped_statuses[status_val or "(blank)"] = (
+                                unmapped_statuses.get(status_val or "(blank)", 0) + 1
+                            )
+                            status_val = "expired"
+                        status_val = LEGACY_STATUS_MAP[status_val]
 
                         # Portal password. PBKDF2 at ~1M iterations costs ~1s per
                         # customer, which is what made the first full import take 8
@@ -403,6 +436,7 @@ class Command(BaseCommand):
                 "pppoe_credentials": len(pppoe_creds),
                 "zero_date_customers": zero_date_customers,
                 "missing_password_customers": missing_password,
+                "unmapped_statuses": unmapped_statuses,
                 "devices_created": list(device_map.keys()),
                 "plans_used": list(plan_map.keys()),
                 "payments": {
@@ -418,6 +452,21 @@ class Command(BaseCommand):
             with open(report_path, "w") as f:
                 json.dump(report, f, indent=2, default=str)
             self.stdout.write(f"  Import report saved to: {report_path}")
+
+            if unmapped_statuses:
+                self.stdout.write(
+                    self.style.WARNING(
+                        "\n=== LEGACY STATUS VALUES WITH NO EQUIVALENT (imported as 'expired') ==="
+                    )
+                )
+                for value, count in unmapped_statuses.items():
+                    self.stdout.write(f"  - {value!r}: {count} row(s)")
+                self.stdout.write(
+                    self.style.WARNING(
+                        "These are NOT valid Customer.STATUS_CHOICES values. Review them in "
+                        "the import report and set the correct status per subscriber."
+                    )
+                )
 
             if missing_password:
                 self.stdout.write(

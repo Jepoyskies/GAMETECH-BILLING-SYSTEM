@@ -132,11 +132,24 @@ def import_legacy_payments(rows, actor="legacy-import", dry_run=False):
             customer_map[c.pppoe_username] = c
 
     if dry_run:
-        summary["matched_customers"] = len(customer_map)
-        summary["orphan_count"] = len(
-            usernames - set(customer_map)
-        )
-        summary["orphans"] = sorted(usernames - set(customer_map))[:50]
+        # A dry run happens BEFORE the customers are written, so the database
+        # legitimately holds none of them. Matching only against the live DB
+        # therefore reported EVERY payment username as an orphan (436 of 436 in
+        # the rehearsal) when the true figure was 3. Match against the customers
+        # in THIS dump as well, which is what the real run will match against.
+        dump_usernames = set()
+        for r in rows:
+            table = r[0] if isinstance(r, tuple) else None
+            row = r[1] if isinstance(r, tuple) else r
+            if table == "customers" or (table is None and row.get("expires_at")):
+                u = str(row.get("username") or "").strip()
+                if u:
+                    dump_usernames.add(u)
+
+        known = set(customer_map) | dump_usernames
+        summary["matched_customers"] = len(known & usernames)
+        summary["orphan_count"] = len(usernames - known)
+        summary["orphans"] = sorted(usernames - known)[:50]
         for r in payment_rows:
             amt = _parse_amount(r.get("amount"))
             if amt <= 0:
