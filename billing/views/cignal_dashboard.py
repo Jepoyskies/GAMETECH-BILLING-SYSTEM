@@ -2,6 +2,7 @@ import csv
 from decimal import Decimal, InvalidOperation
 from datetime import datetime, timedelta
 from django.shortcuts import render, redirect, get_object_or_404
+from billing.decorators import billing_required
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.contrib import messages
@@ -13,6 +14,7 @@ from billing.models import Customer, CignalPlay, AddOnRequest, Notification, Pay
 
 
 @login_required
+@billing_required
 def cignal_dashboard_view(request):
     today = timezone.localtime().date()
     current_tab = request.GET.get("tab", "active")
@@ -182,6 +184,7 @@ def cignal_dashboard_view(request):
 
 @login_required
 @require_POST
+@billing_required
 def process_cignal_payment(request):
     """
     Process manual payment / reload for a Cignal subscription (One-to-Many).
@@ -262,26 +265,26 @@ def process_cignal_payment(request):
         if payment_type == "box_and_load" or (payment_type != "load_only" and amount == Decimal("399.00") and subscription.hardware_payment_type == "installment" and (subscription.installments_paid or 0) < 12 and subscription.monthly_load_plan == "149"):
             if subscription.hardware_payment_type == "installment" and (subscription.installments_paid or 0) < 12:
                 subscription.installments_paid = (subscription.installments_paid or 0) + 1
-                installment_text = f" [Box Installment #{subscription.installments_paid}/12 (₱250) + Load (₱149)]"
+                installment_text = f" [Box Installment #{subscription.installments_paid}/12 (â‚±250) + Load (â‚±149)]"
                 # Auto-complete: upgrade to cashout on final installment
                 if subscription.installments_paid >= 12:
                     subscription.hardware_payment_type = "cashout"
-                    installment_text += " ✅ Hardware FULLY PAID — upgraded to Cashout"
+                    installment_text += " âœ… Hardware FULLY PAID â€” upgraded to Cashout"
             else:
-                installment_text = " [Box + Load: ₱399]"
+                installment_text = " [Box + Load: â‚±399]"
         elif payment_type in ("box_installment", "box_only") or (payment_type != "load_only" and amount == Decimal("250.00") and subscription.hardware_payment_type == "installment" and (subscription.installments_paid or 0) < 12):
             if subscription.hardware_payment_type == "installment" and (subscription.installments_paid or 0) < 12:
                 subscription.installments_paid = (subscription.installments_paid or 0) + 1
-                installment_text = f" [Box Installment #{subscription.installments_paid}/12 (₱250)]"
+                installment_text = f" [Box Installment #{subscription.installments_paid}/12 (â‚±250)]"
                 if subscription.installments_paid >= 12:
                     subscription.hardware_payment_type = "cashout"
-                    installment_text += " ✅ Hardware FULLY PAID — upgraded to Cashout"
+                    installment_text += " âœ… Hardware FULLY PAID â€” upgraded to Cashout"
             else:
-                installment_text = " [Box Installment: ₱250]"
+                installment_text = " [Box Installment: â‚±250]"
         elif payment_type == "box_cashout" or amount >= Decimal("3000.00"):
             subscription.hardware_payment_type = "cashout"
             subscription.installments_paid = 12
-            installment_text = " [Hardware Cashout ₱3k Completed]"
+            installment_text = " [Hardware Cashout â‚±3k Completed]"
 
         subscription.amount_paid = (subscription.amount_paid or Decimal("0.00")) + amount
         subscription.adjusted_by = request.user.username
@@ -314,13 +317,13 @@ def process_cignal_payment(request):
             admin_user=request.user,
             customer=customer,
             action_type="Cignal Payment Reload",
-            remarks=f"Amount: ₱{amount:,.2f} | Type: {payment_type or 'load'} | HW: {subscription.hardware_payment_type} ({subscription.installments_paid}/12) | Ref: {reference_no or 'N/A'}{audit_notes} | Expiry: {new_expiration_date.strftime('%Y-%m-%d') if new_expiration_date else 'Unchanged'} | Acct: {subscription.account_number}",
+            remarks=f"Amount: â‚±{amount:,.2f} | Type: {payment_type or 'load'} | HW: {subscription.hardware_payment_type} ({subscription.installments_paid}/12) | Ref: {reference_no or 'N/A'}{audit_notes} | Expiry: {new_expiration_date.strftime('%Y-%m-%d') if new_expiration_date else 'Unchanged'} | Acct: {subscription.account_number}",
         )
 
         # Notification
         Notification.objects.create(
             title="Cignal Reload Recorded",
-            message=f"₱{amount:,.2f} payment recorded for {customer.full_name} ({subscription.account_name or subscription.account_number}) by {request.user.username}.{installment_text}",
+            message=f"â‚±{amount:,.2f} payment recorded for {customer.full_name} ({subscription.account_name or subscription.account_number}) by {request.user.username}.{installment_text}",
             notification_type="cignal",
             link=f"/customer/{customer.id}/cignal-logs/",
         )
@@ -328,7 +331,7 @@ def process_cignal_payment(request):
     if request.headers.get("X-Requested-With") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", ""):
         return JsonResponse({
             "status": "success",
-            "message": f"Payment of ₱{amount:,.2f} recorded successfully.{installment_text}",
+            "message": f"Payment of â‚±{amount:,.2f} recorded successfully.{installment_text}",
             "subscription_id": subscription.id,
             "new_expiration": subscription.expiration_date.strftime("%Y-%m-%d") if subscription.expiration_date else "",
             "amount_paid": float(subscription.amount_paid),
@@ -339,13 +342,14 @@ def process_cignal_payment(request):
     inst_msg = f" (Box Installment #{subscription.installments_paid}/12)" if subscription.hardware_payment_type == 'installment' else ""
     messages.success(
         request,
-        f"Cignal reload of ₱{amount:,.2f} successfully recorded for {customer.full_name} ({subscription.account_name or subscription.account_number}){inst_msg}.",
+        f"Cignal reload of â‚±{amount:,.2f} successfully recorded for {customer.full_name} ({subscription.account_name or subscription.account_number}){inst_msg}.",
     )
     return redirect(request.META.get("HTTP_REFERER", "cignal_dashboard"))
 
 
 @login_required
 @require_POST
+@billing_required
 def edit_cignal_subscription(request, sub_id=None):
     """
     Update Cignal subscription details: label/account_name, cignal_play_no, cignal_box_no, hardware, and plan.
@@ -446,7 +450,7 @@ def edit_cignal_subscription(request, sub_id=None):
         admin_user=request.user,
         customer=customer,
         action_type="Edit Cignal Subscription",
-        remarks=f"Updated Cignal #{subscription.id}: Label='{subscription.account_name}', Play='{cignal_play_no}', Box='{cignal_box_no}', HW='{subscription.hardware_payment_type}' ({subscription.installments_paid}/12), Load='₱{subscription.monthly_load_plan}', Expiry='{exp_str}'",
+        remarks=f"Updated Cignal #{subscription.id}: Label='{subscription.account_name}', Play='{cignal_play_no}', Box='{cignal_box_no}', HW='{subscription.hardware_payment_type}' ({subscription.installments_paid}/12), Load='â‚±{subscription.monthly_load_plan}', Expiry='{exp_str}'",
     )
 
     if request.headers.get("X-Requested-With") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", ""):
@@ -471,6 +475,7 @@ def edit_cignal_subscription(request, sub_id=None):
 
 @login_required
 @require_POST
+@billing_required
 def cancel_cignal_subscription(request, sub_id):
     """Soft-cancel (pull-out) a Cignal subscription. Moves to Cancelled / Deleted Bar."""
     from dispatch.models import JobTicket
@@ -518,6 +523,7 @@ def cancel_cignal_subscription(request, sub_id):
 
 @login_required
 @require_POST
+@billing_required
 def restore_cignal_subscription(request, sub_id):
     """Restore a cancelled Cignal subscription back to active."""
     subscription = get_object_or_404(CignalPlay, id=sub_id, is_cancelled=True)
@@ -548,6 +554,7 @@ def restore_cignal_subscription(request, sub_id):
 
 @login_required
 @require_POST
+@billing_required
 def purge_cignal_subscription(request, sub_id):
     """Permanently delete a cancelled subscription (Admin only)."""
     if not (request.user.is_staff or request.user.is_superuser):
@@ -571,6 +578,7 @@ def purge_cignal_subscription(request, sub_id):
 
 @login_required
 @require_POST
+@billing_required
 def purge_all_cancelled_cignal_subscriptions(request):
     """Permanently clear all items in the cancelled / deleted bar (Admin only)."""
     if not (request.user.is_staff or request.user.is_superuser):
@@ -596,6 +604,7 @@ def purge_all_cancelled_cignal_subscriptions(request):
 
 
 @login_required
+@billing_required
 def cignal_applications_view(request):
     today = timezone.localtime().date()
     pending_applications = AddOnRequest.objects.filter(
@@ -613,6 +622,7 @@ def cignal_applications_view(request):
 
 @login_required
 @require_POST
+@billing_required
 def cancel_cignal_application(request, request_id):
     """
     Cancel / delete a pending Cignal add-on or box application.
@@ -645,6 +655,7 @@ def cancel_cignal_application(request, request_id):
 
 
 @login_required
+@billing_required
 def cignal_logs_view(request):
     cignal_payments = CignalPlay.objects.all().select_related("customer").order_by("-created_at")[:50]
     notifications = Notification.objects.filter(notification_type="cignal").order_by("-id")[:50]
@@ -658,6 +669,7 @@ def cignal_logs_view(request):
 
 
 @login_required
+@billing_required
 def cignal_export_csv_view(request):
     """
     Stream a clean CSV file of all Cignal subscribers for manual 3rd-party reconciliation.

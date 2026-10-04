@@ -184,6 +184,52 @@ def _role_allows(user, allowed_roles):
     return False
 
 
+def billing_required(view_func=None):
+    """
+    Gate a view behind the StaffRole `billing` module.
+
+    Many billing/customer views were decorated with `@login_required` alone,
+    which meant ANY authenticated account -- including a field Technician -- could
+    read the subscriber list, export Cignal data, create Xendit payment invoices
+    and purge Cignal subscriptions. `@login_required` answers "is this a known
+    user", not "is this user allowed to do this".
+
+    This consults the same StaffRole matrix the sidebar uses, so the Role Editor
+    stays the single source of truth: Admin / Editor / CSR / Viewer have
+    `can_access_billing`; Agent, Technician and Dispatch do not.
+
+    Usage:
+        @login_required
+        @billing_required
+        def some_view(request): ...
+    """
+    def decorator(func):
+        def _wrapped(request, *args, **kwargs):
+            user = request.user
+            if getattr(user, "is_superuser", False):
+                return func(request, *args, **kwargs)
+            perms = getattr(user, "role_perms", None)
+            if perms is None or not getattr(perms, "can_access_billing", False):
+                if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                    return JsonResponse(
+                        {"status": "error",
+                         "message": "You do not have permission to access billing data."},
+                        status=403,
+                    )
+                messages.error(
+                    request,
+                    "Your role does not have access to billing data.",
+                )
+                if hasattr(user, "technician"):
+                    return redirect("technician_dashboard")
+                if hasattr(user, "agent_profile") and not user.is_staff:
+                    return redirect("agent_dashboard")
+                return redirect("dashboard")
+            return func(request, *args, **kwargs)
+        return _wrapped
+    return decorator(view_func) if view_func else decorator
+
+
 def role_required(allowed_roles):
     """
     Decorator for views that checks that the user's role is in the allowed_roles list.

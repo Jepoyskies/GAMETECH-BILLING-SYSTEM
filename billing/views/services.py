@@ -10,7 +10,7 @@ from django.contrib.auth.decorators import (
     permission_required,
 )
 from django.views.decorators.http import require_POST
-from billing.decorators import role_required
+from billing.decorators import role_required, billing_required
 from django.contrib import messages
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -45,6 +45,7 @@ import calendar
 
 
 @login_required
+@billing_required
 def subscription_plans_view(request):
     """Customer Subscriptions Dashboard Skeleton View."""
     search = request.GET.get("search", "").strip()
@@ -114,6 +115,7 @@ def plan_list(request):
 
 
 @login_required
+@billing_required
 def sync_plans_from_mikrotik(request):
     from network_manager.models import MikrotikDevice
     from network_manager.services import MikrotikAPI
@@ -239,6 +241,7 @@ def delete_plan(request, plan_id):
 
 
 @login_required
+@billing_required
 def cignal_play_list_view(request):
     search = request.GET.get("search", "")
     status_filter = request.GET.get("status", "all")
@@ -280,6 +283,7 @@ def cignal_play_list_view(request):
 
 
 @login_required
+@billing_required
 def add_on_payments_view(request):
     search = request.GET.get("search", "")
 
@@ -320,6 +324,7 @@ def add_on_payments_view(request):
 
 
 @login_required
+@billing_required
 def cignalplay_form_view(request, customer_id):
     customer = get_object_or_404(Customer, id=customer_id)
     if request.method == "POST":
@@ -385,6 +390,7 @@ def get_categorized_plans():
 
 
 @login_required
+@billing_required
 def user_cignal_logs_view(request, customer_id):
     customer = get_object_or_404(
         Customer.objects.select_related("plan", "mikrotik_device"),
@@ -398,6 +404,7 @@ def user_cignal_logs_view(request, customer_id):
 
 @login_required
 @transaction.atomic
+@billing_required
 def apply_cignal_addon(request):
     if request.method == "POST":
         request_id = request.POST.get("request_id")

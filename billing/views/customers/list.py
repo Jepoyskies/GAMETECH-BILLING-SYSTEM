@@ -43,10 +43,44 @@ import calendar
 from billing.views.services import get_categorized_plans
 
 
+def _can_view_billing(user):
+    """Who may open the subscriber list.
+
+    Uses the StaffRole matrix (`can_access_billing`) so the Role Editor stays the
+    single source of truth: Admin / Editor / CSR / Viewer are True, while Agent,
+    Technician and Dispatch are False.
+    """
+    if getattr(user, "is_superuser", False):
+        return True
+    perms = getattr(user, "role_perms", None)
+    if perms is None:
+        return False
+    return bool(getattr(perms, "can_access_billing", False))
+
+
 @login_required
 def customer_list(request):
     if hasattr(request.user, "agent_profile") and not request.user.is_staff:
         return redirect("agent_dashboard")
+
+    # This view was gated by @login_required alone, so ANY authenticated user
+    # could browse the whole subscriber list -- names, addresses, phones and
+    # balances. A field Technician has no business here; their isolation
+    # contract says they only ever see jobs staff assigned them.
+    #
+    # Checked inside the view rather than as a decorator so the agent redirect
+    # above keeps priority (a decorator would run first and bounce agents to
+    # the dashboard instead of their own portal).
+    if not _can_view_billing(request.user):
+        from django.contrib import messages as _m
+        _m.error(
+            request,
+            "Your role does not have access to the customer list. "
+            "Technicians see only their assigned jobs in the Field Portal.",
+        )
+        if hasattr(request.user, "technician"):
+            return redirect("technician_dashboard")
+        return redirect("dashboard")
     from network_manager.models import MikrotikDevice
     from django.utils import timezone
     from datetime import timedelta

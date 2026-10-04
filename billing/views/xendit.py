@@ -1,6 +1,7 @@
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from billing.decorators import billing_required
 from django.contrib.auth.decorators import login_required
 from billing.models import Customer, Payment
 
@@ -9,6 +10,7 @@ from billing.models import Customer, Payment
 
 
 @login_required
+@billing_required
 def create_xendit_invoice(request, customer_id):
     """
     Stub for creating a Xendit Invoice.

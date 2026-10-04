@@ -1,4 +1,5 @@
 @login_required
+@billing_required
 def payment_receipt_view(request, payment_id):
     payment = get_object_or_404(Payment, id=payment_id)
     customer = payment.customer

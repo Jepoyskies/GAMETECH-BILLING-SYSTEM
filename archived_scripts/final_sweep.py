@@ -32,7 +32,7 @@ hdr("1. DISPATCH PIPELINE: assign -> arrive -> done -> QA bounce -> re-approve")
 plan = SubscriptionPlan.objects.filter(price__gt=0).order_by("price").first()
 tp = Technician.objects.filter(user__username="Merk").first()
 c = Customer.objects.create(full_name="TEST Pipeline", pppoe_username="e2e_pipeline",
-                            pppoe_password="x", status="pending",
+                            pppoe_password="x", status="active",
                             installation_status="installed", plan=plan, is_test_data=True)
 t = JobTicket.objects.create(customer=c, client_name=c.full_name, ticket_type="INSTALLATION",
                              source_tab="INTERNET_INSTALL", status="PENDING",
