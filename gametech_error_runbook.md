@@ -2766,3 +2766,116 @@ has two independent causes, make ONE of them the only writer.
 `dispatch/signals.py`, `dispatch/views.py`, `dispatch/views_approval.py`,
 `dispatch/pipeline_views.py`, `billing/views/payments/transactions.py`
 **Date Logged**: 2026-10-03
+
+---
+
+### ERR-105: 41 Billing/Customer Views Were Gated By `@login_required` Alone
+
+**Symptom**: a field Technician (Merk) could open `/customers/` and read the entire
+subscriber list -- names, addresses, phones, balances. A static audit found the
+same class of hole on **41 views** that touch customer, billing or money data.
+
+Worst offenders reachable by any authenticated account:
+- `cignal_export_csv_view` -- export every Cignal subscriber to CSV
+- `create_xendit_invoice` -- **create real payment invoices**
+- `purge_all_cancelled_cignal_subscriptions` / `purge_cignal_subscription` -- destructive
+- `cancel_cignal_subscription`, `process_cignal_payment` -- money movement
+- `payment_receipt_view`, the whole Cignal dashboard/applications/logs family
+
+**Root cause**: `@login_required` answers "is this a known user", not "is this
+user allowed to do this". These views simply never got a role gate. The sidebar
+hid the links, but the URLs were open -- which is exactly what you must never rely
+on for authorisation.
+
+**Fix**: a new `billing_required` decorator in `billing/decorators.py` that
+consults the same `StaffRole.can_access_billing` the sidebar uses, so the Role
+Editor stays the single source of truth. Applied to 30 views across
+`views_receipt.py`, `views/cignal_dashboard.py`, `views/services.py`,
+`views/xendit.py`. `customer_list` got the check inside the view body so the Agent
+redirect keeps priority.
+
+Verified matrix (deny = 302/403):
+- Technician: denied on all 10 billing pages
+- Agent: denied on all 10
+- CSR / Admin: allowed (CSR correctly still bounced from Admin-only pages)
+
+**Lesson**: hiding a link is not a permission. Any URL reachable by an
+authenticated user must be gated at the view.
+
+**Files**: `billing/decorators.py` (`billing_required`),
+`billing/views/customers/list.py`, `billing/views/cignal_dashboard.py`,
+`billing/views/services.py`, `billing/views/xendit.py`, `billing/views_receipt.py`
+**Date Logged**: 2026-10-04
+
+---
+
+### ERR-106: The Agent Commission Engine Was Dark - And Compose Silently Swallowed The Fix
+
+**Symptom**: the Agent Portal advertises "Claimable Commission" and "Cashout at 5"
+but every agent sits at PHP 0.00 forever. No agent has ever qualified.
+
+**Root cause - two layers**:
+1. `INCENTIVES_ENABLED = env.bool("INCENTIVES_ENABLED", default=False)` was never
+   set in `.env`, so the whole engine (`billing/services/incentives.py`, the
+   `post_save` trigger on Payment, qualification, payout batches) was a no-op.
+2. Even after adding it to `.env`, it stayed off: **`docker-compose.yml` never
+   passed it through.** `x-app-env` lists each variable explicitly, so anything
+   not listed never reaches the container regardless of `.env`. Setting it in
+   `.env` did literally nothing.
+
+**The same trap applied to `ROUTER_MODE`**, which was hardcoded `ROUTER_MODE: read_only`
+in compose -- so it could never be changed by editing `.env` either. Both are now
+env-driven with the safe value as the default:
+
+```yaml
+ROUTER_MODE: ${ROUTER_MODE:-read_only}
+INCENTIVES_ENABLED: ${INCENTIVES_ENABLED:-False}
+SESSION_COOKIE_AGE: ${SESSION_COOKIE_AGE:-28800}
+```
+
+**Verified after enabling** (`INCENTIVES_ENABLED=True`): 5 agent-referred customers
+paid 2 months each -> 5 qualification events, each backed by a real `Payment` row
+-> `claimable_amount = 2500.00` and `is_cashout_eligible = True` -> Agent Portal
+shows PHP 2,500.00 -> payout batch `BATCH-...-001` created with exactly 5 events
+-> claimable resets to 0 -> CSR correctly refused `mark-paid` (no
+`billing.mark_payout_paid`) -> Admin marked it paid, `paid_at` set, all 5 events
+flipped to `paid_out`.
+
+Note the qualification threshold is **2x the monthly price** (2nd month paid), and
+cashout needs `batch_size` (5) qualifications. Both are intentional.
+
+**Lesson**: a feature behind a flag that nobody set is a feature that does not
+exist. And with Compose, an env var that is not listed in `environment:` does not
+exist either -- `.env` alone is not enough.
+
+**Files**: `docker-compose.yml`, `.env`, `billing/decorators.py`
+**Date Logged**: 2026-10-04
+
+---
+
+### ERR-107: Force Suspend/Reactivate Gated BILLING On ROUTER Success
+
+**Symptom**: with `ROUTER_MODE=read_only` (or any router timeout, or a customer
+with no device assigned) staff **could not suspend or reactivate anybody**. The
+collections workflow was dead and the failure looked like a normal redirect.
+
+**Root cause**: a Rule 35 violation. `customer_force_suspend` only wrote
+`status = "suspended"` *inside* `if success:` from the router call, and
+`customer_force_reactivate` nested three levels of router success
+(`enable` -> `profile` -> `kick`) in front of its DB update. Billing truth was made
+dependent on hardware reaching back.
+
+**Fix**: both now write the CRM status and the AuditLog **first, unconditionally**,
+then attempt the router action as a separate best-effort step whose outcome is
+reported distinctly (`messages.warning` tells staff the line may still be live and
+to check the Sync Manager). Reactivating still requires superuser + password +
+reason, and still never touches `expires_at`.
+
+Verified: suspend works with no device and no router write; superuser reactivate
+works the same way; CSR is still refused the reactivate override.
+
+**Lesson**: hardware connectivity and billing lifecycle are independent domains.
+Never let a router timeout decide whether a customer is suspended.
+
+**Files**: `billing/views/customers/actions.py`
+**Date Logged**: 2026-10-04
