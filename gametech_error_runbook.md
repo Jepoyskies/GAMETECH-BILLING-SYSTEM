@@ -3294,3 +3294,96 @@ definition. Sweep the routes *with* data, not just against an empty database.
 
 **Files**: `dispatch/views.py`
 **Date Logged**: 2026-10-04
+
+---
+
+### ERR-118: Deleting A Plan Silently Deleted Its Router Profile From Every Router
+
+**The worst bug found in this project.** It was armed and waiting for the day
+the routers came back online.
+
+**What happened**: while merging duplicate plan rows I saw the log:
+
+    Failed to delete profile GTipid Fiber 1000: Could not connect to
+    ccr2116.v1 - patag API.
+
+`delete_plan_on_mikrotik` fires on `post_delete` of a `SubscriptionPlan` and
+called `delete_plan_from_mikrotik(plan_name=instance.name)` on **every**
+registered device, unconditionally.
+
+**Why it was nearly catastrophic**: the duplicate rows I was deleting had the
+SAME NAME as the surviving rows. So the moment the routers were reachable, that
+merge would have deleted the profile `GTipid Fiber 1000` from all three routers
+-- the profile carrying **1,396 live subscribers**. They would have kept
+authenticating but lost their rate limits. Every duplicate-plan cleanup anyone
+ever did in the admin carried this same trigger.
+
+It survived only because the routers were powered off. That is not a safeguard,
+that is luck.
+
+**Fix**: the signal now refuses to touch a profile that anyone is still on. It
+checks both customers pointing at any plan with that `router_profile`, and
+sibling plans sharing it. If either is non-zero it logs loudly and returns.
+
+**Verified 4/4 with the router API mocked**, so the proof does not depend on
+router availability:
+- deleting a plan whose profile has subscribers -> API never called
+- deleting a genuinely unused plan -> profile still cleaned off all 4 devices
+
+**Lesson**: a database delete should never have an unbounded external side
+effect. And "the routers were off so it did not happen" is not a test result.
+
+**Files**: `billing/signals.py`
+**Date Logged**: 2026-10-04
+
+---
+
+### ERR-119: Duplicate Plan Rows, And The Import Created Them
+
+**Symptom**: the catalogue listed `GTipid Fiber 1000` twice, `GTipid Fiber 1300`
+twice, `GTipid Fiber 1500` twice -- same name, same price, same speed, different
+row ids. 1,644 subscribers pointed at one of each pair arbitrarily.
+
+**Cause**: plans are keyed on `name` but `name` has no unique constraint, and both
+the importer and the plan editor created rows with `get_or_create`-style logic
+that did not always match what was already there.
+
+**Fix**: merged on exact `(name, price, speed_mbps)`, keeping the lowest id,
+moving every customer onto the survivor, and carrying over a router profile if
+only the dead row had one. Wrapped in `transaction.atomic`.
+
+49 plans -> 46. 1,644 customers moved. 0 customers without a plan. 0 duplicates
+remaining.
+
+Plans whose names differ were never merged, even at the same price.
+
+**Files**: `archived_scripts/merge_duplicate_plans.py`
+**Date Logged**: 2026-10-04
+
+---
+
+### ERR-120: Plan Health Cried Wolf About Legitimate Price Tiers
+
+**Symptom**: 8 "duplicate price collision" warnings. Six of them were not
+problems at all:
+
+    PHP 500  GTipid Fiber 500 (10 Mbps) / GTipid Fiber 500 (15 Mbps)
+    PHP 1500 GTipid Fiber 1500 / GTipid Fiber 1500 (Speedboost)
+
+Those are deliberate product tiers, and **the plan name states its own speed**.
+A warning that fires on correct data trains staff to ignore the banner, which
+would have hidden a genuine problem later.
+
+**Fix**: the detector now distinguishes three cases.
+- same price + same speed + same download speed -> a true duplicate (raised)
+- same price + different speeds, but every name states its speed -> informational
+  variant list, not a warning
+- same price, different speeds, names that do NOT distinguish them -> raised,
+  because the import genuinely cannot tell them apart
+
+`plan_health()` gained a `variants` key; the Sync Manager banner reports it as a
+neutral count instead of an alert.
+
+**Files**: `billing/services/plan_health.py`,
+`network_manager/templates/network_manager/sync_manager/_plan_health_banner.html`
+**Date Logged**: 2026-10-04

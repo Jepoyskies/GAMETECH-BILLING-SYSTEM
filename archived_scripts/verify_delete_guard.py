@@ -34,8 +34,10 @@ class FakeAPI:
 print("=" * 74)
 print("1. DELETE A PLAN THAT REAL SUBSCRIBERS ARE ON")
 print("=" * 74)
-target = (SubscriptionPlan.objects.filter(plan__isnull=False)
-          .distinct().order_by("id").first())
+target = (Customer.objects.filter(plan__isnull=False)
+          .distinct().order_by("plan__id").values_list("plan", flat=True)
+          .first())
+target = SubscriptionPlan.objects.get(pk=target)
 victim = SubscriptionPlan.objects.create(
     name=target.name, speed_up="20 Mbps", speed_down="20 Mbps",
     price=target.price, router_profile=target.router_profile,
