@@ -63,3 +63,5 @@ def go():
     print("-" * 90)
     print(f"filled speed_mbps on {filled_speed} plan(s); "
           f"set router_profile on {filled_profile} plan(s)")
+
+go()

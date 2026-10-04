@@ -1,0 +1,59 @@
+{% comment %}
+Plan-health banner for the Sync Manager.
+
+Rows here show as DRIFT for a reason that has nothing to do with the router: the
+plan has no MikroTik profile mapped, or two plans share a price at different
+speeds so the import cannot tell which one a subscriber meant. Saying so here
+stops staff chasing a router problem that is actually a catalogue problem.
+{% endcomment %}
+{% if plan_health and not plan_health.clean %}
+<div class="alert alert-warning shadow-sm">
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-2">
+        <div>
+            <i class="fas fa-clipboard-list me-2"></i>
+            <strong>Plan catalogue problems</strong>
+            <span class="text-muted small ms-1">
+                ({{ plan_health.plans_with_profile }}/{{ plan_health.total_plans }} plans mapped to a router profile)
+            </span>
+        </div>
+        <a href="{% url 'plan_list' %}" class="btn btn-sm btn-outline-warning">
+            <i class="fas fa-cog me-1"></i>Fix in Internet Plans
+        </a>
+    </div>
+
+    {% if plan_health.ambiguous %}
+    <p class="mb-1 fw-semibold small">
+        Same price, different speed &mdash; the import cannot tell which one a subscriber meant:
+    </p>
+    <ul class="small mb-2">
+        {% for a in plan_health.ambiguous %}
+        <li>
+            <strong>&#8369;{{ a.price|floatformat:0 }}</strong> &mdash; {{ a.plans|join:" / " }}
+            ({% for s in a.speeds %}{{ s }} Mbps{% if not forloop.last %}, {% endif %}{% endfor %})
+            {% if a.customer_count %}<span class="badge bg-secondary ms-1">{{ a.customer_count }} customer(s)</span>{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if plan_health.unmapped %}
+    <p class="mb-1 fw-semibold small">
+        No router profile mapped &mdash; these fall back to the display name and may show permanent drift:
+    </p>
+    <div class="small" style="max-height:9rem; overflow:auto;">
+        {% for u in plan_health.unmapped %}
+        <span class="badge bg-light text-dark border me-1 mb-1">
+            {{ u.name }} <span class="text-muted">&#8369;{{ u.price|floatformat:0 }}</span>
+            {% if u.customer_count %}<span class="text-danger">({{ u.customer_count }})</span>{% endif %}
+        </span>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% elif plan_health and plan_health.clean %}
+<div class="alert alert-success shadow-sm py-2 small">
+    <i class="fas fa-check-circle me-2"></i>
+    Plan catalogue is clean &mdash; all {{ plan_health.total_plans }} plans map to a router profile,
+    and no two plans share a price at different speeds.
+</div>
+{% endif %}

@@ -21,6 +21,16 @@ BULK_DELETE_MAX = 25
 
 @role_required(['Admin', 'Editor', 'CSR'])
 @login_required
+def _plan_health():
+    """Plan problems, never fatal to the page."""
+    try:
+        from billing.services.plan_health import plan_health
+        return plan_health()
+    except Exception as exc:
+        return {"clean": True, "ambiguous": [], "unmapped": [], "error": str(exc),
+                "total_plans": 0, "plans_with_profile": 0}
+
+
 def sync_manager(request, device_id):
     from billing.models import Customer
     from network_manager.sync_services import MikrotikAPI as MikrotikSyncAPI
@@ -208,6 +218,11 @@ def sync_manager(request, device_id):
         'count_missing': len(missing_on_router),
         'count_orphans': len(clean_orphans),
         'count_suspicious': len(suspicious_users),
+        # Plan-level problems that would otherwise show up as unexplained
+        # drift: duplicate-priced plans at different speeds, and plans with no
+        # MikroTik profile mapped. Surfaced here so staff see WHY a row drifts
+        # before blaming the router.
+        'plan_health': _plan_health(),
     }
     
     return render(request, 'network_manager/sync_manager.html', context)

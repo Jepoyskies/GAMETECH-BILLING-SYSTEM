@@ -38,6 +38,12 @@ COLUMNS = [
     ("is_connected", "Connected"),
     ("installed_at", "Installed At"),
     ("created_at", "Created At"),
+    # Plan-catalogue columns. Without these you cannot tell, from the file
+    # alone, whether a row drifted because of the router or because the plan has
+    # no profile mapped / shares a price with a faster plan.
+    ("speed_mbps", "Plan Speed Mbps"),
+    ("router_profile", "Plan Router Profile"),
+    ("plan_problem", "Plan Problem"),
 ]
 
 
@@ -45,6 +51,25 @@ COLUMNS = [
 @billing_required
 def export_customers_csv(request):
     """Export the subscriber list as CSV, honouring the list page filters."""
+    from billing.services.plan_health import plan_health
+
+    # Cache the catalogue problems once, not per row.
+    health = plan_health()
+    unmapped = {u["name"] for u in health.get("unmapped", [])}
+    ambiguous_names = set()
+    for a in health.get("ambiguous", []):
+        ambiguous_names.update(a["plans"])
+
+    def plan_problem(plan):
+        if not plan:
+            return "no plan"
+        bits = []
+        if plan.name in unmapped or not (plan.router_profile or "").strip():
+            bits.append("no router profile mapped")
+        if plan.name in ambiguous_names:
+            bits.append("price shared with another speed")
+        return "; ".join(bits)
+
     qs = Customer.objects.select_related("plan", "mikrotik_device", "barangay", "agent")
 
     q = (request.GET.get("q") or "").strip()
@@ -103,6 +128,12 @@ def export_customers_csv(request):
                            or (c.original_agent.name if c.original_agent else ""))
             elif attr == "is_connected":
                 row.append("Yes" if getattr(c, "is_connected", False) else "No")
+            elif attr == "speed_mbps":
+                row.append(c.plan.speed_mbps if c.plan and c.plan.speed_mbps else "")
+            elif attr == "router_profile":
+                row.append(c.plan.effective_router_profile if c.plan else "")
+            elif attr == "plan_problem":
+                row.append(plan_problem(c.plan))
             elif attr in ("expires_at", "installed_at", "created_at"):
                 v = getattr(c, attr, None)
                 row.append(v.strftime("%Y-%m-%d %H:%M") if v else "")
