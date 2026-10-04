@@ -65,8 +65,16 @@ def build_router_comment(customer):
 
 
 def desired_profile(customer):
-    """The profile name the router should carry for this customer."""
-    return customer.plan.name if customer.plan else "default"
+    """The profile name the router should carry for this customer.
+
+    Uses `SubscriptionPlan.effective_router_profile` so a plan can have a
+    customer-facing name ("GTipid Fiber 1000") that maps to a technical router
+    profile ("pppoe-100m_1k"). Falls back to the plan name when no profile is
+    set, which is the previous behaviour.
+    """
+    if not customer.plan:
+        return "default"
+    return customer.plan.effective_router_profile
 
 
 def mark_synced(customer, device, actor):

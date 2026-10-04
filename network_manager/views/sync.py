@@ -99,7 +99,7 @@ def sync_manager(request, device_id):
                 # has, so the table shows the DIFF rather than just "both
                 # exist". Staff need to see WHAT differs to trust the page.
                 dc = django_customer_map.get(name)
-                want_profile = dc.plan.name if dc and dc.plan else "default"
+                want_profile = dc.plan.effective_router_profile if dc and dc.plan else "default"
                 have_profile = ru.get('profile')
                 have_pw = ru.get('password')
                 want_pw = dc.pppoe_password if dc else None

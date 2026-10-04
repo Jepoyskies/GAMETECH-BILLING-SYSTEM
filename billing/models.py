@@ -107,6 +107,25 @@ class SubscriptionPlan(models.Model):
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # The MikroTik PPPoE profile this plan maps to.
+    #
+    # `name` is the product label staff and customers see ("GTipid Fiber 1000").
+    # The router profile is a technical string ("pppoe-100m_1k"). Conflating the
+    # two made every customer on a nicely-named plan show PERMANENT drift in the
+    # Sync Manager, because the comparison is exact string equality. Blank means
+    # "fall back to name", so nothing changes for plans that are already aligned.
+    router_profile = models.CharField(
+        max_length=255, blank=True, default="",
+        help_text="MikroTik /ppp/profile name. Blank = use the plan name.",
+    )
+
+    # Numeric speed, so two plans at the same price can be detected as a genuine
+    # collision rather than compared as free text ("5Mbps" vs "5 Mbps").
+    speed_mbps = models.IntegerField(
+        null=True, blank=True,
+        help_text="Download speed in Mbps. Used to spot duplicate-priced plans.",
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._original_name = self.name
@@ -114,6 +133,11 @@ class SubscriptionPlan(models.Model):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         self._original_name = self.name
+
+    @property
+    def effective_router_profile(self):
+        """The profile string the router should actually carry."""
+        return (self.router_profile or self.name or "default").strip()
 
     def __str__(self):
         return f"{self.name} (₱{self.price})"
