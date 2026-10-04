@@ -12,11 +12,20 @@ x-app-env: &app-env
   # Required while migrating legacy customers, so the 30-min auto_reconcile task
   # cannot overwrite production PPPoE passwords/profiles from the imported dump.
   # Flip to 'live' only after router credentials are confirmed correct.
-  ROUTER_MODE: read_only
+  #
+  # This was HARDCODED, which meant it could never be changed by editing .env --
+  # compose always won. It is now env-driven with read_only as the safe default,
+  # so the safety interlock is preserved but can be lifted deliberately.
+  ROUTER_MODE: ${ROUTER_MODE:-read_only}
   SEMAPHORE_API_KEY: ${SEMAPHORE_API_KEY:-}
   SECRET_KEY: ${SECRET_KEY:-}
   DEBUG: ${DEBUG:-False}
   ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
+  # The agent commission engine (billing.services.incentives) is a no-op unless
+  # this is on. It was missing from app-env entirely, so setting it in .env had
+  # no effect and the Agent Portal advertised a payout it could never grant.
+  INCENTIVES_ENABLED: ${INCENTIVES_ENABLED:-False}
+  SESSION_COOKIE_AGE: ${SESSION_COOKIE_AGE:-28800}
 
 # Cap container logs so a chatty worker cannot silently fill the 48G disk.
 # 2026-09-30: one container log had reached 34M with no rotation.

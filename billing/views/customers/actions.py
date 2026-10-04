@@ -46,27 +46,69 @@ from billing.views.services import get_categorized_plans
 @login_required
 @permission_required("billing.change_customer", raise_exception=True)
 def customer_force_suspend(request, username):
-    """Manually force suspends a customer (updates profile, kicks session, and updates DB status)"""
-    if request.method == "POST":
-        customer = get_object_or_404(Customer, pppoe_username=username)
-        if customer.mikrotik_device:
-            from network_manager.services import MikrotikAPI
+    """Force-suspend a customer.
 
-            api = MikrotikAPI(customer.mikrotik_device)
-            success, msg = api.suspend_pppoe_user(username)
-            if success:
-                customer.status = "suspended"
-                customer.expires_at = None
-                customer.save()
-                messages.success(
-                    request, f"Customer {username} has been forcefully suspended."
-                )
-            else:
-                messages.error(request, f"Failed to suspend {username}: {msg}")
-        else:
-            messages.error(request, "Customer has no Mikrotik device assigned.")
+    Billing and hardware are INDEPENDENT domains (AGENTS.md Rule 35). The CRM
+    status is the billing truth and must be written regardless of what the
+    router does. Previously the whole DB update sat inside `if success:` from
+    the router call, which meant:
+      * with ROUTER_MODE=read_only (or any router timeout) collections staff
+        could not suspend anybody -- the arrears workflow was dead, and
+      * a customer with no device assigned could never be suspended at all.
+
+    Now: CRM first, router second, and the two outcomes are reported separately
+    so staff always know whether the line is actually cut off.
+    """
+    if request.method != "POST":
+        return redirect("customer_list")
+
+    customer = get_object_or_404(Customer, pppoe_username=username)
+
+    reason = (request.POST.get("reason") or "").strip() or "manual suspension"
+
+    # --- 1. BILLING (always) ---
+    customer.status = "suspended"
+    customer.expires_at = None
+    customer.save(update_fields=["status", "expires_at"])
+
+    from billing.models import AuditLog
+    AuditLog.objects.create(
+        admin_user=request.user if request.user.is_authenticated else None,
+        customer=customer,
+        action_type="FORCE_SUSPEND",
+        remarks=reason,
+    )
+
+    # --- 2. HARDWARE (best effort, reported separately) ---
+    if not customer.mikrotik_device:
+        messages.warning(
+            request,
+            f"{username} is now SUSPENDED in billing, but has no MikroTik device "
+            f"assigned so nothing was changed on the router.",
+        )
         return redirect("view_customer", customer_id=customer.id)
-    return redirect("customer_list")
+
+    try:
+        from network_manager.services import MikrotikAPI
+
+        api = MikrotikAPI(customer.mikrotik_device)
+        ok, msg = api.suspend_pppoe_user(username)
+    except Exception as exc:
+        ok, msg = False, f"{type(exc).__name__}: {exc}"
+
+    if ok:
+        messages.success(
+            request,
+            f"{username} suspended in billing and on {customer.mikrotik_device.device_name}.",
+        )
+    else:
+        messages.warning(
+            request,
+            f"{username} is now SUSPENDED in billing, but the router did not "
+            f"confirm the cut-off ({msg}). The line may still be live on the "
+            f"router - check the Sync Manager.",
+        )
+    return redirect("view_customer", customer_id=customer.id)
 
 
 @role_required(["Admin", "Editor"])
@@ -146,56 +188,67 @@ def customer_force_reactivate(request, username):
             )
             return redirect("view_customer", customer_id=customer.id)
 
-        if customer.mikrotik_device:
+        # --- 1. BILLING (always) ---
+        # Same Rule 35 split as force_suspend: the CRM status is the billing
+        # truth and does not depend on the router answering. Previously three
+        # nested `if <router call succeeded>` gates sat in front of the DB
+        # update, so under ROUTER_MODE=read_only -- or on any router timeout --
+        # an admin override silently did nothing at all.
+        customer.status = "active"
+        # DO NOT update expiration date or outstanding balance: reactivating
+        # restores service, it is not a payment.
+        customer.save(update_fields=["status"])
+
+        from billing.models import AuditLog
+
+        AuditLog.objects.create(
+            admin_user=(request.user if request.user.is_authenticated else None),
+            customer=customer,
+            action_type="FORCE_REACTIVATE",
+            remarks=reason,
+        )
+
+        # --- 2. HARDWARE (best effort, reported separately) ---
+        if not customer.mikrotik_device:
+            messages.warning(
+                request,
+                f"{username} is now ACTIVE in billing, but has no MikroTik device "
+                f"assigned so nothing was changed on the router.",
+            )
+            return redirect("view_customer", customer_id=customer.id)
+
+        target_profile = customer.plan.name if customer.plan else "default"
+        steps, problems = [], []
+        try:
             from network_manager.services import MikrotikAPI
 
             api = MikrotikAPI(customer.mikrotik_device)
 
-            # Use their plan name as the profile, or "default" if no plan is assigned
-            target_profile = customer.plan.name if customer.plan else "default"
+            ok, msg = api.enable_pppoe_user(username)
+            steps.append(("enable secret", ok, msg))
+            if ok:
+                ok2, msg2 = api.set_user_pppoe_profile(username, target_profile)
+                steps.append((f"profile -> {target_profile}", ok2, msg2))
+                if ok2:
+                    ok3, msg3 = api.kick_active_user(username)
+                    steps.append(("kick session", ok3, msg3))
+        except Exception as exc:
+            problems.append(f"{type(exc).__name__}: {exc}")
 
-            # 1. Enable User (removes bridge drop rule and enables ppp secret)
-            enable_success, enable_msg = api.enable_pppoe_user(username)
-            if enable_success:
-                # 2. Update Profile
-                prof_success, prof_msg = api.set_user_pppoe_profile(
-                    username, target_profile
-                )
-                if prof_success:
-                    # 3. Kick Session (allows modem to redial and gain internet)
-                    kick_success, kick_msg = api.kick_active_user(username)
-
-                    # 4. Update DB
-                    customer.status = "active"
-                    # DO NOT update expiration date or outstanding balance
-                    customer.save()
-
-                    # 5. Log the override in the new AuditLog model
-                    from billing.models import AuditLog
-
-                    AuditLog.objects.create(
-                        admin_user=(
-                            request.user if request.user.is_authenticated else None
-                        ),
-                        customer=customer,
-                        action_type="FORCE_REACTIVATE",
-                        remarks=reason,
-                    )
-
-                    messages.success(
-                        request,
-                        f"Customer {username} force-reactivated via Master Override.",
-                    )
-                else:
-                    messages.error(
-                        request, f"Failed to restore profile for {username}: {prof_msg}"
-                    )
-            else:
-                messages.error(
-                    request, f"Failed to enable user {username}: {enable_msg}"
-                )
+        failed = [s for s in steps if not s[1]]
+        if not steps or failed or problems:
+            detail = "; ".join([f"{label}: {msg}" for label, ok, msg in steps if not ok]
+                               + problems) or "router not contacted"
+            messages.warning(
+                request,
+                f"{username} is now ACTIVE in billing, but the router did not fully "
+                f"confirm service ({detail}). Check the Sync Manager.",
+            )
         else:
-            messages.error(request, "Customer has no Mikrotik device assigned.")
+            messages.success(
+                request,
+                f"Customer {username} force-reactivated via Master Override.",
+            )
         return redirect("view_customer", customer_id=customer.id)
     return redirect("customer_list")
 
