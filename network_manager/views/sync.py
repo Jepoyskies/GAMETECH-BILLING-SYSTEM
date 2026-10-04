@@ -227,8 +227,6 @@ def sync_manager(request, device_id):
     
     return render(request, 'network_manager/sync_manager.html', context)
 
-@role_required(['Admin', 'Editor', 'CSR'])
-@login_required
 def push_blockers(customer):
     """Reasons this account must not be given a router secret without a human.
 
@@ -236,6 +234,10 @@ def push_blockers(customer):
     the badge the operator reads can never disagree. Kept as a named function
     because "why is this push refused" is a question the view asks in four
     places and the answer must be identical in all of them.
+
+    Deliberately undecorated: this is a pure helper, not a view. It was briefly
+    carrying sync_push_user's @role_required/@login_required, which both broke
+    callers and left sync_push_user itself unauthenticated.
     """
     return customer.push_blocked_reasons
 
@@ -264,6 +266,8 @@ def _push_one(api, customer, device, actor):
     return res
 
 
+@role_required(['Admin', 'Editor', 'CSR'])
+@login_required
 def sync_override_push(request, device_id):
     """Admin-authorised push for an account blocked by push_blockers().
 
@@ -371,6 +375,8 @@ def sync_override_push(request, device_id):
     return redirect('sync_manager_device', device_id=device_id)
 
 
+@role_required(['Admin', 'Editor', 'CSR'])
+@login_required
 def sync_push_user(request, device_id):
     if request.method == 'POST':
         pppoe_username = request.POST.get('pppoe_username')
