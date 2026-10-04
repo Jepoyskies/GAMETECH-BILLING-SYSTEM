@@ -161,6 +161,7 @@ urlpatterns = [
     path("agents/view/<int:agent_id>/", views.view_agent, name="view_agent"),
     path("agents/delete/<int:agent_id>/", views.delete_agent, name="delete_agent"),
     path("agents/<int:agent_id>/add-customer-on-behalf/", views.staff_add_customer_for_agent, name="staff_add_customer_for_agent"),
+    path("customers/export/csv/", views.export_customers_csv, name="export_customers_csv"),
     path("plans/", views.plan_list, name="plan_list"),
     path("plans/add/", views.add_plan, name="add_plan"),
     path("plans/edit/<int:plan_id>/", views.edit_plan, name="edit_plan"),
