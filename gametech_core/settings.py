@@ -275,6 +275,15 @@ CELERY_BEAT_SCHEDULE = {
         "task": "billing.tasks.cignal_expiry_notification_task",
         "schedule": crontab(hour="8", minute="0"),  # Run daily at 8:00 AM — alerts staff before workday
     },
+    # BILLING-ONLY expiry sweep. `auto_suspend` stays unscheduled on purpose
+    # (nothing writes to a router unattended), which left nobody noticing that a
+    # subscriber had gone past due -- they simply stayed `active` and online.
+    # This closes that gap without touching a router: it auto-renews from advance
+    # payment and otherwise raises one Notification for staff to action.
+    "expiry-sweep-nightly": {
+        "task": "billing.tasks.expiry_sweep_task",
+        "schedule": crontab(hour="7", minute="15"),  # 7:15 AM, before the workday
+    },
     "auto-backup-hourly": {
         "task": "billing.tasks.automated_backup_task",
         "schedule": crontab(minute="0"),  # Run at the top of every hour

@@ -16,6 +16,28 @@ def auto_suspend_task():
         logger.error(f"Error in auto-suspend task: {e}")
 
 
+@shared_task(name="billing.tasks.expiry_sweep_task")
+def expiry_sweep_task():
+    """Nightly BILLING-ONLY expiry sweep.
+
+    Deliberately does NOT suspend anyone on a router -- the project rule is that
+    nothing writes to a router unattended, and `auto_suspend` stays a deliberate
+    human action through the "Connected, Unpaid" queue. This only makes sure a
+    past-due subscriber is never silently forgotten: it auto-renews from advance
+    payment, and otherwise raises one Notification so staff are told rather than
+    having to remember to look.
+    """
+    from billing.services.expiry_sweep import sweep_expiry
+
+    try:
+        result = sweep_expiry()
+        logger.info(f"Expiry sweep: {result}")
+        return result
+    except Exception as e:
+        logger.error(f"Error in expiry sweep task: {e}", exc_info=True)
+        return {"error": str(e)}
+
+
 @shared_task(name="billing.tasks.auto_sms_task")
 def auto_sms_task():
     logger.info("Starting auto-SMS task via Celery...")
