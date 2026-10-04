@@ -23,7 +23,7 @@ stops staff chasing a router problem that is actually a catalogue problem.
 
     {% if plan_health.ambiguous %}
     <p class="mb-1 fw-semibold small">
-        Same price, different speed &mdash; the import cannot tell which one a subscriber meant:
+        Same price, but the plan name does not say which speed &mdash; the import cannot tell them apart:
     </p>
     <ul class="small mb-2">
         {% for a in plan_health.ambiguous %}
@@ -54,6 +54,12 @@ stops staff chasing a router problem that is actually a catalogue problem.
 <div class="alert alert-success shadow-sm py-2 small">
     <i class="fas fa-check-circle me-2"></i>
     Plan catalogue is clean &mdash; all {{ plan_health.total_plans }} plans map to a router profile,
-    and no two plans share a price at different speeds.
+    and no plan is ambiguous.
+    {% if plan_health.variants %}
+    <span class="text-muted">
+        ({{ plan_health.variants|length }} price{{ plan_health.variants|length|pluralize }}
+        sold at more than one speed; each plan name states its own speed.)
+    </span>
+    {% endif %}
 </div>
 {% endif %}
