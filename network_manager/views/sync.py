@@ -229,6 +229,148 @@ def sync_manager(request, device_id):
 
 @role_required(['Admin', 'Editor', 'CSR'])
 @login_required
+def push_blockers(customer):
+    """Reasons this account must not be given a router secret without a human.
+
+    Delegates to Customer.push_blocked_reasons so the gate, the bulk gate and
+    the badge the operator reads can never disagree. Kept as a named function
+    because "why is this push refused" is a question the view asks in four
+    places and the answer must be identical in all of them.
+    """
+    return customer.push_blocked_reasons
+
+
+def _push_one(api, customer, device, actor):
+    """Write a single secret to the router and record the approval.
+
+    Shared by the single-push, bulk-push and admin-override paths so all three
+    produce byte-identical secrets. Divergence here is what created the
+    "Missing/Invalid Comment" noise: two writers, two comment formats.
+    """
+    res = api.add_pppoe_user(
+        name=customer.pppoe_username,
+        password=customer.pppoe_password,
+        profile=desired_profile(customer),
+        comment=build_router_comment(customer),
+    )
+    if res.get('success'):
+        mark_synced(customer, device, actor)
+    elif 'read_only' in str(res.get('error', '')).lower():
+        customer.sync_status = "Blocked"
+        customer.save(update_fields=["sync_status"])
+    else:
+        customer.sync_status = "Failed"
+        customer.save(update_fields=["sync_status"])
+    return res
+
+
+def sync_override_push(request, device_id):
+    """Admin-authorised push for an account blocked by push_blockers().
+
+    The CSR who pressed Push is exactly the person being blocked, so this
+    requires a SEPARATE Admin's credentials. There is no fallback to
+    request.user: accepting the operator's own password would make the gate
+    decoration. Every approval is written to SystemLog with both names.
+    """
+    if request.method != 'POST':
+        return redirect('sync_manager_device', device_id=device_id)
+
+    device = get_object_or_404(MikrotikDevice, id=device_id)
+    pppoe_username = request.POST.get('pppoe_username')
+
+    from billing.models import Customer
+    from network_manager.sync_services import MikrotikAPI as MikrotikSyncAPI
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.hashers import check_password
+
+    customer = Customer.objects.filter(
+        pppoe_username=pppoe_username, mikrotik_device=device
+    ).first()
+    if not customer:
+        messages.error(request, "Customer not found on this router.")
+        return redirect('sync_manager_device', device_id=device_id)
+
+    admin_username = (request.POST.get('admin_username') or '').strip()
+    admin_password = request.POST.get('admin_password') or ''
+
+    admin_user = None
+    if admin_username:
+        admin_user = get_user_model().objects.filter(
+            username__iexact=admin_username, is_active=True
+        ).first()
+
+    if admin_user is None or not check_password(admin_password, admin_user.password):
+        messages.error(
+            request,
+            "Override denied: '{}' is not a valid Admin account, or the password "
+            "is incorrect.".format(admin_username or "(blank)"),
+        )
+        return redirect('sync_manager_device', device_id=device_id)
+
+    if not (admin_user.is_superuser or getattr(admin_user, "role", "") == "Admin"):
+        messages.error(
+            request,
+            "Override denied: {} is not an Admin.".format(admin_user.username),
+        )
+        return redirect('sync_manager_device', device_id=device_id)
+
+    reasons = push_blockers(customer)
+    if not reasons:
+        messages.info(
+            request,
+            "{} has no blocking conditions — use the normal Push button."
+            .format(customer.full_name),
+        )
+        return redirect('sync_manager_device', device_id=device_id)
+
+    api = MikrotikSyncAPI(
+        ip_address=device.ip_address,
+        username=device.api_username,
+        password=device.api_password,
+        port=device.api_port
+    )
+    res = _push_one(api, customer, device, request.user)
+
+    if res.get('success'):
+        SystemLog.objects.create(
+            table_name="Customer",
+            record_id=str(customer.id),
+            action="SYNC_ADMIN_OVERRIDE",
+            changed_by=request.user.username,
+            target_name=customer.full_name,
+            old_data=(
+                "status={}, expires_at={}".format(
+                    customer.status, customer.expires_at or "NONE"
+                )
+            ),
+            new_data=(
+                "Blocked by: {}. Pressed by {}. Approved by Admin {}. "
+                "Pushed PPPoE '{}' to {} with profile '{}'."
+            ).format(
+                "; ".join(reasons),
+                request.user.username,
+                admin_user.username,
+                customer.pppoe_username,
+                device.device_name,
+                desired_profile(customer),
+            ),
+        )
+        messages.success(
+            request,
+            "Override approved by {}. {} is now live on {}."
+            .format(admin_user.username, customer.full_name, device.device_name),
+        )
+    else:
+        messages.error(
+            request,
+            "Override approved by {} but the router refused: {}".format(
+                admin_user.username, res.get('error')
+            ),
+        )
+
+    return redirect('sync_manager_device', device_id=device_id)
+
+
 def sync_push_user(request, device_id):
     if request.method == 'POST':
         pppoe_username = request.POST.get('pppoe_username')
@@ -238,7 +380,18 @@ def sync_push_user(request, device_id):
         from network_manager.sync_services import MikrotikAPI as MikrotikSyncAPI
         
         customer = get_object_or_404(Customer, pppoe_username=pppoe_username, mikrotik_device=device)
-        
+
+        # Gate lives here, not in the template, so the bulk path and any
+        # hand-posted form hit the same rule.
+        blockers = push_blockers(customer)
+        if blockers:
+            messages.error(
+                request,
+                "Blocked — {} not pushed: {}. An Admin must authorise this."
+                .format(customer.pppoe_username, "; ".join(blockers)),
+            )
+            return redirect('sync_manager_device', device_id=device_id)
+
         api = MikrotikSyncAPI(
             ip_address=device.ip_address,
             username=device.api_username,
@@ -428,33 +581,39 @@ def sync_bulk_action(request, device_id):
             # name here produced secrets the system could not recognise, which
             # is what "Missing/Invalid Comment" actually was.
             blocked_writes = 0
+            gated = []
             for uname in usernames:
                 customer = Customer.objects.filter(pppoe_username=uname).first()
                 if not customer:
                     error_count += 1
                     continue
-                res = api.add_pppoe_user(
-                    name=customer.pppoe_username,
-                    password=customer.pppoe_password,
-                    profile=desired_profile(customer),
-                    comment=build_router_comment(customer),
-                )
+                # Same gate as the single-account path. Bulk must not become
+                # the way around it: selecting 200 rows is exactly how an
+                # unpaid, un-expiring account would silently go live.
+                blockers = push_blockers(customer)
+                if blockers:
+                    gated.append("{} ({})".format(uname, "; ".join(blockers)))
+                    error_count += 1
+                    continue
+                res = _push_one(api, customer, device, request.user)
                 if res.get('success'):
-                    # Record the approval, not just the write. Otherwise the
-                    # account still reads Unverified and never leaves the queue.
-                    mark_synced(customer, device, request.user)
                     success_count += 1
                 else:
                     error_count += 1
                     if 'read_only' in str(res.get('error', '')).lower():
                         blocked_writes += 1
-                        customer.sync_status = "Blocked"
-                        customer.save(update_fields=["sync_status"])
-                    else:
-                        customer.sync_status = "Failed"
-                        customer.save(update_fields=["sync_status"])
 
-            if blocked_writes:
+            if gated:
+                messages.warning(
+                    request,
+                    "Bulk Push: {} approved, {} not pushed. {} account(s) were "
+                    "held back for unpaid/no-expiry and need an Admin override: {}"
+                    .format(
+                        success_count, error_count, len(gated),
+                        ", ".join(gated[:8]) + (" ..." if len(gated) > 8 else ""),
+                    ),
+                )
+            elif blocked_writes:
                 messages.warning(
                     request,
                     "Bulk Push: {} approved, {} failed. {} were refused by "

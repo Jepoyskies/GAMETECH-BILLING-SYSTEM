@@ -362,6 +362,35 @@ class Customer(models.Model):
             return False
         return not self.payments.exists()
 
+    @property
+    def push_blocked_reasons(self):
+        """Why this account must not get a router secret without a human saying so.
+
+        Single source of truth for the Sync Manager gate. Lives here rather
+        than in the view or the template because three places need to agree:
+        the single-push guard, the bulk-push guard, and the badge the operator
+        reads. When these drift, an account that the UI marks "fine" gets
+        refused on submit, or worse, a blocked account gets pushed.
+
+        Returns a LIST so every reason is shown, not just the first -- an
+        operator who fixes one and is then bounced by the next wastes the
+        whole round trip.
+
+          * unpaid     no verified payment, so the subscription should not carry
+          * no expiry  without a cut-off date the account can never auto-suspend,
+                       which is how an unpaid line quietly stays live forever
+        """
+        reasons = []
+        if self.status in ("expired", "inactive", "suspended", "pull out"):
+            reasons.append("Unpaid ({})".format(self.get_status_display()))
+        if self.expires_at is None:
+            reasons.append("No expiry date — cannot auto-suspend")
+        return reasons
+
+    @property
+    def is_push_blocked(self):
+        return bool(self.push_blocked_reasons)
+
     # --- THE SUPERPOWER: Foreign Keys tying the system together ---
     plan = models.ForeignKey("SubscriptionPlan", on_delete=models.SET_NULL, null=True)
     agent = models.ForeignKey("Agent", on_delete=models.SET_NULL, null=True)

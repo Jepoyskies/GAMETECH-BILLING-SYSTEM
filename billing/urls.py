@@ -306,7 +306,6 @@ urlpatterns = [
     path("settings/import/history/", views.import_history_view, name="import_history"),
     path("settings/import/history/<int:import_id>/", views.import_history_detail_view, name="import_history_detail"),
     path("settings/backup/", views.backup_database_view, name="backup_database"),
-    path("sync-manager/", views.sync_manager_view, name="sync_manager"),
     path("settings/templates/", views.message_templates_view, name="message_templates"),
     path(
         "settings/templates/update/<int:template_id>/",

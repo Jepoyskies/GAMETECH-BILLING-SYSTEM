@@ -87,6 +87,20 @@
                             {% else %}
                             <span class="gametech-pill pill-secondary" title="No live PPPoE session on this router right now"><span class="status-dot dot-offline"></span> No Session</span>
                             {% endif %}
+                            {% comment %}
+                              Money flag. The router says this secret is enabled, which
+                              is NOT the same as "should be enabled". An account that
+                              is enabled while unpaid or while it has no cut-off date
+                              is costing money every minute, so surface it here even
+                              though the router considers it healthy.
+                            {% endcomment %}
+                            {% if user.customer.is_push_blocked %}
+                                <div class="mt-1 d-flex flex-wrap gap-1">
+                                    {% for reason in user.customer.push_blocked_reasons %}
+                                    <span class="gametech-pill pill-danger" title="Enabled on the router but billing says this should not be live">{{ reason }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </td>
                         <td class="text-end">
                             {% if user.customer %}

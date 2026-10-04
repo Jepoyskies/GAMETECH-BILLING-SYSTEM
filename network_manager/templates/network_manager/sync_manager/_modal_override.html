@@ -1,0 +1,93 @@
+<!-- Admin override gate for pushing an account that billing says should not be live.
+
+     Rendered on the per-device Sync Manager. The CSR who pressed "Push" is
+     exactly the person being blocked, so this asks for a SEPARATE Admin's
+     credentials. No default value, no "use my own password" shortcut: without
+     that the gate is decoration. -->
+<div class="modal fade" id="syncOverrideModal" tabindex="-1" aria-labelledby="syncOverrideModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="{% url 'sync_override_push' device.id %}" class="modal-content">
+            {% csrf_token %}
+            <input type="hidden" name="pppoe_username" id="ovrPppoe">
+
+            <div class="modal-header" style="border-bottom-color:rgba(245,158,11,.35);">
+                <h5 class="modal-title" id="syncOverrideModalLabel" style="color:#f59e0b;">
+                    <i class="fas fa-lock me-2"></i>Admin Override Required
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <p class="mb-3" style="font-size:.9rem;">
+                    <strong id="ovrName" class="text-white"></strong>
+                    cannot be pushed to <strong class="text-white">{{ device.device_name }}</strong> because:
+                </p>
+                <ul id="ovrReasons" class="mb-3"
+                    style="font-size:.86rem; color:#fca5a5; padding-left:1.1rem;"></ul>
+
+                <div class="alert alert-warning py-2 px-3 mb-3" style="font-size:.82rem;">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    Pushing anyway gives the subscriber internet access without verified
+                    payment. An <strong>Admin</strong> must authorise it, and the approval is
+                    recorded in System Logs against both names.
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="ovrAdminUsername" style="font-size:.82rem; color:var(--text-muted,#94a3b8);">
+                        Admin username <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" name="admin_username" id="ovrAdminUsername" class="form-control"
+                           required autocomplete="off" placeholder="Admin account name">
+                </div>
+
+                <div class="mb-0">
+                    <label class="form-label" for="ovrAdminPassword" style="font-size:.82rem; color:var(--text-muted,#94a3b8);">
+                        Admin password <span class="text-danger">*</span>
+                    </label>
+                    <input type="password" name="admin_password" id="ovrAdminPassword" class="form-control"
+                           required autocomplete="new-password" placeholder="Admin password">
+                </div>
+            </div>
+
+            <div class="modal-footer" style="border-top-color:rgba(148,163,184,.18);">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-warning fw-bold">
+                    <i class="fas fa-unlock me-1"></i> Authorise &amp; Push
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+(function () {
+    var modal = document.getElementById('syncOverrideModal');
+    if (!modal) { return; }
+
+    modal.addEventListener('show.bs.modal', function (event) {
+        var btn = event.relatedTarget;
+        if (!btn) { return; }
+
+        var pppoe  = btn.dataset.pppoe || '';
+        var name   = btn.dataset.cname || '';
+        var parts  = (btn.dataset.reasons || '').split('|');
+
+        document.getElementById('ovrPppoe').value = pppoe;
+        document.getElementById('ovrName').textContent = name + ' (' + pppoe + ')';
+
+        var ul = document.getElementById('ovrReasons');
+        ul.innerHTML = '';
+        parts.forEach(function (p) {
+            p = p.trim();
+            if (!p) { return; }
+            var li = document.createElement('li');
+            li.textContent = p;
+            ul.appendChild(li);
+        });
+
+        // Never carry a previous authorisation into the next approval.
+        document.getElementById('ovrAdminUsername').value = '';
+        document.getElementById('ovrAdminPassword').value = '';
+    });
+})();
+</script>
