@@ -435,23 +435,23 @@ If the AI asks the user *"Which file is that in?"* or *"Can you point me to the 
 | Page | Protected Paths |
 |---|---|
 | **Login Page** | `billing/templates/billing/login.html`, `billing/views/auth.py` (login view only), any CSS scoped exclusively to the login page |
-| **Live Monitoring** | `billing/templates/billing/live_monitoring/` (entire directory), `billing/views/live_monitoring.py`, `billing/views/api/network.py` (monitoring endpoints only) |
+| **Live Monitoring (Left Hero)** | `billing/templates/billing/live_monitoring/_hero.html` (left blue hero card baseline remains strictly frozen; right side panels unfreezing approved 2026-10-04) |
 
-### ❌ FORBIDDEN (for both pages)
+### ❌ FORBIDDEN (for frozen baselines)
 
-* Editing, "cleaning up", re-tokenizing, re-fonting, or restyling any file in the above paths
-* Swapping colors, gradients, fonts, spacing, border-radii, or animations — even for an "obvious improvement"
-* Refactoring JS, removing polling intervals, or changing layout structure
-* Touching these pages as a side-effect of a "system-wide unification" task
+* Editing, "cleaning up", re-tokenizing, re-fonting, or restyling `_hero.html` or `login.html`
+* Swapping colors, gradients, fonts, spacing, border-radii, or mascot on the left hero card
+* Refactoring JS or removing polling intervals
 
 ### ✅ ALLOWED
 
 * Reading these pages to extract design values (blue `#3533cd`, gold `#fbae1a`, mascot assets) and reproducing them on **other** pages
 * Fixing a confirmed production 500 error **pinpointed by docker logs** to an exact line in these files (backend logic only — never templates/CSS)
+* Restyling right-side panels of Live Monitoring per owner approval (DECISION_LOG 2026-10-04)
 
 ### 🔍 VERIFY BEFORE COMMITTING
 
 ```bash
 # Must be EMPTY for any UI task — if not, revert before pushing:
-git diff --stat -- billing/templates/billing/login.html billing/templates/billing/live_monitoring/
+git diff --stat -- billing/templates/billing/login.html billing/templates/billing/live_monitoring/_hero.html
 ```

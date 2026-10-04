@@ -10,8 +10,8 @@
 
 | Page | Protected Paths | Reason |
 |---|---|---|
+| **Live Monitoring (Left Hero)** | `billing/templates/billing/live_monitoring/_hero.html` | Hand-authored design baseline (Strictly Frozen) |
 | **Login** | `billing/templates/billing/login.html`, `billing/views/auth.py` (login view only) | Hand-authored design baseline |
-| **Live Monitoring** | `billing/templates/billing/live_monitoring/` (entire directory), `billing/views/live_monitoring.py`, `billing/views/api/network.py` (monitoring endpoints only) | Hand-authored design baseline |
 | **Dashboard** | `billing/templates/billing/dashboard/`, `billing/templates/billing/dashboard.html` | Visual baseline owned by another contributor |
 
 ---
@@ -27,5 +27,5 @@
 
 ```bash
 # Must be EMPTY for any UI task
-git diff --stat -- billing/templates/billing/login.html billing/templates/billing/live_monitoring/ billing/templates/billing/dashboard/ billing/templates/billing/dashboard.html
+git diff --stat -- billing/templates/billing/login.html billing/templates/billing/live_monitoring/_hero.html billing/templates/billing/dashboard/ billing/templates/billing/dashboard.html
 ```

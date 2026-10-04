@@ -16,6 +16,13 @@
 
 ---
 
+## 2026-10-04 — Live Monitoring Right-Side Modernization
+**Decision**: The right-side panels of Live Monitoring (`_info_cards.html`, `_live_traffic_card.html`, and right-column CSS in `_styles.html`) are unfrozen and modernized to align with Gametech's theme tokens. The left-side hero card (`_hero.html`) remains strictly frozen and untouched.
+**Rationale**: Owner explicitly requested to keep the left side exactly as it is while modernizing the right-side cards (alerts, telemetry, add-ons, and live traffic table) to match the system theme.
+**Consequences**: Future work may edit right-side panels for UI improvements, but must preserve all JS telemetry/polling hooks and never touch `_hero.html`.
+
+---
+
 ## 2026-09-30 — Agents Separated from Dispatch System
 **Decision**: Agents and Agent Payouts moved from Dispatch System sidebar into their own top-level "Agents" menu item.
 **Rationale**: Agents are a distinct operational domain (sales, commissions, referrals) and deserve their own navigation section for faster access.
