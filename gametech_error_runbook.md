@@ -2879,3 +2879,47 @@ Never let a router timeout decide whether a customer is suspended.
 
 **Files**: `billing/views/customers/actions.py`
 **Date Logged**: 2026-10-04
+
+---
+
+### ERR-108: Nothing Was Scheduled To Notice A Subscriber Had Gone Past Due
+
+**The risk the owner named**: after cutover, "some customers will go past their
+actually due dates and not get expired... connecting them right away makes the
+company bankrupt."
+
+**Confirmed as a real gap.** `auto_suspend` is deliberately unscheduled (the
+project rule: nothing writes to a router unattended). But that rule removed the
+*only* expiry enforcement, so a subscriber whose `expires_at` had passed simply
+kept `status="active"` and stayed online **forever**. Verified: with
+`expires_at` 5 days in the past, nothing had changed the status and no scheduled
+task would have.
+
+The safety net exists but is passive -- the customer list resolves such a row to
+`connected_unpaid` ("Connected, Unpaid", `billing=lapsed`, `hardware=connected`,
+`priority=0`), which is exactly right, but only if a human opens the list.
+
+**Fix -- `billing/services/expiry_sweep.py` + `billing.tasks.expiry_sweep_task`,
+scheduled 07:15 daily.** It does the *safe* half only:
+
+- auto-renews from advance payment (`outstanding_balance <= -plan_price`) and
+  writes the matching `Payment` row with `reference_no="AUTO-RENEW"`
+- counts everyone past due, split by who is still online
+- raises ONE `Notification` for staff linking to `/customers/`
+- **never touches a router.** Suspending stays a deliberate human action through
+  the "Connected, Unpaid" queue, which is what the lifecycle vocabulary intends.
+
+`auto_suspend` remains unscheduled, so the safety rule is intact.
+
+Verified 12/12: advance auto-renew granted a future expiry and logged a Payment;
+the plain lapsed customer was left `active`; a Notification was raised; the router
+was **byte-identical before and after**; the sweep is in the beat schedule and
+`auto_suspend` is still not.
+
+**Lesson**: "nothing automated touches the router" and "nothing notices a
+non-payment" are different decisions. Removing the unsafe half should not have
+removed the visibility half.
+
+**Files**: `billing/services/expiry_sweep.py`, `billing/tasks.py`,
+`gametech_core/settings.py`
+**Date Logged**: 2026-10-04
