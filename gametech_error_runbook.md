@@ -2978,3 +2978,102 @@ one column guarantees a permanent mismatch.
 `billing/views/exports.py`, `billing/views/services.py`,
 `billing/templates/billing/add_plan.html`, `billing/templates/billing/edit_plan.html`
 **Date Logged**: 2026-10-04
+
+---
+
+### ERR-110: Import Expiry Fidelity Proven By A REAL Import (not a dry-run)
+
+**Why this mattered**: every previous import test was a `--dry-run`. The owner's
+stated worst fear was *"if the new system didnt read that sql file properly some
+customers will go past their actually due dates and not get expired"*. Never
+actually proven.
+
+**The rehearsal** (2026-10-04, `/root/backups/PRE_REHEARSAL_20261004_064849.dump`
+taken first, DB restored after):
+
+- 528 customers, 799 payments, PHP 659,757.48 imported for real
+- **518 of 518 expiry dates matched the source dump exactly. 0 mismatched.**
+- 0 customers auto-provisioned to any router (`sync_status` all `Unverified`)
+- 0 duplicate usernames
+- 3 payments with no matching customer kept with a reason, not dropped
+
+**The trap this exposed**: 507 of 528 imported customers came back PAST DUE, only
+12 in the future. That is **not** a real backlog -- it is an artifact of the dump
+being dated `2026-03-20` while today is `2026-10-04`. Every 30-day plan lapsed
+during those 6.5 months. Do NOT use this number to judge tomorrow's import;
+export fresh from the still-running legacy system and the figure will be real.
+
+**The safety valve that mattered**: `expiry_sweep` auto-renews any past-due
+customer whose advance credit covers a month. Measured across all 507:
+**0 would be auto-renewed** (no imported customer has advance credit). Running it
+for real produced `past_due=507 renewed=0`, payments `801 -> 801`, and exactly one
+notification. No fabricated revenue, no router contact.
+
+**9 customers imported with `expires_at=NULL`** (zero dates in the legacy DB).
+They will never lapse on their own. The sweep counts them and raises
+`9 installed customer(s) still have no expiry date`, but staff must set dates
+manually or those 9 lines serve free indefinitely.
+
+**Files**: `archived_scripts/rehearsal_import.sh`,
+`archived_scripts/verify_real_import.py`, `archived_scripts/measure_pastdue_risk.py`
+**Date Logged**: 2026-10-04
+
+---
+
+### ERR-111: Router `health_status` Is A Manual Label, Never Auto-Downgraded
+
+**Symptom**: with 3 of 4 routers genuinely unreachable, every device still reads
+`health_status='Excellent'`.
+
+**Root cause**: `MikrotikDevice.health_status` is only ever written by
+`billing/views/network.py` from a staff POST (and set to `Excellent` on
+acknowledge). Nothing in the connection layer downgrades it on failure.
+
+**Consequence at cutover**: the device-alert counters are
+`MikrotikDevice.objects.exclude(health_status="Excellent")`, so they report **zero
+device alerts while three routers are dead**. A staff member glancing at the
+devices page would conclude everything is fine.
+
+**Not a dead end**: `/devices/devices/<id>/test/` tests a single router, and the
+Sync Manager shows a red banner when its API call fails. Reachability IS
+discoverable, just not from the list page.
+
+**Decision**: left as-is. Auto-probing four routers on every page load is exactly
+the kind of load this 1-vCPU droplet should not take, and it would touch routers
+unattended -- which breaks the project rule. Flagged for the owner instead. If a
+live reachability column is wanted later, reuse the existing
+`router_unreachable_{id}` circuit-breaker cache (45s TTL) rather than adding a
+new poller.
+
+**Files**: `network_manager/models.py`, `billing/views/network.py`,
+`billing/views/api/network.py`
+**Date Logged**: 2026-10-04
+
+---
+
+### ERR-112: Test Residue Survived The Operational Wipe
+
+**Symptom**: after the data wipe, the alert bell still held **55 notifications**
+and the audit log held **230 rows** -- all created by my own verification
+harnesses. 44 were "Payment Received" alerts for customers that no longer
+existed.
+
+**Root cause**: the wipe targeted customers / payments / dispatch / prospects,
+but `Notification` and `SystemLog` were never in scope, so they accumulated across
+a dozen test runs.
+
+**Consequence**: dead notifications pointing at deleted customers, and an audit
+trail made entirely of test logins and test customer creations -- actively
+misleading for a production cutover, where the audit log is supposed to be
+evidence.
+
+**Fix**: cleared both (`archived_scripts/clear_test_residue.py`), with a hard
+guard that aborts if more than 5 customers are present. Payments were never
+touched. Any notification or audit row created from now on is real activity.
+
+**Lesson**: a data wipe is only complete if you enumerate the tables that
+*reference* the deleted rows, not just the rows themselves.
+
+**Files**: `archived_scripts/clear_test_residue.py`,
+`archived_scripts/restore_after_rehearsal.sh`
+**Date Logged**: 2026-10-04
