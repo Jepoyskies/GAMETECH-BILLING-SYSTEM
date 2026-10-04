@@ -1237,14 +1237,18 @@ def dispatch_customer_detail_view(request, customer_id):
 
     for t in JobTicket.objects.filter(customer=customer).select_related("team"):
         ta = "-"
-        if t.completed_at and t.created_at:
-            diff = int((t.completed_at - t.created_at).total_seconds() / 60)
+        # JobTicket records completion as `finished_at` (set when the technician
+        # clicks Done). There is no `completed_at` on this model -- referencing
+        # it raised AttributeError and 500'd this page for every customer who
+        # actually had job history, i.e. exactly the customers worth looking at.
+        if t.finished_at and t.created_at:
+            diff = int((t.finished_at - t.created_at).total_seconds() / 60)
             ta = _turnaround(diff)
         jobs.append({
             "source":        "TICKET",
             "id":            t.id,
             "date":          t.created_at,
-            "done_at":       t.completed_at,
+            "done_at":       t.finished_at,
             "turnaround":    ta,
             "module":        MODULE_MAP.get(t.source_tab or "DISPATCH_LOG", "Dispatch Log"),
             "type":          t.job_type or "Unassigned",
