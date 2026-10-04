@@ -151,46 +151,88 @@ class Command(BaseCommand):
 
         plans = list(SubscriptionPlan.objects.all())
 
-        exact = reused = created = 0
-
+        # ---- PHASE 1: decide, do not write ----------------------------
+        #
+        # Everything is resolved before anything is saved, because the
+        # decision for one code can invalidate the decision for another.
+        decisions = {}
         for legacy_name, (speed, price) in sorted(LEGACY_CATALOGUE.items()):
-            # 1. Exact name already present -> identity.
             by_name = next((p for p in plans if p.name == legacy_name), None)
             if by_name:
-                target, verdict = by_name, "EXACT"
-                exact += 1
+                decisions[legacy_name] = (by_name, "EXACT")
+                continue
 
+            target = None
+            preferred = PREFERRED_TARGET.get(legacy_name)
+            if preferred:
+                target = next((p for p in plans if p.name == preferred), None)
+            if target is None:
+                target = self._find_speed_price_match(plans, speed, price)
+
+            if target is not None:
+                decisions[legacy_name] = (target, "REUSE")
             else:
-                # 2. Preferred target, then any exact (speed, price) match.
-                target = None
-                preferred = PREFERRED_TARGET.get(legacy_name)
-                if preferred:
-                    target = next((p for p in plans if p.name == preferred), None)
+                decisions[legacy_name] = (None, "CREATE")
 
-                if target is None:
-                    target = self._find_speed_price_match(plans, speed, price)
+        # ---- COLLISION CHECK -------------------------------------------
+        #
+        # A plan carries ONE router_profile. If two legacy codes are pointed
+        # at the same plan, the second write silently overwrites the first
+        # and the earlier code's subscribers get pushed to the router under
+        # the WRONG profile string.
+        #
+        # This is not theoretical: pppoe-20m and pppoe-20m-speedboost60 both
+        # matched GTipid Fiber 1000 on (speed, price) and would have ended up
+        # as one plan whose profile was whichever sorted last.
+        #
+        # So: any plan claimed by more than one legacy code gets split, and
+        # every claimant keeps its own dedicated plan with its own profile.
+        claims = {}
+        for legacy_name, (target, verdict) in decisions.items():
+            if verdict != "REUSE":
+                continue
+            claims.setdefault(id(target), []).append((legacy_name, target))
 
-                if target is not None:
-                    verdict = "REUSE"
-                    reused += 1
-                else:
-                    # 3. Nothing matches -> create, using the system's
-                    #    existing "<speed> Mbps Plan <price>" convention.
-                    target = SubscriptionPlan(
-                        name=f"{speed} Mbps Plan {int(price)}",
-                        speed_up=f"{speed} Mbps",
-                        speed_down=f"{speed} Mbps",
-                        speed_mbps=speed,
-                        price=price,
-                        validity_days=30,
-                        router_profile=legacy_name,
-                        description="Created by map_plans from legacy catalogue.",
-                    )
-                    verdict = "CREATE"
-                    created += 1
+        split_names = {}
+        for claimants in claims.values():
+            if len(claimants) < 2:
+                continue
+            self.stdout.write(self.style.WARNING(
+                "  COLLISION: {} legacy codes all matched '{}'. Splitting so each "
+                "keeps its own router_profile."
+                .format(len(claimants), claimants[0][1].name)
+            ))
+            for legacy_name, base in claimants:
+                speed, price = LEGACY_CATALOGUE[legacy_name]
+                decisions[legacy_name] = (None, "CREATE")
+                split_names[legacy_name] = "{} — {}".format(base.name, legacy_name)
 
-            # The router must keep receiving the legacy profile string it
-            # already has. This is the whole point of the command.
+        # ---- PHASE 2: write --------------------------------------------
+        exact = reused = created = 0
+        for legacy_name, (speed, price) in sorted(LEGACY_CATALOGUE.items()):
+            target, verdict = decisions[legacy_name]
+
+            if verdict == "CREATE":
+                # Reuse a dedicated name if this code was split out of a
+                # collision, otherwise follow the system's existing
+                # "<speed> Mbps Plan <price>" convention.
+                base_name = split_names.get(legacy_name) or f"{speed} Mbps Plan {int(price)}"
+                target = SubscriptionPlan(
+                    name=base_name,
+                    speed_up=f"{speed} Mbps",
+                    speed_down=f"{speed} Mbps",
+                    speed_mbps=speed,
+                    price=price,
+                    validity_days=30,
+                    router_profile=legacy_name,
+                    description="Created by map_plans from legacy catalogue.",
+                )
+                created += 1
+            elif verdict == "EXACT":
+                exact += 1
+            else:
+                reused += 1
+
             desired_profile = legacy_name
             profile_changed = (target.router_profile or "") != desired_profile
 
@@ -202,18 +244,20 @@ class Command(BaseCommand):
                     target.router_profile = desired_profile
                     target.save(update_fields=["router_profile"])
 
-                mapping, _ = PlanMapping.objects.update_or_create(
-                    legacy_name=legacy_name,
-                    defaults={"plan": target},
+                PlanMapping.objects.update_or_create(
+                    legacy_name=legacy_name, defaults={"plan": target}
                 )
 
             self.stdout.write(
-                f"  {verdict:6}  {legacy_name:<22} -> "
-                f"{(target.name + ' [' + desired_profile + ']')}"
+                f"  {verdict:6}  {legacy_name:<22} -> {target.name} [{desired_profile}]"
                 + ("   (profile updated)" if profile_changed and verdict == "REUSE" else "")
             )
 
-        if report_only:
+        if report_only or dry_run:
+            self.stdout.write("")
+            self.stdout.write(
+                f"Would apply: {exact} exact, {reused} reused, {created} created."
+            )
             return
 
         self.stdout.write("")
@@ -221,7 +265,3 @@ class Command(BaseCommand):
             f"Done. {exact} exact, {reused} reused, {created} created. "
             f"{len(LEGACY_CATALOGUE)} legacy codes mapped."
         ))
-        if created and not dry_run:
-            self.stdout.write(self.style.SUCCESS(
-                f"{created} new plan(s) created and saved to router_profile."
-            ))
