@@ -418,15 +418,44 @@ from django.db.models.signals import post_delete
 def delete_plan_on_mikrotik(sender, instance, **kwargs):
     """
     When a SubscriptionPlan is deleted in Django, remove it from all active Mikrotik devices.
+
+    GUARD: never touch a router profile that a live subscriber is still on.
+
+    This signal used to fire unconditionally, which is a loaded gun. Deleting a
+    plan row whose name matches a real router profile removed that profile from
+    EVERY router -- so tidying up a duplicate plan in the admin would silently
+    strip the rate limits of every customer on that profile. It was only ever
+    "safe" because the routers happened to be powered off.
+
+    A profile is only removed when no customer points at any plan that maps to it.
+    Otherwise we log loudly and leave the router alone: an unused stale profile
+    is a cosmetic problem, a deleted one is an outage.
     """
-    devices = MikrotikDevice.objects.all()
-    for device in devices:
+    profile = (getattr(instance, "router_profile", "") or instance.name or "").strip()
+
+    in_use = Customer.objects.filter(
+        plan__router_profile=profile
+    ).exclude(plan__isnull=True).distinct().count()
+    # A plan that still maps to the same profile also protects it.
+    sibling = SubscriptionPlan.objects.filter(
+        router_profile=profile
+    ).exclude(pk=instance.pk).count()
+
+    if in_use or sibling:
+        logger.warning(
+            "KEPT router profile '%s': %d subscriber(s) and %d sibling plan(s) "
+            "still use it. Deleting the Django row does not touch the router.",
+            profile, in_use, sibling,
+        )
+        return
+
+    for device in MikrotikDevice.objects.all():
         try:
             api = MikrotikAPI(device)
-            api.delete_plan_from_mikrotik(plan_name=instance.name)
+            api.delete_plan_from_mikrotik(plan_name=profile)
         except Exception as e:
             logger.error(
-                f"Failed to delete plan {instance.name} from {device.device_name}: {e}"
+                f"Failed to delete plan {profile} from {device.device_name}: {e}"
             )
 
 
