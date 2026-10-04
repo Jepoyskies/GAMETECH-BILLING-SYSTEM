@@ -75,6 +75,7 @@ def subscription_plans_view(request):
     return render(request, "billing/subscription_plans.html", context)
 
 
+@billing_required
 def plan_list(request):
     if hasattr(request.user, "role") and request.user.role == "Agent":
         return redirect("customer_list")

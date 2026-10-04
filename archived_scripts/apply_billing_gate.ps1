@@ -12,7 +12,9 @@ $targets = @{
     "billing\views\services.py"                                  = @(
         "subscription_plans_view","sync_plans_from_mikrotik","cignal_play_list_view",
         "add_on_payments_view","cignalplay_form_view","user_cignal_logs_view",
-        "apply_cignal_addon")
+        "apply_cignal_addon","plan_list","add_plan","edit_plan","delete_plan")
+    "billing\views\settings.py"                                  = @(
+        "addon_plan_list","create_addon_plan","edit_addon_plan","delete_addon_plan")
     "billing\views\xendit.py"                                    = @("create_xendit_invoice")
 }
 
