@@ -282,7 +282,7 @@ def sync_override_push(request, device_id):
     device = get_object_or_404(MikrotikDevice, id=device_id)
     pppoe_username = request.POST.get('pppoe_username')
 
-    from billing.models import Customer
+    from billing.models import Customer, SystemLog
     from network_manager.sync_services import MikrotikAPI as MikrotikSyncAPI
     from django.contrib.auth import get_user_model
     from django.contrib.auth.hashers import check_password
