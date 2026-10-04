@@ -50,11 +50,13 @@ cust.agent = martin
 cust.installation_status = "pending"
 cust.expires_at = timezone.now() + timezone.timedelta(days=5)
 cust.save()
-Payment.objects.get_or_create(
-    username=cust.pppoe_username, amount=500,
-    defaults={"customer": cust, "payment_method": "cash"},
-)
-print(f"  {cust.pppoe_username}: pending install, expires in 5 days, paid 500")
+if not Payment.objects.filter(username=cust.pppoe_username).exists():
+    Payment.objects.create(
+        customer=cust, username=cust.pppoe_username, amount=500,
+        payment_method="cash", reason="verify_agent_portal",
+    )
+print(f"  {cust.pppoe_username}: pending install, expires in 5 days, "
+      f"payments={Payment.objects.filter(username=cust.pppoe_username).count()}")
 
 hdr("1. SIDEBAR: the Agent Payouts tab is gone")
 adm = Client(); adm.force_login(U.objects.get(username="Jep"))
@@ -65,18 +67,25 @@ check("'Agent Payouts' no longer a nav label",
 check("'Agent Portal' still in the nav", "Agent Portal" in nav_only)
 
 hdr("2. VIEW ON AN AGENT SHOWS THE AGENT'S OWN DASHBOARD")
-page = adm.get(f"/agents/view/{martin.id}/").content.decode()
+table = adm.get("/agents/").content.decode()
 detail = adm.get(f"/staff/agents/portal/{martin.id}/").content.decode()
+account = adm.get(f"/agents/view/{martin.id}/").content.decode()
 
-check("both URLs render", bool(page) and bool(detail))
-check("they render the SAME page (not two look-alikes)",
-      page == detail, "identical HTML")
+check("the Agents table View button targets the agent's dashboard",
+      f"/staff/agents/portal/{martin.id}/" in table)
+check("the eye button is titled as the agent's own dashboard",
+      "exactly what they see when they log in" in table)
+check("the dashboard renders", bool(detail))
 check("it is the agent portal shell, not the staff base",
       'data-persona="agent"' in detail)
 check("the staff-only banner appears", "Staff view" in detail)
 check("commission panel is the portal's",
       "Claimable Commission" in detail)
-check("portal referral table present", "Referral History" in detail)
+check("portal referral table present", "My Referrals" in detail)
+check("the OLD duplicate look-alike page is gone",
+      "Agent referral performance and commission status" not in detail)
+check("portal login settings are still reachable separately",
+      "Portal Login Account" in account)
 
 hdr("3. MARTIN SEES HIS CUSTOMERS (the four questions)")
 check("My Customers section present", "My Customers" in detail)
@@ -108,6 +117,8 @@ check("Referral button replaced by 'View only'",
       "View only" in detail)
 check("no live 'Submit New Referral' link for staff",
       'href="/agent-dashboard/add/"' not in detail)
+check("no live 'Submit Your First Referral' link either",
+      "Submit Your First Referral" not in detail)
 check("no live cashout form for staff",
       "/agent-dashboard/cashout/" not in detail)
 check("a way back to the Agents list",
