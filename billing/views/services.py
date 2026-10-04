@@ -206,6 +206,10 @@ def add_plan(request):
             price=price,
             validity_days=validity_days,
             description=description,
+            # MikroTik profile this plan maps to. Blank falls back to the name,
+            # which is what the Sync Manager compares against.
+            router_profile=(request.POST.get("router_profile") or "").strip(),
+            speed_mbps=(request.POST.get("speed_mbps") or "").strip() or None,
         )
         messages.success(request, f"Service plan '{name}' added successfully!")
         return redirect("plan_list")
@@ -224,6 +228,8 @@ def edit_plan(request, plan_id):
         plan.price = request.POST.get("price")
         plan.validity_days = request.POST.get("validity_days")
         plan.description = request.POST.get("description")
+        plan.router_profile = (request.POST.get("router_profile") or "").strip()
+        plan.speed_mbps = (request.POST.get("speed_mbps") or "").strip() or None
         plan.save()
 
         messages.success(request, "Service plan updated successfully!")

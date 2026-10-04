@@ -71,6 +71,28 @@
                 <textarea name="description" class="plan-form-control" rows="3" placeholder="Optional description of this plan...">{{ data.description|default:'' }}</textarea>
             </div>
 
+            <div class="mb-4">
+                <label class="plan-form-label">MikroTik PPPoE Profile</label>
+                <input type="text" name="router_profile" class="plan-form-control"
+                       placeholder="e.g. pppoe-15m_500 — leave blank to use the plan name"
+                       value="{{ data.router_profile|default:'' }}">
+                <small class="text-muted d-block mt-1">
+                    The profile the router must carry for this plan. The Sync Manager
+                    compares this string against the router. If it is blank the plan
+                    name is used, so a plan called "GTipid Fiber 1000" will show
+                    permanent drift unless the router's profile is named exactly that.
+                </small>
+            </div>
+
+            <div class="mb-4">
+                <label class="plan-form-label">Download Speed (Mbps)</label>
+                <input type="number" name="speed_mbps" class="plan-form-control"
+                       min="1" placeholder="e.g. 100" value="{{ data.speed_mbps|default:'' }}">
+                <small class="text-muted d-block mt-1">
+                    Used to detect two plans sold at the same price but different speeds.
+                </small>
+            </div>
+
             <div class="d-flex align-items-center justify-content-between gap-2">
                 <a href="{% url 'plan_list' %}" class="btn-cancel">Cancel</a>
                 <button type="submit" class="btn-submit"><i class="fas fa-save me-2"></i>Add Plan</button>
