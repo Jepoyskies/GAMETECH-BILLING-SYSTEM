@@ -3102,3 +3102,89 @@ page's `_styles.html`. Template/CSS only -- no view or logic change.
 
 **Files**: `customer_list.html`, `customer_list/_hero.html`, `_table.html`, `_styles.html`
 **Date Logged**: 2026-10-04
+
+---
+
+### ERR-113: The Import Invented A Phantom Router And Stranded Every Customer
+
+**Symptom**: after importing 2,041 subscribers, the Sync Manager showed the real
+router `ccr2116.v1 - patag` with **zero** customers, and a mysterious second
+device called `ccr2116.v1` holding all 2,041.
+
+**Root cause**: `get_or_create_device()` matched on `device_name` only. The dump
+calls the router `ccr2116.v1`; staff registered it as `ccr2116.v1 - patag`.
+Different string, same physical router (both `172.30.120.1`), so `get_or_create`
+happily created a **duplicate device row**. Every imported customer was parked on
+the phantom.
+
+Consequences at cutover: the real router looked empty, the phantom looked like it
+had 2,041 accounts all drifting, and router bookkeeping was split across two
+records for one box.
+
+**Fix**: match on `ip_address` first and fall back to `get_or_create` by name
+only when no device has that IP. The IP is the one value both sides agree on.
+
+**Verified**: 527-row import, whose dump says `ccr2116.v1`, now puts all 527 on
+`ccr2116.v1 - patag`. 4 devices (not 5), no phantom, 0 orphans. 5/5.
+
+**This is the same bug class as ERR-109** (plan name doubling as the router
+profile). A dump identifier and an internal label are not the same thing, and
+matching them by string equality invents entities that do not exist.
+
+**Lesson**: when importing from another system, match on the *address* the two
+systems agree on -- an IP, an account number -- never on a human label.
+
+**Files**: `billing/management/commands/import_legacy_customers.py`
+**Date Logged**: 2026-10-04
+
+---
+
+### ERR-114: The Import Was Not Atomic -- A Partial Subscriber Base Was Possible
+
+**Symptom**: an interrupted 2,041-row import left **287 customers** committed with
+no import report and no way to tell how far it had got. Staff would have started
+billing real people against a silently incomplete account list.
+
+**Root cause**: `import_legacy_customers.handle()` had `try:` / `finally:` and no
+`transaction.atomic()`. Every row committed on its own. The file's own comment
+admits the process had already been OOM-killed once for the same reason.
+
+**Fix**: an `all_or_nothing` decorator wraps `handle()` in a single transaction,
+so the import either completes fully or changes nothing.
+
+**Chaos-tested, not assumed**: baseline 1 customer -> start the import -> kill the
+container mid-transaction -> after restart the count is still 1. No partial rows.
+(The naive first attempt was inconclusive twice over: `pkill` does not exist in
+the image and the baseline was polluted, so both were fixed before believing it.)
+
+**Import at real 2,041 scale, measured on this 1 vCPU / 1.9 GB box**:
+- completes clean, `EXIT=0`, 2,041 of 2,041 rows created
+- **0 of 2,005 expiry dates mismatched** against the source file
+- 0 duplicate usernames, 0 customers auto-provisioned to a router
+- 2,041 of 2,041 received portal credentials
+- peak container memory **362 MiB of 1.92 GiB (18.4%)** -- the OOM history is not
+  reproducible at this size
+- wall clock **~20 minutes** (527 rows takes ~4 minutes)
+
+**Operational warning**: a 20-minute foreground command over SSH WILL be cut off
+if the link drops, and that is exactly what produced the original 287-row mess.
+Run the real import detached and poll it:
+
+```bash
+docker exec -d gametech-web sh -c \
+  "python manage.py import_legacy_customers /tmp/legacy.sql > /tmp/import.log 2>&1; echo EXIT=\$? >> /tmp/import.log"
+# then poll:  docker exec gametech-web grep EXIT= /tmp/import.log
+```
+
+Also note: `Customer.phone` is **not** unique, so subscribers sharing a household
+phone import fine. Worth knowing, because the real export will contain them.
+
+**Pre-import check**: the importer builds the plan catalogue from the dump's own
+`service_plans` table. If tomorrow's export omits that table, subscribers land
+with **no plan at all** -- no expiry can be computed and no billing can run.
+Confirm `service_plans` is present before importing.
+
+**Files**: `billing/management/commands/import_legacy_customers.py`,
+`archived_scripts/build_scale_dump.py`, `archived_scripts/scale_import_full.sh`,
+`archived_scripts/verify_scale_import.py`, `archived_scripts/chaos_import_test2.sh`
+**Date Logged**: 2026-10-04
