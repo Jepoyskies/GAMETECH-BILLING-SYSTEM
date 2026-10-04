@@ -1,60 +1,107 @@
 <!-- Partial: Modal Handler Scripts (View All, Customer Live Chart, Apply Addon, Customer Search) -->
 <script>
+    function toggleModalFullscreen() {
+        let dialog = document.querySelector('#viewAllModal .modal-dialog');
+        if (dialog) {
+            dialog.classList.toggle('modal-fullscreen');
+            let btn = document.getElementById('viewAllModalFullscreenBtn');
+            if (dialog.classList.contains('modal-fullscreen')) {
+                btn.innerHTML = '<i class="fas fa-down-left-and-up-right-to-center me-1"></i> Exit Fullscreen';
+            } else {
+                btn.innerHTML = '<i class="fas fa-up-right-and-down-left-from-center me-1"></i> Fullscreen';
+            }
+        }
+    }
+
     function openViewAllModal(type) {
         let title = document.getElementById('viewAllModalTitle');
+        let icon = document.getElementById('viewAllModalIcon');
         let body = document.getElementById('viewAllModalBody');
-        let html = '<div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light">';
+        let html = '<div class="table-responsive"><table class="table table-hover align-middle mb-0 gt-modal-table"><thead>';
 
         if (type === 'network') {
-            title.innerText = 'All Network Alerts';
+            title.innerText = 'Network Alerts';
+            if (icon) icon.innerHTML = '<i class="fas fa-triangle-exclamation text-danger"></i>';
             html += '<tr><th class="ps-3">Name</th><th>Type</th><th>Status</th><th>Reason</th><th class="pe-3 text-end">Action</th></tr></thead><tbody>';
             currentNetworkAlerts.forEach(a => {
                 let btnColor = a.type === 'ticket' ? 'btn-warning' : 'btn-danger';
-                let badgeClass = a.type === 'ticket' ? 'bg-warning text-dark' : 'bg-secondary';
+                let badgeClass = a.type === 'ticket' ? 'bg-warning text-dark' : 'bg-danger text-light';
                 let actionUrl = a.type === 'customer' ? '/customers/view/' + a.id + '/' : (a.type === 'ticket' ? '/dispatch/client-concerns/' : '/network/health/resolve/' + a.type + '/' + a.id + '/');
                 let actionTitle = a.type === 'ticket' ? 'View Ticket' : 'Resolve';
                 html += `<tr>
                     <td class="ps-3"><span class="fw-bold">${a.name}</span></td>
-                    <td><span class="badge ${badgeClass}">${a.type.toUpperCase()}</span></td>
+                    <td><span class="badge ${badgeClass} rounded-pill px-2.5 py-1">${a.type.toUpperCase()}</span></td>
                     <td><span class="fw-semibold ${a.type === 'ticket' ? 'text-warning' : 'text-danger'}">${a.status}</span></td>
-                    <td class="text-muted small" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${a.reason || '-'}</td>
-                    <td class="pe-3 text-end"><a href="${actionUrl}" class="btn ${btnColor} rounded-circle d-inline-flex justify-content-center align-items-center" style="width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" title="${actionTitle}"><i class="fas fa-eye"></i></a></td>
+                    <td class="text-secondary small" style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${a.reason || '-'}</td>
+                    <td class="pe-3 text-end"><a href="${actionUrl}" class="btn ${btnColor} rounded-circle d-inline-flex justify-content-center align-items-center" style="width: 28px; height: 28px; padding: 0; font-size: 0.75rem;" title="${actionTitle}"><i class="fas fa-eye"></i></a></td>
                 </tr>`;
             });
         } else if (type === 'addons') {
-            title.innerText = 'All Pending Add-on Requests';
+            title.innerText = 'Pending Add-on Requests';
+            if (icon) icon.innerHTML = '<i class="fas fa-puzzle-piece text-warning"></i>';
             html += '<tr><th class="ps-3">Customer</th><th>Add-on Type</th><th>Requested At</th><th class="pe-3 text-end">Action</th></tr></thead><tbody>';
             currentAddonRequests.forEach(req => {
                 html += `<tr>
                     <td class="ps-3"><span class="fw-bold">${req.customer_name}</span></td>
-                    <td><span class="badge bg-warning text-dark">${req.addon_type}</span></td>
-                    <td class="text-muted small">${req.requested_at}</td>
-                    <td class="pe-3 text-end"><a href="/customers/view/${req.customer_id}/" class="btn btn-warning rounded-circle d-inline-flex justify-content-center align-items-center" style="width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" title="Process"><i class="fas fa-eye"></i></a></td>
+                    <td><span class="badge bg-warning text-dark rounded-pill px-2.5 py-1">${req.addon_type}</span></td>
+                    <td class="text-secondary small">${req.requested_at}</td>
+                    <td class="pe-3 text-end"><a href="/customers/view/${req.customer_id}/" class="btn btn-warning rounded-circle d-inline-flex justify-content-center align-items-center" style="width: 28px; height: 28px; padding: 0; font-size: 0.75rem;" title="Process"><i class="fas fa-eye"></i></a></td>
                 </tr>`;
             });
         } else if (type === 'offline') {
-            title.innerText = 'All Paid Offline Customers';
+            title.innerText = 'Paid Offline Customers';
+            if (icon) icon.innerHTML = '<i class="fas fa-user-xmark text-info"></i>';
             html += '<tr><th class="ps-3">Customer</th><th>Username</th><th>Down Since</th><th class="pe-3 text-end">Action</th></tr></thead><tbody>';
             currentOfflineUsers.forEach(u => {
                 html += `<tr>
                     <td class="ps-3"><span class="fw-bold">${u.full_name}</span></td>
-                    <td><span class="badge bg-primary">${u.username}</span></td>
-                    <td class="text-muted small">${u.last_logged_out}</td>
-                    <td class="pe-3 text-end"><a href="/customers/view/${u.id}/" class="btn btn-primary rounded-circle d-inline-flex justify-content-center align-items-center" style="width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" title="View"><i class="fas fa-eye"></i></a></td>
+                    <td><span class="badge bg-primary rounded-pill px-2.5 py-1">${u.username}</span></td>
+                    <td class="text-secondary small">${u.last_logged_out}</td>
+                    <td class="pe-3 text-end"><a href="/customers/view/${u.id}/" class="btn btn-primary rounded-circle d-inline-flex justify-content-center align-items-center" style="width: 28px; height: 28px; padding: 0; font-size: 0.75rem;" title="View"><i class="fas fa-eye"></i></a></td>
                 </tr>`;
             });
         } else if (type === 'hardware') {
             title.innerText = 'Hardware Telemetry';
+            if (icon) icon.innerHTML = '<i class="fas fa-microchip text-info"></i>';
             html += '<tr><th class="ps-3">Device Name</th><th>Status</th><th>CPU</th><th>RAM</th><th>Disk</th><th class="pe-3">Uptime</th></tr></thead><tbody>';
             currentHardwareData.forEach(h => {
                 let badgeClass = h.status === 'Online' ? 'bg-success' : 'bg-danger';
                 html += `<tr>
                     <td class="ps-3"><span class="fw-bold">${h.name}</span></td>
-                    <td><span class="badge ${badgeClass}">${h.status}</span></td>
+                    <td><span class="badge ${badgeClass} rounded-pill px-2.5 py-1">${h.status}</span></td>
                     <td><span class="fw-semibold text-info">${h.cpu}</span></td>
                     <td><span class="fw-semibold text-warning">${h.ram}</span></td>
                     <td><span class="fw-semibold text-danger">${h.disk}</span></td>
-                    <td class="pe-3 text-muted small">${h.uptime}</td>
+                    <td class="pe-3 text-secondary small">${h.uptime}</td>
+                </tr>`;
+            });
+        } else if (type === 'traffic') {
+            title.innerText = 'Live Traffic Activity — All Active Sessions';
+            if (icon) icon.innerHTML = '<i class="fas fa-network-wired text-success"></i>';
+            html += '<tr><th class="ps-3">Customer (PPPoE)</th><th>IP Address</th><th>Download (RX)</th><th>Upload (TX)</th><th>Total Traffic</th><th>Uptime</th><th class="pe-3 text-end">Action</th></tr></thead><tbody>';
+            
+            let sorted = [...allData].sort((a, b) => (b.rx_mbps + b.tx_mbps) - (a.rx_mbps + a.tx_mbps));
+            sorted.forEach(u => {
+                let custDisplay = u.customer_name || u.user;
+                let safeDisplay = (custDisplay || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                let safeUser = (u.user || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                let totalBw = (u.rx_mbps + u.tx_mbps).toFixed(2);
+                
+                html += `<tr>
+                    <td class="ps-3">
+                        <span class="fw-bold">${custDisplay}</span>
+                        ${u.customer_name && u.customer_name !== u.user ? `<div class="small text-muted">${u.user}</div>` : ''}
+                    </td>
+                    <td><code class="text-info">${u.ip || '-'}</code></td>
+                    <td><span class="text-primary fw-semibold"><i class="fas fa-arrow-down me-1"></i>${Number(u.rx_mbps).toFixed(1)} Mbps</span></td>
+                    <td><span class="text-info fw-semibold"><i class="fas fa-arrow-up me-1"></i>${Number(u.tx_mbps).toFixed(1)} Mbps</span></td>
+                    <td><span class="badge bg-dark-subtle border border-secondary text-light px-2.5 py-1">${totalBw} Mbps</span></td>
+                    <td><span class="text-secondary small"><i class="fas fa-clock me-1"></i>${u.uptime || '-'}</span></td>
+                    <td class="pe-3 text-end">
+                        <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="openCustomerLiveChart('${safeUser}', '${safeDisplay}')">
+                            <i class="fas fa-chart-line me-1"></i> Chart
+                        </button>
+                    </td>
                 </tr>`;
             });
         }
@@ -62,8 +109,9 @@
         if ((type === 'network' && currentNetworkAlerts.length === 0) ||
             (type === 'addons' && currentAddonRequests.length === 0) ||
             (type === 'offline' && currentOfflineUsers.length === 0) ||
-            (type === 'hardware' && currentHardwareData.length === 0)) {
-            html = '<div class="text-center text-muted p-5">No data to display. <i class="fas fa-check-circle text-success ms-1"></i></div>';
+            (type === 'hardware' && currentHardwareData.length === 0) ||
+            (type === 'traffic' && allData.length === 0)) {
+            html = '<div class="text-center text-muted p-5"><i class="fas fa-circle-check text-success fs-3 d-block mb-2"></i>No data to display. Everything is normal!</div>';
         } else {
             html += '</tbody></table></div>';
         }
