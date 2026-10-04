@@ -3387,3 +3387,34 @@ neutral count instead of an alert.
 **Files**: `billing/services/plan_health.py`,
 `network_manager/templates/network_manager/sync_manager/_plan_health_banner.html`
 **Date Logged**: 2026-10-04
+
+---
+
+### ERR-121: Four Real Duplicate Plans Remain, And Merging Them Is A Business Call
+
+`plan_health` now reports exactly 4 ambiguous groups, and all 4 are **true
+duplicates** by every measurable attribute -- same price, same upload, same
+download. Only the NAME differs:
+
+| plans | price | up/down | subscribers |
+|---|---|---|---|
+| `GTipid Fiber 1000` / `GTipid Fiber 1000 (Speedboost)` | 1000 | 20/20 | 1396 / 33 |
+| `GTipid Fiber 1300` / `GTipid Fiber 1300 (Speedboost)` | 1300 | 30/30 | 103 / 4 |
+| `GTipid Fiber 1500` / `GTipid Fiber 1500 (Speedboost)` | 1500 | 50/50 | 145 / 5 |
+| `GIMI Home Fiber 1500` / `(New Plan)` / `(100 Mbps)` | 1500 | 100/100 | 0 / 39 / 0 |
+
+**Deliberately NOT merged.** "Speedboost" is very likely a real commercial
+promise -- a burst allowance, a priority, a better upload that simply was never
+recorded in `speed_up`. Merging on the measurable fields would silently move 81
+subscribers onto a different plan and erase the only evidence that the tier
+exists. That is the owner's decision, not an automatic cleanup.
+
+**To resolve**: either
+- if Speedboost IS a distinct product, give it its real `speed_up` /
+  `speed_down` and it stops being a duplicate, or
+- if it is a leftover, merge it into the base plan in Internet Plans.
+
+Until then the banner correctly reports 4. That is a true reading, not noise.
+
+**Files**: `billing/services/plan_health.py`
+**Date Logged**: 2026-10-04
