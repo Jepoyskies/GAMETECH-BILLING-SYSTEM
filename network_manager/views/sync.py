@@ -19,8 +19,6 @@ from network_manager.sync_helpers import (
 # batches keep a mistake recoverable.
 BULK_DELETE_MAX = 25
 
-@role_required(['Admin', 'Editor', 'CSR'])
-@login_required
 def _plan_health():
     """Plan problems, never fatal to the page."""
     try:
@@ -31,6 +29,8 @@ def _plan_health():
                 "total_plans": 0, "plans_with_profile": 0}
 
 
+@role_required(['Admin', 'Editor', 'CSR'])
+@login_required
 def sync_manager(request, device_id):
     from billing.models import Customer
     from network_manager.sync_services import MikrotikAPI as MikrotikSyncAPI
