@@ -337,6 +337,12 @@ def customer_list(request):
     # Fetch recent customer logs for the new UI feature
     customer_logs = SystemLog.objects.filter(table_name="Customer").order_by("-changed_at")[:50]
 
+    # Count customers not yet synced to any router (for the sync reminder badge)
+    pending_sync_count = Customer.objects.filter(
+        sync_status__in=["Unverified", "Failed"],
+        pppoe_username__isnull=False,
+    ).exclude(pppoe_username='').count()
+
     context = {
         "customers": customers,
         "devices": devices,
@@ -354,6 +360,7 @@ def customer_list(request):
         "router_filter": router_filter,
         "barangay_filter": barangay_filter,
         "sort": sort,
+        "pending_sync_count": pending_sync_count,
     }
 
     # --- DataTables server-side processing ---------------------------------

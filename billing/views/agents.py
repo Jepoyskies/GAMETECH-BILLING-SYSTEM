@@ -379,3 +379,129 @@ def staff_add_customer_for_agent(request, agent_id):
     )
     messages.info(request, f"Onboarding referral initiated for Agent {agent.name}. Please complete the policy checklist and customer details.")
     return redirect(f"/customers/add/?prospect_id={prospect.id}&agent_id={agent.id}")
+
+
+@login_required
+def staff_agent_portal(request):
+    """
+    Staff view: All agents with live incentive stats.
+    Accessible by staff with agent management permissions.
+    """
+    if not (request.user.is_staff or request.user.has_perm("billing.view_agent")):
+        messages.error(request, "Access restricted.")
+        return redirect("dashboard")
+
+    agents = Agent.objects.all().order_by("name")
+
+    # Build summary for each agent
+    agent_rows = []
+    for agent in agents:
+        summary = get_agent_incentive_summary(agent)
+        prospect_count = Prospect.objects.filter(agent=agent).count()
+        converted_count = Prospect.objects.filter(agent=agent, status="converted").count()
+        agent_rows.append({
+            "agent": agent,
+            "prospect_count": prospect_count,
+            "converted_count": converted_count,
+            "summary": summary,
+        })
+
+    return render(request, "billing/staff/agent_portal_list.html", {
+        "agent_rows": agent_rows,
+    })
+
+
+@login_required
+def staff_agent_portal_detail(request, agent_id):
+    """
+    Staff view: Read-only view of an individual agent's portal.
+    Shows referrals, commission progress, and payout history.
+    """
+    if not (request.user.is_staff or request.user.has_perm("billing.view_agent")):
+        messages.error(request, "Access restricted.")
+        return redirect("dashboard")
+
+    agent = get_object_or_404(Agent, id=agent_id)
+
+    prospects = (
+        Prospect.objects.filter(agent=agent)
+        .select_related("barangay", "plan", "converted_customer", "converted_customer__plan")
+        .order_by("-created_at")
+    )
+
+    summary = get_agent_incentive_summary(agent)
+    batch_size = summary["batch_size"]
+    progress_count = summary["progress_to_next"]
+    progress_pct = min(100, int((progress_count / batch_size) * 100)) if batch_size else 0
+
+    # Decorate prospects with qualification and payment progress
+    for p in prospects:
+        cust = p.converted_customer
+        if cust:
+            event = AgentQualificationEvent.objects.filter(customer=cust, agent=agent).first()
+            if event and event.status == "paid_out":
+                p.qualification_status = "paid_out"
+                p.progress_text = "Paid Out (₱500)"
+                p.is_qualified = True
+            elif event and event.status == "qualified":
+                p.qualification_status = "qualified"
+                p.progress_text = "Qualified (₱500)"
+                p.is_qualified = True
+            elif event and event.status == "revoked":
+                p.qualification_status = "revoked"
+                p.progress_text = "Revoked (Rollback)"
+                p.is_qualified = False
+            else:
+                is_cancelled = (
+                    cust.status in ["closed_not_installed", "pull out"]
+                    or cust.installation_status == "closed_not_installed"
+                )
+                if is_cancelled:
+                    p.qualification_status = "cancelled"
+                    p.progress_text = "Cancelled (Ineligible)"
+                    p.is_qualified = False
+                else:
+                    net_paid = get_customer_qualifying_paid_total(cust)
+                    plan_price = cust.plan.price if cust.plan and cust.plan.price else Decimal("0.00")
+                    threshold = Decimal("2.00") * plan_price
+
+                    if net_paid >= threshold and plan_price > 0:
+                        p.qualification_status = "qualified"
+                        p.progress_text = "Qualified (₱500)"
+                        p.is_qualified = True
+                    elif net_paid > plan_price and plan_price > 0:
+                        paid_2nd_month = net_paid - plan_price
+                        rem_2nd_month = threshold - net_paid
+                        p.qualification_status = "in_progress"
+                        p.progress_text = f"PHP {paid_2nd_month:,.0f} paid, PHP {rem_2nd_month:,.0f} remaining"
+                        p.is_qualified = False
+                    elif net_paid > 0 and plan_price > 0:
+                        p.qualification_status = "in_progress"
+                        p.progress_text = f"PHP 0 paid, PHP {plan_price:,.0f} remaining"
+                        p.is_qualified = False
+                    else:
+                        p.qualification_status = "pending_payment"
+                        p.progress_text = "Pending 1st Payment"
+                        p.is_qualified = False
+
+            p.unlock_date = cust.agent_lock_until
+        else:
+            p.qualification_status = "prospect"
+            p.progress_text = "Pending Onboarding"
+            p.unlock_date = None
+
+    payout_history = AgentPayoutBatch.objects.filter(agent=agent).order_by("-created_at")
+
+    context = {
+        "agent": agent,
+        "prospects": prospects,
+        "claimable_commission": summary["claimable_amount"],
+        "unpaid_qualified": summary["unpaid_qualified"],
+        "total_qualified": summary["total_qualified"],
+        "batch_size": batch_size,
+        "progress_count": progress_count,
+        "progress_pct": progress_pct,
+        "is_cashout_eligible": summary["is_cashout_eligible"],
+        "payout_history": payout_history,
+    }
+    return render(request, "billing/staff/agent_portal_detail.html", context)

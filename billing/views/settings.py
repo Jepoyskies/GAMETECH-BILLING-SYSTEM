@@ -47,7 +47,24 @@ import calendar
 
 @login_required
 def settings_view(request):
-    return render(request, "billing/settings.html")
+    from billing.models import SystemConfig
+    config = SystemConfig.get_config()
+    return render(request, "billing/settings.html", {
+        "auto_sync_enabled": config.auto_sync_routers,
+    })
+
+
+@role_required(["Admin"])
+@login_required
+@require_POST
+def toggle_auto_sync(request):
+    from billing.models import SystemConfig
+    config = SystemConfig.get_config()
+    config.auto_sync_routers = not config.auto_sync_routers
+    config.save(update_fields=["auto_sync_routers"])
+    status = "ON" if config.auto_sync_routers else "OFF"
+    messages.success(request, f"Auto-Sync to Routers is now {status}.")
+    return redirect("settings")
 
 
 @role_required(["Admin"])

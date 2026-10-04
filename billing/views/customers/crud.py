@@ -376,6 +376,60 @@ def add_customer(request):
                 request,
                 f"Customer {customer.full_name} created successfully! Policy checklist confirmed and installation order dispatched to the unassigned queue.",
             )
+
+            # Auto-sync to MikroTik router if enabled
+            device_id = request.POST.get("device_id")
+            auto_synced = False
+            if device_id:
+                from billing.models import SystemConfig
+                config = SystemConfig.get_config()
+                if config.auto_sync_routers:
+                    try:
+                        from network_manager.sync_services import MikrotikAPI as MikrotikSyncAPI
+                        from network_manager.sync_helpers import desired_profile, build_router_comment, mark_synced
+                        from network_manager.models import MikrotikDevice
+
+                        device = MikrotikDevice.objects.filter(id=device_id).first()
+                        if device:
+                            api = MikrotikSyncAPI(
+                                ip_address=device.ip_address,
+                                username=device.api_username,
+                                password=device.api_password,
+                                port=device.api_port,
+                            )
+                            result = api.add_pppoe_user(
+                                name=customer.pppoe_username,
+                                password=customer.pppoe_password,
+                                profile=desired_profile(customer),
+                                comment=build_router_comment(customer),
+                            )
+                            if result.get("success"):
+                                mark_synced(customer, device, request.user)
+                                auto_synced = True
+                                messages.success(
+                                    request,
+                                    f"{customer.full_name} automatically synced to {device.device_name}. Internet access enabled.",
+                                )
+                            else:
+                                customer.sync_status = "Failed"
+                                customer.save(update_fields=["sync_status"])
+                                messages.warning(
+                                    request,
+                                    f"Customer created but auto-sync to {device.device_name} failed. Go to Sync Manager to push manually.",
+                                )
+                    except Exception as e:
+                        customer.sync_status = "Failed"
+                        customer.save(update_fields=["sync_status"])
+                        messages.warning(
+                            request,
+                            f"Customer created but auto-sync failed: {e}. Go to Sync Manager to push manually.",
+                        )
+                else:
+                    messages.info(
+                        request,
+                        f"Don't forget to sync {customer.full_name} to the MikroTik router. Go to Network Ops → Sync Manager → Push to enable internet access.",
+                    )
+
             next_url = request.POST.get("next") or request.GET.get("next")
             if next_url:
                 return redirect(next_url)

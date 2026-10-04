@@ -1905,3 +1905,24 @@ class IncentiveSetting(models.Model):
         )
         return obj
 
+
+class SystemConfig(models.Model):
+    """Single-row system-wide configuration."""
+    auto_sync_routers = models.BooleanField(
+        default=False,
+        help_text="Automatically push new customers to their MikroTik router upon creation.",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "System Configuration"
+        verbose_name_plural = "System Configuration"
+
+    def __str__(self):
+        return f"Auto-Sync Routers: {'ON' if self.auto_sync_routers else 'OFF'}"
+
+    @classmethod
+    def get_config(cls):
+        obj, _ = cls.objects.get_or_create(id=1)
+        return obj
+

@@ -1,0 +1,84 @@
+{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}Agent Portal | Gametech Unli Fiber{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-3 px-md-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h4 class="mb-1 fw-bold text-white"><i class="fas fa-user-tie me-2 text-primary"></i> Agent Portal</h4>
+            <p class="mb-0 text-muted small">View all agents, their referral performance, and commission status.</p>
+        </div>
+    </div>
+
+    <!-- Agents Table -->
+    <div class="gt-cl-card p-3">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0">
+                <thead>
+                    <tr class="text-muted small">
+                        <th>Agent</th>
+                        <th class="text-center">Referrals</th>
+                        <th class="text-center">Converted</th>
+                        <th class="text-center">Qualified</th>
+                        <th class="text-center">Progress</th>
+                        <th class="text-end">Claimable</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in agent_rows %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-white">{{ row.agent.name }}</div>
+                                    <div class="text-muted small">{{ row.agent.phone|default:"No phone" }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-secondary">{{ row.prospect_count }}</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-info">{{ row.converted_count }}</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-success">{{ row.summary.total_qualified }}</span>
+                        </td>
+                        <td class="text-center" style="min-width:120px;">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress flex-grow-1" style="height:6px;">
+                                    <div class="progress-bar bg-primary" role="progressbar" style="width: {% widthratio row.summary.progress_to_next row.summary.batch_size 100 %}%;"></div>
+                                </div>
+                                <span class="text-muted small">{{ row.summary.progress_to_next }}/{{ row.summary.batch_size }}</span>
+                            </div>
+                        </td>
+                        <td class="text-end">
+                            <span class="fw-bold text-success">₱{{ row.summary.claimable_amount|floatformat:2 }}</span>
+                        </td>
+                        <td class="text-end">
+                            <a href="{% url 'staff_agent_portal_detail' row.agent.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye me-1"></i> View
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fs-1 d-block mb-2"></i>
+                            No agents found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -161,6 +161,10 @@ urlpatterns = [
     path("agents/view/<int:agent_id>/", views.view_agent, name="view_agent"),
     path("agents/delete/<int:agent_id>/", views.delete_agent, name="delete_agent"),
     path("agents/<int:agent_id>/add-customer-on-behalf/", views.staff_add_customer_for_agent, name="staff_add_customer_for_agent"),
+
+    # Staff Agent Portal (CSR/Admin view of agent dashboards)
+    path("staff/agents/portal/", views.staff_agent_portal, name="staff_agent_portal"),
+    path("staff/agents/portal/<int:agent_id>/", views.staff_agent_portal_detail, name="staff_agent_portal_detail"),
     path("customers/export/csv/", views.export_customers_csv, name="export_customers_csv"),
     path("plans/", views.plan_list, name="plan_list"),
     path("plans/add/", views.add_plan, name="add_plan"),
@@ -183,6 +187,7 @@ urlpatterns = [
     # Core UI & Placeholders
     path("profile/", views.profile_view, name="profile"),
     path("settings/", views.settings_view, name="settings"),
+    path("settings/toggle-auto-sync/", views.toggle_auto_sync, name="toggle_auto_sync"),
     path("admin-panel/", views.admin_panel_view, name="admin_panel"),
     path("api/online-staff/", views.online_staff_api, name="online_staff_api"),
     # Auth Extensions
