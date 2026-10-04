@@ -1235,52 +1235,62 @@ def dispatch_customer_detail_view(request, customer_id):
 
     jobs = []
 
+    # NOTE: this view was written against an earlier schema and referenced
+    # fields that do not exist -- JobTicket has no `completed_at` or `job_type`,
+    # and MonitoringRecord has no `job_type`, `status` or `time_end`. Because
+    # every reference sat inside a loop, the page returned 200 for any customer
+    # with an empty history and 500'd for exactly the customers with real job
+    # history. Field names below are the real ones; getattr keeps a future
+    # rename degrading to a blank cell instead of a 500.
     for t in JobTicket.objects.filter(customer=customer).select_related("team"):
+        done_at = getattr(t, "finished_at", None) or getattr(t, "done_at", None)
         ta = "-"
-        # JobTicket records completion as `finished_at` (set when the technician
-        # clicks Done). There is no `completed_at` on this model -- referencing
-        # it raised AttributeError and 500'd this page for every customer who
-        # actually had job history, i.e. exactly the customers worth looking at.
-        if t.finished_at and t.created_at:
-            diff = int((t.finished_at - t.created_at).total_seconds() / 60)
-            ta = _turnaround(diff)
+        if done_at and t.created_at:
+            ta = _turnaround(int((done_at - t.created_at).total_seconds() / 60))
         jobs.append({
             "source":        "TICKET",
             "id":            t.id,
             "date":          t.created_at,
-            "done_at":       t.finished_at,
+            "done_at":       done_at,
             "turnaround":    ta,
             "module":        MODULE_MAP.get(t.source_tab or "DISPATCH_LOG", "Dispatch Log"),
-            "type":          t.job_type or "Unassigned",
+            "type":          getattr(t, "ticket_type", None) or "Unassigned",
             "status":        t.status,
             "concern":       t.concern or "-",
             "ticket_number": t.ticket_number or "-",
         })
 
     for r in MonitoringRecord.objects.filter(customer=customer):
+        start = getattr(r, "time_start", None)
+        end = getattr(r, "time_accomplish", None) or getattr(r, "done_at", None)
         ta = "-"
-        if r.date and r.time_start and r.time_end:
-            s = timezone.make_aware(dt.datetime.combine(r.date, r.time_start))
-            e = timezone.make_aware(dt.datetime.combine(r.date, r.time_end))
+        if r.date and start and end:
+            s = timezone.make_aware(dt.datetime.combine(r.date, start))
+            e = timezone.make_aware(dt.datetime.combine(r.date, end))
             ta = _turnaround(int((e - s).total_seconds() / 60))
-        if r.date and r.time_start:
-            record_dt = timezone.make_aware(dt.datetime.combine(r.date, r.time_start))
+        if r.date and start:
+            record_dt = timezone.make_aware(dt.datetime.combine(r.date, start))
         elif r.date:
             record_dt = timezone.make_aware(dt.datetime.combine(r.date, dt.time()))
         else:
             record_dt = None
-        status_label = "Done" if r.time_end else ("Ongoing" if r.time_start else (r.status or "Pending"))
+
+        status_label = (
+            getattr(r, "status_option", None)
+            or ("Done" if end else "Ongoing" if start else "Pending")
+        )
         jobs.append({
             "source":        "MONITORING",
             "id":            r.id,
             "date":          record_dt,
-            "done_at":       None,
+            "done_at":       end,
             "turnaround":    ta,
             "module":        "Dispatch Log",
-            "type":          r.job_type or "Unassigned",
+            "type":          (getattr(r, "type_option", None)
+                              or getattr(r, "tab_type", None) or "Unassigned"),
             "status":        status_label,
-            "concern":       r.concern or "-",
-            "ticket_number": "-",
+            "concern":       getattr(r, "concern", None) or "-",
+            "ticket_number": getattr(r, "ticket_number", None) or "-",
         })
 
     jobs.sort(key=lambda j: j["date"] or timezone.datetime.min.replace(tzinfo=dt.timezone.utc), reverse=True)

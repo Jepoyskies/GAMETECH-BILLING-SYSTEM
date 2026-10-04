@@ -43,9 +43,13 @@ print("2. SAME PAGE OVER HTTP, for every customer")
 print("=" * 74)
 c = Client(); c.force_login(adm)
 for cust in Customer.objects.all():
-    r = c.get(f"/dispatch/customers/{cust.id}/")
-    check(f"/dispatch/customers/{cust.id}/ ({cust.pppoe_username})",
-          r.status_code == 200, f"HTTP {r.status_code}")
+    try:
+        r = c.get(f"/dispatch/customers/{cust.id}/")
+        check(f"/dispatch/customers/{cust.id}/ ({cust.pppoe_username})",
+              r.status_code == 200, f"HTTP {r.status_code}")
+    except Exception as e:
+        check(f"/dispatch/customers/{cust.id}/ ({cust.pppoe_username})",
+              False, f"RAISED {type(e).__name__}: {e}")
 
 print()
 print("=" * 74)
