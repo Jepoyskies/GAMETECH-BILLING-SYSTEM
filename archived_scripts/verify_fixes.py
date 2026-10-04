@@ -60,9 +60,12 @@ check("superuser reactivate works without a router write", c.status == "active",
       f"status={c.status}")
 
 hdr("2. AGENT COMMISSION: 2 MONTHS PAID -> QUALIFY -> COMMISSION")
+from billing.models import SubscriptionPlan
+_refplan = SubscriptionPlan.objects.filter(price__gt=0).order_by("price").first()
 ref = Customer.objects.create(
     full_name="TEST Commission2", pppoe_username="e2e_commission2", pppoe_password="x",
     status="active", installation_status="installed",
+    plan=_refplan,
     agent=agent, original_agent=agent, is_test_data=True)
 Customer.objects.filter(pk=ref.pk).update(expires_at=timezone.now() + timedelta(days=25))
 ref.refresh_from_db()
