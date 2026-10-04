@@ -107,7 +107,12 @@ def agent_customer_tracking(agent):
             "ticket_status": ticket.get_status_display() if ticket else None,
             "ticket_number": ticket.ticket_number if ticket else None,
             "ticket_scheduled": (
-                f"{ticket.scheduled_date} {ticket.scheduled_time}".strip()
+                # scheduled_time is nullable; concatenating None printed the
+                # literal string "None" next to the date.
+                " ".join(
+                    str(p) for p in (ticket.scheduled_date,
+                                     ticket.scheduled_time) if p
+                ).strip()
                 if ticket and ticket.scheduled_date else None
             ),
             "technicians": (

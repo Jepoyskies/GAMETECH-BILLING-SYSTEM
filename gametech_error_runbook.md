@@ -3188,3 +3188,74 @@ Confirm `service_plans` is present before importing.
 `archived_scripts/build_scale_dump.py`, `archived_scripts/scale_import_full.sh`,
 `archived_scripts/verify_scale_import.py`, `archived_scripts/chaos_import_test2.sh`
 **Date Logged**: 2026-10-04
+
+---
+
+### ERR-115: "View" On An Agent Showed A Different Page From The Agent's Own Portal
+
+**Symptom**: opening an agent from the Agents tab landed on a sparse "Agent
+Details" page that Martin never sees, while `staff_agent_portal_detail` rendered a
+*third* variant. Staff could not check what an agent actually sees, which was the
+whole point of looking.
+
+**Root cause**: `agent_dashboard` and `staff_agent_portal_detail` each carried a
+byte-identical ~85-line copy of the portal context builder, and each rendered a
+different template (`agent_portal/dashboard.html` vs
+`staff/agent_portal_detail.html`). The copies drifted. Classic duplicated-logic
+divergence.
+
+**Fix**: one builder, `billing/services/agent_portal.agent_portal_context()`, and
+one template. `staff_agent_portal_detail` now renders the agent's real dashboard
+with `viewing_staff=True`. Deleted the duplicate template.
+
+**Also**: removed the Agent Payouts nav item AND the matching page-header button.
+There were two identical-looking doors onto commission figures already shown on
+the Agent Portal dashboard. The route itself is untouched for direct links.
+
+**Safety**: staff viewing is read-only. `agent_add_prospect` and
+`agent_request_cashout` resolve the agent from `request.user.agent_profile`, so a
+staff POST could not act as the agent -- but the UI no longer offers the buttons
+at all, and a staff POST still 302s. Martin logging in himself gets the live
+buttons.
+
+**Files**: `billing/services/agent_portal.py`, `billing/views/agents.py`,
+`billing/templates/billing/agent_portal/dashboard.html`,
+`billing/templates/billing/agent_portal/base_agent.html`,
+`billing/templates/billing/agent_portal/_my_customers.html`,
+`billing/templates/billing/agents/_table.html`,
+`billing/templates/billing/agents/_stats.html`,
+`billing/templates/billing/base/_sidebar.html`
+**Verified**: 34/34
+**Date Logged**: 2026-10-04
+
+---
+
+### ERR-116: Multi-Line `{# #}` Comments Render As Literal Text
+
+**Symptom**: raw template text appeared on the live pages --
+
+    {# Staff opened someone else's portal to check on them. Say so, and give them a way back #}
+
+shown to the user as visible body copy, mid-page.
+
+**Root cause**: Django's `{# ... #}` is a **single-line** comment. Written across
+several lines it does not match the comment token, so the template engine emits
+the text verbatim. It fails silently -- `manage.py check` is clean and the page
+still returns 200.
+
+**Found in three places**, including one authored by a concurrent session
+(`network_manager/sync_manager/_card_missing.html`, live on the Sync Manager
+"Missing on Router" card).
+
+**Fix**: use `{% comment %} ... {% endcomment %}` for anything that wraps. All
+three converted; a repo-wide sweep now reports zero multi-line `{# #}` blocks.
+
+**Lesson**: a template bug that renders rather than raises is invisible to every
+automated check that only asserts on status codes. Assert on page *content*, and
+grep for the pattern -- `{#[\s\S]*?#\}` containing a newline is the detector.
+
+**Files**: `billing/templates/billing/agent_portal/base_agent.html`,
+`billing/templates/billing/agent_portal/dashboard.html`,
+`billing/templates/billing/base/_sidebar.html`,
+`network_manager/templates/network_manager/sync_manager/_card_missing.html`
+**Date Logged**: 2026-10-04
