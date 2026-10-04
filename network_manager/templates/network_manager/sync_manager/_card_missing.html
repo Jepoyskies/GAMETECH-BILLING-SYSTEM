@@ -30,9 +30,14 @@
                         <td>{{ customer.full_name }}</td>
                         <td><span class="gametech-pill pill-primary">{{ customer.plan.name|default:"None" }}</span></td>
                         <td>
-                            {# Customer.push_blocked_reasons is the single rule the view
-                               enforces too. These badges stop an operator discovering
-                               the block by being refused after the fact. #}
+                            {% comment %}
+    Customer.push_blocked_reasons is the single rule the view enforces too.
+    These badges stop an operator discovering the block by being refused after
+    the fact.
+
+    NOTE: must stay a {% comment %} block -- Django's {# #} is single-line and
+    silently renders as literal text when it wraps.
+    {% endcomment %}
                             {% if customer.is_push_blocked %}
                                 {% for reason in customer.push_blocked_reasons %}
                                     <span class="badge {% if 'Unpaid' in reason %}bg-danger{% else %}bg-warning text-dark{% endif %}">{{ reason }}</span>
