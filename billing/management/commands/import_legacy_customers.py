@@ -122,15 +122,30 @@ class Command(BaseCommand):
         if device_name in device_map:
             return device_map[device_name]
 
-        device, created = MikrotikDevice.objects.get_or_create(
-            device_name=device_name,
-            defaults={
-                "ip_address": ip_address or "0.0.0.0",
-                "api_username": api_username or "admin",
-                "api_password": api_password or "",
-                "api_port": api_port or "700",
-            },
-        )
+        ip_address = ip_address or ""
+
+        # Match on the IP, not just the name.
+        #
+        # The dump calls the router `ccr2116.v1`; staff registered it as
+        # `ccr2116.v1 - patag`. Matching on name alone invented a SECOND device
+        # row for the same physical router and parked every imported customer on
+        # it, so the real router showed zero customers in the Sync Manager and
+        # all 2,041 appeared to drift. The IP address is the one value both sides
+        # agree on.
+        device = None
+        if ip_address:
+            device = MikrotikDevice.objects.filter(ip_address=ip_address).first()
+
+        if device is None:
+            device, _ = MikrotikDevice.objects.get_or_create(
+                device_name=device_name,
+                defaults={
+                    "ip_address": ip_address or "0.0.0.0",
+                    "api_username": api_username or "admin",
+                    "api_password": api_password or "",
+                    "api_port": api_port or "700",
+                },
+            )
         device_map[device_name] = device
         return device
 
