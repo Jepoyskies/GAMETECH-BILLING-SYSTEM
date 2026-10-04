@@ -2923,3 +2923,58 @@ removed the visibility half.
 **Files**: `billing/services/expiry_sweep.py`, `billing/tasks.py`,
 `gametech_core/settings.py`
 **Date Logged**: 2026-10-04
+
+---
+
+### ERR-109: Plan Display Name Was Doing Double Duty As The MikroTik Profile
+
+**Symptom**: customers on nicely-named plans (`GTipid Fiber 1000`, `5Mbps`,
+`75 Mbps Plan`) would show as PERMANENT DRIFT in the Sync Manager, because the
+comparison is exact string equality against the router's `/ppp/profile` name
+(`pppoe-100m_1k`, `pppoe-15m_500`). Half the catalogue could never line up with
+any router.
+
+**Root cause**: `SubscriptionPlan` had no router-profile field. `name` was both
+the customer-facing product label AND the technical router profile. Those are two
+different namespaces and the legacy system already used the `pppoe-<speed>` form.
+
+**Fix**:
+- `SubscriptionPlan.router_profile` (blank = fall back to `name`, so nothing that
+  already works changes) and `SubscriptionPlan.speed_mbps`.
+- `SubscriptionPlan.effective_router_profile` is now the single place that answers
+  "what should the router carry".
+- `sync_helpers.desired_profile()` and the Sync Manager drift check both use it.
+
+**Plan health** (`billing/services/plan_health.py`) now reports the two failure
+modes the owner asked to see:
+1. **duplicate price at different speeds** -- `5Mbps`, `pppoe-15m_500` and
+   `10Mbps` are ALL PHP 500 at 5/15/10 Mbps. Found **7** such collisions.
+2. **no router profile mapped** -- found **19** plans (now 18 after a mapping).
+
+Backfilled all 34 plans' `speed_mbps` from their names and set `router_profile`
+on the 15 that were already `pppoe-*`.
+
+**Surfaced in three places**:
+- a warning banner at the top of the Sync Manager, linking to Internet Plans
+- `Plan Speed Mbps`, `Plan Router Profile` and `Plan Problem` columns in the
+  customer CSV export (Juan's row reads
+  `no router profile mapped; price shared with another speed`)
+- green "catalogue is clean" banner once both counts reach zero
+
+And it is **actionable**: `router_profile` + `speed_mbps` were added to the Add
+and Edit plan forms, and the edit form shows what will actually be pushed.
+Verified 10/10 end to end.
+
+**Caution**: saving a plan triggers `sync_plans_on_save`, which pushes the
+profile to every router. With `ROUTER_MODE=live` that is a real write. It failed
+safely while the 3 routers were unreachable.
+
+**Lesson**: a product name and a device identifier are different things. Sharing
+one column guarantees a permanent mismatch.
+
+**Files**: `billing/models.py`, `billing/services/plan_health.py`,
+`network_manager/sync_helpers.py`, `network_manager/views/sync.py`,
+`network_manager/templates/network_manager/sync_manager/_plan_health_banner.html`,
+`billing/views/exports.py`, `billing/views/services.py`,
+`billing/templates/billing/add_plan.html`, `billing/templates/billing/edit_plan.html`
+**Date Logged**: 2026-10-04
