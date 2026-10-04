@@ -15,7 +15,7 @@ from django.utils.dateparse import parse_datetime
 from django.utils.timezone import make_aware
 
 from billing.legacy_import import cutover_lines, iter_rows, resolve_plan
-from billing.models import Customer, SubscriptionPlan, AccountType
+from billing.models import Customer, SubscriptionPlan, AccountType, PlanMapping
 from billing.signals import (
     delete_plan_on_mikrotik,
     sync_customer_to_mikrotik,
@@ -260,10 +260,21 @@ class Command(BaseCommand):
                         # Get or create related objects
                         if not dry_run:
                             acct_obj = self.get_or_create_account_type(account_type_map, acct_type_str) if acct_type_str else None
-                            plan_obj = resolve_plan(
-                                plan_map, plan_name_str,
-                                spec=plan_specs.get(plan_name_str),
-                            )
+
+                            # Check PlanMapping first for legacy plan name translations
+                            plan_obj = None
+                            if plan_name_str:
+                                mapping = PlanMapping.objects.filter(legacy_name=plan_name_str).first()
+                                if mapping and mapping.plan:
+                                    plan_obj = mapping.plan
+                                    plan_map[plan_name_str] = plan_obj
+
+                            # Fall back to resolve_plan if no mapping found
+                            if not plan_obj:
+                                plan_obj = resolve_plan(
+                                    plan_map, plan_name_str,
+                                    spec=plan_specs.get(plan_name_str),
+                                )
                             device_obj = device_map.get(device_name_str) if device_name_str else None
                             if not device_obj and device_name_str:
                                 device_obj = MikrotikDevice.objects.filter(device_name=device_name_str).first()
@@ -542,6 +553,40 @@ class Command(BaseCommand):
                         "Review them in the import page."
                     )
                 )
+
+            # --- SAVE IMPORT HISTORY ----------------------------------------
+            if not dry_run:
+                from billing.models import ImportHistory
+                import json as _json
+
+                # Count plans created during this import
+                plans_created = len(plan_map)
+
+                # Collect unmapped plans (plans that were created but not in the original catalogue)
+                unmapped_plans = []
+                for plan_name in plan_map:
+                    if plan_name not in plan_specs:
+                        unmapped_plans.append(plan_name)
+
+                history = ImportHistory.objects.create(
+                    filename=os.path.basename(sql_file_path),
+                    total_customers=processed_customers,
+                    created=created_count,
+                    updated=updated_count,
+                    missing_passwords=len(missing_password),
+                    zero_date_customers=len(zero_date_customers),
+                    unmapped_statuses=unmapped_statuses,
+                    plans_created=plans_created,
+                    unmapped_plans=unmapped_plans,
+                    devices_created=list(device_map.keys()),
+                    payments_seen=payment_summary.get("seen", 0),
+                    payments_created=payment_summary.get("created", 0),
+                    payments_updated=payment_summary.get("updated", 0),
+                    payments_orphaned=payment_summary.get("orphan_count", 0),
+                    payment_total=payment_summary.get("total_amount", 0),
+                    dry_run=dry_run,
+                )
+                self.stdout.write(f"  Import history saved (ID: {history.id})")
 
         finally:
             # Reconnect the signals

@@ -1,0 +1,159 @@
+{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}Import Detail | Gametech Unli Fiber{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-3 px-md-4">
+
+  <div class="gt-page-header gt-page-header--hero d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <div class="gt-header-icon"><i class="fas fa-file-circle-check"></i></div>
+      <div>
+        <div class="gt-header-eyebrow"><i class="fas fa-clock-rotate-left me-1"></i> Import History</div>
+        <h1 class="gt-header-title">{{ history.filename|truncatechars:52 }}</h1>
+        <p class="gt-header-sub">{{ history.timestamp|date:"l, F d, Y — H:i" }}
+          {% if history.dry_run %}<span class="badge bg-secondary ms-2">DRY RUN — nothing written</span>{% endif %}
+        </p>
+      </div>
+    </div>
+    <a href="{% url 'import_history' %}" class="gt-btn-secondary">
+      <i class="fas fa-arrow-left me-1"></i> All Imports
+    </a>
+  </div>
+
+  <!-- Outcome -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+      <div class="gt-cl-card p-3 text-center h-100">
+        <div class="text-muted small text-uppercase fw-semibold">Processed</div>
+        <div class="fs-3 fw-bold">{{ history.total_customers }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="gt-cl-card p-3 text-center h-100">
+        <div class="text-muted small text-uppercase fw-semibold">Created</div>
+        <div class="fs-3 fw-bold text-success">{{ history.created }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="gt-cl-card p-3 text-center h-100">
+        <div class="text-muted small text-uppercase fw-semibold">Updated</div>
+        <div class="fs-3 fw-bold text-info">{{ history.updated }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="gt-cl-card p-3 text-center h-100">
+        <div class="text-muted small text-uppercase fw-semibold">Plans Mapped</div>
+        <div class="fs-3 fw-bold">{{ history.plans_created }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Revenue -->
+  {% if history.payments_seen %}
+  <div class="gt-cl-card p-3 mb-4">
+    <h6 class="fw-bold text-white mb-3"><i class="fas fa-cash-register text-success me-2"></i>Payments</h6>
+    <div class="row g-3 text-center">
+      <div class="col-6 col-md-3"><div class="text-muted small">Seen</div><div class="fs-5 fw-bold">{{ history.payments_seen }}</div></div>
+      <div class="col-6 col-md-3"><div class="text-muted small">Created</div><div class="fs-5 fw-bold text-success">{{ history.payments_created }}</div></div>
+      <div class="col-6 col-md-3"><div class="text-muted small">Updated</div><div class="fs-5 fw-bold text-info">{{ history.payments_updated }}</div></div>
+      <div class="col-6 col-md-3">
+        <div class="text-muted small">Total Amount</div>
+        <div class="fs-5 fw-bold text-success">₱{{ history.payment_total|floatformat:2 }}</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Needs attention -->
+  <div class="row g-3 mb-4">
+    <div class="col-lg-4">
+      <div class="gt-cl-card p-3 h-100" style="border-left:4px solid #dc2626;">
+        <h6 class="fw-bold text-white mb-1"><i class="fas fa-key text-danger me-2"></i>Missing PPPoE Passwords</h6>
+        <div class="fs-2 fw-bold text-danger">{{ history.missing_passwords }}</div>
+        <p class="text-muted small mb-0">
+          {% if history.missing_passwords %}
+            These subscribers exist in billing but have no router password.
+            They cannot authenticate on MikroTik until a password is set.
+          {% else %}
+            Every imported subscriber kept a working PPPoE password.
+          {% endif %}
+        </p>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="gt-cl-card p-3 h-100" style="border-left:4px solid #f59e0b;">
+        <h6 class="fw-bold text-white mb-1"><i class="fas fa-calendar-xmark text-warning me-2"></i>No Expiry Date</h6>
+        <div class="fs-2 fw-bold text-warning">{{ history.zero_date_customers }}</div>
+        <p class="text-muted small mb-0">
+          {% if history.zero_date_customers %}
+            Expiry is the cut-off that stops unpaid service. These accounts have none
+            and will never auto-suspend on their own.
+          {% else %}
+            Every imported subscriber has an expiry date and will cut off correctly.
+          {% endif %}
+        </p>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="gt-cl-card p-3 h-100" style="border-left:4px solid #3b82f6;">
+        <h6 class="fw-bold text-white mb-1"><i class="fas fa-sitemap text-primary me-2"></i>Routers Registered</h6>
+        <div class="fs-2 fw-bold text-primary">{{ history.devices_created|length }}</div>
+        {% if history.devices_created %}
+        <ul class="text-muted small mb-0 ps-3">
+          {% for d in history.devices_created %}<li>{{ d }}</li>{% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted small mb-0">No router records in this file.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Unmapped statuses -->
+  {% if history.unmapped_statuses %}
+  <div class="gt-cl-card p-3 mb-4">
+    <h6 class="fw-bold text-white mb-2"><i class="fas fa-random text-warning me-2"></i>Unmapped Status Values</h6>
+    <p class="text-muted small mb-2">
+      The old system used status values the new system does not recognise. These were
+      recorded rather than silently coerced, so nothing disappears without a trace.
+    </p>
+    <table class="table table-dark table-sm mb-0 small" style="max-width:520px;">
+      <thead><tr class="text-muted"><th>Legacy value</th><th class="text-end">Rows</th></tr></thead>
+      <tbody>
+        {% for value, count in history.unmapped_statuses.items %}
+        <tr><td class="font-monospace text-warning">{{ value }}</td><td class="text-end">{{ count }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- Unmapped plans -->
+  {% if history.unmapped_plans %}
+  <div class="gt-cl-card p-3 mb-4">
+    <h6 class="fw-bold text-white mb-2"><i class="fas fa-plug-circle-xmark text-danger me-2"></i>Unmapped Plans</h6>
+    <p class="text-muted small mb-2">
+      Plan codes present in the file with no mapping to a current plan. Check these before
+      cutover — an unmapped plan can leave a subscriber without the correct bandwidth.
+    </p>
+    <div class="d-flex flex-wrap gap-1">
+      {% for p in history.unmapped_plans %}
+      <span class="badge bg-danger font-monospace">{{ p }}</span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="d-flex gap-2">
+    <a href="{% url 'customer_list' %}" class="gt-btn-secondary">
+      <i class="fas fa-users me-1"></i> View Customers
+    </a>
+    <a href="{% url 'sync_manager' %}" class="gt-btn-primary">
+      <i class="fas fa-tower-broadcast me-1"></i> Go to Sync Manager
+    </a>
+  </div>
+
+</div>
+{% endblock %}

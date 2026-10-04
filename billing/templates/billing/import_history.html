@@ -1,0 +1,96 @@
+{% extends "billing/base.html" %}
+{% load static %}
+
+{% block title %}Import History | Gametech Unli Fiber{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-3 px-md-4">
+
+  <div class="gt-page-header gt-page-header--hero d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <div class="gt-header-icon"><i class="fas fa-clock-rotate-left"></i></div>
+      <div>
+        <div class="gt-header-eyebrow"><i class="fas fa-file-import me-1"></i> Legacy Migration</div>
+        <h1 class="gt-header-title">Import History</h1>
+        <p class="gt-header-sub">Every legacy import run, with what it created, updated and could not resolve</p>
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'import_legacy_data' %}" class="gt-btn-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Back to Import
+      </a>
+      <a href="{% url 'import_legacy_data' %}" class="gt-btn-primary">
+        <i class="fas fa-file-import me-1"></i> New Import
+      </a>
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm">
+      {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  {% endif %}
+
+  {% if not history %}
+    <div class="gt-cl-card p-5 text-center">
+      <i class="fas fa-inbox fs-1 text-muted d-block mb-3"></i>
+      <h5 class="text-white">No imports yet</h5>
+      <p class="text-muted mb-3">Run a legacy import and it will be recorded here automatically.</p>
+      <a href="{% url 'import_legacy_data' %}" class="gt-btn-primary">
+        <i class="fas fa-file-import me-1"></i> Go to Import
+      </a>
+    </div>
+  {% else %}
+  <div class="gt-cl-card p-0 overflow-hidden">
+    <div class="table-responsive">
+      <table class="table table-dark table-hover align-middle mb-0">
+        <thead>
+          <tr class="text-muted">
+            <th>When</th>
+            <th>File</th>
+            <th class="text-center">Customers</th>
+            <th class="text-center">Created</th>
+            <th class="text-center">Updated</th>
+            <th class="text-center">No Password</th>
+            <th class="text-center">No Expiry</th>
+            <th class="text-end">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for h in history %}
+          <tr>
+            <td class="text-white fw-semibold">
+              {{ h.timestamp|date:"M d, Y H:i" }}
+              {% if h.dry_run %}<span class="badge bg-secondary ms-1">DRY RUN</span>{% endif %}
+            </td>
+            <td class="font-monospace text-muted">{{ h.filename|truncatechars:44 }}</td>
+            <td class="text-center">{{ h.total_customers }}</td>
+            <td class="text-center text-success fw-semibold">{{ h.created }}</td>
+            <td class="text-center text-info">{{ h.updated }}</td>
+            <td class="text-center">
+              {% if h.missing_passwords %}
+                <span class="badge bg-danger">{{ h.missing_passwords }}</span>
+              {% else %}<span class="text-muted">0</span>{% endif %}
+            </td>
+            <td class="text-center">
+              {% if h.zero_date_customers %}
+                <span class="badge bg-warning text-dark">{{ h.zero_date_customers }}</span>
+              {% else %}<span class="text-muted">0</span>{% endif %}
+            </td>
+            <td class="text-end">
+              <a href="{% url 'import_history_detail' h.id %}" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-eye me-1"></i> View
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

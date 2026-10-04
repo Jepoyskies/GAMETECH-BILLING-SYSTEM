@@ -111,6 +111,7 @@ def send_semaphore_sms(phone, message):
 
 
 from .settings import *
+from .sync_manager import *
 from .system_logs import *
 from .customers import *
 from .payments import *

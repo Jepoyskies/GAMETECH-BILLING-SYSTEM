@@ -36,6 +36,7 @@ from billing.models import (
     ImprovementRequest,
     MessageTemplate,
     AddonPlan,
+    ImportHistory,
 )
 from billing.forms import AccountTypeForm, AddonPlanForm, BarangayForm
 import requests
@@ -557,4 +558,28 @@ def toggle_addon_plan(request, pk):
         except Exception as e:
             messages.error(request, f"Error toggling Add-on Plan status: {str(e)}")
     return redirect("addon_plan_list")
+
+
+# ==========================================
+# Import History Views
+# ==========================================
+
+@login_required
+@role_required(["Admin"])
+def import_history_view(request):
+    """Show all past imports."""
+    history = ImportHistory.objects.all()
+    return render(request, "billing/import_history.html", {
+        "history": history,
+    })
+
+
+@login_required
+@role_required(["Admin"])
+def import_history_detail_view(request, import_id):
+    """Show full summary of a specific import."""
+    history = get_object_or_404(ImportHistory, id=import_id)
+    return render(request, "billing/import_history_detail.html", {
+        "history": history,
+    })
 

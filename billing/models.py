@@ -1926,3 +1926,47 @@ class SystemConfig(models.Model):
         obj, _ = cls.objects.get_or_create(id=1)
         return obj
 
+
+class PlanMapping(models.Model):
+    """Maps legacy plan names to current SubscriptionPlan records."""
+    legacy_name = models.CharField(max_length=255, unique=True)
+    plan = models.ForeignKey(
+        SubscriptionPlan, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.legacy_name} -> {self.plan.name if self.plan else '(unmapped)'}"
+
+    class Meta:
+        ordering = ["legacy_name"]
+
+
+class ImportHistory(models.Model):
+    """Tracks each legacy import run with full summary statistics."""
+    timestamp = models.DateTimeField(auto_now_add=True)
+    filename = models.CharField(max_length=255)
+    total_customers = models.IntegerField(default=0)
+    created = models.IntegerField(default=0)
+    updated = models.IntegerField(default=0)
+    missing_passwords = models.IntegerField(default=0)
+    zero_date_customers = models.IntegerField(default=0)
+    unmapped_statuses = models.JSONField(default=dict, blank=True)
+    plans_created = models.IntegerField(default=0)
+    unmapped_plans = models.JSONField(default=list, blank=True)
+    devices_created = models.JSONField(default=list, blank=True)
+    payments_seen = models.IntegerField(default=0)
+    payments_created = models.IntegerField(default=0)
+    payments_updated = models.IntegerField(default=0)
+    payments_orphaned = models.IntegerField(default=0)
+    payment_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    dry_run = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["-timestamp"]
+        verbose_name = "Import History"
+        verbose_name_plural = "Import History"
+
+    def __str__(self):
+        return f"Import of {self.filename} at {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
+

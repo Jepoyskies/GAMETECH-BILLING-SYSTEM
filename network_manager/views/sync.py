@@ -271,7 +271,7 @@ def sync_push_user(request, device_id):
             customer.save(update_fields=["sync_status"])
             messages.error(request, f"Failed to push user: {result.get('error')}")
 
-    return redirect('sync_manager', device_id=device_id)
+    return redirect('sync_manager_device', device_id=device_id)
 
 @role_required(['Admin', 'Editor', 'CSR'])
 @login_required
@@ -325,7 +325,7 @@ def sync_autofix_user(request, device_id):
                 f"Failed to Auto-Fix '{pppoe_username}': {result.get('error')}",
             )
             
-    return redirect('sync_manager', device_id=device_id)
+    return redirect('sync_manager_device', device_id=device_id)
 
 @role_required(['Admin', 'Editor', 'CSR'])
 @login_required
@@ -350,7 +350,7 @@ def sync_delete_user(request, device_id):
         else:
             messages.error(request, f"Failed to delete user: {result.get('error')}")
             
-    return redirect('sync_manager', device_id=device_id)
+    return redirect('sync_manager_device', device_id=device_id)
 
 @role_required(['Admin', 'Editor', 'CSR'])
 @login_required
@@ -362,7 +362,7 @@ def sync_bulk_action(request, device_id):
         
         if not usernames:
             messages.warning(request, "No users selected for bulk action.")
-            return redirect('sync_manager', device_id=device_id)
+            return redirect('sync_manager_device', device_id=device_id)
 
         from billing.models import Customer
         from network_manager.sync_services import MikrotikAPI as MikrotikSyncAPI
@@ -393,7 +393,7 @@ def sync_bulk_action(request, device_id):
                     "subscribers. Deleting them cuts their internet. Tick the "
                     "confirmation box to proceed.".format(len(known)),
                 )
-                return redirect('sync_manager', device_id=device_id)
+                return redirect('sync_manager_device', device_id=device_id)
             if len(usernames) > BULK_DELETE_MAX:
                 messages.error(
                     request,
@@ -401,7 +401,7 @@ def sync_bulk_action(request, device_id):
                     "limit is {}. Delete in reviewed batches so a mistake is "
                     "recoverable.".format(len(usernames), BULK_DELETE_MAX),
                 )
-                return redirect('sync_manager', device_id=device_id)
+                return redirect('sync_manager_device', device_id=device_id)
 
             blocked_writes = 0
             for uname in usernames:
@@ -471,7 +471,7 @@ def sync_bulk_action(request, device_id):
         elif action == 'bulk_import':
             if not (request.user.is_superuser or request.user.has_perm("billing.import_router_subscribers")):
                 messages.error(request, "Permission denied: Requires 'billing.import_router_subscribers' permission.")
-                return redirect('sync_manager', device_id=device_id)
+                return redirect('sync_manager_device', device_id=device_id)
 
             # Let's fetch secrets to get passwords:
             all_users_res = api.get_all_pppoe_users()
@@ -523,5 +523,5 @@ def sync_bulk_action(request, device_id):
         else:
             messages.error(request, "Invalid bulk action.")
 
-    return redirect('sync_manager', device_id=device_id)
+    return redirect('sync_manager_device', device_id=device_id)
 

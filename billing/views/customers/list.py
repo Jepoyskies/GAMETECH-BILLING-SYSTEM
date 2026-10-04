@@ -159,6 +159,36 @@ def customer_list(request):
         keep = {cid for cid, lc in by_key.items() if lc.key == filter_type}
         base_customers = [c for c in base_customers if c.id in keep]
 
+    # --- Cutover integrity filters -------------------------------------
+    #
+    # These are NOT billing states. They answer "is this account actually
+    # able to carry service", which is the question an operator has after a
+    # legacy import and which no lifecycle row can express:
+    #
+    #   not_in_router  exists here, never pushed to the MikroTik
+    #   no_pppoe       no router credentials at all -> cannot authenticate
+    #   no_expiry      no cut-off date -> will never auto-suspend
+    #
+    # Deliberately computed from the row itself, not from a live router read.
+    # A router that is down must not make an operator think an account is
+    # unsynced, which is exactly the false alarm the blind-mode banner exists
+    # to prevent.
+    integrity = {
+        "not_in_router": lambda c: c.sync_status != "Synced" or not c.mikrotik_device_id,
+        "no_pppoe": lambda c: not (c.pppoe_username or "").strip(),
+        "no_expiry": lambda c: c.expires_at is None,
+    }
+    integrity_counts = {
+        k: sum(1 for c in base_customers if fn(c)) for k, fn in integrity.items()
+    }
+
+    integrity_filter = request.GET.get("integrity", "").strip()
+    if integrity_filter:
+        if integrity_filter in integrity:
+            base_customers = [c for c in base_customers if integrity[integrity_filter](c)]
+        else:
+            integrity_filter = ""
+
     # Attach the resolved Lifecycle to every row, then sort by it so the most
     # urgent rows come first. This replaces the old overlapping Case/When
     # status_order, which ranked "paid but offline" first even when we were
@@ -361,6 +391,8 @@ def customer_list(request):
         "barangay_filter": barangay_filter,
         "sort": sort,
         "pending_sync_count": pending_sync_count,
+        "integrity_counts": integrity_counts,
+        "integrity_filter": integrity_filter,
     }
 
     # --- DataTables server-side processing ---------------------------------

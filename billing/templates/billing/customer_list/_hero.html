@@ -112,3 +112,45 @@
     </a>
     {% endfor %}
 </nav>
+
+{#
+  Cutover integrity strip.
+
+  Separate from the lifecycle KPIs above on purpose. Those answer "what is
+  this subscriber's billing state?"; these answer "can this account actually
+  carry service at all?" — the question that matters on cutover day and in the
+  window after a legacy import.
+#}
+<nav class="mb-4 animate-fade-in" aria-label="Filter customers by provisioning integrity">
+  <div class="gt-alert mb-2" style="border-left:3px solid rgba(59,130,246,.5);">
+    <i class="fas fa-shield-halved"></i>
+    <span><strong>Provisioning integrity.</strong>
+      These are not billing states — they flag accounts that cannot currently
+      deliver service, whatever their balance.</span>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="?integrity=not_in_router{% if filter_type != 'all' %}&amp;filter={{ filter_type }}{% endif %}{% if search %}&amp;search={{ search|urlencode }}{% endif %}"
+       class="btn btn-sm {% if integrity_filter == 'not_in_router' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+      <i class="fas fa-tower-broadcast me-1"></i>
+      Not pushed to router
+      <span class="badge bg-dark ms-1">{{ integrity_counts.not_in_router }}</span>
+    </a>
+    <a href="?integrity=no_pppoe{% if filter_type != 'all' %}&amp;filter={{ filter_type }}{% endif %}{% if search %}&amp;search={{ search|urlencode }}{% endif %}"
+       class="btn btn-sm {% if integrity_filter == 'no_pppoe' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+      <i class="fas fa-key me-1"></i>
+      No PPPoE credentials
+      <span class="badge bg-dark ms-1">{{ integrity_counts.no_pppoe }}</span>
+    </a>
+    <a href="?integrity=no_expiry{% if filter_type != 'all' %}&amp;filter={{ filter_type }}{% endif %}{% if search %}&amp;search={{ search|urlencode }}{% endif %}"
+       class="btn btn-sm {% if integrity_filter == 'no_expiry' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+      <i class="fas fa-calendar-xmark me-1"></i>
+      No expiry date
+      <span class="badge bg-dark ms-1">{{ integrity_counts.no_expiry }}</span>
+    </a>
+    {% if integrity_filter %}
+    <a href="?filter=all" class="btn btn-sm btn-outline-secondary">
+      <i class="fas fa-xmark me-1"></i> Clear integrity filter
+    </a>
+    {% endif %}
+  </div>
+</nav>
