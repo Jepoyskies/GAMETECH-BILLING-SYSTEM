@@ -14,9 +14,16 @@
                     <p class="text-muted small mb-0">Track your submitted applicant leads, review 2nd-month qualifying progress, and manage your referral incentives.</p>
                 </div>
                 <div>
+                    {% if viewing_staff %}
+                    <button class="btn btn-outline-secondary px-4 py-2 fs-6" disabled
+                            title="Agents only — you are viewing, not acting">
+                        <i class="fas fa-eye me-2"></i> View only
+                    </button>
+                    {% else %}
                     <a href="{% url 'agent_add_prospect' %}" class="btn btn-primary-gt shadow-sm px-4 py-2 fs-6">
                         <i class="fas fa-user-plus me-2"></i> Submit New Referral
                     </a>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -59,7 +66,15 @@
                 </div>
 
                 <div class="col-12 col-md-3 text-md-end">
-                    {% if is_cashout_eligible %}
+                    {% if viewing_staff %}
+                    {# Staff is inspecting, not acting. These endpoints resolve
+                       the agent from request.user.agent_profile, so a POST here
+                       would either fail or, worse, act as somebody else. #}
+                    <button class="btn btn-outline-secondary btn-sm" disabled
+                            title="Agents only — you are viewing, not acting">
+                        <i class="fas fa-eye me-1"></i> View only
+                    </button>
+                    {% elif is_cashout_eligible %}
                     <form method="post" action="{% url 'agent_request_cashout' %}">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-success fw-bold px-3 py-2">
@@ -171,7 +186,11 @@
                                 {% endif %}
                             </td>
                             <td class="text-end pe-2 py-3">
-                                {% if not p.opened_by_staff_at and p.status == 'submitted' %}
+                                {% if viewing_staff %}
+                                    <span class="badge bg-secondary text-muted" title="Staff view is read-only">
+                                        <i class="fas fa-eye me-1"></i> View only
+                                    </span>
+                                {% elif not p.opened_by_staff_at and p.status == 'submitted' %}
                                     <a href="{% url 'agent_edit_prospect' p.id %}" class="btn btn-sm btn-outline-primary fw-semibold">
                                         <i class="fas fa-edit me-1"></i> Edit
                                     </a>
@@ -196,6 +215,9 @@
             </div>
         </div>
     </div>
+
+    <!-- My Customers: the four things an agent is actually asked about -->
+    {% include "billing/agent_portal/_my_customers.html" %}
 
     <!-- Payout History Card -->
     <div class="col-12">

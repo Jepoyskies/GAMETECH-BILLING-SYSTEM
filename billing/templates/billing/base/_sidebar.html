@@ -90,9 +90,12 @@
                     <span class="icon"><i class="fas fa-user-tie"></i></span> <span>Agents</span>
                 </a>
                 <ul class="collapse list-unstyled {% if 'agent' in request.path %}show{% endif %}" id="agentsSubmenu" data-bs-parent="#sidebarNav">
-                    {% if request.user.role_perms.subtabs.agents_agents %}<li><a href="{% url 'agent_list' %}" class="menu-link sub-menu-link {% if 'agent' in request.path and 'payout' not in request.path and 'portal' not in request.path %}active{% endif %}"><span>Agents</span></a></li>{% endif %}
+                    {% if request.user.role_perms.subtabs.agents_agents %}<li><a href="{% url 'agent_list' %}" class="menu-link sub-menu-link {% if 'agent' in request.path and 'portal' not in request.path %}active{% endif %}"><span>Agents</span></a></li>{% endif %}
                     <li><a href="{% url 'staff_agent_portal' %}" class="menu-link sub-menu-link {% if 'portal' in request.path %}active{% endif %}"><span>Agent Portal</span></a></li>
-                    {% if perms.billing.mark_payout_paid or request.user.is_superuser %}<li><a href="{% url 'agent_payouts_list' %}" class="menu-link sub-menu-link {% if 'payout' in request.path %}active{% endif %}"><span>Agent Payouts</span></a></li>{% endif %}
+                    {# Agent Payouts removed from the menu: it duplicated the
+                       commission figures already on the Agent Portal dashboard.
+                       The route and its buttons still work for anyone holding a
+                       direct link -- only the duplicate tab is gone. #}
                 </ul>
             </li>
             {% endif %}

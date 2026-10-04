@@ -1,0 +1,146 @@
+{% comment %}
+My Customers -- the four things a sales agent is actually asked after handing a
+customer over, and which used to require phoning the office:
+
+  1. Is the line installed yet, or still waiting for a technician?
+  2. Has a technician been scheduled, and are they on the way?
+  3. Has this customer paid?
+  4. When does it expire, so I can renew before they complain?
+
+Rule 35: the three domains are reported side by side but never inferred from one
+another. A customer can be installed but unpaid, or paid with an open repair
+ticket, and the agent needs to see both facts at once.
+
+Scoped by the view to this agent's own customers only.
+{% endcomment %}
+<div class="col-12">
+    <div class="pt-card p-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <h5 class="fw-bold text-white mb-0">
+                <i class="fas fa-users text-primary me-2"></i>
+                My Customers ({{ tracked_customers|length }})
+            </h5>
+            <span class="text-muted small">
+                Installation, technician schedule, payment and expiry for your own customers only
+            </span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 text-white" style="font-size: 0.88rem;">
+                <thead class="bg-dark text-muted text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">
+                    <tr>
+                        <th class="ps-2 py-3">Customer</th>
+                        <th class="py-3">Plan</th>
+                        <th class="py-3">Installation</th>
+                        <th class="py-3">Technician / Job</th>
+                        <th class="py-3">Paid</th>
+                        <th class="py-3">Next Expiry</th>
+                        <th class="py-3 text-end pe-2">Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in tracked_customers %}
+                    <tr>
+                        <td class="ps-2 py-3">
+                            <div class="fw-semibold text-white">{{ row.name|default:row.pppoe_username }}</div>
+                            <div class="text-muted small font-monospace">{{ row.pppoe_username|default:"—" }}</div>
+                        </td>
+                        <td class="py-3 text-muted small">{{ row.plan|default:"—" }}</td>
+
+                        {# Hardware state. Never inferred from billing. #}
+                        <td class="py-3">
+                            {% if row.is_installed %}
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">
+                                    <i class="fas fa-check-circle me-1"></i> Installed
+                                </span>
+                            {% elif row.installation_status == "Pending Installation" %}
+                                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25">
+                                    <i class="fas fa-screwdriver-wrench me-1"></i> Awaiting install
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">
+                                    {{ row.installation_status }}
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        {# Is a technician on it? #}
+                        <td class="py-3 small">
+                            {% if row.ticket %}
+                                <div class="text-white-50">
+                                    <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 mb-1">
+                                        {{ row.ticket_status }}
+                                    </span>
+                                </div>
+                                {% if row.ticket_scheduled %}
+                                    <div class="text-muted"><i class="fas fa-calendar-day me-1"></i>{{ row.ticket_scheduled }}</div>
+                                {% endif %}
+                                {% if row.technicians %}
+                                    <div class="text-muted"><i class="fas fa-user-gear me-1"></i>{{ row.technicians }}</div>
+                                {% endif %}
+                                <div class="text-muted small font-monospace">{{ row.ticket_number }}</div>
+                            {% elif row.is_installed %}
+                                <span class="text-muted">No open job</span>
+                            {% else %}
+                                <span class="text-muted">Not dispatched yet</span>
+                            {% endif %}
+                        </td>
+
+                        {# Billing state. Kept separate from the above. #}
+                        <td class="py-3 small">
+                            {% if row.has_paid %}
+                                <div class="text-success fw-semibold">₱{{ row.total_paid|floatformat:2 }}</div>
+                                {% if row.last_paid_at %}
+                                    <div class="text-muted small">last {{ row.last_paid_at|date:"M d, Y" }}</div>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">
+                                    <i class="fas fa-exclamation-circle me-1"></i> Unpaid
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <td class="py-3 small">
+                            {% if row.no_expiry %}
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">
+                                    No expiry set
+                                </span>
+                            {% else %}
+                                <div class="text-white">{{ row.expires_at|date:"M d, Y" }}</div>
+                                {% if row.days_left < 0 %}
+                                    <div class="text-danger small fw-semibold">
+                                        <i class="fas fa-triangle-exclamation me-1"></i>expired {{ row.days_left|add:"-1" }} day{{ row.days_left|add:"-1"|pluralize }} ago
+                                    </div>
+                                {% elif row.days_left <= 7 %}
+                                    <div class="text-warning small fw-semibold">
+                                        <i class="fas fa-clock me-1"></i>{{ row.days_left }} day{{ row.days_left|pluralize }} left
+                                    </div>
+                                {% else %}
+                                    <div class="text-muted small">{{ row.days_left }} days left</div>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+
+                        <td class="py-3 text-end pe-2 small">
+                            {% if row.balance > 0 %}
+                                <span class="text-danger fw-semibold">₱{{ row.balance|floatformat:2 }}</span>
+                            {% elif row.balance < 0 %}
+                                <span class="text-success">₱{{ row.balance|floatformat:2 }}</span>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="fas fa-users-slash fa-3x mb-3 text-secondary opacity-50"></i>
+                            <p class="mb-0">No converted customers assigned to you yet.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

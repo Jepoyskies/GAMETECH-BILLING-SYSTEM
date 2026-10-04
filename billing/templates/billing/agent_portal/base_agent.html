@@ -60,6 +60,27 @@
     </header>
 
     <main class="container px-3 py-4">
+        {# Staff opened someone else's portal to check on them. Say so, and give
+           them a way back -- otherwise the brand link drops them into
+           agent_dashboard, which bounces with "not linked to an Agent profile". #}
+        {% if viewing_staff %}
+        <div class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <span class="small">
+                <i class="fas fa-eye me-2"></i>
+                <strong>Staff view.</strong> You are looking at
+                <strong>{{ agent.name }}</strong>'s dashboard exactly as they see it.
+                Read-only &mdash; their referral and cashout buttons are disabled.
+            </span>
+            <span class="d-flex gap-2">
+                <a href="{% url 'agent_list' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Agents
+                </a>
+                <a href="{% url 'view_agent' agent.id %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-id-badge me-1"></i>Portal login
+                </a>
+            </span>
+        </div>
+        {% endif %}
         {% include "billing/portal/_messages.html" %}
         {% block content %}{% endblock %}
     </main>
