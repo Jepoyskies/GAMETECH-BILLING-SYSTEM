@@ -3259,3 +3259,38 @@ grep for the pattern -- `{#[\s\S]*?#\}` containing a newline is the detector.
 `billing/templates/billing/base/_sidebar.html`,
 `network_manager/templates/network_manager/sync_manager/_card_missing.html`
 **Date Logged**: 2026-10-04
+
+---
+
+### ERR-117: Dispatch Customer Detail 500'd For Every Customer With Job History
+
+**Symptom**: `/dispatch/customers/<id>/` raised
+`AttributeError: 'JobTicket' object has no attribute 'completed_at'`.
+
+Found by a whole-system sweep of all 470 named routes, not by a user report.
+113 returned 200, and this was the only genuine crash in the project.
+
+**Root cause**: `dispatch_customer_detail_view` built its turnaround-time column
+from `ticket.completed_at`. `JobTicket` records completion as **`finished_at`**
+(set when the technician clicks Done on site). There is no `completed_at` field.
+
+The cruel part: the crash needed a customer who actually HAD a job ticket. Every
+customer with an empty history sorted fine, so every smoke test passed and the
+page looked healthy right up until dispatch had real work in it -- which is
+precisely when staff need it.
+
+**Fix**: `finished_at` in all three places (the turnaround calculation, the
+`done_at` value passed to the template, and the null guard).
+
+**Verification discipline**: my first guess was wrong. I assumed
+`timezone.datetime.min` was the culprit and "fixed" it; that was not the bug
+(`django.utils.timezone` does import `datetime`, so `timezone.datetime.min` is
+valid -- there are 11 such usages across the codebase that are all fine). I
+reverted that change and got the real traceback instead, which named the field in
+one step. **The reverted diff was noise; the evidence was not.**
+
+**Lesson**: a code path that only executes when there is real data is untested by
+definition. Sweep the routes *with* data, not just against an empty database.
+
+**Files**: `dispatch/views.py`
+**Date Logged**: 2026-10-04
