@@ -6,19 +6,57 @@
 /* The shared design system (static/css/gt/*) already themes DataTables.
    Only page-specific layout rules belong here. */
 
-/* Ellipsis on long cells without collapsing row height */
+/* Ellipsis on long cells. Auto table layout (no fixed colgroup) so the
+   Status/Actions columns are never clipped; DataTables Responsive collapses
+   low-priority columns (data-priority on <th>) when space runs out. */
 #customerTable td {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 190px;
 }
+#customerTable td.gt-cell-status,
 #customerTable td:last-child {
-  white-space: nowrap;
+  max-width: none;
   overflow: visible;
 }
 .gt-table-card .table-responsive {
   overflow-x: auto;
   overflow-y: hidden;
+}
+
+/* KPI filter grid: fills each row evenly at any width (no orphan card). */
+.gt-cust-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 0.75rem;
+}
+.gt-cust-kpis .gt-kpi-card { min-width: 0; text-decoration: none; }
+.gt-cust-kpis .gt-kpi-lbl { overflow: hidden; text-overflow: ellipsis; }
+.gt-cust-kpis .gt-kpi-card.is-zero:not(.is-active) { opacity: 0.5; }
+.gt-cust-kpis .gt-kpi-card.is-zero:not(.is-active):hover { opacity: 1; }
+
+/* Table toolbar */
+.gt-cust-search { flex: 1 1 260px; max-width: 380px; }
+.gt-cust-select { width: auto; min-width: 150px; max-width: 200px; }
+.gt-cust-count { font-size: var(--gt-fs-sm, 0.85rem); color: var(--gt-text-muted); white-space: nowrap; }
+.gt-cust-count strong { color: var(--gt-text-title); }
+
+/* Blind-mode banner (.gt-alert had no styles anywhere in static/css/gt). */
+.gt-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.8rem 1rem;
+  border-radius: 12px;
+  font-size: var(--gt-fs-sm, 0.85rem);
+  line-height: 1.5;
+}
+.gt-alert > i { margin-top: 0.2rem; }
+.gt-alert--warning {
+  background: var(--badge-warning-bg);
+  color: var(--badge-warning-text);
+  border: 1px solid color-mix(in srgb, var(--badge-warning-text) 30%, transparent);
 }
 
 /* Row State Visual Highlights (triage semantics — see AGENTS.md rule 35) */

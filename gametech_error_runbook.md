@@ -3077,3 +3077,28 @@ touched. Any notification or audit row created from now on is real activity.
 **Files**: `archived_scripts/clear_test_residue.py`,
 `archived_scripts/restore_after_rehearsal.sh`
 **Date Logged**: 2026-10-04
+
+### ERR-113: Customers Directory Toolbar Stacked Vertically / Status Clipped Into Actions
+
+**Symptom**: on `/customers/` the search box, router and barangay selects stacked
+vertically above the table; the router warning rendered as bare text inside the
+KPI grid; every lifecycle filter appeared twice (KPI cards + an overflowing pill
+row); the Status badge and dots spilled into the Actions column.
+
+**Root cause**: (1) `<form id="customerSearchForm">` sat *inside* `<table>`
+between `<colgroup>` and `<thead>` -- invalid HTML, the parser ejects it and its
+flex layout is lost. (2) `.gt-alert` had no CSS anywhere in `static/css/gt`.
+(3) `_filters.html` rendered the same `lifecycle_filters` loop as `_hero.html`.
+(4) `table-layout: fixed` + percentage `<colgroup>` clipped the Status column,
+and stopped DataTables Responsive from ever collapsing columns.
+
+**Fix**: form moved above the table as a `.gt-table-toolbar`; auto table layout
+with `data-priority` on optional columns; KPI cards in an auto-fill CSS grid
+(zero buckets dimmed); `_filters.html` deleted; `.gt-alert` styled in the
+page's `_styles.html`. Template/CSS only -- no view or logic change.
+
+**Lesson**: never put a `<form>` (or any non-table element) directly inside
+`<table>`; wrap the whole table instead or place the form before it.
+
+**Files**: `customer_list.html`, `customer_list/_hero.html`, `_table.html`, `_styles.html`
+**Date Logged**: 2026-10-04

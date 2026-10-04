@@ -72,49 +72,43 @@
   Order is urgency order, not billing order: what needs a human first is on
   the left.
 -->
-<div class="row g-3 mb-4 animate-fade-in">
-    <div class="col-6 col-md-4 col-xl-2">
-        <a href="?filter=all" class="gt-kpi-card gt-kpi-card--compact h-100 {% if filter_type == 'all' or not filter_type %}is-active{% endif %}">
-            <div class="gt-kpi-icon"><i class="fa-solid fa-users"></i></div>
-            <div>
-                <div class="gt-kpi-val">{{ stats.total|default:"0" }}</div>
-                <div class="gt-kpi-lbl">Total</div>
-            </div>
-        </a>
-    </div>
-
-    {% comment %}
-      Blind-mode banner. When we cannot reach the routers, every hardware
-      verdict is "unknown", and saying so is the whole point -- previously
-      the page showed "1,240 Paid/Offline" while every router was timing out.
-    {% endcomment %}
-    {% if not network_visible %}
-    <div class="col-12">
-        <div class="gt-alert gt-alert--warning d-flex align-items-center gap-2 mb-0" role="status">
-            <i class="fa-solid fa-eye-slash"></i>
-            <span>
-                <strong>Cannot see the routers right now.</strong>
-                Connectivity columns show <em>Unknown</em> instead of
-                <em>Offline</em>. Billing states below are still accurate &mdash;
-                do <strong>not</strong> dispatch technicians from this page until
-                the network is reachable.
-            </span>
-        </div>
-    </div>
-    {% endif %}
-
-    {% for key, label, icon, tone, count in lifecycle_filters %}
-    <div class="col-6 col-md-4 col-xl-2">
-        <a href="?filter={{ key }}" class="gt-kpi-card gt-kpi-card--compact h-100 {% if filter_type == key %}is-active{% endif %}"
-           title="{{ label }}">
-            <div class="gt-kpi-icon gt-kpi-icon--{{ tone }}">
-                <i class="fa-solid {{ icon }}"></i>
-            </div>
-            <div>
-                <div class="gt-kpi-val">{{ count }}</div>
-                <div class="gt-kpi-lbl">{{ label }}</div>
-            </div>
-        </a>
-    </div>
-    {% endfor %}
+{% comment %}
+  Blind-mode banner. When we cannot reach the routers, every hardware
+  verdict is "unknown", and saying so is the whole point -- previously
+  the page showed "1,240 Paid/Offline" while every router was timing out.
+{% endcomment %}
+{% if not network_visible %}
+<div class="gt-alert gt-alert--warning mb-3 animate-fade-in" role="status">
+    <i class="fa-solid fa-eye-slash"></i>
+    <span>
+        <strong>Cannot see the routers right now.</strong>
+        Connectivity columns show <em>Unknown</em> instead of
+        <em>Offline</em>. Billing states below are still accurate &mdash;
+        do <strong>not</strong> dispatch technicians from this page until
+        the network is reachable.
+    </span>
 </div>
+{% endif %}
+
+{# The KPI cards ARE the lifecycle filters (the duplicate pill row was removed). #}
+<nav class="gt-cust-kpis mb-4 animate-fade-in" aria-label="Filter customers by lifecycle state">
+    <a href="?filter=all" class="gt-kpi-card gt-kpi-card--compact {% if filter_type == 'all' or not filter_type %}is-active{% endif %}">
+        <div class="gt-kpi-icon"><i class="fa-solid fa-users"></i></div>
+        <div>
+            <div class="gt-kpi-val">{{ stats.total|default:"0" }}</div>
+            <div class="gt-kpi-lbl">Total</div>
+        </div>
+    </a>
+    {% for key, label, icon, tone, count in lifecycle_filters %}
+    <a href="?filter={{ key }}" class="gt-kpi-card gt-kpi-card--compact {% if filter_type == key %}is-active{% endif %}{% if not count %} is-zero{% endif %}"
+       title="{{ label }}">
+        <div class="gt-kpi-icon gt-kpi-icon--{{ tone }}">
+            <i class="fa-solid {{ icon }}"></i>
+        </div>
+        <div>
+            <div class="gt-kpi-val">{{ count }}</div>
+            <div class="gt-kpi-lbl">{{ label }}</div>
+        </div>
+    </a>
+    {% endfor %}
+</nav>

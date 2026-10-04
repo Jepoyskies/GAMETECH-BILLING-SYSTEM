@@ -6,7 +6,7 @@ This document tracks every UI control, button, menu item, column, field, modal, 
 
 ## 1. Customers Directory (`/customers/`)
 - **Orchestrator Template:** `billing/templates/billing/customer_list.html`
-- **Partials:** `_hero.html`, `_filters.html`, `_table.html`, `_scripts.html`, `_styles.html`, `_modals.html`
+- **Partials:** `_hero.html` (KPI cards = lifecycle filters), `_table.html` (toolbar: search/router/barangay), `_customer_status.html`, `_scripts.html`, `_styles.html`, `_modals.html` — `_filters.html` pill row removed 2026-10-04 (exact duplicate of the KPI cards)
 
 ### Inventory
 | Category | Control / Feature | Current State | Notes |

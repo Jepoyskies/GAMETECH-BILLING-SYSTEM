@@ -1,66 +1,64 @@
 <!-- Base Partial: Customer Table -->
 <div class="gt-table-card animate-fade-in animate-delay-2">
-    <div class="table-responsive p-0">
-    <table id="customerTable" class="table gt-table align-middle mb-0" style="width:100%; border-collapse: collapse; table-layout: fixed;">
-        <colgroup>
-            <col style="width: 3%;">
-            <col style="width: 13%;">
-            <col style="width: 15%;">
-            <col style="width: 9%;">
-            <col style="width: 10%;">
-            <col style="width: 7%;">
-            <col style="width: 8%;">
-            <col style="width: 8%;">
-            <col style="width: 17%;">
-            <col style="width: 10%;">
-        </colgroup>
-        {% comment %}
-          Server-side search / filter / sort / paginate. The table used to
-          render all 2,041 rows into one document (13 MB, ~11s) and used
-          client-side DataTables, which meant the browser had to receive the
-          entire customer base to find anyone. Search and filtering now run in
-          the view, so the browser receives one page and search still covers
-          every customer.
-        {% endcomment %}
-        <form method="GET" id="customerSearchForm" class="gt-filter-pills-row animate-fade-in">
-            {% if filter_type != 'all' %}<input type="hidden" name="filter" value="{{ filter_type }}">{% endif %}
-            {% if sort != 'priority' %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
-            <input type="search" name="search" class="form-control" style="max-width: 320px;"
-                   placeholder="Search name, username, email, phone, plan, barangay or router..."
-                   value="{{ search }}" aria-label="Search customers">
-            <select name="router" class="form-select gt-select-filter" style="width: auto; min-width: 160px;" aria-label="Filter by router">
+    {% comment %}
+      Server-side search / filter / sort / paginate. The table used to
+      render all 2,041 rows into one document (13 MB, ~11s) and used
+      client-side DataTables, which meant the browser had to receive the
+      entire customer base to find anyone. Search and filtering now run in
+      the view, so the browser receives one page and search still covers
+      every customer.
+      NB: this form must stay OUTSIDE <table>. A <form> between <colgroup>
+      and <thead> is invalid HTML; browsers eject it and the controls stack.
+    {% endcomment %}
+    <form method="GET" id="customerSearchForm" class="gt-table-toolbar" role="search">
+        {% if filter_type != 'all' %}<input type="hidden" name="filter" value="{{ filter_type }}">{% endif %}
+        {% if sort != 'priority' %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+        <div class="gt-table-toolbar-left">
+            <div class="gt-search gt-cust-search">
+                <i class="fas fa-magnifying-glass gt-search-icon"></i>
+                <input type="search" name="search" id="searchInput" class="form-control"
+                       placeholder="Search name, username, email, phone, plan..."
+                       value="{{ search }}" aria-label="Search customers">
+            </div>
+            <select name="router" id="routerFilter" class="form-select gt-select-filter gt-cust-select" aria-label="Filter by router" onchange="this.form.submit()">
                 <option value="">All Routers</option>
                 {% for device in devices %}
                 <option value="{{ device.device_name }}" {% if router_filter == device.device_name %}selected{% endif %}>{{ device.device_name }}</option>
                 {% endfor %}
             </select>
-            <select name="barangay" class="form-select gt-select-filter" style="width: auto; min-width: 160px;" aria-label="Filter by barangay">
+            <select name="barangay" id="barangayFilter" class="form-select gt-select-filter gt-cust-select" aria-label="Filter by barangay" onchange="this.form.submit()">
                 <option value="">All Barangays</option>
                 {% for brgy in barangays %}
                 <option value="{{ brgy.name }}" {% if barangay_filter == brgy.name %}selected{% endif %}>{{ brgy.name }}</option>
                 {% endfor %}
             </select>
-            <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-magnifying-glass me-1"></i> Search</button>
+            <button type="submit" class="gt-btn-primary"><i class="fas fa-magnifying-glass"></i> Search</button>
             {% if search or router_filter or barangay_filter %}
-            <a href="?{% if filter_type != 'all' %}filter={{ filter_type }}{% endif %}" class="btn btn-sm btn-outline-secondary">Clear</a>
+            <a href="?{% if filter_type != 'all' %}filter={{ filter_type }}{% endif %}" id="resetFilters" class="gt-btn-ghost"><i class="fas fa-xmark"></i> Clear</a>
             {% endif %}
-            <span class="text-muted small align-self-center ms-2">
-                {{ total_rows }} customer{{ total_rows|pluralize }} match{{ total_rows|pluralize:"es" }}
-                {% if paginator.num_pages > 1 %} &mdash; page {{ page_obj.number }} of {{ paginator.num_pages }}{% endif %}
+        </div>
+        <div class="gt-table-toolbar-right">
+            <span class="gt-cust-count">
+                <strong>{{ total_rows }}</strong> customer{{ total_rows|pluralize }}
+                {% if paginator.num_pages > 1 %}<span class="text-muted"> &middot; page {{ page_obj.number }}/{{ paginator.num_pages }}</span>{% endif %}
             </span>
-        </form>
+        </div>
+    </form>
+    <div class="table-responsive p-0">
+    <table id="customerTable" class="table gt-table align-middle mb-0" style="width:100%;">
         <thead>
             <tr>
-                <th class="all" style="text-align: center;">
+                <th class="all" style="text-align: center; width: 36px;">
                     <input type="checkbox" id="selectAllCheckbox" class="form-check-input shadow-sm" style="cursor: pointer;">
                 </th>
                 <th class="all"><a class="gt-sort-link" href="?{% if search %}search={{ search|urlencode }}&amp;{% endif %}{% if filter_type != 'all' %}filter={{ filter_type }}&amp;{% endif %}{% if router_filter %}router={{ router_filter|urlencode }}&amp;{% endif %}{% if barangay_filter %}barangay={{ barangay_filter|urlencode }}&amp;{% endif %}sort={% if sort == 'name' %}priority{% else %}name{% endif %}">Full Name</a></th>
-                <th class="min-tablet">Email</th>
-                <th class="min-tablet">Phone</th>
-                <th class="min-tablet">Plan</th>
-                <th class="min-tablet">Agent</th>
-                <th class="min-tablet">Barangay</th>
-                <th class="min-tablet">Router</th>
+                {# Responsive collapses the highest data-priority first. #}
+                <th data-priority="5">Email</th>
+                <th data-priority="2">Phone</th>
+                <th data-priority="1">Plan</th>
+                <th data-priority="6">Agent</th>
+                <th data-priority="4">Barangay</th>
+                <th data-priority="3">Router</th>
                 <th class="all"><a class="gt-sort-link" href="?{% if search %}search={{ search|urlencode }}&amp;{% endif %}{% if filter_type != 'all' %}filter={{ filter_type }}&amp;{% endif %}{% if router_filter %}router={{ router_filter|urlencode }}&amp;{% endif %}{% if barangay_filter %}barangay={{ barangay_filter|urlencode }}&amp;{% endif %}sort={% if sort == 'expiry' %}priority{% else %}expiry{% endif %}">Status</a></th>
                 <th class="all text-end" style="padding-right: 0.5rem;">Actions</th>
             </tr>
@@ -147,7 +145,7 @@
                     </td>
 
                     {# col 9 – Unified Status Badges #}
-                    <td class="align-middle">
+                    <td class="align-middle gt-cell-status">
                         {% include "billing/customer_list/_customer_status.html" with customer=customer %}
                         {# Hidden telemetry data for JS #}
                         <span class="conn-status-indicator" style="display: none;"
@@ -170,7 +168,7 @@
 
                     {# col 10 – Row Actions #}
                     <td class="text-end">
-                        <div class="d-inline-flex align-items-center gap-1.5 justify-content-end">
+                        <div class="d-inline-flex align-items-center gap-1 justify-content-end">
                             <a href="{% url 'view_customer' customer.id %}" class="gt-icon-btn" title="View Details" aria-label="View Details">
                                 <i class="fas fa-eye"></i>
                             </a>
