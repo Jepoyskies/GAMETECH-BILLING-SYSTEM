@@ -3430,3 +3430,14 @@ Until then the banner correctly reports 4. That is a true reading, not noise.
 **Symptom**: Raw text like `{# Cutover integrity strip. Separate from the lifecycle KPIs... #}` rendered above the Customers Directory integrity filters.
 **Cause**: Django's `{# ... #}` comment syntax is SINGLE-LINE only. Spread over several lines it is not recognised and is output as plain text.
 **Fix**: Use `{% comment %} ... {% endcomment %}` for any multi-line template comment. Fixed in `billing/templates/billing/customer_list/_hero.html`.
+
+
+### ERR-124: Customer View Link Verdict Box Overlapping Live Monitoring & Map
+**Symptom**: On `/customers/view/<id>/`, the link diagnosis box ("MikroTik is healthy ? the fault is between it and the customer's house") hung out of the middle column and superimposed directly on top of the Live Monitoring chart and Exact Location map. Additionally, "Last Logged Out" showed the raw Unix epoch `jan/01/1970 00:00:00`.
+**Cause**:
+1. `_link_verdict.html` was included inside Column 2 (`col-lg-4`) right after `.info-card`. Because `.info-card` had `height: 100%`, it consumed the full flex height of the column, causing the subsequent sibling (`#link-verdict`) to start at `top: 100%` and spill ~200px down over the next row (`_live_monitoring.html`).
+2. MikroTik RouterOS returns `jan/01/1970 00:00:00` for PPP secrets that have never disconnected or logged out. The live polling handler did not filter out epoch `1970` timestamps.
+**Fix**:
+1. Moved `_link_verdict.html` out of Column 2 into its own full-width row (`col-12`) between `_info_cards.html` and `_live_monitoring.html`. Styled it with a clean badge, icon container, headline, recommendation, and checklist section.
+2. Updated all 3 info card columns to `col-lg-4 d-flex` with `.info-card.flex-fill.w-100` (`display: flex; flex-direction: column; margin-bottom: 0`), ensuring all three cards match height without vertical overflow.
+3. Filtered out `1970` epoch dates in `billing/views/api/network.py` and `_scripts.html` so newly provisioned accounts or sessions without previous disconnections show cleanly without epoch glitch text.
