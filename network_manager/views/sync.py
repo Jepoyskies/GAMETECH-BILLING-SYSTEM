@@ -266,6 +266,122 @@ def _push_one(api, customer, device, actor):
     return res
 
 
+def _approve_customers(customers, device, actor):
+    """Record a human's approval of accounts that already match the router.
+
+    WHY THIS EXISTS
+    ---------------
+    A PPPoE secret already sitting on the router proves the old system created
+    it. It does not prove anyone has looked at it. During a cutover the old
+    billing system is often still writing to the same routers, so "it happens
+    to be there" is exactly the kind of assumption that should not be enough to
+    call an account live.
+
+    So approval is explicit and separate from provisioning:
+      * the router is READ to confirm the secret exists
+      * the router is NEVER written -- nothing here can change a subscriber
+      * the operator's name is logged, and sync_status moves Unverified -> Synced
+
+    Returns (approved, skipped_blocked, not_on_router).
+    """
+    from network_manager.sync_services import MikrotikAPI as MikrotikSyncAPI
+
+    api = MikrotikSyncAPI(
+        ip_address=device.ip_address,
+        username=device.api_username,
+        password=device.api_password,
+        port=device.api_port
+    )
+    result = api.get_all_pppoe_users()
+    if not result.get('success'):
+        raise RuntimeError(
+            "Could not read {}: {}".format(device.device_name, result.get('error'))
+        )
+    on_router = {u.get('name'): u for u in (result.get('data') or []) if u.get('name')}
+
+    approved = blocked = absent = 0
+    for customer in customers:
+        # Unpaid / no-expiry is refused here exactly as it is on Push.
+        # Approving asserts this account SHOULD be live, so it must not become
+        # the easy way round the payment gate.
+        if push_blockers(customer):
+            blocked += 1
+            continue
+
+        secret = on_router.get(customer.pppoe_username)
+        if secret is None:
+            absent += 1
+            continue
+
+        was = customer.sync_status
+        customer.sync_status = "Synced"
+        customer.save(update_fields=["sync_status"])
+
+        SystemLog.objects.create(
+            table_name="Customer",
+            record_id=str(customer.id),
+            action="SYNC_PAIR_APPROVED",
+            changed_by=actor.username,
+            target_name=customer.full_name,
+            old_data="sync_status={}".format(was),
+            new_data=(
+                "Approved by {}. PPPoE '{}' verified present on {} "
+                "(enabled={}, profile='{}'). Router not modified."
+            ).format(
+                actor.username, customer.pppoe_username, device.device_name,
+                secret.get('is_enabled'), secret.get('profile'),
+            ),
+        )
+        approved += 1
+
+    return approved, blocked, absent
+
+
+@role_required(['Admin', 'Editor', 'CSR'])
+@login_required
+def sync_approve_match(request, device_id):
+    """Approve one already-matched account. Reads the router, never writes it."""
+    if request.method != 'POST':
+        return redirect('sync_manager_device', device_id=device_id)
+
+    device = get_object_or_404(MikrotikDevice, id=device_id)
+    username = request.POST.get('pppoe_username')
+
+    from billing.models import Customer
+    customer = Customer.objects.filter(
+        pppoe_username=username, mikrotik_device=device
+    ).first()
+    if not customer:
+        messages.error(request, "No customer matches that PPPoE username on this router.")
+        return redirect('sync_manager_device', device_id=device_id)
+
+    try:
+        approved, blocked, absent = _approve_customers([customer], device, request.user)
+    except Exception as e:
+        messages.error(request, "Approval failed: {}".format(e))
+        return redirect('sync_manager_device', device_id=device_id)
+
+    if approved:
+        messages.success(
+            request, "Approved {} on {}. Recorded in System Logs.".format(
+                customer.full_name, device.device_name)
+        )
+    elif blocked:
+        reasons = "; ".join(push_blockers(customer))
+        messages.error(
+            request,
+            "Refused: {} is {} — admin override required before this account can "
+            "be treated as live.".format(customer.full_name, reasons)
+        )
+    else:
+        messages.error(
+            request,
+            "{} is not actually on {}. Use Push instead.".format(
+                customer.pppoe_username, device.device_name)
+        )
+    return redirect('sync_manager_device', device_id=device_id)
+
+
 @role_required(['Admin', 'Editor', 'CSR'])
 @login_required
 def sync_override_push(request, device_id):
@@ -581,6 +697,46 @@ def sync_bulk_action(request, device_id):
             else:
                 messages.success(
                     request, f"Bulk Delete: {success_count} deleted, {error_count} failed.")
+
+        elif action == 'bulk_approve':
+            # Human sign-off for accounts that already match the router. Reads
+            # only: nothing here writes to hardware, so approving can never be
+            # the thing that changes a subscriber's service.
+            from billing.models import Customer as _C
+            ids = request.POST.getlist('customer_ids')
+            names = request.POST.getlist('selected_users')
+            targets = _C.objects.filter(mikrotik_device=device)
+            if ids:
+                targets = targets.filter(id__in=ids)
+            elif names:
+                targets = targets.filter(pppoe_username__in=names)
+            else:
+                messages.warning(
+                    request,
+                    "Nothing selected to approve. Tick the accounts you have "
+                    "reviewed, then press Approve.",
+                )
+                return redirect('sync_manager_device', device_id=device_id)
+
+            targets = list(targets.select_related("plan"))
+            try:
+                approved, blocked, absent = _approve_customers(
+                    targets, device, request.user
+                )
+            except Exception as e:
+                messages.error(request, "Approval failed: {}".format(e))
+                return redirect('sync_manager_device', device_id=device_id)
+
+            parts = ["{} approved".format(approved)]
+            if blocked:
+                parts.append("{} held back for unpaid/no-expiry".format(blocked))
+            if absent:
+                parts.append("{} were not actually on the router".format(absent))
+            messages.success(
+                request,
+                "Pairing approved on {}: {}. Router not modified.".format(
+                    device.device_name, ", ".join(parts))
+            )
 
         elif action == 'bulk_push':
             # Same canonical comment as the single-account path. Passing a bare
