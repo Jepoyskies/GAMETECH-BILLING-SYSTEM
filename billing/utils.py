@@ -39,6 +39,9 @@ def get_live_monitoring_data_sync():
 
     logger = logging.getLogger(__name__)
 
+    # Every connected PPPoE name across every router that answered.
+    all_connected = set()
+
     response_data = {
         "users": [],
         "routers": [],
@@ -61,6 +64,20 @@ def get_live_monitoring_data_sync():
 
     devices = MikrotikDevice.objects.all()
     for device in devices:
+        # Skip a router the circuit breaker has already written off.
+        #
+        # Three of the four routers are currently unreachable. Each one costs a
+        # full socket timeout per cycle, which is what stretched this task from
+        # its intended 10 seconds to a measured 178-221s -- and with a 30s cache
+        # TTL that meant the customer list read an EMPTY cache about 150 seconds
+        # out of every 180, so every subscriber rendered "Unknown". The breaker
+        # already knows; do not pay for the socket again.
+        if cache.get(f"router_unreachable_{device.id}"):
+            logger.warning(
+                "Skipping %s in the live poll: circuit breaker has it marked "
+                "unreachable.", device.device_name,
+            )
+            continue
         try:
             api = MikrotikAPI(device)
             active_users = api.get_active_pppoe_users()
@@ -98,6 +115,17 @@ def get_live_monitoring_data_sync():
 
             for au in active_users:
                 username = au.get("name")
+                if username:
+                    # THIS IS THE FIX. The customer list resolves every
+                    # customer's Online/Offline badge by comparing
+                    # pppoe_username against the `active_pppoe_usernames_set`
+                    # cache -- and that key was only ever written by the
+                    # network API view, i.e. when a human happened to open Live
+                    # Monitoring. The background poll collects exactly this
+                    # information and discarded it, so the customers page
+                    # rendered "Unknown" for all 2,038 accounts unless someone
+                    # was looking at the live dashboard at that moment.
+                    all_connected.add(str(username).lower())
                 tr = traffic_dict.get(username, {"rx_mbps": 0.0, "tx_mbps": 0.0})
                 cust_match = customer_map.get(username) or (
                     customer_map.get(username.lower()) if username else None
@@ -163,6 +191,20 @@ def get_live_monitoring_data_sync():
     if response_data["routers"]:
         # Only refreshed on success, so its age = "time since we had eyes".
         cache.set("bridge_last_ok", time.time(), 600)
+
+    # The TTL has to outlast the WORST-CASE cycle, not the ideal one.
+    #
+    # This task is scheduled every 10s but measured at 178-221s whenever any
+    # router is slow, so a 30s TTL expired between nearly every poll and the
+    # customers page saw "we are blind" for most of each cycle. 300s gives
+    # ample headroom: a stale-but-real reading is far better for staff than a
+    # missing one, and customer_state.network_visibility() still refuses to
+    # guess when NO router answered, so a genuine outage cannot be masked.
+    cache.set("active_pppoe_usernames_set", all_connected, 300)
+    logger.info(
+        "Live poll finished: %d router(s) answered, %d connected session(s).",
+        len(response_data["routers"]), len(all_connected),
+    )
 
     return response_data
 

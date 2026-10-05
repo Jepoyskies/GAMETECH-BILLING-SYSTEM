@@ -76,8 +76,15 @@ def fetch_live_monitoring_data_task():
 
         response_data = get_live_monitoring_data_sync()
 
-        # Save to cache
-        cache.set("live_monitoring_data", response_data, timeout=30)
+        # Save to cache.
+        #
+        # TTL must outlast the poll cycle. The task is scheduled every 10s but
+        # measured at 178-221s whenever a router is slow, so the old 30s TTL
+        # meant this cache was empty for most of each cycle -- and
+        # customer_state.network_visibility() reads it, so the customers page
+        # showed "Unknown" for every customer. Matches the 300s now used for
+        # active_pppoe_usernames_set in get_live_monitoring_data_sync().
+        cache.set("live_monitoring_data", response_data, timeout=300)
         logger.info("Live-monitoring data cached successfully.")
     except Exception as e:
         logger.error(f"Error in fetch-live-monitoring data task: {e}")
