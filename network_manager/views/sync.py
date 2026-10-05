@@ -301,11 +301,11 @@ def _approve_customers(customers, device, actor):
     on_router = {u.get('name'): u for u in (result.get('data') or []) if u.get('name')}
 
     # Imported here, not at module scope: this module is imported very early by
-    # the URL conf and a top-level billing.models import would risk a circular
-    # import. Missing this name raised NameError *after* sync_status had already
-    # been saved, so the operator saw "Approval failed" on an approval that had
-    # actually been recorded -- with no audit trail.
-    from billing.models import SystemLog
+    # the URL conf and a top-level billing.models import risks a circular
+    # import. Both names below must be in this function's namespace -- a
+    # missing one raised NameError *inside* the atomic block, which rolled the
+    # approval back while the operator saw only a generic failure.
+    from billing.models import Customer, SystemLog
 
     approved = blocked = absent = 0
     for customer in customers:
