@@ -3424,3 +3424,9 @@ Until then the banner correctly reports 4. That is a true reading, not noise.
 **Symptom**: Sync Manager on an unreachable router showed the same "Failed to connect to router" text 3x: a toast overlapping the topbar, an inline alert, and the page's own offline card.
 **Cause**: The view called `messages.error(...)` AND passed `router_error` to the template; the template also had its own `{% for message in messages %}` loop on top of the toast already rendered by `billing/base.html`.
 **Fix**: Do not flash an error the template already renders from context. Never add a per-page `messages` loop: `base.html` (line ~64) already toasts every message. Fixed in `network_manager/views/sync.py` + `sync_manager.html`.
+
+
+### ERR-123: Developer Comment Visible On The Page (Multi-line `{# #}`)
+**Symptom**: Raw text like `{# Cutover integrity strip. Separate from the lifecycle KPIs... #}` rendered above the Customers Directory integrity filters.
+**Cause**: Django's `{# ... #}` comment syntax is SINGLE-LINE only. Spread over several lines it is not recognised and is output as plain text.
+**Fix**: Use `{% comment %} ... {% endcomment %}` for any multi-line template comment. Fixed in `billing/templates/billing/customer_list/_hero.html`.
