@@ -203,10 +203,37 @@ class ApprovalGateTests(TestCase):
             "With no router assigned the account cannot be traced anywhere.",
         )
 
-    def test_synced_and_linked_account_is_approved(self):
+    def test_synced_and_linked_still_needs_approval_without_a_pairing_log(self):
+        """A Push is not a pairing.
+
+        mark_synced() also writes sync_status="Synced", so an account that was
+        merely pushed to a router used to fall out of the queue and render as
+        APPROVED with nobody having paired it.
+        """
         dev = make_device()
         cust = make_customer(mikrotik_device=dev, sync_status="Synced")
-        self.assertFalse(account_needs_approval(cust))
+        self.assertTrue(
+            account_needs_approval(cust),
+            "Being Synced proves a write happened, not that a human paired it.",
+        )
+
+    def test_pair_approved_account_needs_no_approval(self):
+        dev = make_device()
+        cust = make_customer(mikrotik_device=dev, sync_status="Synced")
+        cust.pair_approved = True
+        self.assertFalse(
+            account_needs_approval(cust),
+            "A recorded pairing approval is the one signal that clears the gate.",
+        )
+
+    def test_pair_approved_account_says_why_it_is_clear(self):
+        dev = make_device()
+        cust = make_customer(mikrotik_device=dev, sync_status="Synced")
+        cust.pair_approved = True
+        self.assertFalse(
+            [r for r in approval_reasons(cust) if "paired" in r],
+            "A paired account should not still be nagged about pairing.",
+        )
 
     def test_reasons_are_human_readable(self):
         cust = make_customer(mikrotik_device=None, sync_status="Unverified")

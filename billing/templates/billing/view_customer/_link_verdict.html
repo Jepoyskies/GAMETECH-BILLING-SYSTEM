@@ -4,20 +4,43 @@
   Read top-down: the FIRST broken link is the real fault, everything below it
   is meaningless. Repainted live by _scripts.html from data.link_diagnosis.
 {% endcomment %}
-<div id="link-verdict"
-     class="p-3 rounded-3 mt-3"
-     style="background: var(--surface-subtle); border: 1px solid var(--border-subtle); border-left: 4px solid var(--status-{{ link.severity }});">
-    <div class="d-flex align-items-start gap-2 mb-2">
-        <i class="fas {% if link.verdict == 'healthy' %}fa-circle-check{% elif link.severity == 'warning' %}fa-house-circle-exclamation{% else %}fa-triangle-exclamation{% endif %} mt-1"
-           style="color: var(--status-{{ link.severity }});"></i>
-        <div>
-            <h6 class="link-verdict-headline fw-bold mb-1" style="font-size:0.88rem; color: var(--status-{{ link.severity }});">{{ link.headline }}</h6>
-            <p class="link-verdict-action mb-0" style="font-size:0.8rem; color: var(--text-secondary);">{{ link.action }}</p>
+<div class="row g-3 mt-1 mb-2 animate-fade-in">
+    <div class="col-12">
+        <div id="link-verdict"
+             class="link-verdict-card p-3 p-md-4 rounded-3"
+             style="background: var(--gt-surface); border: 1px solid var(--gt-border); border-left: 4px solid var(--status-{{ link.severity }}); box-shadow: var(--gt-shadow-card);">
+            <div class="d-flex align-items-start gap-3">
+                <div class="link-verdict-icon-box" style="flex-shrink: 0; width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: color-mix(in srgb, var(--status-{{ link.severity }}) 15%, transparent); border: 1px solid color-mix(in srgb, var(--status-{{ link.severity }}) 30%, transparent);">
+                    <i class="fas {% if link.verdict == 'healthy' %}fa-circle-check{% elif link.severity == 'warning' %}fa-house-circle-exclamation{% else %}fa-triangle-exclamation{% endif %}"
+                       style="color: var(--status-{{ link.severity }}); font-size: 1.25rem;"></i>
+                </div>
+                <div class="flex-grow-1 min-w-0">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+                        <h6 class="link-verdict-headline fw-bold mb-0" style="font-size: 1rem; color: var(--status-{{ link.severity }});">{{ link.headline }}</h6>
+                        <span class="badge status-badge--{% if link.severity == 'warning' %}warning{% elif link.severity == 'danger' %}danger{% elif link.severity == 'info' %}info{% else %}success{% endif %} py-1 px-2 fw-semibold" style="font-size: 0.72rem;">
+                            {{ link.verdict|title }}
+                        </span>
+                    </div>
+                    <p class="link-verdict-action mb-0 text-muted" style="font-size: 0.85rem; line-height: 1.5;">{{ link.action }}</p>
+                </div>
+            </div>
+
+            {% if link.check %}
+            <div class="link-verdict-check-section mt-3 pt-3 border-top" style="border-color: var(--gt-border) !important;">
+                <div class="d-flex align-items-center gap-1 fw-bold mb-2 text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.06em; color: var(--gt-text-muted);">
+                    <i class="fas fa-list-check me-1 text-primary"></i> What to check
+                </div>
+                <ol class="link-verdict-check mb-0 ps-3" style="font-size: 0.82rem; color: var(--gt-text);">
+                    {% for item in link.check %}
+                    <li class="mb-1">{{ item }}</li>
+                    {% endfor %}
+                </ol>
+            </div>
+            {% else %}
+            <div class="link-verdict-check-section mt-3 pt-3 border-top d-none" style="border-color: var(--gt-border) !important;">
+                <ol class="link-verdict-check mb-0 ps-3" style="font-size: 0.82rem; color: var(--gt-text);"></ol>
+            </div>
+            {% endif %}
         </div>
     </div>
-    <hr class="my-2" style="border-color: var(--border-subtle); opacity: 1;">
-    <div class="fw-bold mb-1 text-uppercase" style="font-size:0.68rem; letter-spacing:0.05em; color: var(--text-muted);">What to check</div>
-    <ol class="link-verdict-check mb-0 ps-3" style="font-size:0.8rem; color: var(--text-secondary);">
-        {% for item in link.check %}<li>{{ item }}</li>{% endfor %}
-    </ol>
 </div>

@@ -383,6 +383,26 @@ class Customer(models.Model):
         reasons = []
         if self.status in ("expired", "inactive", "suspended", "pull out"):
             reasons.append("Unpaid ({})".format(self.get_status_display()))
+        elif self.expires_at is not None and self.expires_at < timezone.now():
+            # THE HOLE THIS CLOSES
+            #
+            # Only the explicit statuses above used to block. A customer whose
+            # status is still 'active' but whose expiry has ALREADY PASSED is
+            # past due in substance -- they have consumed more service than they
+            # paid for -- yet nothing stopped a secret being written for them or
+            # a pairing being approved. Worse, approving one set sync_status to
+            # 'Synced', which the UI then rendered as a green APPROVED badge, so
+            # an unpaid line looked cleared.
+            #
+            # Deliberately not keyed off payment_status: an admin override must
+            # be able to clear an EXPIRED account whose expiry has been rolled
+            # forward again (a re-payment someone logged but has not yet
+            # re-activated). Blocking on the date alone would strand them.
+            reasons.append(
+                "Past due since {}".format(
+                    timezone.localtime(self.expires_at).strftime("%b %d, %Y %I:%M %p")
+                )
+            )
         if self.expires_at is None:
             reasons.append("No expiry date — cannot auto-suspend")
         return reasons
@@ -800,13 +820,37 @@ class Customer(models.Model):
 
     @property
     def payment_status(self):
-        """Returns 'Paid' or 'Unpaid' based on billing status and expiration date."""
+        """'Paid' or 'Unpaid' for the BILLING axis only.
+
+        WHY THIS IS NOT status-driven
+        -----------------------------
+        This used to answer 'Paid' only when status == 'active', so every other
+        status fell through to 'Unpaid'. That read as a money problem when it was
+        really an INSTALLATION problem: an applicant sitting in 'pending' with a
+        live expiry date was badged Unpaid while demonstrably in date.
+
+        status and expires_at are different domains (see Rule 35 in AGENTS.md):
+          * status          -> lifecycle / installation (pending, pulled out, ...)
+          * expires_at      -> when the paid period runs out
+        A subscription is in date when expires_at is still ahead of us, whatever
+        the installation state is. The profile shows those as separate badges,
+        so both facts stay visible instead of one overwriting the other.
+
+        No expiry at all means we cannot prove payment covers any period, and
+        such a line can never auto-suspend -- the same reasoning that blocks it
+        from being pushed. So it reads Unpaid, which is the safe direction.
+        """
         from django.utils import timezone
-        if self.status == 'active':
-            if self.expires_at and self.expires_at < timezone.now():
-                return 'Unpaid'
-            return 'Paid'
-        return 'Unpaid'
+
+        # These mean the subscription itself is finished, regardless of dates:
+        # pulled out, suspended or explicitly expired.
+        if self.status in ("expired", "suspended", "pull out"):
+            return "Unpaid"
+
+        if self.expires_at is None:
+            return "Unpaid"
+
+        return "Unpaid" if self.expires_at < timezone.now() else "Paid"
 
     @property
     def link_diagnosis(self):

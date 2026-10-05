@@ -12,6 +12,7 @@ from network_manager.sync_helpers import (
     approval_reasons,
     build_router_comment,
     desired_profile,
+    mark_pair_approvals,
     mark_synced,
     router_write_blocked_message,
 )
@@ -44,6 +45,12 @@ def sync_manager(request, device_id):
         Q(mikrotik_device=device) | Q(mikrotik_device__isnull=True)
     ).exclude(pppoe_username__isnull=True).exclude(pppoe_username='')
     django_usernames = set(django_customers.values_list('pppoe_username', flat=True))
+
+    # Stamp the pairing audit trail onto every row BEFORE the categorise loop,
+    # so account_needs_approval() and the Approve badge both answer the same
+    # question: has a human actually paired this, or did it merely get pushed?
+    # Iterating here also caches the queryset, so the map below reuses it.
+    mark_pair_approvals(django_customers)
     
     # 2. Fetch Router Users using the Sync API
     #

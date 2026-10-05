@@ -126,18 +126,20 @@
                                 <a href="{% url 'view_customer' user.customer.id %}" class="btn btn-sm btn-outline-secondary" target="_blank" title="View Customer Profile"><i class="fas fa-external-link-alt"></i> View</a>
                                 {% comment %}
                                   Pairing is an explicit human sign-off, not a side
-                                  effect of the secret happening to exist. Until
-                                  someone presses this the account stays Unverified
-                                  in our system, so a router the old billing system
-                                  is still writing to cannot make an account look
-                                  approved on its own. Reads the router, writes nothing.
+                                  effect of the secret happening to exist, and not
+                                  a side effect of having pushed it either. Until
+                                  someone presses this there is no
+                                  SYNC_PAIR_APPROVED log for the account, so a
+                                  router the old billing system is still writing
+                                  to cannot make an account look approved on its
+                                  own. Reads the router, writes nothing.
                                 {% endcomment %}
                                 {% if user.customer.is_push_blocked %}
                                     <button type="button" class="btn btn-sm btn-secondary" disabled
                                             title="Held back: {{ user.customer.push_blocked_reasons|join:', ' }}. Admin override required before this can be treated as live.">
                                         <i class="fas fa-lock"></i> Approve
                                     </button>
-                                {% elif user.customer.sync_status == 'Synced' %}
+                                {% elif user.customer.pair_approved %}
                                     <span class="gametech-pill pill-success" title="A human has reviewed and approved this pairing"><i class="fas fa-check-double me-1"></i> Approved</span>
                                 {% else %}
                                     <button type="submit" formnovalidate

@@ -141,15 +141,53 @@ def router_write_blocked_message():
     )
 
 
+def mark_pair_approvals(customers):
+    """Stamp ``customer.pair_approved`` from the pairing audit trail.
+
+    One query for the whole page, then a plain attribute per row.
+
+    WHY NOT sync_status
+    -------------------
+    A successful Push also leaves sync_status == "Synced" (mark_synced). Keying
+    the approval badge off that made provisioning masquerade as a human pairing
+    approval: an account could be pushed to a router and then render as
+    "APPROVED" without anyone ever pairing it. The whole point of the pairing
+    step is that a human signed off, so the signal has to be the log their click
+    writes -- SYNC_PAIR_APPROVED -- and nothing else.
+
+    Call this once per page over the customers the rows are built from. Anything
+    not stamped reads as un-approved, which is the safe direction.
+    """
+    from billing.models import SystemLog
+
+    ids = [str(c.id) for c in customers]
+    approved = set()
+    if ids:
+        approved = set(
+            SystemLog.objects.filter(
+                action="SYNC_PAIR_APPROVED",
+                table_name="Customer",
+                record_id__in=ids,
+            ).values_list("record_id", flat=True)
+        )
+    for c in customers:
+        c.pair_approved = str(c.id) in approved
+    return customers
+
+
 def account_needs_approval(customer):
     """Does this account still require a human decision?
 
     Unverified = never checked against a router. Blocked = a write was
     attempted and refused. No device = cannot be traced to a router at all.
+    No pairing approval on record = present in both places, but nobody has ever
+    confirmed the two belong together. Being Synced is not that: a Push sets it
+    too (see mark_pair_approvals).
     """
     return (
         customer.sync_status in ("Unverified", "Blocked")
         or not customer.mikrotik_device_id
+        or not getattr(customer, "pair_approved", False)
     )
 
 
@@ -164,4 +202,6 @@ def approval_reasons(customer):
         reasons.append("A previous write was refused")
     elif customer.sync_status == "Failed":
         reasons.append("The last write failed")
+    if customer.mikrotik_device_id and not getattr(customer, "pair_approved", False):
+        reasons.append("Not yet paired by an admin")
     return reasons

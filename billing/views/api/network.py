@@ -280,7 +280,11 @@ def api_customer_mikrotik_status(request, customer_id):
                     secret_found = True
                     if secret.get("disabled") in ["true", True]:
                         secret_disabled = True
-                    data["last_logged_out"] = secret.get("last-logged-out", "N/A")
+                    raw_last_out = secret.get("last-logged-out", "N/A")
+                    if raw_last_out and ("1970" in str(raw_last_out) or str(raw_last_out).strip() in ["00:00:00", "N/A", "none", ""]):
+                        data["last_logged_out"] = "Never"
+                    else:
+                        data["last_logged_out"] = raw_last_out
                     if data["mt_status"] == "Disconnected" and not customer.mac_address:
                         data["live_mac"] = secret.get("caller-id", "N/A")
                     break

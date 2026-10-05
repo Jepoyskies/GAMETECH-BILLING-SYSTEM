@@ -315,9 +315,26 @@ document.addEventListener("DOMContentLoaded", function() {
                         const act = verdictBox.querySelector('.link-verdict-action');
                         if (act) act.textContent = link.action || '';
                         const iconEl = verdictBox.querySelector('i');
-                        if (iconEl) iconEl.style.color = 'var(--status-' + sev + ')';
+                        if (iconEl) {
+                            iconEl.style.color = 'var(--status-' + sev + ')';
+                            iconEl.className = 'fas ' + (link.verdict === 'healthy' ? 'fa-circle-check' : (sev === 'warning' ? 'fa-house-circle-exclamation' : 'fa-triangle-exclamation'));
+                        }
+                        const iconBox = verdictBox.querySelector('.link-verdict-icon-box');
+                        if (iconBox) {
+                            iconBox.style.background = 'color-mix(in srgb, var(--status-' + sev + ') 15%, transparent)';
+                            iconBox.style.borderColor = 'color-mix(in srgb, var(--status-' + sev + ') 30%, transparent)';
+                        }
+                        const checkSec = verdictBox.querySelector('.link-verdict-check-section');
                         const ol = verdictBox.querySelector('.link-verdict-check');
-                        if (ol) ol.innerHTML = (link.check || []).map(function (i) { return '<li>' + i + '</li>'; }).join('');
+                        if (ol) {
+                            if (link.check && link.check.length > 0) {
+                                ol.innerHTML = link.check.map(function (i) { return '<li class="mb-1">' + i + '</li>'; }).join('');
+                                if (checkSec) checkSec.classList.remove('d-none');
+                            } else {
+                                ol.innerHTML = '';
+                                if (checkSec) checkSec.classList.add('d-none');
+                            }
+                        }
                     }
                 }
 
@@ -381,7 +398,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     }
                 } else {
                     if (stabilityBadge) stabilityBadge.style.display = 'none';
-                    if (data.last_logged_out && data.last_logged_out !== 'N/A') {
+                    const isEpoch = data.last_logged_out && (data.last_logged_out.includes('1970') || data.last_logged_out === '00:00:00' || data.last_logged_out === 'Never');
+                    if (data.last_logged_out && data.last_logged_out !== 'N/A' && !isEpoch) {
                         const lastOutEl = document.getElementById('mt-last-logged-out');
                         if (lastOutEl) lastOutEl.innerText = data.last_logged_out;
                         if (lastLoggedOutContainer) lastLoggedOutContainer.style.display = 'flex';
