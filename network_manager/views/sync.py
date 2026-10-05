@@ -121,9 +121,41 @@ def sync_manager(request, device_id):
                 have_profile = ru.get('profile')
                 have_pw = ru.get('password')
                 want_pw = dc.pppoe_password if dc else None
+
+                # Is OUR record lapsed? Needed before drift is computed, because
+                # the router's 'expired' profile is a suspension, not a config
+                # mistake. Computed again further down for the state cross-check;
+                # kept here so the drift test below can use it.
+                system_thinks_off = bool(
+                    dc and (
+                        dc.status in ('suspended', 'expired', 'inactive', 'past_due')
+                        or (dc.expires_at and dc.expires_at <= timezone.now())
+                    )
+                )
+
                 drift_fields = []
                 if want_profile and have_profile and want_profile != have_profile:
-                    drift_fields.append('profile')
+                    # THE FALSE DRIFT THIS REMOVES
+                    #
+                    # The legacy billing system moved a subscriber onto the
+                    # router's 'expped'/'expired' profile the moment it
+                    # suspended them. On ccr2116.v1 alone that was 310 accounts
+                    # reading 'expired -> pppoe-20m', which is not a
+                    # misconfiguration: our record says lapsed AND the router
+                    # says lapsed, so the two AGREE. Flagging it pushed 310
+                    # correct accounts into the review queue and buried the
+                    # handful that genuinely needed attention.
+                    #
+                    # If OUR record is still in date while the router says
+                    # expired, that IS a real fault -- a paying customer cut
+                    # off -- so it stays flagged below via state_mismatch.
+                    router_suspended = str(have_profile).strip().lower() in (
+                        'expired', 'expped',
+                    )
+                    if not (router_suspended and system_thinks_off):
+                        drift_fields.append('profile')
+                    else:
+                        ru['both_agree_suspended'] = True
                 if want_pw and have_pw and str(want_pw) != str(have_pw):
                     drift_fields.append('password')
                 ru['drift'] = bool(drift_fields)
@@ -152,17 +184,20 @@ def sync_manager(request, device_id):
                 #     -> "Connected but Unpaid": collect, do NOT suspend.
                 #   system says fine, router says disabled
                 #     -> a paying customer is cut off. Reconnect.
-                system_thinks_off = bool(
-                    dc and (
-                        dc.status in ('suspended', 'expired', 'inactive', 'past_due')
-                        or (dc.expires_at and dc.expires_at <= timezone.now())
-                    )
+                #   system says fine, router sits on the 'expired' profile
+                #     -> paying customer throttled to nothing. Restore profile.
+                router_suspended = str(have_profile or '').strip().lower() in (
+                    'expired', 'expped',
+                )
+                ru['paid_on_expired_profile'] = bool(
+                    router_suspended and not system_thinks_off
                 )
                 ru['connected_but_unpaid'] = bool(system_thinks_off and not router_disabled)
                 ru['should_be_disabled'] = system_thinks_off
                 ru['state_mismatch'] = bool(
                     ru['connected_but_unpaid']
                     or (router_disabled and not system_thinks_off)
+                    or ru['paid_on_expired_profile']
                 )
 
                 # --- THE BOUNCER CHECK -----------------------------------
