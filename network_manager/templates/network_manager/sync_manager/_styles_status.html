@@ -123,6 +123,97 @@
         .sm-offline { padding: 1.25rem; }
         .sm-offline .sm-btn { flex: 1 1 auto; justify-content: center; }
     }
+    /* ---- SIMPLE VIEW ------------------------------------------------
+       Designed for a supervisor who does not know what a PPPoE profile is.
+       Large type, plain sentences, one idea per card, and the safety state
+       stated in words at the very top. Colour is used only to rank urgency,
+       never as the sole carrier of meaning -- every card also says what it
+       is and what to do, so it still reads correctly in greyscale.
+    */
+    .smv { margin-bottom: 1.5rem; }
+    .smv-safe, .smv-warn {
+        display: flex; gap: .9rem; align-items: flex-start;
+        padding: 1rem 1.15rem; border-radius: 18px; margin-bottom: 1.5rem;
+        border: 1px solid; line-height: 1.45;
+    }
+    .smv-safe {
+        background: rgba(34,197,94,.10); border-color: rgba(34,197,94,.35);
+    }
+    .smv-safe strong { color: #4ade80; font-size: 1.05rem; }
+    .smv-safe__sub { color: var(--gt-text-muted, #94a3b8); font-size: .9rem; margin-top: .2rem; }
+    .smv-warn {
+        background: rgba(239,68,68,.10); border-color: rgba(239,68,68,.4);
+    }
+    .smv-warn strong { color: #f87171; font-size: 1.05rem; }
+    .smv-safe__icon { font-size: 1.5rem; margin-top: .1rem; }
+    .smv-safe .smv-safe__icon { color: #4ade80; }
+    .smv-warn  .smv-safe__icon { color: #f87171; }
+
+    .smv-head { margin-bottom: 1rem; }
+    .smv-head__title { font-size: 1.35rem; font-weight: 700; margin: 0; }
+    .smv-head__sub { color: var(--gt-text-muted, #94a3b8); font-size: .95rem; margin: .25rem 0 0; }
+
+    .smv-grid {
+        display: grid; gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    }
+    .smv-card {
+        display: flex; flex-direction: column;
+        padding: 1.15rem 1.25rem; border-radius: 18px;
+        background: var(--gt-surface-1, rgba(148,163,184,.06));
+        border: 1px solid var(--gt-border, rgba(148,163,184,.16));
+        /* a thick left edge, so urgency is legible without reading */
+        border-left: 5px solid var(--smv-accent, #64748b);
+    }
+    .smv-card--urgent { --smv-accent: #f87171; background: rgba(248,113,113,.07); border-color: rgba(248,113,113,.3); border-left-color: #f87171; }
+    .smv-card--warn   { --smv-accent: #fbbf24; background: rgba(251,191,36,.06); border-color: rgba(251,191,36,.26); border-left-color: #fbbf24; }
+    .smv-card--info   { --smv-accent: #60a5fa; background: rgba(96,165,250,.06); border-color: rgba(96,165,250,.24); border-left-color: #60a5fa; }
+    .smv-card--ok     { --smv-accent: #4ade80; background: rgba(34,197,94,.06); border-color: rgba(34,197,94,.24); border-left-color: #4ade80; }
+
+    .smv-card__top { display: flex; align-items: center; gap: .6rem; margin-bottom: .5rem; }
+    .smv-card__icon { color: var(--smv-accent); font-size: 1.35rem; line-height: 1; }
+    /* Tabular numerals so 1,026 does not render wider than 944 next to it */
+    .smv-card__count {
+        margin-left: auto; font-size: 2.1rem; font-weight: 800; line-height: 1;
+        font-variant-numeric: tabular-nums; color: var(--smv-accent);
+    }
+    .smv-card__title { font-size: 1.08rem; font-weight: 700; margin: 0 0 .4rem; }
+    .smv-card__plain { font-size: .93rem; line-height: 1.5; color: var(--gt-text, #e2e8f0); margin: 0 0 .6rem; }
+    .smv-card__action {
+        display: flex; gap: .45rem; align-items: flex-start;
+        font-size: .88rem; line-height: 1.45; margin: 0 0 .9rem;
+        color: var(--gt-text-muted, #94a3b8);
+    }
+    .smv-card__action i { color: var(--smv-accent); margin-top: .15rem; }
+    .smv-card__link {
+        margin-top: auto; align-self: flex-start;
+        display: inline-flex; align-items: center; gap: .45rem;
+        font-size: .9rem; font-weight: 600; color: var(--smv-accent);
+        text-decoration: none; padding: .45rem .85rem; border-radius: 999px;
+        border: 1px solid var(--smv-accent);
+    }
+    .smv-card__link:hover { background: var(--smv-accent); color: #0f172a; }
+    .smv-card__link:focus-visible { outline: 2px solid #fbae1a; outline-offset: 2px; }
+
+    .smv-allgood {
+        display: flex; gap: 1rem; align-items: center;
+        padding: 1.5rem; border-radius: 18px;
+        background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.3);
+    }
+    .smv-allgood i { color: #4ade80; font-size: 2rem; }
+    .smv-allgood strong { font-size: 1.1rem; color: #4ade80; }
+
+    .smv-foot {
+        display: flex; gap: .5rem; align-items: center;
+        color: var(--gt-text-muted, #94a3b8); font-size: .88rem; margin: 1rem 0 0;
+    }
+
+    @media (max-width: 576px) {
+        .smv-card__count { font-size: 1.7rem; }
+        .smv-card { padding: 1rem; }
+        .smv-card__link { width: 100%; justify-content: center; }
+    }
+
     /* ---- Review-queue reason chips -------------------------------
        Severity by COLOUR, not by position. A 1,000-row queue needs the
        emergencies to be findable without reading, so red (customer has no

@@ -50,6 +50,31 @@
             applyReasonFilter($btn.data('reason-filter'));
         });
 
+        // A "Show me these N" link on the plain-language cards has to do TWO
+        // things: scroll to the queue AND pre-apply the matching filter.
+        // Scrolling alone drops the supervisor into the full 1,000-row table,
+        // which is the confusion the simple view exists to remove.
+        $(document).on('click', '[data-smv-filter]', function(e) {
+            var reason = $(this).data('smv-filter');
+            var $chip = $('[data-reason-filter="' + reason + '"]');
+            if ($chip.length) {
+                e.preventDefault();
+                $chip.trigger('click');
+                var target = $('#queue-needs-review');
+                if (target.length) {
+                    $('html, body').animate({
+                        scrollTop: target.offset().top - 20
+                    }, 300);
+                }
+                // A brief outline so the eye lands on the filtered rows
+                // rather than on the top of the card they scrolled to.
+                $('#reviewTable tbody').css('outline', '2px solid #fbae1a');
+                window.setTimeout(function() {
+                    $('#reviewTable tbody').css('outline', '');
+                }, 1400);
+            }
+        });
+
         
 
         // Initialize DataTables

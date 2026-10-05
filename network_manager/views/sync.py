@@ -307,6 +307,7 @@ def sync_manager(request, device_id):
         # narrowed to the handful that actually need a decision today.
         'reason_counts': reason_counts(needs_review),
         'review_total': len(needs_review),
+        'simple_summary': simple_summary(needs_review),
     }
     
     return render(request, 'network_manager/sync_manager.html', context)
@@ -354,6 +355,87 @@ def reason_counts(rows):
             counts.append({'key': key, 'label': label, 'css': css,
                            'tip': tip, 'count': n})
     return counts
+
+
+# Plain-language groupings for the simple view.
+#
+# The queue's five technical cards describe FIVE different situations. A
+# non-technical supervisor does not think in profiles and orphans; they think
+# in three questions:
+#
+#   1. Is anyone cut off right now?     -> urgent, drop everything
+#   2. Who owes money?                  -> billing/collections work
+#   3. Is everyone else fine?           -> nothing to do today
+#
+# These are presentation groupings only. They re-bucket the counts that were
+# already computed and change no behaviour: the same rows, the same buttons,
+# the same URLs, the same gating.
+SIMPLE_GROUPS = [
+    {
+        'key': 'cut_off',
+        'icon': 'fa-plug-circle-xmark',
+        'title': 'Customers with no internet',
+        'count_keys': ['cut_off', 'paid_expired_profile'],
+        'plain': 'Our records say these customers have paid, but their '
+                 'internet is switched off on the router. They have no '
+                 'service. Someone should call them today.',
+        'action': 'Call the customer. If they have paid, turn their internet '
+                  'back on.',
+        'level': 'urgent',
+    },
+    {
+        'key': 'collect',
+        'icon': 'fa-hand-holding-dollar',
+        'title': 'Customers who owe money',
+        'count_keys': ['connected_unpaid'],
+        'plain': 'Their monthly payment has run out, but their internet is '
+                 'still on. This is a collections job, not a fault.',
+        'action': 'Collect the payment. Do NOT turn their internet off yet.',
+        'level': 'warn',
+    },
+    {
+        'key': 'fix',
+        'icon': 'fa-screwdriver-wrench',
+        'title': 'Records that need correcting',
+        'count_keys': ['drift', 'suspicious', 'unlinked'],
+        'plain': 'The router and our records disagree about the details, like '
+                 'the speed setting. Nobody is cut off; it just needs tidying.',
+        'action': 'Check a few. Press "Write to Router" only if OUR details '
+                  'are the correct ones.',
+        'level': 'info',
+    },
+    {
+        'key': 'confirm',
+        'icon': 'fa-handshake',
+        'title': 'Just need your confirmation',
+        'count_keys': ['awaiting_approval'],
+        'plain': 'These accounts are on the router AND in our system, and they '
+                 'agree with each other. Nothing is wrong. You just have to '
+                 'say "yes, that is the right customer".',
+        'action': 'Press Pair. This writes nothing to the router.',
+        'level': 'ok',
+    },
+]
+
+
+def simple_summary(rows):
+    """Bucket the review queue into the three plain-language questions.
+
+    Presentation only. Every row lands in at least one bucket because the
+    count_keys above cover all of REASON_ORDER, and a row can appear in two
+    buckets when it genuinely is two things (e.g. unpaid AND awaiting
+    confirmation) -- which is honest, because it needs both a collections
+    follow-up and a signature.
+    """
+    out = []
+    for g in SIMPLE_GROUPS:
+        n = sum(
+            1 for r in rows
+            if any(k in (r.get('reason_keys') or []) for k in g['count_keys'])
+        )
+        if n:
+            out.append(dict(g, count=n))
+    return out
 
 
 def push_blockers(customer):
