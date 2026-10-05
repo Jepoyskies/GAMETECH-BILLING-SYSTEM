@@ -1,49 +1,24 @@
-import os
-import shutil
-from datetime import datetime
-from django.core.management.base import BaseCommand
-from django.conf import settings
+from django.core.management.base import BaseCommand, CommandError
+
+from billing.backup import create_backup, restore_hint
 
 
 class Command(BaseCommand):
-    help = "Creates a backup of the SQLite database and zips it."
+    help = "Creates a database backup. Works on PostgreSQL and SQLite."
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--dest", type=str, default=None,
+            help="Directory to write the backup into (default: <BASE_DIR>/data/backups).",
+        )
 
     def handle(self, *args, **kwargs):
-        # The database is db.sqlite3 in the root directory
-        db_path = settings.DATABASES["default"]["NAME"]
-
-        # Create a backups directory if it doesn't exist
-        backup_dir = os.path.join(settings.BASE_DIR, "data", "backups")
-        os.makedirs(backup_dir, exist_ok=True)
-
-        # Generate filename with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_filename = f"db_backup_{timestamp}.sqlite3"
-        backup_filepath = os.path.join(backup_dir, backup_filename)
-
         try:
-            # Copy the database file
-            shutil.copy2(db_path, backup_filepath)
-
-            # Zip the file to save space
-            zip_filename = f"db_backup_{timestamp}"
-            shutil.make_archive(
-                os.path.join(backup_dir, zip_filename),
-                "zip",
-                backup_dir,
-                backup_filename,
-            )
-
-            # Remove the unzipped copy
-            os.remove(backup_filepath)
-
-            self.stdout.write(
-                self.style.SUCCESS(
-                    f"Successfully backed up database to {zip_filename}.zip"
-                )
-            )
-
-            # Here you could easily add boto3 to upload to S3 or Google Drive API
-
+            path, description, engine = create_backup(dest_dir=kwargs.get("dest"))
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f"Failed to backup database: {e}"))
+            # Non-zero exit so cron/monitoring notices a failed backup.
+            raise CommandError(str(e))
+
+        self.stdout.write(self.style.SUCCESS(f"Backup written: {path}"))
+        self.stdout.write(f"  method : {description}")
+        self.stdout.write(f"  restore: {restore_hint(engine)}")
