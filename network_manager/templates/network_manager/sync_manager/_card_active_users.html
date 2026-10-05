@@ -67,8 +67,8 @@
                             formaction="{% url 'sync_bulk_action' device.id %}"
                             formmethod="POST"
                             class="btn btn-sm btn-success"
-                            onclick="return confirm('Approve the selected pairings?\n\nThis only records YOUR sign-off that each account matches the router. Nothing on any router is changed. Unpaid or no-expiry accounts will be held back.');">
-                        <i class="fas fa-check-double"></i> Approve Selected
+                            onclick="return confirm('Pair the selected accounts?\n\nThis only records YOUR sign-off that each account matches the router. Nothing on any router is changed. Accounts with no expiry date will be held back.');">
+                        <i class="fas fa-check-double"></i> Pair Selected
                     </button>
                     <span class="text-muted small">records your approval only &mdash; router untouched</span>
                 </div>
@@ -166,17 +166,17 @@
                                             formmethod="POST" name="pppoe_username" value="{{ user.name }}"
                                             class="btn btn-sm btn-primary"
                                             title="Confirm this account as paired. Reads the router to verify the secret is there; does not modify it.">
-                                        <i class="fas fa-handshake"></i> Approve
+                                        <i class="fas fa-handshake"></i> Pair
                                     </button>
                                 {% endif %}
                                 {% if user.is_suspicious %}
                                     {% if user.customer.plan and user.customer.barangay %}
-                                    <button type="submit" formnovalidate formaction="{% url 'sync_autofix_user' device.id %}" formmethod="POST" name="pppoe_username" value="{{ user.name }}" class="btn btn-sm btn-outline-primary" title="Automatically correct the profile and comment on the router to match the system database" onclick="return confirm('Are you sure you want to Auto-Fix this account?\n\nThis is completely safe! It will simply update the router to match the Plan and Barangay exactly as it is saved in our system database.');">
-                                        <i class="fas fa-magic"></i> Auto-Fix
+                                    <button type="submit" formnovalidate formaction="{% url 'sync_autofix_user' device.id %}" formmethod="POST" name="pppoe_username" value="{{ user.name }}" class="btn btn-sm btn-outline-primary" title="Write to Router: update the existing secret's profile and comment to match the system database. The secret is looked up by name first, so this updates it -- it cannot create a duplicate." onclick="return confirm('Write to Router: are you sure?\n\nThis UPDATES the existing secret on {{ device.device_name }} to match the Plan and Barangay exactly as saved in our system database. No duplicate can be created.');">
+                                        <i class="fas fa-pen-to-square"></i> Write to Router
                                     </button>
                                     {% else %}
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" title="Cannot Auto-Fix because the customer is missing a Subscription Plan or Barangay in the system." onclick="showGametechAlert('This customer is missing a Subscription Plan or Barangay in the System Database. Please complete their profile first before auto-fixing.')">
-                                        <i class="fas fa-magic"></i> Auto-Fix
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" title="Cannot write to the router: the customer is missing a Subscription Plan or Barangay in the system." onclick="showGametechAlert('This customer is missing a Subscription Plan or Barangay in the System Database. Please complete their profile first before writing to the router.')">
+                                        <i class="fas fa-pen-to-square"></i> Write to Router
                                     </button>
                                     {% endif %}
                                 {% endif %}
