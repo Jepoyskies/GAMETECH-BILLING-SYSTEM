@@ -4,6 +4,7 @@ from billing.decorators import role_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.utils import timezone
+from django.db import transaction
 from network_manager.models import MikrotikDevice
 from network_manager.services import MikrotikAPI
 from network_manager.sync_helpers import (
@@ -299,6 +300,13 @@ def _approve_customers(customers, device, actor):
         )
     on_router = {u.get('name'): u for u in (result.get('data') or []) if u.get('name')}
 
+    # Imported here, not at module scope: this module is imported very early by
+    # the URL conf and a top-level billing.models import would risk a circular
+    # import. Missing this name raised NameError *after* sync_status had already
+    # been saved, so the operator saw "Approval failed" on an approval that had
+    # actually been recorded -- with no audit trail.
+    from billing.models import SystemLog
+
     approved = blocked = absent = 0
     for customer in customers:
         # Unpaid / no-expiry is refused here exactly as it is on Push.
@@ -313,25 +321,30 @@ def _approve_customers(customers, device, actor):
             absent += 1
             continue
 
-        was = customer.sync_status
-        customer.sync_status = "Synced"
-        customer.save(update_fields=["sync_status"])
+        # Status and audit trail must land together. Writing the status first
+        # meant a failure in the log step left an approval recorded with no
+        # evidence of who made it -- the one thing this whole gate exists to
+        # guarantee. atomic() keeps them inseparable.
+        with transaction.atomic():
+            was = customer.sync_status
+            Customer.objects.filter(pk=customer.pk).update(sync_status="Synced")
 
-        SystemLog.objects.create(
-            table_name="Customer",
-            record_id=str(customer.id),
-            action="SYNC_PAIR_APPROVED",
-            changed_by=actor.username,
-            target_name=customer.full_name,
-            old_data="sync_status={}".format(was),
-            new_data=(
-                "Approved by {}. PPPoE '{}' verified present on {} "
-                "(enabled={}, profile='{}'). Router not modified."
-            ).format(
-                actor.username, customer.pppoe_username, device.device_name,
-                secret.get('is_enabled'), secret.get('profile'),
-            ),
-        )
+            SystemLog.objects.create(
+                table_name="Customer",
+                record_id=str(customer.id),
+                action="SYNC_PAIR_APPROVED",
+                changed_by=actor.username,
+                target_name=customer.full_name,
+                old_data="sync_status={}".format(was),
+                new_data=(
+                    "Approved by {}. PPPoE '{}' verified present on {} "
+                    "(enabled={}, profile='{}'). Router not modified."
+                ).format(
+                    actor.username, customer.pppoe_username, device.device_name,
+                    secret.get('is_enabled'), secret.get('profile'),
+                ),
+            )
+        customer.sync_status = "Synced"
         approved += 1
 
     return approved, blocked, absent
