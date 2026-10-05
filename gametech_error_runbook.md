@@ -3418,3 +3418,9 @@ Until then the banner correctly reports 4. That is a true reading, not noise.
 
 **Files**: `billing/services/plan_health.py`
 **Date Logged**: 2026-10-04
+
+
+### ERR-122: Same Error Shown Three Times On A Page (Flash + Inline Loop + Dedicated Card)
+**Symptom**: Sync Manager on an unreachable router showed the same "Failed to connect to router" text 3x: a toast overlapping the topbar, an inline alert, and the page's own offline card.
+**Cause**: The view called `messages.error(...)` AND passed `router_error` to the template; the template also had its own `{% for message in messages %}` loop on top of the toast already rendered by `billing/base.html`.
+**Fix**: Do not flash an error the template already renders from context. Never add a per-page `messages` loop: `base.html` (line ~64) already toasts every message. Fixed in `network_manager/views/sync.py` + `sync_manager.html`.
