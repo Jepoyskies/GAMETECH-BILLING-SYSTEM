@@ -223,6 +223,28 @@ def sync_manager(request, device_id):
                 )
                 ru['approval_reasons'] = approval_reasons(dc)
 
+                # Reason KEYS, as a list, so the template can both render a
+                # filter chip per reason and tag the row for client-side
+                # filtering. One source of truth: the chip counts and the row
+                # tags cannot disagree, which is what made this queue
+                # untriageable at 1,023 rows.
+                keys = []
+                if user_paid_and_cut_off(ru):
+                    keys.append('cut_off')
+                if ru.get('paid_on_expired_profile'):
+                    keys.append('paid_expired_profile')
+                if ru.get('connected_but_unpaid'):
+                    keys.append('connected_unpaid')
+                if ru.get('unlinked'):
+                    keys.append('unlinked')
+                if ru.get('never_verified'):
+                    keys.append('awaiting_approval')
+                if ru.get('drift'):
+                    keys.append('drift')
+                if ru.get('is_suspicious'):
+                    keys.append('suspicious')
+                ru['reason_keys'] = keys
+
                 # Route on DISAGREEMENT, not on "not yet paired".
                 #
                 # Pairing is a read-only sign-off, so an account present in both
@@ -274,9 +296,58 @@ def sync_manager(request, device_id):
         # MikroTik profile mapped. Surfaced here so staff see WHY a row drifts
         # before blaming the router.
         'plan_health': _plan_health(),
+        # Reason breakdown, emergencies first, so a 1,000-row queue can be
+        # narrowed to the handful that actually need a decision today.
+        'reason_counts': reason_counts(needs_review),
+        'review_total': len(needs_review),
     }
     
     return render(request, 'network_manager/sync_manager.html', context)
+
+def user_paid_and_cut_off(ru):
+    """Is this a customer we believe is paid, but the router has cut off?
+
+    A paying customer with no internet is the one row in this queue that is an
+    emergency rather than a decision, so it is separated from the collections
+    rows instead of being buried in them.
+    """
+    return bool(ru.get('router_disabled') and not ru.get('connected_but_unpaid'))
+
+
+# Reason keys, in the order staff should triage them: emergencies first,
+# technical faults next, collections decisions last. Each entry is
+# (key, label, css-class, tooltip).
+REASON_ORDER = [
+    ('cut_off', 'Paid, Cut Off', 'chip-danger',
+     'We believe this customer is paid, but the router has their secret '
+     'disabled. They have no internet and should be reconnected.'),
+    ('paid_expired_profile', 'Paid but Throttled', 'chip-danger',
+     'In date, but sitting on the router\'s expired profile, so their speed '
+     'is cut to nothing.'),
+    ('drift', 'Config Drift', 'chip-warn',
+     'Profile or password on the router does not match the system.'),
+    ('suspicious', 'Suspicious', 'chip-warn',
+     'Profile or comment on the router is malformed.'),
+    ('unlinked', 'Not Linked', 'chip-warn',
+     'Not assigned to a router in the system, so it cannot be traced.'),
+    ('awaiting_approval', 'Awaiting Approval', 'chip-info',
+     'Present in both places but nobody has confirmed the pairing yet.'),
+    ('connected_unpaid', 'Connected, Unpaid', 'chip-collect',
+     'Past due in the system but still connected. Collect payment; do not '
+     'auto-suspend.'),
+]
+
+
+def reason_counts(rows):
+    """Count each reason key across the review queue, preserving triage order."""
+    counts = []
+    for key, label, css, tip in REASON_ORDER:
+        n = sum(1 for r in rows if key in (r.get('reason_keys') or []))
+        if n:
+            counts.append({'key': key, 'label': label, 'css': css,
+                           'tip': tip, 'count': n})
+    return counts
+
 
 def push_blockers(customer):
     """Reasons this account must not be given a router secret without a human.

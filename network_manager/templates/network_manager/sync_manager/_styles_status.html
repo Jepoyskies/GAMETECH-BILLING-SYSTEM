@@ -123,7 +123,61 @@
         .sm-offline { padding: 1.25rem; }
         .sm-offline .sm-btn { flex: 1 1 auto; justify-content: center; }
     }
+    /* ---- Review-queue reason chips -------------------------------
+       Severity by COLOUR, not by position. A 1,000-row queue needs the
+       emergencies to be findable without reading, so red (customer has no
+       service) outranks amber (technical mismatch) outranks the collections
+       slate (business decision, not an outage).
+    */
+    .sm-chips { border-bottom: 1px solid var(--gt-border, rgba(148,163,184,.16)); }
+    .sm-chip {
+        display: inline-flex; align-items: center; gap: .4rem;
+        padding: .34rem .7rem; border-radius: 999px; cursor: pointer;
+        font-size: .78rem; font-weight: 600; line-height: 1.2;
+        background: var(--gt-surface-2, rgba(148,163,184,.08));
+        border: 1px solid var(--gt-border, rgba(148,163,184,.18));
+        color: var(--gt-text-muted, #94a3b8);
+        transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    }
+    .sm-chip:hover { transform: translateY(-1px); }
+    .sm-chip:focus-visible { outline: 2px solid #fbae1a; outline-offset: 2px; }
+    .sm-chip .chip-n {
+        font-variant-numeric: tabular-nums; font-weight: 700;
+        padding: .05rem .4rem; border-radius: 999px;
+        background: rgba(148,163,184,.18); color: inherit; font-size: .74rem;
+    }
+    /* red = the customer has no service right now */
+    .sm-chip.chip-danger   { color: #f87171; border-color: rgba(248,113,113,.4); background: rgba(248,113,113,.10); }
+    .sm-chip.chip-danger .chip-n { background: rgba(248,113,113,.22); }
+    /* amber = the two systems disagree, needs a technical decision */
+    .sm-chip.chip-warn     { color: #fbbf24; border-color: rgba(251,191,36,.4);  background: rgba(251,191,36,.10); }
+    .sm-chip.chip-warn .chip-n { background: rgba(251,191,36,.22); }
+    /* blue = informational */
+    .sm-chip.chip-info     { color: #60a5fa; border-color: rgba(96,165,250,.38); background: rgba(96,165,250,.10); }
+    .sm-chip.chip-info .chip-n { background: rgba(96,165,250,.20); }
+    /* slate = collections decision, the bulk of the queue, deliberately quiet */
+    .sm-chip.chip-collect  { color: #94a3b8; border-color: rgba(148,163,184,.3);  background: rgba(148,163,184,.07); }
+    /* the selected chip gets the brand gold so it reads instantly */
+    .sm-chip.chip-active {
+        border-color: #fbae1a; color: #0f172a;
+        background: linear-gradient(135deg, #f9b233, #fbae1a);
+        box-shadow: 0 4px 14px rgba(249,178,51,.32);
+    }
+    .sm-chip.chip-active .chip-n { background: rgba(15,23,42,.22); color: #0f172a; }
+
+    /* A row carrying an emergency must be visible in a 1,000-row table
+       without hunting: a left edge marker, not a background wash that would
+       fight the alternating row colours. */
+    #reviewTable tbody tr[data-reasons~="cut_off"] td:first-child,
+    #reviewTable tbody tr[data-reasons~="paid_expired_profile"] td:first-child {
+        box-shadow: inset 3px 0 0 #f87171;
+    }
+    #reviewTable tbody tr[data-reasons~="cut_off"],
+    #reviewTable tbody tr[data-reasons~="paid_expired_profile"] { background: rgba(248,113,113,.06); }
+
     @media (prefers-reduced-motion: reduce) {
         .sm-dot, .sm-offline__icon::after { animation: none; }
+        .sm-chip { transition: none; }
+        .sm-chip:hover { transform: none; }
     }
 </style>

@@ -46,13 +46,39 @@
             never touches the router.
         </div>
     </div>
-    <div class="card-body p-0 table-responsive">
+    <div class="card-body p-0">
         {% if not needs_review %}
         <div class="p-4 text-center text-muted">
             <i class="fas fa-check-double fa-2x mb-2"></i>
             <p class="mb-0">Nothing to review. Every matched account agrees with the router.</p>
         </div>
         {% else %}
+
+        {% comment %}
+          WHY THESE CHIPS EXIST
+          On ccr2116.v1 this queue holds 1,023 rows, and ~990 of them are the
+          same thing: past due in the system, still connected on the router.
+          Those are a COLLECTIONS list. A handful are "Paid, Cut Off", which is
+          an emergency. Filing them in one undifferentiated table meant the
+          emergencies were invisible under the collections backlog, and nobody
+          could tell a 3-row problem from a 1,000-row one.
+
+          The chips are counted from the same ru['reason_keys'] the rows are
+          tagged with, so the number on the chip can never disagree with what
+          the filter shows.
+        {% endcomment %}
+        <div class="sm-chips px-3 pt-3 pb-2 d-flex flex-wrap gap-2 align-items-center" role="group" aria-label="Filter review queue by reason">
+            <button type="button" class="sm-chip chip-active" data-reason-filter="all">
+                All <span class="chip-n">{{ review_total }}</span>
+            </button>
+            {% for rc in reason_counts %}
+            <button type="button" class="sm-chip {{ rc.css }}" data-reason-filter="{{ rc.key }}" title="{{ rc.tip }}">
+                {{ rc.label }} <span class="chip-n">{{ rc.count }}</span>
+            </button>
+            {% endfor %}
+            <span class="ms-auto text-muted small" id="smReviewShowing"></span>
+        </div>
+        <div class="table-responsive">
         <table class="table table-hover mb-0 datatable" id="reviewTable">
             <thead>
                 <tr>
@@ -66,7 +92,8 @@
             </thead>
             <tbody>
                 {% for user in needs_review %}
-                <tr class="{% if user.connected_but_unpaid %}table-row-collect{% elif user.state_mismatch %}table-row-pending-install{% endif %}">
+                <tr class="{% if user.connected_but_unpaid %}table-row-collect{% elif user.state_mismatch %}table-row-pending-install{% endif %}"
+                    data-reasons="{% for k in user.reason_keys %}{{ k }}{% if not forloop.last %} {% endif %}{% endfor %}">
                     <td><span class="fw-bold">{{ user.name }}</span></td>
                     <td>
                         {{ user.customer.full_name|default:"-" }}
@@ -167,6 +194,7 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
         {% endif %}
     </div>
 </div>

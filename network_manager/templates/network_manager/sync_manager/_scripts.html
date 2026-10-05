@@ -10,7 +10,7 @@
     }
 
     $(document).ready(function() {
-        $('.datatable').DataTable({
+        var table = $('.datatable').DataTable({
             "pageLength": 10,
             "lengthChange": false,
             "info": true,
@@ -19,6 +19,38 @@
             "autoWidth": false,
             "order": [] // Disable initial sorting
         });
+
+        // ---- Review-queue reason filter -------------------------------
+        // The Needs Review card can hold a thousand rows, and they are NOT
+        // the same kind of problem. Most are collections work (past due,
+        // still connected); a few are emergencies (paid, but cut off).
+        //
+        // Implemented with a DataTables search over the row's data-reasons
+        // attribute rather than CSS .hide(), because hiding rows behind
+        // DataTables' back would desynchronise the row indexes from the
+        // checkbox values in a POST -- a hidden row could still be submitted.
+        var reviewDt = $('#reviewTable').DataTable();
+
+        function applyReasonFilter(reason) {
+            if (reason === 'all') {
+                reviewDt.columns().search('').draw();
+                $('#smReviewShowing').text('');
+                return;
+            }
+            var re = '^\\s*(?:' + $.fn.dataTable.util.escapeRegex(reason) + ')\\s*$';
+            reviewDt.columns().search(re, true, false).draw();
+            var shown = reviewDt.rows({ search: 'applied' }).count();
+            $('#smReviewShowing').text('Showing ' + shown + ' of ' + reviewDt.rows().count());
+        }
+
+        $(document).on('click', '[data-reason-filter]', function() {
+            var $btn = $(this);
+            $('[data-reason-filter]').removeClass('chip-active');
+            $btn.addClass('chip-active');
+            applyReasonFilter($btn.data('reason-filter'));
+        });
+
+        
 
         // Initialize DataTables
         var syncedTable = $('#syncedTable').DataTable({
