@@ -25,40 +25,46 @@
         // the same kind of problem. Most are collections work (past due,
         // still connected); a few are emergencies (paid, but cut off).
         //
-        // Implemented as a custom DataTables search over the row's
-        // data-reasons attribute, NOT columns().search().
+        // THREE ATTEMPTS AT THIS, KEEP ONLY WHAT WORKS:
+        //   1. columns().search() over the row's data-reasons attribute -- wrong,
+        //      a column search reads CELL TEXT and the attribute is not in a cell.
+        //      Result: "No matching records found" for every chip.
+        //   2. $.fn.dataTable.ext.search reading rowData.reasons -- wrong, that
+        //      key came back undefined.
+        //   3. The keys are now real text in a hidden <td class="sm-reasonkey">,
+        //      so an ordinary column search on THAT column finds them. This is
+        //      the one mechanism DataTables is documented to honour.
         //
-        // columns().search() matches against CELL TEXT. The reason keys live
-        // on the <tr>, never in a <td>, so a column search matched nothing at
-        // all and the table came up empty ("Showing 0 of 1051") the moment any
-        // chip was pressed. $.fn.dataTable.ext.search receives rowData, which
-        // does include the row's data-* attributes, so it can actually see
-        // them.
-        //
-        // Also not CSS .hide(): hiding rows behind DataTables' back
+        // Not CSS .hide() on the <tr>: hiding rows behind DataTables' back
         // desynchronises row indexes from the checkbox values in a POST, so a
         // row the operator cannot see could still be submitted.
-        var activeReason = '';
-
-        $.fn.dataTable.ext.search.push(function (settings, data, dataIndex, rowData) {
-            // Only the review table is filtered; the other tables share this
-            // page and must keep every row.
-            if (settings.nTable.id !== 'reviewTable') { return true; }
-            if (!activeReason) { return true; }
-            var keys = ((rowData && rowData.reasons) || '').split(/\s+/);
-            return keys.indexOf(activeReason) !== -1;
+        // The reason-key column is hidden by CSS, and its controls duplicate
+        // the chips above it, so this table's own length/search chrome is off.
+        // The global .datatable init further down leaves them on for the other
+        // tables, so turn them off explicitly here.
+        var reviewDt = $('#reviewTable').DataTable({
+            "pageLength": 10,
+            "lengthChange": false,
+            "searching": false,
+            "info": false,
+            "order": []
         });
-
-        var reviewDt = $('#reviewTable').DataTable();
+        var reasonCol = reviewDt.columns('.sm-reasonkey').index();
 
         function applyReasonFilter(reason) {
-            activeReason = (reason === 'all') ? '' : reason;
-            reviewDt.draw();
+            if (reason === 'all') {
+                reviewDt.column(reasonCol).search('').draw();
+                $('#smReviewShowing').text('');
+                return;
+            }
+            // Whole-word match: the cell holds several space-separated keys, so
+            // a bare substring search for "drift" would also match
+            // "paid_expired_profile" style neighbours and show the wrong rows.
+            var re = '(^|\\s)' + $.fn.dataTable.util.escapeRegex(reason) + '(\\s|$)';
+            reviewDt.column(reasonCol).search(re, true, false).draw();
             var shown = reviewDt.rows({ search: 'applied' }).count();
             var total = reviewDt.rows().count();
-            $('#smReviewShowing').text(
-                activeReason ? ('Showing ' + shown + ' of ' + total) : ''
-            );
+            $('#smReviewShowing').text('Showing ' + shown + ' of ' + total);
         }
 
         $(document).on('click', '[data-reason-filter]', function() {

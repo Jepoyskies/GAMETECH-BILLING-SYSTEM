@@ -67,6 +67,14 @@
           tagged with, so the number on the chip can never disagree with what
           the filter shows.
         {% endcomment %}
+        {% comment %}
+          ONE row of controls. This used to be three stacked bars (reason
+          chips, then a DataTables "10 per page" + search row), which read as
+          three separate menus and pushed the actual table below the fold.
+          The page length selector and the search box are DataTables features
+          that duplicate their own header controls, so they are turned off in
+          _scripts.html and the chips do the only filtering that matters here.
+        {% endcomment %}
         <div class="sm-chips px-3 pt-3 pb-2 d-flex flex-wrap gap-2 align-items-center" role="group" aria-label="Filter review queue by reason">
             <button type="button" class="sm-chip chip-active" data-reason-filter="all">
                 All <span class="chip-n">{{ review_total }}</span>
@@ -88,6 +96,23 @@
                     <th>System Says</th>
                     <th>What Differs</th>
                     <th class="text-end">Actions</th>
+                    {% comment %}
+                      Invisible search key column.
+
+                      The reason keys have to be REAL CELL TEXT for DataTables to
+                      find them. Two earlier attempts failed: columns().search()
+                      against the row's data-reasons attribute matched nothing
+                      (a column search reads cell text, and the attribute is not
+                      in a cell), and reading rowData.reasons in an ext.search
+                      hook returned undefined. Putting the keys in a hidden <td>
+                      makes them ordinary searchable content, which is the one
+                      mechanism DataTables definitely honours.
+
+                      Hidden with CSS, not the `hidden` attribute: DataTables
+                      reads the DOM, and display:none on a <td> still contributes
+                      its text to the row's search index.
+                    {% endcomment %}
+                    <th class="sm-reasonkey" aria-hidden="true"></th>
                 </tr>
             </thead>
             <tbody>
@@ -190,6 +215,7 @@
                         </div>
                         {% endif %}
                     </td>
+                <td class="sm-reasonkey" aria-hidden="true">{% for k in user.reason_keys %}{{ k }} {% endfor %}</td>
                 </tr>
                 {% endfor %}
             </tbody>

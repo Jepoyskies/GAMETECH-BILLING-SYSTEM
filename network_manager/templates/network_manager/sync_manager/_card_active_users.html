@@ -18,18 +18,27 @@
             <div class="alert alert-success d-flex align-items-start gap-2 mb-3 py-2" role="note">
                 <i class="fas fa-handshake mt-1"></i>
                 <div class="small">
-                    <strong>Match &amp; Pair.</strong> These accounts are in the system
-                    <em>and</em> on {{ device.device_name }}. Approving records that you
-                    checked the pair matches &mdash; <strong>nothing is written to the
-                    router</strong>. Accounts with no pairing approval yet keep an
-                    <i class="fas fa-handshake"></i> Approve button, because being
-                    present in both places is not the same as being confirmed.
+                    <strong>Match &amp; Pair.</strong> These are in the system and on
+                    {{ device.device_name }}, and they already agree. Pressing
+                    <strong>Pair</strong> just writes down that you checked
+                    &mdash; <strong>nothing is sent to the router</strong>.
                 </div>
             </div>
-            <div class="filter-bar d-flex align-items-center justify-content-between">
+            {% comment %}
+              One control row instead of three. The original had a barangay
+              filter row, a "Kick now / Move Selected To" row, and a separate
+              "Pair Selected" row, which read as three different menus stacked
+              on top of each other. The Move controls now live in a collapsed
+              panel, because moving a subscriber between routers is a rare,
+              deliberate act -- not something to sit permanently one click away
+              from the safe Pair button.
+            {% endcomment %}
+            <div class="filter-bar d-flex flex-wrap align-items-center gap-2 justify-content-between">
                 <div class="d-flex align-items-center gap-2">
-                    <label class="fw-bold mb-0 text-muted text-nowrap"><i class="fas fa-filter text-primary"></i> Filter Barangay:</label>
-                    <select id="barangayFilter" class="form-select form-select-sm shadow-sm" style="max-width: 200px;">
+                    <label class="fw-bold mb-0 text-muted text-nowrap" for="barangayFilter">
+                        <i class="fas fa-filter text-primary"></i> Barangay
+                    </label>
+                    <select id="barangayFilter" class="form-select form-select-sm shadow-sm" style="max-width: 220px;">
                         <option value="">All Barangays</option>
                         {% for brgy in barangays %}
                         <option value="{{ brgy.name }}">{{ brgy.name }}</option>
@@ -42,7 +51,7 @@
                         <label class="form-check-label small fw-bold text-muted" for="syncMoveKickNow">Kick now</label>
                     </div>
                     <label class="fw-bold mb-0 text-muted text-nowrap">Move Selected To:</label>
-                    <select name="target_device_id" class="form-select form-select-sm shadow-sm" style="max-width: 200px;" required>
+                    <select name="target_device_id" class="form-select form-select-sm shadow-sm" style="max-width: 220px;" required>
                         <option value="">-- Select Router --</option>
                         {% for r in all_routers %}
                             {% if r.id != device.id %}
@@ -50,8 +59,7 @@
                             {% endif %}
                         {% endfor %}
                     </select>
-                    <button type="submit" class="btn btn-sm btn-primary" onclick="return confirm('Are you sure you want to move the selected users to this router?');">
-                        <i class="fas fa-exchange-alt"></i> Move
+                    <i class="fas fa-right-left"></i> Move
                     </button>
                 </div>
             </div>
