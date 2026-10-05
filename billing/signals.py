@@ -379,29 +379,63 @@ def sync_plan_on_save(sender, instance, created, **kwargs):
     if kwargs.get("raw"):
         return
     """
-    When a SubscriptionPlan is saved in Django, push it to all active Mikrotik devices.
-    If the name was changed, delete the old profile first.
-    """
-    devices = MikrotikDevice.objects.all()
-    for device in devices:
-        try:
-            api = MikrotikAPI(device)
+    Push a plan's bandwidth profile to every active MikroTik device.
 
-            # Check if name was changed
-            if (
-                hasattr(instance, "_original_name")
-                and instance._original_name
-                and instance._original_name != instance.name
-            ):
+    Two things this used to get wrong, both of which mattered after the legacy
+    import:
+
+    1. It synced `instance.name`. The display name is not the router's profile
+       name -- `router_profile` exists precisely because they differ (staff see
+       "GTipid Fiber 1000", the router knows "pppoe-20m"). Syncing the display
+       name invented profiles the routers never had.
+
+    2. On rename it deleted the old profile unconditionally. Renaming a plan
+       whose old name was a live profile therefore stripped the rate limits
+       from every subscriber on it -- and it only stayed harmless because the
+       routers happened to be unreachable. Same loaded gun the post_delete
+       handler already guards against, so it uses the same guard here.
+
+    The profile actually written is `effective_router_profile`, the same value
+    the Sync Manager compares against, so a plan cannot be synced to a router
+    under one name and verified under another.
+    """
+    profile = (getattr(instance, "router_profile", "") or instance.name or "").strip()
+
+    devices = MikrotikDevice.objects.all()
+
+    # Rename: only remove the profile the plan used to occupy, and only when
+    # nothing depends on it any more.
+    old_name = getattr(instance, "_original_name", None)
+    if old_name and old_name != instance.name:
+        old_profile = old_name.strip()
+        in_use = Customer.objects.filter(
+            plan__router_profile=old_profile
+        ).exclude(plan__isnull=True).distinct().count()
+        sibling = SubscriptionPlan.objects.filter(
+            router_profile=old_profile
+        ).exclude(pk=instance.pk).count()
+
+        if in_use or sibling:
+            logger.warning(
+                "KEPT router profile '%s' on rename: %d subscriber(s) and %d "
+                "sibling plan(s) still use it. The display name changed; the "
+                "router profile was left alone.",
+                old_profile, in_use, sibling,
+            )
+        else:
+            for device in devices:
                 try:
-                    api.delete_plan_from_mikrotik(plan_name=instance._original_name)
+                    MikrotikAPI(device).delete_plan_from_mikrotik(plan_name=old_profile)
                 except Exception as e:
                     logger.warning(
-                        f"Could not delete old plan {instance._original_name} from {device.device_name} during rename: {e}"
+                        "Could not delete old profile %s from %s during rename: %s",
+                        old_profile, device.device_name, e,
                     )
 
-            api.sync_plan_to_mikrotik(
-                plan_name=instance.name,
+    for device in devices:
+        try:
+            MikrotikAPI(device).sync_plan_to_mikrotik(
+                plan_name=profile,
                 speed_up=instance.speed_up,
                 speed_down=instance.speed_down,
             )
