@@ -23,10 +23,26 @@
   `/ppp/secret` resource. Before ERR-094 that field was dropped, so a cut-off
   customer and a live one looked identical here.
 -->
+<span id="queue-needs-review"></span>
 <div class="card sync-card border-0 mb-4">
     <div class="card-header warning-header d-flex justify-content-between align-items-center border-0">
         <h5 class="mb-0"><i class="fas fa-clipboard-check me-2"></i> Needs Review ({{ needs_review|length }})</h5>
         <small>System and router disagree &mdash; a human decides</small>
+    </div>
+    {# This is the only card on the page whose Approve button WRITES to the
+       router. Needs Review and Match & Pair both say "Approve" and sit near
+       each other, so state the difference on the card itself rather than
+       trusting the operator to remember which one they are looking at. #}
+    <div class="alert alert-warning d-flex align-items-start gap-2 mx-3 mt-3 mb-0 py-2" role="note">
+        <i class="fas fa-triangle-exclamation mt-1"></i>
+        <div class="small">
+            <strong>These rows disagree.</strong> <i class="fas fa-user-check"></i>
+            <strong>Approve</strong> here <strong>does write to {{ device.device_name }}</strong>
+            &mdash; it sets the profile, password and comment. Use
+            <strong>Match &amp; Pair</strong> below if you only want to record that
+            a system account and a router secret are the same subscriber; that one
+            never touches the router.
+        </div>
     </div>
     <div class="card-body p-0 table-responsive">
         {% if not needs_review %}

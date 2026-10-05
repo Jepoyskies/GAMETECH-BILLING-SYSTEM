@@ -5,8 +5,25 @@
         <small>Present in both System and Mikrotik</small>
     </div>
     <div class="card-body p-0 table-responsive">
+        <span id="queue-pair"></span>
         <form method="POST" action="{% url 'bulk_transfer_router' %}" id="bulkTransferForm">
             {% csrf_token %}
+            {# This card is the MATCH & PAIR queue: the account exists in the system
+               AND on the router. Approving here is a human sign-off only and
+               writes NOTHING to the router. The card that does write is Needs
+               Review. Saying so on the card is the difference between a safe
+               click and an unintended secret being overwritten. #}
+            <div class="alert alert-success d-flex align-items-start gap-2 mb-3 py-2" role="note">
+                <i class="fas fa-handshake mt-1"></i>
+                <div class="small">
+                    <strong>Match &amp; Pair.</strong> These accounts are in the system
+                    <em>and</em> on {{ device.device_name }}. Approving records that you
+                    checked the pair matches &mdash; <strong>nothing is written to the
+                    router</strong>. Accounts with no pairing approval yet keep an
+                    <i class="fas fa-handshake"></i> Approve button, because being
+                    present in both places is not the same as being confirmed.
+                </div>
+            </div>
             <div class="filter-bar d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center gap-2">
                     <label class="fw-bold mb-0 text-muted text-nowrap"><i class="fas fa-filter text-primary"></i> Filter Barangay:</label>

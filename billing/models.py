@@ -376,9 +376,16 @@ class Customer(models.Model):
         operator who fixes one and is then bounced by the next wastes the
         whole round trip.
 
-          * unpaid     no verified payment, so the subscription should not carry
+          * unpaid     status says the subscription is finished
+          * past due   the expiry date has passed while status is still 'active'
           * no expiry  without a cut-off date the account can never auto-suspend,
                        which is how an unpaid line quietly stays live forever
+
+        Deliberately NOT keyed off payment_status. The status branch is checked
+        first on purpose: an admin who has re-paid a lapsed account expects the
+        explicit statuses to be clearable by override even before anyone
+        re-activates it, and collapsing the two properties would make that
+        impossible.
         """
         reasons = []
         if self.status in ("expired", "inactive", "suspended", "pull out"):

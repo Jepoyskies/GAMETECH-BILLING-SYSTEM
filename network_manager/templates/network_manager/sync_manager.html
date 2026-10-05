@@ -14,6 +14,31 @@
 
     {% include "network_manager/sync_manager/_hero.html" %}
 
+    {# Two queues live on this page and they do VERY different things:
+         Needs Review -> "Approve" WRITES profile/password/comment to the router
+         Active Users -> "Approve" only records a human sign-off, writes nothing
+       Both were reachable only by scrolling, which is how the wrong one gets
+       clicked. Jump links, and an explicit warning on the writing card. #}
+    {% if api_success %}
+    <nav class="d-flex flex-wrap align-items-center gap-2 mb-3" aria-label="Jump to a queue">
+        <span class="text-body-secondary small fw-semibold me-1">Jump to:</span>
+        <a class="btn btn-sm btn-outline-warning" href="#queue-needs-review">
+            <i class="fas fa-triangle-exclamation"></i> Needs Review
+            <span class="badge text-bg-warning ms-1">{{ count_needs_review }}</span>
+            <span class="d-none d-md-inline">— writes to the router</span>
+        </a>
+        <a class="btn btn-sm btn-outline-success" href="#queue-pair">
+            <i class="fas fa-handshake"></i> Match &amp; Pair
+            <span class="badge text-bg-success ms-1">{{ count_synced }}</span>
+            <span class="d-none d-md-inline">— records your sign-off only</span>
+        </a>
+        <a class="btn btn-sm btn-outline-secondary" href="#queue-missing">
+            <i class="fas fa-triangle-exclamation"></i> Missing on Router
+            <span class="badge text-bg-secondary ms-1">{{ count_missing }}</span>
+        </a>
+    </nav>
+    {% endif %}
+
     {% include "network_manager/sync_manager/_plan_health_banner.html" %}
 
     {% if not api_success %}

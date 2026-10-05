@@ -1,0 +1,106 @@
+"""Regression tests for the two billing-axis bugs found during cutover QA.
+
+Bug 1: payment_status keyed off status, so an applicant in 'pending' with a
+       live expiry was badged Unpaid while demonstrably in date.
+
+Bug 2: push_blocked_reasons only blocked the explicit unpaid statuses, so an
+       'active' customer whose expiry had already passed could have a secret
+       written for them or a pairing approved -- and approving one set
+       sync_status='Synced', which rendered as a green APPROVED badge.
+
+These pin the domain separation Rule 35 in AGENTS.md demands: status is
+lifecycle/installation, expires_at is money.
+"""
+from datetime import timedelta
+
+from django.test import TestCase
+from django.utils import timezone
+
+from billing.models import Customer
+
+
+def make_customer(**kw):
+    now = timezone.now()
+    defaults = {
+        "full_name": "Test Subscriber",
+        "pppoe_username": "test_sub",
+        "pppoe_password": "secret123",
+        "status": "active",
+        "expires_at": now + timedelta(days=30),
+    }
+    defaults.update(kw)
+    defaults.pop("pppoe_username", None)
+    return Customer.objects.create(
+        pppoe_username=defaults.pop("pppoe_username", "test_sub"), **defaults
+    )
+
+
+class PaymentStatusTests(TestCase):
+    """Bug 1: the billing axis must not be driven by installation state."""
+
+    def test_active_and_in_date_is_paid(self):
+        c = make_customer(status="active")
+        self.assertEqual(c.payment_status, "Paid")
+
+    def test_applicant_with_live_expiry_is_paid_not_unpaid(self):
+        """THE BUG: 'pending' means awaiting installation, not owing money."""
+        c = make_customer(status="pending")
+        self.assertEqual(
+            c.payment_status,
+            "Paid",
+            "A pending applicant with a future expiry is in date. Badging them "
+            "Unpaid conflates installation state with money.",
+        )
+
+    def test_past_due_is_unpaid(self):
+        c = make_customer(status="active", expires_at=timezone.now() - timedelta(days=1))
+        self.assertEqual(c.payment_status, "Unpaid")
+
+    def test_no_expiry_is_unpaid(self):
+        """No cut-off date means we cannot prove payment covers any period."""
+        c = make_customer(expires_at=None)
+        self.assertEqual(c.payment_status, "Unpaid")
+
+    def test_explicit_lapsed_status_wins_over_a_future_expiry(self):
+        for status in ("expired", "suspended", "pull out"):
+            c = make_customer(status=status)
+            self.assertEqual(
+                c.payment_status,
+                "Unpaid",
+                "%s means the subscription is finished whatever the date says." % status,
+            )
+
+
+class PushGateTests(TestCase):
+    """Bug 2: the money gate must catch a lapsed expiry, not just a status."""
+
+    def test_active_but_past_due_is_blocked(self):
+        c = make_customer(status="active", expires_at=timezone.now() - timedelta(days=3))
+        self.assertTrue(
+            c.is_push_blocked,
+            "An active account whose expiry has passed has consumed more than "
+            "it paid for. It must not get a router secret without an override.",
+        )
+
+    def test_past_due_reason_is_plain_english_with_the_date(self):
+        c = make_customer(status="active", expires_at=timezone.now() - timedelta(days=3))
+        joined = " ".join(c.push_blocked_reasons).lower()
+        self.assertIn("past due", joined)
+
+    def test_in_date_active_account_is_not_blocked(self):
+        self.assertFalse(make_customer().is_push_blocked)
+
+    def test_missing_expiry_is_still_blocked(self):
+        self.assertTrue(make_customer(expires_at=None).is_push_blocked)
+
+    def test_reactivated_account_can_be_overridden(self):
+        """An explicit 'expired' row stays overridable even before re-activation.
+
+        This is why the gate checks status first instead of collapsing to
+        payment_status: staff re-pay a lapsed line and then override, and must
+        not be stranded while someone clicks Re-activate.
+        """
+        c = make_customer(status="expired")
+        reasons = c.push_blocked_reasons
+        self.assertTrue(reasons)
+        self.assertTrue(any("Unpaid" in r for r in reasons))
