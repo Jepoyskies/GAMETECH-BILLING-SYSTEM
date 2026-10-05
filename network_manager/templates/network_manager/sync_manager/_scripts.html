@@ -25,22 +25,40 @@
         // the same kind of problem. Most are collections work (past due,
         // still connected); a few are emergencies (paid, but cut off).
         //
-        // Implemented with a DataTables search over the row's data-reasons
-        // attribute rather than CSS .hide(), because hiding rows behind
-        // DataTables' back would desynchronise the row indexes from the
-        // checkbox values in a POST -- a hidden row could still be submitted.
+        // Implemented as a custom DataTables search over the row's
+        // data-reasons attribute, NOT columns().search().
+        //
+        // columns().search() matches against CELL TEXT. The reason keys live
+        // on the <tr>, never in a <td>, so a column search matched nothing at
+        // all and the table came up empty ("Showing 0 of 1051") the moment any
+        // chip was pressed. $.fn.dataTable.ext.search receives rowData, which
+        // does include the row's data-* attributes, so it can actually see
+        // them.
+        //
+        // Also not CSS .hide(): hiding rows behind DataTables' back
+        // desynchronises row indexes from the checkbox values in a POST, so a
+        // row the operator cannot see could still be submitted.
+        var activeReason = '';
+
+        $.fn.dataTable.ext.search.push(function (settings, data, dataIndex, rowData) {
+            // Only the review table is filtered; the other tables share this
+            // page and must keep every row.
+            if (settings.nTable.id !== 'reviewTable') { return true; }
+            if (!activeReason) { return true; }
+            var keys = ((rowData && rowData.reasons) || '').split(/\s+/);
+            return keys.indexOf(activeReason) !== -1;
+        });
+
         var reviewDt = $('#reviewTable').DataTable();
 
         function applyReasonFilter(reason) {
-            if (reason === 'all') {
-                reviewDt.columns().search('').draw();
-                $('#smReviewShowing').text('');
-                return;
-            }
-            var re = '^\\s*(?:' + $.fn.dataTable.util.escapeRegex(reason) + ')\\s*$';
-            reviewDt.columns().search(re, true, false).draw();
+            activeReason = (reason === 'all') ? '' : reason;
+            reviewDt.draw();
             var shown = reviewDt.rows({ search: 'applied' }).count();
-            $('#smReviewShowing').text('Showing ' + shown + ' of ' + reviewDt.rows().count());
+            var total = reviewDt.rows().count();
+            $('#smReviewShowing').text(
+                activeReason ? ('Showing ' + shown + ' of ' + total) : ''
+            );
         }
 
         $(document).on('click', '[data-reason-filter]', function() {
