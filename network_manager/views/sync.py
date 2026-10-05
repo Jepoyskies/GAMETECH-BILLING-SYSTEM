@@ -188,7 +188,15 @@ def sync_manager(request, device_id):
                 )
                 ru['approval_reasons'] = approval_reasons(dc)
 
-                if ru['awaiting_approval'] or ru.get('is_suspicious'):
+                # Route on DISAGREEMENT, not on "not yet paired".
+                #
+                # Pairing is a read-only sign-off, so an account present in both
+                # places that agrees with the router belongs in Match & Pair
+                # whether or not anyone has paired it yet. Routing it to Needs
+                # Review instead left the pairing card permanently empty and
+                # pushed every operator toward the one Approve button that
+                # writes to the router.
+                if ru['drift'] or ru['state_mismatch'] or ru.get('is_suspicious'):
                     needs_review.append(ru)
                 else:
                     synced.append(ru)
@@ -319,7 +327,14 @@ def _approve_customers(customers, device, actor):
         # Unpaid / no-expiry is refused here exactly as it is on Push.
         # Approving asserts this account SHOULD be live, so it must not become
         # the easy way round the payment gate.
-        if push_blockers(customer):
+        #
+        # Pairing uses the NARROWER gate (pair_blocked_reasons), not the full
+        # push gate. Pairing writes nothing to the router and changes no
+        # service, so a payment problem is not a reason to refuse it -- only a
+        # missing expiry date is, because such a line can never auto-suspend.
+        # Blocking pairing on a lapsed expiry would stall the cutover on 961
+        # admin overrides while changing nothing about anyone's service.
+        if customer.pair_blocked_reasons:
             blocked += 1
             continue
 

@@ -418,6 +418,38 @@ class Customer(models.Model):
     def is_push_blocked(self):
         return bool(self.push_blocked_reasons)
 
+    @property
+    def pair_blocked_reasons(self):
+        """Why this account cannot be PAIRED without an admin override.
+
+        Deliberately narrower than push_blocked_reasons, and the difference is
+        the whole point:
+
+          * Push writes a secret to a router. That makes a line live, so the
+            full payment gate applies -- lapsed expiry, no expiry, finished
+            subscription, all of it.
+          * Pairing only records that a human confirmed a system account and a
+            router secret are the same subscriber. It writes nothing and
+            changes no service, so a payment problem is not a reason to refuse
+            it.
+
+        Only a missing expiry date blocks pairing. Without a cut-off date the
+        account can never auto-suspend, so pairing it would bless a line that
+        can never be retired.
+
+        Blocking pairing on a lapsed expiry would be wrong in the other
+        direction: 961 accounts are past due, and refusing to let a human record
+        that a system account matches a router secret would stall the cutover
+        on 961 admin overrides while changing nothing about anyone's service.
+        """
+        if self.expires_at is None:
+            return ["No expiry date — cannot auto-suspend"]
+        return []
+
+    @property
+    def is_pair_blocked(self):
+        return bool(self.pair_blocked_reasons)
+
     # --- THE SUPERPOWER: Foreign Keys tying the system together ---
     plan = models.ForeignKey("SubscriptionPlan", on_delete=models.SET_NULL, null=True)
     agent = models.ForeignKey("Agent", on_delete=models.SET_NULL, null=True)

@@ -8,11 +8,13 @@
         <span id="queue-pair"></span>
         <form method="POST" action="{% url 'bulk_transfer_router' %}" id="bulkTransferForm">
             {% csrf_token %}
-            {# This card is the MATCH & PAIR queue: the account exists in the system
-               AND on the router. Approving here is a human sign-off only and
-               writes NOTHING to the router. The card that does write is Needs
-               Review. Saying so on the card is the difference between a safe
-               click and an unintended secret being overwritten. #}
+            {% comment %}
+      This card is the MATCH & PAIR queue: the account exists in the system
+      AND on the router. Approving here is a human sign-off only and writes
+      NOTHING to the router. The card that does write is Needs Review.
+      Saying so on the card is the difference between a safe click and an
+      unintended secret being overwritten.
+    {% endcomment %}
             <div class="alert alert-success d-flex align-items-start gap-2 mb-3 py-2" role="note">
                 <i class="fas fa-handshake mt-1"></i>
                 <div class="small">
@@ -151,9 +153,9 @@
                                   to cannot make an account look approved on its
                                   own. Reads the router, writes nothing.
                                 {% endcomment %}
-                                {% if user.customer.is_push_blocked %}
+                                {% if user.customer.pair_blocked_reasons %}
                                     <button type="button" class="btn btn-sm btn-secondary" disabled
-                                            title="Held back: {{ user.customer.push_blocked_reasons|join:', ' }}. Admin override required before this can be treated as live.">
+                                            title="Held back: {{ user.customer.pair_blocked_reasons|join:', ' }}. Admin override required before this can be paired.">
                                         <i class="fas fa-lock"></i> Approve
                                     </button>
                                 {% elif user.customer.pair_approved %}
