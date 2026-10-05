@@ -72,7 +72,8 @@
                     </td>
 
                     {# col 2 – Full Name + mobile status dot #}
-                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;">
+                    <td class="gt-cell-name">
+                      <div class="gt-name-wrap">
                         {% if customer.is_paid_offline %}
                             <span class="gt-conn-dot gt-conn-dot--offline d-inline-block d-md-none me-1 align-middle"></span>
                         {% elif customer.installation_status == 'pending' or customer.status == 'pending' or customer.is_pending_install %}
@@ -88,13 +89,14 @@
                             <span class="gt-conn-dot d-inline-block d-md-none me-1 align-middle"
                                   style="background: #64748b;"></span>
                         {% endif %}
-                        <span class="fw-semibold text-title" title="{{ customer.full_name }}">{{ customer.full_name }}</span>
+                        <span class="gt-name-text fw-semibold text-title" title="{{ customer.full_name }}">{{ customer.full_name }}</span>
                         {% if customer.is_suspicious %}
-                            <span class="badge bg-danger ms-1" title="Suspicious Account: {{ customer.suspicious_reasons|join:', ' }}"><i class="fas fa-exclamation-triangle"></i></span>
+                            <span class="gt-name-flag gt-name-flag--danger" title="Suspicious Account: {{ customer.suspicious_reasons|join:', ' }}"><i class="fas fa-exclamation-triangle"></i></span>
                         {% endif %}
                         {% if customer.is_no_expiry %}
-                            <span class="badge bg-warning text-dark ms-1" title="No expiration date on file. This line cannot be auto-suspended or auto-renewed until an expiry date is set."><i class="fas fa-calendar-xmark"></i> No expiry</span>
+                            <span class="gt-name-flag gt-name-flag--warning" title="No expiration date on file. This line cannot be auto-suspended or auto-renewed until an expiry date is set."><i class="fas fa-calendar-xmark"></i></span>
                         {% endif %}
+                      </div>
                     </td>
 
                     {# col 3 – Email #}
