@@ -245,6 +245,13 @@ def sync_manager(request, device_id):
                     keys.append('suspicious')
                 ru['reason_keys'] = keys
 
+                # Re-derive drift AFTER the reason keys, because the expired
+                # profile fix above can CLEAR drift. A row labelled "Config
+                # Drift" on the card but tagged without it would make the chip
+                # count and the filter disagree, which is the exact bug the
+                # chips exist to remove.
+                ru['drift'] = bool(ru['drift_fields'])
+
                 # Route on DISAGREEMENT, not on "not yet paired".
                 #
                 # Pairing is a read-only sign-off, so an account present in both
