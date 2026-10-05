@@ -421,20 +421,30 @@ SIMPLE_GROUPS = [
 def simple_summary(rows):
     """Bucket the review queue into the three plain-language questions.
 
-    Presentation only. Every row lands in at least one bucket because the
-    count_keys above cover all of REASON_ORDER, and a row can appear in two
-    buckets when it genuinely is two things (e.g. unpaid AND awaiting
-    confirmation) -- which is honest, because it needs both a collections
-    follow-up and a signature.
+    Presentation only. A row can appear in two buckets when it genuinely is
+    two things (unpaid AND awaiting confirmation), which is honest -- it needs
+    both a collections follow-up and a signature.
+
+    filter_key is the reason-chip this card should activate when its "Show me
+    these" link is clicked. It is resolved from the data rather than hardcoded
+    in the template: a card can cover several reasons ('cut_off' and
+    'paid_expired_profile' are both "customer has no internet"), and only some
+    of them may currently have rows. A chip only renders when it has a non-zero
+    count, so picking a fixed key would aim the link at a chip that is not on
+    the page and the filter would silently do nothing. Falls back to the first
+    key with rows, else the group's own key.
     """
     out = []
     for g in SIMPLE_GROUPS:
-        n = sum(
-            1 for r in rows
-            if any(k in (r.get('reason_keys') or []) for k in g['count_keys'])
-        )
-        if n:
-            out.append(dict(g, count=n))
+        per_key = {
+            k: sum(1 for r in rows if k in (r.get('reason_keys') or []))
+            for k in g['count_keys']
+        }
+        n = sum(per_key.values())
+        if not n:
+            continue
+        live = [k for k in g['count_keys'] if per_key[k]]
+        out.append(dict(g, count=n, per_key=per_key, filter_key=live[0]))
     return out
 
 

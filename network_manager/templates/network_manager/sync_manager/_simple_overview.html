@@ -91,13 +91,14 @@
               on a 1,000-row table and has to find the chips themselves,
               which defeats the point of the plain-language summary.
             {% endcomment %}
+            
             {% comment %}
-              The filter key must be a real chip, so "collect" maps onto the
-              chip the reason filter already uses. Keeping one vocabulary for
-              both views means a filter written by either one still works.
+              g.filter_key is resolved from the data by simple_summary(), so
+              the link can never point at a chip that has no rows and
+              therefore was never rendered.
             {% endcomment %}
             <a class="smv-card__link" href="#queue-needs-review"
-               data-smv-filter="{% if g.key == 'fix' %}drift{% elif g.key == 'collect' %}connected_unpaid{% elif g.key == 'confirm' %}awaiting_approval{% else %}{{ g.key }}{% endif %}">
+               data-smv-filter="{{ g.filter_key }}">
                 Show me these {{ g.count }}
                 <i class="fas fa-chevron-down" aria-hidden="true"></i>
             </a>
