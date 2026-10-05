@@ -5,40 +5,19 @@
 
 {% block extra_css %}
 {% include "network_manager/sync_manager/_styles.html" %}
+{% include "network_manager/sync_manager/_styles_status.html" %}
 {% endblock %}
 
 {% block content %}
 <main class="container-fluid py-4 px-3 px-md-4">
-    <!-- Messages / Notifications -->
-    {% if messages %}
-    {% for message in messages %}
-    <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    {% endfor %}
-    {% endif %}
+    {% comment %} Flash messages are toasted by billing/base.html; rendering them here too showed each one twice. {% endcomment %}
 
     {% include "network_manager/sync_manager/_hero.html" %}
 
     {% include "network_manager/sync_manager/_plan_health_banner.html" %}
 
     {% if not api_success %}
-    <div class="alert alert-danger shadow-sm d-flex flex-wrap align-items-center justify-content-between gap-2">
-        <span>
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            {% if router_error %}{{ router_error }}
-            {% else %}Failed to connect to the Mikrotik API. Please ensure the device is online and API credentials are correct.{% endif %}
-        </span>
-        {% comment %}
-          A cached "unreachable" must never become a dead end: the operator
-          fixes the cable and needs a way to re-test immediately rather than
-          waiting out the circuit breaker's backoff.
-        {% endcomment %}
-        <a href="{% url 'sync_manager_device' device.id %}?force=1" class="btn btn-sm btn-outline-light">
-            <i class="fas fa-rotate-right me-1"></i> Retry now
-        </a>
-    </div>
+    {% include "network_manager/sync_manager/_router_offline.html" %}
     {% else %}
     <div class="row">
         <div class="col-12">

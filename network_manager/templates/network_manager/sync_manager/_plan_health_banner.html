@@ -7,56 +7,61 @@ speeds so the import cannot tell which one a subscriber meant. Saying so here
 stops staff chasing a router problem that is actually a catalogue problem.
 {% endcomment %}
 {% if plan_health and not plan_health.clean %}
-<div class="alert alert-warning shadow-sm">
-    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-2">
-        <div>
-            <i class="fas fa-clipboard-list me-2"></i>
-            <strong>Plan catalogue problems</strong>
-            <span class="text-muted small ms-1">
-                ({{ plan_health.plans_with_profile }}/{{ plan_health.total_plans }} plans mapped to a router profile)
-            </span>
+<section class="sm-panel sm-panel--warn animate-fade-in" aria-labelledby="smPlanHealthTitle">
+    <div class="sm-panel__head">
+        <div class="d-flex align-items-center gap-3 min-w-0">
+            <div class="sm-panel__icon" aria-hidden="true"><i class="fas fa-clipboard-list"></i></div>
+            <div class="min-w-0">
+                <h2 id="smPlanHealthTitle" class="sm-panel__title">Plan catalogue problems</h2>
+                <div class="sm-panel__sub">
+                    {{ plan_health.plans_with_profile }}/{{ plan_health.total_plans }} plans mapped to a router profile
+                </div>
+            </div>
         </div>
-        <a href="{% url 'plan_list' %}" class="btn btn-sm btn-outline-warning">
-            <i class="fas fa-cog me-1"></i>Fix in Internet Plans
+        <a id="smFixPlansBtn" href="{% url 'plan_list' %}" class="sm-btn sm-btn--warn">
+            <i class="fas fa-cog"></i> Fix in Internet Plans
         </a>
     </div>
 
     {% if plan_health.ambiguous %}
-    <p class="mb-1 fw-semibold small">
+    <p class="sm-panel__label">
         Same price, but the plan name does not say which speed &mdash; the import cannot tell them apart:
     </p>
-    <ul class="small mb-2">
+    <ul class="sm-plan-list">
         {% for a in plan_health.ambiguous %}
-        <li>
-            <strong>&#8369;{{ a.price|floatformat:0 }}</strong> &mdash; {{ a.plans|join:" / " }}
-            ({% for s in a.speeds %}{{ s }} Mbps{% if not forloop.last %}, {% endif %}{% endfor %})
-            {% if a.customer_count %}<span class="badge bg-secondary ms-1">{{ a.customer_count }} customer(s)</span>{% endif %}
+        <li class="sm-plan-row">
+            <span class="sm-price">&#8369;{{ a.price|floatformat:0 }}</span>
+            <span class="sm-plan-row__names">{{ a.plans|join:" / " }}</span>
+            <span class="sm-plan-row__tags">
+                {% for s in a.speeds %}<span class="sm-chip sm-chip--info">{{ s }} Mbps</span>{% endfor %}
+                {% if a.customer_count %}<span class="sm-chip"><i class="fas fa-users"></i> {{ a.customer_count }}</span>{% endif %}
+            </span>
         </li>
         {% endfor %}
     </ul>
     {% endif %}
 
     {% if plan_health.unmapped %}
-    <p class="mb-1 fw-semibold small">
+    <p class="sm-panel__label">
         No router profile mapped &mdash; these fall back to the display name and may show permanent drift:
     </p>
-    <div class="small" style="max-height:9rem; overflow:auto;">
+    <div class="sm-unmapped">
         {% for u in plan_health.unmapped %}
-        <span class="badge bg-light text-dark border me-1 mb-1">
-            {{ u.name }} <span class="text-muted">&#8369;{{ u.price|floatformat:0 }}</span>
-            {% if u.customer_count %}<span class="text-danger">({{ u.customer_count }})</span>{% endif %}
+        <span class="sm-chip">
+            {{ u.name }} <span class="sm-muted">&#8369;{{ u.price|floatformat:0 }}</span>
+            {% if u.customer_count %}<span class="sm-text-danger">({{ u.customer_count }})</span>{% endif %}
         </span>
         {% endfor %}
     </div>
     {% endif %}
-</div>
+</section>
 {% elif plan_health and plan_health.clean %}
-<div class="alert alert-success shadow-sm py-2 small">
+<div class="sm-panel sm-panel--ok sm-panel--slim animate-fade-in">
     <i class="fas fa-check-circle me-2"></i>
     Plan catalogue is clean &mdash; all {{ plan_health.total_plans }} plans map to a router profile,
     and no plan is ambiguous.
     {% if plan_health.variants %}
-    <span class="text-muted">
+    <span class="sm-muted">
         ({{ plan_health.variants|length }} price{{ plan_health.variants|length|pluralize }}
         sold at more than one speed; each plan name states its own speed.)
     </span>

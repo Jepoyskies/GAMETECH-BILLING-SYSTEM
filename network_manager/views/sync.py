@@ -193,9 +193,9 @@ def sync_manager(request, device_id):
         for dc in django_customers:
             if dc.pppoe_username not in router_usernames:
                 missing_on_router.append(dc)
-    else:
-        messages.error(request, f"Failed to connect to router: {result.get('error')}")
-        
+    # No flash message on failure: the template's offline card already shows
+    # router_error. A flash duplicated it as a toast AND an inline alert.
+
     from billing.models import Barangay
     
     all_routers = MikrotikDevice.objects.all()

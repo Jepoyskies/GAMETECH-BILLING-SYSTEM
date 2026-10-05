@@ -1,0 +1,47 @@
+{% comment %}
+Router-unreachable state for the Sync Manager.
+
+A cached "unreachable" must never become a dead end: the operator fixes the
+cable and needs a way to re-test immediately rather than waiting out the
+circuit breaker's backoff, hence Retry now (?force=1).
+{% endcomment %}
+<section class="sm-offline animate-fade-in" aria-labelledby="smOfflineTitle">
+    <div class="sm-offline__icon" aria-hidden="true">
+        <i class="fas fa-plug-circle-xmark"></i>
+    </div>
+
+    <div class="sm-offline__body">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+            <h2 id="smOfflineTitle" class="sm-offline__title">{{ device.device_name }} is not answering</h2>
+            {% if known_down %}
+            <span class="sm-chip sm-chip--danger"><i class="fas fa-clock-rotate-left"></i> Cached outage</span>
+            {% else %}
+            <span class="sm-chip sm-chip--danger"><i class="fas fa-circle-exclamation"></i> Connection failed</span>
+            {% endif %}
+        </div>
+        <p class="sm-offline__text">
+            {% if router_error %}{{ router_error }}
+            {% else %}Failed to connect to the Mikrotik API. Please ensure the device is online and API credentials are correct.{% endif %}
+        </p>
+
+        <div class="sm-offline__meta">
+            <span><i class="fas fa-network-wired"></i> {{ device.ip_address }}</span>
+            <span><i class="fas fa-door-open"></i> API port {{ device.api_port }}</span>
+        </div>
+
+        <ul class="sm-offline__checks">
+            <li><i class="fas fa-ethernet"></i> Cable &amp; uplink connected</li>
+            <li><i class="fas fa-bolt"></i> Router powered on</li>
+            <li><i class="fas fa-key"></i> IP &amp; API credentials correct</li>
+        </ul>
+
+        <div class="d-flex flex-wrap gap-2">
+            <a id="smRetryBtn" href="{% url 'sync_manager_device' device.id %}?force=1" class="sm-btn sm-btn--gold">
+                <i class="fas fa-rotate-right"></i> Retry now
+            </a>
+            <a id="smBackBtn" href="{% url 'device_list' %}" class="sm-btn sm-btn--ghost">
+                <i class="fas fa-server"></i> All devices
+            </a>
+        </div>
+    </div>
+</section>
