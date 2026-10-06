@@ -12,22 +12,22 @@
 <div class="container-fluid py-4 px-3 px-md-4">
 
   <!-- Page Header -->
-  <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4" >
+  <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
     <div class="d-flex align-items-center gap-3">
       <div class="gt-header-icon"><i class="fas fa-users-cog"></i></div>
       <div>
-        <div class="gt-header-eyebrow"><i class="fas fa-users-cog me-1"></i> Staff &amp; Admins</div>
-        <h1 class="gt-header-title">Staff &amp; Admins</h1>
-        <p class="gt-header-sub">Manage system users, roles, and access levels</p>
+        <div class="gt-header-eyebrow"><i class="fas fa-shield-alt me-1"></i> Administration &amp; Security</div>
+        <h1 class="gt-header-title">Staff &amp; Operator Accounts</h1>
+        <p class="gt-header-sub">Manage system staff accounts, operational roles, access tiers, and security credentials</p>
       </div>
     </div>
     {% if request.user.role == 'Admin' or request.user.role_perms.can_access_administration %}
-    <div class="d-flex gap-2">
+    <div class="d-flex flex-wrap gap-2">
       <a href="{% url 'manage_roles' %}" class="gt-btn-secondary">
-        <i class="fas fa-shield-alt me-1"></i> Manage Roles
+        <i class="fas fa-user-shield me-1"></i> Manage Roles
       </a>
       <button type="button" class="gt-btn-primary" data-bs-toggle="modal" data-bs-target="#addStaffModal">
-        <i class="fas fa-user-plus me-1"></i> Add Staff
+        <i class="fas fa-user-plus me-1"></i> Add Staff Member
       </button>
     </div>
     {% endif %}
@@ -41,94 +41,169 @@
   {% endfor %}
   {% endif %}
 
+  <!-- Staff Overview KPI Row -->
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-sm-6 col-md-4">
+      <div class="gt-kpi-card h-100">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="gt-kpi-lbl">Total Registered Accounts</span>
+          <div class="gt-kpi-icon" style="background: rgba(249,178,51,0.15); color: #F9B233;">
+            <i class="fas fa-users"></i>
+          </div>
+        </div>
+        <div class="gt-kpi-val">{{ staff_members|length }}</div>
+        <div class="text-xs text-muted mt-1">Active staff with portal credentials</div>
+      </div>
+    </div>
+    <div class="col-12 col-sm-6 col-md-4">
+      <div class="gt-kpi-card h-100">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="gt-kpi-lbl">Access Control Policy</span>
+          <div class="gt-kpi-icon" style="background: rgba(59,130,246,0.12); color: #3b82f6;">
+            <i class="fas fa-id-card"></i>
+          </div>
+        </div>
+        <div class="gt-kpi-val" style="font-size: 1.35rem;">RBAC Enforcement</div>
+        <div class="text-xs text-info mt-1"><i class="fas fa-lock me-1"></i>Per-module granular permissions</div>
+      </div>
+    </div>
+    <div class="col-12 col-sm-6 col-md-4">
+      <div class="gt-kpi-card h-100">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="gt-kpi-lbl">Audit Compliance</span>
+          <div class="gt-kpi-icon" style="background: rgba(16,185,129,0.12); color: #10b981;">
+            <i class="fas fa-clipboard-check"></i>
+          </div>
+        </div>
+        <div class="gt-kpi-val" style="font-size: 1.35rem;">100% Tracked</div>
+        <div class="text-xs text-success mt-1"><i class="fas fa-shield-alt me-1"></i>All modifications logged in system audit</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Staff Table Card -->
   <div class="gt-table-card">
     <div class="gt-table-toolbar">
       <div class="gt-table-toolbar-left">
-        <span class="gt-status-badge gt-status-badge--info"><span class="gt-status-dot"></span> Team Members</span>
+        <span class="status-badge status-badge--info">
+          <i class="fas fa-users-gear me-1"></i> {{ staff_members|length }} Staff Accounts
+        </span>
       </div>
       <div class="gt-table-toolbar-right">
-        <span class="text-muted" style="font-size:0.85rem;">{{ staff_members|length }} accounts</span>
+        <span class="text-xs text-muted">Click headers to sort &bull; Real-time search filter</span>
       </div>
     </div>
     <div class="table-responsive">
       <table id="staffTable" class="gt-table align-middle dt-responsive nowrap mb-0" style="width:100%">
         <thead>
           <tr>
-            <th>Username</th>
+            <th class="ps-3">Staff Identity</th>
             <th>Full Name</th>
             <th>Email</th>
             <th>Role</th>
             <th>Status</th>
-            {% if request.user.role == 'Admin' %}<th>Password</th>{% endif %}
+            {% if request.user.role == 'Admin' %}<th>Security</th>{% endif %}
             <th>Date Added</th>
             {% if request.user.role != 'Viewer' %}
-            <th class="text-center">Actions</th>
+            <th class="text-end pe-3">Actions</th>
             {% endif %}
           </tr>
         </thead>
         <tbody>
           {% for staff in staff_members %}
           <tr>
-            <td>
+            <td class="ps-3">
               <div class="d-flex align-items-center gap-2">
                 {% if staff.role == 'Admin' %}
-                  <div class="av av-sm av-red">{{ staff.username|make_list|first|upper }}</div>
+                  <div class="rounded-circle d-inline-flex align-items-center justify-content-center text-white fw-bold shadow-sm"
+                       style="width: 34px; height: 34px; font-size: 0.82rem; background: linear-gradient(135deg, #ef4444, #b91c1c); flex-shrink: 0;">
+                    {{ staff.username|make_list|first|upper }}
+                  </div>
                 {% elif staff.role == 'Editor' %}
-                  <div class="av av-sm av-blue">{{ staff.username|make_list|first|upper }}</div>
+                  <div class="rounded-circle d-inline-flex align-items-center justify-content-center text-white fw-bold shadow-sm"
+                       style="width: 34px; height: 34px; font-size: 0.82rem; background: linear-gradient(135deg, #3b82f6, #1d4ed8); flex-shrink: 0;">
+                    {{ staff.username|make_list|first|upper }}
+                  </div>
+                {% elif staff.role == 'CSR' %}
+                  <div class="rounded-circle d-inline-flex align-items-center justify-content-center text-white fw-bold shadow-sm"
+                       style="width: 34px; height: 34px; font-size: 0.82rem; background: linear-gradient(135deg, #10b981, #047857); flex-shrink: 0;">
+                    {{ staff.username|make_list|first|upper }}
+                  </div>
+                {% elif staff.role == 'Technician' %}
+                  <div class="rounded-circle d-inline-flex align-items-center justify-content-center text-white fw-bold shadow-sm"
+                       style="width: 34px; height: 34px; font-size: 0.82rem; background: linear-gradient(135deg, #F9B233, #d97706); flex-shrink: 0;">
+                    {{ staff.username|make_list|first|upper }}
+                  </div>
                 {% else %}
-                  <div class="av av-sm" style="background:#94a3b8;">{{ staff.username|make_list|first|upper }}</div>
+                  <div class="rounded-circle d-inline-flex align-items-center justify-content-center text-white fw-bold shadow-sm"
+                       style="width: 34px; height: 34px; font-size: 0.82rem; background: linear-gradient(135deg, #64748b, #475569); flex-shrink: 0;">
+                    {{ staff.username|make_list|first|upper }}
+                  </div>
                 {% endif %}
-                <span class="fw-bold" style="font-size:0.88rem;">{{ staff.username }}</span>
+                <span class="fw-bold" style="font-size: 0.88rem; color: var(--gt-text-primary, #0f172a);">{{ staff.username }}</span>
               </div>
             </td>
-            <td>{{ staff.full_name }}</td>
-            <td><span class="text-muted" style="font-size:0.85rem;">{{ staff.email }}</span></td>
+            <td>
+              <span style="color: var(--gt-text-primary, #0f172a); font-weight: 500;">{{ staff.full_name|default:"&mdash;" }}</span>
+            </td>
+            <td>
+              <span class="text-muted" style="font-size: 0.84rem;">{{ staff.email|default:"&mdash;" }}</span>
+            </td>
             <td>
               {% if staff.role == 'Admin' %}
-                <span class="pill" style="background:rgba(239,68,68,0.12); color:#dc2626; border:1px solid rgba(239,68,68,0.3);">
-                  <i class="fas fa-user-shield" style="font-size:0.65rem;"></i> Admin
+                <span class="status-badge status-badge--danger">
+                  <i class="fas fa-user-shield me-1"></i> Admin
                 </span>
               {% elif staff.role == 'Editor' %}
-                <span class="pill" style="background:rgba(59,130,246,0.12); color:#2563eb; border:1px solid rgba(59,130,246,0.3);">
-                  <i class="fas fa-edit" style="font-size:0.65rem;"></i> Editor
+                <span class="status-badge status-badge--primary">
+                  <i class="fas fa-edit me-1"></i> Editor
                 </span>
               {% elif staff.role == 'CSR' %}
-                <span class="pill" style="background:rgba(16,185,129,0.12); color:#059669; border:1px solid rgba(16,185,129,0.3);">
-                  <i class="fas fa-headset" style="font-size:0.65rem;"></i> CSR
+                <span class="status-badge status-badge--success">
+                  <i class="fas fa-headset me-1"></i> CSR
                 </span>
               {% elif staff.role == 'Technician' %}
-                <span class="pill" style="background:rgba(245,158,11,0.12); color:#d97706; border:1px solid rgba(245,158,11,0.3);">
-                  <i class="fas fa-tools" style="font-size:0.65rem;"></i> Technician
+                <span class="status-badge status-badge--warning">
+                  <i class="fas fa-tools me-1"></i> Technician
                 </span>
               {% else %}
-                <span class="pill pill-inactive"><span class="pill-dot"></span>{{ staff.role }}</span>
+                <span class="status-badge status-badge--neutral">
+                  {{ staff.role }}
+                </span>
               {% endif %}
             </td>
             <td>
               {% if staff.status == 'Active' %}
-                <span class="pill pill-active"><span class="pill-dot"></span>Active</span>
+                <span class="status-badge status-badge--success">
+                  <i class="fas fa-check-circle me-1"></i> Active
+                </span>
               {% else %}
-                <span class="pill pill-expired"><span class="pill-dot"></span>Inactive</span>
+                <span class="status-badge status-badge--neutral">
+                  <i class="fas fa-ban me-1"></i> Inactive
+                </span>
               {% endif %}
             </td>
             {% if request.user.role == 'Admin' %}
             <td>
-              <span class="text-muted" style="font-size:0.8rem;"><i class="far fa-eye-slash"></i> Hashed &mdash; not viewable</span>
+              <span class="status-badge status-badge--neutral font-monospace text-xs" title="Cryptographically hashed password">
+                <i class="fas fa-lock me-1 text-warning"></i> Hashed
+              </span>
             </td>
             {% endif %}
-            <td><span class="text-muted" style="font-size:0.82rem;">{{ staff.created_at|date:"M d, Y" }}</span></td>
+            <td>
+              <span class="text-muted" style="font-size: 0.82rem;">{{ staff.created_at|date:"M d, Y" }}</span>
+            </td>
 
             {% if request.user.role != 'Viewer' %}
-            <td class="text-center">
-              <div class="d-flex justify-content-center align-items-center gap-1">
-                <a href="{% url 'edit_staff' staff.id %}" class="btn-premium btn-p-primary" style="padding:6px 12px; font-size:0.8rem;" title="Edit Staff">
-                  <i class="fas fa-edit"></i> Edit
+            <td class="text-end pe-3">
+              <div class="d-flex justify-content-end align-items-center gap-1">
+                <a href="{% url 'edit_staff' staff.id %}" class="gt-icon-btn" title="Edit Staff Member">
+                  <i class="fas fa-edit"></i>
                 </a>
                 {% if request.user.role == 'Admin' and staff.username != request.user.username %}
                 <form method="post" action="{% url 'delete_staff' staff.id %}" data-confirm-delete="Are you sure you want to delete staff member {{ staff.full_name }} ({{ staff.username }})? This action cannot be undone." data-confirm-title="Delete Staff Member?" style="display:inline;">
                   {% csrf_token %}
-                  <button type="submit" class="btn-premium btn-p-danger" style="padding:6px 12px; font-size:0.8rem;" title="Delete Staff">
+                  <button type="submit" class="gt-icon-btn gt-icon-btn--danger" title="Delete Staff Member">
                     <i class="fas fa-trash-alt"></i>
                   </button>
                 </form>
@@ -160,7 +235,7 @@ $(document).ready(function() {
     pageLength: 25,
     // Date Added column index shifts by 1 when the Admin-only Password column renders
     order: [[{% if request.user.role == 'Admin' %}6{% else %}5{% endif %}, 'desc']],
-    language: { search: '', searchPlaceholder: 'Search staff...' }
+    language: { search: '', searchPlaceholder: 'Search staff accounts...' }
   });
 });
 </script>

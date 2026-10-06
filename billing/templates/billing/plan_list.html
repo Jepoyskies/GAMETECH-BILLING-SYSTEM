@@ -11,18 +11,23 @@
 <div class="container-fluid py-4 px-3 px-md-4">
 
   <!-- Page Header -->
-  <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4" >
+  <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
     <div class="d-flex align-items-center gap-3">
       <div class="gt-header-icon"><i class="fas fa-network-wired"></i></div>
       <div>
-        <div class="gt-header-eyebrow"><i class="fas fa-network-wired me-1"></i> Service Plans</div>
+        <div class="gt-header-eyebrow"><i class="fas fa-network-wired me-1"></i> Subscription Management</div>
         <h1 class="gt-header-title">Service Plans</h1>
-        <p class="gt-header-sub">Manage internet packages, speeds, pricing, and validity periods</p>
+        <p class="gt-header-sub">Manage internet bandwidth packages, upload/download limits, pricing, and billing periods</p>
       </div>
     </div>
-    <a href="{% url 'add_plan' %}" class="gt-btn-primary">
-      <i class="fas fa-plus me-1"></i> Add Plan
-    </a>
+    <div class="d-flex flex-wrap align-items-center gap-2">
+      <a href="{% url 'addon_plans_list' %}" class="gt-btn-secondary">
+        <i class="fas fa-puzzle-piece me-1"></i> Add-on Tiers
+      </a>
+      <a href="{% url 'add_plan' %}" class="gt-btn-primary">
+        <i class="fas fa-plus me-1"></i> Add Plan
+      </a>
+    </div>
   </div>
 
   {% if messages %}
@@ -33,62 +38,123 @@
   {% endfor %}
   {% endif %}
 
+  <!-- Service Plans KPI Overview -->
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-sm-6 col-md-4">
+      <div class="gt-kpi-card h-100">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="gt-kpi-lbl">Active Service Plans</span>
+          <div class="gt-kpi-icon" style="background: rgba(249,178,51,0.15); color: #F9B233;">
+            <i class="fas fa-box-open"></i>
+          </div>
+        </div>
+        <div class="gt-kpi-val">{{ plans|length }}</div>
+        <div class="text-xs text-muted mt-1">Available for subscriber signup &amp; upgrades</div>
+      </div>
+    </div>
+    <div class="col-12 col-sm-6 col-md-4">
+      <div class="gt-kpi-card h-100">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="gt-kpi-lbl">Network Technology</span>
+          <div class="gt-kpi-icon" style="background: rgba(59,130,246,0.12); color: #3b82f6;">
+            <i class="fas fa-microchip"></i>
+          </div>
+        </div>
+        <div class="gt-kpi-val" style="font-size: 1.35rem;">MikroTik PPPoE</div>
+        <div class="text-xs text-info mt-1"><i class="fas fa-bolt me-1"></i>Queues auto-synced per user profile</div>
+      </div>
+    </div>
+    <div class="col-12 col-sm-6 col-md-4">
+      <div class="gt-kpi-card h-100">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="gt-kpi-lbl">Standard Cycle</span>
+          <div class="gt-kpi-icon" style="background: rgba(16,185,129,0.12); color: #10b981;">
+            <i class="fas fa-calendar-check"></i>
+          </div>
+        </div>
+        <div class="gt-kpi-val" style="font-size: 1.35rem;">30 Days / Mo</div>
+        <div class="text-xs text-success mt-1"><i class="fas fa-sync me-1"></i>Auto-billing &amp; invoice renewal</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Plans Table Card -->
   <div class="gt-table-card">
     <div class="gt-table-toolbar">
       <div class="gt-table-toolbar-left">
-        <span class="gt-status-badge gt-status-badge--info"><span class="gt-status-dot"></span> {{ plans|length }} plans total</span>
+        <span class="status-badge status-badge--info">
+          <i class="fas fa-list-check me-1"></i> {{ plans|length }} Plans Configured
+        </span>
       </div>
     </div>
     <div class="table-responsive">
       <table id="plansTable" class="gt-table align-middle mb-0" style="width:100%">
         <thead>
           <tr>
-            <th>ID</th>
+            <th class="ps-3" style="width: 70px;">ID</th>
             <th>Plan Name</th>
-            <th>Upload (Mbps)</th>
-            <th>Download (Mbps)</th>
-            <th>Price (₱)</th>
-            <th>Validity (days)</th>
+            <th>Upload</th>
+            <th>Download</th>
+            <th>Price</th>
+            <th>Validity</th>
             <th>Description</th>
-            <th style="min-width:120px;">Actions</th>
+            <th class="text-end pe-3" style="min-width:110px;">Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for plan in plans %}
           <tr>
-            <td><span class="text-muted" style="font-size:0.78rem;">#{{ plan.id }}</span></td>
-            <td>
-              <span class="gt-status-badge gt-status-badge--success"><span class="gt-status-dot"></span>{{ plan.name }}</span>
+            <td class="ps-3">
+              <span class="text-muted font-monospace" style="font-size:0.8rem;">#{{ plan.id }}</span>
             </td>
             <td>
-              <span class="fw-bold" style="color: var(--section-accent);">â†‘ {{ plan.speed_up }} Mbps</span>
+              <div class="d-flex align-items-center gap-2">
+                <div class="p-1.5 rounded-2" style="background: rgba(16,185,129,0.12); color: #10b981;">
+                  <i class="fas fa-wifi"></i>
+                </div>
+                <span class="fw-bold" style="color: var(--gt-text-primary, #0f172a); font-size: 0.92rem;">{{ plan.name }}</span>
+              </div>
             </td>
             <td>
-              <span class="fw-bold" style="color: var(--badge-success-text);">â†“ {{ plan.speed_down }} Mbps</span>
+              <span class="status-badge status-badge--info">
+                <i class="fas fa-arrow-up me-1"></i>{{ plan.speed_up }} Mbps
+              </span>
+            </td>
+            <td>
+              <span class="status-badge status-badge--success">
+                <i class="fas fa-arrow-down me-1"></i>{{ plan.speed_down }} Mbps
+              </span>
             </td>
             <td data-sort="{{ plan.price }}">
-              <span class="fw-bold" style="color: var(--badge-success-text); font-size:0.95rem;">₱{{ plan.price|floatformat:2 }}</span>
+              <span class="fw-bold font-monospace" style="color: var(--gt-gold, #F9B233); font-size: 1rem;">
+                ₱{{ plan.price|floatformat:2 }}
+              </span>
             </td>
             <td>
-              <span class="gt-status-badge gt-status-badge--warning"><span class="gt-status-dot"></span>{{ plan.validity_days }}d</span>
+              <span class="status-badge status-badge--neutral">
+                <i class="fas fa-clock me-1"></i>{{ plan.validity_days }} days
+              </span>
             </td>
-            <td style="max-width:200px; white-space:normal; font-size:0.83rem; color: var(--text-muted);">
-              {{ plan.description|default:"â€”" }}
+            <td style="max-width:240px; white-space:normal; font-size:0.82rem; color: var(--gt-text-secondary, #64748b);">
+              {{ plan.description|default:"&mdash;" }}
             </td>
-            <td>
-              <div class="d-flex gap-2">
-                <a href="{% url 'edit_plan' plan.id %}" class="gt-icon-btn" title="Edit">
+            <td class="text-end pe-3">
+              <div class="d-flex justify-content-end align-items-center gap-1">
+                <a href="{% url 'edit_plan' plan.id %}" class="gt-icon-btn" title="Edit Plan">
                   <i class="fas fa-edit"></i>
                 </a>
                 <form action="{% url 'delete_plan' plan.id %}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this plan?');">
                   {% csrf_token %}
-                  <button type="submit" class="gt-icon-btn gt-icon-btn--danger" title="Delete">
+                  <button type="submit" class="gt-icon-btn gt-icon-btn--danger" title="Delete Plan">
                     <i class="fas fa-trash-alt"></i>
                   </button>
                 </form>
               </div>
             </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center py-4 text-muted fst-italic">No service plans configured.</td>
           </tr>
           {% endfor %}
         </tbody>

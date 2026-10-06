@@ -5,123 +5,268 @@
 
 {% block extra_css %}
 <style>
-    .card {
-        border-radius: 16px;
-        border: none;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    }
+  .job-complete-card {
+    background: var(--gt-surface-card, #ffffff);
+    border: 1px solid var(--gt-border-card, rgba(0, 0, 0, 0.08));
+    border-radius: 16px;
+    box-shadow: var(--gt-shadow-card, 0 4px 16px rgba(0,0,0,0.06));
+    overflow: hidden;
+  }
+  .job-client-banner {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.04), rgba(249, 178, 51, 0.08));
+    border-bottom: 1px solid var(--gt-border-card, rgba(0, 0, 0, 0.08));
+    padding: 1.25rem 1.5rem;
+  }
+  [data-bs-theme="dark"] .job-client-banner {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(249, 178, 51, 0.05));
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+  .job-section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--gt-text-primary, #0f172a);
+    padding-bottom: 0.6rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--gt-border-card, rgba(0, 0, 0, 0.08));
+  }
+  [data-bs-theme="dark"] .job-section-header {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+  .job-field-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--gt-text-secondary, #64748b);
+    margin-bottom: 0.35rem;
+    display: block;
+  }
+  .job-input-group .form-control {
+    border-radius: 10px;
+    border: 1px solid var(--gt-border-card, #cbd5e1);
+    background-color: var(--gt-surface-input, #ffffff);
+    color: var(--gt-text-primary, #0f172a);
+    font-size: 0.88rem;
+    padding: 0.55rem 0.85rem;
+    transition: all 0.2s ease;
+  }
+  [data-bs-theme="dark"] .job-input-group .form-control {
+    background-color: rgba(15, 23, 42, 0.6);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #f8fafc;
+  }
+  .job-input-group .form-control:focus {
+    border-color: var(--gt-gold, #F9B233);
+    box-shadow: 0 0 0 3px rgba(249, 178, 51, 0.2);
+    background-color: var(--gt-surface-input, #ffffff);
+  }
+  [data-bs-theme="dark"] .job-input-group .form-control:focus {
+    background-color: rgba(15, 23, 42, 0.9);
+  }
+  .client-avatar-badge {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #1e3a8a, #0f172a);
+    border: 1px solid rgba(249, 178, 51, 0.4);
+    color: #F9B233;
+    font-weight: 800;
+    font-size: 1.15rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-<main class="content px-4 py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-1 fw-bold text-gray-800">Job Completion</h1>
-            <p class="text-muted mb-0">Record: {{ record.client_name }} ({{ record.get_tab_type_display }})</p>
+<main class="content px-3 px-md-4 py-4">
+  <!-- Page Header -->
+  <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <div class="gt-header-icon">
+        <i class="fas fa-clipboard-check"></i>
+      </div>
+      <div>
+        <div class="gt-header-eyebrow mb-1">
+          <i class="fas fa-hard-hat"></i> Field Job Completion
+        </div>
+        <h1 class="gt-header-title">Job Completion &amp; Sign-Off</h1>
+        <p class="gt-header-sub">Document physical plant connection details, signal telemetry, and customer acknowledgment.</p>
+      </div>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <a href="javascript:history.back()" class="gt-btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back to Queue
+      </a>
+    </div>
+  </div>
+
+  <!-- Main Completion Form Card -->
+  <div class="job-complete-card">
+    <!-- Client Identity Banner -->
+    <div class="job-client-banner d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="client-avatar-badge">
+          {{ record.client_name|slice:":1"|upper }}
         </div>
         <div>
-            <a href="javascript:history.back()" class="btn btn-light shadow-sm" style="border-radius: 12px; padding: 10px 20px;">
-                <i class="fas fa-arrow-left me-2"></i> Back
-            </a>
+          <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span class="fw-bold" style="font-size: 1.1rem; color: var(--gt-text-primary, #0f172a);">
+              {{ record.client_name }}
+            </span>
+            <span class="status-badge status-badge--info">
+              <i class="fas fa-tag"></i> {{ record.get_tab_type_display }}
+            </span>
+            <span class="status-badge status-badge--warning">
+              <i class="fas fa-clock"></i> {{ record.status_option.label|default:record.status|default:"In Progress" }}
+            </span>
+          </div>
+          <div class="d-flex align-items-center gap-3 text-xs" style="color: var(--gt-text-secondary, #64748b);">
+            <span><i class="fas fa-hashtag me-1 text-primary"></i>Record #{{ record.id }}</span>
+            {% if record.contact_no %}
+            <span><i class="fas fa-phone me-1 text-success"></i>{{ record.contact_no }}</span>
+            {% endif %}
+            {% if record.barangay_city %}
+            <span><i class="fas fa-map-marker-alt me-1 text-danger"></i>{{ record.barangay_city }}</span>
+            {% endif %}
+          </div>
         </div>
+      </div>
+      <div class="text-md-end text-muted text-xs">
+        <div>Registered: <strong class="text-body">{{ record.created_at|date:"M d, Y H:i" }}</strong></div>
+        {% if record.assigned_team %}
+        <div class="mt-1">Assigned Team: <span class="badge bg-secondary bg-opacity-25 text-body border">{{ record.assigned_team.name }}</span></div>
+        {% endif %}
+      </div>
     </div>
 
-    <div class="card p-4">
-        <form method="POST" action="">
-            {% csrf_token %}
-            
-            <h5 class="fw-bold mb-3 text-primary border-bottom pb-2">Pending / Assignment</h5>
-            <div class="row g-3 mb-4">
-                <div class="col-md-3">
-                    <label class="form-label text-muted fw-bold small text-uppercase">Schedule Date</label>
-                    {{ form.schedule_date }}
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label text-muted fw-bold small text-uppercase">Schedule Time</label>
-                    {{ form.schedule_time }}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label text-muted fw-bold small text-uppercase">Barangay / City</label>
-                    {{ form.barangay_city }}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label text-muted fw-bold small text-uppercase">Account No</label>
-                    {{ form.account_no }}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label text-muted fw-bold small text-uppercase">Job Order</label>
-                    {{ form.job_order }}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label text-muted fw-bold small text-uppercase">Email Address</label>
-                    {{ form.email_address }}
-                </div>
-            </div>
+    <!-- Form Body -->
+    <div class="p-3 p-md-4">
+      <form method="POST" action="" class="job-input-group">
+        {% csrf_token %}
 
-            <h5 class="fw-bold mb-3 text-primary border-bottom pb-2">Completion Details</h5>
-            <div class="row g-3 mb-4">
-                <div class="col-md-4">
-                    <label class="form-label text-muted fw-bold small text-uppercase">NAP Port</label>
-                    {{ form.nap_port }}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label text-muted fw-bold small text-uppercase">Cable Length</label>
-                    {{ form.cable_length }}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label text-muted fw-bold small text-uppercase">NAP Reading</label>
-                    {{ form.nap_reading }}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label text-muted fw-bold small text-uppercase">Pole Number</label>
-                    {{ form.pole_number }}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label text-muted fw-bold small text-uppercase">Plan / Package</label>
-                    {{ form.plan_package }}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label text-muted fw-bold small text-uppercase">ONT Modem S/N</label>
-                    {{ form.ont_modem_sn }}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label text-muted fw-bold small text-uppercase">Signal Level</label>
-                    {{ form.signal_level }}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label text-muted fw-bold small text-uppercase">Facility</label>
-                    {{ form.facility }}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label text-muted fw-bold small text-uppercase">House Reading</label>
-                    {{ form.house_reading }}
-                </div>
-                <div class="col-12">
-                    <label class="form-label text-muted fw-bold small text-uppercase">Special Instruction</label>
-                    {{ form.special_instruction }}
-                </div>
+        <!-- Section 1: Scheduling & Routing Coordinates -->
+        <div class="mb-4">
+          <div class="job-section-header">
+            <i class="fas fa-calendar-alt text-warning"></i>
+            <span>1. Assignment &amp; Routing Schedule</span>
+          </div>
+          <div class="row g-3">
+            <div class="col-12 col-sm-6 col-md-3">
+              <label class="job-field-label">Schedule Date</label>
+              {{ form.schedule_date }}
             </div>
+            <div class="col-12 col-sm-6 col-md-3">
+              <label class="job-field-label">Schedule Time</label>
+              {{ form.schedule_time }}
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="job-field-label">Barangay / City</label>
+              {{ form.barangay_city }}
+            </div>
+            <div class="col-12 col-sm-6 col-md-4">
+              <label class="job-field-label">Account No.</label>
+              {{ form.account_no }}
+            </div>
+            <div class="col-12 col-sm-6 col-md-4">
+              <label class="job-field-label">Job Order #</label>
+              {{ form.job_order }}
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="job-field-label">Email Address</label>
+              {{ form.email_address }}
+            </div>
+          </div>
+        </div>
 
-            <h5 class="fw-bold mb-3 text-primary border-bottom pb-2">Post-Completion</h5>
-            <div class="row g-3 mb-4">
-                <div class="col-12">
-                    <label class="form-label text-muted fw-bold small text-uppercase">Technician Remarks</label>
-                    {{ form.technician_remarks }}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label text-muted fw-bold small text-uppercase">Acknowledged By</label>
-                    {{ form.acknowledged_by }}
-                </div>
+        <!-- Section 2: Physical Plant & Network Telemetry -->
+        <div class="mb-4">
+          <div class="job-section-header">
+            <i class="fas fa-network-wired text-info"></i>
+            <span>2. Physical Plant &amp; Signal Telemetry</span>
+          </div>
+          <div class="row g-3">
+            <div class="col-12 col-sm-6 col-md-4">
+              <label class="job-field-label">NAP Port</label>
+              {{ form.nap_port }}
             </div>
+            <div class="col-12 col-sm-6 col-md-4">
+              <label class="job-field-label">Cable Length (Meters)</label>
+              {{ form.cable_length }}
+            </div>
+            <div class="col-12 col-sm-6 col-md-4">
+              <label class="job-field-label">NAP Optical Reading (dBm)</label>
+              {{ form.nap_reading }}
+            </div>
+            <div class="col-12 col-sm-6 col-md-4">
+              <label class="job-field-label">Pole Number</label>
+              {{ form.pole_number }}
+            </div>
+            <div class="col-12 col-sm-6 col-md-4">
+              <label class="job-field-label">Plan / Package</label>
+              {{ form.plan_package }}
+            </div>
+            <div class="col-12 col-sm-6 col-md-4">
+              <label class="job-field-label">ONT Modem Serial / MAC</label>
+              {{ form.ont_modem_sn }}
+            </div>
+            <div class="col-12 col-sm-6 col-md-4">
+              <label class="job-field-label">Customer Signal Level (dBm)</label>
+              {{ form.signal_level }}
+            </div>
+            <div class="col-12 col-sm-6 col-md-4">
+              <label class="job-field-label">Distribution Facility</label>
+              {{ form.facility }}
+            </div>
+            <div class="col-12 col-sm-6 col-md-4">
+              <label class="job-field-label">House Optical Reading</label>
+              {{ form.house_reading }}
+            </div>
+            <div class="col-12">
+              <label class="job-field-label">Special Installation Notes</label>
+              {{ form.special_instruction }}
+            </div>
+          </div>
+        </div>
 
-            <div class="text-end mt-4">
-                <button type="submit" id="btn-submit-done" class="btn btn-success px-5 py-2" style="border-radius: 8px;">
-                    <i class="fas fa-check-circle me-2"></i> Save & Mark as Done
-                </button>
+        <!-- Section 3: Technician Handover & Sign-Off -->
+        <div class="mb-4">
+          <div class="job-section-header">
+            <i class="fas fa-signature text-success"></i>
+            <span>3. Technician Handover &amp; Customer Sign-Off</span>
+          </div>
+          <div class="row g-3">
+            <div class="col-12 col-md-7">
+              <label class="job-field-label">Technician Remarks &amp; Observations</label>
+              {{ form.technician_remarks }}
             </div>
-        </form>
+            <div class="col-12 col-md-5">
+              <label class="job-field-label">Acknowledged / Received By (Client)</label>
+              {{ form.acknowledged_by }}
+              <div class="text-xs text-muted mt-2">
+                <i class="fas fa-info-circle me-1 text-primary"></i>Customer or representative who verified working connection.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Footer -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pt-3 border-top">
+          <a href="javascript:history.back()" class="gt-btn-secondary">
+            <i class="fas fa-times me-1"></i> Cancel
+          </a>
+          <button type="submit" id="btn-submit-done" class="gt-btn-primary px-4 py-2">
+            <i class="fas fa-check-circle me-2"></i> Save &amp; Mark as Done
+          </button>
+        </div>
+      </form>
     </div>
+  </div>
 </main>
 {% endblock %}
 

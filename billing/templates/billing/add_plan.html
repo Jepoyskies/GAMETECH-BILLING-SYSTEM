@@ -1,22 +1,30 @@
 {% extends "billing/base.html" %}
 {% load static %}
 
-{% block title %}Add Subscription Plan{% endblock %}
-
-{% block extra_css %}
-</style>
-{% endblock %}
+{% block title %}Add Subscription Plan | Gametech{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-3 px-3 px-md-4">
-    <div class="form-card">
-        <div class="form-page-title">
-            <div class="title-icon"><i class="fas fa-plus"></i></div>
-            Add Subscription Plan
+<div class="container-fluid py-4 px-3 px-md-4">
+    <!-- Page Header -->
+    <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <div class="gt-header-icon"><i class="fas fa-plus"></i></div>
+            <div>
+                <div class="gt-header-eyebrow"><i class="fas fa-network-wired me-1"></i> Subscription Management</div>
+                <h1 class="gt-header-title">Add Subscription Plan</h1>
+                <p class="gt-header-sub">Configure network bandwidth profiles, speeds, pricing, and billing periods</p>
+            </div>
         </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'plan_list' %}" class="gt-btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back to Plans
+            </a>
+        </div>
+    </div>
 
+    <div class="form-card">
         {% if error %}
-        <div class="error-alert"><i class="fas fa-exclamation-circle"></i> {{ error }}</div>
+        <div class="error-alert mb-3"><i class="fas fa-exclamation-circle me-1"></i> {{ error }}</div>
         {% endif %}
 
         <form method="post" autocomplete="off">
@@ -80,12 +88,12 @@
                     The profile the router must carry for this plan. The Sync Manager
                     compares this string against the router. If it is blank the plan
                     name is used, so a plan called "GTipid Fiber 1000" will show
-                    permanent drift unless the router's profile is named exactly that.
+                    drift unless the router's profile is named exactly that.
                 </small>
             </div>
 
             <div class="mb-4">
-                <label class="plan-form-label">Download Speed (Mbps)</label>
+                <label class="plan-form-label">Download Speed Benchmark (Mbps)</label>
                 <input type="number" name="speed_mbps" class="plan-form-control"
                        min="1" placeholder="e.g. 100" value="{{ data.speed_mbps|default:'' }}">
                 <small class="text-muted d-block mt-1">
@@ -93,9 +101,13 @@
                 </small>
             </div>
 
-            <div class="d-flex align-items-center justify-content-between gap-2">
-                <a href="{% url 'plan_list' %}" class="btn-cancel">Cancel</a>
-                <button type="submit" class="btn-submit"><i class="fas fa-save me-2"></i>Add Plan</button>
+            <div class="d-flex align-items-center justify-content-between gap-2 pt-3 border-top">
+                <a href="{% url 'plan_list' %}" class="gt-btn-secondary">
+                    <i class="fas fa-times me-1"></i> Cancel
+                </a>
+                <button type="submit" class="gt-btn-primary">
+                    <i class="fas fa-save me-1"></i> Add Plan
+                </button>
             </div>
         </form>
     </div>
