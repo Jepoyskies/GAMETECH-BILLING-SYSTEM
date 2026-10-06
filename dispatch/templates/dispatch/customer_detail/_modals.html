@@ -1,0 +1,65 @@
+<!-- Edit Modal -->
+<div class="cd-modal-overlay" id="editModal" style="display:none;">
+  <div class="cd-modal">
+    <h2><i class="fas fa-pen me-2"></i>Edit Customer</h2>
+    <form method="POST" action="{% url 'view_customer' customer.id %}?next={% url 'dispatch_customer_detail' customer.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="_method" value="PATCH">
+      <div class="cd-form-row">
+        <label>First Name</label>
+        <input type="text" name="first_name" value="{{ customer.first_name }}" required>
+      </div>
+      <div class="cd-form-row">
+        <label>Last Name</label>
+        <input type="text" name="last_name" value="{{ customer.last_name }}" required>
+      </div>
+      <div class="cd-form-row">
+        <label>Address</label>
+        <input type="text" name="address" value="{{ customer.address|default:'' }}">
+      </div>
+      <div class="cd-form-row">
+        <label>Contact Number</label>
+        <input type="text" name="contact_number" value="{{ customer.contact_number|default:'' }}">
+      </div>
+      <div class="cd-form-row">
+        <label>Account Number</label>
+        <input type="text" name="account_number" value="{{ customer.account_number|default:'' }}">
+      </div>
+      <div class="cd-form-row">
+        <label>Email</label>
+        <input type="email" name="email" value="{{ customer.email|default:'' }}">
+      </div>
+      <div class="cd-modal-footer">
+        <button type="button" class="btn-cd-cancel" onclick="closeEditModal()">Cancel</button>
+        <a href="{% url 'view_customer' customer.id %}" class="btn-cd-save" style="text-decoration:none; display:inline-flex; align-items:center;">
+          <i class="fas fa-external-link-alt me-1"></i> Open Full CRM Profile
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete Modal -->
+{% if request.user.is_superuser %}
+<div class="cd-modal-overlay" id="deleteModal" style="display:none;">
+  <div class="cd-modal">
+    <h2><i class="fas fa-trash-alt me-2" style="color:#dc2626;"></i>Delete Customer</h2>
+    <p class="delete-warn">
+      This removes the master record for <strong>{{ customer.first_name }} {{ customer.last_name }}</strong>.
+      Existing job records will keep their snapshots.
+    </p>
+    <div class="cd-form-row">
+      <label>Type the customer name to confirm</label>
+      <input type="text" id="deleteConfirmInput" placeholder="{{ customer.first_name }} {{ customer.last_name }}"
+             oninput="checkDeleteConfirm(this.value)">
+    </div>
+    <div class="cd-modal-footer">
+      <button type="button" class="btn-cd-cancel" onclick="closeDeleteModal()">Cancel</button>
+      <a href="{% url 'view_customer' customer.id %}" class="btn-cd-del-confirm" id="deleteConfirmBtn"
+         style="text-decoration:none; display:inline-flex; align-items:center; opacity:.4; pointer-events:none;">
+        <i class="fas fa-trash-alt me-1"></i> Delete Customer
+      </a>
+    </div>
+  </div>
+</div>
+{% endif %}

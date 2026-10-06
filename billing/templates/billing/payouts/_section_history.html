@@ -1,0 +1,78 @@
+<!-- Section 3: Permanent Payout History Ledger -->
+<div class="gt-table-card animate-fade-in mb-4">
+  <div class="gt-table-toolbar d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-2">
+      <span class="badge bg-primary bg-opacity-20 text-primary border border-primary-subtle px-2 py-1"><i class="fas fa-book me-1"></i> Permanent Ledger</span>
+      <h5 class="fw-bold mb-0 text-white" style="font-size: 1rem;">Payout History</h5>
+    </div>
+    <div class="text-muted small">
+      {{ completed_batches|length }} batches paid &bull; Every subscriber stays linked to referring agent forever
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="gt-table table align-middle mb-0" style="width:100%">
+      <thead>
+        <tr>
+          <th style="font-size: 11px; text-transform: uppercase;">Batch #</th>
+          <th style="font-size: 11px; text-transform: uppercase;">Agent</th>
+          <th style="font-size: 11px; text-transform: uppercase;">Count</th>
+          <th style="font-size: 11px; text-transform: uppercase;">Amount</th>
+          <th style="font-size: 11px; text-transform: uppercase;">Reference #</th>
+          <th style="font-size: 11px; text-transform: uppercase;">Paid By / Date</th>
+          <th class="text-end pe-3" style="font-size: 11px; text-transform: uppercase;">Subscribers</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for batch in completed_batches %}
+        <tr>
+          <td>
+            <span class="font-monospace fw-bold text-white">{{ batch.batch_number }}</span>
+          </td>
+          <td>
+            <strong class="text-white">{{ batch.agent.name }}</strong>
+          </td>
+          <td>
+            <span class="badge bg-secondary bg-opacity-40 text-white">{{ batch.customer_count }} Customers</span>
+          </td>
+          <td>
+            <span class="fw-bold text-success fs-6">₱{{ batch.amount|floatformat:2 }}</span>
+          </td>
+          <td>
+            <span class="font-monospace text-info small">{{ batch.reference_no|default:"&mdash;" }}</span>
+          </td>
+          <td class="text-muted small">
+            <div><i class="fas fa-user-check me-1"></i> {{ batch.paid_by.username|default:"Admin" }}</div>
+            <div>{{ batch.paid_at|date:"M d, Y H:i" }}</div>
+          </td>
+          <td class="text-end pe-3">
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#batchCustomers-{{ batch.id }}">
+              <i class="fas fa-list me-1"></i> View ({{ batch.customers.count }})
+            </button>
+          </td>
+        </tr>
+        <tr class="collapse" id="batchCustomers-{{ batch.id }}">
+          <td colspan="7" class="bg-dark bg-opacity-50 p-3">
+            <div class="text-muted small text-uppercase mb-2 fw-bold">Permanent Subscriber Links for {{ batch.batch_number }}:</div>
+            <div class="d-flex flex-wrap gap-2">
+              {% for c in batch.customers.all %}
+              <span class="badge bg-secondary bg-opacity-20 text-white border border-secondary px-2 py-1">
+                <i class="fas fa-user me-1 text-primary"></i> {{ c.full_name }} (PPPoE: {{ c.pppoe_username|default:"None" }})
+              </span>
+              {% empty %}
+              <span class="text-muted small">No customer records attached.</span>
+              {% endfor %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center py-4 text-muted">
+            No historical payout batches yet.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,180 @@
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const monthlyPrice = parseFloat("{{ customer.plan.price|default:0 }}");
+    const currentExpiryStr = "{{ customer.expires_at|date:'c' }}";
+    
+    // Parse Initial Date (Default Start Date)
+    let initialDate = new Date();
+    if (currentExpiryStr && currentExpiryStr !== 'None' && currentExpiryStr !== '') {
+        let parsed = new Date(currentExpiryStr);
+        if (!isNaN(parsed.getTime())) {
+            // Only use the current expiry if it's in the future!
+            if (parsed > new Date()) {
+                initialDate = parsed;
+            }
+        }
+    }
+    
+    // Set default value for Start Date input
+    const startInput = document.getElementById('start_date');
+    function formatInputDatetime(dt) {
+        const pad = (n) => n < 10 ? '0'+n : n;
+        return dt.getFullYear() + '-' + pad(dt.getMonth()+1) + '-' + pad(dt.getDate()) + 'T' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+    }
+    if (startInput) {
+        startInput.value = formatInputDatetime(initialDate);
+    }
+    
+    // Setup Quick Pay Grid Math
+    document.querySelectorAll('.calc-price').forEach(el => {
+        if (el.hasAttribute('data-mult')) {
+            let mult = parseInt(el.getAttribute('data-mult'));
+            el.textContent = (monthlyPrice * mult).toFixed(2);
+        } else if (el.hasAttribute('data-days')) {
+            let days = parseInt(el.getAttribute('data-days'));
+            el.textContent = ((monthlyPrice / 30) * days).toFixed(2);
+        }
+    });
+
+    const amountInput = document.getElementById('amount');
+    const reasonBlock = document.getElementById('reason-block');
+    const reasonInput = document.getElementById('reason');
+    const previewDateEl = document.getElementById('preview-date');
+    const quickBtns = document.querySelectorAll('.quick-btn');
+
+    function safeAddOneMonth(dt) {
+        let year = dt.getFullYear();
+        let month = dt.getMonth(); // 0-indexed
+        let day = dt.getDate();
+        let hours = dt.getHours();
+        let mins = dt.getMinutes();
+        let secs = dt.getSeconds();
+        
+        month += 1;
+        if (month > 11) {
+            month = 0;
+            year += 1;
+        }
+        
+        // Get max days in the new month
+        let maxDays = new Date(year, month + 1, 0).getDate();
+        let safeDay = Math.min(day, maxDays);
+        
+        return new Date(year, month, safeDay, hours, mins, secs);
+    }
+
+    function calculateExpiryPreview(paymentAmount) {
+        // Read dynamic start date
+        let baseDate = startInput ? new Date(startInput.value) : new Date();
+        if (isNaN(baseDate.getTime())) baseDate = new Date();
+
+        if (monthlyPrice <= 0 || paymentAmount <= 0) {
+            return baseDate;
+        }
+        
+        let fullMonths = Math.floor(paymentAmount / monthlyPrice);
+        let remainder = paymentAmount % monthlyPrice;
+        
+        let previewDate = new Date(baseDate.getTime());
+        for(let i = 0; i < fullMonths; i++) {
+            previewDate = safeAddOneMonth(previewDate);
+        }
+        
+        if (remainder > 0.01) {
+            let pricePerDay = monthlyPrice / 30.0;
+            let daysGranted = remainder / pricePerDay;
+            previewDate = new Date(previewDate.getTime() + (daysGranted * 24 * 60 * 60 * 1000));
+        }
+        
+        return previewDate;
+    }
+
+    function updatePreview() {
+        if (!amountInput || !previewDateEl) return;
+        let amt = parseFloat(amountInput.value) || 0;
+        let newDate = calculateExpiryPreview(amt);
+        
+        // Format nicely: e.g. "Oct 15, 2024, 10:30 AM"
+        const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+        previewDateEl.textContent = newDate.toLocaleDateString('en-US', options);
+        
+        // Handle Reason block
+        if (reasonBlock && reasonInput) {
+            if (amt > 0 && monthlyPrice > 0 && amt % monthlyPrice !== 0) {
+                reasonBlock.style.display = 'block';
+                reasonInput.required = true;
+            } else {
+                reasonBlock.style.display = 'none';
+                reasonInput.required = false;
+            }
+        }
+    }
+
+    // Quick Button Click Handling
+    quickBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            quickBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            if (btn.hasAttribute('data-months')) {
+                let months = btn.getAttribute('data-months');
+                if (months === 'custom') {
+                    if (amountInput) {
+                        amountInput.readOnly = false;
+                        amountInput.focus();
+                    }
+                } else {
+                    if (amountInput) {
+                        amountInput.readOnly = true;
+                        amountInput.value = (monthlyPrice * parseInt(months)).toFixed(2);
+                        updatePreview();
+                    }
+                }
+            } else if (btn.hasAttribute('data-days')) {
+                let days = parseInt(btn.getAttribute('data-days'));
+                if (amountInput) {
+                    amountInput.readOnly = true;
+                    amountInput.value = ((monthlyPrice / 30) * days).toFixed(2);
+                    updatePreview();
+                }
+            }
+        });
+    });
+
+    // Inputs listeners
+    if (amountInput) {
+        amountInput.addEventListener('input', () => {
+            const customBtn = document.getElementById('btn-custom');
+            // Only run if Custom is selected
+            if (customBtn && customBtn.classList.contains('active')) {
+                updatePreview();
+            }
+        });
+    }
+
+    if (startInput) {
+        startInput.addEventListener('change', updatePreview);
+    }
+
+    // Payment method logic
+    const paymentMethod = document.getElementById('payment_method');
+    const refNo = document.getElementById('reference_no');
+    
+    if (paymentMethod && refNo) {
+        paymentMethod.addEventListener('change', () => {
+            if (paymentMethod.value === 'cash') {
+                refNo.required = false;
+            } else {
+                refNo.required = true;
+            }
+        });
+    }
+
+    // Initialize Page State
+    if (amountInput) {
+        amountInput.readOnly = true; // 1 Month is active by default
+        amountInput.value = monthlyPrice.toFixed(2);
+    }
+    updatePreview();
+});
+</script>

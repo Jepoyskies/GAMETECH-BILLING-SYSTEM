@@ -1,0 +1,24 @@
+<script>
+const CUSTOMER_FULL_NAME = "{{ customer.first_name }} {{ customer.last_name }}";
+
+function openEditModal()   { document.getElementById('editModal').style.display   = 'flex'; }
+function closeEditModal()  { document.getElementById('editModal').style.display   = 'none'; }
+function openDeleteModal() { document.getElementById('deleteModal').style.display = 'flex'; }
+function closeDeleteModal(){ document.getElementById('deleteModal').style.display = 'none'; document.getElementById('deleteConfirmInput').value = ''; checkDeleteConfirm(''); }
+
+function checkDeleteConfirm(val) {
+  const btn = document.getElementById('deleteConfirmBtn');
+  if (!btn) return;
+  if (val.trim() === CUSTOMER_FULL_NAME) {
+    btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
+  } else {
+    btn.style.opacity = '.4'; btn.style.pointerEvents = 'none';
+  }
+}
+
+// Close on overlay click
+['editModal','deleteModal'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('click', function(e){ if (e.target === this) this.style.display='none'; });
+});
+</script>

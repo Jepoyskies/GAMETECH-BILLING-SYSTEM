@@ -1,0 +1,121 @@
+<!-- Section 1: Agents Ready for Payout -->
+<div class="gt-table-card animate-fade-in mb-4">
+  <div class="gt-table-toolbar d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-2">
+      <span class="payout-badge-ready"><i class="fas fa-check-circle me-1"></i> Cashout Ready</span>
+      <h5 class="fw-bold mb-0 text-white" style="font-size: 1rem;">Agents with &ge; {{ settings.batch_size }} Unpaid Qualified Subscribers</h5>
+    </div>
+    <div class="text-muted small">
+      ₱{{ settings.incentive_amount|floatformat:2 }} per referral &bull; Multiples of {{ settings.batch_size }}
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="gt-table table align-middle mb-0" style="width:100%">
+      <thead>
+        <tr>
+          <th style="font-size: 11px; text-transform: uppercase;">Agent</th>
+          <th style="font-size: 11px; text-transform: uppercase;">Unpaid Qualified</th>
+          <th style="font-size: 11px; text-transform: uppercase;">Available Batches</th>
+          <th style="font-size: 11px; text-transform: uppercase;">Claimable Amount</th>
+          <th style="font-size: 11px; text-transform: uppercase;">Carry-Over</th>
+          <th class="text-end pe-3" style="font-size: 11px; text-transform: uppercase;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in ready_agents %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="av av-sm" style="width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:700; background:rgba(139,92,246,0.15); color:#8b5cf6;">
+                {{ item.agent.name|make_list|first|upper }}
+              </div>
+              <div>
+                <strong class="text-white d-block" style="font-size: 0.88rem;">{{ item.agent.name }}</strong>
+                <span class="text-muted small">{{ item.agent.email }}</span>
+              </div>
+            </div>
+          </td>
+          <td>
+            <span class="badge bg-success bg-opacity-20 text-success fw-bold px-2 py-1" style="font-size: 0.82rem;">
+              {{ item.summary.unpaid_qualified }} Qualified
+            </span>
+          </td>
+          <td>
+            <span class="text-white fw-semibold">{{ item.summary.eligible_batches }} Batch{{ item.summary.eligible_batches|pluralize:"es" }}</span>
+            <span class="text-muted small">({{ item.summary.eligible_batches|stringformat:"d" }} &times; {{ settings.batch_size }})</span>
+          </td>
+          <td>
+            <strong class="text-success fs-6">₱{{ item.summary.claimable_amount|floatformat:2 }}</strong>
+          </td>
+          <td>
+            <span class="badge bg-secondary bg-opacity-30 text-white-50">
+              +{{ item.summary.carry_over }} Carry-over
+            </span>
+          </td>
+          <td class="text-end pe-3">
+            <button type="button" class="btn btn-sm btn-primary fw-bold px-3" data-bs-toggle="modal" data-bs-target="#createBatchModal-{{ item.agent.id }}">
+              <i class="fas fa-layer-group me-1"></i> Create Batch
+            </button>
+
+            <!-- Modal Create Batch -->
+            <div class="modal fade" id="createBatchModal-{{ item.agent.id }}" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered text-start">
+                <div class="modal-content bg-dark border border-secondary text-white">
+                  <form method="post" action="{% url 'create_payout_batch' item.agent.id %}">
+                    {% csrf_token %}
+                    <div class="modal-header border-secondary">
+                      <h5 class="modal-title fw-bold text-white">
+                        <i class="fas fa-file-invoice-dollar text-primary me-2"></i> Create Payout Batch
+                      </h5>
+                      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                      <div class="mb-3">
+                        <label class="form-label text-muted small text-uppercase">Sales Agent</label>
+                        <div class="form-control bg-secondary bg-opacity-10 text-white border-secondary">{{ item.agent.name }} ({{ item.agent.email }})</div>
+                      </div>
+
+                      <div class="mb-3">
+                        <label class="form-label text-muted small text-uppercase">Batch Size (Multiples of {{ settings.batch_size }})</label>
+                        <select name="batch_size" class="form-select bg-dark text-white border-secondary" required>
+                          {% for sz in item.eligible_sizes %}
+                          <option value="{{ sz }}" {% if forloop.last %}selected{% endif %}>
+                            {{ sz }} Customers &mdash; ₱{{ sz|stringformat:"d" }} &times; ₱{{ settings.incentive_amount|floatformat:0 }} = ₱{{ item.summary.claimable_amount|floatformat:2 }}
+                          </option>
+                          {% endfor %}
+                        </select>
+                        <div class="form-text text-muted small">
+                          Subscribers are selected in FIFO order (oldest qualified first). Remaining qualified subscribers carry over.
+                        </div>
+                      </div>
+
+                      <div class="mb-3">
+                        <label class="form-label text-muted small text-uppercase">Notes / Memo (Optional)</label>
+                        <textarea name="notes" class="form-control bg-dark text-white border-secondary" rows="2" placeholder="e.g. Cut-off Sept 15-30 referrals"></textarea>
+                      </div>
+                    </div>
+                    <div class="modal-footer border-secondary">
+                      <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                      <button type="submit" class="btn btn-primary btn-sm fw-bold">
+                        <i class="fas fa-check-circle me-1"></i> Generate Payout Batch
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center py-4 text-muted">
+            <i class="fas fa-info-circle me-2"></i> No agents currently have &ge; {{ settings.batch_size }} unpaid qualified customers.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>

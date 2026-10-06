@@ -1,0 +1,42 @@
+<!-- Section 4: Progressing Agents (< 5 Qualified) -->
+{% if progressing_agents %}
+<div class="gt-table-card animate-fade-in">
+  <div class="gt-table-toolbar">
+    <h6 class="fw-bold mb-0 text-white-50" style="font-size: 0.9rem;">
+      <i class="fas fa-chart-line me-2 text-info"></i> Agents Progressing Toward Next Payout (1 &ndash; {{ settings.batch_size|add:"-1" }} Qualified)
+    </h6>
+  </div>
+  <div class="table-responsive">
+    <table class="gt-table table align-middle mb-0" style="width:100%">
+      <thead>
+        <tr>
+          <th style="font-size: 11px; text-transform: uppercase;">Agent</th>
+          <th style="font-size: 11px; text-transform: uppercase;">Current Qualified</th>
+          <th style="font-size: 11px; text-transform: uppercase;">Progress</th>
+          <th style="font-size: 11px; text-transform: uppercase;">Remaining Needed</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in progressing_agents %}
+        <tr>
+          <td>
+            <strong class="text-white">{{ item.agent.name }}</strong>
+          </td>
+          <td>
+            <span class="text-white">{{ item.summary.unpaid_qualified }} / {{ settings.batch_size }}</span>
+          </td>
+          <td style="max-width: 200px;">
+            <div class="progress bg-dark" style="height: 8px;">
+              <div class="progress-bar bg-info" style="width: {% widthratio item.summary.unpaid_qualified settings.batch_size 100 %}%;"></div>
+            </div>
+          </td>
+          <td class="text-muted small">
+            {{ settings.batch_size|add:"-"|add:item.summary.unpaid_qualified }} more qualified referral{{ settings.batch_size|add:"-"|add:item.summary.unpaid_qualified|pluralize:"s" }} to unlock ₱{{ settings.batch_payout_amount|floatformat:2 }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
