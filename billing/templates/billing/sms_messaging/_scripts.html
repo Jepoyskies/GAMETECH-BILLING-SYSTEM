@@ -1,0 +1,148 @@
+<script>
+document.querySelectorAll('.btn-copy').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var phone = btn.getAttribute('data-phone');
+        navigator.clipboard.writeText(phone);
+        btn.innerHTML = '<i class="fa fa-check text-success"></i>';
+        setTimeout(function() { btn.innerHTML = '<i class="fa fa-copy text-secondary"></i>'; }, 1000);
+    });
+});
+
+let lastSmsMessage = '';
+document.querySelectorAll('.btn-edit-sms').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var phone = btn.getAttribute('data-phone');
+        var full_name = btn.getAttribute('data-full_name');
+        var default_message = btn.getAttribute('data-default_message');
+        
+        document.getElementById('smsPhone').value = phone;
+        document.getElementById('smsPhoneDisplay').innerText = full_name + " (" + phone + ")";
+        
+        let msg = lastSmsMessage || default_message;
+        document.getElementById('smsMessage').value = msg;
+        document.getElementById('smsPreview').innerText = msg;
+        updateCharCount('smsMessage', 'smsCharCount', 'smsCharWarning');
+        
+        document.getElementById('smsMessage').dataset.fullName = full_name;
+        document.getElementById('smsTemplates').selectedIndex = 0;
+        
+        new bootstrap.Modal(document.getElementById('editSmsModal')).show();
+    });
+});
+
+document.getElementById('smsTemplates')?.addEventListener('change', function() {
+    let template = this.value;
+    let msgField = document.getElementById('smsMessage');
+    let fullName = msgField.dataset.fullName || '';
+    if (template) {
+        template = template.replace('{name}', fullName);
+        msgField.value = template;
+        msgField.dispatchEvent(new Event('input'));
+    }
+});
+
+document.getElementById('smsMessage')?.addEventListener('input', function() {
+    updateCharCount('smsMessage', 'smsCharCount', 'smsCharWarning');
+    document.getElementById('smsPreview').innerText = this.value;
+    lastSmsMessage = this.value;
+});
+
+// Bulk selection logic
+let selectedPhones = new Set();
+document.querySelectorAll('.row-checkbox').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+        let phone = cb.getAttribute('data-phone');
+        if (cb.checked && phone && phone !== 'None' && phone.trim() !== '') {
+            selectedPhones.add(phone);
+        } else {
+            selectedPhones.delete(phone);
+        }
+        updateBulkBar();
+    });
+});
+
+document.getElementById('selectAll')?.addEventListener('change', function() {
+    let allChecked = this.checked;
+    document.querySelectorAll('.row-checkbox').forEach(function(cb) {
+        let phone = cb.getAttribute('data-phone');
+        if (phone && phone !== 'None' && phone.trim() !== '') {
+            cb.checked = allChecked;
+            if (allChecked) {
+                selectedPhones.add(phone);
+            } else {
+                selectedPhones.delete(phone);
+            }
+        } else {
+            cb.checked = false; // Never check empty phones
+        }
+    });
+    updateBulkBar();
+});
+
+function updateBulkBar() {
+    let bar = document.getElementById('bulkBar');
+    let count = document.getElementById('bulkCount');
+    if (bar && count) {
+        if (selectedPhones.size > 0) {
+            bar.style.setProperty('display', 'flex', 'important');
+            count.textContent = `${selectedPhones.size} selected`;
+        } else {
+            bar.style.setProperty('display', 'none', 'important');
+        }
+    }
+}
+
+document.getElementById('bulkClearBtn')?.addEventListener('click', function() {
+    selectedPhones.clear();
+    document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
+    if(document.getElementById('selectAll')) {
+        document.getElementById('selectAll').checked = false;
+    }
+    updateBulkBar();
+});
+
+document.getElementById('bulkSendBtn')?.addEventListener('click', function() {
+    document.getElementById('bulkModalPhones').value = Array.from(selectedPhones).join(',');
+    document.getElementById('bulkPhoneCountDisplay').innerText = selectedPhones.size + " Recipients Selected";
+    
+    let msg = localStorage.getItem('lastBulkMessage') || "Hello! Kindly renew your subscription. Thank you!";
+    document.getElementById('bulkSmsMessage').value = msg;
+    document.getElementById('bulkSmsPreview').innerText = msg;
+    updateCharCount('bulkSmsMessage', 'bulkSmsCharCount', 'bulkSmsCharWarning');
+    
+    document.getElementById('bulkSmsTemplates').selectedIndex = 0;
+    
+    new bootstrap.Modal(document.getElementById('bulkSmsModal')).show();
+});
+
+document.getElementById('bulkSmsTemplates')?.addEventListener('change', function() {
+    let template = this.value;
+    let msgField = document.getElementById('bulkSmsMessage');
+    if (template) {
+        msgField.value = template;
+        msgField.dispatchEvent(new Event('input'));
+    }
+});
+
+document.getElementById('bulkSmsMessage')?.addEventListener('input', function() {
+    updateCharCount('bulkSmsMessage', 'bulkSmsCharCount', 'bulkSmsCharWarning');
+    document.getElementById('bulkSmsPreview').innerText = this.value;
+    localStorage.setItem('lastBulkMessage', this.value);
+});
+
+function updateCharCount(textareaId, counterId, warningId) {
+    const el = document.getElementById(textareaId);
+    if (!el) return;
+    let len = el.value.length;
+    const cEl = document.getElementById(counterId);
+    if (cEl) cEl.innerHTML = '<i class="fas fa-pencil-alt me-1"></i> ' + len + '/160';
+    const wEl = document.getElementById(warningId);
+    if (wEl) {
+        if (len > 160) {
+            wEl.classList.remove('d-none');
+        } else {
+            wEl.classList.add('d-none');
+        }
+    }
+}
+</script>
