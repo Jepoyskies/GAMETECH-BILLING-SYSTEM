@@ -11,10 +11,34 @@ from .read_only import ReadOnlyApiWrapper
 logger = logging.getLogger(__name__)
 
 class MikrotikBase:
+        @staticmethod
+        def _resolve_mode(value=None):
+            """Coerce a router mode to a safe, usable value.
+
+            Anything missing, blank, non-textual, or unrecognised resolves to
+            `read_only`. Only the exact string "live" -- supplied deliberately by
+            an operator -- can ever enable writes. The settings lookup is wrapped
+            because `ROUTER_MODE` may be absent or None in a partially-loaded
+            settings module, and that must not raise or escalate.
+            """
+            if value is None:
+                try:
+                    value = getattr(settings, "ROUTER_MODE", "read_only")
+                except Exception:
+                    return "read_only"
+            try:
+                mode = str(value).strip().lower()
+            except Exception:
+                return "read_only"
+            return mode if mode in ("dry_run", "read_only", "live") else "read_only"
+
         def __init__(self, device: MikrotikDevice, dry_run: bool = None, router_mode: str = None):
             self.device = device
+
+            # `_resolve_mode` coerces anything unusable to read_only BEFORE we
+            # branch on it, so every path below is already safe.
             if router_mode:
-                self.router_mode = router_mode.lower().strip()
+                self.router_mode = self._resolve_mode(router_mode)
             elif dry_run is not None:
                 # dry_run=False means "do not stub the router", i.e. "really
                 # connect". It does NOT mean "you may write". That used to read
@@ -23,15 +47,10 @@ class MikrotikBase:
                 # ROUTER_MODE=read_only. Resolve through the global setting
                 # instead, so only an explicit router_mode can grant writes.
                 self.router_mode = (
-                    "dry_run" if dry_run
-                    else getattr(settings, "ROUTER_MODE", "read_only").lower().strip()
+                    "dry_run" if dry_run else self._resolve_mode(None)
                 )
             else:
-                self.router_mode = getattr(settings, "ROUTER_MODE", "read_only").lower().strip()
-
-            if self.router_mode not in ("dry_run", "read_only", "live"):
-                # Unrecognised value: a config mistake, not permission to write.
-                self.router_mode = "read_only"
+                self.router_mode = self._resolve_mode(None)
 
             self.is_dry_run = (self.router_mode == "dry_run")
             self.is_read_only = (self.router_mode == "read_only")

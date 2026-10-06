@@ -59,7 +59,56 @@ class RouterWriteDefaultsFailSafeTests(SimpleTestCase):
     def test_missing_setting_is_read_only(self):
         obj = _build("dev")
         self.assertEqual(obj.router_mode, "read_only")
-        self.assertFalse(obj.is_read_only is False)
+        self.assertTrue(obj.is_read_only)
+
+    def test_setting_is_none_is_read_only(self):
+        """ROUTER_MODE=None must not raise and must not grant writes.
+
+        A partially-loaded settings module can expose ROUTER_MODE as None. The
+        old `.lower().strip()` chain raised AttributeError on that, which is a
+        crash rather than a safe refusal.
+        """
+        import network_manager.services.base as B
+
+        class NoneSettings:
+            ROUTER_MODE = None
+
+        old = B.settings
+        try:
+            B.settings = NoneSettings()
+            obj = _build("dev", dry_run=False)
+        finally:
+            B.settings = old
+        self.assertEqual(obj.router_mode, "read_only")
+        self.assertTrue(obj.is_read_only)
+
+    def test_setting_attribute_absent_entirely(self):
+        """A settings object with no ROUTER_MODE attribute at all."""
+        import network_manager.services.base as B
+
+        class EmptySettings:
+            pass
+
+        old = B.settings
+        try:
+            B.settings = EmptySettings()
+            obj = _build("dev")
+        finally:
+            B.settings = old
+        self.assertEqual(obj.router_mode, "read_only")
+
+    def test_resolve_mode_helper_is_total(self):
+        """_resolve_mode must return a safe mode for anything whatsoever."""
+        from network_manager.services.base import MikrotikBase as M
+
+        for value in (None, "", "  ", "LIVE", "Read_Only", "banana", 0, 1,
+                      object(), [], {}, True, 3.5):
+            with self.subTest(value=repr(value)):
+                self.assertIn(M._resolve_mode(value),
+                              ("dry_run", "read_only", "live"))
+        self.assertEqual(M._resolve_mode("live"), "live")
+        self.assertEqual(M._resolve_mode("READ_ONLY"), "read_only")
+        self.assertEqual(M._resolve_mode(" Dry_Run "), "dry_run")
 
     def test_unrecognised_value_is_read_only(self):
         obj = _build("dev", router_mode="totally-bogus-mode")
