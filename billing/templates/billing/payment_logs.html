@@ -244,11 +244,11 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">Select Correct Customer</label>
-                        <select class="form-select" name="new_customer_id" required>
+                        {# Populated by script from #paymentCustomerOptions below. Rendering the 2,038
+                               options inline, once per modal, made this page 9.3 MB
+                               and took 4.4 seconds to load. #}
+                        <select class="form-select" name="new_customer_id" required data-customer-select>
                             <option value="">-- Choose Customer --</option>
-                            {% for c in all_customers %}
-                                <option value="{{ c.id }}">{{ c.full_name }} ({{ c.pppoe_username }})</option>
-                            {% endfor %}
                         </select>
                     </div>
                 </div>
@@ -263,6 +263,29 @@
     </div>
 </div>
 {% endfor %}
+
+{# The customer list, shipped ONCE for the whole page instead of once per
+   payment row. Populates every [data-customer-select] on load. #}
+<script type="application/json" id="paymentCustomerOptions">{{ all_customers_json|safe }}</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var raw = document.getElementById('paymentCustomerOptions');
+    var selects = document.querySelectorAll('[data-customer-select]');
+    if (!raw || !selects.length) { return; }
+    var opts;
+    try { opts = JSON.parse(raw.textContent || '[]'); } catch (e) { return; }
+    selects.forEach(function (sel) {
+        var frag = document.createDocumentFragment();
+        opts.forEach(function (o) {
+            var el = document.createElement('option');
+            el.value = o.id;
+            el.textContent = o.label;
+            frag.appendChild(el);
+        });
+        sel.appendChild(frag);
+    });
+});
+</script>
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

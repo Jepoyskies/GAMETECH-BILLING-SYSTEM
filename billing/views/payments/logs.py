@@ -108,12 +108,32 @@ def payment_logs_view(request):
     )
 
     context = {
+        # Rendered ONCE as JSON, not once per payment row.
+        #
+        # The "Transfer Payment" modal embeds a customer <select>. There is one
+        # modal per payment on the page (35) and each was rendering all 2,038
+        # customers as <option> elements: 35 x 255 KB = 8.9 MB, and the page took
+        # 4.4 seconds to arrive. The dropdowns are populated by a tiny script
+        # from this single list, so the form POSTs the same new_customer_id it
+        # always did but the page drops to roughly a quarter of a megabyte.
+        "all_customers_json": json.dumps(
+            [
+                {"id": c.id, "label": "{} ({})".format(
+                    c.full_name or "(no name)", c.pppoe_username or "no-username")}
+                for c in Customer.objects.all().order_by("full_name").values(
+                    "id", "full_name", "pppoe_username"
+                )
+            ]
+        ),
         "page_obj": page_obj,
         "filter_from": filter_from,
         "filter_to": filter_to,
         "filter_search": filter_search,
         "filter_method": filter_method,
         "methods": methods,
+        # Left in place for the Cignal enroll modal and any other consumer that
+        # still walks it. The heavy consumer -- the transfer modal, which
+        # rendered it once per payment row -- now uses all_customers_json.
         "all_customers": Customer.objects.all().order_by("full_name"),
         "grand_total": grand_total,
         "filtered_range_total": filtered_range_total,
