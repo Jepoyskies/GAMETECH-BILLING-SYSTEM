@@ -131,6 +131,25 @@ def subscription_plans_data_api(request):
 
     ppp_users_status = {}
     live_data = cache.get("live_monitoring_data") or {}
+
+    # Per-session detail for the rows on this page: assigned IP and uptime.
+    #
+    # `connected_usernames` above is a SET -- it answers "is this customer
+    # online?" but has no .get(), so asking it for uptime/IP raised
+    # `AttributeError: 'set' object has no attribute 'get'` and 500'd the
+    # endpoint. That detail lives in the live payload's `users` list, one entry
+    # per live session. It carries no MAC, so caller_id stays blank rather than
+    # being invented.
+    mt_session_info = {}
+    for u in live_data.get("users") or []:
+        name = u.get("user")
+        if name:
+            mt_session_info[name] = {
+                "uptime": u.get("uptime", "") or "",
+                "address": u.get("ip", "") or "",
+                "caller_id": "",
+            }
+
     for r in live_data.get("routers") or []:
         for s in r.get("secrets") or []:
             name = s.get("name")
@@ -252,7 +271,7 @@ def subscription_plans_data_api(request):
     # Append MT data to page objects
     for c in page_obj:
         c.mt_connected = c.pppoe_username in connected_usernames
-        mt_info = connected_usernames.get(c.pppoe_username, {})
+        mt_info = mt_session_info.get(c.pppoe_username, {})
         c.mt_uptime = mt_info.get("uptime", "")
         c.mt_ip = mt_info.get("address", "")
         c.mt_mac = mt_info.get("caller_id", "")
