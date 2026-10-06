@@ -4,6 +4,7 @@ from billing.decorators import role_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 from network_manager.models import MikrotikDevice
 from network_manager.services import MikrotikAPI
 
@@ -75,26 +76,35 @@ def delete_device(request, device_id):
     return redirect('device_list')
 
 @login_required
+@require_POST
 def test_device_connection(request, device_id):
-    if request.method == 'POST':
-        device = get_object_or_404(MikrotikDevice, id=device_id)
+    # AJAX button. `@require_POST` makes a stray GET (bookmark, crawler, or
+    # someone pasting the address) a clean 405 rather than falling off the end
+    # of the function and becoming a 500. See ERR-129.
+    device = get_object_or_404(MikrotikDevice, id=device_id)
 
-        try:
-            from network_manager.services import MikrotikAPI
-            api = MikrotikAPI(device)
-            # Try to fetch something simple to confirm connection
-            api_conn = api._get_api()
-            system_identity = api_conn.get_resource('/system/identity')
-            identity = system_identity.get()[0]['name']
-            api.connection.disconnect()
-            
-            return JsonResponse({'status': 'success', 'message': f'Connected successfully to {device.device_name} ({identity})'})
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': f'Connection failed: {e}'})
+    try:
+        from network_manager.services import MikrotikAPI
+        api = MikrotikAPI(device)
+        # Try to fetch something simple to confirm connection
+        api_conn = api._get_api()
+        system_identity = api_conn.get_resource('/system/identity')
+        identity = system_identity.get()[0]['name']
+        api.connection.disconnect()
+
+        return JsonResponse({'status': 'success', 'message': f'Connected successfully to {device.device_name} ({identity})'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': f'Connection failed: {e}'})
 
 @role_required(['Admin', 'Editor', 'CSR'])
 @login_required
+@require_POST
 def sync_device_users(request, device_id):
+    # Only the decorator was added here. This view CREATES customers from router
+    # secrets, so the body was deliberately left byte-for-byte alone: the
+    # `if request.method == 'POST':` guard is now redundant but harmless, and
+    # `@require_POST` rejects a stray GET with 405 before it can reach any write.
+    # See ERR-129.
     if request.method == 'POST':
         if not (request.user.is_superuser or request.user.has_perm("billing.import_router_subscribers")):
             return JsonResponse({'status': 'error', 'message': 'Permission denied: Requires billing.import_router_subscribers permission.'}, status=403)
