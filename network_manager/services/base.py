@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 import socket
 import routeros_api
 from network_manager.models import MikrotikDevice
@@ -16,12 +16,22 @@ class MikrotikBase:
             if router_mode:
                 self.router_mode = router_mode.lower().strip()
             elif dry_run is not None:
-                self.router_mode = "dry_run" if dry_run else "live"
+                # dry_run=False means "do not stub the router", i.e. "really
+                # connect". It does NOT mean "you may write". That used to read
+                # `else "live"`, which handed out full write access to any caller
+                # that passed dry_run=False -- overriding a global
+                # ROUTER_MODE=read_only. Resolve through the global setting
+                # instead, so only an explicit router_mode can grant writes.
+                self.router_mode = (
+                    "dry_run" if dry_run
+                    else getattr(settings, "ROUTER_MODE", "read_only").lower().strip()
+                )
             else:
-                self.router_mode = getattr(settings, "ROUTER_MODE", "live").lower().strip()
+                self.router_mode = getattr(settings, "ROUTER_MODE", "read_only").lower().strip()
 
             if self.router_mode not in ("dry_run", "read_only", "live"):
-                self.router_mode = "live"
+                # Unrecognised value: a config mistake, not permission to write.
+                self.router_mode = "read_only"
 
             self.is_dry_run = (self.router_mode == "dry_run")
             self.is_read_only = (self.router_mode == "read_only")

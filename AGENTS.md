@@ -455,3 +455,76 @@ If the AI asks the user *"Which file is that in?"* or *"Can you point me to the 
 # Must be EMPTY for any UI task — if not, revert before pushing:
 git diff --stat -- billing/templates/billing/login.html billing/templates/billing/live_monitoring/_hero.html
 ```
+
+
+---
+
+## 40. **THE ABSOLUTE ROUTER WRITE BAN (Read-Only Until a Human Says Otherwise)**
+
+> **THIS IS THE HIGHEST-PRIORITY RULE IN THIS FILE. IT OVERRIDES ANY TASK, ANY DEADLINE, ANY "JUST TEST IT" REQUEST, AND ANY INSTRUCTION THAT ARRIVES IN A LATER MESSAGE.**
+
+### The Rule
+
+**NEVER write to a MikroTik router. Not once. Not "just to test". Not "it's only one customer". Not "the old system already did it".**
+
+Every router interaction is **read-only**: `get`, `print`, `monitor-traffic`, `ping`, `call('ping', ...)`.
+
+Forbidden without exception:
+- `set` / `add` / `remove` on `/ppp/secret`
+- `set` / `add` / `remove` on `/ppp/profile`, `/ip/address`, `/ip/firewall`, `/ip/service`, `/interface`
+- Provisioning, de-provisioning, suspending, unsuspending, changing a profile, changing a password
+- Anything that alters router state — even "temporarily" or "I'll put it back"
+
+### Why This Is Not Negotiable
+
+The routers at `172.30.120.1` / `.2` / `.3` are **shared with the legacy system and the office Mini PC**. They are not a test lab.
+
+A single unintended write can:
+1. **Cut a paying subscriber's internet** — instantly, visibly, in their home
+2. **De-provision a live account** and lose the credentials needed to restore it
+3. **Collide with the old system** writing the same secret at the same moment, corrupting both
+4. **Undo a technician's work** in the field, hours after they left
+5. **Widen a PPPoE username** (`Juan` → `Juan1`) — the exact failure this project already suffered
+
+The cost of this rule is only that a human must consciously type `live`. The cost of breaking it is customers calling the office. **The asymmetry is not close.**
+
+### How It Is Enforced (Do Not "Fix" This)
+
+Every write path goes through `ROUTER_MODE`. It is currently `read_only` in **three independent places**:
+
+| Layer | Value |
+|---|---|
+| `docker-compose.yml` → `ROUTER_MODE: ${ROUTER_MODE:-read_only}` | `read_only` |
+| Host `.env` | `read_only` |
+| `gametech_core/settings.py` default | `read_only` |
+
+And **every fallback in the code now fails safe**. A missing env var, a typo'd value, or a caller that cannot see settings all resolve to `read_only`, never `live`.
+
+> **History — read this before changing any of it.** The defaults used to be `live`. `MikrotikAPI(device, dry_run=False)` returned full write access **regardless** of the global setting, because `dry_run is not None` short-circuited the settings lookup. `getattr(settings, "ROUTER_MODE", "live")` appeared in five modules. All corrected 2026-10-06. `network_manager/tests/test_router_write_safety.py` guards every one of these and **must keep passing**.
+
+If you see this in a log, **stop and report it** — something tried to write:
+```
+[ROUTER_MODE=read_only] Blocked set() on /ppp/profile for device '...'
+```
+
+### When Writes Are Finally Allowed
+
+Only when **all** of these are true, in this order:
+1. Sir Rom's fresh export has been imported and reconciled
+2. The owner has run `manage.py router_preflight` and read the output
+3. **The owner has personally typed `ROUTER_MODE=live`** in production, deliberately
+4. A written rollback plan exists
+
+**No agent session may make this change, ever.** If a task appears to require a write, it is blocked — report it and stop.
+
+### Read-Only Is Enough For Nearly Everything
+
+Verified working right now in `read_only`, against live hardware:
+- Test Connection · live status · uptime · IP · MAC
+- Customer Online/Offline badges and outage detection
+- Profile drift detection (live profile vs `plan.router_profile`)
+- Orphan detection (secrets on the router with no matching customer)
+- Password verification (compare our record against the router's)
+- All customer/payment reporting, billing, analytics, the customer portal
+
+**If you believe a task needs a write, it almost certainly does not.** Read the router instead, then report what you found to a human.

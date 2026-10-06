@@ -73,17 +73,32 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "http")
 
 # Router Mode: 'dry_run' | 'read_only' | 'live'
 # dry_run: Stubs all RouterOS calls via in-memory mock pool (default in tests)
-# read_only: Allows real router socket reads (live status, uptime), blocks all writes (default on droplet)
+# read_only: Allows real router socket reads (live status, uptime), blocks all writes
 # live: Full read & write to real hardware (set only by administrator at cutover)
+#
+# THE DEFAULT IS read_only, NOT live, AND THAT IS DELIBERATE.
+#
+# The routers are shared with the legacy system and the office Mini PC. A
+# write from this system can deprovision a paying subscriber, collide with the
+# old system mid-change, or cut a live line. Those failures hit the business
+# immediately and are hard to undo; the cost of defaulting to read_only is only
+# that someone must consciously type "live" to allow writes.
+#
+# So every ambiguous path fails SAFE: a missing env var, a typo'd value, a
+# service that cannot see settings, a settings module evaluated outside
+# docker-compose. None of them may become write-capable by accident.
+# Reaching 'live' requires an explicit, human decision. See AGENTS.md Rule 40.
 import sys
 _is_testing = "test" in sys.argv or any("pytest" in str(arg) for arg in sys.argv)
 if _is_testing:
     ROUTER_MODE = "dry_run"
     ROUTER_DRY_RUN = True
 else:
-    ROUTER_MODE = env.str("ROUTER_MODE", default="live").lower().strip()
+    ROUTER_MODE = env.str("ROUTER_MODE", default="read_only").lower().strip()
     if ROUTER_MODE not in ("dry_run", "read_only", "live"):
-        ROUTER_MODE = "live"
+        # An unrecognised value is a configuration mistake, not permission to
+        # write. Refuse the writes.
+        ROUTER_MODE = "read_only"
     # Backward-compatibility alias
     ROUTER_DRY_RUN = (ROUTER_MODE == "dry_run")
 
