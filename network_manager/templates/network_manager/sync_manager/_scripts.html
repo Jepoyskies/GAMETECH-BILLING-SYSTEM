@@ -4,66 +4,46 @@
 
 <script>
     function showGametechAlert(message) {
-        var modal = new bootstrap.Modal(document.getElementById('gametechAlertModal'));
-        $('#gametechAlertModalBody').text(message);
-        modal.show();
+        var el = document.getElementById('gametechAlertModal');
+        if (el) {
+            var modal = new bootstrap.Modal(el);
+            $('#gametechAlertModalBody').text(message);
+            modal.show();
+        } else {
+            alert(message);
+        }
     }
 
     $(document).ready(function() {
-        var table = $('.datatable').DataTable({
-            "pageLength": 10,
+        // Initialize client-paginated tables
+        $('.datatable').DataTable({
+            "pageLength": 15,
             "lengthChange": false,
             "info": true,
             "searching": true,
             "destroy": true,
             "autoWidth": false,
-            "order": [] // Disable initial sorting
+            "order": []
         });
 
-        // ---- Review-queue reason filter -------------------------------
-        // The Needs Review card can hold a thousand rows, and they are NOT
-        // the same kind of problem. Most are collections work (past due,
-        // still connected); a few are emergencies (paid, but cut off).
-        //
-        // THREE ATTEMPTS AT THIS, KEEP ONLY WHAT WORKS:
-        //   1. columns().search() over the row's data-reasons attribute -- wrong,
-        //      a column search reads CELL TEXT and the attribute is not in a cell.
-        //      Result: "No matching records found" for every chip.
-        //   2. $.fn.dataTable.ext.search reading rowData.reasons -- wrong, that
-        //      key came back undefined.
-        //   3. The keys are now real text in a hidden <td class="sm-reasonkey">,
-        //      so an ordinary column search on THAT column finds them. This is
-        //      the one mechanism DataTables is documented to honour.
-        //
-        // Not CSS .hide() on the <tr>: hiding rows behind DataTables' back
-        // desynchronises row indexes from the checkbox values in a POST, so a
-        // row the operator cannot see could still be submitted.
-        // The reason-key column is hidden by CSS, and its controls duplicate
-        // the chips above it, so this table's own length/search chrome is off.
-        // The global .datatable init further down leaves them on for the other
-        // tables, so turn them off explicitly here.
-        // Paging is done server-side now (see REVIEW_PAGE_SIZE), so DataTables must
-        // not also paginate -- two pagers over one table produced a page of 10
-        // out of the 100 the server had already chosen, and a page-size
-        // selector that reset it on every reload.
+        // Review Table: server-paginated, reason filter on hidden sm-reasonkey column
         var reviewDt = $('#reviewTable').DataTable({
             "paging": false,
             "lengthChange": false,
             "searching": false,
             "info": false,
+            "destroy": true,
+            "autoWidth": false,
             "order": []
         });
         var reasonCol = reviewDt.columns('.sm-reasonkey').index();
 
         function applyReasonFilter(reason) {
-            if (reason === 'all') {
+            if (!reason || reason === 'all') {
                 reviewDt.column(reasonCol).search('').draw();
                 $('#smReviewShowing').text('');
                 return;
             }
-            // Whole-word match: the cell holds several space-separated keys, so
-            // a bare substring search for "drift" would also match
-            // "paid_expired_profile" style neighbours and show the wrong rows.
             var re = '(^|\\s)' + $.fn.dataTable.util.escapeRegex(reason) + '(\\s|$)';
             reviewDt.column(reasonCol).search(re, true, false).draw();
             var shown = reviewDt.rows({ search: 'applied' }).count();
@@ -78,37 +58,7 @@
             applyReasonFilter($btn.data('reason-filter'));
         });
 
-        // A "Show me these N" link on the plain-language cards has to do TWO
-        // things: scroll to the queue AND pre-apply the matching filter.
-        // Scrolling alone drops the supervisor into the full 1,000-row table,
-        // which is the confusion the simple view exists to remove.
-        $(document).on('click', '[data-smv-filter]', function(e) {
-            var reason = $(this).data('smv-filter');
-            var $chip = $('[data-reason-filter="' + reason + '"]');
-            if ($chip.length) {
-                e.preventDefault();
-                $chip.trigger('click');
-                var target = $('#queue-needs-review');
-                if (target.length) {
-                    $('html, body').animate({
-                        scrollTop: target.offset().top - 20
-                    }, 300);
-                }
-                // A brief outline so the eye lands on the filtered rows
-                // rather than on the top of the card they scrolled to.
-                $('#reviewTable tbody').css('outline', '2px solid #fbae1a');
-                window.setTimeout(function() {
-                    $('#reviewTable tbody').css('outline', '');
-                }, 1400);
-            }
-        });
-
-        
-
-        // Paginated server-side like the review queue, so paging is off here too.
-        // Note the column search is still used: the barangay dropdown filters
-        // the current page, which is honest -- the count next to the card
-        // header always described the whole queue.
+        // Synced Table: server-paginated
         var syncedTable = $('#syncedTable').DataTable({
             "paging": false,
             "lengthChange": false,
@@ -120,37 +70,130 @@
         });
 
         // Barangay Filter for Synced Table
-        $('#barangayFilter').on('change', function() {
+        $(document).on('change', '#barangayFilter', function() {
             var val = $.fn.dataTable.util.escapeRegex($(this).val());
             syncedTable.column(3).search(val ? '^' + val + '$' : '', true, false).draw();
         });
 
+        // Recalculate column widths whenever a tab is switched
+        $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function(e) {
+            $.fn.dataTable.tables({ visible: true, api: true }).columns.adjust();
+        });
+
+        // Tab Switching via Links & Hash
+        function activateSyncTab(tabTarget) {
+            if (!tabTarget) return;
+            var tabBtn = document.querySelector('button[data-bs-target="' + tabTarget + '"]');
+            if (tabBtn) {
+                var tab = new bootstrap.Tab(tabBtn);
+                tab.show();
+                $('html, body').animate({
+                    scrollTop: $(tabTarget).offset().top - 80
+                }, 200);
+            }
+        }
+
+        $(document).on('click', '[data-tab-target]', function(e) {
+            e.preventDefault();
+            var target = $(this).data('tab-target');
+            activateSyncTab(target);
+
+            var filter = $(this).data('smv-filter');
+            if (filter) {
+                var $chip = $('[data-reason-filter="' + filter + '"]');
+                if ($chip.length) {
+                    $chip.trigger('click');
+                    $('#reviewTable tbody').css('outline', '2px solid #f9b233');
+                    setTimeout(function() {
+                        $('#reviewTable tbody').css('outline', '');
+                    }, 1200);
+                }
+            }
+        });
+
+        // Read hash on load
+        var hash = window.location.hash;
+        if (hash) {
+            if (hash === '#queue-needs-review') activateSyncTab('#tab-needs-review');
+            else if (hash === '#queue-pair') activateSyncTab('#tab-pair');
+            else if (hash === '#queue-missing') activateSyncTab('#tab-missing');
+            else if (hash.startsWith('#tab-')) activateSyncTab(hash);
+        }
+
         // Select All for Synced Table
-        $('#selectAllSynced').change(function() {
+        $(document).on('change', '#selectAllSynced', function() {
             var isChecked = $(this).prop('checked');
-            // Only check visible checkboxes in the DataTable
             $('.synced-check:visible').prop('checked', isChecked);
         });
 
-        $('.synced-check').change(function(){
-            if(false == $(this).prop("checked")){
-                $("#selectAllSynced").prop('checked', false); 
-            }
-            if ($('.synced-check:visible:checked').length == $('.synced-check:visible').length ){
-                $("#selectAllSynced").prop('checked', true);
+        $(document).on('change', '.synced-check', function() {
+            if (!$(this).prop('checked')) {
+                $('#selectAllSynced').prop('checked', false);
+            } else if ($('.synced-check:visible:checked').length === $('.synced-check:visible').length) {
+                $('#selectAllSynced').prop('checked', true);
             }
         });
 
-        // Bulk Transfer Form Validation
+        // Select All for Clean Orphans
+        $(document).on('change', '#selectAllCleanOrphans', function() {
+            $('.clean-orphan-check').prop('checked', $(this).prop('checked'));
+        });
+
+        $(document).on('change', '.clean-orphan-check', function() {
+            if (!$(this).prop('checked')) {
+                $('#selectAllCleanOrphans').prop('checked', false);
+            } else if ($('.clean-orphan-check:checked').length === $('.clean-orphan-check').length) {
+                $('#selectAllCleanOrphans').prop('checked', true);
+            }
+        });
+
+        // Select All for Suspicious Orphans
+        $(document).on('change', '#selectAllSuspiciousOrphans', function() {
+            $('.suspicious-orphan-check').prop('checked', $(this).prop('checked'));
+        });
+
+        $(document).on('change', '.suspicious-orphan-check', function() {
+            if (!$(this).prop('checked')) {
+                $('#selectAllSuspiciousOrphans').prop('checked', false);
+            } else if ($('.suspicious-orphan-check:checked').length === $('.suspicious-orphan-check').length) {
+                $('#selectAllSuspiciousOrphans').prop('checked', true);
+            }
+        });
+
+        // Select All for Missing
+        $(document).on('change', '#selectAllMissing', function() {
+            $('.missing-check:not(:disabled)').prop('checked', $(this).prop('checked'));
+        });
+
+        $(document).on('change', '.missing-check', function() {
+            if (!$(this).prop('checked')) {
+                $('#selectAllMissing').prop('checked', false);
+            } else if ($('.missing-check:not(:disabled):checked').length === $('.missing-check:not(:disabled)').length) {
+                $('#selectAllMissing').prop('checked', true);
+            }
+        });
+
+        // Form Validation for Bulk Transfer / Move
         $('#bulkTransferForm').on('submit', function(e) {
-            var submitterName = e.originalEvent && e.originalEvent.submitter ? e.originalEvent.submitter.name : '';
-            if (submitterName === 'pppoe_username') {
-                return true; // Bypass validation for Auto-Fix button
+            var submitter = e.originalEvent && e.originalEvent.submitter ? e.originalEvent.submitter : null;
+            var submitterVal = submitter ? $(submitter).val() : '';
+            var submitterName = submitter ? $(submitter).attr('name') : '';
+
+            // If action is pair or autofix, skip move validation
+            if (submitterVal === 'bulk_approve' || submitterName === 'pppoe_username') {
+                var checkedCount = $(this).find('input[name="customer_ids"]:checked').length;
+                if (submitterVal === 'bulk_approve' && checkedCount === 0) {
+                    e.preventDefault();
+                    showGametechAlert('Please select at least one customer using the checkboxes.');
+                    return false;
+                }
+                return true;
             }
 
+            // Move validation
             var checkboxes = $(this).find('input[name="customer_ids"]:checked');
             var target = $(this).find('select[name="target_device_id"]').val();
-            
+
             if (checkboxes.length === 0) {
                 e.preventDefault();
                 showGametechAlert('Please select at least one customer to move.');
@@ -162,68 +205,17 @@
                 return false;
             }
         });
-        
-        // Select All for Clean Orphans
-        $('#selectAllCleanOrphans').change(function() {
-            $('.clean-orphan-check').prop('checked', $(this).prop('checked'));
-        });
-        
-        // Select All for Suspicious Orphans
-        $('#selectAllSuspiciousOrphans').change(function() {
-            $('.suspicious-orphan-check').prop('checked', $(this).prop('checked'));
-        });
-        
-        // Form Validation for Bulk Actions
-        $('form:not(#bulkTransferForm)').on('submit', function(e) {
+
+        // Generic Bulk Action Checkbox Validation
+        $('form:not(#bulkTransferForm):not(#reviewTableForm)').on('submit', function(e) {
             var submitBtn = $(document.activeElement);
             if (submitBtn.attr('name') === 'bulk_action') {
                 var checkboxes = $(this).find('input[name="selected_users"]:checked');
                 if (checkboxes.length === 0) {
                     e.preventDefault();
-                    
-                    // Show a nice inline alert instead of reloading the page
-                    const alertHtml = `
-                    <div class="alert alert-warning alert-dismissible fade show mt-2 custom-validation-alert" role="alert">
-                        <i class="fas fa-exclamation-triangle me-2"></i> Please select at least one user using the checkboxes first.
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>`;
-                    
-                    $(this).find('.custom-validation-alert').remove();
-                    $(this).find('.card-body').prepend(alertHtml);
+                    showGametechAlert('Please select at least one user using the checkboxes first.');
+                    return false;
                 }
-            }
-        });
-
-        // Select All for Missing
-        $('#selectAllMissing').change(function() {
-            $('.missing-check').prop('checked', $(this).prop('checked'));
-        });
-        
-        // Uncheck 'Select All' if one is manually unchecked
-        $('.clean-orphan-check').change(function(){
-            if(false == $(this).prop("checked")){
-                $("#selectAllCleanOrphans").prop('checked', false); 
-            }
-            if ($('.clean-orphan-check:checked').length == $('.clean-orphan-check').length ){
-                $("#selectAllCleanOrphans").prop('checked', true);
-            }
-        });
-        
-        $('.suspicious-orphan-check').change(function(){
-            if(false == $(this).prop("checked")){
-                $("#selectAllSuspiciousOrphans").prop('checked', false); 
-            }
-            if ($('.suspicious-orphan-check:checked').length == $('.suspicious-orphan-check').length ){
-                $("#selectAllSuspiciousOrphans").prop('checked', true);
-            }
-        });
-
-        $('.missing-check').change(function(){
-            if(false == $(this).prop("checked")){
-                $("#selectAllMissing").prop('checked', false); 
-            }
-            if ($('.missing-check:checked').length == $('.missing-check').length ){
-                $("#selectAllMissing").prop('checked', true);
             }
         });
     });

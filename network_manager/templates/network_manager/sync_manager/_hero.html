@@ -5,20 +5,33 @@
     <div class="d-flex align-items-center gap-3 position-relative">
         <div class="sm-hero__icon" aria-hidden="true"><i class="fas fa-satellite-dish"></i></div>
         <div class="min-w-0">
-            <div class="sm-hero__eyebrow">Sync Manager</div>
+            <div class="sm-hero__eyebrow">MikroTik Provisioning &amp; Sync</div>
             <h1 class="sm-hero__title">{{ device.device_name }}</h1>
             <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
-                <span class="sm-chip"><i class="fas fa-network-wired"></i> {{ device.ip_address }}</span>
+                <span class="sm-tag"><i class="fas fa-network-wired"></i> {{ device.ip_address }}</span>
                 {% if api_success %}
-                <span class="sm-chip sm-chip--ok"><span class="sm-dot"></span> Online</span>
+                <span class="sm-tag sm-tag--ok"><span class="sm-dot sm-dot--pulse"></span> Online</span>
                 {% else %}
-                <span class="sm-chip sm-chip--danger"><span class="sm-dot"></span> Unreachable</span>
+                <span class="sm-tag sm-tag--danger"><span class="sm-dot"></span> Unreachable</span>
+                {% endif %}
+                {% if router_mode == 'read_only' %}
+                <span class="sm-tag sm-tag--ok" title="Changes cannot be pushed to live hardware in safe mode"><i class="fas fa-shield-halved"></i> Safe Mode</span>
+                {% else %}
+                <span class="sm-tag sm-tag--danger" title="Approving changes will write directly to router"><i class="fas fa-bolt"></i> Live Mode</span>
+                {% endif %}
+                {% if api_success and router_read_at %}
+                <span class="sm-tag" title="Automatic re-read within {{ router_cache_ttl }}s"><i class="fas fa-clock"></i> {% if router_age_seconds is not None %}{{ router_age_seconds }}s ago{% else %}Live{% endif %}</span>
                 {% endif %}
             </div>
         </div>
     </div>
 
-    <a id="smHeroBackBtn" href="{% url 'device_list' %}" class="sm-btn sm-btn--glass position-relative">
-        <i class="fas fa-arrow-left"></i> Back to Devices
-    </a>
+    <div class="d-flex align-items-center gap-2 position-relative">
+        <a id="smHeroBackBtn" href="{% url 'device_list' %}" class="sm-btn sm-btn--glass">
+            <i class="fas fa-arrow-left"></i> Devices
+        </a>
+        <a href="{% url 'sync_manager' device.id %}" class="sm-btn sm-btn--gold" title="Force refresh secrets from router">
+            <i class="fas fa-rotate"></i> Refresh
+        </a>
+    </div>
 </header>

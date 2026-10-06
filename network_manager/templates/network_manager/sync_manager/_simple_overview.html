@@ -1,75 +1,25 @@
-<!--
-  SIMPLE VIEW - the default.
-
-  WHY THIS EXISTS
-  ---------------
-  The technical cards underneath answer the right questions for someone who
-  already knows what a PPPoE profile is. A supervisor does not think in
-  profiles, orphans or drift. They think:
-
-      "Is anyone cut off?  Who owes money?  What do I do today?"
-
-  So the top of the page now answers those three in plain language, with the
-  number, what it means, and what to do about it. The full technical tables
-  are still there underneath for staff who need them -- nothing was removed,
-  only summarised above.
-
-  EVERYTHING HERE IS PRESENTATION. The same rows, the same buttons, the same
-  URLs, the same payment and admin gates. Only the wording changed.
--->
-<section class="smv" aria-labelledby="smvTitle">
-
-    {% comment %}
-      The single most important thing on this page: whether anything can
-      touch the router right now. Stated once, in words, before any numbers,
-      because that is the question a nervous supervisor actually has.
-    {% endcomment %}
-    {% if router_mode == 'read_only' %}
-    <div class="smv-safe" role="status">
-        <i class="fas fa-lock smv-safe__icon" aria-hidden="true"></i>
+<!-- Simple Plain-Language Overview -->
+<section class="smv mb-4" aria-labelledby="smvTitle">
+    {% if router_mode != 'read_only' %}
+    <div class="sm-live" role="alert">
+        <i class="fas fa-triangle-exclamation"></i>
         <div>
-            <strong>Safe mode is ON. Nothing can change the routers.</strong>
-            <div class="smv-safe__sub">
-                You can look at everything here. Even if you press the buttons
-                by accident, the routers will not change. An admin has to turn
-                this off on purpose before anything can be written.
-            </div>
-        </div>
-    </div>
-    {% else %}
-    <div class="smv-warn" role="alert">
-        <i class="fas fa-triangle-exclamation smv-safe__icon" aria-hidden="true"></i>
-        <div>
-            <strong>Live mode is ON. Buttons here WILL change the routers.</strong>
-            <div class="smv-safe__sub">
-                Please be careful. "Write to Router" changes that customer's
-                speed and password on the real router.
-            </div>
+            <strong>Live Mode is ACTIVE. Changes WILL write directly to router hardware.</strong>
+            <span>"Approve" in Needs Review or "Push" will modify PPPoE secrets, passwords, and profiles on {{ device.device_name }}.</span>
         </div>
     </div>
     {% endif %}
 
-    {% if not api_success %}
+    {% if api_success %}
     <div class="smv-head">
-        <h2 class="smv-head__title">This router is not answering</h2>
-        <p class="smv-head__sub">Check the cable and power, then press Retry.</p>
-    </div>
-    {% else %}
-
-    <div class="smv-head">
-        <h2 class="smv-head__title" id="smvTitle">What needs doing today</h2>
-        <p class="smv-head__sub">
-            We compared all {{ review_total }} accounts on
-            {{ device.device_name }} against our records. Here is what we found.
-        </p>
+        <div>
+            <h2 class="smv-head__title" id="smvTitle">What needs attention today</h2>
+            <p class="smv-head__sub">
+                Compared {{ review_total }} accounts on {{ device.device_name }} against billing database records.
+            </p>
+        </div>
     </div>
 
-    {% comment %}
-      Ordered by urgency in simple_summary(): urgent, warn, info, ok. The
-      cards are deliberately large and wordy. Someone who is not sure what a
-      word means should still be able to act correctly from the sentence
-      alone, without scrolling into a table.
-    {% endcomment %}
     <div class="smv-grid">
         {% for g in simple_summary %}
         <article class="smv-card smv-card--{{ g.level }}">
@@ -85,91 +35,68 @@
                 <i class="fas fa-arrow-right" aria-hidden="true"></i>
                 {{ g.action }}
             </p>
-            {% comment %}
-              Two jobs in one click: jump to the queue, AND apply the filter
-              that matches this card. Without the filter the supervisor lands
-              on a 1,000-row table and has to find the chips themselves,
-              which defeats the point of the plain-language summary.
-            {% endcomment %}
-            
-            {% comment %}
-              g.filter_key is resolved from the data by simple_summary(), so
-              the link can never point at a chip that has no rows and
-              therefore was never rendered.
-            {% endcomment %}
-            <a class="smv-card__link" href="#queue-needs-review"
-               data-smv-filter="{{ g.filter_key }}">
-                Show me these {{ g.count }}
-                <i class="fas fa-chevron-down" aria-hidden="true"></i>
+            <a class="smv-card__link" href="#tab-needs-review" data-tab-target="#tab-needs-review" data-smv-filter="{{ g.filter_key }}">
+                Review {{ g.count }} accounts
+                <i class="fas fa-chevron-right ms-1"></i>
             </a>
         </article>
         {% empty %}
+        {% if not count_missing and not count_orphans %}
         <div class="smv-allgood">
-            <i class="fas fa-circle-check" aria-hidden="true"></i>
+            <i class="fas fa-circle-check"></i>
             <div>
-                <strong>Everything matches.</strong>
-                <div>Every account on {{ device.device_name }} agrees with our
-                     records. There is nothing to do today.</div>
+                <strong>All accounts in sync!</strong>
+                <div>Every account on {{ device.device_name }} matches the billing records. No actions required today.</div>
             </div>
         </div>
+        {% endif %}
         {% endfor %}
+
+        {% if count_missing %}
+        <article class="smv-card smv-card--urgent">
+            <div class="smv-card__top">
+                <span class="smv-card__icon" aria-hidden="true">
+                    <i class="fas fa-cloud-arrow-down"></i>
+                </span>
+                <span class="smv-card__count">{{ count_missing }}</span>
+            </div>
+            <h3 class="smv-card__title">In Billing but Missing on Router</h3>
+            <p class="smv-card__plain">
+                {{ count_missing }} subscriber{{ count_missing|pluralize }} active in the system do not exist on {{ device.device_name }}.
+            </p>
+            <p class="smv-card__action">
+                <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                Push secrets to router to provision service.
+            </p>
+            <a class="smv-card__link" href="#tab-missing" data-tab-target="#tab-missing">
+                View Missing ({{ count_missing }})
+                <i class="fas fa-chevron-right ms-1"></i>
+            </a>
+        </article>
+        {% endif %}
+
+        {% if count_orphans %}
+        <article class="smv-card smv-card--info">
+            <div class="smv-card__top">
+                <span class="smv-card__icon" aria-hidden="true">
+                    <i class="fas fa-user-secret"></i>
+                </span>
+                <span class="smv-card__count">{{ count_orphans }}</span>
+            </div>
+            <h3 class="smv-card__title">On Router but Not in Billing</h3>
+            <p class="smv-card__plain">
+                {{ count_orphans }} secret{{ count_orphans|pluralize }} exist on {{ device.device_name }} with no matching subscriber record.
+            </p>
+            <p class="smv-card__action">
+                <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                Review credentials before importing or deleting.
+            </p>
+            <a class="smv-card__link" href="#tab-router-users" data-tab-target="#tab-router-users">
+                View Router Secrets ({{ count_orphans }})
+                <i class="fas fa-chevron-right ms-1"></i>
+            </a>
+        </article>
+        {% endif %}
     </div>
-
-    {% comment %}
-      The one number that is NOT on this router and needs a push. Kept as its
-      own card because "Missing on Router" is the only queue whose fix writes
-      a brand-new secret, so it must not be confused with the review buckets.
-    {% endcomment %}
-    {% if count_missing %}
-    <article class="smv-card smv-card--urgent">
-        <div class="smv-card__top">
-            <span class="smv-card__icon" aria-hidden="true">
-                <i class="fas fa-cloud-arrow-down"></i>
-            </span>
-            <span class="smv-card__count">{{ count_missing }}</span>
-        </div>
-        <h3 class="smv-card__title">In our records but not on the router</h3>
-        <p class="smv-card__plain">
-            We have {{ count_missing }} customer{{ count_missing|pluralize }}
-            that our system knows about, but the router has never heard of
-            them. They cannot be online.
-        </p>
-        <p class="smv-card__action">
-            <i class="fas fa-arrow-right" aria-hidden="true"></i>
-            Push them to the router. This CREATES a new secret.
-        </p>
-        <a class="smv-card__link" href="#queue-missing">
-            Show me these {{ count_missing }}
-            <i class="fas fa-chevron-down" aria-hidden="true"></i>
-        </a>
-    </article>
-    {% endif %}
-
-    {% if count_orphans %}
-    <article class="smv-card smv-card--info">
-        <div class="smv-card__top">
-            <span class="smv-card__icon" aria-hidden="true">
-                <i class="fas fa-user-secret"></i>
-            </span>
-            <span class="smv-card__count">{{ count_orphans }}</span>
-        </div>
-        <h3 class="smv-card__title">On the router but not in our records</h3>
-        <p class="smv-card__plain">
-            {{ count_orphans }} customer{{ count_orphans|pluralize }} can use
-            the internet, but we have no record of them. Someone set them up
-            outside the system.
-        </p>
-        <p class="smv-card__action">
-            <i class="fas fa-arrow-right" aria-hidden="true"></i>
-            Ask the office who they are before adding them.
-        </p>
-    </article>
-    {% endif %}
-
-    <p class="smv-foot">
-        <i class="fas fa-circle-info" aria-hidden="true"></i>
-        Need the technical detail? Everything is still listed below, exactly as
-        before.
-    </p>
     {% endif %}
 </section>

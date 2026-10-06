@@ -1,81 +1,36 @@
 <!--
   NEEDS REVIEW - the deliberate-decision queue.
-
   Everything here is a disagreement between what the SYSTEM intends and what
-  the ROUTER actually has. Nothing here is fixed automatically, because every
-  row is a business decision:
-
-    Connected, Unpaid  system says lapsed/suspended, router secret is still
-                       ENABLED. The old PHP system could not represent this, so
-                       these customers were invisible and kept paying cash.
-                       -> COLLECT. Do NOT suspend.
-    Paid, Cut Off      system says fine and paid, router secret is DISABLED.
-                       -> A paying customer has no internet. Reconnect.
-    Drift              password or profile on the router no longer matches the
-                       system. -> Confirm which side is right before writing.
-    Not Linked         the account has no router assigned in the system, so it
-                       cannot be traced to a router at all. -> Assign one first.
-    Awaiting Approval  present in BOTH the system and the router, but never
-                       verified against one. Existing in both places is not the
-                       same as a human having approved it. -> Check, then approve.
-
-  The enabled/disabled column is read straight off the MikroTik
-  `/ppp/secret` resource. Before ERR-094 that field was dropped, so a cut-off
-  customer and a live one looked identical here.
+  the ROUTER actually has.
 -->
 <span id="queue-needs-review"></span>
-<div class="card sync-card border-0 mb-4">
-    <div class="card-header warning-header d-flex justify-content-between align-items-center border-0">
-        <h5 class="mb-0"><i class="fas fa-clipboard-check me-2"></i> Needs Review ({{ needs_review|length }})</h5>
-        <small>System and router disagree &mdash; a human decides</small>
+<div class="sm-queue-panel">
+    <div class="sm-queue-panel__header">
+        <h5 class="sm-queue-panel__title">
+            <i class="fas fa-clipboard-check text-warning"></i>
+            <span>Needs Review</span>
+            <span class="sm-tab__count sm-tab--warn">{{ needs_review|length }}</span>
+        </h5>
+        <span class="sm-muted small">System and router disagree &mdash; human decision required</span>
     </div>
-    {% comment %}
-      This is the only card on the page whose Approve button WRITES to the
-      router. Needs Review and Match & Pair both say "Approve" and sit near
-      each other, so state the difference on the card itself rather than
-      trusting the operator to remember which one they are looking at.
-    {% endcomment %}
-    <div class="alert alert-warning d-flex align-items-start gap-2 mx-3 mt-3 mb-0 py-2" role="note">
-        <i class="fas fa-triangle-exclamation mt-1"></i>
-        <div class="small">
-            <strong>These rows disagree.</strong> <i class="fas fa-user-check"></i>
-            <strong>Approve</strong> here <strong>does write to {{ device.device_name }}</strong>
-            &mdash; it sets the profile, password and comment. Use
-            <strong>Match &amp; Pair</strong> below if you only want to record that
-            a system account and a router secret are the same subscriber; that one
-            never touches the router.
+
+    <div class="sm-queue-panel__notice sm-queue-panel__notice--warn" role="note">
+        <i class="fas fa-triangle-exclamation mt-1 text-warning"></i>
+        <div>
+            <strong>Discrepancies Detected.</strong>
+            <span><strong>Write to Router</strong> will overwrite credentials on {{ device.device_name }} (sets profile, password, comment). Use <strong>Match &amp; Pair</strong> tab if you only wish to record a link without changing router hardware.</span>
         </div>
     </div>
-    <div class="card-body p-0">
+
+    <div class="p-0">
         {% if not needs_review %}
-        <div class="p-4 text-center text-muted">
-            <i class="fas fa-check-double fa-2x mb-2"></i>
+        <div class="p-4 text-center sm-muted">
+            <i class="fas fa-check-double fa-2x mb-2 text-success"></i>
             <p class="mb-0">Nothing to review. Every matched account agrees with the router.</p>
         </div>
         {% else %}
 
-        {% comment %}
-          WHY THESE CHIPS EXIST
-          On ccr2116.v1 this queue holds 1,023 rows, and ~990 of them are the
-          same thing: past due in the system, still connected on the router.
-          Those are a COLLECTIONS list. A handful are "Paid, Cut Off", which is
-          an emergency. Filing them in one undifferentiated table meant the
-          emergencies were invisible under the collections backlog, and nobody
-          could tell a 3-row problem from a 1,000-row one.
-
-          The chips are counted from the same ru['reason_keys'] the rows are
-          tagged with, so the number on the chip can never disagree with what
-          the filter shows.
-        {% endcomment %}
-        {% comment %}
-          ONE row of controls. This used to be three stacked bars (reason
-          chips, then a DataTables "10 per page" + search row), which read as
-          three separate menus and pushed the actual table below the fold.
-          The page length selector and the search box are DataTables features
-          that duplicate their own header controls, so they are turned off in
-          _scripts.html and the chips do the only filtering that matters here.
-        {% endcomment %}
-        <div class="sm-chips px-3 pt-3 pb-2 d-flex flex-wrap gap-2 align-items-center" role="group" aria-label="Filter review queue by reason">
+        <div class="sm-chips" role="group" aria-label="Filter review queue by reason">
             <button type="button" class="sm-chip chip-active" data-reason-filter="all">
                 All <span class="chip-n">{{ review_total }}</span>
             </button>
@@ -84,154 +39,133 @@
                 {{ rc.label }} <span class="chip-n">{{ rc.count }}</span>
             </button>
             {% endfor %}
-            <span class="ms-auto text-muted small" id="smReviewShowing"></span>
-        </div>
-        <div class="table-responsive">
-        <table class="table table-hover mb-0 datatable" id="reviewTable">
-            <thead>
-                <tr>
-                    <th>PPPoE Username</th>
-                    <th>Customer</th>
-                    <th>On Router</th>
-                    <th>System Says</th>
-                    <th>What Differs</th>
-                    <th class="text-end">Actions</th>
-                    {% comment %}
-                      Invisible search key column.
-
-                      The reason keys have to be REAL CELL TEXT for DataTables to
-                      find them. Two earlier attempts failed: columns().search()
-                      against the row's data-reasons attribute matched nothing
-                      (a column search reads cell text, and the attribute is not
-                      in a cell), and reading rowData.reasons in an ext.search
-                      hook returned undefined. Putting the keys in a hidden <td>
-                      makes them ordinary searchable content, which is the one
-                      mechanism DataTables definitely honours.
-
-                      Hidden with CSS, not the `hidden` attribute: DataTables
-                      reads the DOM, and display:none on a <td> still contributes
-                      its text to the row's search index.
-                    {% endcomment %}
-                    <th class="sm-reasonkey" aria-hidden="true"></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for user in review_rows %}
-                <tr class="{% if user.connected_but_unpaid %}table-row-collect{% elif user.state_mismatch %}table-row-pending-install{% endif %}"
-                    data-reasons="{% for k in user.reason_keys %}{{ k }}{% if not forloop.last %} {% endif %}{% endfor %}">
-                    <td><span class="fw-bold">{{ user.name }}</span></td>
-                    <td>
-                        {{ user.customer.full_name|default:"-" }}
-                        {% if user.customer.barangay %}<small class="d-block text-muted">{{ user.customer.barangay.name }}</small>{% endif %}
-                    </td>
-
-                    {# ---- GROUND TRUTH FROM THE ROUTER ---- #}
-                    <td>
-                        {% if user.router_disabled %}
-                            <span class="gametech-pill pill-danger" title="The MikroTik has this secret DISABLED, so the customer cannot connect.">
-                                <span class="status-dot dot-offline"></span> Cut Off
-                            </span>
-                        {% else %}
-                            <span class="gametech-pill pill-success" title="The MikroTik has this secret ENABLED.">
-                                <span class="status-dot dot-online"></span> Enabled
-                            </span>
-                        {% endif %}
-                        {% if user.is_active %}
-                            <span class="gametech-pill pill-primary d-block mt-1" title="A live PPPoE session exists right now.">Session Up</span>
-                        {% endif %}
-                    </td>
-
-                    {# ---- WHAT THE BILLING SYSTEM BELIEVES ---- #}
-                    <td>
-                        {% if user.customer %}
-                            <span class="gametech-pill pill-secondary">{{ user.customer.get_status_display }}</span>
-                            {% if user.customer.expires_at %}
-                                <small class="d-block text-muted mt-1">Exp {{ user.customer.expires_at|date:"M d, Y" }}</small>
-                            {% else %}
-                                <small class="d-block text-warning mt-1">No expiry date</small>
-                            {% endif %}
-                        {% else %}-{% endif %}
-                    </td>
-
-                    {# ---- THE ACTUAL VERDICT ---- #}
-                    <td>
-                        {% if user.connected_but_unpaid %}
-                            <span class="gametech-pill pill-warning" title="Past due in the system but the router secret is still enabled. Collect payment - do not auto-suspend.">
-                                <i class="fas fa-hand-holding-dollar me-1"></i> Connected, Unpaid
-                            </span>
-                            <small class="d-block text-muted mt-1">Collect payment. Do not suspend.</small>
-                        {% elif user.router_disabled %}
-                            <span class="gametech-pill pill-danger" title="System thinks this customer is fine and paid, but the router has them cut off.">
-                                <i class="fas fa-scissors me-1"></i> Paid, Cut Off
-                            </span>
-                            <small class="d-block text-muted mt-1">Reconnect, or check why they were cut.</small>
-                        {% endif %}
-                        {% if user.unlinked %}
-                            <span class="gametech-pill pill-warning" title="This account is not assigned to any router in the system, so it cannot be traced to a router at all.">
-                                <i class="fas fa-unlink me-1"></i> Not Linked to a Router
-                            </span>
-                            <small class="d-block text-muted mt-1">Approving will link it to {{ device.device_name }}.</small>
-                        {% elif user.never_verified %}
-                            <span class="gametech-pill pill-warning" title="This account exists in both places but has never been verified against a router. Present in both is not the same as approved.">
-                                <i class="fas fa-user-clock me-1"></i> Awaiting Approval
-                            </span>
-                            <small class="d-block text-muted mt-1">Check the details match, then approve.</small>
-                        {% endif %}
-                        {% if user.approval_reasons %}
-                            <small class="d-block text-muted mt-1">
-                                {{ user.approval_reasons|join:" &middot; " }}
-                            </small>
-                        {% endif %}
-                        {% if user.drift_fields %}
-                            <small class="d-block text-warning mt-1">
-                                Drift: {{ user.drift_fields|join:", " }}
-                            </small>
-                        {% endif %}
-                        {% if user.is_suspicious %}
-                            <small class="d-block text-danger mt-1">{{ user.suspicious_reasons }}</small>
-                        {% endif %}
-                    </td>
-
-                    <td class="text-end">
-                        {% if user.customer %}
-                        <div class="d-flex justify-content-end gap-1">
-                            <a href="{% url 'view_customer' user.customer.id %}" class="btn btn-sm btn-outline-secondary" title="Open the customer record and decide there.">
-                                <i class="fas fa-external-link-alt"></i> View
-                            </a>
-                            {% if user.customer %}
-                            {% if router_mode == 'read_only' %}
-                            <button type="button" class="btn btn-sm btn-outline-warning" disabled
-                                    title="Router writes are switched off (ROUTER_MODE=read_only). Review the details now; an admin must enable writes before this can be approved.">
-                                <i class="fas fa-lock"></i> Writes Off
-                            </button>
-                            {% else %}
-                            <button type="submit" formnovalidate formaction="{% url 'sync_autofix_user' device.id %}" formmethod="POST" name="pppoe_username" value="{{ user.name }}" class="btn btn-sm btn-outline-primary"
-                                    title="Write to Router: update the EXISTING secret's profile, password and comment to match the system, and link it to {{ device.device_name }}. The secret is looked up by name first, so this updates it -- it cannot create a duplicate."
-                                    onclick="return confirm('Write to Router: {{ user.name|escapejs }}?\n\nThis UPDATES the existing secret on {{ device.device_name }} (looked up by name, so no duplicate can be created):\n  profile  {{ user.want_profile }}\n  comment  {{ user.customer.full_name }}{% if user.customer.barangay %} | {{ user.customer.barangay.name }}{% endif %}\n\nAfterwards the account is linked to this router and marked Synced.\n\nOnly do this if the SYSTEM details are correct.');">
-                                <i class="fas fa-pen-to-square"></i> Write to Router
-                            </button>
-                            {% endif %}
-                            {% endif %}
-                        </div>
-                        {% endif %}
-                    </td>
-                <td class="sm-reasonkey" aria-hidden="true">{% for k in user.reason_keys %}{{ k }} {% endfor %}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+            <span class="ms-auto sm-muted small" id="smReviewShowing"></span>
         </div>
 
-        {% comment %}
-          Server-side paging. Without this the card shipped all 1,051 rows in
-          the HTML (6.5 MB, 5.8s) to let an operator act on the 17 urgent ones.
-          The chips still count the whole queue; only the rendered rows are a
-          page. "Previous/Next" carry the current chip filter in the query
-          string so paging does not silently drop the operator out of a filter.
-        {% endcomment %}
+        <form method="POST" id="reviewTableForm">
+            {% csrf_token %}
+            <div class="sm-table-wrap">
+                <table class="sm-table" id="reviewTable">
+                    <thead>
+                        <tr>
+                            <th>PPPoE Username</th>
+                            <th>Customer</th>
+                            <th>On Router</th>
+                            <th>System Status</th>
+                            <th>What Differs</th>
+                            <th class="text-end">Actions</th>
+                            <th class="sm-reasonkey" aria-hidden="true"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in review_rows %}
+                        <tr class="{% if user.connected_but_unpaid %}table-row-collect{% elif user.state_mismatch %}table-row-pending-install{% endif %}"
+                            data-reasons="{% for k in user.reason_keys %}{{ k }}{% if not forloop.last %} {% endif %}{% endfor %}">
+                            <td><span class="fw-bold sm-mono">{{ user.name }}</span></td>
+                            <td>
+                                <div class="fw-semibold">{{ user.customer.full_name|default:"-" }}</div>
+                                {% if user.customer.barangay %}<small class="sm-muted">{{ user.customer.barangay.name }}</small>{% endif %}
+                            </td>
+
+                            {# ---- GROUND TRUTH FROM THE ROUTER ---- #}
+                            <td>
+                                {% if user.router_disabled %}
+                                    <span class="sm-pill sm-pill--danger" title="The MikroTik has this secret DISABLED, so customer cannot connect.">
+                                        <span class="sm-dot"></span> Cut Off
+                                    </span>
+                                {% else %}
+                                    <span class="sm-pill sm-pill--ok" title="The MikroTik has this secret ENABLED.">
+                                        <span class="sm-dot sm-dot--pulse"></span> Enabled
+                                    </span>
+                                {% endif %}
+                                {% if user.is_active %}
+                                    <span class="sm-pill sm-pill--info d-block mt-1" title="A live PPPoE session exists right now.">Session Up</span>
+                                {% endif %}
+                            </td>
+
+                            {# ---- WHAT THE BILLING SYSTEM BELIEVES ---- #}
+                            <td>
+                                {% if user.customer %}
+                                    <span class="sm-pill">{{ user.customer.get_status_display }}</span>
+                                    {% if user.customer.expires_at %}
+                                        <small class="d-block sm-muted mt-1">Exp {{ user.customer.expires_at|date:"M d, Y" }}</small>
+                                    {% else %}
+                                        <small class="d-block sm-sub--warn mt-1">No expiry date</small>
+                                    {% endif %}
+                                {% else %}-{% endif %}
+                            </td>
+
+                            {# ---- THE ACTUAL VERDICT ---- #}
+                            <td>
+                                {% if user.connected_but_unpaid %}
+                                    <span class="sm-pill sm-pill--warn" title="Past due in system but router secret is enabled. Collect payment - do not auto-suspend.">
+                                        <i class="fas fa-hand-holding-dollar me-1"></i> Connected, Unpaid
+                                    </span>
+                                    <small class="d-block sm-muted mt-1">Collect payment. Do not suspend.</small>
+                                {% elif user.router_disabled %}
+                                    <span class="sm-pill sm-pill--danger" title="System thinks this customer is paid, but router has them cut off.">
+                                        <i class="fas fa-scissors me-1"></i> Paid, Cut Off
+                                    </span>
+                                    <small class="d-block sm-sub--danger mt-1">Reconnect or verify cutoff reason.</small>
+                                {% endif %}
+                                {% if user.unlinked %}
+                                    <span class="sm-pill sm-pill--warn" title="Not assigned to any router in the system.">
+                                        <i class="fas fa-unlink me-1"></i> Not Linked
+                                    </span>
+                                    <small class="d-block sm-muted mt-1">Approving will link to {{ device.device_name }}.</small>
+                                {% elif user.never_verified %}
+                                    <span class="sm-pill sm-pill--warn" title="Exists in both places but never verified.">
+                                        <i class="fas fa-user-clock me-1"></i> Awaiting Approval
+                                    </span>
+                                    <small class="d-block sm-muted mt-1">Check details match, then approve.</small>
+                                {% endif %}
+                                {% if user.approval_reasons %}
+                                    <small class="d-block sm-muted mt-1">
+                                        {{ user.approval_reasons|join:" &middot; " }}
+                                    </small>
+                                {% endif %}
+                                {% if user.drift_fields %}
+                                    <small class="d-block sm-sub--warn mt-1">
+                                        Drift: {{ user.drift_fields|join:", " }}
+                                    </small>
+                                {% endif %}
+                                {% if user.is_suspicious %}
+                                    <small class="d-block sm-sub--danger mt-1">{{ user.suspicious_reasons }}</small>
+                                {% endif %}
+                            </td>
+
+                            <td class="text-end">
+                                {% if user.customer %}
+                                <div class="d-flex justify-content-end gap-1">
+                                    <a href="{% url 'view_customer' user.customer.id %}" class="sm-btn sm-btn--sm sm-btn--ghost" title="Open customer record.">
+                                        <i class="fas fa-external-link-alt"></i> View
+                                    </a>
+                                    {% if router_mode == 'read_only' %}
+                                    <button type="button" class="sm-btn sm-btn--sm sm-btn--warn" disabled
+                                            title="Router writes disabled (ROUTER_MODE=read_only).">
+                                        <i class="fas fa-lock"></i> Locked
+                                    </button>
+                                    {% else %}
+                                    <button type="submit" formnovalidate formaction="{% url 'sync_autofix_user' device.id %}" formmethod="POST" name="pppoe_username" value="{{ user.name }}" class="sm-btn sm-btn--sm sm-btn--primary"
+                                            title="Write to Router: updates existing secret profile, password, comment."
+                                            onclick="return confirm('Write to Router: {{ user.name|escapejs }}?\n\nThis UPDATES the existing secret on {{ device.device_name }}:\n  profile: {{ user.want_profile }}\n  comment: {{ user.customer.full_name }}{% if user.customer.barangay %} | {{ user.customer.barangay.name }}{% endif %}\n\nOnly proceed if system details are verified.');">
+                                        <i class="fas fa-pen-to-square"></i> Write to Router
+                                    </button>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td class="sm-reasonkey" aria-hidden="true">{% for k in user.reason_keys %}{{ k }} {% endfor %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </form>
+
         {% if review_page.paginator.num_pages > 1 %}
         <nav class="d-flex flex-wrap align-items-center justify-content-between gap-2 px-3 py-2 border-top" aria-label="Review queue pages">
-            <span class="text-muted small">
+            <span class="sm-muted small">
                 Page {{ review_page.number }} of {{ review_page.paginator.num_pages }}
                 &mdash; showing {{ review_rows|length }} of {{ review_total }} accounts
             </span>

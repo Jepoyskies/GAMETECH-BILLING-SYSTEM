@@ -1,70 +1,64 @@
 {% comment %}
 Plan-health banner for the Sync Manager.
-
-Rows here show as DRIFT for a reason that has nothing to do with the router: the
-plan has no MikroTik profile mapped, or two plans share a price at different
-speeds so the import cannot tell which one a subscriber meant. Saying so here
-stops staff chasing a router problem that is actually a catalogue problem.
+Surfaces catalogue-level plan mapping issues so staff don't blame router drift.
 {% endcomment %}
 {% if plan_health and not plan_health.clean %}
-<section class="sm-panel sm-panel--warn animate-fade-in" aria-labelledby="smPlanHealthTitle">
-    <div class="sm-panel__head">
+<details class="sm-plan-box mb-4 animate-fade-in" aria-labelledby="smPlanHealthTitle">
+    <summary>
         <div class="d-flex align-items-center gap-3 min-w-0">
-            <div class="sm-panel__icon" aria-hidden="true"><i class="fas fa-clipboard-list"></i></div>
+            <span class="fs-5 text-warning"><i class="fas fa-triangle-exclamation"></i></span>
             <div class="min-w-0">
-                <h2 id="smPlanHealthTitle" class="sm-panel__title">Plan catalogue problems</h2>
-                <div class="sm-panel__sub">
-                    {{ plan_health.plans_with_profile }}/{{ plan_health.total_plans }} plans mapped to a router profile
-                </div>
+                <span id="smPlanHealthTitle" class="fw-bold text-warning">Plan Catalogue Discrepancies</span>
+                <span class="sm-muted ms-2 small d-none d-md-inline">
+                    {{ plan_health.plans_with_profile }}/{{ plan_health.total_plans }} plans mapped to a MikroTik profile
+                </span>
             </div>
         </div>
-        <a id="smFixPlansBtn" href="{% url 'plan_list' %}" class="sm-btn sm-btn--warn">
-            <i class="fas fa-cog"></i> Fix in Internet Plans
-        </a>
-    </div>
+        <div class="d-flex align-items-center gap-2">
+            <a id="smFixPlansBtn" href="{% url 'plan_list' %}" class="sm-btn sm-btn--sm sm-btn--warn" onclick="event.stopPropagation();">
+                <i class="fas fa-cog"></i> Internet Plans
+            </a>
+            <i class="fas fa-chevron-down sm-muted small"></i>
+        </div>
+    </summary>
 
-    {% if plan_health.ambiguous %}
-    <p class="sm-panel__label">
-        Same price, but the plan name does not say which speed &mdash; the import cannot tell them apart:
-    </p>
-    <ul class="sm-plan-list">
-        {% for a in plan_health.ambiguous %}
-        <li class="sm-plan-row">
-            <span class="sm-price">&#8369;{{ a.price|floatformat:0 }}</span>
-            <span class="sm-plan-row__names">{{ a.plans|join:" / " }}</span>
-            <span class="sm-plan-row__tags">
-                {% for s in a.speeds %}<span class="sm-chip sm-chip--info">{{ s }} Mbps</span>{% endfor %}
-                {% if a.customer_count %}<span class="sm-chip"><i class="fas fa-users"></i> {{ a.customer_count }}</span>{% endif %}
+    <div class="sm-plan-content">
+        {% if plan_health.ambiguous %}
+        <p class="sm-muted small fw-bold mb-2">
+            Same price, but plan names do not state speed &mdash; sync cannot distinguish profiles:
+        </p>
+        <ul class="sm-plan-list mb-3">
+            {% for a in plan_health.ambiguous %}
+            <li class="sm-plan-row">
+                <span class="sm-price">&#8369;{{ a.price|floatformat:0 }}</span>
+                <span class="sm-plan-row__names">{{ a.plans|join:" / " }}</span>
+                <span class="sm-plan-row__tags">
+                    {% for s in a.speeds %}<span class="sm-pill sm-pill--info">{{ s }} Mbps</span>{% endfor %}
+                    {% if a.customer_count %}<span class="sm-pill"><i class="fas fa-users"></i> {{ a.customer_count }}</span>{% endif %}
+                </span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+
+        {% if plan_health.unmapped %}
+        <p class="sm-muted small fw-bold mb-2">
+            No router profile mapped &mdash; falls back to display name:
+        </p>
+        <div class="sm-unmapped">
+            {% for u in plan_health.unmapped %}
+            <span class="sm-pill">
+                {{ u.name }} <span class="sm-muted ms-1">&#8369;{{ u.price|floatformat:0 }}</span>
+                {% if u.customer_count %}<span class="text-danger ms-1">({{ u.customer_count }})</span>{% endif %}
             </span>
-        </li>
-        {% endfor %}
-    </ul>
-    {% endif %}
-
-    {% if plan_health.unmapped %}
-    <p class="sm-panel__label">
-        No router profile mapped &mdash; these fall back to the display name and may show permanent drift:
-    </p>
-    <div class="sm-unmapped">
-        {% for u in plan_health.unmapped %}
-        <span class="sm-chip">
-            {{ u.name }} <span class="sm-muted">&#8369;{{ u.price|floatformat:0 }}</span>
-            {% if u.customer_count %}<span class="sm-text-danger">({{ u.customer_count }})</span>{% endif %}
-        </span>
-        {% endfor %}
+            {% endfor %}
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
-</section>
+</details>
 {% elif plan_health and plan_health.clean %}
-<div class="sm-panel sm-panel--ok sm-panel--slim animate-fade-in">
-    <i class="fas fa-check-circle me-2"></i>
-    Plan catalogue is clean &mdash; all {{ plan_health.total_plans }} plans map to a router profile,
-    and no plan is ambiguous.
-    {% if plan_health.variants %}
-    <span class="sm-muted">
-        ({{ plan_health.variants|length }} price{{ plan_health.variants|length|pluralize }}
-        sold at more than one speed; each plan name states its own speed.)
-    </span>
-    {% endif %}
+<div class="sm-pill sm-pill--ok mb-3 py-2 px-3 w-100 d-flex align-items-center gap-2">
+    <i class="fas fa-circle-check"></i>
+    <span>Plan catalogue is clean &mdash; all {{ plan_health.total_plans }} plans map to a router profile.</span>
 </div>
 {% endif %}

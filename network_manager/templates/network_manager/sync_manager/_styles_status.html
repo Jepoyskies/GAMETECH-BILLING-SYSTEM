@@ -1,299 +1,196 @@
 <style>
-    /* Sync Manager: hero, status panels, offline state.
-       Values mirror the Dashboard baseline (navy #0f172a -> #1e3a8a, gold #F9B233, radii 24/12px). */
-    .sm-hero {
-        position: relative; overflow: hidden;
-        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
-        padding: 1.6rem 1.75rem; margin-bottom: 1.5rem;
-        border-radius: 24px; border: 1px solid rgba(255,255,255,.08);
-        background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #2563eb 100%);
-        box-shadow: 0 18px 40px -18px rgba(15,23,42,.7);
-        color: #fff;
-    }
-    .sm-hero__glow {
-        position: absolute; inset: 0; pointer-events: none;
-        background: radial-gradient(circle at 85% 0%, rgba(249,178,51,.18), transparent 45%),
-                    radial-gradient(circle at 0% 100%, rgba(96,165,250,.18), transparent 50%);
-    }
-    .sm-hero__icon {
-        flex: 0 0 auto; width: 56px; height: 56px; border-radius: 16px;
-        display: grid; place-items: center; font-size: 1.4rem; color: #F9B233;
-        background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14);
-        backdrop-filter: blur(10px);
-    }
-    .sm-hero__eyebrow { font-size: .72rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #F9B233; }
-    .sm-hero__title { margin: 0; font-size: clamp(1.35rem, 2.6vw, 1.85rem); font-weight: 800; line-height: 1.15; color: #fff; overflow-wrap: anywhere; }
-    .min-w-0 { min-width: 0; }
+/* =====================================================================
+   SYNC MANAGER — status panels, tabs, queue tables, reason chips & offline.
+   Consumes --sm-* variables from _styles.html. Scoped under .sm-page.
+   ===================================================================== */
 
-    /* Chips */
-    .sm-chip {
-        display: inline-flex; align-items: center; gap: .4rem;
-        padding: .28rem .7rem; border-radius: 999px;
-        font-size: .74rem; font-weight: 600; line-height: 1.2; white-space: nowrap;
-        background: rgba(148,163,184,.14); border: 1px solid rgba(148,163,184,.22); color: inherit;
-    }
-    .sm-hero .sm-chip { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.18); color: #e2e8f0; }
-    .sm-chip--ok     { background: rgba(16,185,129,.14) !important; border-color: rgba(16,185,129,.35) !important; color: #34d399 !important; }
-    .sm-chip--danger { background: rgba(239,68,68,.14) !important;  border-color: rgba(239,68,68,.35) !important;  color: #f87171 !important; }
-    .sm-chip--info   { background: rgba(59,130,246,.14);  border-color: rgba(59,130,246,.3);  color: #60a5fa; }
-    .sm-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 0 currentColor; animation: smPulse 1.8s infinite; }
-    @keyframes smPulse { 0% { box-shadow: 0 0 0 0 currentColor; } 70% { box-shadow: 0 0 0 7px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+/* ---- Tab Navigation Bar ---------------------------------------------- */
+.sm-tabs-nav {
+    display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.25rem;
+    padding: .4rem; border-radius: 16px; background: var(--sm-subtle);
+    border: 1px solid var(--sm-border);
+}
+.sm-tab {
+    position: relative; display: inline-flex; align-items: center; gap: .6rem;
+    padding: .65rem 1.15rem; border-radius: 12px; border: 1px solid transparent;
+    font-size: .88rem; font-weight: 700; color: var(--sm-muted); text-decoration: none;
+    background: transparent; cursor: pointer; transition: all .15s ease;
+}
+.sm-tab:hover {
+    color: var(--sm-text); background: var(--sm-card); border-color: var(--sm-border);
+}
+.sm-tab.active {
+    color: var(--sm-primary); background: var(--sm-card); border-color: var(--sm-border);
+    box-shadow: 0 4px 12px rgba(17, 54, 194, .08);
+}
+.sm-tab__count {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: .18rem .55rem; border-radius: 999px; font-size: .75rem; font-weight: 800;
+    line-height: 1; background: var(--sm-neutral-bg); color: var(--sm-neutral);
+    font-variant-numeric: tabular-nums;
+}
+.sm-tab.active .sm-tab__count {
+    background: var(--sm-primary-bg); color: var(--sm-primary-ink);
+}
+.sm-tab--warn .sm-tab__count { background: var(--sm-warn-bg); color: var(--sm-warn); }
+.sm-tab--danger .sm-tab__count { background: var(--sm-danger-bg); color: var(--sm-danger); }
+.sm-tab--ok .sm-tab__count { background: var(--sm-ok-bg); color: var(--sm-ok); }
+.sm-tab--info .sm-tab__count { background: var(--sm-info-bg); color: var(--sm-info); }
+.sm-tab__sub {
+    font-size: .72rem; font-weight: 600; opacity: .8;
+}
 
-    /* Buttons */
-    .sm-btn {
-        display: inline-flex; align-items: center; gap: .5rem;
-        padding: .55rem 1.1rem; border-radius: 12px;
-        font-size: .85rem; font-weight: 700; text-decoration: none; white-space: nowrap;
-        border: 1px solid transparent; transition: transform .15s ease, box-shadow .2s ease, background .2s ease;
-    }
-    .sm-btn:hover { transform: translateY(-1px); }
-    .sm-btn--glass { color: #fff; background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.22); backdrop-filter: blur(6px); }
-    .sm-btn--glass:hover { color: #fff; background: rgba(255,255,255,.18); }
-    .sm-btn--gold { color: #0f172a; background: linear-gradient(135deg, #F9B233, #fbae1a); box-shadow: 0 8px 20px -8px rgba(249,178,51,.7); }
-    .sm-btn--gold:hover { color: #0f172a; box-shadow: 0 10px 24px -6px rgba(249,178,51,.85); }
-    .sm-btn--ghost { color: var(--gt-text, #e2e8f0); background: transparent; border-color: var(--gt-border, rgba(148,163,184,.25)); }
-    .sm-btn--ghost:hover { color: var(--gt-text, #fff); background: var(--gt-surface-2, rgba(148,163,184,.1)); }
-    .sm-btn--warn { color: #F9B233; background: rgba(249,178,51,.1); border-color: rgba(249,178,51,.4); }
-    .sm-btn--warn:hover { color: #0f172a; background: #F9B233; }
+/* ---- Queue Panel / Card Container ----------------------------------- */
+.sm-queue-panel {
+    border-radius: 20px; background: var(--sm-card); border: 1px solid var(--sm-border);
+    box-shadow: var(--sm-shadow); overflow: hidden; margin-bottom: 1.5rem;
+}
+.sm-queue-panel__header {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+    padding: 1.1rem 1.4rem; border-bottom: 1px solid var(--sm-divider); background: var(--sm-subtle);
+}
+.sm-queue-panel__title {
+    margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--sm-text);
+    display: flex; align-items: center; gap: .6rem;
+}
+.sm-queue-panel__notice {
+    display: flex; align-items: flex-start; gap: .75rem; padding: .85rem 1.25rem;
+    border-bottom: 1px solid var(--sm-divider); font-size: .84rem; line-height: 1.45;
+}
+.sm-queue-panel__notice--warn { background: var(--sm-warn-bg); color: var(--sm-warn); }
+.sm-queue-panel__notice--ok { background: var(--sm-ok-bg); color: var(--sm-ok); }
+.sm-queue-panel__notice--info { background: var(--sm-info-bg); color: var(--sm-info); }
+.sm-queue-panel__notice strong { color: currentColor; }
 
-    /* Panels */
-    .sm-panel {
-        position: relative; padding: 1.25rem 1.4rem; margin-bottom: 1.5rem;
-        border-radius: 20px; border: 1px solid var(--gt-border, rgba(148,163,184,.18));
-        background: var(--gt-surface, #111827); color: var(--gt-text, #e2e8f0);
-        box-shadow: 0 10px 30px -12px rgba(0,0,0,.35);
-    }
-    .sm-panel::before { content: ""; position: absolute; left: 0; top: 18px; bottom: 18px; width: 4px; border-radius: 0 4px 4px 0; background: var(--sm-accent, #F9B233); }
-    .sm-panel--warn { --sm-accent: #F9B233; background: linear-gradient(135deg, rgba(249,178,51,.07), transparent 55%), var(--gt-surface, #111827); }
-    .sm-panel--ok   { --sm-accent: #10b981; color: #34d399; }
-    .sm-panel--slim { padding: .8rem 1.4rem; font-size: .85rem; }
-    .sm-panel__head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .9rem; margin-bottom: 1rem; }
-    .sm-panel__icon { flex: 0 0 auto; width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; color: var(--sm-accent); background: rgba(249,178,51,.12); border: 1px solid rgba(249,178,51,.28); }
-    .sm-panel__title { margin: 0; font-size: 1rem; font-weight: 800; color: var(--gt-text, #fff); }
-    .sm-panel__sub, .sm-muted { font-size: .78rem; color: var(--gt-text-muted, #94a3b8); }
-    .sm-panel__label { margin: .25rem 0 .6rem; font-size: .8rem; font-weight: 600; color: var(--gt-text-muted, #94a3b8); }
-    .sm-text-danger { color: #f87171; }
+/* ---- Filter & Toolbar Bar ------------------------------------------- */
+.sm-toolbar {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem;
+    padding: .9rem 1.25rem; border-bottom: 1px solid var(--sm-divider);
+}
 
-    .sm-plan-list { list-style: none; margin: 0 0 .75rem; padding: 0; display: grid; gap: .5rem; }
-    .sm-plan-row {
-        display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .5rem 1rem;
-        padding: .7rem .9rem; border-radius: 12px;
-        background: var(--gt-surface-2, rgba(148,163,184,.06)); border: 1px solid var(--gt-border, rgba(148,163,184,.14));
-        transition: border-color .2s ease, background .2s ease;
-    }
-    .sm-plan-row:hover { border-color: rgba(249,178,51,.35); }
-    .sm-price { font-weight: 800; font-size: .95rem; color: #F9B233; min-width: 4.2rem; }
-    .sm-plan-row__names { font-size: .82rem; color: var(--gt-text, #e2e8f0); overflow-wrap: anywhere; }
-    .sm-plan-row__tags { display: flex; flex-wrap: wrap; gap: .35rem; justify-content: flex-end; }
-    .sm-unmapped { display: flex; flex-wrap: wrap; gap: .4rem; max-height: 9rem; overflow: auto; }
+/* ---- Reason Filter Chips (Needs Review) ------------------------------ */
+.sm-chips {
+    display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; padding: .9rem 1.25rem;
+    border-bottom: 1px solid var(--sm-divider); background: var(--sm-subtle);
+}
+.sm-chip {
+    display: inline-flex; align-items: center; gap: .4rem; padding: .32rem .75rem; border-radius: 999px;
+    font-size: .78rem; font-weight: 600; line-height: 1.2; cursor: pointer; border: 1px solid var(--sm-border);
+    background: var(--sm-card); color: var(--sm-muted); transition: all .15s ease;
+}
+.sm-chip:hover { transform: translateY(-1px); border-color: var(--sm-primary); color: var(--sm-text); }
+.sm-chip .chip-n {
+    font-variant-numeric: tabular-nums; font-weight: 800; padding: .08rem .45rem; border-radius: 999px;
+    background: var(--sm-neutral-bg); color: var(--sm-neutral); font-size: .72rem;
+}
+.sm-chip.chip-danger { color: var(--sm-danger); border-color: var(--sm-danger-bg); background: var(--sm-danger-bg); }
+.sm-chip.chip-danger .chip-n { background: var(--sm-danger); color: #fff; }
+.sm-chip.chip-warn { color: var(--sm-warn); border-color: var(--sm-warn-bg); background: var(--sm-warn-bg); }
+.sm-chip.chip-warn .chip-n { background: var(--sm-warn); color: #fff; }
+.sm-chip.chip-info { color: var(--sm-info); border-color: var(--sm-info-bg); background: var(--sm-info-bg); }
+.sm-chip.chip-info .chip-n { background: var(--sm-info); color: #fff; }
+.sm-chip.chip-active {
+    border-color: #f9b233; color: #1a1408; font-weight: 700;
+    background: linear-gradient(135deg, #ffd34d 0%, #f9b233 100%);
+    box-shadow: 0 4px 12px rgba(249, 178, 51, .35);
+}
+.sm-chip.chip-active .chip-n { background: rgba(0, 0, 0, .2); color: #1a1408; }
 
-    /* Router offline */
-    .sm-offline {
-        display: flex; gap: 1.5rem; align-items: flex-start; flex-wrap: wrap;
-        padding: 1.75rem; margin-bottom: 1.5rem; border-radius: 24px;
-        border: 1px solid rgba(239,68,68,.28);
-        background: radial-gradient(circle at 0% 0%, rgba(239,68,68,.12), transparent 55%), var(--gt-surface, #111827);
-        color: var(--gt-text, #e2e8f0);
-        box-shadow: 0 14px 36px -16px rgba(239,68,68,.35);
-    }
-    .sm-offline__icon {
-        position: relative; flex: 0 0 auto; width: 68px; height: 68px; border-radius: 20px;
-        display: grid; place-items: center; font-size: 1.6rem; color: #f87171;
-        background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.35);
-    }
-    .sm-offline__icon::after { content: ""; position: absolute; inset: -6px; border-radius: 24px; border: 2px solid rgba(239,68,68,.35); animation: smRing 2.2s ease-out infinite; }
-    @keyframes smRing { 0% { opacity: .9; transform: scale(.92); } 100% { opacity: 0; transform: scale(1.18); } }
-    .sm-offline__body { flex: 1 1 280px; min-width: 0; }
-    .sm-offline__title { margin: 0; font-size: 1.2rem; font-weight: 800; color: var(--gt-text, #fff); }
-    .sm-offline__text { margin: .4rem 0 1rem; font-size: .88rem; line-height: 1.55; color: var(--gt-text-muted, #94a3b8); max-width: 70ch; }
-    .sm-offline__meta { display: flex; flex-wrap: wrap; gap: 1.25rem; margin-bottom: 1rem; font-size: .8rem; font-weight: 600; color: var(--gt-text, #cbd5e1); }
-    .sm-offline__meta i { color: #F9B233; margin-right: .35rem; }
-    .sm-offline__checks { list-style: none; padding: 0; margin: 0 0 1.25rem; display: flex; flex-wrap: wrap; gap: .5rem; }
-    .sm-offline__checks li {
-        display: inline-flex; align-items: center; gap: .45rem; padding: .4rem .75rem; border-radius: 10px;
-        font-size: .78rem; background: var(--gt-surface-2, rgba(148,163,184,.08)); border: 1px solid var(--gt-border, rgba(148,163,184,.16));
-    }
-    .sm-offline__checks i { color: var(--gt-text-muted, #94a3b8); }
+.sm-reasonkey { visibility: hidden; width: 1px; padding: 0 !important; border: 0 !important; font-size: 0; max-width: 1px; }
 
-    @media (max-width: 576px) {
-        .sm-hero { padding: 1.25rem; border-radius: 20px; }
-        .sm-hero > .sm-btn { width: 100%; justify-content: center; }
-        .sm-plan-row { grid-template-columns: auto 1fr; }
-        .sm-plan-row__tags { grid-column: 1 / -1; justify-content: flex-start; }
-        .sm-offline { padding: 1.25rem; }
-        .sm-offline .sm-btn { flex: 1 1 auto; justify-content: center; }
-    }
-    /* How old the router reading is. Deliberately quiet -- it is reassurance, not
-       an alarm -- but never hidden, because the numbers on this page drive
-       decisions about live hardware. */
-    .sm-freshness {
-        font-size: .85rem; color: var(--gt-text-muted, #94a3b8);
-        padding: .5rem .85rem; border-radius: 12px;
-        background: var(--gt-surface-2, rgba(148,163,184,.06));
-        border: 1px solid var(--gt-border, rgba(148,163,184,.12));
-    }
-    .sm-freshness i { color: #60a5fa; }
+/* ---- Table Design & DataTables -------------------------------------- */
+.sm-table-wrap { overflow-x: auto; width: 100%; }
+.sm-table {
+    width: 100%; margin-bottom: 0; border-collapse: separate; border-spacing: 0;
+    --bs-table-bg: transparent; --bs-table-accent-bg: transparent; color: var(--sm-text);
+}
+.sm-table thead th {
+    background: var(--sm-subtle); color: var(--sm-muted); font-size: .73rem;
+    font-weight: 800; text-transform: uppercase; letter-spacing: .06em;
+    padding: .85rem 1rem; border-bottom: 1px solid var(--sm-divider); white-space: nowrap; vertical-align: middle;
+}
+.sm-table tbody td {
+    padding: .9rem 1rem; border-bottom: 1px solid var(--sm-divider);
+    font-size: .85rem; vertical-align: middle; background: transparent;
+}
+.sm-table tbody tr:hover td { background: var(--sm-hover); }
+.sm-table tbody tr:last-child td { border-bottom: 0; }
 
-    /* ---- SIMPLE VIEW ------------------------------------------------
-       Designed for a supervisor who does not know what a PPPoE profile is.
-       Large type, plain sentences, one idea per card, and the safety state
-       stated in words at the very top. Colour is used only to rank urgency,
-       never as the sole carrier of meaning -- every card also says what it
-       is and what to do, so it still reads correctly in greyscale.
-    */
-    .smv { margin-bottom: 1.5rem; }
-    .smv-safe, .smv-warn {
-        display: flex; gap: .9rem; align-items: flex-start;
-        padding: 1rem 1.15rem; border-radius: 18px; margin-bottom: 1.5rem;
-        border: 1px solid; line-height: 1.45;
-    }
-    .smv-safe {
-        background: rgba(34,197,94,.10); border-color: rgba(34,197,94,.35);
-    }
-    .smv-safe strong { color: #4ade80; font-size: 1.05rem; }
-    .smv-safe__sub { color: var(--gt-text-muted, #94a3b8); font-size: .9rem; margin-top: .2rem; }
-    .smv-warn {
-        background: rgba(239,68,68,.10); border-color: rgba(239,68,68,.4);
-    }
-    .smv-warn strong { color: #f87171; font-size: 1.05rem; }
-    .smv-safe__icon { font-size: 1.5rem; margin-top: .1rem; }
-    .smv-safe .smv-safe__icon { color: #4ade80; }
-    .smv-warn  .smv-safe__icon { color: #f87171; }
+/* Emergency indicator for review table */
+#reviewTable tbody tr[data-reasons~="cut_off"] td:first-child,
+#reviewTable tbody tr[data-reasons~="paid_expired_profile"] td:first-child {
+    box-shadow: inset 4px 0 0 var(--sm-danger);
+}
+#reviewTable tbody tr[data-reasons~="cut_off"],
+#reviewTable tbody tr[data-reasons~="paid_expired_profile"] {
+    background: var(--sm-danger-bg);
+}
 
-    .smv-head { margin-bottom: 1rem; }
-    .smv-head__title { font-size: 1.35rem; font-weight: 700; margin: 0; }
-    .smv-head__sub { color: var(--gt-text-muted, #94a3b8); font-size: .95rem; margin: .25rem 0 0; }
+/* DataTables pagination overrides */
+.sm-page .dataTables_wrapper { padding: 0; }
+.sm-page .dataTables_wrapper .dataTables_filter { padding: .75rem 1.25rem; }
+.sm-page .dataTables_wrapper .dataTables_filter input {
+    border-radius: 10px; border: 1px solid var(--sm-border); padding: .35rem .75rem;
+    background: var(--sm-card); color: var(--sm-text); font-size: .85rem;
+}
+.sm-page .dataTables_wrapper .dataTables_info {
+    padding: .9rem 1.25rem; color: var(--sm-muted); font-size: .8rem;
+}
+.sm-page .dataTables_wrapper .dataTables_paginate {
+    padding: .75rem 1.25rem;
+}
 
-    /* Two cards per row at most, and never squeezed. The previous
-       auto-fit/minmax(320px) packed four side by side on a wide monitor,
-       which shrank the sentences until they read as a wall of small text --
-       the opposite of the point. */
-    .smv-grid {
-        display: grid; gap: 1.5rem;
-        grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
-    }
-    .smv-card {
-        display: flex; flex-direction: column;
-        padding: 1.6rem 1.75rem; border-radius: 20px;
-        background: var(--gt-surface-1, rgba(148,163,184,.06));
-        border: 1px solid var(--gt-border, rgba(148,163,184,.16));
-        /* a thick left edge, so urgency is legible without reading */
-        border-left: 5px solid var(--smv-accent, #64748b);
-    }
-    .smv-card--urgent { --smv-accent: #f87171; background: rgba(248,113,113,.07); border-color: rgba(248,113,113,.3); border-left-color: #f87171; }
-    .smv-card--warn   { --smv-accent: #fbbf24; background: rgba(251,191,36,.06); border-color: rgba(251,191,36,.26); border-left-color: #fbbf24; }
-    .smv-card--info   { --smv-accent: #60a5fa; background: rgba(96,165,250,.06); border-color: rgba(96,165,250,.24); border-left-color: #60a5fa; }
-    .smv-card--ok     { --smv-accent: #4ade80; background: rgba(34,197,94,.06); border-color: rgba(34,197,94,.24); border-left-color: #4ade80; }
+/* Plan Health Banner */
+.sm-plan-box {
+    margin-bottom: 1.25rem; border-radius: 18px; border: 1px solid var(--sm-border);
+    background: var(--sm-card); overflow: hidden; box-shadow: var(--sm-shadow);
+}
+.sm-plan-box summary {
+    display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem;
+    cursor: pointer; font-weight: 700; color: var(--sm-text); list-style: none; user-select: none;
+}
+.sm-plan-box summary::-webkit-details-marker { display: none; }
+.sm-plan-box summary:hover { background: var(--sm-hover); }
+.sm-plan-content { padding: 0 1.25rem 1.25rem; }
+.sm-plan-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+.sm-plan-row {
+    display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .5rem 1rem;
+    padding: .65rem .85rem; border-radius: 12px; background: var(--sm-subtle); border: 1px solid var(--sm-border);
+}
+.sm-price { font-weight: 800; font-size: .95rem; color: #f9b233; min-width: 4.2rem; }
+.sm-plan-row__names { font-size: .82rem; color: var(--sm-text); word-break: break-word; }
+.sm-plan-row__tags { display: flex; flex-wrap: wrap; gap: .35rem; justify-content: flex-end; }
+.sm-unmapped { display: flex; flex-wrap: wrap; gap: .4rem; max-height: 9rem; overflow-y: auto; }
 
-    .smv-card__top { display: flex; align-items: center; gap: .75rem; margin-bottom: .75rem; }
-    .smv-card__icon { color: var(--smv-accent); font-size: 1.6rem; line-height: 1; }
-    /* Tabular numerals so 1,016 does not render wider than 56 next to it */
-    .smv-card__count {
-        margin-left: auto; font-size: 2.75rem; font-weight: 800; line-height: 1;
-        font-variant-numeric: tabular-nums; color: var(--smv-accent);
-    }
-    .smv-card__title { font-size: 1.3rem; font-weight: 700; margin: 0 0 .6rem; }
-    .smv-card__plain { font-size: 1.02rem; line-height: 1.6; color: var(--gt-text, #e2e8f0); margin: 0 0 .85rem; }
-    .smv-card__action {
-        display: flex; gap: .55rem; align-items: flex-start;
-        font-size: .97rem; line-height: 1.5; margin: 0 0 1.15rem;
-        color: var(--gt-text-muted, #94a3b8);
-    }
-    .smv-card__action i { color: var(--smv-accent); margin-top: .2rem; }
-    .smv-card__link {
-        margin-top: auto; align-self: flex-start;
-        display: inline-flex; align-items: center; gap: .55rem;
-        font-size: 1rem; font-weight: 600; color: var(--smv-accent);
-        text-decoration: none; padding: .6rem 1.15rem; border-radius: 999px;
-        border: 1px solid var(--smv-accent);
-    }
-    .smv-card__link:hover { background: var(--smv-accent); color: #0f172a; }
-    .smv-card__link:focus-visible { outline: 2px solid #fbae1a; outline-offset: 2px; }
+/* Offline State */
+.sm-offline {
+    display: flex; gap: 1.5rem; align-items: flex-start; flex-wrap: wrap;
+    padding: 1.75rem; margin-bottom: 1.5rem; border-radius: 24px;
+    border: 1px solid var(--sm-danger); background: var(--sm-danger-bg);
+    color: var(--sm-text); box-shadow: var(--sm-shadow);
+}
+.sm-offline__icon {
+    position: relative; flex: 0 0 auto; width: 64px; height: 64px; border-radius: 18px;
+    display: grid; place-items: center; font-size: 1.6rem; color: #fff;
+    background: var(--sm-danger); box-shadow: 0 8px 20px -6px rgba(220, 38, 38, .6);
+}
+.sm-offline__icon::after {
+    content: ""; position: absolute; inset: -6px; border-radius: 22px;
+    border: 2px solid var(--sm-danger); animation: smRing 2.2s ease-out infinite;
+}
+@keyframes smRing { 0% { opacity: .9; transform: scale(.92); } 100% { opacity: 0; transform: scale(1.18); } }
+.sm-offline__body { flex: 1 1 280px; min-width: 0; }
+.sm-offline__title { margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--sm-text); }
+.sm-offline__text { margin: .4rem 0 1rem; font-size: .88rem; line-height: 1.55; color: var(--sm-muted); }
+.sm-offline__checks { list-style: none; padding: 0; margin: 0 0 1.25rem; display: flex; flex-wrap: wrap; gap: .5rem; }
+.sm-offline__checks li {
+    display: inline-flex; align-items: center; gap: .45rem; padding: .4rem .75rem; border-radius: 10px;
+    font-size: .78rem; background: var(--sm-card); border: 1px solid var(--sm-border); color: var(--sm-text);
+}
 
-    .smv-allgood {
-        display: flex; gap: 1rem; align-items: center;
-        padding: 1.5rem; border-radius: 18px;
-        background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.3);
-    }
-    .smv-allgood i { color: #4ade80; font-size: 2rem; }
-    .smv-allgood strong { font-size: 1.1rem; color: #4ade80; }
-
-    .smv-foot {
-        display: flex; gap: .5rem; align-items: center;
-        color: var(--gt-text-muted, #94a3b8); font-size: .88rem; margin: 1rem 0 0;
-    }
-
-    @media (max-width: 576px) {
-        .smv-card__count { font-size: 1.7rem; }
-        .smv-card { padding: 1rem; }
-        .smv-card__link { width: 100%; justify-content: center; }
-    }
-
-    /* ---- Review-queue reason chips -------------------------------
-       Severity by COLOUR, not by position. A 1,000-row queue needs the
-       emergencies to be findable without reading, so red (customer has no
-       service) outranks amber (technical mismatch) outranks the collections
-       slate (business decision, not an outage).
-    */
-    .sm-chips { border-bottom: 1px solid var(--gt-border, rgba(148,163,184,.16)); }
-
-    /* The search-key column must vanish for the eye but keep its TEXT in the
-       DOM, because DataTables indexes cell text. `visibility` and `font-size:0`
-       are used rather than `display:none` so no layout reflow happens and the
-       column cannot open a 1px gap at the far right of the table. */
-    .sm-reasonkey {
-        visibility: hidden; width: 1px; padding: 0 !important;
-        border: 0 !important; font-size: 0; max-width: 1px;
-    }
-    #reviewTable thead th.sm-reasonkey:empty::after { content: "\00a0"; }
-    .sm-chip {
-        display: inline-flex; align-items: center; gap: .4rem;
-        padding: .34rem .7rem; border-radius: 999px; cursor: pointer;
-        font-size: .78rem; font-weight: 600; line-height: 1.2;
-        background: var(--gt-surface-2, rgba(148,163,184,.08));
-        border: 1px solid var(--gt-border, rgba(148,163,184,.18));
-        color: var(--gt-text-muted, #94a3b8);
-        transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
-    }
-    .sm-chip:hover { transform: translateY(-1px); }
-    .sm-chip:focus-visible { outline: 2px solid #fbae1a; outline-offset: 2px; }
-    .sm-chip .chip-n {
-        font-variant-numeric: tabular-nums; font-weight: 700;
-        padding: .05rem .4rem; border-radius: 999px;
-        background: rgba(148,163,184,.18); color: inherit; font-size: .74rem;
-    }
-    /* red = the customer has no service right now */
-    .sm-chip.chip-danger   { color: #f87171; border-color: rgba(248,113,113,.4); background: rgba(248,113,113,.10); }
-    .sm-chip.chip-danger .chip-n { background: rgba(248,113,113,.22); }
-    /* amber = the two systems disagree, needs a technical decision */
-    .sm-chip.chip-warn     { color: #fbbf24; border-color: rgba(251,191,36,.4);  background: rgba(251,191,36,.10); }
-    .sm-chip.chip-warn .chip-n { background: rgba(251,191,36,.22); }
-    /* blue = informational */
-    .sm-chip.chip-info     { color: #60a5fa; border-color: rgba(96,165,250,.38); background: rgba(96,165,250,.10); }
-    .sm-chip.chip-info .chip-n { background: rgba(96,165,250,.20); }
-    /* slate = collections decision, the bulk of the queue, deliberately quiet */
-    .sm-chip.chip-collect  { color: #94a3b8; border-color: rgba(148,163,184,.3);  background: rgba(148,163,184,.07); }
-    /* the selected chip gets the brand gold so it reads instantly */
-    .sm-chip.chip-active {
-        border-color: #fbae1a; color: #0f172a;
-        background: linear-gradient(135deg, #f9b233, #fbae1a);
-        box-shadow: 0 4px 14px rgba(249,178,51,.32);
-    }
-    .sm-chip.chip-active .chip-n { background: rgba(15,23,42,.22); color: #0f172a; }
-
-    /* A row carrying an emergency must be visible in a 1,000-row table
-       without hunting: a left edge marker, not a background wash that would
-       fight the alternating row colours. */
-    #reviewTable tbody tr[data-reasons~="cut_off"] td:first-child,
-    #reviewTable tbody tr[data-reasons~="paid_expired_profile"] td:first-child {
-        box-shadow: inset 3px 0 0 #f87171;
-    }
-    #reviewTable tbody tr[data-reasons~="cut_off"],
-    #reviewTable tbody tr[data-reasons~="paid_expired_profile"] { background: rgba(248,113,113,.06); }
-
-    @media (prefers-reduced-motion: reduce) {
-        .sm-dot, .sm-offline__icon::after { animation: none; }
-        .sm-chip { transition: none; }
-        .sm-chip:hover { transform: none; }
-    }
+@media (max-width: 768px) {
+    .sm-tabs-nav { flex-direction: column; }
+    .sm-tab { width: 100%; justify-content: space-between; }
+    .sm-toolbar { flex-direction: column; align-items: stretch; }
+}
 </style>

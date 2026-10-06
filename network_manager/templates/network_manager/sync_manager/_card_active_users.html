@@ -1,87 +1,73 @@
-<!-- Synced Users -->
-<div class="card sync-card border-0 mb-4">
-    <div class="card-header success-header d-flex justify-content-between align-items-center border-0">
-        <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i> Active Users ({{ synced|length }})</h5>
-        <small>Present in both System and Mikrotik</small>
+<!-- Synced / Active Users -->
+<span id="queue-pair"></span>
+<div class="sm-queue-panel">
+    <div class="sm-queue-panel__header">
+        <h5 class="sm-queue-panel__title">
+            <i class="fas fa-handshake text-success"></i>
+            <span>Active &amp; Matched Users</span>
+            <span class="sm-tab__count sm-tab--ok">{{ synced|length }}</span>
+        </h5>
+        <span class="sm-muted small">Present in both Billing Database and MikroTik Router</span>
     </div>
-    <div class="card-body p-0 table-responsive">
-        <span id="queue-pair"></span>
-        <form method="POST" action="{% url 'bulk_transfer_router' %}" id="bulkTransferForm">
-            {% csrf_token %}
-            {% comment %}
-      This card is the MATCH & PAIR queue: the account exists in the system
-      AND on the router. Approving here is a human sign-off only and writes
-      NOTHING to the router. The card that does write is Needs Review.
-      Saying so on the card is the difference between a safe click and an
-      unintended secret being overwritten.
-    {% endcomment %}
-            <div class="alert alert-success d-flex align-items-start gap-2 mb-3 py-2" role="note">
-                <i class="fas fa-handshake mt-1"></i>
-                <div class="small">
-                    <strong>Match &amp; Pair.</strong> These are in the system and on
-                    {{ device.device_name }}, and they already agree. Pressing
-                    <strong>Pair</strong> just writes down that you checked
-                    &mdash; <strong>nothing is sent to the router</strong>.
-                </div>
+
+    <form method="POST" action="{% url 'bulk_transfer_router' %}" id="bulkTransferForm">
+        {% csrf_token %}
+        <div class="sm-queue-panel__notice sm-queue-panel__notice--ok" role="note">
+            <i class="fas fa-handshake mt-1 text-success"></i>
+            <div>
+                <strong>Match &amp; Pair Queue.</strong>
+                <span>These accounts exist in both the system and {{ device.device_name }}. Clicking <strong>Pair</strong> only records human sign-off; <strong>nothing is sent to or modified on the router</strong>.</span>
             </div>
-            {% comment %}
-              One control row instead of three. The original had a barangay
-              filter row, a "Kick now / Move Selected To" row, and a separate
-              "Pair Selected" row, which read as three different menus stacked
-              on top of each other. The Move controls now live in a collapsed
-              panel, because moving a subscriber between routers is a rare,
-              deliberate act -- not something to sit permanently one click away
-              from the safe Pair button.
-            {% endcomment %}
-            <div class="filter-bar d-flex flex-wrap align-items-center gap-2 justify-content-between">
+        </div>
+
+        <!-- Integrated Toolbar -->
+        <div class="sm-toolbar">
+            <div class="d-flex align-items-center gap-2">
+                <label class="fw-bold mb-0 sm-muted text-nowrap small" for="barangayFilter">
+                    <i class="fas fa-filter text-primary"></i> Barangay:
+                </label>
+                <select id="barangayFilter" class="form-select form-select-sm shadow-sm" style="max-width: 200px;">
+                    <option value="">All Barangays</option>
+                    {% for brgy in barangays %}
+                    <option value="{{ brgy.name }}">{{ brgy.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <button type="submit" name="bulk_action" value="bulk_approve"
+                        formaction="{% url 'sync_bulk_action' device.id %}"
+                        formmethod="POST"
+                        class="sm-btn sm-btn--sm sm-btn--ok"
+                        onclick="return confirm('Pair selected accounts?\n\nThis only records YOUR approval that each account matches the router. Router is untouched.');">
+                    <i class="fas fa-check-double"></i> Pair Selected
+                </button>
+
+                <div class="vr mx-1 d-none d-md-block"></div>
+
                 <div class="d-flex align-items-center gap-2">
-                    <label class="fw-bold mb-0 text-muted text-nowrap" for="barangayFilter">
-                        <i class="fas fa-filter text-primary"></i> Barangay
-                    </label>
-                    <select id="barangayFilter" class="form-select form-select-sm shadow-sm" style="max-width: 220px;">
-                        <option value="">All Barangays</option>
-                        {% for brgy in barangays %}
-                        <option value="{{ brgy.name }}">{{ brgy.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="d-flex align-items-center gap-2">
-                    <div class="form-check form-check-inline mb-0 me-1" title="Forces subscriber modems to redial and immediately connect to the target router">
+                    <div class="form-check form-check-inline mb-0" title="Forces subscriber modems to redial and connect immediately to target router">
                         <input class="form-check-input" type="checkbox" name="kick_now" id="syncMoveKickNow" value="1" checked>
-                        <label class="form-check-label small fw-bold text-muted" for="syncMoveKickNow">Kick now</label>
+                        <label class="form-check-label small sm-muted" for="syncMoveKickNow">Kick</label>
                     </div>
-                    <label class="fw-bold mb-0 text-muted text-nowrap">Move Selected To:</label>
-                    <select name="target_device_id" class="form-select form-select-sm shadow-sm" style="max-width: 220px;" required>
-                        <option value="">-- Select Router --</option>
+                    <select name="target_device_id" class="form-select form-select-sm shadow-sm" style="max-width: 180px;">
+                        <option value="">-- Move to Router --</option>
                         {% for r in all_routers %}
                             {% if r.id != device.id %}
-                            <option value="{{ r.id }}">{{ r.device_name }} ({{ r.ip_address }})</option>
+                            <option value="{{ r.id }}">{{ r.device_name }}</option>
                             {% endif %}
                         {% endfor %}
                     </select>
-                    <i class="fas fa-right-left"></i> Move
+                    <button type="submit" class="sm-btn sm-btn--sm sm-btn--primary"
+                            onclick="return confirm('Move selected customers to target router?');">
+                        <i class="fas fa-right-left"></i> Move
                     </button>
                 </div>
             </div>
-            {% comment %}
-              Bulk pairing sign-off. Deliberately separate from Move: this only
-              records human approval, it never touches the router, so approving
-              1,900 accounts cannot alter a single subscriber's service.
-            {% endcomment %}
-            <div class="filter-bar d-flex align-items-center justify-content-between">
-                <div class="d-flex align-items-center gap-2">
-                    <label class="fw-bold mb-0 text-muted text-nowrap"><i class="fas fa-handshake text-success"></i> Reviewed &amp; Matched:</label>
-                    <button type="submit" name="bulk_action" value="bulk_approve"
-                            formaction="{% url 'sync_bulk_action' device.id %}"
-                            formmethod="POST"
-                            class="btn btn-sm btn-success"
-                            onclick="return confirm('Pair the selected accounts?\n\nThis only records YOUR sign-off that each account matches the router. Nothing on any router is changed. Accounts with no expiry date will be held back.');">
-                        <i class="fas fa-check-double"></i> Pair Selected
-                    </button>
-                    <span class="text-muted small">records your approval only &mdash; router untouched</span>
-                </div>
-            </div>
-            <table class="table table-hover mb-0 datatable" id="syncedTable">
+        </div>
+
+        <div class="sm-table-wrap">
+            <table class="sm-table" id="syncedTable">
                 <thead>
                     <tr>
                         <th style="width: 40px;"><input type="checkbox" class="form-check-input" id="selectAllSynced"></th>
@@ -89,8 +75,8 @@
                         <th>Customer Name</th>
                         <th>Barangay</th>
                         <th>Profile</th>
-                        <th>Router</th>
-                        <th>Status</th>
+                        <th>Router Secret</th>
+                        <th>Session</th>
                         <th class="text-end">Actions</th>
                     </tr>
                 </thead>
@@ -102,47 +88,35 @@
                             <input type="checkbox" class="form-check-input synced-check" name="customer_ids" value="{{ user.customer.id }}" data-barangay="{{ user.customer.barangay.name|default:'' }}">
                             {% endif %}
                         </td>
-                        <td><span class="fw-bold">{{ user.name }}</span></td>
+                        <td><span class="fw-bold sm-mono">{{ user.name }}</span></td>
                         <td>{{ user.customer.full_name|default:"-" }}</td>
                         <td>{{ user.customer.barangay.name|default:"-" }}</td>
                         <td>
-                            <span class="gametech-pill pill-primary">{{ user.profile }}</span>
+                            <span class="sm-pill sm-pill--info">{{ user.profile }}</span>
                             {% if user.is_suspicious %}
                             <div class="mt-1">
-                                <span class="gametech-pill pill-danger" title="{{ user.suspicious_reasons|default:'Suspicious' }}"><i class="fas fa-exclamation-triangle me-1"></i> Suspicious Account</span>
+                                <span class="sm-pill sm-pill--danger" title="{{ user.suspicious_reasons|default:'Suspicious' }}"><i class="fas fa-exclamation-triangle me-1"></i> Suspicious</span>
                             </div>
-                            <small class="text-danger d-block mt-1 fw-bold" style="font-size: 0.75rem;">{{ user.suspicious_reasons }}</small>
+                            <small class="sm-sub--danger">{{ user.suspicious_reasons }}</small>
                             {% endif %}
                         </td>
                         <td>
-                            {% comment %}
-                              Router truth. Before ERR-094 this field was never
-                              read off the MikroTik, so "enabled" and "cut off"
-                              looked identical.
-                            {% endcomment %}
                             {% if user.router_disabled %}
-                            <span class="gametech-pill pill-danger" title="Secret is DISABLED on the router"><span class="status-dot dot-offline"></span> Cut Off</span>
+                            <span class="sm-pill sm-pill--danger" title="Secret is DISABLED on the router"><span class="sm-dot"></span> Cut Off</span>
                             {% else %}
-                            <span class="gametech-pill pill-success" title="Secret is ENABLED on the router"><span class="status-dot dot-online"></span> Enabled</span>
+                            <span class="sm-pill sm-pill--ok" title="Secret is ENABLED on the router"><span class="sm-dot sm-dot--pulse"></span> Enabled</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if user.is_active %}
-                            <span class="gametech-pill pill-success" title="A live PPPoE session exists right now"><span class="status-dot dot-online"></span> Session Up</span>
+                            <span class="sm-pill sm-pill--ok"><span class="sm-dot sm-dot--pulse"></span> Up</span>
                             {% else %}
-                            <span class="gametech-pill pill-secondary" title="No live PPPoE session on this router right now"><span class="status-dot dot-offline"></span> No Session</span>
+                            <span class="sm-pill"><span class="sm-dot"></span> Down</span>
                             {% endif %}
-                            {% comment %}
-                              Money flag. The router says this secret is enabled, which
-                              is NOT the same as "should be enabled". An account that
-                              is enabled while unpaid or while it has no cut-off date
-                              is costing money every minute, so surface it here even
-                              though the router considers it healthy.
-                            {% endcomment %}
                             {% if user.customer.is_push_blocked %}
                                 <div class="mt-1 d-flex flex-wrap gap-1">
                                     {% for reason in user.customer.push_blocked_reasons %}
-                                    <span class="gametech-pill pill-danger" title="Enabled on the router but billing says this should not be live">{{ reason }}</span>
+                                    <span class="sm-pill sm-pill--danger" title="Enabled on router but blocked in billing">{{ reason }}</span>
                                     {% endfor %}
                                 </div>
                             {% endif %}
@@ -150,41 +124,31 @@
                         <td class="text-end">
                             {% if user.customer %}
                             <div class="d-flex justify-content-end gap-1">
-                                <a href="{% url 'view_customer' user.customer.id %}" class="btn btn-sm btn-outline-secondary" target="_blank" title="View Customer Profile"><i class="fas fa-external-link-alt"></i> View</a>
-                                {% comment %}
-                                  Pairing is an explicit human sign-off, not a side
-                                  effect of the secret happening to exist, and not
-                                  a side effect of having pushed it either. Until
-                                  someone presses this there is no
-                                  SYNC_PAIR_APPROVED log for the account, so a
-                                  router the old billing system is still writing
-                                  to cannot make an account look approved on its
-                                  own. Reads the router, writes nothing.
-                                {% endcomment %}
+                                <a href="{% url 'view_customer' user.customer.id %}" class="sm-btn sm-btn--sm sm-btn--ghost" target="_blank" title="View Customer Profile"><i class="fas fa-external-link-alt"></i> View</a>
                                 {% if user.customer.pair_blocked_reasons %}
-                                    <button type="button" class="btn btn-sm btn-secondary" disabled
-                                            title="Held back: {{ user.customer.pair_blocked_reasons|join:', ' }}. Admin override required before this can be paired.">
-                                        <i class="fas fa-lock"></i> Approve
+                                    <button type="button" class="sm-btn sm-btn--sm sm-btn--ghost" disabled
+                                            title="Held back: {{ user.customer.pair_blocked_reasons|join:', ' }}. Admin override required.">
+                                        <i class="fas fa-lock"></i> Locked
                                     </button>
                                 {% elif user.customer.pair_approved %}
-                                    <span class="gametech-pill pill-success" title="A human has reviewed and approved this pairing"><i class="fas fa-check-double me-1"></i> Approved</span>
+                                    <span class="sm-pill sm-pill--ok" title="Pairing reviewed and approved"><i class="fas fa-check-double me-1"></i> Approved</span>
                                 {% else %}
                                     <button type="submit" formnovalidate
                                             formaction="{% url 'sync_approve_match' device.id %}"
                                             formmethod="POST" name="pppoe_username" value="{{ user.name }}"
-                                            class="btn btn-sm btn-primary"
-                                            title="Confirm this account as paired. Reads the router to verify the secret is there; does not modify it.">
+                                            class="sm-btn sm-btn--sm sm-btn--primary"
+                                            title="Confirm this account as paired.">
                                         <i class="fas fa-handshake"></i> Pair
                                     </button>
                                 {% endif %}
                                 {% if user.is_suspicious %}
                                     {% if user.customer.plan and user.customer.barangay %}
-                                    <button type="submit" formnovalidate formaction="{% url 'sync_autofix_user' device.id %}" formmethod="POST" name="pppoe_username" value="{{ user.name }}" class="btn btn-sm btn-outline-primary" title="Write to Router: update the existing secret's profile and comment to match the system database. The secret is looked up by name first, so this updates it -- it cannot create a duplicate." onclick="return confirm('Write to Router: are you sure?\n\nThis UPDATES the existing secret on {{ device.device_name }} to match the Plan and Barangay exactly as saved in our system database. No duplicate can be created.');">
-                                        <i class="fas fa-pen-to-square"></i> Write to Router
+                                    <button type="submit" formnovalidate formaction="{% url 'sync_autofix_user' device.id %}" formmethod="POST" name="pppoe_username" value="{{ user.name }}" class="sm-btn sm-btn--sm sm-btn--outline" title="Write to Router: update existing secret to match plan/barangay" onclick="return confirm('Write to Router: are you sure?\n\nThis UPDATES the existing secret on {{ device.device_name }} to match the Plan and Barangay in database.');">
+                                        <i class="fas fa-pen-to-square"></i> Fix
                                     </button>
                                     {% else %}
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" title="Cannot write to the router: the customer is missing a Subscription Plan or Barangay in the system." onclick="showGametechAlert('This customer is missing a Subscription Plan or Barangay in the System Database. Please complete their profile first before writing to the router.')">
-                                        <i class="fas fa-pen-to-square"></i> Write to Router
+                                    <button type="button" class="sm-btn sm-btn--sm sm-btn--ghost" title="Customer missing Plan or Barangay" onclick="showGametechAlert('Customer is missing a Subscription Plan or Barangay in the system database. Please complete their profile first.')">
+                                        <i class="fas fa-pen-to-square"></i> Fix
                                     </button>
                                     {% endif %}
                                 {% endif %}
@@ -195,39 +159,34 @@
                     {% endfor %}
                 </tbody>
             </table>
-        </form>
+        </div>
+    </form>
 
-        {% comment %}
-          Server-side paging, same reason as the review queue: this card held
-          944 rows. The card header count and every chip above still describe
-          the WHOLE queue -- only the rendered rows are a page.
-        {% endcomment %}
-        {% if pair_page.paginator.num_pages > 1 %}
-        <nav class="d-flex flex-wrap align-items-center justify-content-between gap-2 px-3 py-2 border-top" aria-label="Pairing queue pages">
-            <span class="text-muted small">
-                Page {{ pair_page.number }} of {{ pair_page.paginator.num_pages }}
-                &mdash; showing {{ synced_page|length }} of {{ count_synced }} accounts
-            </span>
-            <ul class="pagination pagination-sm mb-0">
-                <li class="page-item {% if not pair_page.has_previous %}disabled{% endif %}">
-                    <a class="page-link" href="?pair_page={% if pair_page.has_previous %}{{ pair_page.previous_page_number }}{% else %}1{% endif %}#queue-pair">
-                        <i class="fas fa-chevron-left"></i> Previous
-                    </a>
-                </li>
-                {% for pn in pair_page.paginator.page_range %}
-                    {% if pn == pair_page.number %}
-                    <li class="page-item active" aria-current="page"><span class="page-link">{{ pn }}</span></li>
-                    {% elif pn > pair_page.number|add:"-3" and pn < pair_page.number|add:"3" %}
-                    <li class="page-item"><a class="page-link" href="?pair_page={{ pn }}#queue-pair">{{ pn }}</a></li>
-                    {% endif %}
-                {% endfor %}
-                <li class="page-item {% if not pair_page.has_next %}disabled{% endif %}">
-                    <a class="page-link" href="?pair_page={% if pair_page.has_next %}{{ pair_page.next_page_number }}{% else %}{{ pair_page.paginator.num_pages }}{% endif %}#queue-pair">
-                        Next <i class="fas fa-chevron-right"></i>
-                    </a>
-                </li>
-            </ul>
-        </nav>
-        {% endif %}
-    </div>
+    {% if pair_page.paginator.num_pages > 1 %}
+    <nav class="d-flex flex-wrap align-items-center justify-content-between gap-2 px-3 py-2 border-top" aria-label="Pairing queue pages">
+        <span class="sm-muted small">
+            Page {{ pair_page.number }} of {{ pair_page.paginator.num_pages }}
+            &mdash; showing {{ synced_page|length }} of {{ count_synced }} accounts
+        </span>
+        <ul class="pagination pagination-sm mb-0">
+            <li class="page-item {% if not pair_page.has_previous %}disabled{% endif %}">
+                <a class="page-link" href="?pair_page={% if pair_page.has_previous %}{{ pair_page.previous_page_number }}{% else %}1{% endif %}#queue-pair">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </a>
+            </li>
+            {% for pn in pair_page.paginator.page_range %}
+                {% if pn == pair_page.number %}
+                <li class="page-item active" aria-current="page"><span class="page-link">{{ pn }}</span></li>
+                {% elif pn > pair_page.number|add:"-3" and pn < pair_page.number|add:"3" %}
+                <li class="page-item"><a class="page-link" href="?pair_page={{ pn }}#queue-pair">{{ pn }}</a></li>
+                {% endif %}
+            {% endfor %}
+            <li class="page-item {% if not pair_page.has_next %}disabled{% endif %}">
+                <a class="page-link" href="?pair_page={% if pair_page.has_next %}{{ pair_page.next_page_number }}{% else %}{{ pair_page.paginator.num_pages }}{% endif %}#queue-pair">
+                    Next <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
 </div>

@@ -1,21 +1,43 @@
 <!-- Missing on Router -->
 <span id="queue-missing"></span>
-<div class="card sync-card border-0">
-    <div class="card-header danger-header d-flex justify-content-between align-items-center border-0">
-        <h5 class="mb-0"><i class="fas fa-cloud-download-alt me-2"></i> Missing on Router ({{ missing_on_router|length }})</h5>
-        <small>In System, but NOT on Mikrotik</small>
+<div class="sm-queue-panel">
+    <div class="sm-queue-panel__header">
+        <h5 class="sm-queue-panel__title">
+            <i class="fas fa-cloud-arrow-down text-danger"></i>
+            <span>Missing on Router</span>
+            <span class="sm-tab__count sm-tab--danger">{{ missing_on_router|length }}</span>
+        </h5>
+        <span class="sm-muted small">Active in Billing, but absent from MikroTik router</span>
     </div>
-    <div class="card-body p-0 table-responsive">
-        <form method="POST" action="{% url 'sync_bulk_action' device.id %}">
-            {% csrf_token %}
-            <table class="table table-hover mb-0 datatable" id="missingTable">
+
+    <div class="sm-queue-panel__notice sm-queue-panel__notice--warn" role="note">
+        <i class="fas fa-triangle-exclamation mt-1 text-warning"></i>
+        <div>
+            <strong>Missing Secrets.</strong>
+            <span>These subscribers have records in the system but no secret on {{ device.device_name }}. Pushing them will create the secret and enable PPPoE dial-in.</span>
+        </div>
+    </div>
+
+    <form method="POST" action="{% url 'sync_bulk_action' device.id %}">
+        {% csrf_token %}
+        <div class="sm-toolbar">
+            <div class="d-flex align-items-center gap-2">
+                <span class="sm-muted small fw-bold">With Selected:</span>
+                <button type="submit" name="bulk_action" value="bulk_push" class="sm-btn sm-btn--sm sm-btn--primary">
+                    <i class="fas fa-cloud-arrow-up"></i> Bulk Push to Router
+                </button>
+            </div>
+        </div>
+
+        <div class="sm-table-wrap">
+            <table class="sm-table datatable" id="missingTable">
                 <thead>
                     <tr>
                         <th style="width: 40px;"><input type="checkbox" class="form-check-input" id="selectAllMissing"></th>
                         <th>PPPoE Username</th>
                         <th>Customer Name</th>
                         <th>Plan</th>
-                        <th>Billing</th>
+                        <th>Billing Status</th>
                         <th class="text-end">Actions</th>
                     </tr>
                 </thead>
@@ -25,31 +47,23 @@
                         <td>
                             <input type="checkbox" class="form-check-input missing-check" name="selected_users"
                                    value="{{ customer.pppoe_username }}"
-                                   {% if customer.is_push_blocked %}disabled title="Blocked — needs an Admin override, so it cannot be bulk pushed"{% endif %}>
+                                   {% if customer.is_push_blocked %}disabled title="Blocked — requires Admin override"{% endif %}>
                         </td>
-                        <td><span class="fw-bold">{{ customer.pppoe_username }}</span></td>
+                        <td><span class="fw-bold sm-mono">{{ customer.pppoe_username }}</span></td>
                         <td>{{ customer.full_name }}</td>
-                        <td><span class="gametech-pill pill-primary">{{ customer.plan.name|default:"None" }}</span></td>
+                        <td><span class="sm-pill sm-pill--info">{{ customer.plan.name|default:"None" }}</span></td>
                         <td>
-                            {% comment %}
-    Customer.push_blocked_reasons is the single rule the view enforces too.
-    These badges stop an operator discovering the block by being refused after
-    the fact.
-
-    NOTE: must stay a {% comment %} block -- Django's {# #} is single-line and
-    silently renders as literal text when it wraps.
-    {% endcomment %}
                             {% if customer.is_push_blocked %}
                                 {% for reason in customer.push_blocked_reasons %}
-                                    <span class="badge {% if 'Unpaid' in reason %}bg-danger{% else %}bg-warning text-dark{% endif %}">{{ reason }}</span>
+                                    <span class="sm-pill sm-pill--danger">{{ reason }}</span>
                                 {% endfor %}
                             {% else %}
-                                <span class="badge bg-secondary">{{ customer.expires_at|date:"M d, Y" }}</span>
+                                <span class="sm-pill">{{ customer.expires_at|date:"M d, Y" }}</span>
                             {% endif %}
                         </td>
                         <td class="text-end">
                             {% if customer.is_push_blocked %}
-                                <button type="button" class="btn btn-sm btn-warning"
+                                <button type="button" class="sm-btn sm-btn--sm sm-btn--warn"
                                         data-bs-toggle="modal" data-bs-target="#syncOverrideModal"
                                         data-pppoe="{{ customer.pppoe_username }}"
                                         data-cname="{{ customer.full_name }}"
@@ -57,8 +71,8 @@
                                     <i class="fas fa-lock me-1"></i> Admin Override
                                 </button>
                             {% else %}
-                                <button type="submit" formaction="{% url 'sync_push_user' device.id %}" formmethod="POST" name="pppoe_username" value="{{ customer.pppoe_username }}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-cloud-upload-alt"></i> Push to Router
+                                <button type="submit" formaction="{% url 'sync_push_user' device.id %}" formmethod="POST" name="pppoe_username" value="{{ customer.pppoe_username }}" class="sm-btn sm-btn--sm sm-btn--primary">
+                                    <i class="fas fa-cloud-arrow-up"></i> Push to Router
                                 </button>
                             {% endif %}
                         </td>
@@ -66,14 +80,6 @@
                     {% endfor %}
                 </tbody>
             </table>
-            <div class="sync-card-footer">
-                <div class="d-flex align-items-center">
-                    <span class="me-3 fw-bold text-muted">With Selected:</span>
-                    <button type="submit" name="bulk_action" value="bulk_push" class="btn btn-sm btn-primary me-2">
-                        <i class="fas fa-cloud-upload-alt"></i> Bulk Push to Router
-                    </button>
-                </div>
-            </div>
-        </form>
-    </div>
+        </div>
+    </form>
 </div>

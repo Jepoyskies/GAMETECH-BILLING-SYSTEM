@@ -1,13 +1,38 @@
-<!-- Mikrotik Router Users (Clean) -->
-<div class="card sync-card border-0">
-    <div class="card-header primary-header d-flex justify-content-between align-items-center border-0">
-        <h5 class="mb-0"><i class="fas fa-question-circle me-2"></i> Mikrotik Router Users ({{ clean_orphans|length }})</h5>
-        <small>On Mikrotik, but NOT in System</small>
+<!-- Mikrotik Router Users (Clean / Unmatched) -->
+<div class="sm-queue-panel">
+    <div class="sm-queue-panel__header">
+        <h5 class="sm-queue-panel__title">
+            <i class="fas fa-question-circle text-info"></i>
+            <span>Router Only Secrets</span>
+            <span class="sm-tab__count sm-tab--info">{{ clean_orphans|length }}</span>
+        </h5>
+        <span class="sm-muted small">Exists on MikroTik, but NOT found in billing system</span>
     </div>
-    <div class="card-body p-0 table-responsive">
-        <form method="POST" action="{% url 'sync_bulk_action' device.id %}">
-            {% csrf_token %}
-            <table class="table table-hover mb-0 datatable" id="cleanOrphansTable">
+
+    <div class="sm-queue-panel__notice sm-queue-panel__notice--info" role="note">
+        <i class="fas fa-circle-info mt-1 text-info"></i>
+        <div>
+            <strong>Unregistered Router Secrets.</strong>
+            <span>These PPPoE accounts exist on {{ device.device_name }} without a matching billing subscriber. You can bulk import them as subscribers or remove unauthorized secrets.</span>
+        </div>
+    </div>
+
+    <form method="POST" action="{% url 'sync_bulk_action' device.id %}">
+        {% csrf_token %}
+        <div class="sm-toolbar">
+            <div class="d-flex align-items-center gap-2">
+                <span class="sm-muted small fw-bold">With Selected:</span>
+                <button type="submit" name="bulk_action" value="bulk_import" class="sm-btn sm-btn--sm sm-btn--ok">
+                    <i class="fas fa-file-import"></i> Bulk Import
+                </button>
+                <button type="submit" name="bulk_action" value="bulk_delete" class="sm-btn sm-btn--sm sm-btn--danger" onclick="return confirm('Delete selected secrets from {{ device.device_name }}? This will terminate their connection.');">
+                    <i class="fas fa-trash-alt"></i> Delete from Router
+                </button>
+            </div>
+        </div>
+
+        <div class="sm-table-wrap">
+            <table class="sm-table datatable" id="cleanOrphansTable">
                 <thead>
                     <tr>
                         <th style="width: 40px;"><input type="checkbox" class="form-check-input" id="selectAllCleanOrphans"></th>
@@ -23,44 +48,33 @@
                     <tr>
                         <td><input type="checkbox" class="form-check-input clean-orphan-check" name="selected_users" value="{{ user.name }}"></td>
                         <td>
-                            <span class="fw-bold">{{ user.name }}</span>
+                            <span class="fw-bold sm-mono">{{ user.name }}</span>
                             {% if user.is_suspicious %}
-                            <span class="gametech-pill pill-danger ms-1" title="Suspicious Name/Profile"><i class="fas fa-exclamation-triangle"></i></span>
+                            <span class="sm-pill sm-pill--danger ms-1" title="Suspicious Name/Profile"><i class="fas fa-exclamation-triangle"></i></span>
                             {% endif %}
                         </td>
                         <td>
                             {% if user.is_active %}
-                            <span class="gametech-pill pill-success"><span class="status-dot dot-online"></span> Online</span>
+                            <span class="sm-pill sm-pill--ok"><span class="sm-dot sm-dot--pulse"></span> Online</span>
                             {% else %}
-                            <span class="gametech-pill pill-secondary"><span class="status-dot dot-offline"></span> Offline</span>
+                            <span class="sm-pill"><span class="sm-dot"></span> Offline</span>
                             {% endif %}
                         </td>
-                        <td><span class="gametech-pill pill-secondary">{{ user.profile }}</span></td>
-                        <td class="text-muted">{{ user.comment|default:"-" }}</td>
+                        <td><span class="sm-pill sm-pill--info">{{ user.profile }}</span></td>
+                        <td><span class="sm-muted">{{ user.comment|default:"-" }}</span></td>
                         <td class="text-end">
-                            <button type="submit" formaction="{% url 'sync_bulk_action' device.id %}" formmethod="POST" name="selected_users" value="{{ user.name }}" class="btn btn-sm btn-outline-success">
+                            <button type="submit" formaction="{% url 'sync_bulk_action' device.id %}" formmethod="POST" name="selected_users" value="{{ user.name }}" class="sm-btn sm-btn--sm sm-btn--outline">
                                 <input type="hidden" name="bulk_action" value="bulk_import">
-                                <i class="fas fa-file-import"></i> Auto-Import
+                                <i class="fas fa-file-import"></i> Import
                             </button>
-                            <button type="submit" formaction="{% url 'sync_delete_user' device.id %}" formmethod="POST" name="pppoe_username" value="{{ user.name }}" class="btn btn-sm btn-outline-danger ms-1" onclick="return confirm('Are you sure you want to delete this user from the Mikrotik router?');">
-                                <i class="fas fa-trash-alt"></i> Delete from Router
+                            <button type="submit" formaction="{% url 'sync_delete_user' device.id %}" formmethod="POST" name="pppoe_username" value="{{ user.name }}" class="sm-btn sm-btn--sm sm-btn--danger-outline ms-1" onclick="return confirm('Delete secret {{ user.name|escapejs }} from {{ device.device_name }}?');">
+                                <i class="fas fa-trash-alt"></i> Delete
                             </button>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
-            <div class="sync-card-footer">
-                <div class="d-flex align-items-center">
-                    <span class="me-3 fw-bold text-muted">With Selected:</span>
-                    <button type="submit" name="bulk_action" value="bulk_import" class="btn btn-sm btn-success me-2">
-                        <i class="fas fa-file-import"></i> Bulk Import to System
-                    </button>
-                    <button type="submit" name="bulk_action" value="bulk_delete" class="btn btn-sm btn-danger" onclick="return confirm('Delete selected users from the router? This cannot be undone.');">
-                        <i class="fas fa-trash-alt"></i> Bulk Delete from Router
-                    </button>
-                </div>
-            </div>
-        </form>
-    </div>
+        </div>
+    </form>
 </div>

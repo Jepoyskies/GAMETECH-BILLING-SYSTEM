@@ -1,13 +1,38 @@
 <!-- Suspicious & Rogue Accounts -->
-<div class="card sync-card border-0">
-    <div class="card-header warning-header d-flex justify-content-between align-items-center border-0">
-        <h5 class="mb-0"><i class="fas fa-user-secret me-2"></i> Suspicious & Rogue Accounts ({{ suspicious_users|length }})</h5>
-        <small>Suspicious/Invalid format. Review immediately.</small>
+<div class="sm-queue-panel">
+    <div class="sm-queue-panel__header">
+        <h5 class="sm-queue-panel__title">
+            <i class="fas fa-user-secret text-danger"></i>
+            <span>Suspicious &amp; Rogue Accounts</span>
+            <span class="sm-tab__count sm-tab--danger">{{ suspicious_users|length }}</span>
+        </h5>
+        <span class="sm-muted small">Abnormal naming, test accounts, or format anomalies</span>
     </div>
-    <div class="card-body p-0 table-responsive">
-        <form method="POST" action="{% url 'sync_bulk_action' device.id %}">
-            {% csrf_token %}
-            <table class="table table-hover mb-0 datatable" id="suspiciousOrphansTable">
+
+    <div class="sm-queue-panel__notice sm-queue-panel__notice--warn" role="note">
+        <i class="fas fa-triangle-exclamation mt-1 text-danger"></i>
+        <div>
+            <strong>Security &amp; Audit Flags.</strong>
+            <span>These accounts exhibit anomalous profiles, passwords, or usernames on {{ device.device_name }}. Review credentials before deciding to import or delete.</span>
+        </div>
+    </div>
+
+    <form method="POST" action="{% url 'sync_bulk_action' device.id %}">
+        {% csrf_token %}
+        <div class="sm-toolbar">
+            <div class="d-flex align-items-center gap-2">
+                <span class="sm-muted small fw-bold">With Selected:</span>
+                <button type="submit" name="bulk_action" value="bulk_import" class="sm-btn sm-btn--sm sm-btn--ok">
+                    <i class="fas fa-file-import"></i> Bulk Import
+                </button>
+                <button type="submit" name="bulk_action" value="bulk_delete" class="sm-btn sm-btn--sm sm-btn--danger" onclick="return confirm('Delete selected suspicious accounts from the router? This cannot be undone.');">
+                    <i class="fas fa-trash-alt"></i> Delete from Router
+                </button>
+            </div>
+        </div>
+
+        <div class="sm-table-wrap">
+            <table class="sm-table datatable" id="suspiciousOrphansTable">
                 <thead>
                     <tr>
                         <th style="width: 40px;"><input type="checkbox" class="form-check-input" id="selectAllSuspiciousOrphans"></th>
@@ -23,51 +48,42 @@
                     <tr class="{% if user.is_suspicious %}table-danger{% endif %}">
                         <td><input type="checkbox" class="form-check-input suspicious-orphan-check" name="selected_users" value="{{ user.name }}"></td>
                         <td>
-                            <span class="fw-bold">{{ user.name }}</span>
+                            <span class="fw-bold sm-mono">{{ user.name }}</span>
                             {% if user.is_suspicious %}
-                            <span class="gametech-pill pill-danger ms-1" title="{{ user.suspicious_reasons|default:'Suspicious' }}"><i class="fas fa-exclamation-triangle"></i></span>
-                            <small class="text-danger d-block mt-1 fw-bold" style="font-size: 0.75rem;">{{ user.suspicious_reasons }}</small>
+                            <span class="sm-pill sm-pill--danger ms-1" title="{{ user.suspicious_reasons|default:'Suspicious' }}"><i class="fas fa-exclamation-triangle"></i></span>
+                            <small class="sm-sub--danger">{{ user.suspicious_reasons }}</small>
                             {% endif %}
                         </td>
                         <td>
                             {% if user.is_active %}
-                            <span class="gametech-pill pill-success"><span class="status-dot dot-online"></span> Online</span>
+                            <span class="sm-pill sm-pill--ok"><span class="sm-dot sm-dot--pulse"></span> Online</span>
                             {% else %}
-                            <span class="gametech-pill pill-secondary"><span class="status-dot dot-offline"></span> Offline</span>
+                            <span class="sm-pill"><span class="sm-dot"></span> Offline</span>
                             {% endif %}
                             
                             {% if user.is_in_system %}
-                            <span class="gametech-pill pill-danger mt-1" title="In System Database"><i class="fas fa-database me-1"></i> In System</span>
+                            <div class="mt-1">
+                                <span class="sm-pill sm-pill--danger" title="In System Database"><i class="fas fa-database me-1"></i> In Billing</span>
+                            </div>
                             {% endif %}
                         </td>
-                        <td><span class="gametech-pill pill-secondary">{{ user.profile }}</span></td>
-                        <td class="text-muted">{{ user.comment|default:"-" }}</td>
+                        <td><span class="sm-pill sm-pill--info">{{ user.profile }}</span></td>
+                        <td><span class="sm-muted">{{ user.comment|default:"-" }}</span></td>
                         <td class="text-end">
                             {% if not user.is_in_system %}
-                            <button type="submit" formaction="{% url 'sync_bulk_action' device.id %}" formmethod="POST" name="selected_users" value="{{ user.name }}" class="btn btn-sm btn-outline-success">
+                            <button type="submit" formaction="{% url 'sync_bulk_action' device.id %}" formmethod="POST" name="selected_users" value="{{ user.name }}" class="sm-btn sm-btn--sm sm-btn--outline">
                                 <input type="hidden" name="bulk_action" value="bulk_import">
-                                <i class="fas fa-file-import"></i> Auto-Import
+                                <i class="fas fa-file-import"></i> Import
                             </button>
                             {% endif %}
-                            <button type="submit" formaction="{% url 'sync_delete_user' device.id %}" formmethod="POST" name="pppoe_username" value="{{ user.name }}" class="btn btn-sm btn-outline-danger ms-1" onclick="return confirm('Are you sure you want to delete this user from the Mikrotik router?');">
-                                <i class="fas fa-trash-alt"></i> Delete from Router
+                            <button type="submit" formaction="{% url 'sync_delete_user' device.id %}" formmethod="POST" name="pppoe_username" value="{{ user.name }}" class="sm-btn sm-btn--sm sm-btn--danger-outline ms-1" onclick="return confirm('Delete user {{ user.name|escapejs }} from the router?');">
+                                <i class="fas fa-trash-alt"></i> Delete
                             </button>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
-            <div class="sync-card-footer">
-                <div class="d-flex align-items-center">
-                    <span class="me-3 fw-bold text-muted">With Selected:</span>
-                    <button type="submit" name="bulk_action" value="bulk_import" class="btn btn-sm btn-success me-2">
-                        <i class="fas fa-file-import"></i> Bulk Import to System
-                    </button>
-                    <button type="submit" name="bulk_action" value="bulk_delete" class="btn btn-sm btn-danger" onclick="return confirm('Delete selected users from the router? This cannot be undone.');">
-                        <i class="fas fa-trash-alt"></i> Bulk Delete from Router
-                    </button>
-                </div>
-            </div>
-        </form>
-    </div>
+        </div>
+    </form>
 </div>

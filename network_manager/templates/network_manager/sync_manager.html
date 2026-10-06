@@ -9,86 +9,76 @@
 {% endblock %}
 
 {% block content %}
-<main class="container-fluid py-4 px-3 px-md-4">
-    {% comment %} Flash messages are toasted by billing/base.html; rendering them here too showed each one twice. {% endcomment %}
+<div class="sm-page">
+    <main class="container-fluid py-4 px-3 px-md-4">
+        {% comment %} Hero section with device info, health status, safe/live mode pill {% endcomment %}
+        {% include "network_manager/sync_manager/_hero.html" %}
 
-    {% include "network_manager/sync_manager/_hero.html" %}
+        {% if not api_success %}
+            {% include "network_manager/sync_manager/_router_offline.html" %}
+        {% else %}
+            {% comment %} Plain-language supervisor overview and plan catalogue health banner {% endcomment %}
+            {% include "network_manager/sync_manager/_simple_overview.html" %}
+            {% include "network_manager/sync_manager/_plan_health_banner.html" %}
 
-    {% comment %}
-      Data-age notice. The secret list is reused for up to ROUTER_SECRETS_TTL so
-      scrolling and paging do not re-read the router on every visit. Saying so
-      keeps the screen honest: someone deciding about live hardware should
-      always be able to see how old the reading is.
-    {% endcomment %}
-    {% if api_success and router_read_at %}
-    <div class="sm-freshness d-flex align-items-center gap-2 mb-3" role="status">
-        <i class="fas fa-clock" aria-hidden="true"></i>
-        <span>
-            Read from {{ device.device_name }}
-            {% if router_age_seconds is not None %}about {{ router_age_seconds }} second{{ router_age_seconds|pluralize }} ago{% endif %}.
-            Re-reads automatically within {{ router_cache_ttl }}s.
-        </span>
-    </div>
-    {% endif %}
+            <!-- Queue Navigation Tabs -->
+            <nav class="sm-tabs-nav" id="syncTabs" role="tablist" aria-label="Sync Manager Queue Tabs">
+                <button class="sm-tab sm-tab--warn active" id="tab-btn-review" data-bs-toggle="tab" data-bs-target="#tab-needs-review" type="button" role="tab" aria-controls="tab-needs-review" aria-selected="true">
+                    <i class="fas fa-clipboard-check"></i>
+                    <span>Needs Review</span>
+                    <span class="sm-tab__count sm-tab--warn">{{ count_needs_review }}</span>
+                    <span class="sm-tab__sub d-none d-lg-inline text-warning">&bull; Writes to Router</span>
+                </button>
+                <button class="sm-tab sm-tab--ok" id="tab-btn-pair" data-bs-toggle="tab" data-bs-target="#tab-pair" type="button" role="tab" aria-controls="tab-pair" aria-selected="false">
+                    <i class="fas fa-handshake"></i>
+                    <span>Match &amp; Pair</span>
+                    <span class="sm-tab__count sm-tab--ok">{{ count_synced }}</span>
+                    <span class="sm-tab__sub d-none d-lg-inline text-success">&bull; Sign-off Only</span>
+                </button>
+                <button class="sm-tab sm-tab--info" id="tab-btn-router" data-bs-toggle="tab" data-bs-target="#tab-router-users" type="button" role="tab" aria-controls="tab-router-users" aria-selected="false">
+                    <i class="fas fa-question-circle"></i>
+                    <span>Router Only</span>
+                    <span class="sm-tab__count sm-tab--info">{{ count_orphans }}</span>
+                    <span class="sm-tab__sub d-none d-lg-inline">&bull; Unregistered</span>
+                </button>
+                <button class="sm-tab sm-tab--danger" id="tab-btn-suspicious" data-bs-toggle="tab" data-bs-target="#tab-suspicious" type="button" role="tab" aria-controls="tab-suspicious" aria-selected="false">
+                    <i class="fas fa-user-secret"></i>
+                    <span>Suspicious</span>
+                    <span class="sm-tab__count sm-tab--danger">{{ count_suspicious }}</span>
+                    <span class="sm-tab__sub d-none d-lg-inline text-danger">&bull; Audit Flags</span>
+                </button>
+                <button class="sm-tab sm-tab--danger" id="tab-btn-missing" data-bs-toggle="tab" data-bs-target="#tab-missing" type="button" role="tab" aria-controls="tab-missing" aria-selected="false">
+                    <i class="fas fa-cloud-arrow-down"></i>
+                    <span>Missing on Router</span>
+                    <span class="sm-tab__count sm-tab--danger">{{ count_missing }}</span>
+                    <span class="sm-tab__sub d-none d-lg-inline">&bull; Needs Push</span>
+                </button>
+            </nav>
 
-    {% comment %}
-      Plain-language summary FIRST, technical tables below. Presentation only
-      -- it re-buckets counts that already exist and adds no behaviour. See
-      _simple_overview.html for why.
-    {% endcomment %}
-    {% include "network_manager/sync_manager/_simple_overview.html" %}
+            <!-- Queue Tab Panes -->
+            <div class="tab-content" id="syncTabsContent">
+                <div class="tab-pane fade show active" id="tab-needs-review" role="tabpanel" aria-labelledby="tab-btn-review">
+                    {% include "network_manager/sync_manager/_card_needs_review.html" %}
+                </div>
+                <div class="tab-pane fade" id="tab-pair" role="tabpanel" aria-labelledby="tab-btn-pair">
+                    {% include "network_manager/sync_manager/_card_active_users.html" %}
+                </div>
+                <div class="tab-pane fade" id="tab-router-users" role="tabpanel" aria-labelledby="tab-btn-router">
+                    {% include "network_manager/sync_manager/_card_router_users.html" %}
+                </div>
+                <div class="tab-pane fade" id="tab-suspicious" role="tabpanel" aria-labelledby="tab-btn-suspicious">
+                    {% include "network_manager/sync_manager/_card_suspicious.html" %}
+                </div>
+                <div class="tab-pane fade" id="tab-missing" role="tabpanel" aria-labelledby="tab-btn-missing">
+                    {% include "network_manager/sync_manager/_card_missing.html" %}
+                </div>
+            </div>
+        {% endif %}
 
-    {% comment %}
-      Two queues live on this page and they do VERY different things:
-         Needs Review -> "Approve" WRITES profile/password/comment to the router
-         Active Users -> "Approve" only records a human sign-off, writes nothing
-       Both were reachable only by scrolling, which is how the wrong one gets
-       clicked. Jump links, and an explicit warning on the writing card.
-    {% endcomment %}
-    {% if api_success %}
-    <nav class="d-flex flex-wrap align-items-center gap-2 mb-3" aria-label="Jump to a queue">
-        <span class="text-body-secondary small fw-semibold me-1">Jump to:</span>
-        <a class="btn btn-sm btn-outline-warning" href="#queue-needs-review">
-            <i class="fas fa-triangle-exclamation"></i> Needs Review
-            <span class="badge text-bg-warning ms-1">{{ count_needs_review }}</span>
-            <span class="d-none d-md-inline">— writes to the router</span>
-        </a>
-        <a class="btn btn-sm btn-outline-success" href="#queue-pair">
-            <i class="fas fa-handshake"></i> Match &amp; Pair
-            <span class="badge text-bg-success ms-1">{{ count_synced }}</span>
-            <span class="d-none d-md-inline">— records your sign-off only</span>
-        </a>
-        <a class="btn btn-sm btn-outline-secondary" href="#queue-missing">
-            <i class="fas fa-triangle-exclamation"></i> Missing on Router
-            <span class="badge text-bg-secondary ms-1">{{ count_missing }}</span>
-        </a>
-    </nav>
-    {% endif %}
-
-    {% include "network_manager/sync_manager/_plan_health_banner.html" %}
-
-    {% if not api_success %}
-    {% include "network_manager/sync_manager/_router_offline.html" %}
-    {% else %}
-    <div class="row">
-        <div class="col-12">
-            {% comment %}
-              Review queue first: these are the accounts where the system and
-              the router disagree, and every one of them is a decision a human
-              has to make. See ERR-094.
-            {% endcomment %}
-            {% include "network_manager/sync_manager/_card_needs_review.html" %}
-            {% include "network_manager/sync_manager/_card_active_users.html" %}
-            {% include "network_manager/sync_manager/_card_router_users.html" %}
-            {% include "network_manager/sync_manager/_card_suspicious.html" %}
-            {% include "network_manager/sync_manager/_card_missing.html" %}
-        </div>
-    </div>
-    {% endif %}
-
-    {% include "network_manager/sync_manager/_modal_alert.html" %}
-{% include "network_manager/sync_manager/_modal_override.html" %}
-</main>
+        {% include "network_manager/sync_manager/_modal_alert.html" %}
+        {% include "network_manager/sync_manager/_modal_override.html" %}
+    </main>
+</div>
 {% endblock %}
 
 {% block extra_js %}
