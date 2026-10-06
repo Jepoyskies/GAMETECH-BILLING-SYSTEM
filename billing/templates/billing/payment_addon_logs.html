@@ -5,76 +5,126 @@
 {% block content %}
 <div class="container-fluid py-4 px-3 px-md-4">
 
-  <!-- Page Hero -->
-  <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in"
-       style="background: linear-gradient(135deg, #7c2d12 0%, #ea580c 60%, #f97316 100%);">
-    <div class="d-flex align-items-center">
-      <div class="hero-icon"><i class="fas fa-satellite-dish"></i></div>
+  <!-- Page Header -->
+  <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4" style="--section-accent: #ea580c;">
+    <div class="d-flex align-items-center gap-3">
+      <div class="gt-header-icon" style="background: rgba(234, 88, 12, 0.15); color: #fb923c;"><i class="fas fa-satellite-dish"></i></div>
       <div>
-        <div class="hero-title">Payment Add-on Logs</div>
-        <div class="hero-sub">Track Cignal Play and add-on payment subscriptions</div>
+        <div class="gt-header-eyebrow"><i class="fas fa-tv me-1"></i> Add-on Subscriptions</div>
+        <h1 class="gt-header-title">Payment Add-on Logs</h1>
+        <p class="gt-header-sub">Track active Cignal Play and premium hardware add-on subscriber lifecycles</p>
       </div>
     </div>
-    <div class="d-flex gap-2 flex-wrap">
-      <span class="hero-badge" style="background:rgba(22,163,74,0.3); border-color:rgba(22,163,74,0.4);">
-        <i class="fas fa-check-circle me-1"></i> Active: {{ active_count }}
-      </span>
-      <span class="hero-badge" style="background:rgba(220,38,38,0.3); border-color:rgba(220,38,38,0.4);">
-        <i class="fas fa-times-circle me-1"></i> Expired: {{ expired_count }}
-      </span>
-      <span class="hero-badge">
-        <i class="fas fa-minus-circle me-1"></i> No Plan: {{ no_plan_count }}
-      </span>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <a href="{% url 'addon_plans_list' %}" class="gt-btn-secondary">
+        <i class="fas fa-tags me-1"></i> Pricing Tiers
+      </a>
+      <a href="{% url 'payment_logs' %}" class="gt-btn-secondary">
+        <i class="fas fa-receipt me-1"></i> Standard Payments
+      </a>
+    </div>
+  </div>
+
+  <!-- KPI Overview Row -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-4">
+      <div class="gt-kpi-card">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="gt-kpi-card-label">Active Subscriptions</span>
+          <div class="gt-kpi-card-icon" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">
+            <i class="fas fa-check-circle"></i>
+          </div>
+        </div>
+        <div class="gt-kpi-card-metric" style="color: var(--gt-success, #10b981);">{{ active_count }}</div>
+        <div class="gt-kpi-card-sub text-muted">Currently active streaming &amp; boxes</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4">
+      <div class="gt-kpi-card">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="gt-kpi-card-label">Expired Subscriptions</span>
+          <div class="gt-kpi-card-icon" style="background: rgba(239, 68, 68, 0.15); color: #f87171;">
+            <i class="fas fa-times-circle"></i>
+          </div>
+        </div>
+        <div class="gt-kpi-card-metric" style="color: var(--gt-danger, #ef4444);">{{ expired_count }}</div>
+        <div class="gt-kpi-card-sub text-muted">Past expiration date</div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="gt-kpi-card">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="gt-kpi-card-label">No Add-on Assigned</span>
+          <div class="gt-kpi-card-icon" style="background: rgba(100, 116, 139, 0.15); color: #94a3b8;">
+            <i class="fas fa-minus-circle"></i>
+          </div>
+        </div>
+        <div class="gt-kpi-card-metric text-muted">{{ no_plan_count }}</div>
+        <div class="gt-kpi-card-sub text-muted">Base fiber only</div>
+      </div>
     </div>
   </div>
 
   <!-- Table Card -->
-  <div class="dashboard-card animate-fade-in animate-delay-1" style="overflow:hidden;">
-    <div class="section-header section-header-orange">
-      <h6><i class="fas fa-award sh-icon"></i> Subscriber Add-on Status</h6>
-      <small>{{ customers|length }} records</small>
+  <div class="gt-table-card mb-4">
+    <div class="gt-table-toolbar">
+      <div class="gt-table-toolbar-left">
+        <div class="d-flex align-items-center gap-2">
+          <i class="fas fa-award text-warning"></i>
+          <span class="fw-bold">Subscriber Add-on Status</span>
+          <span class="badge bg-light text-muted border ms-1">{{ customers|length }} records</span>
+        </div>
+      </div>
     </div>
     <div class="table-responsive">
-      <table class="table table-premium table-hover align-middle mb-0">
+      <table class="table gt-table align-middle mb-0">
         <thead>
           <tr>
-            <th>Username</th>
+            <th class="ps-3">Username</th>
             <th>Full Name</th>
             <th>Current Plan</th>
             <th>Expiry Date</th>
-            <th>Status</th>
+            <th class="pe-3">Status</th>
           </tr>
         </thead>
         <tbody>
           {% for c in customers %}
           <tr>
-            <td>
+            <td class="ps-3">
               {% if c.pppoe_username %}
-                <span class="fw-bold" style="color:#2563eb;">{{ c.pppoe_username }}</span>
+                <span class="fw-bold" style="color: var(--gt-primary, #0284c7);">{{ c.pppoe_username }}</span>
               {% else %}
-                <span class="pill pill-expired"><span class="pill-dot"></span>Not Connected</span>
+                <span class="status-badge status-badge--secondary">Not Connected</span>
               {% endif %}
             </td>
             <td class="fw-semibold">{{ c.full_name }}</td>
-            <td><span class="text-muted" style="font-size:0.85rem;">{{ c.plan.name|default:"N/A" }}</span></td>
-            <td><span class="text-muted" style="font-size:0.85rem;">{{ c.expires_at|date:"M d, Y H:i"|default:"—" }}</span></td>
             <td>
-              {% if not c.expires_at %}
-                <span class="pill pill-inactive"><span class="pill-dot"></span>No Plan</span>
-              {% elif c.expires_at < now %}
-                <span class="pill pill-expired"><span class="pill-dot"></span>Expired</span>
+              {% if c.plan %}
+                <span class="fw-medium">{{ c.plan.name }}</span>
               {% else %}
-                <span class="pill pill-active"><span class="pill-dot"></span>Active</span>
+                <span class="text-muted small">&mdash;</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="text-muted small">{{ c.expires_at|date:"M d, Y H:i"|default:"—" }}</span>
+            </td>
+            <td class="pe-3">
+              {% if not c.expires_at %}
+                <span class="status-badge status-badge--secondary"><i class="fas fa-minus me-1"></i> No Plan</span>
+              {% elif c.expires_at < now %}
+                <span class="status-badge status-badge--danger"><i class="fas fa-times-circle me-1"></i> Expired</span>
+              {% else %}
+                <span class="status-badge status-badge--success"><i class="fas fa-check-circle me-1"></i> Active</span>
               {% endif %}
             </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="5">
-              <div class="empty-state">
-                <div class="es-icon"><i class="fas fa-satellite-dish"></i></div>
+            <td colspan="5" class="text-center py-5">
+              <div class="text-muted">
+                <i class="fas fa-satellite-dish mb-3" style="font-size: 2.5rem; opacity: 0.3;"></i>
                 <h6>No Records Found</h6>
-                <p>No add-on payment logs available.</p>
+                <p class="small text-muted mb-0">No add-on payment subscriber logs available.</p>
               </div>
             </td>
           </tr>
@@ -83,5 +133,6 @@
       </table>
     </div>
   </div>
+
 </div>
 {% endblock %}

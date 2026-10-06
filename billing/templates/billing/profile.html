@@ -7,63 +7,88 @@
 <div class="container-fluid py-4 px-3 px-md-4">
 
   {% if request.GET.password_changed %}
-  <div class="alert alert-success border-0 rounded-3 shadow-sm mb-4" style="background:#f0fdf4; color:#15803d; border-left:4px solid #16a34a !important;">
-    <i class="fas fa-check-circle me-2"></i>Password updated successfully!
+  <div class="alert alert-success border-0 rounded-3 shadow-sm mb-4 d-flex align-items-center gap-2">
+    <i class="fas fa-check-circle"></i>
+    <div>Password updated successfully!</div>
   </div>
   {% endif %}
 
-  <!-- Profile Hero -->
-  <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-4 mb-4 animate-fade-in"
-       style="background: linear-gradient(135deg, #1e1b4b 0%, #3730a3 60%, #4f46e5 100%);">
-    <div class="d-flex align-items-center gap-4">
-      <div class="av av-xl" style="background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3); font-size:2.5rem; backdrop-filter:blur(8px);">
-        <i class="fas fa-user-shield"></i>
-      </div>
+  <!-- Page Header -->
+  <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4" style="--section-accent: #6366f1;">
+    <div class="d-flex align-items-center gap-3">
+      <div class="gt-header-icon" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;"><i class="fas fa-user-shield"></i></div>
       <div>
-        <div class="hero-title">{{ request.user.get_full_name|default:request.user.username }}</div>
-        <div class="hero-sub">{{ request.user.role|default:"System Administrator" }} &bull; {{ request.user.email|default:"No email set" }}</div>
-        <div class="mt-2">
-          <span class="pill pill-active" style="background:rgba(22,163,74,0.25); color:#bbf7d0; border-color:rgba(22,163,74,0.4);">
-            <span class="pill-dot" style="background:#4ade80;"></span>Active Account
-          </span>
-        </div>
+        <div class="gt-header-eyebrow"><i class="fas fa-id-card me-1"></i> Staff Credentials</div>
+        <h1 class="gt-header-title">My Account Profile</h1>
+        <p class="gt-header-sub">Manage your operator account details and security settings</p>
       </div>
     </div>
-    <a href="{% url 'change_password' %}" class="btn-premium" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.3);">
-      <i class="fas fa-lock"></i> Change Password
-    </a>
+    <div class="d-flex align-items-center gap-2">
+      <a href="{% url 'change_password' %}" class="gt-btn-primary">
+        <i class="fas fa-key me-1"></i> Change Password
+      </a>
+    </div>
   </div>
 
-  <!-- Profile Details Card -->
-  <div class="row justify-content-center animate-fade-in animate-delay-1">
+  <div class="row justify-content-center">
     <div class="col-12 col-lg-8">
-      <div class="dashboard-card" style="overflow:hidden;">
-        <div class="section-header section-header-purple">
-          <h6><i class="fas fa-id-card sh-icon"></i> Account Details</h6>
+      <!-- Profile Card -->
+      <div class="gt-table-card mb-4">
+        <div class="gt-table-toolbar">
+          <div class="gt-table-toolbar-left">
+            <div class="d-flex align-items-center gap-2">
+              <i class="fas fa-user-check text-primary"></i>
+              <span class="fw-bold">Operator Identity</span>
+            </div>
+          </div>
+          <div class="gt-table-toolbar-right">
+            <span class="status-badge status-badge--success"><i class="fas fa-circle me-1" style="font-size: 0.5rem;"></i> Active Account</span>
+          </div>
         </div>
+
         <div class="p-4">
-          <ul class="detail-list">
-            <li>
-              <span class="dl-label"><i class="fas fa-user me-2 text-muted"></i>Username</span>
-              <span class="dl-value">{{ request.user.username }}</span>
-            </li>
-            <li>
-              <span class="dl-label"><i class="fas fa-envelope me-2 text-muted"></i>Email Address</span>
-              <span class="dl-value">{{ request.user.email|default:"No email provided" }}</span>
-            </li>
-            <li>
-              <span class="dl-label"><i class="fas fa-user-tag me-2 text-muted"></i>Role</span>
-              <span class="dl-value">{{ request.user.role|default:"Administrator" }}</span>
-            </li>
-            <li>
-              <span class="dl-label"><i class="fas fa-circle-check me-2 text-muted"></i>Account Status</span>
-              <span class="dl-value"><span class="pill pill-active" style="font-size:0.78rem;"><span class="pill-dot"></span>Active</span></span>
-            </li>
-            <li>
-              <span class="dl-label"><i class="fas fa-clock me-2 text-muted"></i>Last Login</span>
-              <span class="dl-value">{{ request.user.last_login|date:"M d, Y h:i A"|default:"N/A" }}</span>
-            </li>
-          </ul>
+          <div class="d-flex align-items-center gap-3 p-3 rounded-3 mb-4" style="background: rgba(99, 102, 241, 0.06); border: 1px solid rgba(99, 102, 241, 0.15);">
+            <div class="gt-avatar-initials" style="width: 56px; height: 56px; border-radius: 16px; font-size: 1.5rem; background: linear-gradient(135deg, #6366f1, #4f46e5); color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700;">
+              {{ request.user.username|slice:":1"|upper }}
+            </div>
+            <div>
+              <h5 class="mb-1 fw-bold">{{ request.user.get_full_name|default:request.user.username }}</h5>
+              <div class="text-muted small">
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 me-2">{{ request.user.role|default:"System Administrator" }}</span>
+                <span>{{ request.user.email|default:"No email set" }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <div class="p-3 rounded-3 border" style="background: var(--gt-surface-subtle, rgba(0,0,0,0.02));">
+                <div class="text-muted small mb-1"><i class="fas fa-user me-1 text-primary"></i> Username</div>
+                <div class="fw-bold">{{ request.user.username }}</div>
+              </div>
+            </div>
+
+            <div class="col-sm-6">
+              <div class="p-3 rounded-3 border" style="background: var(--gt-surface-subtle, rgba(0,0,0,0.02));">
+                <div class="text-muted small mb-1"><i class="fas fa-envelope me-1 text-primary"></i> Email Address</div>
+                <div class="fw-bold">{{ request.user.email|default:"No email provided" }}</div>
+              </div>
+            </div>
+
+            <div class="col-sm-6">
+              <div class="p-3 rounded-3 border" style="background: var(--gt-surface-subtle, rgba(0,0,0,0.02));">
+                <div class="text-muted small mb-1"><i class="fas fa-user-tag me-1 text-primary"></i> Access Role</div>
+                <div class="fw-bold">{{ request.user.role|default:"Administrator" }}</div>
+              </div>
+            </div>
+
+            <div class="col-sm-6">
+              <div class="p-3 rounded-3 border" style="background: var(--gt-surface-subtle, rgba(0,0,0,0.02));">
+                <div class="text-muted small mb-1"><i class="fas fa-clock me-1 text-primary"></i> Last Login Session</div>
+                <div class="fw-bold">{{ request.user.last_login|date:"M d, Y h:i A"|default:"Active session" }}</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

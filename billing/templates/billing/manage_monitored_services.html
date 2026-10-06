@@ -1,4 +1,4 @@
-﻿{% extends "billing/base.html" %}
+{% extends "billing/base.html" %}
 {% load static %}
 
 {% block title %}Manage Monitored Services | Gametech{% endblock %}
@@ -68,11 +68,11 @@
             </div>
 
             <div class="d-flex gap-2">
-              <button type="submit" class="btn-premium btn-p-success flex-grow-1 justify-content-center py-2">
-                <i class="fas fa-save"></i> <span id="form-submit-label">Add Service</span>
+              <button type="submit" class="gt-btn-primary flex-grow-1 justify-content-center py-2">
+                <i class="fas fa-save me-1"></i> <span id="form-submit-label">Add Service</span>
               </button>
-              <button type="button" class="btn-premium btn-p-ghost py-2 px-3" onclick="resetForm()" id="cancel-btn" style="display:none;">
-                <i class="fas fa-times"></i> Cancel
+              <button type="button" class="gt-btn-secondary py-2 px-3" onclick="resetForm()" id="cancel-btn" style="display:none;">
+                <i class="fas fa-times me-1"></i> Cancel
               </button>
             </div>
           </form>
@@ -82,45 +82,55 @@
 
     <!-- Right: Services Table -->
     <div class="col-lg-8">
-      <div class="dashboard-card" style="overflow:hidden;">
-        <div class="section-header" style="background:linear-gradient(90deg,#0284c7,#38bdf8);">
-          <h6><i class="fas fa-list sh-icon"></i> Monitored Services ({{ services|length }})</h6>
+      <div class="gt-table-card">
+        <div class="gt-table-toolbar">
+          <div class="gt-table-toolbar-left">
+            <div class="d-flex align-items-center gap-2">
+              <i class="fas fa-satellite-dish text-primary"></i>
+              <span class="fw-bold">Monitored Endpoints</span>
+              <span class="badge bg-light text-muted border ms-1">{{ services|length }} Total</span>
+            </div>
+          </div>
         </div>
         <div class="table-responsive">
-          <table class="table table-premium table-hover align-middle mb-0">
+          <table class="table gt-table align-middle mb-0">
             <thead>
               <tr>
-                <th>Name</th>
+                <th class="ps-3">Name</th>
                 <th>Type</th>
                 <th>Target</th>
                 <th>Status</th>
-                <th class="text-center">Actions</th>
+                <th class="text-center" style="width: 120px;">Actions</th>
               </tr>
             </thead>
             <tbody>
               {% for svc in services %}
               <tr>
-                <td class="fw-bold">{{ svc.name }}</td>
+                <td class="ps-3 fw-bold">{{ svc.name }}</td>
                 <td>
                   {% if svc.service_type == 'Game' %}
-                  <span class="badge" style="background:#7c3aed;font-size:.75rem;"><i class="fas fa-gamepad me-1"></i> Game</span>
+                  <span class="status-badge" style="background: rgba(124, 58, 237, 0.15); color: #a78bfa; border: 1px solid rgba(124, 58, 237, 0.3); font-size: 0.75rem;">
+                    <i class="fas fa-gamepad me-1"></i> Game
+                  </span>
                   {% else %}
-                  <span class="badge" style="background:#0284c7;font-size:.75rem;"><i class="fas fa-globe me-1"></i> Website</span>
+                  <span class="status-badge status-badge--primary" style="font-size: 0.75rem;">
+                    <i class="fas fa-globe me-1"></i> Website
+                  </span>
                   {% endif %}
                 </td>
-                <td><code style="font-size:.78rem;color: var(--text-muted, #64748b);">{{ svc.target }}</code></td>
+                <td><code style="font-size: 0.8rem; color: var(--gt-text-subtle, #94a3b8); background: rgba(0,0,0,0.04); padding: 2px 6px; border-radius: 4px;">{{ svc.target }}</code></td>
                 <td>
                   {% if svc.status == 'Up' %}
-                  <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> Up</span>
+                  <span class="status-badge status-badge--success"><i class="fas fa-check-circle me-1"></i> Up</span>
                   {% elif svc.status == 'Degraded' %}
-                  <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-circle me-1"></i> Degraded</span>
+                  <span class="status-badge status-badge--warning"><i class="fas fa-exclamation-circle me-1"></i> Degraded</span>
                   {% else %}
-                  <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i> Down</span>
+                  <span class="status-badge status-badge--danger"><i class="fas fa-times-circle me-1"></i> Down</span>
                   {% endif %}
                 </td>
                 <td class="text-center">
-                  <div class="d-flex justify-content-center gap-2">
-                    <button class="btn btn-sm btn-warning fw-bold px-2 py-1"
+                  <div class="d-flex justify-content-center gap-1">
+                    <button class="gt-icon-btn"
                             onclick="editService({{ svc.pk }}, '{{ svc.name|escapejs }}', '{{ svc.target|escapejs }}', '{{ svc.service_type }}')"
                             title="Edit">
                       <i class="fas fa-pen"></i>
@@ -130,8 +140,8 @@
                       {% csrf_token %}
                       <input type="hidden" name="action" value="delete">
                       <input type="hidden" name="pk" value="{{ svc.pk }}">
-                      <button type="submit" class="btn btn-sm btn-danger fw-bold px-2 py-1" title="Delete">
-                        <i class="fas fa-trash"></i>
+                      <button type="submit" class="gt-icon-btn gt-icon-btn--danger" title="Delete">
+                        <i class="fas fa-trash-alt"></i>
                       </button>
                     </form>
                   </div>
@@ -139,11 +149,11 @@
               </tr>
               {% empty %}
               <tr>
-                <td colspan="5">
-                  <div class="empty-state">
-                    <div class="es-icon"><i class="fas fa-globe-slash"></i></div>
+                <td colspan="5" class="text-center py-5">
+                  <div class="text-muted">
+                    <i class="fas fa-globe mb-3" style="font-size: 2.5rem; opacity: 0.3;"></i>
                     <h6>No Services Configured</h6>
-                    <p>Add your first website or game server to monitor using the form on the left.</p>
+                    <p class="small text-muted mb-0">Add your first website or game server to monitor using the form on the left.</p>
                   </div>
                 </td>
               </tr>

@@ -4,55 +4,72 @@
 
 {% block content %}
 <div class="container-fluid py-4 px-3 px-md-4">
-  <div class="row justify-content-center animate-fade-in">
+
+  <!-- Page Header -->
+  <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4" style="--section-accent: #dc2626;">
+    <div class="d-flex align-items-center gap-3">
+      <div class="gt-header-icon" style="background: rgba(220, 38, 38, 0.15); color: #f87171;"><i class="fas fa-history"></i></div>
+      <div>
+        <div class="gt-header-eyebrow"><i class="fas fa-undo me-1"></i> Billing Correction</div>
+        <h1 class="gt-header-title">Rollback Expiry Date</h1>
+        <p class="gt-header-sub">Reversing payment or adjusting expiration date for <strong>{{ customer.full_name }}</strong> ({{ customer.pppoe_username }})</p>
+      </div>
+    </div>
+    <a href="{% url 'view_customer' customer.id %}" class="gt-btn-secondary">
+      <i class="fas fa-arrow-left me-1"></i> Back to Customer
+    </a>
+  </div>
+
+  <div class="row justify-content-center">
     <div class="col-12 col-md-8 col-lg-6 col-xl-5">
       <div class="gt-table-card">
-        <!-- Card Header -->
-        <div class="gt-table-toolbar" style="justify-content: center;">
+        <div class="gt-table-toolbar">
           <div class="gt-table-toolbar-left">
-            <span class="gt-status-badge gt-status-badge--danger"><span class="gt-status-dot"></span> Rollback Expiry — {{ customer.pppoe_username }}</span>
+            <span class="status-badge status-badge--danger"><i class="fas fa-backward me-1"></i> Expiry Rollback Protocol</span>
           </div>
         </div>
         <div class="p-4">
-          <div class="alert alert-danger rounded-3 border-0 mb-4" style="background:rgba(220,38,38,0.08); border-left:3px solid #dc2626 !important; font-size:0.85rem;">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            <strong>Warning:</strong> This action will reduce the customer's expiry date. Use only for bounced payments or billing errors.
+          <div class="alert alert-danger rounded-3 border-0 mb-4 d-flex align-items-center gap-2" style="background: rgba(220, 38, 38, 0.1); color: #ef4444; border-left: 3px solid #dc2626 !important; font-size: 0.85rem;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div>
+              <strong>Audit Warning:</strong> This action will reduce the customer's expiry date. Use only for bounced checks, reversed online transfers, or billing adjustments.
+            </div>
           </div>
           <form method="post" autocomplete="off">
             {% csrf_token %}
             <div class="mb-3">
-              <label class="filter-label">Current Status</label>
+              <label class="form-label small fw-semibold text-muted">Current Subscription Status</label>
               {% if customer.status == 'active' %}
-                <div class="p-2 rounded" style="background:rgba(16,185,129,0.1); color:#10b981; font-weight:600; border:1px solid rgba(16,185,129,0.2);">
-                  <i class="fas fa-plug me-2"></i>Active (PPPoE Enabled)
+                <div class="p-2 rounded d-flex align-items-center gap-2" style="background: rgba(16, 185, 129, 0.1); color: #10b981; font-weight: 600; border: 1px solid rgba(16, 185, 129, 0.2);">
+                  <i class="fas fa-plug"></i> Active (PPPoE Provisioned)
                 </div>
               {% else %}
-                <div class="p-2 rounded" style="background:rgba(239,68,68,0.1); color:#ef4444; font-weight:600; border:1px solid rgba(239,68,68,0.2);">
-                  <i class="fas fa-plug-circle-xmark me-2"></i>{{ customer.status|title }} (PPPoE Disabled)
+                <div class="p-2 rounded d-flex align-items-center gap-2" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; font-weight: 600; border: 1px solid rgba(239, 68, 68, 0.2);">
+                  <i class="fas fa-plug-circle-xmark"></i> {{ customer.status|title }} (PPPoE Disabled)
                 </div>
               {% endif %}
             </div>
             <div class="mb-3">
-              <label class="filter-label">Current Expiry</label>
-              <input type="text" class="form-control" value="{{ customer.expires_at|default:'N/A' }}" readonly style="background:rgba(220,38,38,0.05); border-color:rgba(220,38,38,0.2); color:#dc2626; font-weight:600;">
+              <label class="form-label small fw-semibold text-muted">Current Expiry Date</label>
+              <input type="text" class="form-control" value="{{ customer.expires_at|default:'N/A' }}" readonly style="background: rgba(220, 38, 38, 0.05); border-color: rgba(220, 38, 38, 0.2); color: #dc2626; font-weight: 600;">
             </div>
             <div class="mb-3">
-              <label class="filter-label" style="color:#dc2626;"><i class="fas fa-money-bill-wave me-1"></i>Rollback Amount (₱)</label>
-              <input type="number" step="0.01" name="rollback_amount" class="form-control" value="0.00" min="0" style="border-color:rgba(220,38,38,0.4);" placeholder="E.g. 500">
+              <label class="form-label small fw-semibold" style="color: #dc2626;"><i class="fas fa-money-bill-wave me-1"></i> Rollback Amount (₱)</label>
+              <input type="number" step="0.01" name="rollback_amount" class="form-control" value="0.00" min="0" style="border-color: rgba(220, 38, 38, 0.4);" placeholder="E.g. 500">
               <small class="text-muted" style="font-size: 0.75rem;">This amount will be added back to the customer's outstanding balance, and logged as a reversed payment.</small>
             </div>
             <div class="mb-3">
-              <label class="filter-label" style="color:#dc2626;"><i class="fas fa-exclamation-circle me-1"></i>Rollback To (Penalty / Adj.)</label>
-              <input type="datetime-local" name="rollback_to" class="form-control" value="{{ current_expiry_js }}" required style="border-color:rgba(220,38,38,0.4);">
+              <label class="form-label small fw-semibold" style="color: #dc2626;"><i class="fas fa-exclamation-circle me-1"></i> Rollback To (New Target Expiry)</label>
+              <input type="datetime-local" name="rollback_to" class="form-control" value="{{ current_expiry_js }}" required style="border-color: rgba(220, 38, 38, 0.4);">
             </div>
             <div class="mb-4">
-              <label class="filter-label">Reason for Rollback</label>
-              <textarea name="note" class="form-control" rows="3" placeholder="Bounced payment, error adjustment..." required></textarea>
+              <label class="form-label small fw-semibold text-muted">Reason for Rollback</label>
+              <textarea name="note" class="form-control" rows="3" placeholder="Bounced payment, error adjustment, customer requested change..." required></textarea>
             </div>
             <div class="d-flex gap-2">
-              <a href="{% url 'view_customer' customer.id %}" class="btn-premium btn-p-ghost flex-fill justify-content-center">Cancel</a>
-              <button type="submit" class="btn-premium btn-p-danger flex-fill justify-content-center">
-                <i class="fas fa-backward"></i> Confirm Rollback
+              <a href="{% url 'view_customer' customer.id %}" class="gt-btn-secondary flex-fill justify-content-center">Cancel</a>
+              <button type="submit" class="gt-btn-danger flex-fill justify-content-center">
+                <i class="fas fa-backward me-1"></i> Confirm Rollback
               </button>
             </div>
           </form>
@@ -60,5 +77,6 @@
       </div>
     </div>
   </div>
+
 </div>
 {% endblock %}

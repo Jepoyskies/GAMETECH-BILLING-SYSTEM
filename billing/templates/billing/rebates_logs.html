@@ -5,83 +5,109 @@
 {% block content %}
 <div class="container-fluid py-4 px-3 px-md-4">
 
-  <!-- Page Hero -->
-  <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in"
-       style="background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #059669 100%);">
-    <div class="d-flex align-items-center">
-      <div class="hero-icon"><i class="fas fa-hand-holding-usd"></i></div>
+  <!-- Page Header -->
+  <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4" style="--section-accent: #059669;">
+    <div class="d-flex align-items-center gap-3">
+      <div class="gt-header-icon" style="background: rgba(5, 150, 105, 0.15); color: #34d399;"><i class="fas fa-hand-holding-usd"></i></div>
       <div>
-        <div class="hero-title">Rebates &amp; Adjustments</div>
-        <div class="hero-sub">Full log of all billing adjustments and rebates applied</div>
+        <div class="gt-header-eyebrow"><i class="fas fa-history me-1"></i> Billing &amp; Outage Adjustments</div>
+        <h1 class="gt-header-title">Rebates &amp; Adjustments Log</h1>
+        <p class="gt-header-sub">Full audit history of subscriber subscription extensions, day credits, and manual billing adjustments</p>
       </div>
+    </div>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <a href="{% url 'payment_logs' %}" class="gt-btn-secondary">
+        <i class="fas fa-receipt me-1"></i> Payment Logs
+      </a>
+      <span class="badge bg-light text-muted border px-3 py-2 fw-semibold">
+        <i class="fas fa-list me-1"></i> {{ rebates|length }} Records
+      </span>
     </div>
   </div>
 
-  <!-- Filter -->
-  <div class="filter-glass animate-fade-in animate-delay-1">
+  <!-- Filter Card -->
+  <div class="gt-table-card p-3 mb-4">
     <form method="get" class="row g-3 align-items-end">
       <div class="col-md-8">
-        <label class="filter-label"><i class="fas fa-search me-1"></i> Search</label>
-        <input type="text" name="search" value="{{ search }}" class="form-control" placeholder="Search by username, plan, or admin...">
+        <label class="form-label small fw-semibold text-muted mb-1"><i class="fas fa-search me-1"></i> Search Records</label>
+        <input type="text" name="search" value="{{ search }}" class="form-control form-control-sm" placeholder="Search by username, plan, or adjusting staff member...">
       </div>
       <div class="col-md-2">
-        <button type="submit" class="btn-premium btn-p-success w-100 justify-content-center">
-          <i class="fas fa-search"></i> Search
+        <button type="submit" class="gt-btn-primary w-100 justify-content-center">
+          <i class="fas fa-search me-1"></i> Search
         </button>
       </div>
       <div class="col-md-2">
-        <a href="{% url 'rebates_logs' %}" class="btn-premium btn-p-ghost w-100 justify-content-center">Clear</a>
+        <a href="{% url 'rebates_logs' %}" class="gt-btn-secondary w-100 justify-content-center">Clear</a>
       </div>
     </form>
   </div>
 
   <!-- Table Card -->
-  <div class="dashboard-card animate-fade-in animate-delay-2" style="overflow:hidden;">
-    <div class="section-header section-header-green">
-      <h6><i class="fas fa-history sh-icon"></i> Adjustment History</h6>
+  <div class="gt-table-card mb-4">
+    <div class="gt-table-toolbar">
+      <div class="gt-table-toolbar-left">
+        <div class="d-flex align-items-center gap-2">
+          <i class="fas fa-history text-success"></i>
+          <span class="fw-bold">Adjustment History</span>
+          <span class="badge bg-light text-muted border ms-1">{{ rebates|length }} entries</span>
+        </div>
+      </div>
     </div>
     <div class="table-responsive">
-      <table class="table table-premium table-hover align-middle mb-0">
+      <table class="table gt-table align-middle mb-0">
         <thead>
           <tr>
-            <th>Date Adjusted</th>
+            <th class="ps-3">Date Adjusted</th>
             <th>Username</th>
             <th>Plan</th>
             <th>Days Adjusted</th>
             <th>Previous Expiry</th>
             <th>New Expiry</th>
             <th>Note</th>
-            <th>Adjusted By</th>
+            <th class="pe-3">Adjusted By</th>
           </tr>
         </thead>
         <tbody>
           {% for r in rebates %}
           <tr>
-            <td>
+            <td class="ps-3" style="white-space:nowrap;">
               <div class="fw-semibold" style="font-size:0.85rem;">{{ r.paid_at|date:"M d, Y" }}</div>
-              <div class="text-muted" style="font-size:0.75rem;">{{ r.paid_at|date:"H:i" }}</div>
+              <div class="text-muted" style="font-size:0.75rem;">{{ r.paid_at|date:"h:i A" }}</div>
             </td>
-            <td><span class="fw-bold" style="color:#2563eb;">{{ r.username }}</span></td>
-            <td><span class="text-muted" style="font-size:0.83rem;">{{ r.plan_name }}</span></td>
+            <td>
+              <span class="fw-bold" style="color: var(--gt-primary, #0284c7); font-size: 0.88rem;">{{ r.username }}</span>
+            </td>
+            <td>
+              <span class="text-muted small">{{ r.plan_name }}</span>
+            </td>
             <td>
               {% if r.days > 0 %}
-                <span class="pill pill-active"><span class="pill-dot"></span>+{{ r.days|floatformat:1 }} Days</span>
+                <span class="status-badge status-badge--success">+{{ r.days|floatformat:1 }} Days</span>
               {% else %}
-                <span class="pill pill-expired"><span class="pill-dot"></span>{{ r.days|floatformat:1 }} Days</span>
+                <span class="status-badge status-badge--danger">{{ r.days|floatformat:1 }} Days</span>
               {% endif %}
             </td>
-            <td><span class="text-muted" style="font-size:0.83rem;">{{ r.current_expiry|date:"M d, Y H:i"|default:"N/A" }}</span></td>
-            <td><span class="fw-bold" style="color:#059669; font-size:0.83rem;">{{ r.expires_at|date:"M d, Y H:i"|default:"N/A" }}</span></td>
-            <td><span class="text-muted" style="font-size:0.8rem;">{{ r.note }}</span></td>
-            <td><span class="pill pill-pending"><span class="pill-dot"></span>{{ r.adjusted_by }}</span></td>
+            <td>
+              <span class="text-muted small">{{ r.current_expiry|date:"M d, Y H:i"|default:"N/A" }}</span>
+            </td>
+            <td>
+              <span class="fw-bold text-success" style="font-size: 0.85rem;">{{ r.expires_at|date:"M d, Y H:i"|default:"N/A" }}</span>
+            </td>
+            <td>
+              <span class="text-muted small">{{ r.note|default:"—" }}</span>
+            </td>
+            <td class="pe-3">
+              <span class="status-badge status-badge--primary"><i class="fas fa-user-shield me-1"></i> {{ r.adjusted_by }}</span>
+            </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="8">
-              <div class="empty-state">
-                <div class="es-icon"><i class="fas fa-hand-holding-usd"></i></div>
+            <td colspan="8" class="text-center py-5">
+              <div class="text-muted">
+                <i class="fas fa-hand-holding-usd mb-3" style="font-size: 2.5rem; opacity: 0.3;"></i>
                 <h6>No Rebate Logs Found</h6>
-                <p>No adjustments have been recorded yet, or try a different search.</p>
+                <p class="small text-muted mb-0">No adjustments have been recorded yet, or try adjusting your search.</p>
               </div>
             </td>
           </tr>
@@ -90,5 +116,6 @@
       </table>
     </div>
   </div>
+
 </div>
 {% endblock %}

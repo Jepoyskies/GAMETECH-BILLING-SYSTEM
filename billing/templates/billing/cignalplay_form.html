@@ -5,47 +5,55 @@
 
 {% block content %}
 <div class="container-fluid py-4 px-3 px-md-4">
-  <div class="row justify-content-center animate-fade-in">
+
+  <!-- Page Header -->
+  <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4" style="--section-accent: #eab308;">
+    <div class="d-flex align-items-center gap-3">
+      <div class="gt-header-icon" style="background: rgba(234, 179, 8, 0.15); color: #facc15;"><i class="fas fa-tv"></i></div>
+      <div>
+        <div class="gt-header-eyebrow"><i class="fas fa-money-bill me-1"></i> Add-on Billing</div>
+        <h1 class="gt-header-title">Cignal Play Payment</h1>
+        <p class="gt-header-sub">Record streaming package payment for <strong>{{ customer.full_name }}</strong> ({{ customer.pppoe_username }})</p>
+      </div>
+    </div>
+    <a href="{% url 'cignal_play_list' %}" class="gt-btn-secondary">
+      <i class="fas fa-arrow-left me-1"></i> Back to Cignal List
+    </a>
+  </div>
+
+  <div class="row justify-content-center">
     <div class="col-12 col-md-8 col-lg-6 col-xl-5">
-      <div class="dashboard-card" style="overflow:hidden;">
-        <!-- Card Header -->
-        <div style="background: linear-gradient(135deg, #713f12 0%, #ca8a04 100%); padding: 28px 24px; text-align:center;">
-          <div style="width:52px; height:52px; border-radius:16px; background:rgba(255,255,255,0.15); display:inline-flex; align-items:center; justify-content:center; font-size:1.4rem; color:white; margin-bottom:12px;">
-            <i class="fas fa-money-bill"></i>
+      <div class="gt-table-card">
+        <div class="gt-table-toolbar">
+          <div class="gt-table-toolbar-left">
+            <span class="status-badge status-badge--warning"><i class="fas fa-satellite-dish me-1"></i> Subscription Details</span>
           </div>
-          <h4 class="mb-1 fw-bold" style="color:white;">Cignal Play Payment</h4>
-          <p class="mb-0" style="color:rgba(255,255,255,0.75); font-size:0.85rem;">for {{ customer.full_name }}</p>
         </div>
         <div class="p-4">
-          <div class="d-flex justify-content-end mb-3">
-            <a href="{% url 'cignal_play_list' %}" class="btn-premium btn-p-ghost" style="padding:6px 14px; font-size:0.8rem;">
-              <i class="fas fa-arrow-left"></i> Back
-            </a>
-          </div>
           <form method="post">
             {% csrf_token %}
             <div class="row g-3">
               <div class="col-12">
-                <label class="filter-label">Plan / Item Name <span style="color:red;">*</span></label>
-                <input type="text" name="plan_name" class="form-control" required placeholder="e.g. Cignal Play Premium">
+                <label class="form-label small fw-semibold text-muted">Plan / Item Name <span class="text-danger">*</span></label>
+                <input type="text" name="plan_name" class="form-control" required placeholder="e.g. Cignal Play Premium 30-Day">
               </div>
               <div class="col-md-6">
-                <label class="filter-label">Start / Received Date <span style="color:red;">*</span></label>
+                <label class="form-label small fw-semibold text-muted">Start / Received Date <span class="text-danger">*</span></label>
                 <input type="date" name="start_date" class="form-control" required>
               </div>
               <div class="col-md-6">
-                <label class="filter-label">End Date</label>
+                <label class="form-label small fw-semibold text-muted">End Date</label>
                 <input type="date" name="end_date" class="form-control">
-                <div class="form-text" style="font-size:0.75rem;">Optional for one-time add-ons.</div>
+                <div class="form-text" style="font-size: 0.75rem;">Optional for one-time add-ons.</div>
               </div>
               <div class="col-12">
-                <label class="filter-label">Processed By <span style="color:red;">*</span></label>
+                <label class="form-label small fw-semibold text-muted">Processed By <span class="text-danger">*</span></label>
                 <input type="text" name="adjusted_by" class="form-control" value="{{ request.user.username }}" required>
               </div>
             </div>
             <div class="mt-4 d-grid">
-              <button type="submit" class="btn-premium btn-p-success justify-content-center">
-                <i class="fas fa-check"></i> Save Payment
+              <button type="submit" class="gt-btn-primary py-2 justify-content-center">
+                <i class="fas fa-check-circle me-1"></i> Save Payment Record
               </button>
             </div>
           </form>
@@ -53,5 +61,6 @@
       </div>
     </div>
   </div>
+
 </div>
 {% endblock %}

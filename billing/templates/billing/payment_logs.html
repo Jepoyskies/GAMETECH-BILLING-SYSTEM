@@ -6,82 +6,96 @@
 {% block content %}
 <div class="container-fluid py-4 px-3 px-md-4">
 
-    <!-- Page Hero -->
-    <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in" style="background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%);">
-        <div class="d-flex align-items-center">
-            <div class="hero-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+    <!-- Page Header -->
+    <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4" style="--section-accent: #059669;">
+        <div class="d-flex align-items-center gap-3">
+            <div class="gt-header-icon" style="background: rgba(5, 150, 105, 0.15); color: #34d399;"><i class="fas fa-file-invoice-dollar"></i></div>
             <div>
-                <div class="hero-title">Payment Logs</div>
-                <div class="hero-sub">Full history of all subscriber billing transactions</div>
+                <div class="gt-header-eyebrow"><i class="fas fa-receipt me-1"></i> Billing &amp; Collections</div>
+                <h1 class="gt-header-title">Payment Logs</h1>
+                <p class="gt-header-sub">Full ledger of all subscriber subscription payments and cash collections</p>
             </div>
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
-            <span class="hero-badge"><i class="fas fa-list me-1"></i> {{ page_obj.paginator.count }} records</span>
+            <a href="{% url 'payment_addon_logs' %}" class="gt-btn-secondary">
+                <i class="fas fa-satellite-dish me-1"></i> Add-on Logs
+            </a>
+            <span class="badge bg-light text-muted border px-3 py-2 fw-semibold">
+                <i class="fas fa-list me-1"></i> {{ page_obj.paginator.count }} Records Found
+            </span>
         </div>
     </div>
 
     <!-- Summary KPI Cards -->
-    <div class="row g-3 mb-4 animate-fade-in animate-delay-1">
+    <div class="row g-3 mb-4">
         <div class="col-6 col-md-3">
-            <div class="kpi-card h-100 bg-mesh-warning text-white border-0">
-                <div class="kpi-icon bg-white bg-opacity-25 shadow-sm"><i class="fas fa-coins text-white"></i></div>
-                <div>
-                    <div class="kpi-label text-white text-opacity-75">Grand Total</div>
-                    <div class="kpi-value text-white">₱{{ grand_total|floatformat:2 }}</div>
-                    <div class="kpi-sub text-white text-opacity-75">All time</div>
+            <div class="gt-kpi-card">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="gt-kpi-card-label">Grand Total</span>
+                    <div class="gt-kpi-card-icon" style="background: rgba(249, 178, 51, 0.15); color: #fbbf24;">
+                        <i class="fas fa-coins"></i>
+                    </div>
                 </div>
+                <div class="gt-kpi-card-metric" style="color: var(--gt-gold, #F9B233); font-family: monospace;">₱{{ grand_total|floatformat:2 }}</div>
+                <div class="gt-kpi-card-sub text-muted">All-time collections</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="kpi-card h-100 bg-mesh-success text-white border-0">
-                <div class="kpi-icon bg-white bg-opacity-25 shadow-sm"><i class="fas fa-calendar-alt text-white"></i></div>
-                <div>
-                    <div class="kpi-label text-white text-opacity-75">Filtered Range</div>
-                    <div class="kpi-value text-white">₱{{ filtered_range_total|floatformat:2 }}</div>
-                    <div class="kpi-sub text-white text-opacity-75">Selected period</div>
+            <div class="gt-kpi-card">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="gt-kpi-card-label">Filtered Range</span>
+                    <div class="gt-kpi-card-icon" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
                 </div>
+                <div class="gt-kpi-card-metric" style="color: var(--gt-success, #10b981); font-family: monospace;">₱{{ filtered_range_total|floatformat:2 }}</div>
+                <div class="gt-kpi-card-sub text-muted">Selected period</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="kpi-card h-100 bg-mesh-primary text-white border-0">
-                <div class="kpi-icon bg-white bg-opacity-25 shadow-sm"><i class="fas fa-calendar-day text-white"></i></div>
-                <div>
-                    <div class="kpi-label text-white text-opacity-75">Today</div>
-                    <div class="kpi-value text-white">₱{{ total_today|floatformat:2 }}</div>
-                    <div class="kpi-sub text-white text-opacity-75">Today's collections</div>
+            <div class="gt-kpi-card">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="gt-kpi-card-label">Today</span>
+                    <div class="gt-kpi-card-icon" style="background: rgba(2, 132, 199, 0.15); color: #38bdf8;">
+                        <i class="fas fa-calendar-day"></i>
+                    </div>
                 </div>
+                <div class="gt-kpi-card-metric" style="color: var(--gt-primary, #0284c7); font-family: monospace;">₱{{ total_today|floatformat:2 }}</div>
+                <div class="gt-kpi-card-sub text-muted">Today's collections</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="kpi-card h-100">
-                <div class="kpi-icon icon-gray"><i class="fas fa-calendar-minus"></i></div>
-                <div>
-                    <div class="kpi-label">Yesterday</div>
-                    <div class="kpi-value">₱{{ total_yesterday|floatformat:2 }}</div>
-                    <div class="kpi-sub">Previous day</div>
+            <div class="gt-kpi-card">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="gt-kpi-card-label">Yesterday</span>
+                    <div class="gt-kpi-card-icon" style="background: rgba(100, 116, 139, 0.15); color: #94a3b8;">
+                        <i class="fas fa-calendar-minus"></i>
+                    </div>
                 </div>
+                <div class="gt-kpi-card-metric" style="font-family: monospace;">₱{{ total_yesterday|floatformat:2 }}</div>
+                <div class="gt-kpi-card-sub text-muted">Previous day</div>
             </div>
         </div>
     </div>
 
-    <!-- Filter Glass Panel -->
-    <div class="filter-glass animate-fade-in animate-delay-2">
+    <!-- Filter Panel -->
+    <div class="gt-table-card p-3 mb-4">
         <form method="get" class="row g-3 align-items-end">
             <div class="col-md-2">
-                <label class="filter-label"><i class="far fa-calendar me-1"></i> From Date</label>
-                <input type="date" name="from" value="{{ filter_from }}" class="form-control">
+                <label class="form-label small fw-semibold text-muted mb-1"><i class="far fa-calendar me-1"></i> From Date</label>
+                <input type="date" name="from" value="{{ filter_from }}" class="form-control form-control-sm">
             </div>
             <div class="col-md-2">
-                <label class="filter-label"><i class="far fa-calendar me-1"></i> To Date</label>
-                <input type="date" name="to" value="{{ filter_to }}" class="form-control">
+                <label class="form-label small fw-semibold text-muted mb-1"><i class="far fa-calendar me-1"></i> To Date</label>
+                <input type="date" name="to" value="{{ filter_to }}" class="form-control form-control-sm">
             </div>
             <div class="col-md-3">
-                <label class="filter-label"><i class="fas fa-search me-1"></i> Search</label>
-                <input type="text" name="search" value="{{ filter_search }}" class="form-control" placeholder="Username or reference no...">
+                <label class="form-label small fw-semibold text-muted mb-1"><i class="fas fa-search me-1"></i> Search</label>
+                <input type="text" name="search" value="{{ filter_search }}" class="form-control form-control-sm" placeholder="Username or reference no...">
             </div>
             <div class="col-md-2">
-                <label class="filter-label"><i class="fas fa-wallet me-1"></i> Payment Method</label>
-                <select name="method" class="form-select">
+                <label class="form-label small fw-semibold text-muted mb-1"><i class="fas fa-wallet me-1"></i> Payment Method</label>
+                <select name="method" class="form-select form-select-sm">
                     <option value="">All Methods</option>
                     {% for m in methods %}
                     <option value="{{ m }}" {% if filter_method == m %}selected{% endif %}>{{ m|title }}</option>
@@ -89,35 +103,45 @@
                 </select>
             </div>
             <div class="col-md-3 d-flex gap-2">
-                <button type="submit" class="btn-premium btn-p-success w-100 justify-content-center">
-                    <i class="fas fa-filter"></i> Filter
+                <button type="submit" class="gt-btn-primary flex-grow-1 justify-content-center">
+                    <i class="fas fa-filter me-1"></i> Filter
                 </button>
-                <a href="{% url 'payment_logs' %}" class="btn-premium btn-p-ghost w-100 justify-content-center">Clear</a>
+                <a href="{% url 'payment_logs' %}" class="gt-btn-secondary flex-grow-1 justify-content-center">Clear</a>
             </div>
         </form>
     </div>
 
     <!-- Sales Chart Card -->
-    <div class="dashboard-card mb-4 animate-fade-in animate-delay-2">
-        <div class="section-header section-header-green">
-            <h6><i class="fas fa-chart-line sh-icon"></i> Last 14 Days — Sales Trend</h6>
+    <div class="gt-table-card mb-4">
+        <div class="gt-table-toolbar">
+            <div class="gt-table-toolbar-left">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-chart-line text-success"></i>
+                    <span class="fw-bold">Last 14 Days &mdash; Sales Trend</span>
+                </div>
+            </div>
         </div>
-        <div class="chart-container">
+        <div class="p-3" style="position: relative; height: 260px;">
             <canvas id="salesChart"></canvas>
         </div>
     </div>
 
-    <!-- Payment Table Card -->
-    <div class="dashboard-card animate-fade-in animate-delay-3" style="overflow:hidden;">
-        <div class="section-header section-header-green">
-            <h6><i class="fas fa-receipt sh-icon"></i> Payment Records</h6>
-            <small>{{ page_obj.paginator.count }} records found</small>
+    <!-- Payment Records Table Card -->
+    <div class="gt-table-card mb-4">
+        <div class="gt-table-toolbar">
+            <div class="gt-table-toolbar-left">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-receipt text-primary"></i>
+                    <span class="fw-bold">Payment Records</span>
+                    <span class="badge bg-light text-muted border ms-1">{{ page_obj.paginator.count }} records</span>
+                </div>
+            </div>
         </div>
         <div class="table-responsive">
-            <table class="table table-premium table-hover align-middle mb-0">
+            <table class="table gt-table align-middle mb-0">
                 <thead>
                     <tr>
-                        <th>Date Paid</th>
+                        <th class="ps-3">Date Paid</th>
                         <th>Username</th>
                         <th>Amount</th>
                         <th>Method</th>
@@ -125,46 +149,48 @@
                         <th>Plan</th>
                         <th>New Expiry</th>
                         <th>Adjusted By</th>
-                        <th>Actions</th>
+                        <th class="text-end pe-3">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for p in page_obj %}
                     <tr>
-                        <td style="white-space:nowrap;">
+                        <td class="ps-3" style="white-space:nowrap;">
                             <div class="fw-semibold" style="font-size:0.85rem;">{{ p.created_at|date:"M d, Y" }}</div>
                             <div class="text-muted" style="font-size:0.75rem;">{{ p.created_at|date:"h:i A" }}</div>
                         </td>
                         <td>
                             <div class="d-flex align-items-center gap-2">
-                                <div class="av av-sm av-blue">{{ p.username|slice:":1"|upper }}</div>
-                                <span class="fw-bold" style="color:#2563eb; font-size:0.88rem;">{{ p.username }}</span>
+                                <div class="gt-avatar-initials" style="width: 28px; height: 28px; font-size: 0.75rem; border-radius: 8px; background: rgba(2, 132, 199, 0.15); color: #0284c7; display: flex; align-items: center; justify-content: center; font-weight: 700;">
+                                    {{ p.username|slice:":1"|upper }}
+                                </div>
+                                <span class="fw-bold" style="color: var(--gt-primary, #0284c7); font-size: 0.88rem;">{{ p.username }}</span>
                             </div>
                         </td>
                         <td>
-                            <span class="fw-bold" style="color:#059669; font-size:1rem;">₱{{ p.amount|floatformat:2 }}</span>
+                            <span class="fw-bold" style="color: var(--gt-gold, #F9B233); font-family: monospace; font-size: 1rem;">₱{{ p.amount|floatformat:2 }}</span>
                         </td>
                         <td>
                             {% if p.payment_method|lower == 'gcash' %}
-                                <span class="pill" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">
-                                    <i class="fas fa-wallet"></i> GCash
+                                <span class="status-badge" style="background: rgba(2, 132, 199, 0.12); color: #0284c7; border: 1px solid rgba(2, 132, 199, 0.25);">
+                                    <i class="fas fa-wallet me-1"></i> GCash
                                 </span>
                             {% elif p.payment_method|lower == 'maya' or p.payment_method|lower == 'paymaya' %}
-                                <span class="pill" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;">
-                                    <i class="fas fa-wallet"></i> Maya
+                                <span class="status-badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.25);">
+                                    <i class="fas fa-wallet me-1"></i> Maya
                                 </span>
                             {% elif p.payment_method|lower == 'cash' %}
-                                <span class="pill" style="background:#fffbeb;color:#92400e;border:1px solid #fde68a;">
-                                    <i class="fas fa-money-bill-wave"></i> Cash
+                                <span class="status-badge" style="background: rgba(245, 158, 11, 0.12); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.25);">
+                                    <i class="fas fa-money-bill-wave me-1"></i> Cash
                                 </span>
                             {% else %}
-                                <span class="pill pill-inactive">
-                                    <i class="fas fa-credit-card"></i> {{ p.payment_method|title }}
+                                <span class="status-badge status-badge--secondary">
+                                    <i class="fas fa-credit-card me-1"></i> {{ p.payment_method|title }}
                                 </span>
                             {% endif %}
                         </td>
                         <td>
-                            <code style="background:rgba(0,0,0,0.04); padding:3px 8px; border-radius:6px; font-size:0.8rem; color: var(--text-secondary, #475569);">
+                            <code style="background: rgba(0,0,0,0.04); padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; color: var(--gt-text-subtle, #64748b);">
                                 {{ p.reference_no|default:"—" }}
                             </code>
                         </td>
@@ -172,25 +198,25 @@
                             <span class="fw-semibold" style="font-size:0.85rem;">{{ p.plan_name }}</span>
                         </td>
                         <td style="white-space:nowrap;">
-                            <span class="fw-semibold" style="font-size:0.85rem;">{{ p.expires_at|date:"M d, Y" }}</span>
+                            <span class="fw-semibold" style="font-size:0.85rem;">{{ p.expires_at|date:"M d, Y"|default:"—" }}</span>
                         </td>
                         <td>
                             {% if p.adjusted_by == 'Customer Portal' %}
-                                <span class="pill pill-active"><i class="fas fa-globe"></i> Portal</span>
+                                <span class="status-badge status-badge--success"><i class="fas fa-globe me-1"></i> Portal</span>
                             {% else %}
-                                <span class="pill pill-pending"><i class="fas fa-user-shield"></i> {{ p.adjusted_by }}</span>
+                                <span class="status-badge status-badge--primary"><i class="fas fa-user-shield me-1"></i> {{ p.adjusted_by }}</span>
                             {% endif %}
                         </td>
-                        <td>
-                            <div class="d-flex gap-1">
-                                <a href="{% url 'dispatch_receipt' p.id %}" target="_blank" rel="noopener" class="btn-premium btn-p-ghost" style="padding:6px 10px; font-size:0.8rem;" title="Print Official Receipt">
+                        <td class="text-end pe-3">
+                            <div class="d-flex justify-content-end gap-1">
+                                <a href="{% url 'dispatch_receipt' p.id %}" target="_blank" rel="noopener" class="gt-icon-btn" title="Print Official Receipt">
                                     <i class="fas fa-receipt"></i>
                                 </a>
                                 {% if request.user.role == 'Admin' %}
-                                <a href="{% url 'edit_payment_log' p.id %}" class="btn-premium btn-p-ghost" style="padding:6px 10px; font-size:0.8rem;" title="Edit">
+                                <a href="{% url 'edit_payment_log' p.id %}" class="gt-icon-btn" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <button type="button" class="btn-premium btn-p-warning" style="padding:6px 10px; font-size:0.8rem;" title="Transfer Payment"
+                                <button type="button" class="gt-icon-btn gt-icon-btn--warning" title="Transfer Payment"
                                         data-bs-toggle="modal" data-bs-target="#transferModal{{ p.id }}">
                                     <i class="fas fa-exchange-alt"></i>
                                 </button>
@@ -200,11 +226,11 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="9">
-                            <div class="empty-state">
-                                <div class="es-icon"><i class="fas fa-receipt"></i></div>
+                        <td colspan="9" class="text-center py-5">
+                            <div class="text-muted">
+                                <i class="fas fa-receipt mb-3" style="font-size: 2.5rem; opacity: 0.3;"></i>
                                 <h6>No payments found</h6>
-                                <p>Try adjusting your date range or search term to find payment records.</p>
+                                <p class="small text-muted mb-0">Try adjusting your date range or search term to find payment records.</p>
                             </div>
                         </td>
                     </tr>
@@ -212,7 +238,7 @@
                 </tbody>
             </table>
         </div>
-        <div class="card-footer-actions">
+        <div class="p-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div class="text-muted small">Page <strong>{{ page_obj.number }}</strong> of <strong>{{ page_obj.paginator.num_pages }}</strong></div>
             {% include 'billing/partials/pagination.html' with page_obj=page_obj query_params=query_params %}
         </div>
@@ -222,40 +248,42 @@
 
 <!-- Transfer Modals -->
 {% for p in page_obj %}
-<div class="modal fade text-start" id="transferModal{{ p.id }}" tabindex="-1" aria-hidden="true">
+<div class="modal fade text-start" id="transferModal{{ p.id }}" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="transferModalLabel{{ p.id }}" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius:20px; overflow:hidden;">
-            <div class="modal-header border-0 pb-2" style="background:linear-gradient(135deg,#78350f,#f59e0b);">
-                <div>
-                    <h5 class="modal-title fw-bold text-white mb-0">
-                        <i class="fas fa-exchange-alt me-2"></i>Transfer Payment
-                    </h5>
-                    <small class="text-white opacity-75">Revert &amp; reassign this payment to another account</small>
+        <div class="modal-content gt-modal-card">
+            <div class="modal-header">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="gt-modal-icon" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title" id="transferModalLabel{{ p.id }}">Transfer Payment</h5>
+                        <div class="small text-muted">Revert &amp; reassign this payment to another account</div>
+                    </div>
                 </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="gt-icon-btn" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
             </div>
             <form action="{% url 'revert_transfer_payment' p.id %}" method="post">
                 {% csrf_token %}
-                <div class="modal-body p-4">
-                    <div class="alert border-0 rounded-3 mb-4" style="background:#fffbeb; color:#92400e; border-left:4px solid #f59e0b !important;">
+                <div class="modal-body py-3">
+                    <div class="alert border-0 rounded-3 mb-3 d-flex align-items-center" style="background: rgba(245, 158, 11, 0.12); color: #d97706; border-left: 4px solid #f59e0b !important;">
                         <i class="fas fa-exclamation-triangle me-2"></i>
-                        This will revert the payment from <strong>{{ p.customer.full_name }}</strong> and apply it to a new customer.
-                        The previous customer's expiration and balance will be recalculated.
+                        <div>
+                            This will revert the payment from <strong>{{ p.customer.full_name }}</strong> and apply it to a new customer.
+                            The previous customer's expiration and balance will be recalculated.
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">Select Correct Customer</label>
-                        {# Populated by script from #paymentCustomerOptions below. Rendering the 2,038
-                               options inline, once per modal, made this page 9.3 MB
-                               and took 4.4 seconds to load. #}
                         <select class="form-select" name="new_customer_id" required data-customer-select>
                             <option value="">-- Choose Customer --</option>
                         </select>
                     </div>
                 </div>
-                <div class="modal-footer border-0 bg-light px-4 pb-4 pt-2">
-                    <button type="button" class="btn-premium btn-p-ghost" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn-premium btn-p-warning">
-                        <i class="fas fa-exchange-alt"></i> Confirm Transfer
+                <div class="modal-footer">
+                    <button type="button" class="gt-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="gt-btn-primary" style="background: linear-gradient(135deg, #d97706, #b45309);">
+                        <i class="fas fa-exchange-alt me-1"></i> Confirm Transfer
                     </button>
                 </div>
             </form>
