@@ -26,8 +26,18 @@ def portal_router_uplink_api(request):
         api_conn = api._get_api()
         resource_data = api_conn.get_resource("/system/resource").get()[0]
 
-        uplink_status = "Offline"
-        uplink_ping = "Timeout"
+        # THREE outcomes, not two.
+        #
+        # This used to default to "Offline" and swallow every exception, so
+        # whenever the ping could not run -- ROUTER_MODE=read_only blocked the
+        # call, the socket timed out, the router was mid-reboot -- the portal
+        # reported a customer with working internet as "Offline" and still
+        # answered 200 "success". A subscriber is told their line is down when
+        # the only truth is that we could not check. "Unknown" is honest, and
+        # the portal UI already has a neutral state for it.
+        uplink_status = "Unknown"
+        uplink_ping = None
+        uplink_note = ""
         try:
             ping_res = api_conn.get_resource("/").call("ping", {"address": "8.8.8.8", "count": "1"})
             if ping_res and len(ping_res) > 0:
@@ -42,8 +52,13 @@ def portal_router_uplink_api(request):
                     rtt_val = float(match.group(1)) if match else 0.0
                     uplink_ping = f"{int(rtt_val)}ms"
                     uplink_status = "Unstable" if rtt_val > 150 else "Online"
-        except Exception:
-            pass
+        except Exception as exc:
+            uplink_note = (
+                "Could not check the connection right now (%s). This does not "
+                "mean your internet is down." % type(exc).__name__
+            )
+            logger.info("portal uplink check failed for %s: %s",
+                        customer.pppoe_username, exc)
 
         health_data = []
         try:
@@ -61,6 +76,9 @@ def portal_router_uplink_api(request):
             "optical": optical_data,
             "uplink_status": uplink_status,
             "uplink_ping": uplink_ping,
+            # So the UI can say "we could not check" instead of leaving a
+            # subscriber staring at a bare "Unknown".
+            "uplink_note": uplink_note,
         })
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)})
