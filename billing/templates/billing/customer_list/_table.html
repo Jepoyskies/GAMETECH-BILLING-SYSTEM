@@ -67,8 +67,8 @@
                 {% for customer in customers %}
                 <tr class="{% if customer.is_paid_offline %}table-row-paid-offline{% elif customer.installation_status == 'pending' or customer.status == 'pending' or customer.is_pending_install %}table-row-pending-install{% elif customer.status == 'suspended' %}table-row-suspended{% elif customer.status == 'expired' %}table-row-expired{% elif customer.status == 'inactive' or customer.status == 'pull out' %}table-row-inactive text-muted{% endif %}">
                     {# col 1 – Checkbox #}
-                    <td style="text-align: center;">
-                        <input type="checkbox" class="form-check-input customer-checkbox shadow-sm" value="{{ customer.id }}" style="cursor: pointer;">
+                    <td class="gt-cl-center">
+                        <input type="checkbox" class="form-check-input customer-checkbox shadow-sm gt-cl-pick" value="{{ customer.id }}">
                     </td>
 
                     {# col 2 – Full Name + mobile status dot #}
@@ -77,8 +77,7 @@
                         {% if customer.is_paid_offline %}
                             <span class="gt-conn-dot gt-conn-dot--offline d-inline-block d-md-none me-1 align-middle"></span>
                         {% elif customer.installation_status == 'pending' or customer.status == 'pending' or customer.is_pending_install %}
-                            <span class="gt-conn-dot d-inline-block d-md-none me-1 align-middle"
-                                  style="background: #0ea5e9; box-shadow: 0 0 6px rgba(14,165,233,0.7);"></span>
+                            <span class="gt-conn-dot gt-cl-dot--pending d-inline-block d-md-none me-1 align-middle"></span>
                         {% elif customer.status == 'active' %}
                             <span class="gt-conn-dot gt-conn-dot--online d-inline-block d-md-none me-1 align-middle"></span>
                         {% elif customer.status == 'suspended' or customer.status == 'expired' %}
@@ -86,8 +85,7 @@
                         {% elif customer.status == 'inactive' or customer.status == 'pull out' %}
                             <span class="gt-conn-dot d-inline-block d-md-none me-1 align-middle"></span>
                         {% else %}
-                            <span class="gt-conn-dot d-inline-block d-md-none me-1 align-middle"
-                                  style="background: #64748b;"></span>
+                            <span class="gt-conn-dot gt-cl-dot--plain d-inline-block d-md-none me-1 align-middle"></span>
                         {% endif %}
                         <span class="gt-name-text fw-semibold text-title" title="{{ customer.full_name }}">{{ customer.full_name }}</span>
                         {% if customer.is_suspicious %}
@@ -100,25 +98,25 @@
                     </td>
 
                     {# col 3 – Email #}
-                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><span class="text-body-secondary">{{ customer.email }}</span></td>
+                    <td class="gt-cl-trunc"><span class="text-body-secondary">{{ customer.email }}</span></td>
 
                     {# col 4 – Phone #}
-                    <td><span class="font-monospace text-body-secondary" style="font-size: 12px;">{{ customer.phone }}</span></td>
+                    <td><span class="font-monospace text-body-secondary gt-cl-sm">{{ customer.phone }}</span></td>
 
                     {# col 5 – Plan #}
-                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    <td class="gt-cl-trunc">
                         {% if customer.plan %}
-                            <i class="fa-solid fa-wifi d-inline d-md-none text-secondary me-1" style="font-size:0.68rem;"></i>
-                            <span class="fw-medium" style="font-size: 12px;" title="{{ customer.plan.name }}">{{ customer.plan.name }}</span>
+                            <i class="fa-solid fa-wifi d-inline d-md-none text-secondary me-1 gt-cl-xs"></i>
+                            <span class="fw-medium gt-cl-sm" title="{{ customer.plan.name }}">{{ customer.plan.name }}</span>
                         {% else %}
-                            <span class="text-muted" style="font-size: 12px;">None</span>
+                            <span class="text-muted gt-cl-sm">None</span>
                         {% endif %}
                     </td>
 
                     {# col 6 – Agent #}
-                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    <td class="gt-cl-trunc">
                         {% if customer.agent %}
-                            <span class="text-body-secondary" style="font-size: 12px;">{{ customer.agent.name }}</span>
+                            <span class="text-body-secondary gt-cl-sm">{{ customer.agent.name }}</span>
                         {% else %}
                             <span class="status-badge status-badge--neutral">
                                 <i class="fas fa-walking"></i>Walk-in
@@ -127,22 +125,22 @@
                     </td>
 
                     {# col 7 – Barangay #}
-                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    <td class="gt-cl-trunc">
                         {% if customer.barangay %}
-                            <span class="text-body-secondary" style="font-size: 12px;">{{ customer.barangay.name }}</span>
+                            <span class="text-body-secondary gt-cl-sm">{{ customer.barangay.name }}</span>
                         {% else %}
-                            <span class="text-muted" style="font-size: 12px;">None</span>
+                            <span class="text-muted gt-cl-sm">None</span>
                         {% endif %}
                     </td>
 
                     {# col 8 – Router #}
-                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    <td class="gt-cl-trunc">
                         {% if customer.mikrotik_device %}
-                            <span class="fw-medium text-title" style="color: var(--text-primary); font-size: 12px;" title="{{ customer.mikrotik_device.device_name }}">
+                            <span class="fw-medium text-title gt-cl-router" title="{{ customer.mikrotik_device.device_name }}">
                                 {{ customer.mikrotik_device.device_name }}
                             </span>
                         {% else %}
-                            <span class="text-muted" style="font-size: 12px;">None</span>
+                            <span class="text-muted gt-cl-sm">None</span>
                         {% endif %}
                     </td>
 
@@ -150,7 +148,7 @@
                     <td class="align-middle gt-cell-status">
                         {% include "billing/customer_list/_customer_status.html" with customer=customer %}
                         {# Hidden telemetry data for JS #}
-                        <span class="conn-status-indicator" style="display: none;"
+                        <span class="conn-status-indicator gt-cl-hidden"
                               data-pppoe="{{ customer.pppoe_username|default:'' }}"
                               data-status="{{ customer.status|lower }}"
                               data-installation-status="{{ customer.installation_status|default:'installed' }}"
