@@ -26,7 +26,14 @@
                 <span class="gt-section-badge">1</span>
                 <h6 class="gt-section-title">Select Customer</h6>
               </div>
-              <span class="gt-count-badge" id="enrollCustCountBadge">{{ all_customers|length }} customer{{ all_customers|length|pluralize }} available</span>
+              <span class="gt-count-badge" id="enrollCustCountBadge">{{ enroll_customer_count }} customer{{ enroll_customer_count|pluralize }} available</span>
+              {% comment %}
+                Compact payload for the picker. json_script escapes the contents
+                for embedding in a script block, so customer names cannot break
+                out of it. Multi-line comment on purpose -- {# #} is single-line
+                only and would print as literal text (ERR-123).
+              {% endcomment %}
+              {{ enroll_customers|json_script:"enrollCustomerData" }}
             </div>
 
             <div class="gt-search gt-search--clear mb-2">
@@ -36,23 +43,13 @@
             </div>
 
             <div class="enroll-picker-list" id="enrollCustomerPickerList">
-              {% for cust in all_customers %}
-                <div class="enroll-cust-card" data-id="{{ cust.id }}" data-name="{{ cust.full_name|default:cust.pppoe_username }}" data-pppoe="{{ cust.pppoe_username|default:'' }}" data-phone="{{ cust.phone|default:'' }}" data-play="{{ cust.cignalplay_no|default:'' }}" data-box="{{ cust.cignalbox_no|default:'' }}" onclick="selectEnrollCustomer(this)" role="button" tabindex="0">
-                  <div class="d-flex align-items-center gap-2">
-                    <span class="gt-avatar enroll-cust-avatar" data-name="{{ cust.full_name|default:cust.pppoe_username }}" aria-hidden="true"></span>
-                    <div>
-                      <strong class="d-block">{{ cust.full_name|default:cust.pppoe_username }}</strong>
-                      <small class="gt-text-muted d-block">
-                        <span class="enroll-cust-pppoe">{{ cust.pppoe_username|default:"No PPPoE" }}</span>
-                        {% if cust.phone %}<span class="enroll-cust-phone"> &bull; {{ cust.phone }}</span>{% endif %}
-                      </small>
-                    </div>
-                  </div>
-                  <span class="badge enroll-check-badge">Select</span>
-                </div>
-              {% empty %}
-                <div class="enroll-empty">No customers found.</div>
-              {% endfor %}
+              {% comment %}
+                Cards are built in JS the first time this modal opens. They used
+                to be pre-rendered here, one per customer, which put 2,038 cards
+                and ~2 MB of hidden markup into every page load. See
+                billing/views/cignal_dashboard.py.
+              {% endcomment %}
+              <div class="enroll-empty">Loading customers&hellip;</div>
             </div>
 
             <div class="gt-field-error d-none" id="enrollErrorCustomer"><i class="fas fa-exclamation-circle me-1"></i> Please select a customer from the list.</div>
@@ -178,7 +175,91 @@
 </div>
 
 <script>
+var enrollCustomers = null;   // parsed once, from the JSON payload below
+
+function buildEnrollCustomerCards() {
+    if (enrollCustomers !== null) return;      // already built
+    var list = document.getElementById('enrollCustomerPickerList');
+    if (!list) return;
+
+    var data = [];
+    var el = document.getElementById('enrollCustomerData');
+    if (el) {
+        try { data = JSON.parse(el.textContent || '[]'); }
+        catch (e) { data = []; }
+    }
+
+    if (!data.length) {
+        list.innerHTML = '<div class="enroll-empty">No customers found.</div>';
+        enrollCustomers = [];
+        return;
+    }
+
+    var frag = document.createDocumentFragment();
+    data.forEach(function (c) {
+        var card = document.createElement('div');
+        card.className = 'enroll-cust-card';
+        card.setAttribute('data-id', c.id);
+        card.setAttribute('data-name', c.name || '');
+        card.setAttribute('data-pppoe', c.pppoe || '');
+        card.setAttribute('data-phone', c.phone || '');
+        card.setAttribute('data-play', c.play || '');
+        card.setAttribute('data-box', c.box || '');
+        card.setAttribute('role', 'button');
+        card.setAttribute('tabindex', '0');
+        card.addEventListener('click', function () { selectEnrollCustomer(card); });
+        card.addEventListener('keydown', function (ev) {
+            if (ev.key === 'Enter' || ev.key === ' ') {
+                ev.preventDefault();
+                selectEnrollCustomer(card);
+            }
+        });
+
+        var row = document.createElement('div');
+        row.className = 'd-flex align-items-center gap-2';
+
+        var avatar = document.createElement('span');
+        avatar.className = 'gt-avatar enroll-cust-avatar';
+        avatar.setAttribute('data-name', c.name || '');
+        avatar.setAttribute('aria-hidden', 'true');
+
+        var textWrap = document.createElement('div');
+        var strong = document.createElement('strong');
+        strong.className = 'd-block';
+        strong.textContent = c.name || 'Unnamed';
+        var small = document.createElement('small');
+        small.className = 'gt-text-muted d-block';
+        var pppoeSpan = document.createElement('span');
+        pppoeSpan.className = 'enroll-cust-pppoe';
+        pppoeSpan.textContent = c.pppoe || 'No PPPoE';
+        small.appendChild(pppoeSpan);
+        if (c.phone) {
+            var phoneSpan = document.createElement('span');
+            phoneSpan.className = 'enroll-cust-phone';
+            phoneSpan.textContent = ' • ' + c.phone;
+            small.appendChild(phoneSpan);
+        }
+        textWrap.appendChild(strong);
+        textWrap.appendChild(small);
+
+        var badge = document.createElement('span');
+        badge.className = 'badge enroll-check-badge';
+        badge.textContent = 'Select';
+
+        row.appendChild(avatar);
+        row.appendChild(textWrap);
+        card.appendChild(row);
+        card.appendChild(badge);
+        frag.appendChild(card);
+    });
+
+    list.innerHTML = '';
+    list.appendChild(frag);
+    enrollCustomers = data;
+}
+
 function openEnrollCignalModal() {
+    buildEnrollCustomerCards();
     var m = new bootstrap.Modal(document.getElementById('enrollCignalModal'));
     m.show();
 }

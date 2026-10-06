@@ -1,4 +1,5 @@
 import csv
+import json
 from decimal import Decimal, InvalidOperation
 from datetime import datetime, timedelta
 from django.shortcuts import render, redirect, get_object_or_404
@@ -149,7 +150,36 @@ def cignal_dashboard_view(request):
     notifications = Notification.objects.filter(notification_type="cignal").order_by("-id")[:5]
 
     # 4. All Customers for Enrollment Selector
+    #
+    # The picker used to pre-render one HTML card per customer inside a modal
+    # that stays hidden until opened. With 2,038 customers that meant 6,623
+    # <div> and 8,278 <span> elements -- a 2.1 MB page, four times heavier than
+    # any other screen and the only one still over 1 MB. The search filtered
+    # those cards client-side, which is why every one had to ship up front.
+    #
+    # Send a compact list instead and let the modal build cards when it opens.
+    # .values() means no Customer model is even instantiated. Same fields, same
+    # search, same behaviour, roughly 7x less to transfer, and nothing to parse
+    # until the modal is actually used.
     all_customers = Customer.objects.all().order_by("full_name", "pppoe_username")
+    enroll_customer_rows = list(
+        all_customers.values(
+            "id", "full_name", "pppoe_username", "phone",
+            "cignalplay_no", "cignalbox_no",
+        )
+    )
+    enroll_customers = [
+        {
+            "id": r["id"],
+            "name": r["full_name"] or r["pppoe_username"] or "",
+            "pppoe": r["pppoe_username"] or "",
+            "phone": r["phone"] or "",
+            "play": r["cignalplay_no"] or "",
+            "box": r["cignalbox_no"] or "",
+        }
+        for r in enroll_customer_rows
+    ]
+    enroll_customer_count = len(enroll_customers)
     default_cignal_due_date = (today + timedelta(days=30)).strftime("%Y-%m-%d")
 
     # 4. Active Addon Plans
@@ -175,6 +205,8 @@ def cignal_dashboard_view(request):
         "cignal_payments": cignal_payments,
         "notifications": notifications,
         "all_customers": all_customers,
+        "enroll_customers": enroll_customers,
+        "enroll_customer_count": enroll_customer_count,
         "default_cignal_due_date": default_cignal_due_date,
         "addon_plans": addon_plans,
     }
