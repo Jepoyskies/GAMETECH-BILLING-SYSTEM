@@ -280,6 +280,19 @@ def sync_manager(request, device_id):
     all_routers = MikrotikDevice.objects.all()
     barangays = Barangay.objects.all().order_by('name')
 
+    # Slice the review queue before it reaches the template. Slicing AFTER
+    # reason_counts/simple_summary is deliberate: the chips must keep counting
+    # the entire queue, otherwise "Connected, Unpaid 1016" would change every
+    # time you turned the page and the numbers would mean nothing.
+    from django.core.paginator import Paginator
+    _paginator = Paginator(needs_review, REVIEW_PAGE_SIZE)
+    review_page_number = request.GET.get("review_page") or 1
+    try:
+        review_page_obj = _paginator.page(review_page_number)
+    except Exception:
+        review_page_obj = _paginator.page(1)
+    needs_review_page = list(review_page_obj.object_list)
+
     context = {
         'device': device,
         'clean_orphans': clean_orphans,
@@ -308,6 +321,11 @@ def sync_manager(request, device_id):
         'reason_counts': reason_counts(needs_review),
         'review_total': len(needs_review),
         'simple_summary': simple_summary(needs_review),
+        # The queue is paginated server-side; counts and chips are still
+        # computed over the WHOLE queue, never over one page.
+        'review_page': review_page_obj,
+        'review_rows': needs_review_page,
+        'review_page_size': REVIEW_PAGE_SIZE,
     }
     
     return render(request, 'network_manager/sync_manager.html', context)
@@ -344,6 +362,21 @@ REASON_ORDER = [
      'Past due in the system but still connected. Collect payment; do not '
      'auto-suspend.'),
 ]
+
+
+# Rows rendered per page for the review queue.
+#
+# The Needs Review card on ccr2116.v1 holds 1,051 rows. Rendering all of them
+# into the HTML made the page 6.5 MB and take 5.8 seconds, and the operator still
+# only ever worked through the 17 urgent ones at the top. Paginating in Django
+# keeps the client-side DataTable behaviour that already works (the reason
+# chips filter the visible page) while cutting the payload by roughly 90%.
+#
+# Deliberately NOT datatables.net server-side processing: that needs an AJAX
+# endpoint and a redraw contract for every chip click, which is a much larger
+# change to verify than server-side slicing. The chips already filter, and
+# paging a filtered set of at most one page is the honest behaviour here.
+REVIEW_PAGE_SIZE = 100
 
 
 def reason_counts(rows):

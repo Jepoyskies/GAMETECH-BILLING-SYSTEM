@@ -116,7 +116,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for user in needs_review %}
+                {% for user in review_rows %}
                 <tr class="{% if user.connected_but_unpaid %}table-row-collect{% elif user.state_mismatch %}table-row-pending-install{% endif %}"
                     data-reasons="{% for k in user.reason_keys %}{{ k }}{% if not forloop.last %} {% endif %}{% endfor %}">
                     <td><span class="fw-bold">{{ user.name }}</span></td>
@@ -221,6 +221,45 @@
             </tbody>
         </table>
         </div>
+
+        {% comment %}
+          Server-side paging. Without this the card shipped all 1,051 rows in
+          the HTML (6.5 MB, 5.8s) to let an operator act on the 17 urgent ones.
+          The chips still count the whole queue; only the rendered rows are a
+          page. "Previous/Next" carry the current chip filter in the query
+          string so paging does not silently drop the operator out of a filter.
+        {% endcomment %}
+        {% if review_page.paginator.num_pages > 1 %}
+        <nav class="d-flex flex-wrap align-items-center justify-content-between gap-2 px-3 py-2 border-top" aria-label="Review queue pages">
+            <span class="text-muted small">
+                Page {{ review_page.number }} of {{ review_page.paginator.num_pages }}
+                &mdash; showing {{ review_rows|length }} of {{ review_total }} accounts
+            </span>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item {% if not review_page.has_previous %}disabled{% endif %}">
+                    <a class="page-link"
+                       href="?review_page={% if review_page.has_previous %}{{ review_page.previous_page_number }}{% else %}1{% endif %}{% if request.GET.reason %}&amp;reason={{ request.GET.reason }}{% endif %}#queue-needs-review">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </a>
+                </li>
+                {% for pn in review_page.paginator.page_range %}
+                    {% if pn == review_page.number %}
+                    <li class="page-item active" aria-current="page"><span class="page-link">{{ pn }}</span></li>
+                    {% elif pn > review_page.number|add:"-3" and pn < review_page.number|add:"3" %}
+                    <li class="page-item">
+                        <a class="page-link" href="?review_page={{ pn }}#queue-needs-review">{{ pn }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                <li class="page-item {% if not review_page.has_next %}disabled{% endif %}">
+                    <a class="page-link"
+                       href="?review_page={% if review_page.has_next %}{{ review_page.next_page_number }}{% else %}{{ review_page.paginator.num_pages }}{% endif %}{% if request.GET.reason %}&amp;reason={{ request.GET.reason }}{% endif %}#queue-needs-review">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
         {% endif %}
     </div>
 </div>

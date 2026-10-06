@@ -42,8 +42,12 @@
         // the chips above it, so this table's own length/search chrome is off.
         // The global .datatable init further down leaves them on for the other
         // tables, so turn them off explicitly here.
+        // Paging is done server-side now (see REVIEW_PAGE_SIZE), so DataTables must
+        // not also paginate -- two pagers over one table produced a page of 10
+        // out of the 100 the server had already chosen, and a page-size
+        // selector that reset it on every reload.
         var reviewDt = $('#reviewTable').DataTable({
-            "pageLength": 10,
+            "paging": false,
             "lengthChange": false,
             "searching": false,
             "info": false,
