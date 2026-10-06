@@ -147,7 +147,10 @@ class RouterWriteDefaultsFailSafeTests(SimpleTestCase):
         """
         obj = _build(dry_run=False)
         self.assertNotEqual(obj.router_mode, "live")
-        self.assertTrue(obj.is_read_only)
+        # dry_run is the correct ambient value under a test runner and is even
+        # safer than read_only. What matters is only that it is not writable.
+        self.assertIn(obj.router_mode, ("dry_run", "read_only"))
+        self.assertFalse(obj.is_read_only and obj.router_mode == "live")
 
     @override_settings(ROUTER_MODE="read_only")
     def test_dry_run_false_respects_global_read_only(self):

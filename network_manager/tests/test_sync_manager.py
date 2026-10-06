@@ -1,4 +1,4 @@
-"""
+﻿"""
 Sync Manager tests -- the bouncer, the comment format, and the write guards.
 
 WHY THIS FILE EXISTS
@@ -578,7 +578,7 @@ class SyncManagerPageTests(TestCase):
         with mock.patch("network_manager.sync_services.MikrotikAPI",
                         return_value=api):
             response = self.client.get(
-                reverse("sync_manager", args=[self.device.id]))
+                reverse("sync_manager_device", args=[self.device.id]))
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("gt_queue", [u["name"] for u in response.context["needs_review"]])
@@ -595,7 +595,7 @@ class SyncManagerPageTests(TestCase):
         with mock.patch("network_manager.sync_services.MikrotikAPI",
                         return_value=api):
             response = self.client.get(
-                reverse("sync_manager", args=[self.device.id]))
+                reverse("sync_manager_device", args=[self.device.id]))
 
         self.assertIn("gt_ok", [u["name"] for u in response.context["synced"]])
 
@@ -618,7 +618,7 @@ class SyncManagerPageTests(TestCase):
         with mock.patch("network_manager.sync_services.MikrotikAPI",
                         return_value=api):
             response = self.client.get(
-                reverse("sync_manager", args=[self.device.id]))
+                reverse("sync_manager_device", args=[self.device.id]))
 
         queued = {u["name"]: u for u in response.context["needs_review"]}
         if "gt_enabled" in queued:
@@ -641,7 +641,7 @@ class SyncManagerPageTests(TestCase):
         with mock.patch("network_manager.sync_services.MikrotikAPI",
                         return_value=api):
             response = self.client.get(
-                reverse("sync_manager", args=[self.device.id]))
+                reverse("sync_manager_device", args=[self.device.id]))
 
         queued = {u["name"]: u for u in response.context["needs_review"]}
         self.assertIn("gt_cut", queued)
@@ -666,7 +666,7 @@ class SyncManagerPageTests(TestCase):
         with mock.patch("network_manager.sync_services.MikrotikAPI",
                         return_value=api):
             response = self.client.get(
-                reverse("sync_manager", args=[self.device.id]))
+                reverse("sync_manager_device", args=[self.device.id]))
 
         queued = {u["name"]: u for u in response.context["needs_review"]}
         self.assertIn("gt_unpaid", queued)
@@ -687,7 +687,7 @@ class SyncManagerPageTests(TestCase):
         with mock.patch("network_manager.sync_services.MikrotikAPI",
                         return_value=api):
             response = self.client.get(
-                reverse("sync_manager", args=[self.device.id]))
+                reverse("sync_manager_device", args=[self.device.id]))
 
         queued = {u["name"]: u for u in response.context["needs_review"]}
         self.assertIn("gt_nolink", queued)
@@ -707,7 +707,7 @@ class SyncManagerPageTests(TestCase):
         with mock.patch("network_manager.sync_services.MikrotikAPI",
                         return_value=api):
             response = self.client.get(
-                reverse("sync_manager", args=[self.device.id]))
+                reverse("sync_manager_device", args=[self.device.id]))
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(
