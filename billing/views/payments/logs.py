@@ -118,8 +118,10 @@ def payment_logs_view(request):
         # always did but the page drops to roughly a quarter of a megabyte.
         "all_customers_json": json.dumps(
             [
-                {"id": c.id, "label": "{} ({})".format(
-                    c.full_name or "(no name)", c.pppoe_username or "no-username")}
+                # .values() yields dicts, not Customer instances.
+                {"id": c["id"], "label": "{} ({})".format(
+                    c["full_name"] or "(no name)",
+                    c["pppoe_username"] or "no-username")}
                 for c in Customer.objects.all().order_by("full_name").values(
                     "id", "full_name", "pppoe_username"
                 )
