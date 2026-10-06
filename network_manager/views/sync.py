@@ -44,6 +44,16 @@ def sync_manager(request, device_id):
     django_customers = Customer.objects.filter(
         Q(mikrotik_device=device) | Q(mikrotik_device__isnull=True)
     ).exclude(pppoe_username__isnull=True).exclude(pppoe_username='')
+
+    # select_related is not an optimisation here, it is the difference between
+    # one query and two thousand. The categorise loop below reads dc.plan for
+    # every secret on the router, and the templates read dc.barangay and
+    # dc.agent for every rendered row. Without this the page issued 1,999
+    # identical "SELECT ... FROM billing_subscriptionplan" queries and took
+    # 5.4 seconds; with it, three.
+    django_customers = django_customers.select_related(
+        "plan", "barangay", "agent",
+    )
     django_usernames = set(django_customers.values_list('pppoe_username', flat=True))
 
     # Stamp the pairing audit trail onto every row BEFORE the categorise loop,
