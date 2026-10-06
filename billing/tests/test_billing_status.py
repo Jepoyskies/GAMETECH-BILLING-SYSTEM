@@ -51,7 +51,9 @@ def make_customer(**kw):
         from billing.models import ChecklistConfirmation
 
         ChecklistConfirmation.objects.create(
-            applicant_phone=defaults.get("phone") or "",`r`n            outcome="agreed",`r`n            confirmed_by="test",
+            applicant_phone=defaults.get("phone") or "",
+            outcome="agreed",
+            confirmed_by="test",
         )
 
     return Customer.objects.create(pppoe_username=username, **defaults)
