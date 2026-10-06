@@ -1,0 +1,235 @@
+{% if request.user.role != 'Agent' %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var mapEl = document.getElementById('map');
+        if (!mapEl) return;
+
+        var defaultLat = {{ customer.latitude|default:"8.4542" }};
+        var defaultLng = {{ customer.longitude|default:"124.6319" }};
+        
+        var map = L.map('map').setView([defaultLat, defaultLng], 15);
+        
+        var darkLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['0', '1', '2', '3'],
+            className: 'dark-tiles',
+            attribution: '&copy; Google Maps'
+        });
+
+        var satelliteLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['0', '1', '2', '3'],
+            attribution: '&copy; Google Maps'
+        });
+
+        var streetLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['0', '1', '2', '3'],
+            attribution: '&copy; Google Maps'
+        });
+
+        var isDark = document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode');
+        (isDark ? darkLayer : streetLayer).addTo(map);
+
+        var baseMaps = {
+            "🌙 Dark": darkLayer,
+            "🛰️ Satellite": satelliteLayer,
+            "🗺️ Streets": streetLayer
+        };
+        L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+
+        var marker = L.marker([defaultLat, defaultLng], {
+            draggable: true
+        }).addTo(map);
+
+        function updateInputs(lat, lng) {
+            var latInput = document.getElementById('latitude');
+            var lngInput = document.getElementById('longitude');
+            if (latInput) latInput.value = lat.toFixed(8);
+            if (lngInput) lngInput.value = lng.toFixed(8);
+        }
+
+        updateInputs(defaultLat, defaultLng);
+
+        marker.on('dragend', function(e) {
+            var position = marker.getLatLng();
+            updateInputs(position.lat, position.lng);
+        });
+
+        map.on('click', function(e) {
+            marker.setLatLng(e.latlng);
+            updateInputs(e.latlng.lat, e.latlng.lng);
+        });
+    });
+</script>
+{% endif %}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const form = document.getElementById('edit-customer-form');
+        if (!form) return;
+
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+                
+                // Find all invalid elements
+                const invalidElements = form.querySelectorAll(':invalid');
+                if (invalidElements.length > 0) {
+                    const firstInvalid = invalidElements[0];
+                    
+                    // Try to find the label for this input
+                    let labelContainer = firstInvalid.closest('.mb-3, .col-md-6, .col-md-12');
+                    let labelText = "Field";
+                    if (labelContainer) {
+                        let labelEl = labelContainer.querySelector('label');
+                        if (labelEl) {
+                            labelText = labelEl.innerText.replace('*','').trim();
+                        }
+                    }
+                    
+                    const message = firstInvalid.validationMessage || 'Invalid format.';
+                    
+                    // Create an elegant error banner
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'error-alert mb-4 custom-validation-alert';
+                    alertDiv.style.backgroundColor = '#fff3f3';
+                    alertDiv.style.color = '#dc3545';
+                    alertDiv.style.borderLeft = '4px solid #dc3545';
+                    alertDiv.style.padding = '12px 16px';
+                    alertDiv.style.borderRadius = '8px';
+                    alertDiv.style.fontWeight = '500';
+                    alertDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i> <b>Validation Error on "' + labelText + '":</b> ' + message;
+                    
+                    // Remove old custom alerts
+                    document.querySelectorAll('.custom-validation-alert').forEach(e => e.remove());
+                    
+                    // Insert at top of form and scroll to it
+                    form.insertBefore(alertDiv, form.firstChild);
+                    alertDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
+                    firstInvalid.focus();
+                    
+                    // Flash red border to draw attention
+                    const originalBorder = firstInvalid.style.border;
+                    firstInvalid.style.border = '2px solid #dc3545';
+                    setTimeout(() => { firstInvalid.style.border = originalBorder; }, 3000);
+                }
+            }
+        }, false);
+    });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Upgrade dropdowns to smart search with TomSelect
+        document.querySelectorAll('select.plan-form-control').forEach((el)=>{
+            try {
+                if (!el.tomselect) {
+                    const hasOptgroups = el.querySelectorAll('optgroup').length > 0;
+                    const isStatus = el.name === 'status' || el.name === 'installation_status';
+                    new TomSelect(el, {
+                        create: false,
+                        sortField: (hasOptgroups || isStatus) ? undefined : { field: "text", direction: "asc" }
+                    });
+                }
+            } catch(err) {
+                console.warn("TomSelect fallback on", el.name, err);
+            }
+        });
+
+        // Auto-capitalize text inputs (Full Address, Full Name, Barangay) to Title Case on blur
+        function toTitleCase(str) {
+            if (!str) return '';
+            return str.toLowerCase().replace(/\b\w/g, s => s.toUpperCase());
+        }
+
+        document.querySelectorAll('input[name="address"], input[name="full_name"], input[name="barangay_name"]').forEach(input => {
+            input.addEventListener('blur', function() {
+                if (this.value) {
+                    this.value = toTitleCase(this.value.trim());
+                }
+            });
+        });
+    });
+</script>
+
+{% if request.GET.action == 'verify' %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const form = document.getElementById('edit-customer-form');
+    if (!form) return;
+    
+    // Add event listener to form submission specifically for verification
+    form.addEventListener('submit', function(event) {
+        let missingFields = [];
+        
+        // Define fields to strictly require for verification
+        const fieldsToCheck = [
+            { name: 'phone', label: 'Phone Number' },
+            { name: 'plan_id', label: 'Subscription Plan' },
+            { name: 'account_type_id', label: 'Account Type' },
+            { name: 'barangay_id', label: 'Barangay' },
+            { name: 'mikrotik_device_id', label: 'Mikrotik Router' }
+        ];
+        
+        fieldsToCheck.forEach(field => {
+            const el = document.querySelector(`[name="${field.name}"]`);
+            if (el && !el.value.trim()) {
+                missingFields.push({el: el, label: field.label});
+                
+                // Add red border
+                el.style.border = '2px solid #dc3545';
+                
+                // If it's a TomSelect element, find its control
+                if (el.tomselect) {
+                    el.tomselect.control.style.border = '2px solid #dc3545';
+                }
+            } else if (el) {
+                // Clear red border if filled
+                el.style.border = '';
+                if (el.tomselect) {
+                    el.tomselect.control.style.border = '';
+                }
+            }
+        });
+        
+        if (missingFields.length > 0) {
+            // Block form submission
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            
+            const labels = missingFields.map(f => f.label).join(', ');
+            
+            // Create or update the elegant error banner
+            let alertDiv = document.getElementById('verification-alert');
+            if (!alertDiv) {
+                alertDiv = document.createElement('div');
+                alertDiv.id = 'verification-alert';
+                alertDiv.className = 'error-alert mb-4 custom-validation-alert';
+                alertDiv.style.backgroundColor = '#fff3f3';
+                alertDiv.style.color = '#dc3545';
+                alertDiv.style.borderLeft = '4px solid #dc3545';
+                alertDiv.style.padding = '12px 16px';
+                alertDiv.style.borderRadius = '8px';
+                alertDiv.style.fontWeight = '500';
+                form.insertBefore(alertDiv, form.firstChild);
+            }
+            
+            alertDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i> <b>Verification Wizard:</b> The following fields are required for a verified account: ' + labels;
+            alertDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Focus first missing
+            if (missingFields[0].el.tomselect) {
+                missingFields[0].el.tomselect.focus();
+            } else {
+                missingFields[0].el.focus();
+            }
+        }
+    });
+});
+</script>
+{% endif %}
