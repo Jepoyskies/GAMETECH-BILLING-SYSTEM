@@ -1,0 +1,89 @@
+<!-- Expandable Diff & JSON Drawer -->
+<tr class="collapse-row border-secondary border-opacity-25">
+    <td colspan="6" class="p-0 border-0">
+        <div class="collapse" id="diff-drawer-{{ log.id }}">
+            <div class="p-3 my-2 mx-3 rounded-3 bg-dark border border-secondary border-opacity-30 shadow-sm" style="background: rgba(10,14,26,0.95) !important;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <ul class="nav nav-pills gap-1 p-1 bg-black bg-opacity-40 rounded-pill d-inline-flex text-xs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active rounded-pill px-3 py-1 text-xs" id="tab-diff-btn-{{ log.id }}" data-bs-toggle="pill" data-bs-target="#tab-diff-{{ log.id }}" type="button" role="tab">
+                                <i class="fas fa-code-compare me-1"></i> Clean Field Transitions
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link rounded-pill px-3 py-1 text-xs text-muted" id="tab-json-btn-{{ log.id }}" data-bs-toggle="pill" data-bs-target="#tab-json-{{ log.id }}" type="button" role="tab">
+                                <i class="fas fa-file-code me-1"></i> Raw JSON Payload
+                            </button>
+                        </li>
+                    </ul>
+                    <span class="text-xs text-muted font-monospace">Event Record #{{ log.id }}</span>
+                </div>
+
+                <div class="tab-content">
+                    <!-- 1. Clean Diff View -->
+                    <div class="tab-pane fade show active" id="tab-diff-{{ log.id }}" role="tabpanel">
+                        {% if log.diff_list %}
+                        <div class="table-responsive">
+                            <table class="table table-dark table-sm align-middle mb-0 text-xs" style="background: transparent;">
+                                <thead>
+                                    <tr class="text-muted text-uppercase text-xs border-secondary border-opacity-25">
+                                        <th style="width: 220px;">Modified Field</th>
+                                        <th>State Transition</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for d in log.diff_list %}
+                                    <tr class="border-secondary border-opacity-25">
+                                        <td class="fw-bold text-info">
+                                            <span>{% if d.label %}{{ d.label }}{% else %}{{ d.field }}{% endif %}</span>
+                                            {% if d.label and d.label != d.field %}
+                                            <span class="text-muted text-xs font-monospace ms-1 opacity-50">({{ d.field }})</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if d.is_change %}
+                                                <span class="diff-del">{{ d.old }}</span>
+                                                <i class="fas fa-arrow-right text-muted mx-2"></i>
+                                                <span class="diff-ins">{{ d.new }}</span>
+                                            {% elif d.is_addition %}
+                                                <span class="badge bg-success bg-opacity-20 text-success me-1">+ Added</span>
+                                                <span class="diff-ins">{{ d.new }}</span>
+                                            {% elif d.is_deletion %}
+                                                <span class="badge bg-danger bg-opacity-20 text-danger me-1">- Removed</span>
+                                                <span class="diff-del">{{ d.old }}</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-muted text-xs py-2 fst-italic">
+                            <i class="fas fa-info-circle me-1"></i> No discrete field modifications recorded in payload.
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 2. Raw JSON View (Side-by-Side) -->
+                    <div class="tab-pane fade" id="tab-json-{{ log.id }}" role="tabpanel">
+                        <div class="row g-2">
+                            <div class="col-12 col-md-6">
+                                <span class="text-xs text-muted fw-bold d-block mb-1">State Before:</span>
+                                <div class="json-box">
+                                    <pre class="mb-0 text-light">{{ log.before_data|default:"{}" }}</pre>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <span class="text-xs text-muted fw-bold d-block mb-1">State After:</span>
+                                <div class="json-box">
+                                    <pre class="mb-0 text-light">{{ log.after_data|default:"{}" }}</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </td>
+</tr>

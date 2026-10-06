@@ -5,73 +5,7 @@
 
 {% block extra_css %}
 {% include "dispatch/_styles.html" %}
-<style>
-    .audit-kpi-card {
-        background: var(--surface-card, #ffffff);
-        border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
-        border-radius: 14px;
-        padding: 1.1rem 1.3rem;
-        position: relative;
-        overflow: hidden;
-        box-shadow: var(--shadow-card);
-        transition: transform 0.2s ease, border-color 0.2s ease;
-    }
-    .audit-kpi-card:hover {
-        transform: translateY(-2px);
-        border-color: var(--border-divider);
-    }
-    .audit-kpi-val {
-        color: var(--text-primary, #0f172a);
-        font-weight: 800;
-        font-size: 1.75rem;
-        line-height: 1.2;
-    }
-    .audit-kpi-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-    }
-    .audit-kpi-card.purple::before { background: linear-gradient(90deg, #8b5cf6, #a855f7); }
-    .audit-kpi-card.emerald::before { background: linear-gradient(90deg, #10b981, #34d399); }
-    .audit-kpi-card.blue::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
-    .audit-kpi-card.rose::before { background: linear-gradient(90deg, #ef4444, #f87171); }
-
-    .diff-del {
-        background: rgba(239, 68, 68, 0.18);
-        color: #fca5a5;
-        padding: 2px 6px;
-        border-radius: 4px;
-        text-decoration: line-through;
-        font-family: monospace;
-        font-size: 0.76rem;
-    }
-    .diff-ins {
-        background: rgba(16, 185, 129, 0.18);
-        color: #86efac;
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-weight: 600;
-        font-family: monospace;
-        font-size: 0.76rem;
-    }
-    .json-box {
-        background: #090d16;
-        color: #e2e8f0;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 8px;
-        padding: 10px;
-        font-family: monospace;
-        font-size: 0.73rem;
-        max-height: 200px;
-        overflow-y: auto;
-    }
-    .expand-chevron {
-        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-</style>
+{% include "dispatch/audit_log/_styles.html" %}
 {% endblock %}
 
 {% block content %}
@@ -269,95 +203,7 @@
                         <td class="text-xs text-light">{{ log.summary|default:"State transition logged" }}</td>
                     </tr>
 
-                    <!-- Expandable Diff & JSON Drawer -->
-                    <tr class="collapse-row border-secondary border-opacity-25">
-                        <td colspan="6" class="p-0 border-0">
-                            <div class="collapse" id="diff-drawer-{{ log.id }}">
-                                <div class="p-3 my-2 mx-3 rounded-3 bg-dark border border-secondary border-opacity-30 shadow-sm" style="background: rgba(10,14,26,0.95) !important;">
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <ul class="nav nav-pills gap-1 p-1 bg-black bg-opacity-40 rounded-pill d-inline-flex text-xs" role="tablist">
-                                            <li class="nav-item" role="presentation">
-                                                <button class="nav-link active rounded-pill px-3 py-1 text-xs" id="tab-diff-btn-{{ log.id }}" data-bs-toggle="pill" data-bs-target="#tab-diff-{{ log.id }}" type="button" role="tab">
-                                                    <i class="fas fa-code-compare me-1"></i> Clean Field Transitions
-                                                </button>
-                                            </li>
-                                            <li class="nav-item" role="presentation">
-                                                <button class="nav-link rounded-pill px-3 py-1 text-xs text-muted" id="tab-json-btn-{{ log.id }}" data-bs-toggle="pill" data-bs-target="#tab-json-{{ log.id }}" type="button" role="tab">
-                                                    <i class="fas fa-file-code me-1"></i> Raw JSON Payload
-                                                </button>
-                                            </li>
-                                        </ul>
-                                        <span class="text-xs text-muted font-monospace">Event Record #{{ log.id }}</span>
-                                    </div>
-
-                                    <div class="tab-content">
-                                        <!-- 1. Clean Diff View -->
-                                        <div class="tab-pane fade show active" id="tab-diff-{{ log.id }}" role="tabpanel">
-                                            {% if log.diff_list %}
-                                            <div class="table-responsive">
-                                                <table class="table table-dark table-sm align-middle mb-0 text-xs" style="background: transparent;">
-                                                    <thead>
-                                                        <tr class="text-muted text-uppercase text-xs border-secondary border-opacity-25">
-                                                            <th style="width: 220px;">Modified Field</th>
-                                                            <th>State Transition</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {% for d in log.diff_list %}
-                                                        <tr class="border-secondary border-opacity-25">
-                                                            <td class="fw-bold text-info">
-                                                                <span>{% if d.label %}{{ d.label }}{% else %}{{ d.field }}{% endif %}</span>
-                                                                {% if d.label and d.label != d.field %}
-                                                                <span class="text-muted text-xs font-monospace ms-1 opacity-50">({{ d.field }})</span>
-                                                                {% endif %}
-                                                            </td>
-                                                            <td>
-                                                                {% if d.is_change %}
-                                                                    <span class="diff-del">{{ d.old }}</span>
-                                                                    <i class="fas fa-arrow-right text-muted mx-2"></i>
-                                                                    <span class="diff-ins">{{ d.new }}</span>
-                                                                {% elif d.is_addition %}
-                                                                    <span class="badge bg-success bg-opacity-20 text-success me-1">+ Added</span>
-                                                                    <span class="diff-ins">{{ d.new }}</span>
-                                                                {% elif d.is_deletion %}
-                                                                    <span class="badge bg-danger bg-opacity-20 text-danger me-1">- Removed</span>
-                                                                    <span class="diff-del">{{ d.old }}</span>
-                                                                {% endif %}
-                                                            </td>
-                                                        </tr>
-                                                        {% endfor %}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                            {% else %}
-                                            <div class="text-muted text-xs py-2 fst-italic">
-                                                <i class="fas fa-info-circle me-1"></i> No discrete field modifications recorded in payload.
-                                            </div>
-                                            {% endif %}
-                                        </div>
-
-                                        <!-- 2. Raw JSON View (Side-by-Side) -->
-                                        <div class="tab-pane fade" id="tab-json-{{ log.id }}" role="tabpanel">
-                                            <div class="row g-2">
-                                                <div class="col-12 col-md-6">
-                                                    <span class="text-xs text-muted fw-bold d-block mb-1">State Before:</span>
-                                                    <div class="json-box">
-                                                        <pre class="mb-0 text-light">{{ log.before_data|default:"{}" }}</pre>
-                                                    </div>
-                                                </div>
-                                                <div class="col-12 col-md-6">
-                                                    <span class="text-xs text-muted fw-bold d-block mb-1">State After:</span>
-                                                    <div class="json-box">
-                                                        <pre class="mb-0 text-light">{{ log.after_data|default:"{}" }}</pre>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
+                    {% include "dispatch/audit_log/_drawer_diff.html" %}
                     {% empty %}
                     <tr>
                         <td colspan="6" class="text-center py-5 text-muted">
@@ -374,21 +220,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Rotate chevron on collapse show/hide
-    document.querySelectorAll('.collapse').forEach(function(el) {
-        el.addEventListener('show.bs.collapse', function() {
-            const rowId = this.id.replace('diff-drawer-', '');
-            const ch = document.getElementById('chevron-' + rowId);
-            if (ch) ch.style.transform = 'rotate(90deg)';
-        });
-        el.addEventListener('hide.bs.collapse', function() {
-            const rowId = this.id.replace('diff-drawer-', '');
-            const ch = document.getElementById('chevron-' + rowId);
-            if (ch) ch.style.transform = 'rotate(0deg)';
-        });
-    });
-});
-</script>
+{% include "dispatch/audit_log/_scripts.html" %}
 {% endblock %}

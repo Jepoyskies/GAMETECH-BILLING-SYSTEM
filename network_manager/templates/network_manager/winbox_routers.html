@@ -1,52 +1,125 @@
 {% extends 'billing/base.html' %}
+{% load static %}
+
+{% block title %}Winbox Router Selector | Gametech{% endblock %}
+
+{% block extra_css %}
+<style>
+.winbox-router-card {
+    background: var(--surface-card, #ffffff);
+    border: 1px solid var(--border-color, rgba(0,0,0,0.08));
+    border-radius: 16px;
+    padding: 1.5rem 1.25rem;
+    text-align: center;
+    transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+}
+.winbox-router-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md, 0 10px 25px rgba(0,0,0,0.1));
+    border-color: rgba(99, 102, 241, 0.35);
+}
+.winbox-router-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
+    background: rgba(99, 102, 241, 0.12);
+    color: #6366f1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    margin-bottom: 1rem;
+    transition: transform 0.2s ease;
+}
+.winbox-router-card:hover .winbox-router-icon {
+    transform: scale(1.1);
+}
+.winbox-router-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary, #0f172a);
+    margin-bottom: 0.25rem;
+}
+.winbox-router-ip {
+    font-size: 0.8rem;
+    color: var(--text-muted, #64748b);
+    font-family: monospace;
+    margin-bottom: 1rem;
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="fa-solid fa-server me-2"></i> Winbox UI</h2>
-</div>
+<div class="container-fluid py-4 px-3 px-md-4">
 
-<div class="card shadow-sm border-0 mb-4">
-    <div class="card-header bg-white py-3">
-        <h5 class="mb-0 text-primary fw-bold"><i class="fa-solid fa-network-wired me-2"></i> Select a Router</h5>
+    <!-- Page Header -->
+    <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4" style="--section-accent: #6366f1;">
+        <div class="d-flex align-items-center gap-3">
+            <div class="gt-header-icon"><i class="fa-solid fa-server"></i></div>
+            <div>
+                <div class="gt-header-eyebrow"><i class="fa-solid fa-network-wired me-1"></i> Router Management</div>
+                <h1 class="gt-header-title">Winbox Console UI</h1>
+                <p class="gt-header-sub">Select a MikroTik physical router to manage Secrets, Profiles, and Active Sessions</p>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'device_list' %}" class="gt-btn-secondary">
+                <i class="fas fa-list me-1"></i> All Devices
+            </a>
+            <a href="{% url 'add_device' %}" class="gt-btn-primary">
+                <i class="fas fa-plus-circle me-1"></i> Add Device
+            </a>
+        </div>
     </div>
-    <div class="card-body">
-        <p class="text-muted">Choose a Mikrotik router below to open its embedded Winbox dashboard (manage Secrets, Profiles, and Active Connections).</p>
-        
-        <div class="row row-cols-1 row-cols-md-3 g-4 mt-2">
+
+    <!-- Router Grid -->
+    <div class="gt-table-card p-4 mb-4">
+        <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+            <div>
+                <h5 class="fw-bold mb-1" style="color: var(--text-primary);"><i class="fa-solid fa-network-wired text-primary me-2"></i>Select a Router</h5>
+                <p class="text-muted small mb-0">Choose a connected device below to open its real-time management dashboard.</p>
+            </div>
+            <span class="badge bg-light text-muted border">{{ devices|length }} Total Configured</span>
+        </div>
+
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-4 g-3">
             {% for device in devices %}
             <div class="col">
                 <a href="{% url 'winbox_dashboard' device.id %}" class="text-decoration-none">
-                    <div class="card h-100 border border-primary border-opacity-25 hover-shadow transition-all">
-                        <div class="card-body text-center py-4">
-                            <div class="mb-3 text-primary">
-                                <i class="fa-solid fa-router fa-3x"></i>
+                    <div class="winbox-router-card">
+                        <div>
+                            <div class="winbox-router-icon mx-auto">
+                                <i class="fa-solid fa-network-wired"></i>
                             </div>
-                            <h5 class="card-title text-dark fw-bold">{{ device.device_name }}</h5>
-                            <p class="card-text text-muted small mb-1">{{ device.ip_address }}</p>
-                            <span class="badge {% if device.health_status != 'Outage' %}bg-success{% else %}bg-danger{% endif %}">
-                                {% if device.health_status != 'Outage' %}Active{% else %}Inactive{% endif %}
+                            <div class="winbox-router-title">{{ device.device_name }}</div>
+                            <div class="winbox-router-ip">{{ device.ip_address }}</div>
+                        </div>
+                        <div>
+                            <span class="status-badge {% if device.health_status != 'Outage' %}status-badge--success{% else %}status-badge--danger{% endif %}">
+                                <i class="fas {% if device.health_status != 'Outage' %}fa-check-circle{% else %}fa-exclamation-triangle{% endif %} me-1"></i>
+                                {% if device.health_status != 'Outage' %}Active Sockets{% else %}Outage / Unreachable{% endif %}
                             </span>
                         </div>
                     </div>
                 </a>
             </div>
             {% empty %}
-            <div class="col-12 text-center py-5">
-                <p class="text-muted mb-0">No Mikrotik devices configured yet.</p>
-                <a href="{% url 'add_device' %}" class="btn btn-primary mt-3">Add Device</a>
+            <div class="col-12 text-center py-5 text-muted">
+                <i class="fa-solid fa-server fa-3x mb-3 text-secondary opacity-50 d-block"></i>
+                <h6 class="fw-bold">No MikroTik Devices Configured</h6>
+                <p class="small text-muted mb-3">Add a physical router to unlock Winbox secret and bandwidth management.</p>
+                <a href="{% url 'add_device' %}" class="gt-btn-primary">
+                    <i class="fas fa-plus-circle me-1"></i> Add First Device
+                </a>
             </div>
             {% endfor %}
         </div>
     </div>
-</div>
 
-<style>
-.hover-shadow:hover {
-    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
-    transform: translateY(-2px);
-}
-.transition-all {
-    transition: all .2s ease-in-out;
-}
-</style>
+</div>
 {% endblock %}

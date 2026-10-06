@@ -1,0 +1,80 @@
+  <!-- Quality Bounce Patterns Section -->
+  <div class="row g-3 mb-4 animate-fade-in animate-delay-2">
+    <div class="col-12 col-lg-6">
+      <div class="gt-table-card h-100">
+        <div class="gt-table-toolbar">
+          <div class="gt-table-toolbar-title">
+            <i class="fas fa-users-viewfinder text-primary"></i> Bounce Patterns by User
+          </div>
+        </div>
+        <div class="table-responsive p-0">
+          <table class="table gt-table align-middle mb-0">
+            <thead>
+              <tr>
+                <th class="ps-3">Team Member</th>
+                <th class="text-center">Total Bounces Triggered</th>
+                <th class="pe-3 text-end">Action Role</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for u in user_patterns %}
+              <tr>
+                <td class="ps-3 fw-semibold" style="color: var(--text-primary);">
+                  {{ u.bounced_by__first_name }} {{ u.bounced_by__last_name|default:u.bounced_by__username }}
+                </td>
+                <td class="text-center">
+                  <span class="status-badge status-badge--warning">
+                    {{ u.count }} bounce{{ u.count|pluralize }}
+                  </span>
+                </td>
+                <td class="pe-3 text-end text-muted" style="font-size: 0.8rem;">Quality Reviewer</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="3" class="text-center py-4 text-muted">No bounce history records found.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-6">
+      <div class="gt-table-card h-100">
+        <div class="gt-table-toolbar">
+          <div class="gt-table-toolbar-title">
+            <i class="fas fa-chart-pie text-info"></i> Bounce Breakdown by Stage &amp; Reason Type
+          </div>
+        </div>
+        <div class="p-3">
+          <div class="mb-3">
+            <span class="text-uppercase text-muted fw-bold" style="font-size: 0.72rem; letter-spacing: 0.5px;">By Pipeline Transition</span>
+            <div class="d-flex flex-wrap gap-2 mt-2">
+              {% for s in stage_patterns %}
+              <div class="p-2 rounded-2 flex-grow-1" style="background: var(--surface-subtle); border: 1px solid var(--border-subtle);">
+                <div class="text-muted" style="font-size: 0.72rem;">{{ s.from_stage }} &rarr; {{ s.to_stage }}</div>
+                <div class="fw-bold fs-6" style="color: var(--gt-gold, #F9B233); font-family: 'Montserrat', sans-serif;">{{ s.count }} bounce(s)</div>
+              </div>
+              {% empty %}
+              <span class="text-muted" style="font-size: 0.8rem;">No stage transitions recorded yet.</span>
+              {% endfor %}
+            </div>
+          </div>
+          <div>
+            <span class="text-uppercase text-muted fw-bold" style="font-size: 0.72rem; letter-spacing: 0.5px;">By Action Type</span>
+            <div class="d-flex flex-wrap gap-2 mt-2">
+              {% for t in type_patterns %}
+              <div class="p-2 rounded-2 flex-grow-1" style="background: var(--surface-subtle); border: 1px solid var(--border-subtle);">
+                <div class="text-muted" style="font-size: 0.72rem;">{{ t.bounce_type|title }}</div>
+                <div class="fw-bold fs-6 text-warning" style="font-family: 'Montserrat', sans-serif;">{{ t.count }} event(s)</div>
+              </div>
+              {% empty %}
+              <span class="text-muted" style="font-size: 0.8rem;">No rejection action types recorded.</span>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>

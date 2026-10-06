@@ -1,0 +1,52 @@
+<script>
+function fetchDowndetectorData() {
+    const icon = document.getElementById('refreshIcon');
+    if (icon) icon.classList.add('fa-spin');
+
+    fetch("{% url 'api_downdetector_data' %}")
+        .then(r => r.json())
+        .then(data => {
+            if (data && data.services) {
+                data.services.forEach(s => {
+                    let card = document.getElementById('card-' + s.id);
+                    let badge = document.getElementById('badge-' + s.id);
+                    let latency = document.getElementById('latency-' + s.id);
+                    let checked = document.getElementById('checked-' + s.id);
+                    
+                    if (card) {
+                        card.className = 'service-card status-' + s.status;
+                    }
+                    if (badge) {
+                        badge.className = 'status-badge status-' + s.status;
+                        let iconHtml = '<i class="fas fa-check-circle me-1"></i>';
+                        if (s.status === 'Degraded') iconHtml = '<i class="fas fa-exclamation-triangle me-1"></i>';
+                        else if (s.status === 'Down') iconHtml = '<i class="fas fa-times-circle me-1"></i>';
+                        badge.innerHTML = iconHtml + ' ' + s.status;
+                    }
+                    if (latency) {
+                        latency.innerHTML = s.latency_ms !== null ? s.latency_ms + '<small>ms</small>' : '-- <small>ms</small>';
+                    }
+                    if (checked) {
+                        checked.innerText = s.last_checked || '--';
+                    }
+                });
+            }
+            const lastRefreshed = document.getElementById('lastRefreshedAt');
+            if (lastRefreshed) {
+                const now = new Date();
+                lastRefreshed.innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            }
+        })
+        .catch(err => console.error("Error fetching downdetector data:", err))
+        .finally(() => {
+            if (icon) icon.classList.remove('fa-spin');
+        });
+}
+
+function triggerManualRefresh() {
+    fetchDowndetectorData();
+}
+
+// Auto refresh every 30 seconds
+setInterval(fetchDowndetectorData, 30000);
+</script>

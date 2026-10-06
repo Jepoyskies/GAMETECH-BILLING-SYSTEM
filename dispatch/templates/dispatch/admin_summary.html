@@ -1,10 +1,13 @@
 {% extends "billing/base.html" %}
 {% load static %}
 
-{% block title %}Quality Assurance & Bounce Patterns | Gametech Dispatch{% endblock %}
+{% block title %}Quality Assurance &amp; Bounce Patterns | Gametech Dispatch{% endblock %}
+
+{% block extra_css %}
+{% include "dispatch/_styles.html" %}
+{% endblock %}
 
 {% block content %}
-{% include "dispatch/_styles.html" %}
 <div class="container-fluid px-3 px-md-4 py-4">
 
   <!-- Header -->
@@ -137,239 +140,15 @@
     </div>
   </div>
 
-  <!-- Quality Bounce Patterns Section -->
-  <div class="row g-3 mb-4 animate-fade-in animate-delay-2">
-    <div class="col-12 col-lg-6">
-      <div class="gt-table-card h-100">
-        <div class="gt-table-toolbar">
-          <div class="gt-table-toolbar-title">
-            <i class="fas fa-users-viewfinder text-primary"></i> Bounce Patterns by User
-          </div>
-        </div>
-        <div class="table-responsive p-0">
-          <table class="table gt-table align-middle mb-0">
-            <thead>
-              <tr>
-                <th class="ps-3">Team Member</th>
-                <th class="text-center">Total Bounces Triggered</th>
-                <th class="pe-3 text-end">Action Role</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for u in user_patterns %}
-              <tr>
-                <td class="ps-3 fw-semibold" style="color: var(--text-primary);">
-                  {{ u.bounced_by__first_name }} {{ u.bounced_by__last_name|default:u.bounced_by__username }}
-                </td>
-                <td class="text-center">
-                  <span class="status-badge status-badge--warning">
-                    {{ u.count }} bounce{{ u.count|pluralize }}
-                  </span>
-                </td>
-                <td class="pe-3 text-end text-muted" style="font-size: 0.8rem;">Quality Reviewer</td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="3" class="text-center py-4 text-muted">No bounce history records found.</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+  {% include "dispatch/admin_summary/_patterns.html" %}
 
-    <div class="col-12 col-lg-6">
-      <div class="gt-table-card h-100">
-        <div class="gt-table-toolbar">
-          <div class="gt-table-toolbar-title">
-            <i class="fas fa-chart-pie text-info"></i> Bounce Breakdown by Stage &amp; Reason Type
-          </div>
-        </div>
-        <div class="p-3">
-          <div class="mb-3">
-            <span class="text-uppercase text-muted fw-bold" style="font-size: 0.72rem; letter-spacing: 0.5px;">By Pipeline Transition</span>
-            <div class="d-flex flex-wrap gap-2 mt-2">
-              {% for s in stage_patterns %}
-              <div class="p-2 rounded-2 flex-grow-1" style="background: var(--surface-subtle); border: 1px solid var(--border-subtle);">
-                <div class="text-muted" style="font-size: 0.72rem;">{{ s.from_stage }} &rarr; {{ s.to_stage }}</div>
-                <div class="fw-bold fs-6" style="color: var(--gt-gold, #F9B233); font-family: 'Montserrat', sans-serif;">{{ s.count }} bounce(s)</div>
-              </div>
-              {% empty %}
-              <span class="text-muted" style="font-size: 0.8rem;">No stage transitions recorded yet.</span>
-              {% endfor %}
-            </div>
-          </div>
-          <div>
-            <span class="text-uppercase text-muted fw-bold" style="font-size: 0.72rem; letter-spacing: 0.5px;">By Action Type</span>
-            <div class="d-flex flex-wrap gap-2 mt-2">
-              {% for t in type_patterns %}
-              <div class="p-2 rounded-2 flex-grow-1" style="background: var(--surface-subtle); border: 1px solid var(--border-subtle);">
-                <div class="text-muted" style="font-size: 0.72rem;">{{ t.bounce_type|title }}</div>
-                <div class="fw-bold fs-6 text-warning" style="font-family: 'Montserrat', sans-serif;">{{ t.count }} event(s)</div>
-              </div>
-              {% empty %}
-              <span class="text-muted" style="font-size: 0.8rem;">No type breakdown recorded yet.</span>
-              {% endfor %}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  {% include "dispatch/admin_summary/_same_person_audit.html" %}
 
-  <!-- Same-Person Audit Flags Table -->
-  <div class="gt-table-card mb-4 animate-fade-in animate-delay-2">
-    <div class="gt-table-toolbar">
-      <div>
-        <div class="gt-table-toolbar-title">
-          <i class="fas fa-user-shield text-warning"></i> Same-Person Rule Audit Flags (Spec #10)
-        </div>
-        <div class="text-muted" style="font-size: 0.75rem;">Jobs where a single staff member executed 2 or more lifecycle stages.</div>
-      </div>
-      <span class="status-badge status-badge--warning">{{ same_person_tickets|length }} flagged</span>
-    </div>
-    <div class="table-responsive p-0">
-      <table class="table gt-table align-middle mb-0">
-        <thead>
-          <tr>
-            <th class="ps-3">Ticket</th>
-            <th>Client / Subscriber</th>
-            <th>Ticket Type</th>
-            <th>Status</th>
-            <th>Stages Handled</th>
-            <th class="pe-3 text-end">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for t in same_person_tickets %}
-          <tr>
-            <td class="ps-3 font-monospace fw-bold" style="color: var(--gt-gold, #F9B233);">{{ t.ticket_number }}</td>
-            <td class="fw-semibold" style="color: var(--text-primary);">{{ t.client_name }}</td>
-            <td><span class="status-badge status-badge--neutral">{{ t.get_ticket_type_display }}</span></td>
-            <td><span class="status-badge status-badge--info">{{ t.get_status_display }}</span></td>
-            <td>
-              <span class="text-muted" style="font-size: 0.75rem;">
-                {% for s in t.same_person_stages %}<span class="status-badge status-badge--neutral me-1">{{ s }}</span>{% empty %}Multi-stage overlap{% endfor %}
-              </span>
-            </td>
-            <td class="pe-3 text-end">
-              <a href="{% url 'dispatch_queue' %}?q={{ t.ticket_number }}" class="gt-btn-secondary gt-btn-sm">View Job</a>
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="6" class="text-center py-4 text-muted">
-              <i class="fas fa-check-circle text-success me-1"></i> No same-person policy discrepancies detected.
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Unreachable Returns Table (Tracked Separately) -->
-  <div class="gt-table-card mb-4 animate-fade-in animate-delay-3">
-    <div class="gt-table-toolbar">
-      <div>
-        <div class="gt-table-toolbar-title">
-          <i class="fas fa-phone-slash text-info"></i> Unreachable Returns (Tracked Separately per Spec #12 &amp; #17)
-        </div>
-        <div class="text-muted" style="font-size: 0.75rem;">Client contact failure after 3 attempts or refusal &bull; Status: Closed - Not Installed.</div>
-      </div>
-      <span class="status-badge status-badge--info">{{ unreachable_tickets|length }} tickets</span>
-    </div>
-    <div class="table-responsive p-0">
-      <table class="table gt-table align-middle mb-0">
-        <thead>
-          <tr>
-            <th class="ps-3">Ticket</th>
-            <th>Client / Phone</th>
-            <th>Technician</th>
-            <th class="text-center">Attempts</th>
-            <th>Close Reason</th>
-            <th>Agent Informed</th>
-            <th class="pe-3 text-end">Reopen Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for ut in unreachable_tickets %}
-          <tr>
-            <td class="ps-3 font-monospace fw-bold" style="color: var(--gt-gold, #F9B233);">{{ ut.ticket_number }}</td>
-            <td>
-              <div class="fw-semibold" style="color: var(--text-primary);">{{ ut.client_name }}</div>
-              <div class="text-muted font-monospace" style="font-size: 0.75rem;">{{ ut.contact_number|default:"No phone" }}</div>
-            </td>
-            <td>
-              {% for tech in ut.technicians.all %}
-              <span class="status-badge status-badge--neutral">{{ tech.name }}</span>
-              {% empty %}
-              <span class="text-muted">&mdash;</span>
-              {% endfor %}
-            </td>
-            <td class="text-center">
-              <span class="status-badge status-badge--danger">{{ ut.contact_attempt_count }}/3</span>
-            </td>
-            <td>
-              <span class="status-badge status-badge--neutral">{{ ut.close_reason|default:ut.get_cancellation_reason_display|default:"Unreachable" }}</span>
-              {% if ut.close_reason_note %}
-              <div class="text-muted text-truncate" style="max-width: 180px; font-size: 0.72rem;">{{ ut.close_reason_note }}</div>
-              {% endif %}
-            </td>
-            <td>
-              {% if ut.client_agent_informed %}
-              <span class="status-badge status-badge--success"><i class="fas fa-check me-1"></i>Informed</span>
-              {% else %}
-              <span class="status-badge status-badge--warning"><i class="fas fa-clock me-1"></i>Pending</span>
-              {% endif %}
-            </td>
-            <td class="pe-3 text-end">
-              {% if ut.customer %}
-              <button type="button" class="gt-btn-primary gt-btn-sm" onclick="reopenCustomer('{{ ut.customer.id }}', '{{ ut.client_name }}')">
-                <i class="fas fa-rotate-right me-1"></i> Reopen &amp; Checklist
-              </button>
-              {% else %}
-              <span class="text-muted">&mdash;</span>
-              {% endif %}
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="7" class="text-center py-4 text-muted">
-              No unreachable returned job orders recorded.
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
+  {% include "dispatch/admin_summary/_unreachable_returns.html" %}
 
 </div>
-
-<script>
-function reopenCustomer(customerId, clientName) {
-  if (!confirm(`Reopen onboarding for ${clientName}? This will reset installation status to pending and launch the checklist.`)) return;
-  fetch(`/dispatch/api/customers/${customerId}/reopen-onboarding/`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}'
-    }
-  })
-  .then(r => r.json())
-  .then(data => {
-    if (data.success) {
-      alert(data.message);
-      if (data.redirect_url) window.location.href = data.redirect_url;
-      else window.location.reload();
-    } else {
-      alert(data.error || 'Failed to reopen customer.');
-    }
-  })
-  .catch(err => alert('Network error: ' + err));
-}
-</script>
 {% endblock %}
 
+{% block extra_js %}
+{% include "dispatch/admin_summary/_scripts.html" %}
+{% endblock %}

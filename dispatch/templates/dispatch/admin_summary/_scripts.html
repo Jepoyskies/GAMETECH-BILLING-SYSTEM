@@ -1,0 +1,23 @@
+<script>
+function reopenCustomer(customerId, clientName) {
+  if (!confirm(`Reopen onboarding for ${clientName}? This will reset installation status to pending and launch the checklist.`)) return;
+  fetch(`/dispatch/api/customers/${customerId}/reopen-onboarding/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}'
+    }
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      alert(data.message);
+      if (data.redirect_url) window.location.href = data.redirect_url;
+      else window.location.reload();
+    } else {
+      alert(data.error || 'Failed to reopen customer.');
+    }
+  })
+  .catch(err => alert('Network error: ' + err));
+}
+</script>

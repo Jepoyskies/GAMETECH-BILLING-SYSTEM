@@ -1,0 +1,50 @@
+  <!-- Same-Person Audit Flags Table -->
+  <div class="gt-table-card mb-4 animate-fade-in animate-delay-2">
+    <div class="gt-table-toolbar">
+      <div>
+        <div class="gt-table-toolbar-title">
+          <i class="fas fa-user-shield text-warning"></i> Same-Person Rule Audit Flags (Spec #10)
+        </div>
+        <div class="text-muted" style="font-size: 0.75rem;">Jobs where a single staff member executed 2 or more lifecycle stages.</div>
+      </div>
+      <span class="status-badge status-badge--warning">{{ same_person_tickets|length }} flagged</span>
+    </div>
+    <div class="table-responsive p-0">
+      <table class="table gt-table align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="ps-3">Ticket</th>
+            <th>Client / Subscriber</th>
+            <th>Ticket Type</th>
+            <th>Status</th>
+            <th>Stages Handled</th>
+            <th class="pe-3 text-end">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in same_person_tickets %}
+          <tr>
+            <td class="ps-3 font-monospace fw-bold" style="color: var(--gt-gold, #F9B233);">{{ t.ticket_number }}</td>
+            <td class="fw-semibold" style="color: var(--text-primary);">{{ t.client_name }}</td>
+            <td><span class="status-badge status-badge--neutral">{{ t.get_ticket_type_display }}</span></td>
+            <td><span class="status-badge status-badge--info">{{ t.get_status_display }}</span></td>
+            <td>
+              <span class="text-muted" style="font-size: 0.75rem;">
+                {% for s in t.same_person_stages %}<span class="status-badge status-badge--neutral me-1">{{ s }}</span>{% empty %}Multi-stage overlap{% endfor %}
+              </span>
+            </td>
+            <td class="pe-3 text-end">
+              <a href="{% url 'dispatch_queue' %}?q={{ t.ticket_number }}" class="gt-btn-secondary gt-btn-sm">View Job</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center py-4 text-muted">
+              <i class="fas fa-check-circle text-success me-1"></i> No same-person policy discrepancies detected.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>

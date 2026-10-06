@@ -1,0 +1,76 @@
+  <!-- Unreachable Returns Table (Tracked Separately) -->
+  <div class="gt-table-card mb-4 animate-fade-in animate-delay-3">
+    <div class="gt-table-toolbar">
+      <div>
+        <div class="gt-table-toolbar-title">
+          <i class="fas fa-phone-slash text-info"></i> Unreachable Returns (Tracked Separately per Spec #12 &amp; #17)
+        </div>
+        <div class="text-muted" style="font-size: 0.75rem;">Client contact failure after 3 attempts or refusal &bull; Status: Closed - Not Installed.</div>
+      </div>
+      <span class="status-badge status-badge--info">{{ unreachable_tickets|length }} tickets</span>
+    </div>
+    <div class="table-responsive p-0">
+      <table class="table gt-table align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="ps-3">Ticket</th>
+            <th>Client / Phone</th>
+            <th>Technician</th>
+            <th class="text-center">Attempts</th>
+            <th>Close Reason</th>
+            <th>Agent Informed</th>
+            <th class="pe-3 text-end">Reopen Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ut in unreachable_tickets %}
+          <tr>
+            <td class="ps-3 font-monospace fw-bold" style="color: var(--gt-gold, #F9B233);">{{ ut.ticket_number }}</td>
+            <td>
+              <div class="fw-semibold" style="color: var(--text-primary);">{{ ut.client_name }}</div>
+              <div class="text-muted font-monospace" style="font-size: 0.75rem;">{{ ut.contact_number|default:"No phone" }}</div>
+            </td>
+            <td>
+              {% for tech in ut.technicians.all %}
+              <span class="status-badge status-badge--neutral">{{ tech.name }}</span>
+              {% empty %}
+              <span class="text-muted">&mdash;</span>
+              {% endfor %}
+            </td>
+            <td class="text-center">
+              <span class="status-badge status-badge--danger">{{ ut.contact_attempt_count }}/3</span>
+            </td>
+            <td>
+              <span class="status-badge status-badge--neutral">{{ ut.close_reason|default:ut.get_cancellation_reason_display|default:"Unreachable" }}</span>
+              {% if ut.close_reason_note %}
+              <div class="text-muted text-truncate" style="max-width: 180px; font-size: 0.72rem;">{{ ut.close_reason_note }}</div>
+              {% endif %}
+            </td>
+            <td>
+              {% if ut.client_agent_informed %}
+              <span class="status-badge status-badge--success"><i class="fas fa-check me-1"></i>Informed</span>
+              {% else %}
+              <span class="status-badge status-badge--warning"><i class="fas fa-clock me-1"></i>Pending</span>
+              {% endif %}
+            </td>
+            <td class="pe-3 text-end">
+              {% if ut.customer %}
+              <button type="button" class="gt-btn-primary gt-btn-sm" onclick="reopenCustomer('{{ ut.customer.id }}', '{{ ut.client_name }}')">
+                <i class="fas fa-rotate-right me-1"></i> Reopen &amp; Checklist
+              </button>
+              {% else %}
+              <span class="text-muted">&mdash;</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center py-4 text-muted">
+              No unreachable returned job orders recorded.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>

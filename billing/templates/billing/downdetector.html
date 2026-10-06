@@ -3,78 +3,11 @@
 
 {% block title %}Downdetector (NOC) | Gametech{% endblock %}
 
+{% block extra_css %}
+{% include "billing/downdetector/_styles.html" %}
+{% endblock %}
+
 {% block content %}
-<style>
-  .service-card {
-    background: var(--gt-card-bg, #ffffff);
-    border: 1px solid var(--gt-border, rgba(0, 0, 0, 0.08));
-    border-top: 4px solid #94a3b8;
-    border-radius: 16px;
-    padding: 1.25rem;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-  }
-  .dark-mode .service-card {
-    background: #1e293b;
-    border-color: rgba(255, 255, 255, 0.08);
-  }
-  .service-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
-  }
-  .service-card.status-Up {
-    border-top-color: #10b981;
-  }
-  .service-card.status-Degraded {
-    border-top-color: #f59e0b;
-  }
-  .service-card.status-Down {
-    border-top-color: #ef4444;
-  }
-  .service-name {
-    font-weight: 700;
-    font-size: 1.15rem;
-    margin-bottom: 2px;
-  }
-  .service-type {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--gt-text-subtle, #94a3b8);
-    margin-bottom: 12px;
-  }
-  .latency-val {
-    font-size: 1.6rem;
-    font-family: monospace;
-    font-weight: 700;
-    margin-top: 15px;
-  }
-  .latency-val small {
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: var(--gt-text-subtle, #94a3b8);
-    margin-left: 2px;
-  }
-  .status-badge.status-Up {
-    background: rgba(16, 185, 129, 0.15);
-    color: #34d399;
-    border: 1px solid rgba(16, 185, 129, 0.3);
-  }
-  .status-badge.status-Degraded {
-    background: rgba(245, 158, 11, 0.15);
-    color: #fbbf24;
-    border: 1px solid rgba(245, 158, 11, 0.3);
-  }
-  .status-badge.status-Down {
-    background: rgba(239, 68, 68, 0.15);
-    color: #f87171;
-    border: 1px solid rgba(239, 68, 68, 0.3);
-  }
-</style>
 
 <div class="container-fluid py-4 px-3 px-md-4">
 
@@ -189,56 +122,8 @@
 
 </div>
 
-<script>
-function fetchDowndetectorData() {
-    const icon = document.getElementById('refreshIcon');
-    if (icon) icon.classList.add('fa-spin');
+{% endblock %}
 
-    fetch("{% url 'api_downdetector_data' %}")
-        .then(r => r.json())
-        .then(data => {
-            if (data && data.services) {
-                data.services.forEach(s => {
-                    let card = document.getElementById('card-' + s.id);
-                    let badge = document.getElementById('badge-' + s.id);
-                    let latency = document.getElementById('latency-' + s.id);
-                    let checked = document.getElementById('checked-' + s.id);
-                    
-                    if (card) {
-                        card.className = 'service-card status-' + s.status;
-                    }
-                    if (badge) {
-                        badge.className = 'status-badge status-' + s.status;
-                        let iconHtml = '<i class="fas fa-check-circle me-1"></i>';
-                        if (s.status === 'Degraded') iconHtml = '<i class="fas fa-exclamation-triangle me-1"></i>';
-                        else if (s.status === 'Down') iconHtml = '<i class="fas fa-times-circle me-1"></i>';
-                        badge.innerHTML = iconHtml + ' ' + s.status;
-                    }
-                    if (latency) {
-                        latency.innerHTML = s.latency_ms !== null ? s.latency_ms + '<small>ms</small>' : '-- <small>ms</small>';
-                    }
-                    if (checked) {
-                        checked.innerText = s.last_checked || '--';
-                    }
-                });
-            }
-            const lastRefreshed = document.getElementById('lastRefreshedAt');
-            if (lastRefreshed) {
-                const now = new Date();
-                lastRefreshed.innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            }
-        })
-        .catch(err => console.error("Error fetching downdetector data:", err))
-        .finally(() => {
-            if (icon) icon.classList.remove('fa-spin');
-        });
-}
-
-function triggerManualRefresh() {
-    fetchDowndetectorData();
-}
-
-// Auto refresh every 30 seconds
-setInterval(fetchDowndetectorData, 30000);
-</script>
+{% block extra_js %}
+{% include "billing/downdetector/_scripts.html" %}
 {% endblock %}
