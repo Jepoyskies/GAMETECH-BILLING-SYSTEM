@@ -1,0 +1,340 @@
+<style>
+/* =========================================================
+   CUSTOMER SUBSCRIPTIONS — Design System Harmonization
+   Section Accent: Blue (#3b82f6)
+   ========================================================= */
+:root {
+  --section-accent: #3b82f6;
+  --color-primary: #3533cd;
+}
+
+.subs-page-wrap {
+  padding: 1.5rem 1.75rem;
+}
+
+@media (max-width: 768px) {
+  .subs-page-wrap {
+    padding: 1rem 0.75rem;
+  }
+}
+
+/* ── Live Sync Badge ── */
+.badge-live-sync {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  color: var(--text-muted);
+  border-radius: 20px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.76rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.badge-live-sync .live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+  animation: livePulse 1.8s infinite ease-in-out;
+}
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
+}
+
+/* ── Responsive KPI Grid (Equal-width, min 150px, wraps to 2 col on mobile) ── */
+.subs-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  width: 100%;
+}
+@media (max-width: 576px) {
+  .subs-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.subs-kpi {
+  background: var(--surface-card) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  position: relative;
+  overflow: hidden;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+}
+.subs-kpi:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--section-accent) 40%, transparent) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+.subs-kpi.active-filter {
+  border-color: var(--kpi-accent, var(--section-accent)) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--kpi-accent, var(--section-accent)) 25%, transparent) !important;
+  background: var(--surface-subtle) !important;
+}
+
+/* Icon tile tinted ONLY by status — no bottom bars */
+.subs-kpi-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  margin-bottom: 0.65rem;
+  background: var(--kpi-icon-bg, rgba(59, 130, 246, 0.1));
+  color: var(--kpi-icon-color, #3b82f6);
+  border: 1px solid var(--kpi-icon-border, rgba(59, 130, 246, 0.2));
+  flex-shrink: 0;
+}
+.subs-kpi-val {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 0.2rem;
+}
+.subs-kpi-lbl {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 0.2rem;
+}
+.subs-kpi-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.25;
+}
+
+/* ── Table Card & Toolbar ── */
+.subs-table-card {
+  background: var(--surface-card) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 14px;
+  overflow: visible;
+  box-shadow: var(--shadow-card, 0 4px 18px rgba(0,0,0,0.06));
+}
+.subs-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.subs-table-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.subs-table-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.subs-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+}
+.subs-search-wrap {
+  position: relative;
+  flex: 1 1 320px;
+  min-width: 320px;
+}
+.subs-search-wrap .sico {
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  pointer-events: none;
+}
+.subs-search-wrap input {
+  width: 100%;
+  height: 40px;
+  padding: 0 1rem 0 2.3rem;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  transition: all 0.15s ease;
+}
+.subs-search-wrap input:focus {
+  outline: none;
+  border-color: var(--section-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--section-accent) 20%, transparent);
+}
+.subs-sel {
+  height: 40px;
+  padding: 0 2.2rem 0 0.85rem;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-width: 150px;
+}
+.subs-sel:focus {
+  outline: none;
+  border-color: var(--section-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--section-accent) 20%, transparent);
+}
+.btn-subs-reset {
+  height: 40px;
+  padding: 0 1rem;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-subs-reset:hover {
+  color: var(--text-primary);
+  border-color: var(--section-accent);
+}
+
+/* ── Table Styling (16-20px vertical padding, 24px at edges) ── */
+.subs-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.subs-th {
+  padding: 0.75rem 12px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  background: var(--surface-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.subs-th a {
+  color: inherit;
+  text-decoration: none;
+}
+.subs-th a:hover {
+  color: var(--text-primary);
+}
+.subs-td {
+  padding: 18px 12px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 14px;
+}
+.subs-th:first-child, .subs-td:first-child {
+  padding-left: 24px;
+  width: 48px;
+  text-align: center;
+}
+.subs-th:last-child, .subs-td:last-child {
+  padding-right: 24px;
+  text-align: right;
+}
+.subs-row {
+  transition: background-color 0.12s ease;
+}
+.subs-row:hover td {
+  background-color: var(--surface-subtle);
+}
+
+/* ── Action Buttons ── */
+.btn-pay-outline {
+  height: 32px;
+  padding: 0 0.85rem;
+  border: 1px solid var(--color-primary, #3533cd);
+  color: var(--color-primary, #3533cd) !important;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  text-decoration: none !important;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.btn-pay-outline:hover {
+  background: var(--color-primary, #3533cd);
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+.subs-more-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-subtle);
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.subs-more-btn:hover {
+  border-color: var(--section-accent);
+  color: var(--text-primary);
+  background: var(--surface-hover);
+}
+
+/* ── Loading state ── */
+.subs-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+@media (max-width: 768px) {
+  .subs-toolbar {
+    padding: 1rem;
+    gap: 12px;
+  }
+  .subs-search-wrap {
+    min-width: 100%;
+  }
+  .subs-sel {
+    flex: 1 1 calc(50% - 6px);
+    min-width: unset;
+  }
+}
+</style>
