@@ -1,4 +1,4 @@
-"""Regression tests for the two billing-axis bugs found during cutover QA.
+﻿"""Regression tests for the two billing-axis bugs found during cutover QA.
 
 Bug 1: payment_status keyed off status, so an applicant in 'pending' with a
        live expiry was badged Unpaid while demonstrably in date.
@@ -19,20 +19,42 @@ from django.utils import timezone
 from billing.models import Customer
 
 
+def _counter():
+    n = 0
+    while True:
+        n += 1
+        yield n
+
+
+_seq = _counter()
+
+
 def make_customer(**kw):
     now = timezone.now()
+    username = kw.pop("pppoe_username", None) or "test_sub_%d" % next(_seq)
     defaults = {
         "full_name": "Test Subscriber",
-        "pppoe_username": "test_sub",
         "pppoe_password": "secret123",
         "status": "active",
         "expires_at": now + timedelta(days=30),
     }
     defaults.update(kw)
-    defaults.pop("pppoe_username", None)
-    return Customer.objects.create(
-        pppoe_username=defaults.pop("pppoe_username", "test_sub"), **defaults
-    )
+    status = defaults.get("status")
+
+    # `Customer.save()` refuses to create or move an account to
+    # 'Pending Installation' unless an agreed ChecklistConfirmation exists for
+    # that phone. That guard is correct business logic -- it stops a line being
+    # installed for someone who never agreed -- and it postdates this test. The
+    # test is about the BILLING axis, so it satisfies the guard the legitimate
+    # way rather than weakening it.
+    if status == "pending":
+        from billing.models import ChecklistConfirmation
+
+        ChecklistConfirmation.objects.create(
+            applicant_phone=defaults.get("phone") or "",`r`n            outcome="agreed",`r`n            confirmed_by="test",
+        )
+
+    return Customer.objects.create(pppoe_username=username, **defaults)
 
 
 class PaymentStatusTests(TestCase):
