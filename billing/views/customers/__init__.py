@@ -1,4 +1,5 @@
 from .list import *
+from .table import *
 from .crud import *
 from .actions import *
 from .messaging import *
