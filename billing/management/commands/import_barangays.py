@@ -201,11 +201,33 @@ class Command(BaseCommand):
                 self.stdout.write("   removing placeholder barangay %r" % b.name)
                 b.delete()
 
-            lookup = {}
+            # Build the lookup by scanning, NOT with get_or_create.
+            #
+            # The table already held "Balulang" as a placeholder AND the legacy
+            # list has BALULANG, and get_or_create(name__iexact=...) calls get()
+            # with a __lookup, which raises MultipleObjectsReturned rather than
+            # returning one row. Indexing by upper-cased name sidesteps the whole
+            # class of problem and picks a single winner if duplicates exist.
+            lookup, dupes = {}, []
+            for b in Barangay.objects.all().order_by("id"):
+                key = b.name.strip().upper()
+                if key in lookup:
+                    dupes.append(b.name)
+                    continue
+                lookup[key] = b
+            if dupes:
+                self.stdout.write(
+                    self.style.WARNING(
+                        "   note: duplicate-named barangays ignored: %s"
+                        % ", ".join(sorted(set(dupes)))))
+
             for name in legacy.values():
-                obj, _ = Barangay.objects.get_or_create(
-                    name__iexact=name, defaults={"name": name})
-                lookup[name.upper()] = obj
+                key = name.upper()
+                if key in lookup:
+                    continue
+                obj = Barangay.objects.create(name=name)
+                lookup[key] = obj
+                self.stdout.write("   created barangay %r" % name)
 
             by_user = {c.pppoe_username: c for c in Customer.objects.all()}
             written = 0
