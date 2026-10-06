@@ -293,6 +293,14 @@ def sync_manager(request, device_id):
         review_page_obj = _paginator.page(1)
     needs_review_page = list(review_page_obj.object_list)
 
+    _pair_paginator = Paginator(synced, PAIR_PAGE_SIZE)
+    pair_page_number = request.GET.get("pair_page") or 1
+    try:
+        pair_page_obj = _pair_paginator.page(pair_page_number)
+    except Exception:
+        pair_page_obj = _pair_paginator.page(1)
+    synced_page = list(pair_page_obj.object_list)
+
     context = {
         'device': device,
         'clean_orphans': clean_orphans,
@@ -326,6 +334,9 @@ def sync_manager(request, device_id):
         'review_page': review_page_obj,
         'review_rows': needs_review_page,
         'review_page_size': REVIEW_PAGE_SIZE,
+        'pair_page': pair_page_obj,
+        'synced_page': synced_page,
+        'pair_page_size': PAIR_PAGE_SIZE,
     }
     
     return render(request, 'network_manager/sync_manager.html', context)
@@ -377,6 +388,9 @@ REASON_ORDER = [
 # change to verify than server-side slicing. The chips already filter, and
 # paging a filtered set of at most one page is the honest behaviour here.
 REVIEW_PAGE_SIZE = 100
+# Same reasoning for the Match & Pair card, which held 944 rows. Together the
+# two cards were 6.5 MB; slicing both brings the page to a usable size.
+PAIR_PAGE_SIZE = 100
 
 
 def reason_counts(rows):

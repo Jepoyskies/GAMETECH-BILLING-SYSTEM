@@ -95,7 +95,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for user in synced %}
+                    {% for user in synced_page %}
                     <tr>
                         <td>
                             {% if user.customer %}
@@ -196,5 +196,38 @@
                 </tbody>
             </table>
         </form>
+
+        {% comment %}
+          Server-side paging, same reason as the review queue: this card held
+          944 rows. The card header count and every chip above still describe
+          the WHOLE queue -- only the rendered rows are a page.
+        {% endcomment %}
+        {% if pair_page.paginator.num_pages > 1 %}
+        <nav class="d-flex flex-wrap align-items-center justify-content-between gap-2 px-3 py-2 border-top" aria-label="Pairing queue pages">
+            <span class="text-muted small">
+                Page {{ pair_page.number }} of {{ pair_page.paginator.num_pages }}
+                &mdash; showing {{ synced_page|length }} of {{ count_synced }} accounts
+            </span>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item {% if not pair_page.has_previous %}disabled{% endif %}">
+                    <a class="page-link" href="?pair_page={% if pair_page.has_previous %}{{ pair_page.previous_page_number }}{% else %}1{% endif %}#queue-pair">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </a>
+                </li>
+                {% for pn in pair_page.paginator.page_range %}
+                    {% if pn == pair_page.number %}
+                    <li class="page-item active" aria-current="page"><span class="page-link">{{ pn }}</span></li>
+                    {% elif pn > pair_page.number|add:"-3" and pn < pair_page.number|add:"3" %}
+                    <li class="page-item"><a class="page-link" href="?pair_page={{ pn }}#queue-pair">{{ pn }}</a></li>
+                    {% endif %}
+                {% endfor %}
+                <li class="page-item {% if not pair_page.has_next %}disabled{% endif %}">
+                    <a class="page-link" href="?pair_page={% if pair_page.has_next %}{{ pair_page.next_page_number }}{% else %}{{ pair_page.paginator.num_pages }}{% endif %}#queue-pair">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
     </div>
 </div>
