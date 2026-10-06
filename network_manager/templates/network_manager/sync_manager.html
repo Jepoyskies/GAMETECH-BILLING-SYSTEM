@@ -15,6 +15,23 @@
     {% include "network_manager/sync_manager/_hero.html" %}
 
     {% comment %}
+      Data-age notice. The secret list is reused for up to ROUTER_SECRETS_TTL so
+      scrolling and paging do not re-read the router on every visit. Saying so
+      keeps the screen honest: someone deciding about live hardware should
+      always be able to see how old the reading is.
+    {% endcomment %}
+    {% if api_success and router_read_at %}
+    <div class="sm-freshness d-flex align-items-center gap-2 mb-3" role="status">
+        <i class="fas fa-clock" aria-hidden="true"></i>
+        <span>
+            Read from {{ device.device_name }}
+            {% if router_age_seconds is not None %}about {{ router_age_seconds }} second{{ router_age_seconds|pluralize }} ago{% endif %}.
+            Re-reads automatically within {{ router_cache_ttl }}s.
+        </span>
+    </div>
+    {% endif %}
+
+    {% comment %}
       Plain-language summary FIRST, technical tables below. Presentation only
       -- it re-buckets counts that already exist and adds no behaviour. See
       _simple_overview.html for why.

@@ -85,6 +85,7 @@ def sync_manager(request, device_id):
             port=device.api_port
         )
         result = api.get_all_pppoe_users()
+        result = _cache_router_secrets(device, result)
 
     clean_orphans = []
     suspicious_users = []
@@ -337,6 +338,12 @@ def sync_manager(request, device_id):
         'pair_page': pair_page_obj,
         'synced_page': synced_page,
         'pair_page_size': PAIR_PAGE_SIZE,
+        # Lets the card say "read 12s ago" so nobody acts on a stale list
+        # without knowing it. None means this load read the router directly.
+        'router_read_at': cache.get(f"sm_router_secrets_{device.id}_at"),
+        'router_cache_ttl': ROUTER_SECRETS_TTL,
+        'router_age_seconds': _cache_age_seconds(
+            cache.get(f"sm_router_secrets_{device.id}_at")),
     }
     
     return render(request, 'network_manager/sync_manager.html', context)
@@ -373,6 +380,50 @@ REASON_ORDER = [
      'Past due in the system but still connected. Collect payment; do not '
      'auto-suspend.'),
 ]
+
+
+# Seconds a router's secret list is reused before it is re-read.
+#
+# The page re-read every secret on every visit: 2,027 secrets on ccr2116.v1,
+# measured at ~4.9s per load. Every operator scrolling, filtering or paging
+# re-paid that cost, and each one is a full API round trip to a live production
+# router -- so the cache protects the router as much as it protects the page.
+#
+# 45s is short enough that the page stays truthful: a secret someone just
+# pushed appears almost immediately, and the card shows the data age so nobody
+# acts on a stale reading without knowing it. Deliberately NOT cached for long:
+# this screen exists to make decisions about real hardware.
+ROUTER_SECRETS_TTL = 45
+
+
+def _cache_age_seconds(stamp):
+    """How old a cached router reading is, in whole seconds. None if unknown."""
+    if not stamp:
+        return None
+    return max(0, int((timezone.now().timestamp() - float(stamp))))
+
+
+def _cache_router_secrets(device, result):
+    """Return the device's secret list, reading the router only when stale."""
+    from django.core.cache import cache
+
+    key = "sm_router_secrets_{}".format(device.id)
+    if result.get("success"):
+        cache.set(key, {"ok": True, "data": result.get("data") or []},
+                  ROUTER_SECRETS_TTL)
+        cache.set(key + "_at", timezone.now().timestamp(), ROUTER_SECRETS_TTL)
+        return result
+
+    cached = cache.get(key)
+    if cached and cached.get("ok"):
+        return {
+            "success": True,
+            "data": cached.get("data") or [],
+            "from_cache": True,
+        }
+    # A genuine failure must not be cached: the next visit should retry, and
+    # the circuit breaker decides how often that is allowed to cost a socket.
+    return result
 
 
 # Rows rendered per page for the review queue.
