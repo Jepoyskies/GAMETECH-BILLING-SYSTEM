@@ -66,6 +66,42 @@ class MikrotikSystemMixin:
                     f"Failed to get simple queues from {self.device.device_name}: {e}")
                 return []
 
+        def get_interface_counters(self):
+            """
+            Retrieves rx/tx byte counters for EVERY interface in a single call.
+
+            This replaces a per-interface `monitor-traffic` loop that cost one
+            round trip per active subscriber. On a router with 1,600 live PPPoE
+            sessions that was ~1,600 sequential API calls and ~150 seconds per
+            poll, which starved the connectivity cache that the customer list
+            depends on. RouterOS 7 exposes the same counters on the plain
+            `/interface` resource, so the whole set arrives in one read.
+
+            Returns: {interface_name: {"rx": int_bytes, "tx": int_bytes}}
+            Callers difference two snapshots to derive a rate.
+            """
+            try:
+                api = self._get_api()
+                rows = api.get_resource('/interface').get()
+            except Exception as e:
+                logger.error(
+                    f"Failed to get interface counters from "
+                    f"{self.device.device_name}: {e}"
+                )
+                return {}
+
+            counters = {}
+            for row in rows:
+                name = row.get("name")
+                rx, tx = row.get("rx-byte"), row.get("tx-byte")
+                if not name or rx is None or tx is None:
+                    continue
+                try:
+                    counters[name] = {"rx": int(rx), "tx": int(tx)}
+                except (TypeError, ValueError):
+                    continue
+            return counters
+
         def get_interfaces_traffic(self, interface_names):
             """
             Retrieves live traffic from specified interfaces individually to prevent batch failures.
