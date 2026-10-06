@@ -1,0 +1,41 @@
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Module master switch reveals BOTH the subtab panel and the action panel.
+    // data-target may hold a space-separated list of panel selectors.
+    // Delegated on document so it also works for elements rendered later.
+    document.addEventListener('change', function(e) {
+        var toggle = e.target.closest ? e.target.closest('.module-toggle') : null;
+        if (!toggle) { return; }
+        (toggle.getAttribute('data-target') || '').split(/\s+/).filter(Boolean).forEach(function(sel) {
+            document.querySelectorAll(sel).forEach(function(panel) {
+                panel.style.display = toggle.checked ? 'block' : 'none';
+            });
+        });
+    });
+
+    // Paint denied action tiles red so a "view-only" role reads at a glance.
+    function paintTiles(panel) {
+        panel.querySelectorAll('.action-toggle').forEach(function(cb) {
+            var tile = cb.closest('.role-act-tile');
+            if (tile) { tile.classList.toggle('role-act-tile--deny', !cb.checked); }
+        });
+    }
+    document.querySelectorAll('.action-panel').forEach(function(panel) {
+        panel.querySelectorAll('.action-toggle').forEach(function(cb) {
+            cb.addEventListener('change', function() { paintTiles(this.closest('.action-panel')); });
+        });
+        paintTiles(panel);
+    });
+
+    // All / None shortcuts, scoped to a single module's action panel.
+    document.querySelectorAll('.act-all, .act-none').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var on = this.classList.contains('act-all');
+            var panel = document.getElementById(this.getAttribute('data-panel'));
+            if (!panel) { return; }
+            panel.querySelectorAll('.action-toggle').forEach(function(cb) { cb.checked = on; });
+            paintTiles(panel);
+        });
+    });
+});
+</script>

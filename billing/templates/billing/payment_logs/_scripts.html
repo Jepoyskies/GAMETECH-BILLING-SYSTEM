@@ -1,0 +1,79 @@
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var raw = document.getElementById('paymentCustomerOptions');
+    var selects = document.querySelectorAll('[data-customer-select]');
+    if (!raw || !selects.length) { return; }
+    var opts;
+    try { opts = JSON.parse(raw.textContent || '[]'); } catch (e) { return; }
+    selects.forEach(function (sel) {
+        var frag = document.createDocumentFragment();
+        opts.forEach(function (o) {
+            var el = document.createElement('option');
+            el.value = o.id;
+            el.textContent = o.label;
+            frag.appendChild(el);
+        });
+        sel.appendChild(frag);
+    });
+});
+</script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chartCanvas = document.getElementById('salesChart');
+    if (!chartCanvas) return;
+    const ctx = chartCanvas.getContext('2d');
+    const chartLabels = JSON.parse('{{ chart_labels_js|escapejs }}');
+    const chartValues = JSON.parse('{{ chart_values_js|escapejs }}');
+    function getChartTheme() {
+        const isDark = document.documentElement.classList.contains('dark-mode');
+        return {
+            grid: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+            ticks: isDark ? '#94a3b8' : '#64748b'
+        };
+    }
+    let theme = getChartTheme();
+    let salesChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                label: 'Sales (₱)',
+                data: chartValues,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16,185,129,0.1)',
+                tension: 0.4,
+                pointRadius: 4,
+                pointBackgroundColor: '#10b981',
+                borderWidth: 2.5,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: theme.ticks, maxRotation: 45, autoSkip: true, maxTicksLimit: 7 }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: theme.grid },
+                    ticks: { color: theme.ticks }
+                }
+            }
+        }
+    });
+    window.addEventListener('themeChanged', () => {
+        let t = getChartTheme();
+        salesChart.options.scales.x.ticks.color = t.ticks;
+        salesChart.options.scales.y.ticks.color = t.ticks;
+        salesChart.options.scales.y.grid.color = t.grid;
+        salesChart.update();
+    });
+});
+</script>

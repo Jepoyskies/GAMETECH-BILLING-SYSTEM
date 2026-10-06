@@ -1,0 +1,49 @@
+<!-- Transfer Modals -->
+{% for p in page_obj %}
+<div class="modal fade text-start" id="transferModal{{ p.id }}" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="transferModalLabel{{ p.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content gt-modal-card">
+            <div class="modal-header">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="gt-modal-icon" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title" id="transferModalLabel{{ p.id }}">Transfer Payment</h5>
+                        <div class="small text-muted">Revert &amp; reassign this payment to another account</div>
+                    </div>
+                </div>
+                <button type="button" class="gt-icon-btn" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
+            </div>
+            <form action="{% url 'revert_transfer_payment' p.id %}" method="post">
+                {% csrf_token %}
+                <div class="modal-body py-3">
+                    <div class="alert border-0 rounded-3 mb-3 d-flex align-items-center" style="background: rgba(245, 158, 11, 0.12); color: #d97706; border-left: 4px solid #f59e0b !important;">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <div>
+                            This will revert the payment from <strong>{{ p.customer.full_name }}</strong> and apply it to a new customer.
+                            The previous customer's expiration and balance will be recalculated.
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Select Correct Customer</label>
+                        <select class="form-select" name="new_customer_id" required data-customer-select>
+                            <option value="">-- Choose Customer --</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="gt-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="gt-btn-primary" style="background: linear-gradient(135deg, #d97706, #b45309);">
+                        <i class="fas fa-exchange-alt me-1"></i> Confirm Transfer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{# The customer list, shipped ONCE for the whole page instead of once per
+   payment row. Populates every [data-customer-select] on load. #}
+<script type="application/json" id="paymentCustomerOptions">{{ all_customers_json|safe }}</script>

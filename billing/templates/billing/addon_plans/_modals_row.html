@@ -1,0 +1,88 @@
+<!-- Edit Modal for this Plan -->
+<div class="modal fade" id="editPlanModal_{{ plan.id }}" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="editPlanModalLabel_{{ plan.id }}" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered gt-modal-scroll">
+    <div class="modal-content gt-modal-card">
+      <div class="modal-header">
+        <div class="d-flex align-items-center gap-3">
+          <div class="gt-modal-icon"><i class="fas fa-edit"></i></div>
+          <h5 class="modal-title" id="editPlanModalLabel_{{ plan.id }}">Edit Add-on Plan</h5>
+        </div>
+        <button type="button" class="gt-icon-btn" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
+      </div>
+      <form action="{% url 'edit_addon_plan' plan.id %}" method="post">
+        {% csrf_token %}
+        <div class="modal-body py-3">
+          <div class="mb-3">
+            <label class="form-label" for="editPlanName_{{ plan.id }}">Plan Name</label>
+            <input type="text" class="form-control" id="editPlanName_{{ plan.id }}" name="name" value="{{ plan.name }}" required>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <label class="form-label" for="editPlanType_{{ plan.id }}">Service Type</label>
+              <select name="addon_type" id="editPlanType_{{ plan.id }}" class="form-select" required>
+                <option value="Cignal Play" {% if plan.addon_type == 'Cignal Play' %}selected{% endif %}>Cignal Play</option>
+                <option value="Cignal Box" {% if plan.addon_type == 'Cignal Box' %}selected{% endif %}>Cignal Box</option>
+                <option value="Other" {% if plan.addon_type == 'Other' %}selected{% endif %}>Other</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label" for="editPlanDuration_{{ plan.id }}">Duration (Days)</label>
+              <input type="number" class="form-control" id="editPlanDuration_{{ plan.id }}" name="duration_days" value="{{ plan.duration_days }}" min="1" required>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="editPlanPrice_{{ plan.id }}">Price</label>
+            <div class="input-group">
+              <span class="input-group-text">₱</span>
+              <input type="number" step="0.01" min="0" class="form-control" id="editPlanPrice_{{ plan.id }}" name="price" value="{{ plan.price }}" required>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="editPlanDesc_{{ plan.id }}">Description <span class="gt-optional-tag">Optional</span></label>
+            <textarea class="form-control" id="editPlanDesc_{{ plan.id }}" name="description" rows="3">{{ plan.description }}</textarea>
+          </div>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="is_active" id="editPlanActive_{{ plan.id }}" {% if plan.is_active %}checked{% endif %}>
+            <label class="form-check-label fw-semibold" for="editPlanActive_{{ plan.id }}">Active and Available</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="gt-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="gt-btn-primary">
+            <i class="fas fa-save me-1"></i> Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Modal for this Plan -->
+<div class="modal fade" id="deletePlanModal_{{ plan.id }}" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="deletePlanModalLabel_{{ plan.id }}" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content gt-modal-card">
+      <div class="modal-header">
+        <div class="d-flex align-items-center gap-3">
+          <div class="gt-modal-icon text-danger" style="background: rgba(239, 68, 68, 0.12); color: #ef4444;"><i class="fas fa-trash-alt"></i></div>
+          <h5 class="modal-title" id="deletePlanModalLabel_{{ plan.id }}">Delete Add-on Plan</h5>
+        </div>
+        <button type="button" class="gt-icon-btn" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body py-3">
+        <p class="mb-0">Are you sure you want to delete the plan <strong>{{ plan.name }}</strong> (₱{{ plan.price|floatformat:2 }})?</p>
+        <div class="alert alert-warning border-0 mt-3 mb-0 small">
+          <i class="fas fa-exclamation-triangle me-1"></i> This will permanently delete the tier definition. Existing subscriptions using this plan will remain intact.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="gt-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form action="{% url 'delete_addon_plan' plan.id %}" method="post" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger" style="border-radius: 10px; font-weight: 600;">
+            <i class="fas fa-trash-alt me-1"></i> Confirm Delete
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

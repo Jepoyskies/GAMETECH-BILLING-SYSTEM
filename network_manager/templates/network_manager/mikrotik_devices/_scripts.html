@@ -1,0 +1,52 @@
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('.test-btn').click(function() {
+            var btn = $(this);
+            var deviceId = btn.data('id');
+            var originalHtml = btn.html();
+            
+            var statusTd = $('#status-' + deviceId);
+            var statusCard = $('#status-card-' + deviceId);
+            
+            btn.html('<i class="fas fa-spinner fa-spin"></i>');
+            btn.prop('disabled', true);
+            statusTd.html('<span class="text-info"><i class="fas fa-spinner fa-spin"></i> Testing...</span>');
+            statusCard.html('<span class="text-info"><i class="fas fa-spinner fa-spin"></i> Testing...</span>');
+            
+            $.ajax({
+                url: '/devices/test-connection/' + deviceId + '/',
+                type: 'POST',
+                data: {
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if(response.status === 'success') {
+                        btn.removeClass('btn-info btn-danger').addClass('btn-success');
+                        btn.html('<i class="fas fa-check"></i>');
+                        statusTd.html('<span class="badge bg-success"><i class="fas fa-check-circle"></i> Connected</span>');
+                        statusCard.html('<span class="badge bg-success"><i class="fas fa-check-circle"></i> Connected</span>');
+                    } else {
+                        btn.removeClass('btn-info btn-success').addClass('btn-danger');
+                        btn.html('<i class="fas fa-times"></i>');
+                        statusTd.html('<span class="badge bg-danger"><i class="fas fa-times-circle"></i> Not Connected</span><br><span class="text-danger small">' + response.error + '</span>');
+                        statusCard.html('<span class="badge bg-danger"><i class="fas fa-times-circle"></i> Not Connected</span>');
+                    }
+                },
+                error: function() {
+                    btn.removeClass('btn-info btn-success').addClass('btn-danger');
+                    btn.html('<i class="fas fa-times"></i>');
+                    statusTd.html('<span class="badge bg-warning">AJAX error</span>');
+                    statusCard.html('<span class="badge bg-warning">AJAX error</span>');
+                },
+                complete: function() {
+                    setTimeout(function() {
+                        btn.removeClass('btn-success btn-danger').addClass('btn-info');
+                        btn.html(originalHtml);
+                        btn.prop('disabled', false);
+                    }, 3000);
+                }
+            });
+        });
+    });
+</script>
