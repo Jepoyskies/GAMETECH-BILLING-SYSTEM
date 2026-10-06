@@ -556,6 +556,14 @@ class SyncManagerPageTests(TestCase):
     """The queue itself must show unapproved accounts."""
 
     def setUp(self):
+        # The view caches each router's secrets for ROUTER_SECRETS_TTL (45s)
+        # under `sm_router_secrets_<id>`. Without clearing it, the first test's
+        # mocked payload is served to every later test in the run, so
+        # `needs_review` comes back holding the wrong accounts and the
+        # assertions fail on an empty list rather than on a real defect.
+        from django.core.cache import cache
+
+        cache.clear()
         self.device = make_device()
         self.operator = make_operator()
         self.client.force_login(self.operator)
