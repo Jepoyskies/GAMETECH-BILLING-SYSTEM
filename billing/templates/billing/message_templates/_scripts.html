@@ -1,0 +1,117 @@
+<script>
+// Recommended defaults if staff wants to reset
+const RECOMMENDED_DEFAULTS = {
+    'TEXT': "Thank you {customer_name}! Your payment of P{paid_amount} has been received. Your internet connection is now active until {new_expiration}.",
+    'SMS': "Thank you {customer_name}! Your payment of P{paid_amount} via {payment_method} has been received. Your internet connection is active until {new_expiration}.",
+    'EMAIL': {
+        'subject': "Gametech Unli Fiber: Payment Received - {customer_name}",
+        'body': "Dear {customer_name},\n\nWe have successfully received your payment of P{paid_amount} for your {plan_name} plan. Your internet subscription is now active until {new_expiration}.\n\nThank you for choosing Gametech Unli Fiber!"
+    }
+};
+
+const SAMPLE_DATA = {
+    '{customer_name}': 'Juan Dela Cruz',
+    '{paid_amount}': '1000.00',
+    '{new_expiration}': 'October 16, 2026',
+    '{plan_name}': 'GTipid Fiber 1000',
+    '{payment_method}': 'GCash',
+    '{processed_by}': 'Jep',
+    '{pppoe_username}': 'delacruz_juan'
+};
+
+function insertTag(templateId, tag) {
+    const textarea = document.getElementById('body-' + templateId);
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+
+    textarea.value = text.substring(0, start) + tag + text.substring(end);
+    textarea.selectionStart = textarea.selectionEnd = start + tag.length;
+    textarea.focus();
+
+    // Trigger update
+    textarea.dispatchEvent(new Event('input'));
+}
+
+function updatePreview(templateId, type) {
+    const textarea = document.getElementById('body-' + templateId);
+    const preview = document.getElementById('preview-' + templateId);
+    const counter = document.getElementById('counter-' + templateId);
+    if (!textarea || !preview) return;
+
+    let text = textarea.value || '';
+
+    // Update Counter
+    if (counter) {
+        const chars = text.length;
+        if (type === 'SMS') {
+            const smsSegments = Math.max(1, Math.ceil(chars / 160));
+            counter.innerHTML = `<span class="badge ${chars > 160 ? 'bg-warning text-dark' : 'bg-secondary'}">${chars} chars</span> &bull; ~${smsSegments} SMS segment${smsSegments > 1 ? 's' : ''}`;
+        } else {
+            counter.innerHTML = `${chars} characters`;
+        }
+    }
+
+    // Substitute placeholders with simulated sample data
+    let rendered = text;
+    for (const [placeholder, val] of Object.entries(SAMPLE_DATA)) {
+        rendered = rendered.split(placeholder).join(val);
+    }
+    preview.textContent = rendered;
+
+    // Handle Email Subject line if present
+    if (type === 'EMAIL') {
+        const subjInput = document.getElementById('subject-' + templateId);
+        const subjPreview = document.getElementById('preview-subj-' + templateId);
+        if (subjInput && subjPreview) {
+            let subjRendered = subjInput.value || '';
+            for (const [placeholder, val] of Object.entries(SAMPLE_DATA)) {
+                subjRendered = subjRendered.split(placeholder).join(val);
+            }
+            subjPreview.textContent = subjRendered;
+        }
+    }
+}
+
+function resetToDefault(templateId, type) {
+    if (!confirm("Are you sure you want to reset this message to the recommended company default? Any unsaved edits will be replaced.")) {
+        return;
+    }
+
+    const textarea = document.getElementById('body-' + templateId);
+    if (!textarea) return;
+
+    if (type === 'EMAIL') {
+        const subjInput = document.getElementById('subject-' + templateId);
+        if (subjInput) subjInput.value = RECOMMENDED_DEFAULTS.EMAIL.subject;
+        textarea.value = RECOMMENDED_DEFAULTS.EMAIL.body;
+    } else {
+        textarea.value = RECOMMENDED_DEFAULTS[type] || RECOMMENDED_DEFAULTS.TEXT;
+    }
+
+    updatePreview(templateId, type);
+}
+
+function copyPreviewText(templateId) {
+    const preview = document.getElementById('preview-' + templateId);
+    const btn = document.getElementById('btn-copy-preview-' + templateId);
+    if (!preview) return;
+
+    navigator.clipboard.writeText(preview.textContent).then(() => {
+        if (btn) {
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check text-success me-1"></i> Copied!';
+            setTimeout(() => { btn.innerHTML = orig; }, 2000);
+        }
+    });
+}
+
+// Initialize all previews on page load
+document.addEventListener('DOMContentLoaded', () => {
+    {% for t in templates %}
+        updatePreview('{{ t.id }}', '{{ t.type }}');
+    {% endfor %}
+});
+</script>
