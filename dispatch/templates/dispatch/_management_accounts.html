@@ -1,136 +1,142 @@
 <!-- TAB 1: ACCOUNTS (Harmonized with Central Staff & Admins) -->
 <div class="tab-pane fade show active" id="tab-accounts" role="tabpanel" aria-labelledby="accounts-tab">
-    <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-25 flex-wrap gap-2">
-        <div>
-            <h6 class="fw-bold mb-0 text-white"><i class="fas fa-id-badge text-primary me-2"></i> System User Accounts</h6>
-            <span class="text-muted text-xs">Active operators, administrators, CSRs, and field technicians</span>
-        </div>
-        <div class="d-flex gap-2">
-            <a href="{% url 'manage_roles' %}" class="btn btn-sm btn-outline-secondary" style="border-radius: 8px; font-size: 0.82rem;">
-                <i class="fas fa-shield-alt me-1"></i> Roles & Permissions
-            </a>
-            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addStaffModal" style="border-radius: 8px; font-size: 0.82rem;">
-                <i class="fas fa-user-plus me-1"></i> Add Account
-            </button>
-        </div>
-    </div>
-
-    <div class="px-3 pt-3">
-        <div class="d-flex align-items-center justify-content-between p-3 rounded-3 flex-wrap gap-2" style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.2);">
-            <div class="d-flex align-items-center gap-2">
-                <i class="fas fa-sync-alt text-info"></i>
+    <div class="p-3">
+        <div class="d-flex align-items-center justify-content-between p-3 rounded-3 flex-wrap gap-2 mb-3" style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.2);">
+            <div class="d-flex align-items-center gap-3">
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; background: rgba(59, 130, 246, 0.15); color: #3b82f6;">
+                    <i class="fas fa-sync-alt"></i>
+                </div>
                 <div>
-                    <span class="text-white text-xs fw-bold d-block">Synchronized Account Directory</span>
-                    <span class="text-muted" style="font-size: 0.75rem;">User accounts here represent the system operators and staff. Advanced role assignments, permissions, and status controls are centrally synchronized with Staff & Admins.</span>
+                    <span class="text-xs fw-bold d-block" style="color: var(--text-primary);">Synchronized Account Directory</span>
+                    <span class="text-muted" style="font-size: 0.75rem;">User accounts here represent the system operators and staff. Advanced role assignments, permissions, and status controls are centrally synchronized with Staff &amp; Admins.</span>
                 </div>
             </div>
-            <a href="{% url 'staff_list' %}" class="btn btn-sm btn-outline-info" style="border-radius: 8px; font-size: 0.78rem;">
-                <i class="fas fa-external-link-alt me-1"></i> Open Staff & Admins
+            <a href="{% url 'staff_list' %}" class="gt-btn-secondary gt-btn-sm">
+                <i class="fas fa-external-link-alt me-1"></i> Open Staff &amp; Admins
             </a>
         </div>
-    </div>
 
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0 text-sm" style="background: transparent;">
-            <thead>
-                <tr class="text-muted text-uppercase text-xs border-secondary border-opacity-25">
-                    <th class="ps-3" style="width: 220px;">Operator / Username</th>
-                    <th>Full Name</th>
-                    <th>Email Address</th>
-                    <th style="width: 150px;">Role & Access</th>
-                    <th style="width: 100px;">Status</th>
-                    <th style="width: 150px;">Last Login</th>
-                    <th class="text-end pe-3" style="width: 120px;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for acc in accounts %}
-                <tr class="border-secondary border-opacity-25">
-                    <td class="ps-3">
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center text-white fw-bold"
-                                 style="width: 32px; height: 32px; font-size: 0.8rem; {% if acc.role == 'Admin' or acc.is_superuser %}background: linear-gradient(135deg, #ef4444, #b91c1c);{% elif acc.role == 'Editor' %}background: linear-gradient(135deg, #3b82f6, #2563eb);{% elif acc.role == 'CSR' %}background: linear-gradient(135deg, #10b981, #059669);{% elif acc.role == 'Technician' %}background: linear-gradient(135deg, #f59e0b, #d97706);{% else %}background: #64748b;{% endif %}">
-                                {{ acc.username|make_list|first|upper }}
-                            </div>
-                            <div>
-                                <span class="fw-bold text-white text-xs d-block">{{ acc.username }}</span>
-                                <span class="text-muted" style="font-size: 0.7rem;">ID #{{ acc.id }}</span>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <span class="text-light text-xs fw-semibold">
-                            {% if acc.get_full_name %}{{ acc.get_full_name }}{% else %}<span class="text-muted fst-italic">Not specified</span>{% endif %}
-                        </span>
-                    </td>
-                    <td>
-                        <span class="text-muted text-xs font-monospace">{{ acc.email|default:"—" }}</span>
-                    </td>
-                    <td>
-                        {% if acc.role == 'Admin' or acc.is_superuser %}
-                        <span class="pill" style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); font-size: 0.72rem; padding: 2px 8px; border-radius: 20px;">
-                            <i class="fas fa-user-shield me-1"></i> Admin
-                        </span>
-                        {% elif acc.role == 'Editor' %}
-                        <span class="pill" style="background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.3); font-size: 0.72rem; padding: 2px 8px; border-radius: 20px;">
-                            <i class="fas fa-edit me-1"></i> Editor
-                        </span>
-                        {% elif acc.role == 'CSR' %}
-                        <span class="pill" style="background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3); font-size: 0.72rem; padding: 2px 8px; border-radius: 20px;">
-                            <i class="fas fa-headset me-1"></i> CSR
-                        </span>
-                        {% elif acc.role == 'Technician' %}
-                        <span class="pill" style="background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.3); font-size: 0.72rem; padding: 2px 8px; border-radius: 20px;">
-                            <i class="fas fa-tools me-1"></i> Technician
-                        </span>
-                        {% else %}
-                        <span class="pill" style="background:rgba(148,163,184,0.15); color:#cbd5e1; border:1px solid rgba(148,163,184,0.3); font-size: 0.72rem; padding: 2px 8px; border-radius: 20px;">
-                            <i class="fas fa-user me-1"></i> {{ acc.role|default:"Standard" }}
-                        </span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if acc.is_active %}
-                        <span class="badge bg-success bg-opacity-20 text-success border border-success border-opacity-30 text-xs">
-                            <i class="fas fa-check-circle me-1"></i>Active
-                        </span>
-                        {% else %}
-                        <span class="badge bg-secondary bg-opacity-20 text-muted border border-secondary border-opacity-30 text-xs">
-                            Inactive
-                        </span>
-                        {% endif %}
-                    </td>
-                    <td class="text-xs text-muted">
-                        {% if acc.last_login %}
-                        {{ acc.last_login|date:"M d, Y h:i A" }}
-                        {% else %}
-                        <span class="fst-italic text-muted">Never</span>
-                        {% endif %}
-                    </td>
-                    <td class="text-end pe-3">
-                        <div class="d-flex justify-content-end align-items-center gap-1">
-                            <a href="{% url 'edit_staff' acc.id %}" class="btn btn-outline-primary btn-xs" style="padding: 3px 8px; border-radius: 6px;" title="Edit Staff Account">
-                                <i class="fas fa-edit me-1"></i> Edit
-                            </a>
-                            {% if request.user.role == 'Admin' or request.user.is_superuser %}
-                            {% if acc.username != request.user.username %}
-                            <form method="post" action="{% url 'delete_staff' acc.id %}" data-confirm-delete="Are you sure you want to delete staff account {{ acc.username }}? This action cannot be undone." data-confirm-title="Delete Staff Account?" style="display:inline;">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-outline-danger btn-xs" style="padding: 3px 8px; border-radius: 6px;" title="Delete Staff Account">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                            </form>
-                            {% endif %}
-                            {% endif %}
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7" class="text-center py-4 text-muted fst-italic">No active user accounts found.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="gt-table-card">
+            <div class="gt-table-toolbar">
+                <div>
+                    <div class="gt-table-toolbar-title">
+                        <i class="fas fa-id-badge text-primary"></i> System User Accounts
+                    </div>
+                    <span class="text-muted" style="font-size: 0.75rem;">Active operators, administrators, CSRs, and field technicians</span>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'manage_roles' %}" class="gt-btn-secondary gt-btn-sm">
+                        <i class="fas fa-shield-alt me-1"></i> Roles &amp; Permissions
+                    </a>
+                    <button type="button" class="gt-btn-primary gt-btn-sm" data-bs-toggle="modal" data-bs-target="#addStaffModal">
+                        <i class="fas fa-user-plus me-1"></i> Add Account
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-responsive p-0">
+                <table class="table gt-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-3" style="width: 220px;">Operator / Username</th>
+                            <th>Full Name</th>
+                            <th>Email Address</th>
+                            <th style="width: 150px;">Role &amp; Access</th>
+                            <th style="width: 100px;">Status</th>
+                            <th style="width: 150px;">Last Login</th>
+                            <th class="text-end pe-3" style="width: 120px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for acc in accounts %}
+                        <tr>
+                            <td class="ps-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center text-white fw-bold"
+                                         style="width: 32px; height: 32px; font-size: 0.8rem; {% if acc.role == 'Admin' or acc.is_superuser %}background: linear-gradient(135deg, #ef4444, #b91c1c);{% elif acc.role == 'Editor' %}background: linear-gradient(135deg, #3b82f6, #2563eb);{% elif acc.role == 'CSR' %}background: linear-gradient(135deg, #10b981, #059669);{% elif acc.role == 'Technician' %}background: linear-gradient(135deg, var(--gt-gold, #F9B233), #d97706);{% else %}background: #64748b;{% endif %}">
+                                        {{ acc.username|make_list|first|upper }}
+                                    </div>
+                                    <div>
+                                        <span class="fw-bold d-block" style="color: var(--text-primary); font-size: 0.85rem;">{{ acc.username }}</span>
+                                        <span class="text-muted" style="font-size: 0.7rem;">ID #{{ acc.id }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="fw-semibold" style="color: var(--text-primary); font-size: 0.85rem;">
+                                    {% if acc.get_full_name %}{{ acc.get_full_name }}{% else %}<span class="text-muted fst-italic">Not specified</span>{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="text-muted font-monospace" style="font-size: 0.8rem;">{{ acc.email|default:"—" }}</span>
+                            </td>
+                            <td>
+                                {% if acc.role == 'Admin' or acc.is_superuser %}
+                                <span class="status-badge status-badge--danger">
+                                    <i class="fas fa-user-shield me-1"></i> Admin
+                                </span>
+                                {% elif acc.role == 'Editor' %}
+                                <span class="status-badge status-badge--info">
+                                    <i class="fas fa-edit me-1"></i> Editor
+                                </span>
+                                {% elif acc.role == 'CSR' %}
+                                <span class="status-badge status-badge--success">
+                                    <i class="fas fa-headset me-1"></i> CSR
+                                </span>
+                                {% elif acc.role == 'Technician' %}
+                                <span class="status-badge status-badge--warning">
+                                    <i class="fas fa-tools me-1"></i> Technician
+                                </span>
+                                {% else %}
+                                <span class="status-badge status-badge--neutral">
+                                    <i class="fas fa-user me-1"></i> {{ acc.role|default:"Standard" }}
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if acc.is_active %}
+                                <span class="status-badge status-badge--success">
+                                    <span class="status-dot"></span> Active
+                                </span>
+                                {% else %}
+                                <span class="status-badge status-badge--neutral">
+                                    Inactive
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-muted font-monospace" style="font-size: 0.8rem;">
+                                {% if acc.last_login %}
+                                {{ acc.last_login|date:"M d, Y h:i A" }}
+                                {% else %}
+                                <span class="fst-italic text-muted">Never</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-3">
+                                <div class="d-flex justify-content-end align-items-center gap-1">
+                                    <a href="{% url 'edit_staff' acc.id %}" class="gt-btn-secondary gt-btn-sm" title="Edit Staff Account">
+                                        <i class="fas fa-edit me-1"></i> Edit
+                                    </a>
+                                    {% if request.user.role == 'Admin' or request.user.is_superuser %}
+                                    {% if acc.username != request.user.username %}
+                                    <form method="post" action="{% url 'delete_staff' acc.id %}" data-confirm-delete="Are you sure you want to delete staff account {{ acc.username }}? This action cannot be undone." data-confirm-title="Delete Staff Account?" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="gt-btn-danger gt-btn-sm" title="Delete Staff Account">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted fst-italic">No active user accounts found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>

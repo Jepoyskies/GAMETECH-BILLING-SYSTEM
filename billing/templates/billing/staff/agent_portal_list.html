@@ -1,78 +1,106 @@
 {% extends "billing/base.html" %}
 {% load static %}
 
-{% block title %}Agent Portal | Gametech Unli Fiber{% endblock %}
+{% block title %}Agent Portal & Performance | Gametech Unli Fiber{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4 px-3 px-md-4">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
-        <div>
-            <h4 class="mb-1 fw-bold text-white"><i class="fas fa-user-tie me-2 text-primary"></i> Agent Portal</h4>
-            <p class="mb-0 text-muted small">View all agents, their referral performance, and commission status.</p>
+    <div class="gt-page-header d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 animate-fade-in">
+        <div class="d-flex align-items-center gap-3">
+            <div class="gt-header-icon">
+                <i class="fas fa-user-tie"></i>
+            </div>
+            <div>
+                <div class="gt-header-eyebrow mb-1">
+                    <i class="fas fa-handshake me-1"></i> Sales &amp; Referral Network
+                </div>
+                <h1 class="gt-header-title">Agent Portal &amp; Performance Ledger</h1>
+                <p class="gt-header-sub">Monitor sales agent referrals, conversion ratios, batch qualifications, and claimable incentive payouts.</p>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'manage_agents' %}" class="gt-btn-secondary">
+                <i class="fas fa-users-gear me-1"></i> Manage Agents
+            </a>
+            <a href="{% url 'dashboard' %}" class="gt-btn-primary">
+                <i class="fas fa-gauge me-1"></i> Dashboard
+            </a>
         </div>
     </div>
 
     <!-- Agents Table -->
-    <div class="gt-cl-card p-3">
-        <div class="table-responsive">
-            <table class="table table-dark table-hover align-middle mb-0">
+    <div class="gt-table-card animate-fade-in animate-delay-1">
+        <div class="gt-table-toolbar">
+            <div class="gt-table-toolbar-title">
+                <i class="fas fa-address-book text-warning"></i> Active Sales Agents
+            </div>
+            <div class="gt-table-toolbar-right">
+                <span class="status-badge status-badge--neutral">
+                    <span class="status-dot"></span> {{ agent_rows|length }} registered agent{{ agent_rows|length|pluralize }}
+                </span>
+            </div>
+        </div>
+        <div class="table-responsive p-0">
+            <table class="table gt-table align-middle mb-0">
                 <thead>
-                    <tr class="text-muted small">
-                        <th>Agent</th>
+                    <tr>
+                        <th class="ps-3">Agent</th>
                         <th class="text-center">Referrals</th>
                         <th class="text-center">Converted</th>
                         <th class="text-center">Qualified</th>
-                        <th class="text-center">Progress</th>
-                        <th class="text-end">Claimable</th>
-                        <th class="text-end">Action</th>
+                        <th class="text-center">Batch Progress</th>
+                        <th class="text-end">Claimable Payout</th>
+                        <th class="text-end pe-3">Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for row in agent_rows %}
                     <tr>
-                        <td>
+                        <td class="ps-3">
                             <div class="d-flex align-items-center gap-2">
-                                <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
-                                    <i class="fas fa-user"></i>
+                                <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" 
+                                     style="width: 36px; height: 36px; background: linear-gradient(135deg, var(--gt-gold, #F9B233), #1e3a8a); box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+                                    {{ row.agent.name|make_list|first|upper }}
                                 </div>
                                 <div>
-                                    <div class="fw-bold text-white">{{ row.agent.name }}</div>
-                                    <div class="text-muted small">{{ row.agent.phone|default:"No phone" }}</div>
+                                    <div class="fw-bold" style="color: var(--text-primary); font-size: 0.88rem;">{{ row.agent.name }}</div>
+                                    <div class="text-muted font-monospace" style="font-size: 0.75rem;">{{ row.agent.phone|default:"No phone" }}</div>
                                 </div>
                             </div>
                         </td>
                         <td class="text-center">
-                            <span class="badge bg-secondary">{{ row.prospect_count }}</span>
+                            <span class="status-badge status-badge--neutral">{{ row.prospect_count }}</span>
                         </td>
                         <td class="text-center">
-                            <span class="badge bg-info">{{ row.converted_count }}</span>
+                            <span class="status-badge status-badge--info">{{ row.converted_count }}</span>
                         </td>
                         <td class="text-center">
-                            <span class="badge bg-success">{{ row.summary.total_qualified }}</span>
+                            <span class="status-badge status-badge--success">{{ row.summary.total_qualified }}</span>
                         </td>
-                        <td class="text-center" style="min-width:120px;">
+                        <td class="text-center" style="min-width: 130px;">
                             <div class="d-flex align-items-center gap-2">
-                                <div class="progress flex-grow-1" style="height:6px;">
-                                    <div class="progress-bar bg-primary" role="progressbar" style="width: {% widthratio row.summary.progress_to_next row.summary.batch_size 100 %}%;"></div>
+                                <div class="progress flex-grow-1" style="height: 6px; background: var(--surface-subtle); border-radius: 4px;">
+                                    <div class="progress-bar" role="progressbar" 
+                                         style="width: {% widthratio row.summary.progress_to_next row.summary.batch_size 100 %}%; background: var(--gt-gold, #F9B233); border-radius: 4px;"></div>
                                 </div>
-                                <span class="text-muted small">{{ row.summary.progress_to_next }}/{{ row.summary.batch_size }}</span>
+                                <span class="text-muted font-monospace" style="font-size: 0.75rem;">{{ row.summary.progress_to_next }}/{{ row.summary.batch_size }}</span>
                             </div>
                         </td>
                         <td class="text-end">
-                            <span class="fw-bold text-success">₱{{ row.summary.claimable_amount|floatformat:2 }}</span>
+                            <span class="fw-bold font-monospace" style="color: var(--badge-success-text); font-size: 0.9rem;">₱{{ row.summary.claimable_amount|floatformat:2 }}</span>
                         </td>
-                        <td class="text-end">
-                            <a href="{% url 'staff_agent_portal_detail' row.agent.id %}" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-eye me-1"></i> View
+                        <td class="text-end pe-3">
+                            <a href="{% url 'staff_agent_portal_detail' row.agent.id %}" class="gt-btn-primary gt-btn-sm">
+                                <i class="fas fa-eye me-1"></i> View Portal
                             </a>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-4">
-                            <i class="fas fa-inbox fs-1 d-block mb-2"></i>
-                            No agents found.
+                        <td colspan="7" class="text-center text-muted py-5">
+                            <i class="fas fa-inbox fs-1 d-block mb-2" style="opacity: 0.3;"></i>
+                            No sales agents found in system registry.
                         </td>
                     </tr>
                     {% endfor %}
@@ -82,3 +110,4 @@
     </div>
 </div>
 {% endblock %}
+

@@ -1,18 +1,25 @@
 {% extends "dispatch/pipeline/portal_base_tech.html" %}
 
-{% block title %}My Field Dashboard | Gametech{% endblock %}
+{% block title %}My Field Dashboard | Gametech Unli Fiber{% endblock %}
 
 {% block content %}
 
-<!-- Greeting -->
-<div class="ft-card p-3 mb-3" style="border-left: 5px solid var(--ft-gold);">
+<!-- Greeting & Identity Card -->
+<div class="card border-0 shadow-sm p-3 mb-3" style="background: var(--surface-card); border-radius: 16px; border: 1px solid var(--border-subtle) !important; border-left: 5px solid var(--gt-gold, #F9B233) !important; backdrop-filter: blur(12px);">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <div>
-            <span class="badge bg-dark text-warning border border-warning badge-soft mb-1">{{ technician.team.name|default:"Unassigned Team" }}</span>
-            <h5 class="fw-bold text-white mb-0">Kumusta, {{ technician.name }}!</h5>
-            <small class="text-muted">Here are the job orders assigned to you.</small>
+        <div class="d-flex align-items-center gap-3">
+            <div class="rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; background: rgba(249, 178, 51, 0.15); color: var(--gt-gold, #F9B233); border: 1px solid rgba(249, 178, 51, 0.3);">
+                <i class="fas fa-screwdriver-wrench fs-5"></i>
+            </div>
+            <div>
+                <span class="status-badge status-badge--warning mb-1">
+                    <i class="fas fa-users-gear me-1"></i>{{ technician.team.name|default:"Unassigned Team" }}
+                </span>
+                <h5 class="fw-bold mb-0" style="color: var(--text-primary); font-family: 'Montserrat', sans-serif;">Kumusta, {{ technician.name }}!</h5>
+                <small class="text-muted">Here are the active job orders and field tickets assigned to you.</small>
+            </div>
         </div>
-        <a href="{% url 'technician_my_jobs' %}" class="ft-btn ft-btn-blue" style="width:auto;">
+        <a href="{% url 'technician_my_jobs' %}" class="gt-btn-primary" style="width:auto;">
             <i class="fas fa-list-check me-2"></i>Open My Jobs
         </a>
     </div>
@@ -21,64 +28,68 @@
 <!-- KPI Tiles -->
 <div class="row g-2 mb-3">
     <div class="col-6 col-lg-2">
-        <div class="kpi-tile pt-kpi-accent">
-            <div class="kpi-value">{{ kpi_active }}</div>
-            <div class="kpi-label">Active Jobs</div>
+        <div class="card border-0 shadow-sm p-3 text-center h-100" style="background: var(--surface-card); border-radius: 12px; border: 1px solid var(--border-subtle) !important;">
+            <div class="fw-bold fs-4 mb-0" style="color: var(--gt-gold, #F9B233); font-family: 'Montserrat', sans-serif;">{{ kpi_active }}</div>
+            <div class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.5px;">Active Jobs</div>
         </div>
     </div>
     <div class="col-6 col-lg-2">
-        <div class="kpi-tile pt-kpi-info">
-            <div class="kpi-value">{{ kpi_today }}</div>
-            <div class="kpi-label">Due Today</div>
+        <div class="card border-0 shadow-sm p-3 text-center h-100" style="background: var(--surface-card); border-radius: 12px; border: 1px solid var(--border-subtle) !important;">
+            <div class="fw-bold fs-4 mb-0 text-info" style="font-family: 'Montserrat', sans-serif;">{{ kpi_today }}</div>
+            <div class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.5px;">Due Today</div>
         </div>
     </div>
     <div class="col-6 col-lg-2">
-        <div class="kpi-tile pt-kpi-danger">
-            <div class="kpi-value">{{ kpi_overdue }}</div>
-            <div class="kpi-label">Overdue</div>
+        <div class="card border-0 shadow-sm p-3 text-center h-100" style="background: var(--surface-card); border-radius: 12px; border: 1px solid var(--border-subtle) !important;">
+            <div class="fw-bold fs-4 mb-0 text-danger" style="font-family: 'Montserrat', sans-serif;">{{ kpi_overdue }}</div>
+            <div class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.5px;">Overdue</div>
         </div>
     </div>
     <div class="col-6 col-lg-2">
-        <div class="kpi-tile pt-kpi-info">
-            <div class="kpi-value">{{ kpi_in_progress }}</div>
-            <div class="kpi-label">On Site Now</div>
+        <div class="card border-0 shadow-sm p-3 text-center h-100" style="background: var(--surface-card); border-radius: 12px; border: 1px solid var(--border-subtle) !important;">
+            <div class="fw-bold fs-4 mb-0 text-primary" style="font-family: 'Montserrat', sans-serif;">{{ kpi_in_progress }}</div>
+            <div class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.5px;">On Site Now</div>
         </div>
     </div>
     <div class="col-6 col-lg-2">
-        <div class="kpi-tile pt-kpi-success">
-            <div class="kpi-value">{{ kpi_done_today }}</div>
-            <div class="kpi-label">Done Today</div>
+        <div class="card border-0 shadow-sm p-3 text-center h-100" style="background: var(--surface-card); border-radius: 12px; border: 1px solid var(--border-subtle) !important;">
+            <div class="fw-bold fs-4 mb-0 text-success" style="font-family: 'Montserrat', sans-serif;">{{ kpi_done_today }}</div>
+            <div class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.5px;">Done Today</div>
         </div>
     </div>
     <div class="col-6 col-lg-2">
-        <div class="kpi-tile pt-kpi-warn">
-            <div class="kpi-value">{{ kpi_awaiting_qa }}</div>
-            <div class="kpi-label">Awaiting QA</div>
+        <div class="card border-0 shadow-sm p-3 text-center h-100" style="background: var(--surface-card); border-radius: 12px; border: 1px solid var(--border-subtle) !important;">
+            <div class="fw-bold fs-4 mb-0 text-warning" style="font-family: 'Montserrat', sans-serif;">{{ kpi_awaiting_qa }}</div>
+            <div class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.5px;">Awaiting QA</div>
         </div>
     </div>
 </div>
 
 {% if is_staff_preview %}
-<div class="alert alert-warning border-2 rounded-3 py-2 small">
-    <i class="fas fa-eye me-1"></i><strong>Staff preview mode.</strong> You are viewing a technician's board.
+<div class="alert alert-warning border-2 rounded-3 py-2 small d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3" style="background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.3) !important;">
+    <div>
+        <i class="fas fa-eye me-1"></i><strong>Staff preview mode:</strong> You are viewing a field technician's board.
+    </div>
     {% if all_techs %}
-        <a href="#" data-bs-toggle="modal" data-bs-target="#techPicker">Switch technician</a>
+        <button type="button" class="gt-btn-secondary gt-btn-sm" data-bs-toggle="modal" data-bs-target="#techPicker">
+            <i class="fas fa-users-gear me-1"></i>Switch Technician
+        </button>
     {% endif %}
 </div>
 
 {% if all_techs %}
 <div class="modal fade" id="techPicker" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="background: var(--ft-card); border: 1px solid var(--ft-border);">
-            <div class="modal-header border-secondary">
-                <h6 class="modal-title text-white fw-bold">Preview Technician</h6>
+        <div class="modal-content" style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 16px;">
+            <div class="modal-header" style="border-bottom: 1px solid var(--border-subtle);">
+                <h6 class="modal-title fw-bold" style="color: var(--text-primary);"><i class="fas fa-user-gear me-2 text-warning"></i>Preview Technician</h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-2">
                 {% for t in all_techs %}
-                    <a href="?tech_id={{ t.id }}" class="d-flex justify-content-between align-items-center text-decoration-none text-white py-2 px-2 rounded-2" style="border-bottom: 1px solid var(--ft-border);">
-                        <span><i class="fas fa-user-gear me-2 text-muted"></i>{{ t.name }}</span>
-                        {% if t.is_available %}<span class="badge bg-success badge-soft">On Duty</span>{% else %}<span class="badge bg-secondary badge-soft">Off Duty</span>{% endif %}
+                    <a href="?tech_id={{ t.id }}" class="d-flex justify-content-between align-items-center text-decoration-none py-2 px-3 rounded-2 mb-1" style="color: var(--text-primary); border-bottom: 1px solid var(--border-subtle); transition: background 0.15s ease;" onmouseover="this.style.background='var(--surface-subtle)'" onmouseout="this.style.background='transparent'">
+                        <span class="fw-semibold"><i class="fas fa-id-card me-2 text-muted"></i>{{ t.name }}</span>
+                        {% if t.is_available %}<span class="status-badge status-badge--success">On Duty</span>{% else %}<span class="status-badge status-badge--neutral">Off Duty</span>{% endif %}
                     </a>
                 {% endfor %}
             </div>
@@ -90,50 +101,60 @@
 
 {% if kpi_active == 0 %}
 <!-- Empty state -->
-<div class="ft-card p-4 text-center">
-    <i class="fas fa-mug-hot fs-1 mb-3" style="color: var(--ft-muted);"></i>
-    <h6 class="fw-bold text-white mb-1">No job orders assigned yet</h6>
+<div class="card border-0 shadow-sm p-4 text-center" style="background: var(--surface-card); border-radius: 16px; border: 1px solid var(--border-subtle) !important;">
+    <div class="rounded-circle d-inline-flex align-items-center justify-content-center p-3 mb-3 mx-auto" style="width: 64px; height: 64px; background: rgba(249, 178, 51, 0.1); color: var(--gt-gold, #F9B233);">
+        <i class="fas fa-mug-hot fs-2"></i>
+    </div>
+    <h6 class="fw-bold mb-1" style="color: var(--text-primary);">No job orders assigned yet</h6>
     <p class="text-muted small mb-3">Jobs appear here automatically once dispatch confirms the ticket and assigns you.</p>
-    <a href="{% url 'technician_my_jobs' %}" class="ft-btn ft-btn-ghost" style="width:auto;">Check My Jobs</a>
+    <div class="d-flex justify-content-center">
+        <a href="{% url 'technician_my_jobs' %}" class="gt-btn-secondary" style="width:auto;">
+            <i class="fas fa-list-check me-2"></i>Check My Jobs
+        </a>
+    </div>
 </div>
 {% else %}
 
 <!-- Overdue first (Rule 36: actionable states on top) -->
 {% if overdue_tickets %}
-<div class="ft-card p-3 mb-3" style="border-left: 5px solid #ef4444;">
-    <h6 class="fw-bold text-white mb-2"><i class="fas fa-triangle-exclamation me-2" style="color: #ef4444;"></i>Overdue ({{ kpi_overdue }})</h6>
+<div class="card border-0 shadow-sm p-3 mb-3" style="background: var(--surface-card); border-radius: 16px; border: 1px solid var(--border-subtle) !important; border-left: 5px solid #ef4444 !important;">
+    <h6 class="fw-bold mb-2" style="color: var(--text-primary);">
+        <i class="fas fa-triangle-exclamation me-2" style="color: #ef4444;"></i>Overdue Jobs ({{ kpi_overdue }})
+    </h6>
     {% for t in overdue_tickets %}
-        <a href="{% url 'technician_my_jobs' %}?ticket_id={{ t.id }}" class="d-block text-decoration-none text-white job-row overdue p-2 mb-2 rounded-2" style="background: rgba(255,255,255,0.03);">
+        <a href="{% url 'technician_my_jobs' %}?ticket_id={{ t.id }}" class="d-block text-decoration-none p-2 mb-2 rounded-2" style="background: var(--surface-subtle); border: 1px solid var(--border-subtle); color: var(--text-primary); transition: transform 0.15s ease;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
             <div class="d-flex justify-content-between align-items-start gap-2">
                 <div>
-                    <div class="fw-bold">{{ t.get_ticket_type_display|default:t.ticket_type }}</div>
+                    <div class="fw-bold" style="color: var(--text-primary);">{{ t.get_ticket_type_display|default:t.ticket_type }}</div>
                     <small class="text-muted">{{ t.client_name|default:"Walk-in Client" }}</small>
                 </div>
-                <span class="badge bg-danger badge-soft">Was {{ t.scheduled_date|date:"M d" }}</span>
+                <span class="status-badge status-badge--danger">Was {{ t.scheduled_date|date:"M d" }}</span>
             </div>
-            <small class="text-muted d-block mt-1"><i class="fas fa-map-marker-alt me-1"></i>{{ t.barangay|default:t.address|default:"Address on job order"|truncatechars:60 }}</small>
+            <small class="text-muted d-block mt-1"><i class="fas fa-map-marker-alt me-1 text-danger"></i>{{ t.barangay|default:t.address|default:"Address on job order"|truncatechars:60 }}</small>
         </a>
     {% endfor %}
 </div>
 {% endif %}
 
 <!-- Today's schedule -->
-<div class="ft-card p-3 mb-3">
-    <h6 class="fw-bold text-white mb-2"><i class="fas fa-calendar-day me-2" style="color: var(--ft-gold);"></i>Due Today</h6>
+<div class="card border-0 shadow-sm p-3 mb-3" style="background: var(--surface-card); border-radius: 16px; border: 1px solid var(--border-subtle) !important;">
+    <h6 class="fw-bold mb-2" style="color: var(--text-primary);">
+        <i class="fas fa-calendar-day me-2" style="color: var(--gt-gold, #F9B233);"></i>Due Today
+    </h6>
     {% for t in today_tickets %}
-        <a href="{% url 'technician_my_jobs' %}?ticket_id={{ t.id }}" class="d-block text-decoration-none text-white job-row {% if t.status == 'IN_PROGRESS' %}in-progress{% endif %} p-2 mb-2 rounded-2" style="background: rgba(255,255,255,0.03);">
+        <a href="{% url 'technician_my_jobs' %}?ticket_id={{ t.id }}" class="d-block text-decoration-none p-2 mb-2 rounded-2" style="background: var(--surface-subtle); border: 1px solid var(--border-subtle); color: var(--text-primary); transition: transform 0.15s ease;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
             <div class="d-flex justify-content-between align-items-start gap-2">
                 <div>
-                    <div class="fw-bold">{{ t.get_ticket_type_display|default:t.ticket_type }}</div>
+                    <div class="fw-bold" style="color: var(--text-primary);">{{ t.get_ticket_type_display|default:t.ticket_type }}</div>
                     <small class="text-muted">{{ t.client_name|default:"Walk-in Client" }}</small>
                 </div>
                 {% if t.status == 'IN_PROGRESS' %}
-                    <span class="badge bg-primary badge-soft">On Site</span>
+                    <span class="status-badge status-badge--info"><span class="status-dot"></span> On Site</span>
                 {% else %}
-                    <span class="badge bg-dark text-warning border border-warning badge-soft">{{ t.scheduled_time|default:"Any time" }}</span>
+                    <span class="status-badge status-badge--warning"><i class="fas fa-clock me-1"></i>{{ t.scheduled_time|default:"Any time" }}</span>
                 {% endif %}
             </div>
-            <small class="text-muted d-block mt-1"><i class="fas fa-map-marker-alt me-1"></i>{{ t.barangay|default:t.address|default:"Address on job order"|truncatechars:60 }}</small>
+            <small class="text-muted d-block mt-1"><i class="fas fa-map-marker-alt me-1" style="color: var(--gt-gold, #F9B233);"></i>{{ t.barangay|default:t.address|default:"Address on job order"|truncatechars:60 }}</small>
         </a>
     {% empty %}
         <p class="text-muted small mb-0 py-2"><i class="fas fa-check-circle me-1" style="color: #22c55e;"></i>Nothing scheduled for today.</p>
@@ -142,18 +163,20 @@
 
 <!-- Upcoming -->
 {% if upcoming_tickets %}
-<div class="ft-card p-3 mb-3">
-    <h6 class="fw-bold text-white mb-2"><i class="fas fa-forward me-2" style="color: #38bdf8;"></i>Upcoming</h6>
+<div class="card border-0 shadow-sm p-3 mb-3" style="background: var(--surface-card); border-radius: 16px; border: 1px solid var(--border-subtle) !important;">
+    <h6 class="fw-bold mb-2" style="color: var(--text-primary);">
+        <i class="fas fa-forward me-2 text-info"></i>Upcoming Jobs
+    </h6>
     {% for t in upcoming_tickets %}
-        <a href="{% url 'technician_my_jobs' %}?ticket_id={{ t.id }}" class="d-block text-decoration-none text-white job-row p-2 mb-2 rounded-2" style="background: rgba(255,255,255,0.03);">
+        <a href="{% url 'technician_my_jobs' %}?ticket_id={{ t.id }}" class="d-block text-decoration-none p-2 mb-2 rounded-2" style="background: var(--surface-subtle); border: 1px solid var(--border-subtle); color: var(--text-primary); transition: transform 0.15s ease;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
             <div class="d-flex justify-content-between align-items-start gap-2">
                 <div>
-                    <div class="fw-bold">{{ t.get_ticket_type_display|default:t.ticket_type }}</div>
+                    <div class="fw-bold" style="color: var(--text-primary);">{{ t.get_ticket_type_display|default:t.ticket_type }}</div>
                     <small class="text-muted">{{ t.client_name|default:"Walk-in Client" }}</small>
                 </div>
-                <span class="badge bg-dark text-info border border-info badge-soft">{{ t.scheduled_date|date:"M d" }}{% if t.scheduled_time %} &middot; {{ t.scheduled_time }}{% endif %}</span>
+                <span class="status-badge status-badge--neutral">{{ t.scheduled_date|date:"M d" }}{% if t.scheduled_time %} &middot; {{ t.scheduled_time }}{% endif %}</span>
             </div>
-            <small class="text-muted d-block mt-1"><i class="fas fa-map-marker-alt me-1"></i>{{ t.barangay|default:t.address|default:"Address on job order"|truncatechars:60 }}</small>
+            <small class="text-muted d-block mt-1"><i class="fas fa-map-marker-alt me-1 text-muted"></i>{{ t.barangay|default:t.address|default:"Address on job order"|truncatechars:60 }}</small>
         </a>
     {% endfor %}
 </div>
@@ -161,16 +184,18 @@
 
 <!-- Recently finished -->
 {% if recent_done %}
-<div class="ft-card p-3 mb-3">
-    <h6 class="fw-bold text-white mb-2"><i class="fas fa-clipboard-check me-2" style="color: #22c55e;"></i>Recently Completed</h6>
+<div class="card border-0 shadow-sm p-3 mb-3" style="background: var(--surface-card); border-radius: 16px; border: 1px solid var(--border-subtle) !important;">
+    <h6 class="fw-bold mb-2" style="color: var(--text-primary);">
+        <i class="fas fa-clipboard-check me-2" style="color: #22c55e;"></i>Recently Completed
+    </h6>
     {% for t in recent_done %}
-        <div class="job-row done p-2 mb-2 rounded-2" style="background: rgba(255,255,255,0.03);">
+        <div class="p-2 mb-2 rounded-2" style="background: var(--surface-subtle); border: 1px solid var(--border-subtle);">
             <div class="d-flex justify-content-between align-items-start gap-2">
                 <div>
-                    <div class="fw-bold">{{ t.get_ticket_type_display|default:t.ticket_type }}</div>
+                    <div class="fw-bold" style="color: var(--text-primary);">{{ t.get_ticket_type_display|default:t.ticket_type }}</div>
                     <small class="text-muted">{{ t.client_name|default:"Walk-in Client" }}</small>
                 </div>
-                <span class="badge bg-success badge-soft">{{ t.get_status_display|default:t.status }}</span>
+                <span class="status-badge status-badge--success">{{ t.get_status_display|default:t.status }}</span>
             </div>
             {% if t.technician_report %}<small class="text-muted d-block mt-1"><i class="fas fa-note-sticky me-1"></i>{{ t.technician_report|truncatechars:80 }}</small>{% endif %}
         </div>
@@ -181,3 +206,4 @@
 {% endif %}
 
 {% endblock %}
+
