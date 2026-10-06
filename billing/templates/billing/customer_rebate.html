@@ -4,30 +4,46 @@
 
 {% block content %}
 <div class="container-fluid py-4 px-3 px-md-4">
-  <div class="row justify-content-center animate-fade-in">
+
+  <!-- Page Header -->
+  <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4" style="--section-accent: #059669;">
+    <div class="d-flex align-items-center gap-3">
+      <div class="gt-header-icon" style="background: rgba(5, 150, 105, 0.15); color: #34d399;"><i class="fas fa-hand-holding-usd"></i></div>
+      <div>
+        <div class="gt-header-eyebrow"><i class="fas fa-gift me-1"></i> Billing Compensation</div>
+        <h1 class="gt-header-title">Issue Customer Rebate</h1>
+        <p class="gt-header-sub">Grant downtime compensation or SLA credit days to <strong>{{ customer.full_name }}</strong> ({{ customer.pppoe_username }})</p>
+      </div>
+    </div>
+    <a href="{% url 'view_customer' customer.id %}" class="gt-btn-secondary">
+      <i class="fas fa-arrow-left me-1"></i> Back to Customer
+    </a>
+  </div>
+
+  <div class="row justify-content-center">
     <div class="col-12 col-md-8 col-lg-6 col-xl-5">
       <div class="gt-table-card">
         <!-- Card Header -->
-        <div class="gt-table-toolbar" style="justify-content: center;">
+        <div class="gt-table-toolbar">
           <div class="gt-table-toolbar-left">
-            <span class="gt-status-badge gt-status-badge--success"><span class="gt-status-dot"></span> Issue Rebate — {{ customer.pppoe_username }}</span>
+            <span class="status-badge status-badge--success"><i class="fas fa-gift me-1"></i> Issue Rebate &mdash; {{ customer.pppoe_username }}</span>
           </div>
         </div>
         <div class="p-4">
           
           {% if sla_breaches %}
-          <div class="alert alert-danger mb-4" style="border-radius: 12px; border-left: 4px solid #dc2626; background: rgba(220,38,38,0.05);">
-            <h5 class="fw-bold mb-2 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>SLA Breach Detected</h5>
+          <div class="alert alert-danger mb-4 rounded-3 border-0" style="border-left: 4px solid #dc2626 !important; background: rgba(220, 38, 38, 0.08);">
+            <h6 class="fw-bold mb-2 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>SLA Breach Detected</h6>
             {% for breach in sla_breaches %}
-            <p class="mb-1" style="font-size: 0.9rem;">
-              Ticket <strong>#{{ breach.ticket_id }}</strong> has been unresolved for <strong>{{ breach.hours_open }} hours</strong>. <br>
-              <span class="text-danger fw-bold">Customer is owed {{ breach.owed_days }} days of rebate.</span>
-            </p>
-            <button class="btn btn-sm btn-outline-danger mt-2 fw-bold apply-sla-btn" 
+            <div class="mb-2" style="font-size: 0.88rem;">
+              Ticket <strong>#{{ breach.ticket_id }}</strong> unresolved for <strong>{{ breach.hours_open }} hours</strong>. <br>
+              <span class="text-danger fw-bold">Customer is eligible for {{ breach.owed_days }} days rebate.</span>
+            </div>
+            <button class="gt-btn-secondary btn-sm mt-1 fw-bold apply-sla-btn" 
                     data-days="{{ breach.owed_days }}" 
                     data-ticket="{{ breach.ticket_id }}"
                     data-note="Manual SLA Rebate: Ticket #{{ breach.ticket_id }} open for {{ breach.hours_open }} hours">
-              <i class="fas fa-magic me-1"></i> Apply {{ breach.owed_days }} Day(s) Free
+              <i class="fas fa-magic me-1 text-danger"></i> Apply {{ breach.owed_days }} Day(s) Free
             </button>
             {% endfor %}
           </div>
@@ -37,23 +53,23 @@
             {% csrf_token %}
             <input type="hidden" name="ticket_id" id="ticket_id" value="">
             <div class="mb-3">
-              <label class="filter-label">Current Status</label>
+              <label class="form-label small fw-semibold text-muted">Current Subscription Status</label>
               {% if customer.status == 'active' %}
-                <div class="p-2 rounded" style="background:rgba(16,185,129,0.1); color:#10b981; font-weight:600; border:1px solid rgba(16,185,129,0.2);">
-                  <i class="fas fa-plug me-2"></i>Active (PPPoE Enabled)
+                <div class="p-2 rounded d-flex align-items-center gap-2" style="background: rgba(16, 185, 129, 0.1); color: #10b981; font-weight: 600; border: 1px solid rgba(16, 185, 129, 0.2);">
+                  <i class="fas fa-plug"></i> Active (PPPoE Enabled)
                 </div>
               {% else %}
-                <div class="p-2 rounded" style="background:rgba(239,68,68,0.1); color:#ef4444; font-weight:600; border:1px solid rgba(239,68,68,0.2);">
-                  <i class="fas fa-plug-circle-xmark me-2"></i>{{ customer.status|title }} (PPPoE Disabled)
+                <div class="p-2 rounded d-flex align-items-center gap-2" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; font-weight: 600; border: 1px solid rgba(239, 68, 68, 0.2);">
+                  <i class="fas fa-plug-circle-xmark"></i> {{ customer.status|title }} (PPPoE Disabled)
                 </div>
               {% endif %}
             </div>
             <div class="mb-3">
-              <label class="filter-label">Current Expiry</label>
-              <input type="text" class="form-control" value="{{ customer.expires_at|default:'N/A' }}" readonly style="background:rgba(5,150,105,0.05); border-color:rgba(5,150,105,0.2); color:#059669; font-weight:600;">
+              <label class="form-label small fw-semibold text-muted">Current Expiry Date</label>
+              <input type="text" class="form-control" value="{{ customer.expires_at|default:'N/A' }}" readonly style="background: rgba(5, 150, 105, 0.05); border-color: rgba(5, 150, 105, 0.2); color: #059669; font-weight: 600;">
             </div>
             <div class="mb-3">
-              <label class="filter-label">Set New Expiry (Rebate)</label>
+              <label class="form-label small fw-semibold text-muted">Set New Expiry (Rebate)</label>
               <div class="input-group mb-2">
                 <input type="datetime-local" name="new_due_date_time" class="form-control" id="new_due_date_time" value="{{ current_expiry_js }}" required>
               </div>
@@ -67,13 +83,13 @@
               </div>
             </div>
             <div class="mb-4">
-              <label class="filter-label">Reason for Rebate</label>
-              <textarea name="note" id="rebate_note" class="form-control" rows="3" placeholder="Power outage, downtime, etc." required></textarea>
+              <label class="form-label small fw-semibold text-muted">Reason for Rebate</label>
+              <textarea name="note" id="rebate_note" class="form-control" rows="3" placeholder="Power outage, line maintenance downtime, etc." required></textarea>
             </div>
             <div class="d-flex gap-2">
-              <a href="{% url 'view_customer' customer.id %}" class="btn-premium btn-p-ghost flex-fill justify-content-center">Cancel</a>
-              <button type="submit" class="btn-premium btn-p-success flex-fill justify-content-center">
-                <i class="fas fa-gift"></i> Apply Rebate
+              <a href="{% url 'view_customer' customer.id %}" class="gt-btn-secondary flex-fill justify-content-center">Cancel</a>
+              <button type="submit" class="gt-btn-primary flex-fill justify-content-center">
+                <i class="fas fa-gift me-1"></i> Apply Rebate
               </button>
             </div>
           </form>
