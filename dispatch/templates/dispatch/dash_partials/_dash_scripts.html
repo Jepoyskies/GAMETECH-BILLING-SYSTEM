@@ -1,0 +1,112 @@
+<script>
+// Live clock updater
+setInterval(function() {
+  var el = document.getElementById('dashLiveClock');
+  if (el) {
+    var now = new Date();
+    el.innerText = now.toLocaleString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+      hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true
+    }) + ' · Realtime Operational Overview';
+  }
+}, 1000);
+
+// Live countdown timers for expiring subscriptions
+function updateCountdownTimers() {
+  document.querySelectorAll('.countdown-timer').forEach(function(el) {
+    var expiryStr = el.getAttribute('data-expiry');
+    if (!expiryStr) return;
+    var expiry = new Date(expiryStr);
+    var now = new Date();
+    var diff = expiry - now;
+    var timerText = el.querySelector('.timer-text');
+    if (!timerText) return;
+    if (diff <= 0) {
+      timerText.textContent = 'EXPIRED';
+      el.classList.remove('status-badge--danger', 'bg-danger');
+      el.classList.add('status-badge--neutral', 'bg-secondary');
+    } else {
+      var days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      var hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      var mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      var secs = Math.floor((diff % 1000 * 60) / 1000);
+      var text = (days > 0 ? days + 'd ' : '') + String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+      timerText.textContent = text;
+    }
+  });
+}
+setInterval(updateCountdownTimers, 1000);
+updateCountdownTimers();
+
+// Status Chart interactive mode switcher
+var rawChartData = {{ overview_data.chart_data_json|default:"{}"|safe }};
+
+function switchPieMode(mode, btn) {
+  document.querySelectorAll('.donut-tab-pill').forEach(function(b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+
+  var modeData = rawChartData[mode] || { pending: 0, assigned: 0, in_progress: 0, completed: 0, cancelled: 0 };
+  var pending = modeData.pending || 0;
+  var assigned = modeData.assigned || 0;
+  var inProgress = modeData.in_progress || 0;
+  var completed = modeData.completed || 0;
+  var cancelled = modeData.cancelled || 0;
+  var total = pending + assigned + inProgress + completed + cancelled;
+
+  document.getElementById('legPending').innerText = pending;
+  document.getElementById('legAssigned').innerText = assigned;
+  document.getElementById('legInProgress').innerText = inProgress;
+  document.getElementById('legDone').innerText = completed;
+  document.getElementById('legCancelled').innerText = cancelled;
+
+  var centerVal = document.getElementById('donutCenterVal');
+  var centerLbl = document.getElementById('donutCenterLbl');
+  if (centerVal) centerVal.innerText = total;
+  if (centerLbl) {
+    centerLbl.innerText = mode === 'internet_install' ? 'Install' :
+                          mode === 'cignal_play' ? 'Cignal' :
+                          mode === 'client_concerns' ? 'Concerns' : 'All Records';
+  }
+
+  // Animate SVG stroke dasharrays
+  var circPending = document.getElementById('donutPending');
+  var circOngoing = document.getElementById('donutOngoing');
+  var circCompleted = document.getElementById('donutCompleted');
+  var perimeter = 2 * Math.PI * 38; // ~238.76
+
+  if (total > 0) {
+    var pPct = (pending / total) * perimeter;
+    var oPct = ((assigned + inProgress) / total) * perimeter;
+    var cPct = (completed / total) * perimeter;
+
+    circPending.setAttribute('stroke-dasharray', pPct + ' ' + (perimeter - pPct));
+    circPending.setAttribute('stroke-dashoffset', '0');
+
+    circOngoing.setAttribute('stroke-dasharray', oPct + ' ' + (perimeter - oPct));
+    circOngoing.setAttribute('stroke-dashoffset', '-' + pPct);
+
+    circCompleted.setAttribute('stroke-dasharray', cPct + ' ' + (perimeter - cPct));
+    circCompleted.setAttribute('stroke-dashoffset', '-' + (pPct + oPct));
+  } else {
+    circPending.setAttribute('stroke-dasharray', '0 250');
+    circOngoing.setAttribute('stroke-dasharray', '0 250');
+    circCompleted.setAttribute('stroke-dasharray', '0 250');
+  }
+}
+
+// Chart theme updater on theme change
+function updateDonutTheme() {
+  var isDark = document.documentElement.classList.contains('dark-mode') || (document.body && document.body.classList.contains('dark-mode'));
+  var track = document.querySelector('.donut-bg-track');
+  if (track) {
+    track.setAttribute('stroke', isDark ? 'rgba(255,255,255,0.08)' : '#e2e8f0');
+  }
+}
+window.addEventListener('themeChanged', updateDonutTheme);
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+  switchPieMode('all', document.querySelector('.donut-tab-pill.active'));
+  updateDonutTheme();
+});
+</script>

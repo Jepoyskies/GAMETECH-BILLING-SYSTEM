@@ -1,0 +1,31 @@
+<!-- 4. Monthly Install Targets Bar Chart -->
+<div class="dash-section animate-fade-in animate-delay-2">
+  <div class="dash-section-heading">
+    <i class="fas fa-chart-column" style="color: #3b82f6;"></i> Monthly Installation Targets vs. Actuals
+  </div>
+  <div class="monthly-targets-card">
+    <div class="monthly-bars-row">
+      {% for m in monthly_targets.months %}
+      <div class="monthly-bar-group">
+        <div class="monthly-bar-pair">
+          <div class="monthly-bar actual" style="height: {% widthratio m.actual monthly_targets.avg_target 150 %}px;" title="Actual: {{ m.actual }}"></div>
+          <div class="monthly-bar target" style="height: {% widthratio m.target monthly_targets.avg_target 150 %}px;" title="Target: {{ m.target }}"></div>
+        </div>
+        <span class="monthly-bar-label">{{ m.month_name }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="monthly-pct-row">
+      {% for m in monthly_targets.months %}
+      <div class="monthly-pct-item">
+        <div class="monthly-pct-val {% if m.pct >= 100 %}green{% elif m.pct >= 50 %}yellow{% else %}red{% endif %}">{{ m.pct }}%</div>
+        <div class="monthly-pct-lbl">{{ m.month_name }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="monthly-legend">
+      <div class="monthly-legend-item"><span class="monthly-legend-dot" style="background:#3b82f6;"></span> Actual Installs</div>
+      <div class="monthly-legend-item"><span class="monthly-legend-dot" style="background:#94a3b8;"></span> Monthly Target</div>
+    </div>
+  </div>
+</div>

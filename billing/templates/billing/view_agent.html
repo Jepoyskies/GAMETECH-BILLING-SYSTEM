@@ -1,41 +1,53 @@
 {% extends 'billing/base.html' %}
+{% load static %}
 
-{% block title %}Agent Details - Mikrotik Billing System{% endblock %}
+{% block title %}Agent Details: {{ agent.name }} | Gametech Unli Fiber{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
 <style>
-    @media (max-width: 768px) {
-        .table-responsive {
-            display: none;
-        }
-
-        .card-view {
-            display: block;
-        }
-    }
-
-    @media (min-width: 769px) {
-        .card-view {
-            display: none;
-        }
-    }
-
-    #customersTable {
-        font-size: 0.875rem;
-    }
-
-    #customersTable td,
-    #customersTable th {
-        padding: 0.5rem;
-    }
+  .gt-table-card .dataTables_info,
+  .gt-table-card .gt-table thead th { color: var(--gt-text-secondary, var(--text-secondary)) !important; }
+  .gt-table-card .pagination .page-item.disabled .page-link {
+    opacity: 1;
+    color: var(--gt-text-secondary, var(--text-secondary)) !important;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-<main class="container py-4">
+<main class="container-fluid py-4 px-3 px-md-4">
+
+    <!-- Hero Header -->
+    <div class="gt-page-header gt-page-header--hero d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 animate-fade-in">
+        <div class="d-flex align-items-center gap-3">
+            <div class="gt-header-icon" style="background: linear-gradient(135deg, rgba(249, 178, 51, 0.2), rgba(59, 130, 246, 0.15)); color: var(--gt-gold, #F9B233); border: 1px solid rgba(249, 178, 51, 0.3);">
+                <i class="fas fa-id-badge"></i>
+            </div>
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="gt-header-eyebrow" style="background: rgba(249, 178, 51, 0.12); color: #fbae1a; border: 1px solid rgba(249, 178, 51, 0.25);">
+                        <i class="fas fa-handshake me-1"></i> Sales Partner Profile
+                    </span>
+                </div>
+                <h1 class="gt-header-title">{{ agent.name }}</h1>
+                <p class="gt-header-sub">Agent referral account details, portal login authorization, and customer ledger</p>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <a href="{% url 'agent_list' %}" class="gt-btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back to Agents
+            </a>
+            <a href="{% url 'staff_add_customer_for_agent' agent.id %}" class="gt-btn-primary">
+                <i class="fas fa-user-plus me-1"></i> Add Customer to this Agent
+            </a>
+        </div>
+    </div>
+
     {% if temp_credentials %}
-    <div class="alert alert-warning border-2 d-flex align-items-center justify-content-between p-3 mb-4 shadow-sm rounded-3">
+    <!-- Temporary Credentials Callout -->
+    <div class="alert alert-warning border-0 d-flex align-items-center justify-content-between p-3 mb-4 shadow-sm rounded-4 animate-fade-in" style="background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3) !important;">
         <div class="d-flex align-items-center gap-3">
             <div class="fs-2 text-warning"><i class="fas fa-shield-halved"></i></div>
             <div>
@@ -43,63 +55,77 @@
                 <p class="mb-0 text-dark" style="font-size: 0.95rem;">
                     Username: <strong class="font-monospace text-primary">{{ temp_credentials.username }}</strong> &nbsp;|&nbsp;
                     Temp Password: <strong class="font-monospace text-danger bg-white px-2 py-1 border rounded">{{ temp_credentials.temp_password }}</strong>
-                    <span class="badge bg-secondary ms-2">Valid 7 Days</span>
+                    <span class="status-badge status-badge--neutral ms-2">Valid 7 Days</span>
                 </p>
                 <small class="text-muted">This temporary password is never logged and will not be displayed again. Please relay it to the agent securely.</small>
             </div>
         </div>
-        <button type="button" class="btn btn-outline-dark btn-sm font-monospace fw-bold" onclick="navigator.clipboard.writeText('Username: {{ temp_credentials.username|escapejs }}\nPassword: {{ temp_credentials.temp_password|escapejs }}'); alert('Credentials copied to clipboard!');">
-            <i class="far fa-copy me-1"></i>Copy Credentials
+        <button type="button" class="gt-btn-secondary gt-btn-sm font-monospace fw-bold" onclick="navigator.clipboard.writeText('Username: {{ temp_credentials.username|escapejs }}\nPassword: {{ temp_credentials.temp_password|escapejs }}'); alert('Credentials copied to clipboard!');">
+            <i class="far fa-copy me-1"></i> Copy Credentials
         </button>
     </div>
     {% endif %}
 
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show rounded-3 shadow-sm mb-3" role="alert">
+                {{ message|safe }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
     {% if agent %}
-    <div class="row g-3 mb-4">
+    <!-- Agent Profile Cards Row -->
+    <div class="row g-3 mb-4 animate-fade-in animate-delay-1">
+        <!-- Agent Info Card -->
         <div class="col-lg-6">
-            <div class="dashboard-card h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h3 class="card-title mb-1 fw-bold">{{ agent.name }}</h3>
-                            <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2 py-1 small">
-                                <i class="fas fa-handshake me-1"></i> Sales Agent
-                            </span>
+            <div class="card border-0 shadow-sm h-100" style="background: var(--surface-card); border-radius: 16px; border: 1px solid var(--border-subtle) !important; backdrop-filter: blur(12px);">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="av av-md" style="width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; background: rgba(59, 130, 246, 0.12); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.25);">
+                                {{ agent.name|make_list|first|upper }}
+                            </div>
+                            <div>
+                                <h4 class="mb-0 fw-bold" style="color: var(--text-primary); font-family: 'Montserrat', sans-serif;">{{ agent.name }}</h4>
+                                <span class="status-badge status-badge--info mt-1">
+                                    <i class="fas fa-handshake me-1"></i> Sales Agent
+                                </span>
+                            </div>
                         </div>
-                        <a href="{% url 'staff_add_customer_for_agent' agent.id %}" class="btn btn-sm btn-primary fw-bold shadow-sm">
-                            <i class="fas fa-user-plus me-1"></i> Add Customer to this Agent
-                        </a>
                     </div>
-                    <hr class="my-3 opacity-25">
-                    <ul class="list-unstyled mb-0 small">
-                        <li class="mb-2"><i class="fas fa-envelope text-muted me-2"></i><strong>Email:</strong> {{ agent.email }}</li>
-                        <li class="mb-2"><i class="fas fa-phone text-muted me-2"></i><strong>Phone:</strong> {{ agent.phone|default_if_none:"None provided" }}</li>
-                        <li><i class="fas fa-calendar-alt text-muted me-2"></i><strong>Registered:</strong> {{ agent.created_at|date:"M d, Y"|default:"N/A" }}</li>
+                    <hr class="my-3" style="border-color: var(--border-divider);">
+                    <ul class="list-unstyled mb-0 small d-flex flex-column gap-2" style="color: var(--text-secondary);">
+                        <li><i class="fas fa-envelope text-muted me-2" style="width: 16px;"></i><strong>Email:</strong> {{ agent.email }}</li>
+                        <li><i class="fas fa-phone text-muted me-2" style="width: 16px;"></i><strong>Phone:</strong> {{ agent.phone|default_if_none:"None provided" }}</li>
+                        <li><i class="fas fa-calendar-alt text-muted me-2" style="width: 16px;"></i><strong>Registered:</strong> {{ agent.created_at|date:"M d, Y"|default:"N/A" }}</li>
                     </ul>
                 </div>
             </div>
         </div>
 
+        <!-- Portal Login Account Card -->
         <div class="col-lg-6">
-            <div class="dashboard-card h-100" style="border-left: 4px solid {% if agent.user %}#10b981{% else %}#f59e0b{% endif %};">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h5 class="card-title mb-0 fw-bold">
-                            <i class="fas fa-id-badge text-primary me-2"></i>Portal Login Account
+            <div class="card border-0 shadow-sm h-100" style="background: var(--surface-card); border-radius: 16px; border: 1px solid var(--border-subtle) !important; border-left: 5px solid {% if agent.user %}#10b981{% else %}#f59e0b{% endif %} !important; backdrop-filter: blur(12px);">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0 fw-bold d-flex align-items-center gap-2" style="color: var(--text-primary); font-family: 'Montserrat', sans-serif;">
+                            <i class="fas fa-id-badge text-primary"></i> Portal Login Account
                         </h5>
                         {% if agent.user %}
                             {% if agent.user.is_active %}
-                                <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> Active</span>
+                                <span class="status-badge status-badge--success"><span class="status-dot"></span> Active</span>
                             {% else %}
-                                <span class="badge bg-danger"><i class="fas fa-ban me-1"></i> Deactivated</span>
+                                <span class="status-badge status-badge--danger"><span class="status-dot"></span> Deactivated</span>
                             {% endif %}
                         {% else %}
-                            <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-circle me-1"></i> No Login Set</span>
+                            <span class="status-badge status-badge--warning"><span class="status-dot"></span> No Login Set</span>
                         {% endif %}
                     </div>
 
                     {% if agent.user %}
-                    <div class="p-3 bg-light rounded-3 mb-3 border small">
+                    <div class="p-3 rounded-3 mb-3 small" style="background: var(--surface-subtle); border: 1px solid var(--border-divider);">
                         <div class="row g-2">
                             <div class="col-sm-6">
                                 <span class="text-muted d-block">Username:</span>
@@ -112,13 +138,13 @@
                         </div>
                     </div>
                     <div class="d-flex gap-2 flex-wrap">
-                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#setupLoginModal">
+                        <button type="button" class="gt-btn-secondary gt-btn-sm" data-bs-toggle="modal" data-bs-target="#setupLoginModal">
                             <i class="fas fa-key me-1"></i> Reset Password
                         </button>
                         <form method="post" action="{% url 'view_agent' agent.id %}" style="display:inline;" onsubmit="return confirm('Toggle login access for this agent?');">
                             {% csrf_token %}
                             <input type="hidden" name="toggle_agent_login" value="1">
-                            <button type="submit" class="btn btn-sm {% if agent.user.is_active %}btn-outline-danger{% else %}btn-outline-success{% endif %}">
+                            <button type="submit" class="gt-btn-secondary gt-btn-sm {% if agent.user.is_active %}text-danger{% else %}text-success{% endif %}">
                                 {% if agent.user.is_active %}<i class="fas fa-user-slash me-1"></i> Deactivate{% else %}<i class="fas fa-user-check me-1"></i> Activate{% endif %}
                             </button>
                         </form>
@@ -127,7 +153,7 @@
                     <p class="text-muted small mb-3">
                         This agent does not have login credentials yet. Create an authorized login so they can submit prospect clients directly through the Agent Portal.
                     </p>
-                    <button type="button" class="btn btn-sm btn-primary fw-bold" data-bs-toggle="modal" data-bs-target="#setupLoginModal">
+                    <button type="button" class="gt-btn-primary gt-btn-sm" data-bs-toggle="modal" data-bs-target="#setupLoginModal">
                         <i class="fas fa-user-plus me-1"></i> Set Up Portal Login
                     </button>
                     {% endif %}
@@ -136,140 +162,126 @@
         </div>
     </div>
 
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
-                {{ message|safe }}
-                <button type="button" class="gt-icon-btn" data-bs-dismiss="alert" aria-label="Close" aria-label="Close"><i class="fas fa-times"></i></button>
-            </div>
-        {% endfor %}
-    {% endif %}
-
+    <!-- Customers Referred Table Card -->
     {% if customers %}
-    <h4 class="mt-2 mb-2">Customers handled by this agent</h4>
-
-    <div class="table-responsive">
-        <table id="customersTable" class="table table-bordered table-striped">
-            <thead class="table-dark">
-                <tr>
-                    <th>Created At</th>
-                    <th>Username</th>
-                    <th>Email</th>
-                    <th>Account Type</th>
-                    <th>Plan Name</th>
-                    <th>Full Name</th>
-                    <th>Referral</th>
-                    <th>Adjusted By</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for cust in customers %}
-                <tr>
-                    <td>{{ cust.created_at|date:"Y-m-d H:i:s" }}</td>
-                    <td>{{ cust.pppoe_username|default_if_none:"" }}</td>
-                    <td>{{ cust.email|default_if_none:"" }}</td>
-                    <td>{{ cust.account_type.type_name|default_if_none:"" }}</td>
-                    <td>{{ cust.plan.name|default_if_none:"" }}</td>
-                    <td>{{ cust.full_name|default_if_none:"" }}</td>
-                    <td>
-                        {% if cust.referral_received == '1' or cust.referral_received|lower == 'true' or cust.referral_received|lower == 'paid' %}
-                        <span class="badge bg-success" aria-label="Referral paid">✓ Paid</span>
-                        {% else %}
-                        <span class="badge bg-secondary" aria-label="Referral not paid">Pending</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <form method="post" action="{% url 'view_agent' agent.id %}" style="display:inline;">
-                            {% csrf_token %}
-                            <input type="hidden" name="cust_id" value="{{ cust.id }}">
-                            <select name="referral_value" class="form-select form-select-sm d-inline-block w-auto" onchange="this.form.submit()">
-                                <option value="0" {% if not cust.referral_received or cust.referral_received == '0' or cust.referral_received|lower == 'false' or cust.referral_received|lower == 'pending' %}selected{% endif %}>Pending</option>
-                                <option value="1" {% if cust.referral_received == '1' or cust.referral_received|lower == 'true' or cust.referral_received|lower == 'paid' %}selected{% endif %}>Paid</option>
-                            </select>
-                            <input type="hidden" name="update_referral" value="1">
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Card View for Mobile -->
-    <div class="card-view">
-        {% for cust in customers %}
-        <div class="dashboard-card mb-4">
-            <div class="card-body">
-                <p class="card-text"><strong>Created At:</strong> {{ cust.created_at|date:"Y-m-d H:i:s" }}</p>
-                <h5 class="card-title"><strong>Username:</strong> {{ cust.pppoe_username|default_if_none:"" }}</h5>
-                <p class="card-text"><strong>Email:</strong> {{ cust.email|default_if_none:"" }}</p>
-                <p class="card-text"><strong>Account Type:</strong> {{ cust.account_type.type_name|default_if_none:"" }}</p>
-                <p class="card-text"><strong>Plan Name:</strong> {{ cust.plan.name|default_if_none:"" }}</p>
-                <p class="card-text"><strong>Full Name:</strong> {{ cust.full_name|default_if_none:"" }}</p>
-                <p class="card-text"><strong>Referral:</strong>
-                    {% if cust.referral_received == '1' or cust.referral_received|lower == 'true' or cust.referral_received|lower == 'paid' %}
-                    <span class="badge bg-success">✓ Paid</span>
-                    {% else %}
-                    <span class="badge bg-secondary">Pending</span>
-                    {% endif %}
-                </p>
-                <form method="post" action="{% url 'view_agent' agent.id %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="cust_id" value="{{ cust.id }}">
-                    <div class="mb-2">
-                        <select name="referral_value" class="form-select" onchange="this.form.submit()">
-                            <option value="0" {% if not cust.referral_received or cust.referral_received == '0' or cust.referral_received|lower == 'false' or cust.referral_received|lower == 'pending' %}selected{% endif %}>Pending</option>
-                            <option value="1" {% if cust.referral_received == '1' or cust.referral_received|lower == 'true' or cust.referral_received|lower == 'paid' %}selected{% endif %}>Paid</option>
-                        </select>
-                    </div>
-                    <input type="hidden" name="update_referral" value="1">
-                </form>
+    <div class="gt-table-card animate-fade-in animate-delay-2">
+        <div class="gt-table-toolbar">
+            <div class="gt-table-toolbar-title">
+                <i class="fas fa-users"></i> Customers Handled by {{ agent.name }}
+            </div>
+            <div class="gt-table-toolbar-right">
+                <span class="status-badge status-badge--neutral">
+                    <span class="status-dot"></span> {{ customers|length }} total referred
+                </span>
             </div>
         </div>
-        {% endfor %}
+
+        <div class="table-responsive p-0">
+            <table id="customersTable" class="table gt-table align-middle mb-0" style="width:100%">
+                <thead>
+                    <tr>
+                        <th>Created At</th>
+                        <th>PPPoE Username</th>
+                        <th>Email</th>
+                        <th>Account Type</th>
+                        <th>Plan Name</th>
+                        <th>Full Name</th>
+                        <th>Referral Status</th>
+                        <th>Adjust Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cust in customers %}
+                    <tr>
+                        <td class="text-muted small" style="white-space: nowrap;">{{ cust.created_at|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            {% if cust.pppoe_username %}
+                            <span class="font-monospace fw-semibold" style="font-size: 0.82rem;">{{ cust.pppoe_username }}</span>
+                            {% else %}<span class="text-muted">-</span>{% endif %}
+                        </td>
+                        <td class="small">{{ cust.email|default_if_none:"-" }}</td>
+                        <td><span class="status-badge status-badge--neutral">{{ cust.account_type.type_name|default:"Standard" }}</span></td>
+                        <td><span class="fw-semibold">{{ cust.plan.name|default:"-" }}</span></td>
+                        <td class="fw-bold">{{ cust.full_name|default_if_none:"-" }}</td>
+                        <td>
+                            {% if cust.referral_received == '1' or cust.referral_received|lower == 'true' or cust.referral_received|lower == 'paid' %}
+                            <span class="status-badge status-badge--success" aria-label="Referral paid">
+                                <span class="status-dot"></span> Paid
+                            </span>
+                            {% else %}
+                            <span class="status-badge status-badge--warning" aria-label="Referral not paid">
+                                <span class="status-dot"></span> Pending
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form method="post" action="{% url 'view_agent' agent.id %}" class="d-inline-flex align-items-center gap-1">
+                                {% csrf_token %}
+                                <input type="hidden" name="cust_id" value="{{ cust.id }}">
+                                <select name="referral_value" class="form-select form-select-sm d-inline-block w-auto" onchange="this.form.submit()">
+                                    <option value="0" {% if not cust.referral_received or cust.referral_received == '0' or cust.referral_received|lower == 'false' or cust.referral_received|lower == 'pending' %}selected{% endif %}>Pending</option>
+                                    <option value="1" {% if cust.referral_received == '1' or cust.referral_received|lower == 'true' or cust.referral_received|lower == 'paid' %}selected{% endif %}>Paid</option>
+                                </select>
+                                <input type="hidden" name="update_referral" value="1">
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
+    {% else %}
+    <div class="gt-table-card p-5 text-center">
+        <div class="gt-empty-state mx-auto" style="max-width: 400px;">
+            <i class="fas fa-users-slash text-muted fa-3x mb-3" style="opacity: 0.35;"></i>
+            <h5 class="fw-bold mb-1">No customers referred yet</h5>
+            <p class="text-muted small mb-0">When this agent brings new subscribers, they will appear in this ledger with their qualifying commission status.</p>
+        </div>
+    </div>
+    {% endif %}
 
     {% else %}
-    <p class="text-muted mt-2">No customers found for this agent.</p>
-    {% endif %}
-    
-    {% else %}
-    <div class="alert alert-warning">Agent not found.</div>
+    <div class="alert alert-warning rounded-4 shadow-sm">Agent profile not found.</div>
     {% endif %}
 
     <!-- Setup / Reset Login Modal -->
     {% if agent %}
     <div class="modal fade" id="setupLoginModal" tabindex="-1" aria-labelledby="setupLoginModalLabel" aria-hidden="true">
-        <div class="modal-dialog gt-modal-scroll">
+        <div class="modal-dialog modal-dialog-centered gt-modal-scroll">
             <div class="modal-content gt-modal-card">
                 <form method="post" action="{% url 'view_agent' agent.id %}">
                     {% csrf_token %}
                     <input type="hidden" name="setup_agent_login" value="1">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="setupLoginModalLabel">
-                            <i class="fas fa-id-badge text-primary me-2"></i>
-                            {% if agent.user %}Reset Agent Login Credentials{% else %}Set Up Agent Portal Login{% endif %}
-                        </h5>
-                        <button type="button" class="gt-icon-btn" data-bs-dismiss="modal" aria-label="Close" aria-label="Close"><i class="fas fa-times"></i></button>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="gt-modal-icon"><i class="fas fa-key"></i></div>
+                            <div>
+                                <h5 class="modal-title" id="setupLoginModalLabel">
+                                    {% if agent.user %}Reset Login Credentials{% else %}Set Up Agent Portal Login{% endif %}
+                                </h5>
+                                <div class="gt-field-help mt-1">Authorize access to the Gametech Sales Agent Portal.</div>
+                            </div>
+                        </div>
+                        <button type="button" class="gt-icon-btn" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
                     </div>
                     <div class="modal-body">
-                        <div class="alert alert-info small mb-3">
-                            <i class="fas fa-info-circle me-1"></i>
-                            <strong>Temporary Password Relay:</strong> Staff generates the password here and relays it to <strong>{{ agent.name }}</strong> via phone or Messenger. Agents log in at <code>/login/</code> and can only submit prospects and view their commission wallet.
+                        <div class="gt-callout gt-callout--info mb-3">
+                            <i class="fas fa-info-circle"></i>
+                            <span>Staff generates the temporary password here and relays it to <strong>{{ agent.name }}</strong> securely. Agents log in at <code>/login/</code>.</span>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-bold small">Login Username</label>
+                            <label class="form-label fw-bold small text-uppercase">Login Username</label>
                             <input type="text" name="username" class="form-control font-monospace" 
                                    value="{% if agent.user %}{{ agent.user.username }}{% else %}{{ agent.email|slice:':15' }}{% endif %}" 
                                    id="agentUsernameInput" required>
                             <div class="form-text small">Used by the agent to log into <code>/login/</code>.</div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-bold small">Temporary Password</label>
+                            <label class="form-label fw-bold small text-uppercase">Temporary Password</label>
                             <div class="input-group">
                                 <input type="text" name="password" class="form-control font-monospace" id="agentTempPasswordInput" placeholder="Click 'Generate' or type password" required>
-                                <button type="button" class="btn btn-outline-secondary" onclick="generateAgentTempPassword()" title="Generate Random Password">
+                                <button type="button" class="gt-btn-secondary" onclick="generateAgentTempPassword()" title="Generate Random Password">
                                     <i class="fas fa-dice me-1"></i> Generate
                                 </button>
                             </div>
@@ -277,8 +289,8 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary fw-bold">
+                        <button type="button" class="gt-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="gt-btn-primary">
                             <i class="fas fa-save me-1"></i> Save & Authorize Login
                         </button>
                     </div>
@@ -287,20 +299,29 @@
         </div>
     </div>
     {% endif %}
+
 </main>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
 <script>
     $(document).ready(function () {
-        $('#customersTable').DataTable({
-            "paging": true,
-            "searching": true,
-            "ordering": true,
-            "info": true
-        });
+        if ($('#customersTable').length) {
+            $('#customersTable').DataTable({
+                paging: true,
+                searching: true,
+                ordering: true,
+                info: true,
+                pageLength: 25,
+                language: {
+                    search: "_INPUT_",
+                    searchPlaceholder: "Filter customers..."
+                }
+            });
+        }
     });
 
     function generateAgentTempPassword() {

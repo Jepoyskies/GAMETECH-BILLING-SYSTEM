@@ -7,14 +7,14 @@
 <div class="container py-3" style="max-width: 680px;">
 
   <!-- Technician Status Header Card -->
-  <div class="card border-0 shadow-sm mb-3" style="background: var(--surface-card); border-radius: 14px; border: 1px solid var(--border-subtle) !important;">
+  <div class="card border-0 shadow-sm mb-3" style="background: var(--surface-card); border-radius: 16px; border: 1px solid var(--border-subtle) !important; backdrop-filter: blur(12px);">
     <div class="card-body p-3 d-flex justify-content-between align-items-center">
       <div class="d-flex align-items-center gap-3">
-        <div class="rounded-circle p-2 d-flex align-items-center justify-content-center style="width: 44px; height: 44px; background: var(--section-accent-soft); color: var(--section-accent-text);">
+        <div class="rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; background: rgba(249, 178, 51, 0.15); color: var(--gt-gold, #F9B233); border: 1px solid rgba(249, 178, 51, 0.3);">
           <i class="fas fa-screwdriver-wrench fs-5"></i>
         </div>
         <div>
-          <h5 class="fw-bold mb-0" style="color: var(--text-primary);">
+          <h5 class="fw-bold mb-0" style="color: var(--text-primary); font-family: 'Montserrat', sans-serif;">
             {% if viewing_all %}All Field Technicians{% else %}{{ technician.name|default:"Technician" }}{% endif %}
           </h5>
           <span class="text-muted small">
@@ -25,10 +25,10 @@
 
       <div class="text-end">
         {% if viewing_all %}
-        <span class="badge bg-success text-white px-2 py-1" style="font-size: 0.75rem; border-radius: 6px;">Field Fleet</span>
+        <span class="status-badge status-badge--success">Field Fleet</span>
         {% else %}
-        <span class="badge {% if technician.is_available %}bg-success text-white{% else %}bg-secondary text-white{% endif %} px-2 py-1" style="font-size: 0.75rem; border-radius: 6px;">
-          {% if technician.is_available %}On Duty{% else %}Off Duty{% endif %}
+        <span class="status-badge {% if technician.is_available %}status-badge--success{% else %}status-badge--neutral{% endif %}">
+          <span class="status-dot"></span> {% if technician.is_available %}On Duty{% else %}Off Duty{% endif %}
         </span>
         {% endif %}
         <div class="small text-muted mt-1" style="font-size: 0.72rem;">
@@ -60,25 +60,31 @@
     </h6>
 
     {% for t in tickets %}
-      <div class="card border-0 shadow-sm mb-3" style="background: var(--surface-card); border-radius: 14px; border: 1px solid var(--border-subtle) !important; border-left: 5px solid {% if t.status == 'IN_PROGRESS' %}#f59e0b{% else %}var(--section-accent-soft){% endif %} !important;">
+      <div class="card border-0 shadow-sm mb-3" style="background: var(--surface-card); border-radius: 16px; border: 1px solid var(--border-subtle) !important; border-left: 5px solid {% if t.status == 'IN_PROGRESS' %}#f59e0b{% else %}var(--border-subtle){% endif %} !important; backdrop-filter: blur(12px);">
         <div class="card-body p-3">
           
           <!-- Top Badges & Priority -->
           <div class="d-flex justify-content-between align-items-start mb-2">
-            <div>
-              <span class="badge me-1" style="background: var(--section-accent-soft); color: var(--section-accent-text);">
-                {{ t.get_ticket_type_display }}
-              </span>
+            <div class="d-flex flex-wrap align-items-center gap-1.5">
+              {% if t.ticket_type == 'INSTALLATION' %}
+                <span class="status-badge status-badge--info">Install</span>
+              {% elif t.ticket_type == 'REPAIR' %}
+                <span class="status-badge status-badge--warning">Repair</span>
+              {% elif t.ticket_type == 'CIGNAL' %}
+                <span class="status-badge status-badge--danger">Cignal</span>
+              {% else %}
+                <span class="status-badge status-badge--neutral">{{ t.get_ticket_type_display }}</span>
+              {% endif %}
               {% if t.priority == 'URGENT' %}
-                <span class="badge bg-danger">Urgent</span>
+                <span class="status-badge status-badge--danger"><i class="fas fa-fire"></i> Urgent</span>
               {% elif t.priority == 'HIGH' %}
-                <span class="badge bg-warning text-dark">High</span>
+                <span class="status-badge status-badge--warning">High</span>
               {% endif %}
               {% if t.status == 'IN_PROGRESS' %}
-                <span class="badge bg-warning text-dark"><i class="fas fa-clock fa-spin me-1"></i> On Site / Active</span>
+                <span class="status-badge status-badge--warning"><span class="status-dot"></span> On Site</span>
               {% endif %}
               {% if viewing_all %}
-                <span class="badge bg-secondary text-white">
+                <span class="status-badge status-badge--neutral">
                   <i class="fas fa-user-gear me-1"></i>{% for tn in t.technicians.all %}{{ tn.name }}{% if not forloop.last %}, {% endif %}{% empty %}Unassigned{% endfor %}
                 </span>
               {% endif %}
@@ -121,11 +127,11 @@
           <div class="row g-2">
             <!-- Call Client & Log Attempt -->
             <div class="col-6">
-              <div class="btn-group w-100">
-                <a href="tel:{{ t.contact_number }}" class="btn btn-sm btn-outline-secondary w-75 d-inline-flex align-items-center justify-content-center gap-1">
+              <div class="d-flex align-items-center gap-1 w-100">
+                <a href="tel:{{ t.contact_number }}" class="gt-btn-secondary gt-btn-sm flex-grow-1 d-inline-flex align-items-center justify-content-center gap-1">
                   <i class="fas fa-phone text-success"></i> Call Client
                 </a>
-                <button type="button" class="btn btn-sm btn-outline-secondary w-25" onclick="openContactModal('{{ t.id }}', '{{ t.ticket_number }}', {{ t.contact_attempt_count }})" title="Log Contact Attempt">
+                <button type="button" class="gt-icon-btn" onclick="openContactModal('{{ t.id }}', '{{ t.ticket_number }}', {{ t.contact_attempt_count }})" title="Log Contact Attempt">
                   <i class="fas fa-pen-to-square"></i>
                 </button>
               </div>
@@ -134,7 +140,7 @@
             <!-- Return to Dispatch (if 3+ attempts or refusal) -->
             {% if t.contact_attempt_count >= 3 %}
               <div class="col-6">
-                <button type="button" class="btn btn-sm btn-danger w-100 d-inline-flex align-items-center justify-content-center gap-1" onclick="openReturnModal('{{ t.id }}', '{{ t.ticket_number }}')">
+                <button type="button" class="gt-btn-danger gt-btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1" onclick="openReturnModal('{{ t.id }}', '{{ t.ticket_number }}')">
                   <i class="fas fa-arrow-rotate-left"></i> Return to Dispatch
                 </button>
               </div>
@@ -145,8 +151,8 @@
               <div class="{% if t.contact_attempt_count >= 3 %}col-12{% else %}col-6{% endif %}">
                 <button type="button" 
                         id="btnArrived{{ t.id }}" 
-                        class="btn btn-sm text-white fw-bold w-100 d-inline-flex align-items-center justify-content-center gap-1"
-                        style="background: #059669; border-color: #059669;"
+                        class="gt-btn-primary gt-btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1.5"
+                        style="background: var(--status-success, #059669); border-color: var(--status-success, #059669);"
                         onclick="triggerArrived('{{ t.id }}')">
                   <i class="fas fa-location-arrow"></i> Arrived on Site
                 </button>
@@ -154,8 +160,7 @@
             {% elif t.status == 'IN_PROGRESS' %}
               <div class="{% if t.contact_attempt_count >= 3 %}col-12{% else %}col-6{% endif %}">
                 <button type="button" 
-                        class="btn btn-sm text-white fw-bold w-100 d-inline-flex align-items-center justify-content-center gap-1"
-                        style="background: #2563eb; border-color: #2563eb;"
+                        class="gt-btn-primary gt-btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1.5"
                         onclick="openDoneModal('{{ t.id }}', '{{ t.ticket_number }}', '{{ t.ticket_type }}')">
                   <i class="fas fa-check-circle"></i> Done (Finish Form)
                 </button>

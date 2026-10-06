@@ -1,0 +1,67 @@
+<!-- Expiring Soon with Live Countdown Timers -->
+<div class="dash-section animate-fade-in animate-delay-1">
+  <div class="gt-table-card">
+    <div class="gt-table-toolbar">
+      <div class="gt-table-toolbar-title">
+        <i class="fas fa-hourglass-half text-danger"></i> Subscriptions Expiring Soon (Live Countdown)
+      </div>
+      <div class="gt-table-toolbar-right">
+        <span class="status-badge status-badge--danger">
+          <span class="status-dot"></span> {{ expiring_soon|length }} at risk
+        </span>
+      </div>
+    </div>
+    <div class="table-responsive p-0">
+      <table class="table gt-table align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th>PPPoE Username</th>
+            <th>Expiry Date</th>
+            <th class="text-end">Countdown Timer</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cust in expiring_soon %}
+          <tr>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="gt-avatar-initials" style="width: 28px; height: 28px; border-radius: 50%; background: rgba(239, 68, 68, 0.12); color: #ef4444; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; justify-content: center;">
+                  {{ cust.full_name|slice:":1"|upper }}
+                </div>
+                <div>
+                  <div class="fw-semibold text-primary-emphasis" style="font-size: 0.85rem;">{{ cust.full_name }}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="gt-code-pill font-monospace" style="background: var(--surface-subtle); padding: 0.2rem 0.5rem; border-radius: 6px; border: 1px solid var(--border-divider); font-size: 0.8rem;">
+                {{ cust.pppoe_username }}
+              </span>
+            </td>
+            <td>
+              <span class="text-muted" style="font-size: 0.82rem;">
+                <i class="far fa-calendar me-1"></i> {{ cust.expires_at|date:"M d, Y h:i A" }}
+              </span>
+            </td>
+            <td class="text-end">
+              <span class="status-badge status-badge--danger countdown-timer" data-expiry="{{ cust.expires_at|date:'c' }}" style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; letter-spacing: 0.02em;">
+                <span class="status-dot"></span> <span class="timer-text">--:--:--</span>
+              </span>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4" class="text-center py-4">
+              <div class="gt-empty-state">
+                <i class="fas fa-circle-check text-success"></i>
+                <div class="empty-title text-muted" style="font-size: 0.85rem;">No subscriptions expiring in the next 3 days.</div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

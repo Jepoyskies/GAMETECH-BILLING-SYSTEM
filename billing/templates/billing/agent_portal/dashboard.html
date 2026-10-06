@@ -6,21 +6,23 @@
 <div class="row g-4">
     <!-- Welcome & Quick CTA Banner -->
     <div class="col-12">
-        <div class="pt-card pt-card-accent p-4">
+        <div class="pt-card pt-card-accent p-4" style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: var(--gt-radius-card, 16px); backdrop-filter: blur(12px);">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                 <div>
-                    <span class="pt-badge pt-badge-accent mb-2">Authenticated Sales Agent</span>
-                    <h4 class="fw-bold mb-1">Mabuhay, {{ agent.name }}!</h4>
+                    <span class="status-badge status-badge--info mb-2">
+                        <i class="fas fa-shield-halved me-1"></i> Authenticated Sales Agent
+                    </span>
+                    <h4 class="fw-bold mb-1" style="color: var(--text-primary); font-family: 'Montserrat', sans-serif;">Mabuhay, {{ agent.name }}!</h4>
                     <p class="text-muted small mb-0">Track your submitted applicant leads, review 2nd-month qualifying progress, and manage your referral incentives.</p>
                 </div>
                 <div>
                     {% if viewing_staff %}
-                    <button class="btn btn-outline-secondary px-4 py-2 fs-6" disabled
+                    <button class="gt-btn-secondary px-4 py-2 fs-6" disabled
                             title="Agents only — you are viewing, not acting">
                         <i class="fas fa-eye me-2"></i> View only
                     </button>
                     {% else %}
-                    <a href="{% url 'agent_add_prospect' %}" class="btn btn-primary-gt shadow-sm px-4 py-2 fs-6">
+                    <a href="{% url 'agent_add_prospect' %}" class="gt-btn-primary px-4 py-2 fs-6">
                         <i class="fas fa-user-plus me-2"></i> Submit New Referral
                     </a>
                     {% endif %}
@@ -31,16 +33,16 @@
 
     <!-- Incentive Progress & Wallet Banner -->
     <div class="col-12">
-        <div class="pt-card p-4">
+        <div class="pt-card p-4" style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: var(--gt-radius-card, 16px); backdrop-filter: blur(12px);">
             <div class="row align-items-center g-3">
                 <div class="col-12 col-md-4">
                     <div class="d-flex align-items-center gap-3">
-                        <div class="wallet-icon d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; border-radius: var(--gt-radius-md); font-size: 1.4rem;">
+                        <div class="wallet-icon d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; border-radius: 12px; font-size: 1.3rem; background: rgba(249, 178, 51, 0.15); color: var(--gt-gold, #F9B233); border: 1px solid rgba(249, 178, 51, 0.3);">
                             <i class="fas fa-wallet"></i>
                         </div>
                         <div>
                             <span class="text-muted small text-uppercase fw-semibold d-block">Claimable Commission</span>
-                            <h3 class="fw-bold text-white mb-0">₱{{ claimable_commission|floatformat:2 }}</h3>
+                            <h3 class="fw-bold mb-0" style="color: var(--text-primary); font-family: 'Montserrat', sans-serif;">₱{{ claimable_commission|floatformat:2 }}</h3>
                             <span class="text-muted small">{{ unpaid_qualified }} qualified &bull; {{ total_qualified }} lifetime</span>
                         </div>
                     </div>
@@ -48,13 +50,13 @@
 
                 <div class="col-12 col-md-5">
                     <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span class="small text-white fw-semibold">
+                        <span class="small fw-semibold" style="color: var(--text-primary);">
                             <i class="fas fa-chart-line text-info me-1"></i> Next Payout Goal ({{ progress_count }} / {{ batch_size }} Qualified)
                         </span>
                         <span class="small text-muted">{{ progress_pct }}%</span>
                     </div>
-                    <div class="pt-progress" style="height: 10px;">
-                        <div class="pt-progress-bar" role="progressbar" style="width: {{ progress_pct }}%;" aria-valuenow="{{ progress_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="pt-progress" style="height: 10px; background: var(--surface-subtle); border-radius: 6px; overflow: hidden; border: 1px solid var(--border-divider);">
+                        <div class="pt-progress-bar" role="progressbar" style="width: {{ progress_pct }}%; height: 100%; background: linear-gradient(90deg, #3b82f6, #10b981); border-radius: 6px;" aria-valuenow="{{ progress_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
                     <div class="small text-muted mt-1">
                         {% if is_cashout_eligible %}
@@ -67,24 +69,19 @@
 
                 <div class="col-12 col-md-3 text-md-end">
                     {% if viewing_staff %}
-                    {% comment %}
-                    Staff is inspecting, not acting. These endpoints resolve the
-                    agent from request.user.agent_profile, so a POST here would
-                    either fail or, worse, act as somebody else.
-                    {% endcomment %}
-                    <button class="btn btn-outline-secondary btn-sm" disabled
+                    <button class="gt-btn-secondary btn-sm" disabled
                             title="Agents only — you are viewing, not acting">
                         <i class="fas fa-eye me-1"></i> View only
                     </button>
                     {% elif is_cashout_eligible %}
                     <form method="post" action="{% url 'agent_request_cashout' %}">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-success fw-bold px-3 py-2">
+                        <button type="submit" class="gt-btn-primary fw-bold px-3 py-2" style="background: var(--status-success, #10b981); border-color: var(--status-success, #10b981);">
                             <i class="fas fa-money-bill-wave me-1"></i> Request Cashout
                         </button>
                     </form>
                     {% else %}
-                    <button class="btn btn-outline-secondary btn-sm" disabled title="Requires at least 5 qualifying subscribers">
+                    <button class="gt-btn-secondary btn-sm" disabled title="Requires at least 5 qualifying subscribers">
                         <i class="fas fa-lock me-1"></i> Cashout at 5
                     </button>
                     {% endif %}
@@ -95,76 +92,80 @@
 
     <!-- Referrals List -->
     <div class="col-12">
-        <div class="pt-card p-4">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                <h5 class="fw-bold text-white mb-0">
-                    <i class="fas fa-users text-primary me-2"></i> My Referrals ({{ prospects|length }})
-                </h5>
-                <span class="text-muted small">Real-time status of your submitted applicants</span>
+        <div class="gt-table-card">
+            <div class="gt-table-toolbar">
+                <div class="gt-table-toolbar-title">
+                    <i class="fas fa-users"></i> My Referrals
+                </div>
+                <div class="gt-table-toolbar-right">
+                    <span class="status-badge status-badge--neutral">
+                        <span class="status-dot"></span> {{ prospects|length }} submitted applicants
+                    </span>
+                </div>
             </div>
 
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 text-white" style="font-size: 0.88rem;">
-                    <thead class="bg-dark text-muted text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">
+            <div class="table-responsive p-0">
+                <table class="table gt-table align-middle mb-0" style="font-size: 0.88rem;">
+                    <thead>
                         <tr>
-                            <th class="ps-2 py-3">Applicant Name</th>
+                            <th class="ps-3 py-3">Applicant Name</th>
                             <th class="py-3">Application Status</th>
                             <th class="py-3">Payment Progress (Qualifying Month)</th>
                             <th class="py-3">Unlock Date</th>
                             <th class="py-3">Due Date</th>
-                            <th class="text-end pe-2 py-3">Action</th>
+                            <th class="text-end pe-3 py-3">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for p in prospects %}
                         <tr>
-                            <td class="ps-2 py-3">
-                                <strong class="text-white d-block">{{ p.full_name }}</strong>
+                            <td class="ps-3 py-3">
+                                <strong class="d-block" style="color: var(--text-primary);">{{ p.full_name }}</strong>
                                 {% if p.duplicate_flag %}
-                                    <span class="badge bg-warning text-dark font-monospace" style="font-size: 0.68rem;">
+                                    <span class="status-badge status-badge--warning font-monospace" style="font-size: 0.68rem;">
                                         <i class="fas fa-flag me-1"></i> Flagged for Review
                                     </span>
                                 {% endif %}
                             </td>
                             <td class="py-3">
                                 {% if p.status == 'submitted' %}
-                                    <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i> Submitted</span>
+                                    <span class="status-badge status-badge--warning"><i class="fas fa-clock me-1"></i> Submitted</span>
                                 {% elif p.status == 'under_review' %}
-                                    <span class="badge bg-info"><i class="fas fa-search me-1"></i> Under Review</span>
+                                    <span class="status-badge status-badge--info"><i class="fas fa-search me-1"></i> Under Review</span>
                                 {% elif p.status == 'converted' %}
-                                    <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> Converted to Customer</span>
+                                    <span class="status-badge status-badge--success"><i class="fas fa-check-circle me-1"></i> Converted</span>
                                 {% elif p.status == 'declined' %}
-                                    <span class="badge bg-danger"><i class="fas fa-times me-1"></i> Declined</span>
+                                    <span class="status-badge status-badge--danger"><i class="fas fa-times me-1"></i> Declined</span>
                                     {% if p.decline_reason %}
                                         <div class="text-danger small mt-1" style="font-size: 0.72rem;" title="{{ p.decline_reason }}">{{ p.decline_reason }}</div>
                                     {% endif %}
                                 {% else %}
-                                    <span class="badge bg-secondary">{{ p.get_status_display }}</span>
+                                    <span class="status-badge status-badge--neutral">{{ p.get_status_display }}</span>
                                 {% endif %}
                             </td>
                             <td class="py-3">
                                 {% if p.qualification_status == 'paid_out' %}
-                                    <span class="badge bg-success text-white">
+                                    <span class="status-badge status-badge--success">
                                         <i class="fas fa-check-double me-1"></i> Paid Out (₱500)
                                     </span>
                                 {% elif p.qualification_status == 'qualified' %}
-                                    <span class="badge bg-success text-white">
+                                    <span class="status-badge status-badge--success">
                                         <i class="fas fa-check-circle me-1"></i> Qualified (₱500)
                                     </span>
                                 {% elif p.qualification_status == 'revoked' %}
-                                    <span class="badge bg-danger text-white">
+                                    <span class="status-badge status-badge--danger">
                                         <i class="fas fa-undo me-1"></i> Revoked (Rollback)
                                     </span>
                                 {% elif p.qualification_status == 'cancelled' %}
-                                    <span class="badge bg-secondary text-muted">
+                                    <span class="status-badge status-badge--neutral">
                                         <i class="fas fa-ban me-1"></i> Ineligible (Cancelled)
                                     </span>
                                 {% elif p.qualification_status == 'in_progress' %}
-                                    <span class="badge bg-primary bg-opacity-20 text-info border border-info border-opacity-25">
+                                    <span class="status-badge status-badge--info">
                                         <i class="fas fa-spinner fa-spin me-1"></i> {{ p.progress_text }}
                                     </span>
                                 {% elif p.qualification_status == 'pending_payment' %}
-                                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25">
+                                    <span class="status-badge status-badge--warning">
                                         <i class="fas fa-hourglass-half me-1"></i> Pending 1st Payment
                                     </span>
                                 {% else %}
@@ -173,7 +174,7 @@
                             </td>
                             <td class="py-3 text-muted small">
                                 {% if p.unlock_date %}
-                                    <span class="badge bg-secondary bg-opacity-20 text-white-50 border border-secondary border-opacity-25">
+                                    <span class="status-badge status-badge--neutral">
                                         {{ p.unlock_date|date:"M d, Y" }}
                                     </span>
                                 {% else %}
@@ -187,17 +188,17 @@
                                     <span class="text-muted">—</span>
                                 {% endif %}
                             </td>
-                            <td class="text-end pe-2 py-3">
+                            <td class="text-end pe-3 py-3">
                                 {% if viewing_staff %}
-                                    <span class="badge bg-secondary text-muted" title="Staff view is read-only">
+                                    <span class="status-badge status-badge--neutral" title="Staff view is read-only">
                                         <i class="fas fa-eye me-1"></i> View only
                                     </span>
                                 {% elif not p.opened_by_staff_at and p.status == 'submitted' %}
-                                    <a href="{% url 'agent_edit_prospect' p.id %}" class="btn btn-sm btn-outline-primary fw-semibold">
+                                    <a href="{% url 'agent_edit_prospect' p.id %}" class="gt-btn-secondary gt-btn-sm">
                                         <i class="fas fa-edit me-1"></i> Edit
                                     </a>
                                 {% else %}
-                                    <span class="badge bg-secondary text-muted" title="Staff has opened this referral for review. Details are locked.">
+                                    <span class="status-badge status-badge--neutral" title="Staff has opened this referral for review. Details are locked.">
                                         <i class="fas fa-lock me-1"></i> Reviewing
                                     </span>
                                 {% endif %}
@@ -206,15 +207,17 @@
                         {% empty %}
                         <tr>
                             <td colspan="6" class="text-center py-5 text-muted">
-                                <i class="fas fa-user-plus fa-3x mb-3 text-secondary opacity-50"></i>
-                                <p class="mb-2">You haven't submitted any referrals yet.</p>
-                                {% if viewing_staff %}
-                                    <span class="badge bg-secondary text-muted">
-                                        <i class="fas fa-eye me-1"></i> View only
-                                    </span>
-                                {% else %}
-                                    <a href="{% url 'agent_add_prospect' %}" class="btn btn-sm btn-primary-gt">Submit Your First Referral</a>
-                                {% endif %}
+                                <div class="gt-empty-state mx-auto" style="max-width: 400px;">
+                                    <i class="fas fa-user-plus fa-3x mb-3 text-muted opacity-50"></i>
+                                    <p class="mb-2">You haven't submitted any referrals yet.</p>
+                                    {% if viewing_staff %}
+                                        <span class="status-badge status-badge--neutral">
+                                            <i class="fas fa-eye me-1"></i> View only
+                                        </span>
+                                    {% else %}
+                                        <a href="{% url 'agent_add_prospect' %}" class="gt-btn-primary">Submit Your First Referral</a>
+                                    {% endif %}
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -229,49 +232,53 @@
 
     <!-- Payout History Card -->
     <div class="col-12">
-        <div class="pt-card p-4">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                <h5 class="fw-bold text-white mb-0">
-                    <i class="fas fa-history text-primary me-2"></i> Payout History ({{ payout_history|length }})
-                </h5>
-                <span class="text-muted small">Permanent record of completed and pending commission batches</span>
+        <div class="gt-table-card">
+            <div class="gt-table-toolbar">
+                <div class="gt-table-toolbar-title">
+                    <i class="fas fa-history"></i> Payout History
+                </div>
+                <div class="gt-table-toolbar-right">
+                    <span class="status-badge status-badge--neutral">
+                        <span class="status-dot"></span> {{ payout_history|length }} commission batches
+                    </span>
+                </div>
             </div>
 
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 text-white" style="font-size: 0.88rem;">
-                    <thead class="bg-dark text-muted text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">
+            <div class="table-responsive p-0">
+                <table class="table gt-table align-middle mb-0" style="font-size: 0.88rem;">
+                    <thead>
                         <tr>
-                            <th class="ps-2 py-3">Batch Number</th>
+                            <th class="ps-3 py-3">Batch Number</th>
                             <th class="py-3">Subscribers</th>
                             <th class="py-3">Amount</th>
                             <th class="py-3">Status</th>
                             <th class="py-3">Reference #</th>
-                            <th class="py-3">Date</th>
+                            <th class="py-3 text-end pe-3">Date</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for batch in payout_history %}
                         <tr>
-                            <td class="ps-2 py-3 font-monospace fw-bold text-white">
+                            <td class="ps-3 py-3 font-monospace fw-bold" style="color: var(--text-primary);">
                                 {{ batch.batch_number }}
                             </td>
                             <td class="py-3">
-                                <span class="badge bg-primary bg-opacity-20 text-primary">{{ batch.customer_count }} referrals</span>
+                                <span class="status-badge status-badge--info">{{ batch.customer_count }} referrals</span>
                             </td>
                             <td class="py-3">
                                 <strong class="text-success fs-6">₱{{ batch.amount|floatformat:2 }}</strong>
                             </td>
                             <td class="py-3">
                                 {% if batch.status == 'paid' %}
-                                    <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> Paid</span>
+                                    <span class="status-badge status-badge--success"><i class="fas fa-check-circle me-1"></i> Paid</span>
                                 {% else %}
-                                    <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i> Pending Approval</span>
+                                    <span class="status-badge status-badge--warning"><i class="fas fa-clock me-1"></i> Pending Approval</span>
                                 {% endif %}
                             </td>
                             <td class="py-3 font-monospace text-info small">
                                 {{ batch.reference_no|default:"—" }}
                             </td>
-                            <td class="py-3 text-muted small">
+                            <td class="py-3 text-muted small text-end pe-3">
                                 {% if batch.paid_at %}
                                     {{ batch.paid_at|date:"M d, Y H:i" }}
                                 {% else %}
@@ -282,7 +289,7 @@
                         {% empty %}
                         <tr>
                             <td colspan="6" class="text-center py-4 text-muted">
-                                <i class="fas fa-receipt fa-2x mb-2 text-secondary opacity-50 d-block"></i>
+                                <i class="fas fa-receipt fa-2x mb-2 text-muted opacity-50 d-block"></i>
                                 No payout history yet. Reach 5 qualified referrals to cash out your first ₱2,500 batch!
                             </td>
                         </tr>

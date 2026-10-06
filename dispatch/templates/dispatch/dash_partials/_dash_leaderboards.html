@@ -1,0 +1,126 @@
+<!-- 5. Technician Productivity & Leaderboard -->
+<div class="dash-section animate-fade-in animate-delay-2">
+  <div class="dash-section-heading">
+    <i class="fas fa-users-gear" style="color: var(--gt-gold, #F9B233);"></i> Field Productivity &amp; Close Rate Leaderboard
+  </div>
+  <div class="gt-table-card">
+    <div class="table-responsive p-0">
+      <table class="table gt-table align-middle mb-0">
+        <thead>
+          <tr>
+            <th style="width: 60px;">Rank</th>
+            <th>Technician</th>
+            <th>Installs</th>
+            <th>Repairs</th>
+            <th>Total Jobs</th>
+            <th>Target / Day</th>
+            <th>Target / Month</th>
+            <th>% of Target</th>
+            <th class="text-end">Avg / Day</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in tech_report.by_staff %}
+            <tr>
+              <td>
+                <span class="rank-badge {% if forloop.counter == 1 %}gold{% elif forloop.counter == 2 %}silver{% elif forloop.counter == 3 %}bronze{% endif %}">
+                  {{ forloop.counter }}
+                </span>
+              </td>
+              <td>
+                <div class="fw-semibold text-primary-emphasis">
+                  {{ row.name }}
+                  {% if row.team_name %}<span class="text-muted small fw-normal ms-1">({{ row.team_name }})</span>{% endif %}
+                </div>
+              </td>
+              <td><span class="status-badge status-badge--info">{{ row.installs }}</span></td>
+              <td><span class="status-badge status-badge--warning">{{ row.repairs }}</span></td>
+              <td><span class="fw-bold fs-6">{{ row.total }}</span></td>
+              <td><span class="text-muted">{{ row.target_day }}</span></td>
+              <td><span class="text-muted">{{ row.target_month }}</span></td>
+              <td>
+                <span class="pill-rate {% if row.pct_product >= 100 %}pill-green{% elif row.pct_product >= 50 %}pill-yellow{% else %}pill-red{% endif %}">
+                  {{ row.pct_product }}%
+                </span>
+              </td>
+              <td class="text-end font-monospace small text-muted">{{ row.per_day_avg }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="9" class="text-center py-4">
+                <div class="gt-empty-state">
+                  <i class="fas fa-user-slash text-muted"></i>
+                  <div class="empty-title text-muted" style="font-size: 0.85rem;">No field activity recorded for this period.</div>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 6. Admin Stats (CSR Performance) -->
+<div class="dash-section animate-fade-in animate-delay-2">
+  <div class="dash-section-heading">
+    <i class="fas fa-headset" style="color: #3b82f6;"></i> Customer Service Representative (CSR) Performance
+  </div>
+  <div class="gt-table-card">
+    <div class="table-responsive p-0">
+      <table class="table gt-table align-middle mb-0">
+        <thead>
+          <tr>
+            <th style="width: 60px;">Rank</th>
+            <th>CSR Representative</th>
+            <th>Assigned</th>
+            <th>Disp. Handled</th>
+            <th>Disp. Closed</th>
+            <th>Dispatch Rate</th>
+            <th>Concerns Handled</th>
+            <th>Concerns Closed</th>
+            <th class="text-end">Concern Rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in csr_report.rows %}
+            <tr>
+              <td>
+                <span class="rank-badge {% if forloop.counter == 1 %}gold{% elif forloop.counter == 2 %}silver{% elif forloop.counter == 3 %}bronze{% endif %}">
+                  {{ forloop.counter }}
+                </span>
+              </td>
+              <td>
+                <div class="fw-semibold text-primary-emphasis">{{ row.name }}</div>
+              </td>
+              <td><span class="text-muted">{{ row.total_handled }}</span></td>
+              <td><span class="status-badge status-badge--info">{{ row.disp_handled }}</span></td>
+              <td><span class="status-badge status-badge--success">{{ row.disp_closed }}</span></td>
+              <td>
+                <span class="pill-rate {% if row.disp_rate >= 70 %}pill-green{% elif row.disp_rate >= 40 %}pill-yellow{% else %}pill-red{% endif %}">
+                  {{ row.disp_rate }}%
+                </span>
+              </td>
+              <td><span class="status-badge status-badge--warning">{{ row.concern_handled }}</span></td>
+              <td><span class="status-badge status-badge--success">{{ row.concern_closed }}</span></td>
+              <td class="text-end">
+                <span class="pill-rate {% if row.concern_rate >= 70 %}pill-green{% elif row.concern_rate >= 40 %}pill-yellow{% else %}pill-red{% endif %}">
+                  {{ row.concern_rate }}%
+                </span>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="9" class="text-center py-4">
+                <div class="gt-empty-state">
+                  <i class="fas fa-headset text-muted"></i>
+                  <div class="empty-title text-muted" style="font-size: 0.85rem;">No CSR activity recorded for this period.</div>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
