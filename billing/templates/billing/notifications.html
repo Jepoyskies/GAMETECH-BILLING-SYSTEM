@@ -6,108 +6,146 @@
 {% block extra_css %}
 <style>
 .notif-item {
-    background: white;
-    border-radius: 16px;
-    border: 1px solid rgba(0,0,0,0.06);
-    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
-    transition: transform 0.2s, box-shadow 0.2s;
+    background: var(--surface-card, #ffffff);
+    border-radius: 14px;
+    border: 1px solid var(--border-color, rgba(15, 23, 42, 0.08));
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     position: relative;
     overflow: hidden;
     margin-bottom: 12px;
 }
-.dark-mode .notif-item {
-    background: #1e293b;
-    border-color: rgba(255,255,255,0.06);
+.notif-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
 }
-.notif-item:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.09); }
-.notif-item.unread { border-left: 4px solid #2563eb; }
-.notif-item.unread { background: linear-gradient(to right, rgba(37,99,235,0.03), white); }
-.dark-mode .notif-item.unread { background: linear-gradient(to right, rgba(37,99,235,0.08), #1e293b); }
+.notif-item.unread {
+    border-left: 4px solid var(--accent-gold, #f59e0b);
+    background: linear-gradient(to right, rgba(245, 158, 11, 0.04), var(--surface-card, #ffffff));
+}
+html.dark-mode .notif-item, .dark-mode .notif-item {
+    background: var(--surface-card, #1e293b);
+    border-color: var(--border-color, rgba(255, 255, 255, 0.08));
+    box-shadow: none;
+}
+html.dark-mode .notif-item.unread, .dark-mode .notif-item.unread {
+    border-left: 4px solid var(--accent-gold, #f59e0b);
+    background: linear-gradient(to right, rgba(245, 158, 11, 0.08), var(--surface-card, #1e293b));
+}
 .notif-icon-box {
-    width: 52px; height: 52px;
-    border-radius: 14px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.3rem;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
     flex-shrink: 0;
 }
-.filter-pill {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 7px 16px; border-radius: 30px;
-    font-size: 0.82rem; font-weight: 600;
-    border: 1px solid rgba(0,0,0,0.1);
-    color: var(--text-secondary, #475569); background: white;
-    text-decoration: none; transition: all 0.2s;
+.gt-filter-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border: 1px solid var(--border-color, rgba(15, 23, 42, 0.12));
+    color: var(--text-secondary, #475569);
+    background: var(--surface-card, #ffffff);
+    text-decoration: none;
+    transition: all 0.2s ease;
 }
-.filter-pill:hover { background: var(--surface-subtle, #f1f5f9); color: var(--text-primary, #1e293b); }
-.filter-pill.active { background: #2563eb; color: white; border-color: #2563eb; box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
-.dark-mode .filter-pill { background: #1e293b; border-color: rgba(255,255,255,0.1); color: var(--text-subtle, #94a3b8); }
-.dark-mode .filter-pill:hover { background: #334155; color: #e2e8f0; }
-.dark-mode .filter-pill.active { background: #2563eb; color: white; border-color: #2563eb; }
+.gt-filter-pill:hover {
+    background: var(--surface-subtle, #f1f5f9);
+    color: var(--text-primary, #0f172a);
+}
+.gt-filter-pill.active {
+    background: #0f172a;
+    color: #ffffff;
+    border-color: #0f172a;
+}
+html.dark-mode .gt-filter-pill, .dark-mode .gt-filter-pill {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary, #94a3b8);
+}
+html.dark-mode .gt-filter-pill:hover, .dark-mode .gt-filter-pill:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #f8fafc;
+}
+html.dark-mode .gt-filter-pill.active, .dark-mode .gt-filter-pill.active {
+    background: var(--accent-gold, #f59e0b);
+    color: #0f172a;
+    border-color: var(--accent-gold, #f59e0b);
+}
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4 px-3 px-md-4">
 
-    <!-- Page Hero -->
-    <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in">
-        <div class="d-flex align-items-center">
-            <div class="hero-icon"><i class="fas fa-bell"></i></div>
+    <!-- Page Header -->
+    <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <div class="gt-header-icon"><i class="fas fa-bell"></i></div>
             <div>
-                <div class="hero-title">Notification Center</div>
-                <div class="hero-sub">Stay updated on payments, network activity, and system alerts</div>
+                <div class="gt-header-eyebrow"><i class="fas fa-inbox me-1"></i> Notification Center</div>
+                <h1 class="gt-header-title">Notification Center</h1>
+                <p class="gt-header-sub">Real-time alerts, payment confirmations, network events, and system messages</p>
             </div>
         </div>
-        <button class="btn-premium" id="pageMarkAllReadBtn"
-                style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.3); backdrop-filter:blur(8px);">
-            <i class="fas fa-check-double"></i> Mark all as read
-        </button>
+        <div class="gt-page-header__actions">
+            <button class="gt-btn-secondary" id="pageMarkAllReadBtn">
+                <i class="fas fa-check-double me-1"></i> Mark All as Read
+            </button>
+        </div>
     </div>
 
     <!-- Filter Bar -->
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 animate-fade-in animate-delay-1">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
         <div class="d-flex gap-2 flex-wrap">
-            <a href="?type=all&status={{ current_status }}" class="filter-pill {% if current_type == 'all' %}active{% endif %}">
+            <a href="?type=all&status={{ current_status }}" class="gt-filter-pill {% if current_type == 'all' %}active{% endif %}">
                 <i class="fas fa-th-large"></i> All Types
             </a>
-            <a href="?type=payment&status={{ current_status }}" class="filter-pill {% if current_type == 'payment' %}active{% endif %}">
+            <a href="?type=payment&status={{ current_status }}" class="gt-filter-pill {% if current_type == 'payment' %}active{% endif %}">
                 <i class="fas fa-money-bill-wave"></i> Payments
             </a>
-            <a href="?type=network&status={{ current_status }}" class="filter-pill {% if current_type == 'network' %}active{% endif %}">
+            <a href="?type=network&status={{ current_status }}" class="gt-filter-pill {% if current_type == 'network' %}active{% endif %}">
                 <i class="fas fa-network-wired"></i> Network Ops
             </a>
-            <a href="?type=cignal&status={{ current_status }}" class="filter-pill {% if current_type == 'cignal' %}active{% endif %}">
+            <a href="?type=cignal&status={{ current_status }}" class="gt-filter-pill {% if current_type == 'cignal' %}active{% endif %}">
                 <i class="fas fa-satellite-dish"></i> Cignal Play
             </a>
         </div>
         <div class="d-flex gap-2">
-            <a href="?type={{ current_type }}&status=all" class="filter-pill {% if current_status == 'all' %}active{% endif %}">All</a>
-            <a href="?type={{ current_type }}&status=unread" class="filter-pill {% if current_status == 'unread' %}active{% endif %}">
-                <i class="fas fa-dot-circle" style="font-size:0.6rem;"></i> Unread
+            <a href="?type={{ current_type }}&status=all" class="gt-filter-pill {% if current_status == 'all' %}active{% endif %}">All</a>
+            <a href="?type={{ current_type }}&status=unread" class="gt-filter-pill {% if current_status == 'unread' %}active{% endif %}">
+                <i class="fas fa-dot-circle text-warning" style="font-size:0.6rem;"></i> Unread
             </a>
         </div>
     </div>
 
     <!-- Notifications List -->
-    <div class="animate-fade-in animate-delay-2">
+    <div>
         {% if page_obj %}
             {% for notif in page_obj %}
             <div class="notif-item {% if not notif.is_read %}unread{% endif %}" data-id="{{ notif.id }}">
-                <div class="p-4 d-flex align-items-start gap-3">
+                <div class="p-3 p-md-4 d-flex align-items-start gap-3">
 
                     <!-- Icon Box -->
                     <div class="notif-icon-box flex-shrink-0
                         {% if notif.notification_type == 'payment' %}
-                            " style="background:#f0fdf4; color:#16a34a;">
+                            bg-success-subtle text-success">
                             <i class="fas fa-check-circle"></i>
                         {% elif notif.notification_type == 'network' %}
-                            " style="background:#fef2f2; color:#dc2626;">
+                            bg-danger-subtle text-danger">
                             <i class="fas fa-network-wired"></i>
                         {% elif notif.notification_type == 'cignal' %}
-                            " style="background:#fdf4ff; color:#7c3aed;">
+                            bg-primary-subtle text-primary">
                             <i class="fas fa-satellite-dish"></i>
                         {% else %}
-                            " style="background:#eff6ff; color:#2563eb;">
+                            bg-info-subtle text-info">
                             <i class="fas fa-info-circle"></i>
                         {% endif %}
                     </div>
@@ -118,27 +156,27 @@
                             <h6 class="mb-0 fw-bold" style="font-size:0.95rem;">{{ notif.title }}</h6>
                             <div class="d-flex align-items-center gap-2 flex-shrink-0">
                                 {% if not notif.is_read %}
-                                <span class="pill pill-pending" style="font-size:0.7rem; padding:2px 10px;">New</span>
+                                <span class="gt-status-badge gt-status-badge--warning" style="font-size:0.7rem;">New</span>
                                 {% endif %}
-                                <small class="text-muted" style="font-size:0.75rem; white-space:nowrap;">
+                                <small class="text-muted text-nowrap" style="font-size:0.75rem;">
                                     <i class="far fa-clock me-1"></i>{{ notif.created_at|date:"M d, Y h:i A" }}
                                 </small>
                             </div>
                         </div>
-                        <p class="text-muted mb-3" style="font-size:0.88rem; line-height:1.5;">{{ notif.message }}</p>
+                        <p class="text-secondary mb-3" style="font-size:0.88rem; line-height:1.5;">{{ notif.message }}</p>
                         <div class="d-flex align-items-center gap-2 flex-wrap">
                             {% if notif.link %}
-                            <a href="{{ notif.link }}" class="btn-premium btn-p-primary" style="padding:6px 14px; font-size:0.8rem;">
-                                <i class="fas fa-arrow-right"></i> View Details
+                            <a href="{{ notif.link }}" class="gt-btn-primary" style="padding:4px 12px; font-size:0.8rem;">
+                                <i class="fas fa-arrow-right me-1"></i> View Details
                             </a>
                             {% endif %}
                             {% if not notif.is_read %}
-                            <button class="btn-premium btn-p-ghost mark-read-btn" data-id="{{ notif.id }}" style="padding:6px 14px; font-size:0.8rem;">
-                                <i class="fas fa-check"></i> Mark as Read
+                            <button class="gt-btn-secondary mark-read-btn" data-id="{{ notif.id }}" style="padding:4px 12px; font-size:0.8rem;">
+                                <i class="fas fa-check me-1"></i> Mark as Read
                             </button>
                             {% endif %}
                             <!-- Type tag -->
-                            <span class="ms-auto text-muted" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.5px;">
+                            <span class="ms-auto text-muted small text-uppercase fw-semibold" style="letter-spacing:0.5px;">
                                 {{ notif.notification_type|title }}
                             </span>
                         </div>
@@ -166,14 +204,14 @@
             </div>
 
         {% else %}
-            <!-- Premium Empty State -->
-            <div class="dashboard-card" style="border-radius:20px; overflow:hidden;">
-                <div class="empty-state py-5">
-                    <div class="es-icon"><i class="fas fa-bell-slash"></i></div>
-                    <h6>No Notifications Found</h6>
-                    <p>You're all caught up! There are no notifications matching your current filters.</p>
-                    <a href="{% url 'notifications_list' %}" class="btn-premium btn-p-primary mt-4">
-                        <i class="fas fa-times"></i> Clear Filters
+            <!-- Modern Empty State -->
+            <div class="gt-table-card p-5 text-center">
+                <div class="empty-state py-4">
+                    <i class="fas fa-bell-slash fa-3x text-muted mb-3 d-block opacity-50"></i>
+                    <h5 class="fw-bold">No Notifications Found</h5>
+                    <p class="text-muted mb-4">You're all caught up! There are no notifications matching your current filters.</p>
+                    <a href="{% url 'notifications_list' %}" class="gt-btn-primary">
+                        <i class="fas fa-times me-1"></i> Clear Filters
                     </a>
                 </div>
             </div>
@@ -201,10 +239,12 @@ document.addEventListener("DOMContentLoaded", function() {
                 headers: {'X-CSRFToken': getCsrfToken()}
             }).then(res => res.json()).then(data => {
                 if(data.status === 'success') {
-                    card.classList.remove('unread');
+                    if(card) {
+                        card.classList.remove('unread');
+                        const badge = card.querySelector('.gt-status-badge--warning');
+                        if(badge) badge.remove();
+                    }
                     this.remove();
-                    const badge = card.querySelector('.pill-pending');
-                    if(badge) badge.remove();
                     window.dispatchEvent(new Event('notificationsUpdated'));
                 }
             });
@@ -224,7 +264,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 cancelButtonColor: '#94a3b8',
                 confirmButtonText: '<i class="fas fa-check-double me-1"></i>Yes, mark all',
                 cancelButtonText: 'Cancel',
-                borderRadius: '20px',
+                borderRadius: '16px',
             }).then((result) => {
                 if(result.isConfirmed) {
                     fetch('/api/notifications/mark-all-read/', {

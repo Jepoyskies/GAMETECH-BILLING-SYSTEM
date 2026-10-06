@@ -6,56 +6,79 @@
 {% block content %}
 <div class="container-fluid py-4 px-3 px-md-4">
 
-  <!-- Page Hero -->
-  <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in"
-       style="background: linear-gradient(135deg, #064e3b 0%, #059669 60%, #10b981 100%);">
-    <div class="d-flex align-items-center">
-      <div class="hero-icon"><i class="fas fa-cash-register"></i></div>
+  <!-- Page Header -->
+  <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4" style="--section-accent: #059669;">
+    <div class="d-flex align-items-center gap-3">
+      <div class="gt-header-icon" style="background: rgba(5, 150, 105, 0.15); color: #34d399;"><i class="fas fa-cash-register"></i></div>
       <div>
-        <div class="hero-title">Payment Portal</div>
-        <div class="hero-sub">Process and record subscriber payments</div>
+        <div class="gt-header-eyebrow"><i class="fas fa-wallet me-1"></i> Billing Counter</div>
+        <h1 class="gt-header-title">Payment Counter &amp; Portal</h1>
+        <p class="gt-header-sub">Process real-time subscriber subscription renewals and billing payments</p>
       </div>
     </div>
-    <span class="hero-badge"><i class="fas fa-users me-1"></i> {{ customers|length }} customers</span>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <a href="{% url 'payment_logs' %}" class="gt-btn-secondary">
+        <i class="fas fa-receipt me-1"></i> View Payment Logs
+      </a>
+      <span class="badge bg-light text-muted border px-3 py-2 fw-semibold">
+        <i class="fas fa-users me-1"></i> {{ customers|length }} Customers
+      </span>
+    </div>
   </div>
 
   <!-- Table Card -->
-  <div class="dashboard-card animate-fade-in animate-delay-1" style="overflow:hidden;">
-    <div class="section-header section-header-green">
-      <h6><i class="fas fa-money-bill-wave sh-icon"></i> All Customers</h6>
+  <div class="gt-table-card mb-4">
+    <div class="gt-table-toolbar">
+      <div class="gt-table-toolbar-left">
+        <div class="d-flex align-items-center gap-2">
+          <i class="fas fa-money-bill-wave text-success"></i>
+          <span class="fw-bold">Active Customer Directory</span>
+          <span class="badge bg-light text-muted border ms-1">{{ customers|length }} total</span>
+        </div>
+      </div>
     </div>
     <div class="table-responsive">
-      <table class="table table-premium table-hover align-middle mb-0" id="paymentTable">
+      <table class="table gt-table align-middle mb-0" id="paymentTable">
         <thead>
           <tr>
-            <th>Username</th>
+            <th class="ps-3">Username</th>
             <th>Full Name</th>
             <th>Plan</th>
             <th>Expiry Date</th>
-            <th class="text-center">Action</th>
+            <th class="text-center pe-3" style="width: 180px;">Action</th>
           </tr>
         </thead>
         <tbody>
           {% for c in customers %}
           <tr>
-            <td><span class="fw-bold" style="color:#2563eb;">{{ c.pppoe_username }}</span></td>
+            <td class="ps-3">
+              <span class="fw-bold" style="color: var(--gt-primary, #0284c7);">{{ c.pppoe_username }}</span>
+            </td>
             <td class="fw-semibold">{{ c.full_name }}</td>
-            <td><span class="text-muted" style="font-size:0.83rem;">{{ c.plan.name|default:"No Plan" }}</span></td>
-            <td><span class="text-muted" style="font-size:0.83rem;">{{ c.expires_at|date:"M d, Y H:i"|default:"N/A" }}</span></td>
-            <td class="text-center">
+            <td>
+              {% if c.plan %}
+                <span class="fw-medium">{{ c.plan.name }}</span>
+              {% else %}
+                <span class="text-muted small">&mdash;</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="text-muted small">{{ c.expires_at|date:"M d, Y H:i"|default:"N/A" }}</span>
+            </td>
+            <td class="text-center pe-3">
               <a href="{% url 'pay_customer' c.pppoe_username %}?next={{ request.get_full_path|urlencode }}"
-                 class="btn-premium btn-p-success" style="padding:7px 16px; font-size:0.8rem;">
-                <i class="fas fa-money-bill-wave"></i> Take Payment
+                 class="gt-btn-primary btn-sm px-3 py-1">
+                <i class="fas fa-cash-register me-1"></i> Take Payment
               </a>
             </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="5">
-              <div class="empty-state">
-                <div class="es-icon"><i class="fas fa-users-slash"></i></div>
+            <td colspan="5" class="text-center py-5">
+              <div class="text-muted">
+                <i class="fas fa-users-slash mb-3" style="font-size: 2.5rem; opacity: 0.3;"></i>
                 <h6>No Customers Found</h6>
-                <p>No customers are available for payment processing.</p>
+                <p class="small text-muted mb-0">No subscribers are currently available for payment processing.</p>
               </div>
             </td>
           </tr>
@@ -64,5 +87,6 @@
       </table>
     </div>
   </div>
+
 </div>
 {% endblock %}

@@ -10,64 +10,69 @@
 {% block content %}
 <div class="container-fluid py-4 px-3 px-md-4">
 
-  <!-- Page Hero -->
-  <div class="page-hero d-flex align-items-center justify-content-between flex-wrap gap-3 animate-fade-in"
-       style="background: linear-gradient(135deg, #0c4a6e 0%, #0369a1 60%, #0ea5e9 100%);">
-    <div class="d-flex align-items-center">
-      <div class="hero-icon"><i class="fas fa-computer"></i></div>
+  <!-- Page Header -->
+  <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4" style="--section-accent: #0284c7;">
+    <div class="d-flex align-items-center gap-3">
+      <div class="gt-header-icon" style="background: rgba(2, 132, 199, 0.15); color: #38bdf8;"><i class="fas fa-network-wired"></i></div>
       <div>
-        <div class="hero-title">Mikrotik Active Users</div>
-        <div class="hero-sub">Live view of connected and disconnected subscribers across all routers</div>
+        <div class="gt-header-eyebrow"><i class="fas fa-satellite-dish me-1"></i> Live Edge Sessions</div>
+        <h1 class="gt-header-title">MikroTik Active Subscribers</h1>
+        <p class="gt-header-sub">Live query of connected and disconnected PPPoE sessions across all edge routers</p>
       </div>
     </div>
     <div class="d-flex align-items-center gap-2 flex-wrap">
-      <select id="routerFilter" class="form-select" style="width:auto; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); color:white; border-radius:12px;">
-        <option value="" style="color: var(--text-primary, #0f172a);">All Routers</option>
+      <select id="routerFilter" class="form-select form-select-sm" style="width: auto; min-width: 160px;">
+        <option value="">All Routers</option>
         {% for device in devices %}
-        <option value="{{ device.device_name }}" style="color: var(--text-primary, #0f172a);">{{ device.device_name }}</option>
+        <option value="{{ device.device_name }}">{{ device.device_name }}</option>
         {% endfor %}
       </select>
-      <button type="button" class="btn-premium" style="background:rgba(245,158,11,0.25); color:#fef3c7; border:1px solid rgba(245,158,11,0.4);" data-bs-toggle="modal" data-bs-target="#updateHealthModal">
-        <i class="fas fa-heartbeat"></i> Update Network Health
+      <button type="button" class="gt-btn-primary" data-bs-toggle="modal" data-bs-target="#updateHealthModal">
+        <i class="fas fa-heartbeat me-1"></i> Update Network Health
       </button>
     </div>
   </div>
 
   <!-- Active Network Alerts -->
   {% if active_device_alerts or active_barangay_alerts %}
-  <div class="dashboard-card mb-4 animate-fade-in animate-delay-1" style="overflow:hidden;">
-    <div class="section-header section-header-amber">
-      <h6><i class="fas fa-exclamation-triangle sh-icon"></i> Active Network Alerts</h6>
-      <small>{{ active_device_alerts|length|add:active_barangay_alerts|length }} active issues</small>
+  <div class="gt-table-card mb-4">
+    <div class="gt-table-toolbar">
+      <div class="gt-table-toolbar-left">
+        <div class="d-flex align-items-center gap-2">
+          <i class="fas fa-exclamation-triangle text-danger"></i>
+          <span class="fw-bold">Active Network Alerts</span>
+          <span class="badge bg-danger text-white ms-1">{{ active_device_alerts|length|add:active_barangay_alerts|length }} active</span>
+        </div>
+      </div>
     </div>
-    <div class="p-4">
+    <div class="p-3">
       {% for alert in active_device_alerts %}
-      <div class="d-flex justify-content-between align-items-start gap-3 mb-3 p-3 rounded-3"
-           style="background:rgba(220,38,38,0.05); border-left:3px solid #dc2626;">
+      <div class="d-flex justify-content-between align-items-center gap-3 mb-2 p-3 rounded-3"
+           style="background: rgba(220, 38, 38, 0.05); border: 1px solid rgba(220, 38, 38, 0.2); border-left: 4px solid #dc2626;">
         <div>
           <div class="fw-bold mb-1">
             <i class="fas fa-server me-2 text-muted"></i>{{ alert.device_name }} <small class="text-muted">(Router)</small>
-            <span class="pill pill-expired ms-2" style="font-size:0.7rem;">{{ alert.health_status }}</span>
+            <span class="status-badge status-badge--danger ms-2" style="font-size: 0.72rem;">{{ alert.health_status }}</span>
           </div>
-          <p class="mb-0 text-muted" style="font-size:0.83rem;">{{ alert.health_reason }}</p>
+          <p class="mb-0 text-muted" style="font-size: 0.83rem;">{{ alert.health_reason }}</p>
         </div>
-        <a href="{% url 'resolve_network_health' 'router' alert.id %}" class="btn-premium btn-p-success flex-shrink-0" style="padding:6px 14px; font-size:0.8rem;">
-          <i class="fas fa-check"></i> Resolve
+        <a href="{% url 'resolve_network_health' 'router' alert.id %}" class="gt-btn-primary btn-sm flex-shrink-0">
+          <i class="fas fa-check me-1"></i> Resolve
         </a>
       </div>
       {% endfor %}
       {% for alert in active_barangay_alerts %}
-      <div class="d-flex justify-content-between align-items-start gap-3 mb-3 p-3 rounded-3"
-           style="background:rgba(245,158,11,0.05); border-left:3px solid #f59e0b;">
+      <div class="d-flex justify-content-between align-items-center gap-3 mb-2 p-3 rounded-3"
+           style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.2); border-left: 4px solid #f59e0b;">
         <div>
           <div class="fw-bold mb-1">
             <i class="fas fa-map-marker-alt me-2 text-muted"></i>{{ alert.name }} <small class="text-muted">(Barangay)</small>
-            <span class="pill pill-suspended ms-2" style="font-size:0.7rem;">{{ alert.health_status }}</span>
+            <span class="status-badge status-badge--warning ms-2" style="font-size: 0.72rem;">{{ alert.health_status }}</span>
           </div>
-          <p class="mb-0 text-muted" style="font-size:0.83rem;">{{ alert.health_reason }}</p>
+          <p class="mb-0 text-muted" style="font-size: 0.83rem;">{{ alert.health_reason }}</p>
         </div>
-        <a href="{% url 'resolve_network_health' 'barangay' alert.id %}" class="btn-premium btn-p-success flex-shrink-0" style="padding:6px 14px; font-size:0.8rem;">
-          <i class="fas fa-check"></i> Resolve
+        <a href="{% url 'resolve_network_health' 'barangay' alert.id %}" class="gt-btn-primary btn-sm flex-shrink-0">
+          <i class="fas fa-check me-1"></i> Resolve
         </a>
       </div>
       {% endfor %}
@@ -76,20 +81,24 @@
   {% endif %}
 
   <!-- Async Data Container -->
-  <div id="async-data-container" class="animate-fade-in animate-delay-2">
-    <div class="dashboard-card" style="overflow:hidden;">
-      <div class="section-header section-header-blue">
-        <h6><i class="fas fa-satellite-dish sh-icon"></i> Loading Router Data...</h6>
+  <div id="async-data-container">
+    <div class="gt-table-card">
+      <div class="gt-table-toolbar">
+        <div class="gt-table-toolbar-left">
+          <i class="fas fa-satellite-dish text-primary me-2"></i>
+          <span class="fw-bold">Polling Active Router Sessions...</span>
+        </div>
       </div>
       <div class="d-flex flex-column align-items-center justify-content-center py-5">
-        <div class="spinner-border text-primary mb-3" style="width:3rem; height:3rem;" role="status">
+        <div class="spinner-border text-primary mb-3" style="width: 2.8rem; height: 2.8rem;" role="status">
           <span class="visually-hidden">Loading...</span>
         </div>
-        <h5 class="text-muted mb-1">Fetching Live Users from Routers...</h5>
-        <p class="text-muted small">This may take a few seconds if some routers are offline.</p>
+        <h5 class="text-muted mb-1">Fetching Live Users from MikroTik Edge Routers...</h5>
+        <p class="text-muted small mb-0">Querying live sockets across connected hardware pools.</p>
       </div>
     </div>
   </div>
+
 </div>
 
 {% include 'billing/partials/update_health_modal.html' %}
@@ -129,11 +138,11 @@ document.addEventListener("DOMContentLoaded", function() {
         .catch(error => {
             console.error('Error:', error);
             container.innerHTML = `
-                <div class="dashboard-card" style="overflow:hidden;">
-                    <div class="empty-state">
-                        <div class="es-icon" style="color:#dc2626;"><i class="fas fa-exclamation-triangle"></i></div>
-                        <h6>Error Loading Data</h6>
-                        <p>Could not fetch router data. Please try refreshing the page.</p>
+                <div class="gt-table-card">
+                    <div class="p-5 text-center text-muted">
+                        <i class="fas fa-exclamation-triangle text-danger mb-3" style="font-size: 2.5rem;"></i>
+                        <h6>Error Loading Live Router Data</h6>
+                        <p class="small text-muted mb-0">Could not fetch router socket data. Please verify router connectivity or try refreshing.</p>
                     </div>
                 </div>
             `;
