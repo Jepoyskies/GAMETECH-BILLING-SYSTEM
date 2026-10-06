@@ -206,20 +206,15 @@ class Command(BaseCommand):
             # The table already held "Balulang" as a placeholder AND the legacy
             # list has BALULANG, and get_or_create(name__iexact=...) calls get()
             # with a __lookup, which raises MultipleObjectsReturned rather than
-            # returning one row. Indexing by upper-cased name sidesteps the whole
-            # class of problem and picks a single winner if duplicates exist.
-            lookup, dupes = {}, []
+            # returning one row.
+            #
+            # The FIRST row wins for a given name, so "Balulang" (mixed case,
+            # pre-existing) is reused rather than a second BALULANG being made.
+            # Indexing by upper-cased name sidesteps the lookup exception and
+            # gives one winner per place.
+            lookup = {}
             for b in Barangay.objects.all().order_by("id"):
-                key = b.name.strip().upper()
-                if key in lookup:
-                    dupes.append(b.name)
-                    continue
-                lookup[key] = b
-            if dupes:
-                self.stdout.write(
-                    self.style.WARNING(
-                        "   note: duplicate-named barangays ignored: %s"
-                        % ", ".join(sorted(set(dupes)))))
+                lookup.setdefault(b.name.strip().upper(), b)
 
             for name in legacy.values():
                 key = name.upper()
@@ -228,6 +223,25 @@ class Command(BaseCommand):
                 obj = Barangay.objects.create(name=name)
                 lookup[key] = obj
                 self.stdout.write("   created barangay %r" % name)
+
+            # Fold any case-variant duplicates back into one row. Doing this here
+            # rather than leaving "Balulang" and "BALULANG" side by side: the
+            # dropdown then lists each place once, and a filter that compares the
+            # name cannot match only one of the two spellings.
+            merged = 0
+            for key, winner in list(lookup.items()):
+                others = [b for b in Barangay.objects.all()
+                          if b.name.strip().upper() == key and b.pk != winner.pk]
+                for extra in others:
+                    moved = Customer.objects.filter(barangay=extra).update(
+                        barangay=winner)
+                    self.stdout.write(
+                        "   merged %r into %r (%d customer(s))"
+                        % (extra.name, winner.name, moved))
+                    extra.delete()
+                    merged += 1
+            if merged:
+                self.stdout.write("   duplicate names merged: %d" % merged)
 
             by_user = {c.pppoe_username: c for c in Customer.objects.all()}
             written = 0
