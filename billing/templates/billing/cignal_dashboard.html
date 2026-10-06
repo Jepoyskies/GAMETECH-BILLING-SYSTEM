@@ -1,214 +1,15 @@
-﻿﻿{% extends "billing/base.html" %}
+{% extends "billing/base.html" %}
 {% load static %}
 
 {% block title %}Cignal Play & Box Dashboard | Gametech{% endblock %}
 
 {% block extra_css %}
-<style>
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   CIGNAL PLAY DASHBOARD â€” Premium Renovated Design
-   Palette: Dashboard gold/navy + Login brand blue
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
-
-/* Hero banner */
-.cignal-hero {
-  background: linear-gradient(135deg, var(--gt-indigo, #1b49ed) 0%, var(--gt-navy, #081e75) 100%);
-  border-radius: 24px;
-  padding: 2rem 2rem 1.6rem;
-  margin-bottom: 1.75rem;
-  position: relative; overflow: hidden; color: #fff;
-}
-.cignal-hero::before {
-  content: ''; position: absolute; top: -40px; right: -40px;
-  width: 200px; height: 200px;
-  background: rgba(248,168,21,0.12); border-radius: 50%;
-}
-.cignal-hero::after {
-  content: ''; position: absolute; bottom: -50px; left: 40px;
-  width: 140px; height: 140px;
-  background: rgba(255,255,255,0.04); border-radius: 50%;
-}
-.cignal-hero-z { position: relative; z-index: 1; }
-.cignal-hero-icon {
-  width: 56px; height: 56px;
-  background: rgba(248,168,21,0.18); border: 2px solid rgba(248,168,21,0.35);
-  border-radius: 16px; display: flex; align-items: center; justify-content: center;
-  font-size: 1.5rem; color: var(--gt-gold, #f8a815); flex-shrink: 0;
-}
-.cignal-hero-eyebrow {
-  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--gt-gold, #f8a815); background: rgba(248,168,21,0.14);
-  border: 1px solid rgba(248,168,21,0.3); border-radius: 99px;
-  padding: 2px 10px; display: inline-block; margin-bottom: 0.4rem;
-}
-.cignal-hero-title { font-size: 1.75rem; font-weight: 800; color: #fff; line-height: 1.2; margin: 0; letter-spacing: -0.02em; }
-.cignal-hero-sub { font-size: 0.84rem; color: rgba(255,255,255,0.72); margin: 0.3rem 0 0; }
-.cignal-live-pill {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: rgba(16,185,129,0.16); border: 1px solid rgba(16,185,129,0.35);
-  color: #34d399; border-radius: 99px; padding: 4px 12px; font-size: 0.75rem; font-weight: 600;
-}
-.cignal-live-dot {
-  width: 7px; height: 7px; background: #34d399; border-radius: 50%;
-  animation: cigPulse 1.8s ease-in-out infinite;
-}
-@keyframes cigPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.75)} }
-
-/* KPI grid */
-.cig-kpi-grid {
-  display: grid; grid-template-columns: repeat(5,1fr); gap: 1rem; margin-bottom: 1.75rem;
-}
-@media(max-width:1400px){.cig-kpi-grid{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:768px) {.cig-kpi-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:480px) {.cig-kpi-grid{grid-template-columns:1fr}}
-
-.cig-kpi {
-  background: var(--surface-card,#fff); border: 1px solid var(--border-subtle,#e2e8f0);
-  border-radius: 20px; padding: 1.4rem 1.2rem;
-  display: flex; align-items: center; gap: 1rem;
-  transition: transform .2s,box-shadow .2s;
-  text-decoration: none; color: inherit;
-  box-shadow: 0 2px 12px rgba(17,54,194,.06);
-  position: relative; overflow: hidden;
-}
-.cig-kpi::before {
-  content: ''; position: absolute; top: 0; left: 0;
-  width: 4px; height: 100%;
-  background: var(--kpi-accent,var(--gt-indigo,#1b49ed)); border-radius: 0 4px 4px 0;
-}
-.cig-kpi:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(17,54,194,.13); text-decoration:none; color:inherit; }
-.cig-kpi-icon {
-  width: 46px; height: 46px; border-radius: 14px;
-  background: var(--kpi-icon-bg,rgba(27,73,237,.1));
-  border: 1px solid var(--kpi-icon-border,rgba(27,73,237,.2));
-  color: var(--kpi-accent,#1b49ed);
-  display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0;
-}
-.cig-kpi-val { font-size: 1.6rem; font-weight: 800; color: var(--text-primary,#16224A); line-height: 1; letter-spacing: -.02em; }
-.cig-kpi-lbl { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted,#64748b); margin-top: .25rem; }
-.cig-kpi-trend { font-size: .72rem; font-weight: 600; margin-top: .2rem; }
-
-/* Main 2-column grid */
-.cig-main-grid { display: grid; grid-template-columns: 1fr 340px; gap: 1.5rem; align-items: start; }
-@media(max-width:1200px){.cig-main-grid{grid-template-columns:1fr}}
-
-/* Panel */
-.cig-panel {
-  background: var(--surface-card,#fff); border: 1px solid var(--border-subtle,#e2e8f0);
-  border-radius: 20px; box-shadow: 0 2px 16px rgba(17,54,194,.06); overflow: hidden;
-}
-.cig-panel-header {
-  padding: 1.1rem 1.5rem; border-bottom: 1px solid var(--border-divider,#e2e8f0);
-  display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap;
-}
-.cig-panel-title { font-size: .95rem; font-weight: 700; color: var(--text-primary,#16224a); display: flex; align-items: center; gap: .5rem; }
-.cig-panel-title-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: .85rem; }
-
-/* Tab pills */
-.cig-tabs { display: flex; gap: .3rem; background: var(--surface-subtle,#f4f6fb); border-radius: 12px; padding: 4px; flex-wrap: wrap; }
-.cig-tab {
-  display: flex; align-items: center; gap: 5px; padding: 5px 11px;
-  border-radius: 9px; font-size: .78rem; font-weight: 600; color: var(--text-muted,#64748b);
-  text-decoration: none; transition: all .18s; white-space: nowrap;
-}
-.cig-tab:hover { color: var(--text-primary,#16224a); text-decoration: none; }
-.cig-tab.active { background: var(--surface-card,#fff); color: var(--gt-indigo,#1b49ed); box-shadow: 0 1px 6px rgba(17,54,194,.13); }
-.cig-tab-count {
-  font-size: .65rem; font-weight: 700; padding: 1px 5px; border-radius: 99px;
-  background: var(--section-accent-subtle,rgba(17,54,194,.1));
-  color: var(--section-accent,#1136c2); min-width: 18px; text-align: center;
-}
-.cig-tab.active .cig-tab-count { background: var(--gt-gold-soft,rgba(248,168,21,.15)); color: var(--gt-gold-text,#8A5A05); }
-
-/* Search */
-.cig-search-wrap { position: relative; display: flex; align-items: center; }
-.cig-search-wrap .fa-search { position: absolute; left: 12px; color: var(--text-muted,#94a3b8); font-size: .8rem; }
-.cig-search {
-  padding: .5rem .8rem .5rem 2.2rem; background: var(--input-bg,#f4f6fb);
-  border: 1px solid var(--input-border,#d5dce8); border-radius: 10px;
-  font-size: .82rem; color: var(--text-primary,#16224a); outline: none; width: 210px; transition: border-color .2s;
-}
-.cig-search:focus { border-color: var(--gt-indigo,#1b49ed); }
-
-/* Right widgets */
-.cig-widget {
-  background: var(--surface-card,#fff); border: 1px solid var(--border-subtle,#e2e8f0);
-  border-radius: 20px; box-shadow: 0 2px 12px rgba(17,54,194,.05); overflow: hidden; margin-bottom: 1rem;
-}
-.cig-widget:last-child { margin-bottom: 0; }
-.cig-widget-header {
-  padding: .9rem 1.25rem; border-bottom: 1px solid var(--border-divider,#e2e8f0);
-  display: flex; align-items: center; justify-content: space-between;
-  background: var(--surface-subtle,#f8fafc);
-}
-.cig-widget-title { font-size: .85rem; font-weight: 700; color: var(--text-primary,#16224a); display: flex; align-items: center; gap: 6px; }
-
-/* Expiry strips */
-.cig-expiry-strip {
-  background: linear-gradient(90deg,rgba(248,168,21,.1) 0%,rgba(248,168,21,.03) 100%);
-  border-left: 3px solid var(--gt-gold,#f8a815); border-radius: 0 10px 10px 0;
-  padding: .6rem .85rem; margin-bottom: .45rem;
-  display: flex; align-items: center; justify-content: space-between; gap: .5rem;
-}
-.cig-expiry-strip:last-child { margin-bottom: 0; }
-.cig-expiry-name { font-size: .82rem; font-weight: 600; color: var(--text-primary,#16224a); }
-.cig-expiry-date { font-size: .71rem; color: var(--text-muted,#64748b); }
-.cig-expiry-badge {
-  font-size: .68rem; font-weight: 700; padding: 2px 8px; border-radius: 99px;
-  background: rgba(248,168,21,.15); color: var(--gt-gold-text,#8A5A05); white-space: nowrap; flex-shrink: 0;
-}
-
-/* Empty states */
-.cig-empty { text-align: center; padding: 2rem 1rem; }
-.cig-empty-icon {
-  width: 52px; height: 52px; border-radius: 14px; background: var(--surface-subtle,#f4f6fb);
-  display: flex; align-items: center; justify-content: center; margin: 0 auto .9rem; font-size: 1.3rem; color: var(--text-muted,#94a3b8);
-}
-.cig-empty-title { font-size: .88rem; font-weight: 700; color: var(--text-primary,#16224a); margin-bottom: .25rem; }
-.cig-empty-sub { font-size: .77rem; color: var(--text-muted,#64748b); }
-
-/* Animations */
-.cig-fade { animation: cigFadeUp .35s ease-out both; }
-.cig-d1 { animation-delay: .07s; } .cig-d2 { animation-delay: .14s; }
-@keyframes cigFadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
-
-/* Dark mode */
-html.dark-mode .cignal-hero { background: linear-gradient(135deg,#3533cd 0%,#1e1b87 100%); }
-html.dark-mode .cig-kpi,html.dark-mode .cig-panel,html.dark-mode .cig-widget { background: var(--surface-card,#141a3d); border-color: var(--border-subtle,rgba(129,140,248,.22)); }
-html.dark-mode .cig-widget-header { background: var(--surface-elevated,#1b2250); }
-html.dark-mode .cig-tabs { background: var(--surface-elevated,#1b2250); }
-html.dark-mode .cig-tab.active { background: var(--surface-card,#141a3d); }
-html.dark-mode .cig-search { background: var(--input-bg,#0f1428); border-color: var(--input-border,rgba(255,255,255,.15)); color: var(--text-primary,#f8fafc); }
-html.dark-mode .cig-kpi-val,html.dark-mode .cig-panel-title,html.dark-mode .cig-widget-title,
-html.dark-mode .cig-empty-title,html.dark-mode .cig-expiry-name { color: var(--text-primary,#f8fafc); }
-html.dark-mode .cig-expiry-strip { background: linear-gradient(90deg,rgba(255,184,0,.1) 0%,rgba(255,184,0,.03) 100%); }
-html.dark-mode .cig-expiry-badge { background: rgba(255,184,0,.15); color: var(--gt-gold-text,#fbbf24); }
-html.dark-mode .cig-empty-icon { background: var(--surface-elevated,#1b2250); }
-
-/* Table (scoped) */
-#cignalSubscriptionsTable thead th {
-  white-space: nowrap !important; text-transform: uppercase !important;
-  font-size: 11px !important; letter-spacing: .06em; padding: .85rem 1rem !important;
-}
-#cignalSubscriptionsTable thead th:first-child,
-#cignalSubscriptionsTable tbody td:first-child { padding-left: 1.5rem !important; }
-#cignalSubscriptionsTable thead th:last-child,
-#cignalSubscriptionsTable tbody td:last-child { padding-right: 1.5rem !important; }
-#cignalSubscriptionsTable tbody td { padding-top: .9rem !important; padding-bottom: .9rem !important; }
-@media(max-width:768px){
-  #cignalSubscriptionsTable thead{display:none}
-  #cignalSubscriptionsTable,#cignalSubscriptionsTable tbody{display:block;width:100%}
-  #cignalSubscriptionsTable tbody tr{display:block;padding:1.25rem !important;border-bottom:1px solid var(--border-divider)}
-  #cignalSubscriptionsTable tbody td{display:block !important;width:100% !important;padding:.35rem 0 !important;border:none !important}
-  #cignalSubscriptionsTable tbody td:first-child{padding-left:0 !important;margin-bottom:.25rem}
-  #cignalSubscriptionsTable tbody td:last-child{padding-right:0 !important;text-align:left !important;margin-top:.75rem;padding-top:.75rem !important;border-top:1px solid var(--border-divider) !important}
-}
-</style>
+{% include "billing/cignal_dashboard/_styles.html" %}
 {% endblock %}
+
 {% block content %}
 <div class="container-fluid py-4 px-3 px-md-4">
 
-  <!-- Page Header -->
   <!-- Page Header -->
   <div class="gt-page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 animate-fade-in" style="--section-accent: #ef4444;">
     <div class="d-flex align-items-center gap-3">
@@ -306,113 +107,17 @@ html.dark-mode .cig-empty-icon { background: var(--surface-elevated,#1b2250); }
 
   <!-- Main Dashboard Command Center: Left (col-xl-8) / Right (col-xl-4) Layout -->
   <div class="row g-4 animate-fade-in animate-delay-2">
-
     <!-- Left Column: Active Subscriptions & Status Table (col-xl-8) -->
     <div class="col-xl-8">
       {% include "billing/cignal_dashboard/_active_subscriptions.html" %}
     </div>
 
-    <!-- Right Column: Pending Applications & Recent Activity / Messages (col-xl-4) -->
+    <!-- Right Column: Pending Applications & Recent Activity (col-xl-4) -->
     <div class="col-xl-4">
-      <!-- 1. Pending Applications Queue -->
       {% include "billing/cignal_dashboard/_pending_applications.html" %}
-
-      <!-- 2. Recent Activity & Renewals -->
       {% include "billing/cignal_dashboard/_recent_logs.html" %}
-
     </div>
-
   </div>
-
-  <script>
-  function filterCignalTable(q) {
-      q = q.toLowerCase();
-      const rows = document.querySelectorAll('#cignalSubscriptionsTable tbody tr');
-      let visible = 0;
-      rows.forEach(r => {
-          const text = r.textContent.toLowerCase();
-          const show = !q || text.includes(q);
-          r.style.display = show ? '' : 'none';
-          if (show) visible++;
-      });
-      const counter = document.getElementById('cignalSearchCount');
-      if (counter) counter.textContent = q ? `${visible} result${visible !== 1 ? 's' : ''}` : '';
-  }
-
-  function confirmCancelCignalApp(requestId, customerName, addonType, isFromModal) {
-      const isDark = document.documentElement.classList.contains('dark-mode');
-      Swal.fire({
-          title: 'Cancel Application?',
-          html: `Are you sure you want to cancel and delete the pending <strong>${addonType}</strong> request for <strong>${customerName}</strong>?`,
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonColor: '#ef4444',
-          cancelButtonColor: '#6b7280',
-          confirmButtonText: '<i class="fas fa-trash-alt me-1"></i> Yes, Cancel Request',
-          cancelButtonText: 'Keep Application',
-          background: isDark ? '#1e293b' : '#fff',
-          color: isDark ? '#f8fafc' : '#0f172a'
-      }).then((result) => {
-          if (result.isConfirmed) {
-              if (isFromModal) {
-                  const modalEl = document.querySelector('.modal.show');
-                  if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
-              }
-              fetch(`/cignal-dashboard/applications/${requestId}/cancel/`, {
-                  method: 'POST',
-                  headers: {
-                      'X-CSRFToken': '{{ csrf_token }}',
-                      'X-Requested-With': 'XMLHttpRequest',
-                      'Accept': 'application/json'
-                  }
-              })
-              .then(r => r.json())
-              .then(data => {
-                  if (data.status === 'success') {
-                      const row = document.getElementById(`cignal-card-row-${requestId}`);
-                      if (row) {
-                          row.style.transition = 'all 0.3s ease';
-                          row.style.opacity = '0';
-                          row.style.transform = 'scale(0.95)';
-                          setTimeout(() => {
-                              row.remove();
-                              const list = document.getElementById('cignalPendingListGroup');
-                              if (list && list.children.length === 0) {
-                                  list.parentElement.innerHTML = `
-                                      <div class="cignal-empty-state py-4 text-center">
-                                        <div class="cignal-empty-icon mb-2"><i class="fas fa-check-circle text-success" style="font-size: 1.6rem; opacity: 0.85;"></i></div>
-                                        <div class="cignal-empty-title" style="font-size: 0.92rem;">All Applications Cleared</div>
-                                        <div class="cignal-empty-sub" style="font-size: 0.78rem;">No pending customer applications at this time.</div>
-                                      </div>`;
-                              }
-                          }, 300);
-                      }
-                      const badge = document.getElementById('cignalPendingBadgeCount');
-                      if (badge) {
-                          let count = parseInt(badge.textContent.trim()) || 0;
-                          badge.textContent = Math.max(0, count - 1);
-                      }
-                      Swal.fire({
-                          title: 'Cancelled!',
-                          text: data.message || 'Request successfully cancelled.',
-                          icon: 'success',
-                          timer: 1800,
-                          showConfirmButton: false,
-                          background: isDark ? '#1e293b' : '#fff',
-                          color: isDark ? '#f8fafc' : '#0f172a'
-                      });
-                  } else {
-                      Swal.fire({ title: 'Error', text: data.message || 'Unable to cancel request.', icon: 'error' });
-                  }
-              })
-              .catch(() => {
-                  Swal.fire({ title: 'Error', text: 'Network error occurred.', icon: 'error' });
-              });
-          }
-      });
-  }
-  </script>
-
 
 </div>
 
@@ -429,17 +134,8 @@ html.dark-mode .cig-empty-icon { background: var(--surface-elevated,#1b2250); }
 
 <!-- Enroll Existing Customer in Cignal Modal -->
 {% include "billing/partials/_cignal_enroll_modal.html" %}
+{% endblock %}
 
-{% if request.GET.highlight_customer %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    var row = document.getElementById('app-row-{{ request.GET.highlight_customer }}');
-    if (row) {
-        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        row.style.transition = 'all 0.5s ease';
-        row.style.boxShadow = '0 0 15px rgba(220, 38, 38, 0.5)';
-    }
-});
-</script>
-{% endif %}
+{% block extra_js %}
+{% include "billing/cignal_dashboard/_scripts.html" %}
 {% endblock %}

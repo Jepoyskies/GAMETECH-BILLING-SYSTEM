@@ -1,0 +1,99 @@
+<script>
+function filterCignalTable(q) {
+    q = q.toLowerCase();
+    const rows = document.querySelectorAll('#cignalSubscriptionsTable tbody tr');
+    let visible = 0;
+    rows.forEach(r => {
+        const text = r.textContent.toLowerCase();
+        const show = !q || text.includes(q);
+        r.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+    const counter = document.getElementById('cignalSearchCount');
+    if (counter) counter.textContent = q ? `${visible} result${visible !== 1 ? 's' : ''}` : '';
+}
+
+function confirmCancelCignalApp(requestId, customerName, addonType, isFromModal) {
+    const isDark = document.documentElement.classList.contains('dark-mode');
+    Swal.fire({
+        title: 'Cancel Application?',
+        html: `Are you sure you want to cancel and delete the pending <strong>${addonType}</strong> request for <strong>${customerName}</strong>?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: '<i class="fas fa-trash-alt me-1"></i> Yes, Cancel Request',
+        cancelButtonText: 'Keep Application',
+        background: isDark ? '#1e293b' : '#fff',
+        color: isDark ? '#f8fafc' : '#0f172a'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            if (isFromModal) {
+                const modalEl = document.querySelector('.modal.show');
+                if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
+            }
+            fetch(`/cignal-dashboard/applications/${requestId}/cancel/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const row = document.getElementById(`cignal-card-row-${requestId}`);
+                    if (row) {
+                        row.style.transition = 'all 0.3s ease';
+                        row.style.opacity = '0';
+                        row.style.transform = 'scale(0.95)';
+                        setTimeout(() => {
+                            row.remove();
+                            const list = document.getElementById('cignalPendingListGroup');
+                            if (list && list.children.length === 0) {
+                                list.parentElement.innerHTML = `
+                                    <div class="cignal-empty-state py-4 text-center">
+                                      <div class="cignal-empty-icon mb-2"><i class="fas fa-check-circle text-success" style="font-size: 1.6rem; opacity: 0.85;"></i></div>
+                                      <div class="cignal-empty-title" style="font-size: 0.92rem;">All Applications Cleared</div>
+                                      <div class="cignal-empty-sub" style="font-size: 0.78rem;">No pending customer applications at this time.</div>
+                                    </div>`;
+                            }
+                        }, 300);
+                    }
+                    const badge = document.getElementById('cignalPendingBadgeCount');
+                    if (badge) {
+                        let count = parseInt(badge.textContent.trim()) || 0;
+                        badge.textContent = Math.max(0, count - 1);
+                    }
+                    Swal.fire({
+                        title: 'Cancelled!',
+                        text: data.message || 'Request successfully cancelled.',
+                        icon: 'success',
+                        timer: 1800,
+                        showConfirmButton: false,
+                        background: isDark ? '#1e293b' : '#fff',
+                        color: isDark ? '#f8fafc' : '#0f172a'
+                    });
+                } else {
+                    Swal.fire({ title: 'Error', text: data.message || 'Unable to cancel request.', icon: 'error' });
+                }
+            })
+            .catch(() => {
+                Swal.fire({ title: 'Error', text: 'Network error occurred.', icon: 'error' });
+            });
+        }
+    });
+}
+
+{% if request.GET.highlight_customer %}
+document.addEventListener('DOMContentLoaded', function() {
+    var row = document.getElementById('app-row-{{ request.GET.highlight_customer }}');
+    if (row) {
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        row.style.transition = 'all 0.5s ease';
+        row.style.boxShadow = '0 0 15px rgba(220, 38, 38, 0.5)';
+    }
+});
+{% endif %}
+</script>
