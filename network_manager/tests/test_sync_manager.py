@@ -576,7 +576,8 @@ class SyncManagerPageTests(TestCase):
         }])
 
         with mock.patch("network_manager.sync_services.MikrotikAPI",
-                        return_value=api):
+                     return_value=api), mock.patch("network_manager.services.MikrotikAPI",
+                     return_value=api):
             response = self.client.get(
                 reverse("sync_manager_device", args=[self.device.id]))
 
@@ -593,7 +594,8 @@ class SyncManagerPageTests(TestCase):
         }])
 
         with mock.patch("network_manager.sync_services.MikrotikAPI",
-                        return_value=api):
+                     return_value=api), mock.patch("network_manager.services.MikrotikAPI",
+                     return_value=api):
             response = self.client.get(
                 reverse("sync_manager_device", args=[self.device.id]))
 
@@ -616,7 +618,8 @@ class SyncManagerPageTests(TestCase):
         }])
 
         with mock.patch("network_manager.sync_services.MikrotikAPI",
-                        return_value=api):
+                     return_value=api), mock.patch("network_manager.services.MikrotikAPI",
+                     return_value=api):
             response = self.client.get(
                 reverse("sync_manager_device", args=[self.device.id]))
 
@@ -639,7 +642,8 @@ class SyncManagerPageTests(TestCase):
         }])
 
         with mock.patch("network_manager.sync_services.MikrotikAPI",
-                        return_value=api):
+                     return_value=api), mock.patch("network_manager.services.MikrotikAPI",
+                     return_value=api):
             response = self.client.get(
                 reverse("sync_manager_device", args=[self.device.id]))
 
@@ -664,7 +668,8 @@ class SyncManagerPageTests(TestCase):
         }])
 
         with mock.patch("network_manager.sync_services.MikrotikAPI",
-                        return_value=api):
+                     return_value=api), mock.patch("network_manager.services.MikrotikAPI",
+                     return_value=api):
             response = self.client.get(
                 reverse("sync_manager_device", args=[self.device.id]))
 
@@ -685,7 +690,8 @@ class SyncManagerPageTests(TestCase):
         }])
 
         with mock.patch("network_manager.sync_services.MikrotikAPI",
-                        return_value=api):
+                     return_value=api), mock.patch("network_manager.services.MikrotikAPI",
+                     return_value=api):
             response = self.client.get(
                 reverse("sync_manager_device", args=[self.device.id]))
 
@@ -705,7 +711,8 @@ class SyncManagerPageTests(TestCase):
         fetch.return_value = {"success": False, "error": "timed out"}
         api = mock.MagicMock(get_all_pppoe_users=fetch)
         with mock.patch("network_manager.sync_services.MikrotikAPI",
-                        return_value=api):
+                     return_value=api), mock.patch("network_manager.services.MikrotikAPI",
+                     return_value=api):
             response = self.client.get(
                 reverse("sync_manager_device", args=[self.device.id]))
 
