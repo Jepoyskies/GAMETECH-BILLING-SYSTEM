@@ -3459,3 +3459,32 @@ Until then the banner correctly reports 4. That is a true reading, not noise.
 **Gotcha**: librouteros CANNOT batch repeated API keys. `call('monitor-traffic', {'interface': [a, b]})` fails with `AttributeError: 'list' object has no attribute 'encode'`. Do not attempt to batch by list -- read the bulk resource instead.
 **Files**: `network_manager/services/system.py`, `billing/utils.py`
 **Date Logged**: 2026-10-06
+
+
+### ERR-127: Slow Page That Is Not A Database Problem
+**Symptom**: `/customers/` took 2.5s and shipped 921 KB. Every instinct says "slow queries", but `manage.py` profiling showed only **0.128s of 2.5s in the database (4%)**. Chasing indexes would have wasted days.
+**Cause**: Template rendering. Each table row expands to ~190 lines of markup once `customer_list/_customer_status.html` is included, so 100 rows meant ~12,000 Django template node evaluations. Two separable costs:
+1. **Row count** — the only real lever, since node evaluation scales linearly.
+2. **Repeated inline styles** — 15 `style="..."` attributes per row (9 distinct values), i.e. 750-1,500 per page load. Moving them to `.gt-cl-*` classes in the page stylesheet cut them to zero.
+A further ~31% of the row bytes was pure template indentation left behind by nested `{% if %}` blocks. Left alone on purpose: collapsing it with `{% spaceless %}` would remove the whitespace between adjacent `d-inline-block` elements and make the connectivity dot touch the customer name.
+**Fix**: `PAGE_SIZE` 100 -> 50 (search/filter/sort still cover every customer through the existing SQL-backed DataTables path, so nothing becomes unfindable) and inline styles -> stylesheet. Result 2.5s -> ~1.1s, 921 KB -> 597 KB.
+**Lesson**: profile before optimising. `connection.queries` tells you the truth in one run. Also check whether your "obvious" style is already dead -- `.text-title` is declared `!important`, so the inline `color:` on the router cell was already being overridden and contributed nothing.
+**Files**: `billing/views/customers/list.py`, `billing/templates/billing/customer_list/{_table,_customer_status,_styles}.html`
+**Date Logged**: 2026-10-06
+
+
+### ERR-128: A URL Sweep That Includes /logout/ Invalidates Its Own Session
+**Symptom**: A headless verification sweep reported `/customers/`, `/mac-history/` and the DataTables endpoint as FAILING -- 302 redirects, zero rows -- minutes after they had all been confirmed working at HTTP 200. Every post-sweep assertion was wrong.
+**Cause**: The sweep enumerated every argument-free route and `GET`ed it. That list legitimately contains `/logout/`. Requesting it flushed the session, so every assertion after it ran unauthenticated and got bounced to the login page. The failures were an artefact of the test harness, not the application.
+**Fix**: Either skip state-changing routes (`/logout/`, anything POST-only) when sweeping, or build a fresh `Client()` and `force_login()` per assertion. Verified after the fix: customer list HTTP 200 with 51 rows, 105 status badges, pagination `page 1/41`, DataTables payload 25 records.
+**Lesson**: When a batch check suddenly fails on pages that were just fine, suspect the batch. Re-run the failing assertions individually with a fresh session before believing them.
+**Date Logged**: 2026-10-06
+
+
+### ERR-129: POST-Only Views Return None On GET, So A Stray GET Is A 500
+**Symptom**: `network_manager.views.devices.test_device_connection` raised `ValueError: The view ... didn't return an HttpResponse object. It returned None instead.` on a GET. Same shape in ~23 views across `network_manager`, `dispatch` and `customer_portal`.
+**Cause**: The view body is wrapped in `if request.method == 'POST':` with no trailing `return`, so any other method falls off the end and Django turns `None` into a 500. The button itself is fine -- it POSTs, and all three routers answer `{"status": "success"}`.
+**Fix (NOT yet applied -- deliberately deferred)**: decorate these with `@require_POST`, or return an explicit `405`. Deferred on purpose: the other session was actively refactoring `network_manager/views/` at the time, and a 500 on a stray GET is cosmetic next to the risk of a mid-flight merge conflict. A stray GET only matters if a human types the URL or a crawler finds it; it cannot affect staff workflow.
+**Diagnose it with**: POST to the endpoint, do not GET it. A `None` return on GET says nothing about whether the feature works.
+**Files**: `network_manager/views/{devices,sync,winbox,naps}.py`, `dispatch/views.py`, `customer_portal/views/auth.py`
+**Date Logged**: 2026-10-06
