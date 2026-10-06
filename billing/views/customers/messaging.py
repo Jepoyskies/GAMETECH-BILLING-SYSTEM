@@ -116,6 +116,14 @@ def bulk_email_view(request):
 
 @login_required
 def sms_view(request):
+    # This page is a working SMS composer pre-filled with subscriber mobile
+    # numbers. `@login_required` alone meant a field Technician could message any
+    # customer from the front desk account. Same rule as the customer list.
+    from billing.views.permissions import require_billing_access
+
+    if not require_billing_access(request, "dashboard"):
+        return redirect("dashboard")
+
     if request.method == "POST":
         if "send_sms_custom" in request.POST:
             phone = request.POST.get("phone")

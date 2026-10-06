@@ -57,16 +57,12 @@ from .table import (
 def _can_view_billing(user):
     """Who may open the subscriber list.
 
-    Uses the StaffRole matrix (`can_access_billing`) so the Role Editor stays the
-    single source of truth: Admin / Editor / CSR / Viewer are True, while Agent,
-    Technician and Dispatch are False.
+    Delegates to the shared helper so the rule is defined once for the whole
+    project. Kept as a local name because billing/tests/ imports this module.
     """
-    if getattr(user, "is_superuser", False):
-        return True
-    perms = getattr(user, "role_perms", None)
-    if perms is None:
-        return False
-    return bool(getattr(perms, "can_access_billing", False))
+    from billing.views.permissions import can_access_billing
+
+    return can_access_billing(user)
 
 
 @login_required

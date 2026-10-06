@@ -47,6 +47,15 @@ from billing.views import calculate_new_expiration_date
 
 @login_required
 def payment_logs_view(request):
+    # `@login_required` alone let a field Technician read every payment in the
+    # system -- amounts, reference numbers, PPPoE usernames, agent names. The
+    # customer list already refuses this via can_access_billing; the Role Editor
+    # stays the single source of truth for who qualifies.
+    from billing.views.permissions import require_billing_access
+
+    if not require_billing_access(request, "dashboard"):
+        return redirect("dashboard")
+
     payments = Payment.objects.select_related("customer").all().order_by("-paid_at")
 
     # Filtering
