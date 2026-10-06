@@ -1,0 +1,129 @@
+<!-- JS dependencies for DataTables -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        $('#deviceTable').DataTable({
+            "lengthMenu": [10, 25, 50],
+            "pageLength": 10,
+            "order": [[4, "desc"]] // Sort by Created At descending
+        });
+
+        // Event delegation for test connection button
+        $(document).on('click', '.test-connection-btn', function() {
+            const btn = $(this);
+            const url = btn.data('url');
+            const csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
+
+            const originalContent = '<i class="fas fa-wifi"></i> Test Connection';
+            btn.html('<i class="fas fa-spinner fa-spin"></i>').prop('disabled', true);
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        btn.html('<i class="fas fa-check"></i> Connected').removeClass('gt-btn-secondary').addClass('btn-success');
+                    } else {
+                        btn.html('<i class="fas fa-times"></i> Failed').removeClass('gt-btn-secondary').addClass('btn-danger');
+                        alert("Error: " + (response.message || response.error || 'Unknown error'));
+                    }
+                },
+                error: function() {
+                    btn.html('<i class="fas fa-times"></i> Failed').removeClass('gt-btn-secondary').addClass('btn-danger');
+                    alert("A server error occurred during the request.");
+                },
+                complete: function() {
+                    setTimeout(() => {
+                        btn.html(originalContent).removeClass('btn-success btn-danger').addClass('gt-btn-secondary').prop('disabled', false);
+                    }, 3000);
+                }
+            });
+        });
+
+        let hwPollInterval = null;
+
+        function fetchHardwareStatus(url) {
+            $.ajax({
+                url: url,
+                type: 'GET',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        $('#hw-loading').hide();
+                        $('#hw-error').hide();
+                        $('#hw-content').fadeIn();
+
+                        let res = response.resource;
+                        let health = response.health;
+
+                        $('#hw-cpu').text((res['cpu-load'] || 0) + '%');
+                        
+                        let freeMem = parseInt(res['free-memory'] || 0);
+                        let totMem = parseInt(res['total-memory'] || 0);
+                        let usedMem = totMem - freeMem;
+                        let memPct = totMem > 0 ? ((usedMem / totMem) * 100).toFixed(1) : 0;
+                        
+                        $('#hw-ram').text(memPct + '%');
+                        $('#hw-ram-details').text((usedMem / 1048576).toFixed(0) + ' / ' + (totMem / 1048576).toFixed(0) + ' MB');
+
+                        $('#hw-uptime').text(res['uptime'] || '-');
+                        $('#hw-board').text(res['board-name'] || '-');
+                        $('#hw-version').text(res['version'] || '-');
+
+                        if (health && health.length > 0) {
+                            let temp = health.find(h => h.name === 'temperature');
+                            let volt = health.find(h => h.name === 'voltage');
+                            
+                            if (temp) {
+                                $('#hw-temp').text(temp.value + ' °C');
+                                $('#hw-temp-row').attr('style', 'display: flex !important;');
+                            }
+                            if (volt) {
+                                $('#hw-voltage').text(volt.value + ' V');
+                                $('#hw-voltage-row').attr('style', 'display: flex !important;');
+                            }
+                        }
+                    } else {
+                        $('#hw-loading').hide();
+                        $('#hw-content').hide();
+                        $('#hw-error').show();
+                        $('#hw-error-msg').text(response.message);
+                    }
+                },
+                error: function() {
+                    $('#hw-loading').hide();
+                    $('#hw-content').hide();
+                    $('#hw-error').show();
+                    $('#hw-error-msg').text('Server communication error.');
+                }
+            });
+        }
+
+        // Event delegation for hardware modal button
+        $(document).on('click', '.hardware-btn', function() {
+            const url = $(this).data('url');
+            const name = $(this).data('name');
+
+            $('#hw-device-name').text(name);
+            $('#hw-loading').show();
+            $('#hw-content').hide();
+            $('#hw-error').hide();
+            $('#hw-temp-row').attr('style', 'display: none !important;');
+            $('#hw-voltage-row').attr('style', 'display: none !important;');
+
+            let hwModal = new bootstrap.Modal(document.getElementById('hardwareModal'));
+            hwModal.show();
+
+            fetchHardwareStatus(url);
+            if (hwPollInterval) clearInterval(hwPollInterval);
+            hwPollInterval = setInterval(() => fetchHardwareStatus(url), 3000);
+        });
+
+        $('#hardwareModal').on('hidden.bs.modal', function () {
+            if (hwPollInterval) clearInterval(hwPollInterval);
+        });
+    });
+</script>
