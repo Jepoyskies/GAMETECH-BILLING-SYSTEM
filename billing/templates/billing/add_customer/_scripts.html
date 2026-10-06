@@ -1,0 +1,336 @@
+{% if request.user.role != 'Agent' %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Initialize Map
+        var defaultLat = 8.4542; // Default coordinates (Cagayan de Oro)
+        var defaultLng = 124.6319;
+        
+        var mapEl = document.getElementById('map');
+        if (!mapEl) return;
+        var map = L.map('map').setView([defaultLat, defaultLng], 13);
+        
+        var darkLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['0', '1', '2', '3'],
+            className: 'dark-tiles',
+            attribution: '&copy; Google Maps'
+        });
+
+        var satelliteLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['0', '1', '2', '3'],
+            attribution: '&copy; Google Maps'
+        });
+
+        var streetLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['0', '1', '2', '3'],
+            attribution: '&copy; Google Maps'
+        });
+
+        var isDark = document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode');
+        (isDark ? darkLayer : streetLayer).addTo(map);
+
+        var baseMaps = {
+            "🌙 Dark": darkLayer,
+            "🛰️ Satellite": satelliteLayer,
+            "🗺️ Streets": streetLayer
+        };
+        L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+
+        var marker = L.marker([defaultLat, defaultLng], {
+            draggable: true
+        }).addTo(map);
+
+        function updateInputs(lat, lng) {
+            var latInput = document.getElementById('latitude');
+            var lngInput = document.getElementById('longitude');
+            if (latInput) latInput.value = lat.toFixed(8);
+            if (lngInput) lngInput.value = lng.toFixed(8);
+        }
+
+        // Set initial values
+        updateInputs(defaultLat, defaultLng);
+
+        // Update when marker is dragged
+        marker.on('dragend', function(e) {
+            var position = marker.getLatLng();
+            updateInputs(position.lat, position.lng);
+        });
+
+        // Update when map is clicked
+        map.on('click', function(e) {
+            marker.setLatLng(e.latlng);
+            updateInputs(e.latlng.lat, e.latlng.lng);
+        });
+    });
+</script>
+{% endif %}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const form = document.getElementById('add-customer-form');
+        if (!form) return;
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+                
+                // Find all invalid elements
+                const invalidElements = form.querySelectorAll(':invalid');
+                if (invalidElements.length > 0) {
+                    const firstInvalid = invalidElements[0];
+                    
+                    // Try to find the label for this input
+                    let labelContainer = firstInvalid.closest('.mb-3, .col-md-6, .col-md-12');
+                    let labelText = "Field";
+                    if (labelContainer) {
+                        let labelEl = labelContainer.querySelector('label');
+                        if (labelEl) {
+                            labelText = labelEl.innerText.replace('*','').trim();
+                        }
+                    }
+                    
+                    const message = firstInvalid.validationMessage || 'Invalid format or missing required field.';
+                    
+                    // Create an elegant error banner
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'error-alert mb-4 custom-validation-alert';
+                    alertDiv.style.backgroundColor = '#fff3f3';
+                    alertDiv.style.color = '#dc3545';
+                    alertDiv.style.borderLeft = '4px solid #dc3545';
+                    alertDiv.style.padding = '12px 16px';
+                    alertDiv.style.borderRadius = '8px';
+                    alertDiv.style.fontWeight = '500';
+                    alertDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i> <b>Validation Error on "' + labelText + '":</b> ' + message;
+                    
+                    // Remove old custom alerts
+                    document.querySelectorAll('.custom-validation-alert').forEach(e => e.remove());
+                    
+                    // Insert at top of form and scroll to it
+                    form.insertBefore(alertDiv, form.firstChild);
+                    alertDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
+                    firstInvalid.focus();
+                    
+                    // Flash red border to draw attention
+                    const originalBorder = firstInvalid.style.border;
+                    firstInvalid.style.border = '2px solid #dc3545';
+                    setTimeout(() => { firstInvalid.style.border = originalBorder; }, 3000);
+                }
+            }
+        }, false);
+    });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Upgrade dropdowns to smart search with TomSelect
+        document.querySelectorAll('select.plan-form-control').forEach((el)=>{
+            try {
+                if (!el.tomselect) {
+                    const hasOptgroups = el.querySelectorAll('optgroup').length > 0;
+                    const isStatus = el.name === 'status' || el.id === 'customer_status_select';
+                    new TomSelect(el, {
+                        create: false,
+                        sortField: (hasOptgroups || isStatus) ? undefined : { field: "text", direction: "asc" }
+                    });
+                }
+            } catch(err) {
+                console.warn("TomSelect fallback on", el.name, err);
+            }
+        });
+
+        // Auto-capitalize text inputs (Full Address, Full Name, Barangay) to Title Case on blur
+        function toTitleCase(str) {
+            if (!str) return '';
+            return str.toLowerCase().replace(/\b\w/g, s => s.toUpperCase());
+        }
+
+        document.querySelectorAll('input[name="address"], input[name="full_name"], input[name="barangay_name"]').forEach(input => {
+            input.addEventListener('blur', function() {
+                if (this.value) {
+                    this.value = toTitleCase(this.value.trim());
+                }
+            });
+        });
+    });
+</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const radInstalled = document.getElementById('install_status_installed');
+        const radPending = document.getElementById('install_status_pending');
+        const cardInstalled = document.getElementById('card-type-installed');
+        const cardPending = document.getElementById('card-type-pending');
+        const datesRow = document.getElementById('installed-dates-row');
+        const existingHelper = document.getElementById('installed-existing-helper');
+        const statusSelect = document.getElementById('customer_status_select');
+
+        function updateSetupUI() {
+            const installInput = document.getElementById('input_installed_at');
+            const checklistCard = document.getElementById('step1-checklist-card');
+            const bypassNotice = document.getElementById('override-bypass-notice');
+            const mandatoryPill = document.getElementById('checklist-mandatory-pill');
+
+            if (radPending && radPending.checked) {
+                // "For Installation (New Applicant)" -> SHOW date field so staff can schedule dispatch
+                if (cardPending) {
+                    cardPending.style.background = 'rgba(14, 165, 233, 0.08)';
+                    cardPending.style.borderColor = 'rgba(14, 165, 233, 0.4)';
+                }
+                if (cardInstalled) {
+                    cardInstalled.style.background = '';
+                    cardInstalled.style.borderColor = '';
+                }
+                if (datesRow) datesRow.style.display = 'flex';
+                if (existingHelper) existingHelper.style.display = 'none';
+                if (bypassNotice) bypassNotice.style.display = 'none';
+                if (mandatoryPill) {
+                    mandatoryPill.className = 'badge bg-danger ms-2';
+                    mandatoryPill.textContent = 'Mandatory for Installation';
+                }
+                if (statusSelect) {
+                    statusSelect.value = 'pending';
+                    if (statusSelect.tomselect) statusSelect.tomselect.setValue('pending');
+                }
+            } else if (radInstalled && radInstalled.checked) {
+                // "Installed / Existing Subscriber" -> HIDE date field because historical dates do not matter
+                if (cardInstalled) {
+                    cardInstalled.style.background = 'rgba(16, 185, 129, 0.08)';
+                    cardInstalled.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                }
+                if (cardPending) {
+                    cardPending.style.background = '';
+                    cardPending.style.borderColor = '';
+                }
+                if (datesRow) datesRow.style.display = 'none';
+                if (existingHelper) existingHelper.style.display = 'block';
+                if (bypassNotice) bypassNotice.style.display = 'block';
+                if (mandatoryPill) {
+                    mandatoryPill.className = 'badge bg-secondary ms-2';
+                    mandatoryPill.textContent = 'Bypassed (Manual Override)';
+                }
+                if (installInput) {
+                    installInput.removeAttribute('required');
+                }
+                if (statusSelect && (statusSelect.value === 'pending' || !statusSelect.value)) {
+                    statusSelect.value = 'expired';
+                    if (statusSelect.tomselect) statusSelect.tomselect.setValue('expired');
+                }
+            }
+        }
+
+        // Checklist Counter & Check All logic
+        function updateChecklistCounter() {
+            const checkboxes = document.querySelectorAll('.policy-item-checkbox');
+            const checkedCount = document.querySelectorAll('.policy-item-checkbox:checked').length;
+            const badge = document.getElementById('checklist-counter-badge');
+            if (badge) {
+                if (checkedCount === 6) {
+                    badge.className = 'badge bg-success p-2 w-100 text-center fw-bold';
+                    badge.innerHTML = '<i class="fas fa-check-circle me-1"></i> All 6 Policies Verified & Confirmed';
+                } else {
+                    badge.className = 'badge bg-warning text-dark p-2 w-100 text-center fw-bold';
+                    badge.innerHTML = '<i class="fas fa-tasks me-1"></i> ' + checkedCount + ' of 6 Policies Verified';
+                }
+            }
+        }
+
+        window.quickCheckAllPolicies = function() {
+            document.querySelectorAll('.policy-item-checkbox').forEach(cb => { cb.checked = true; });
+            updateChecklistCounter();
+        };
+
+        document.querySelectorAll('.policy-item-checkbox').forEach(cb => {
+            cb.addEventListener('change', updateChecklistCounter);
+        });
+        updateChecklistCounter();
+
+        // Dynamic plan & staggered policy text updates
+        function updateDynamicChecklistText() {
+            const planSelect = document.getElementById('plan_id');
+            const planNameSpan = document.getElementById('checklist_plan_name');
+            const planPriceSpan = document.getElementById('checklist_plan_price');
+            if (planSelect && planNameSpan && planPriceSpan) {
+                const opt = planSelect.options[planSelect.selectedIndex];
+                if (opt && opt.value) {
+                    const text = opt.textContent || '';
+                    const parts = text.split(' - ');
+                    planNameSpan.textContent = parts[0].trim();
+                    if (parts.length > 1) {
+                        planPriceSpan.textContent = parts[1].trim();
+                    }
+                }
+            }
+
+            const agentSelect = document.getElementById('agent_id');
+            const staggeredStatus = document.getElementById('checklist_staggered_status');
+            const hasProspect = {% if prospect %}true{% else %}false{% endif %};
+            if (staggeredStatus) {
+                const hasAgent = (agentSelect && agentSelect.value) || hasProspect;
+                if (hasAgent) {
+                    staggeredStatus.textContent = 'Not available for 60 days from your first payment';
+                } else {
+                    staggeredStatus.textContent = 'Available';
+                }
+            }
+        }
+
+        const planSelectEl = document.getElementById('plan_id');
+        if (planSelectEl) planSelectEl.addEventListener('change', updateDynamicChecklistText);
+        const agentSelectEl = document.getElementById('agent_id');
+        if (agentSelectEl) agentSelectEl.addEventListener('change', updateDynamicChecklistText);
+        updateDynamicChecklistText();
+
+        // Sync modal fields on open
+        window.openWalkinDeclineModal = function() {
+            const nameInput = document.getElementById('input_full_name');
+            const phoneInput = document.getElementById('input_phone');
+            const modalName = document.getElementById('decline_modal_name');
+            const modalPhone = document.getElementById('decline_modal_phone');
+            if (nameInput && modalName && nameInput.value) modalName.value = nameInput.value;
+            if (phoneInput && modalPhone && phoneInput.value) modalPhone.value = phoneInput.value;
+        };
+
+        // Enforce checklist validation on submit for "For Installation"
+        const customerForm = document.getElementById('add-customer-form');
+        if (customerForm) {
+            customerForm.addEventListener('submit', function(e) {
+                if (radPending && radPending.checked) {
+                    const checkedCount = document.querySelectorAll('.policy-item-checkbox:checked').length;
+                    if (checkedCount < 6) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        alert('Checklist Incomplete: All 6 policy items must be confirmed before creating an installation subscriber.');
+                        const step1 = document.getElementById('step1-checklist-card');
+                        if (step1) step1.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        return false;
+                    }
+                }
+            });
+        }
+
+        if (cardInstalled) {
+            cardInstalled.addEventListener('click', function(e) {
+                if (e.target !== radInstalled) {
+                    radInstalled.checked = true;
+                }
+                updateSetupUI();
+            });
+        }
+        if (cardPending) {
+            cardPending.addEventListener('click', function(e) {
+                if (e.target !== radPending) {
+                    radPending.checked = true;
+                }
+                updateSetupUI();
+            });
+        }
+        if (radInstalled) radInstalled.addEventListener('change', updateSetupUI);
+        if (radPending) radPending.addEventListener('change', updateSetupUI);
+        updateSetupUI();
+    });
+</script>
