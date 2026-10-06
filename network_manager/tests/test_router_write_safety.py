@@ -1,4 +1,4 @@
-"""
+﻿"""
 The routers must never become write-capable by accident.
 
 These routers are shared with the legacy system and the office Mini PC. A write
@@ -15,11 +15,26 @@ from unittest import mock
 
 from django.test import SimpleTestCase, override_settings
 
+from network_manager.models import MikrotikDevice
 from network_manager.services.base import MikrotikBase
 
 
-def _build(device, **kwargs):
-    """Instantiate the base without opening a socket or touching the router."""
+def _build(device=None, **kwargs):
+    """Instantiate the base without opening a socket or touching the router.
+
+    A real unsaved MikrotikDevice is used so the full __init__ runs (it reads
+    api_port and builds a connection pool object, but never connects). Passing a
+    bare string would fail on `.api_port` before the mode is ever resolved, which
+    tests nothing about write safety.
+    """
+    if device is None:
+        device = MikrotikDevice(
+            device_name="unit-test-no-connection",
+            ip_address="127.0.0.1",
+            api_username="x",
+            api_password="x",
+            api_port=8728,
+        )
     obj = MikrotikBase.__new__(MikrotikBase)
     obj.__init__(device, **kwargs)
     return obj
@@ -57,7 +72,7 @@ class RouterWriteDefaultsFailSafeTests(SimpleTestCase):
         )
 
     def test_missing_setting_is_read_only(self):
-        obj = _build("dev")
+        obj = _build()
         self.assertEqual(obj.router_mode, "read_only")
         self.assertTrue(obj.is_read_only)
 
@@ -76,7 +91,7 @@ class RouterWriteDefaultsFailSafeTests(SimpleTestCase):
         old = B.settings
         try:
             B.settings = NoneSettings()
-            obj = _build("dev", dry_run=False)
+            obj = _build(dry_run=False)
         finally:
             B.settings = old
         self.assertEqual(obj.router_mode, "read_only")
@@ -92,7 +107,7 @@ class RouterWriteDefaultsFailSafeTests(SimpleTestCase):
         old = B.settings
         try:
             B.settings = EmptySettings()
-            obj = _build("dev")
+            obj = _build()
         finally:
             B.settings = old
         self.assertEqual(obj.router_mode, "read_only")
@@ -111,7 +126,7 @@ class RouterWriteDefaultsFailSafeTests(SimpleTestCase):
         self.assertEqual(M._resolve_mode(" Dry_Run "), "dry_run")
 
     def test_unrecognised_value_is_read_only(self):
-        obj = _build("dev", router_mode="totally-bogus-mode")
+        obj = _build(router_mode="totally-bogus-mode")
         self.assertEqual(obj.router_mode, "read_only")
         self.assertTrue(obj.is_read_only)
 
@@ -122,25 +137,25 @@ class RouterWriteDefaultsFailSafeTests(SimpleTestCase):
         write access -- because `dry_run is not None` short-circuited the
         settings lookup. A global ROUTER_MODE=read_only could not stop it.
         """
-        obj = _build("dev", dry_run=False)
+        obj = _build(dry_run=False)
         self.assertNotEqual(obj.router_mode, "live")
         self.assertTrue(obj.is_read_only)
 
     @override_settings(ROUTER_MODE="read_only")
     def test_dry_run_false_respects_global_read_only(self):
-        obj = _build("dev", dry_run=False)
+        obj = _build(dry_run=False)
         self.assertEqual(obj.router_mode, "read_only")
         self.assertTrue(obj.is_read_only)
 
     @override_settings(ROUTER_MODE="read_only")
     def test_dry_run_true_still_stubs(self):
-        obj = _build("dev", dry_run=True)
+        obj = _build(dry_run=True)
         self.assertEqual(obj.router_mode, "dry_run")
         self.assertTrue(obj.is_dry_run)
 
     def test_explicit_live_is_still_honoured(self):
         """The escape hatch must keep working, or cutover could never happen."""
-        obj = _build("dev", router_mode="live")
+        obj = _build(router_mode="live")
         self.assertEqual(obj.router_mode, "live")
 
     def test_no_service_layer_falls_back_to_live(self):
