@@ -1,4 +1,4 @@
-from django.test import TestCase, Client
+﻿from django.test import TestCase, Client
 from django.contrib.auth.models import User, Permission
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
@@ -433,7 +433,7 @@ class Phase31RefinementTests(TestCase):
             username="normal_staff_phase31",
             full_name="Normal Staff",
             email="nstaff@gametech.local",
-            role="Staff",
+            role="CSR",
             status="Active",
         )
         # Grant standard add_customer and manage_prospects to normal staff
@@ -512,7 +512,7 @@ class Phase31RefinementTests(TestCase):
         # Check agent snapshot
         agent_snap = setting.generate_policy_snapshot(plan_name="Turbo 100", price="1500.00", is_agent_referred=True)
         self.assertIn("Turbo 100", agent_snap["item_specific_plan"])
-        self.assertIn("₱1500.00/month", agent_snap["item_specific_plan"])
+        self.assertIn("â‚±1500.00/month", agent_snap["item_specific_plan"])
         self.assertIn("Not available for 60 days from your first payment", agent_snap["item_staggered_lock"])
 
         # Check walkin snapshot

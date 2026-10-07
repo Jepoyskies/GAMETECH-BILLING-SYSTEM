@@ -1,4 +1,4 @@
-"""
+﻿"""
 One install ticket per customer.
 
 THE BUG THIS PINS
@@ -55,7 +55,7 @@ class SingleInstallTicketTests(TestCase):
             defaults={
                 "full_name": "Crud Staff",
                 "email": "crud@gametech.local",
-                "role": "Staff",
+                "role": "CSR",
                 "status": "Active",
             },
         )

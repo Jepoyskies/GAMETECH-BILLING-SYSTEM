@@ -1,4 +1,4 @@
-"""
+﻿"""
 Subscription lifecycle: status, expiry, suspension and reactivation.
 
 WHY THIS FILE EXISTS
@@ -300,7 +300,7 @@ class ForceReactivateTests(TestCase):
             defaults={
                 "full_name": "Staff Not Admin",
                 "email": "staff@gametech.local",
-                "role": "Staff",
+                "role": "CSR",
                 "status": "Active",
             },
         )
