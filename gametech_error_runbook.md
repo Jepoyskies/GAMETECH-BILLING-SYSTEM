@@ -3488,3 +3488,40 @@ A further ~31% of the row bytes was pure template indentation left behind by nes
 **Diagnose it with**: POST to the endpoint, do not GET it. A `None` return on GET says nothing about whether the feature works.
 **Files**: `network_manager/views/{devices,sync,winbox,naps}.py`, `dispatch/views.py`, `customer_portal/views/auth.py`
 **Date Logged**: 2026-10-06
+
+### ERR-130: Tests Silently Run Against SQLite, Not PostgreSQL
+**Symptom**: The full suite reported **200 tests** on one run and **271 tests** on another from identical code. The 71-test difference was not flaky tests -- 20+ `setUpClass` calls were raising `OperationalError: connection refused` because the test database had been destroyed underneath them.
+**Cause**: `gametech_core/settings.py` reads `env.db("DATABASE_URL", default=f"sqlite:///{BASE_DIR}/db.sqlite3")`. `.env` does **not** define `DATABASE_URL` -- it lives only in the `gametech-web` container's environment, injected by compose. So any container started with just `--env-file .env` silently fell back to **SQLite** and tested the wrong database engine entirely. SQLite has no row-level locking, so the concurrency guarantee under test cannot exist there, and a `dispatch` test spawning 10 threads died with `sqlite3.OperationalError: database table is locked`.
+**Fix**: test containers must inherit the real value, not just `.env`:
+```bash
+DBURL=$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' gametech-web | grep -m1 '^DATABASE_URL=')
+docker run --env-file /root/GAMETECH-BILLING-SYSTEM/.env -e "$DBURL" ... gametech-web python manage.py test
+```
+**Lesson**: always confirm the engine before trusting a green run. The suite should report 271 tests, and a `sqlite3` frame anywhere in a traceback means you are on the wrong database. A SQLite pass says nothing about PostgreSQL behaviour.
+**Files**: `gametech_core/settings.py`
+**Date Logged**: 2026-10-07
+
+
+### ERR-131: PowerShell `Set-Content -Encoding UTF8` Corrupts UTF-8 Source Into Mojibake
+**Symptom**: subscribers were receiving payment SMS reading `a-circumflex-low-9-quote-plus-or-minus250` instead of `P250`. Eleven peso signs had been destroyed in `billing/views/cignal_dashboard.py`, inside the strings that build `remarks` and `message` for every recorded payment.
+**Cause**: rewriting a file with PowerShell's `Set-Content -Encoding UTF8` after reading it with `Get-Content -Raw`. In Windows PowerShell 5.1 `Get-Content -Raw` takes **no** `-Encoding` and decodes using the ANSI code page (cp1252), so UTF-8 bytes were mis-decoded and then written back out as UTF-8. `U+20B1` (bytes `E2 82 B1`) became three characters, as did every em-dash and ellipsis in the file.
+**Fix**: repair by re-encoding each damaged run to cp1252 to recover the original bytes, then decoding as UTF-8. 22 runs were recovered across 4 files, including the three shipped files `billing/views/cignal_dashboard.py`, `billing/views/customers/crud.py` and `billing/templates/billing/customer_list/_styles.html`. The repair is idempotent and only touches runs containing a known mojibake trigger, so real text is never rewritten.
+**Detect it**:
+```python
+s = open(path, encoding="utf-8").read()
+# the 3-char cp1252 mis-reads of U+20B1, U+2014, U+2026
+bad = sum(s.count(t) for t in ("\u00e2\u201a", "\u00e2\u20ac", "\u00c3\u00a2"))
+```
+The damage contains **no** U+FFFD, so a "replacement character" check misses it entirely.
+**Lesson**: on this Windows host, never use `Set-Content`/`Out-File` to rewrite a file containing non-ASCII. Use the editor tool, or Python with explicit `encoding="utf-8"` and binary-safe writes. `Set-Content -Encoding UTF8` also prepends a BOM.
+**Files**: `billing/views/cignal_dashboard.py`, `billing/views/customers/crud.py`, `billing/templates/billing/customer_list/_styles.html`
+**Date Logged**: 2026-10-07
+
+
+### ERR-132: An External `docker compose up -d --build` Tears Down Production On A Timer
+**Symptom**: roughly every 40 minutes all five containers stop and are recreated within about 20 seconds. The site returns connection-refused for that window, and **any** long-running job dies mid-flight -- including test suites, which lost 271-test runs twice and reported a bogus `Connection refused` / `server closed the connection unexpectedly` against PostgreSQL.
+**Cause**: not a crash, not OOM, not a healthcheck. `dmesg` showed no OOM kills, `OOMKilled=false`, `ExitCode=0`, and the PostgreSQL log showed a **clean** shutdown (`database system was shut down`) immediately before startup. The `docker events` trace is unambiguous: an image `create`, then `kill`/`stop`/`die`/`destroy` for all five containers, then `create` for all five. That is `docker compose up -d --build`. No cron job, no systemd timer and no watchtower/autoheal container exists on the host, so the trigger is an external session -- another agent, or a person -- redeploying on a schedule.
+**Also found**: two abandoned diagnostic shells from that earlier session had been alive for **6.6 and 6.9 days** (a long-running `docker events` and a `ping` loop), holding open Docker sockets. They were killed.
+**Fix / mitigation**: none available from inside the app; this needs a human decision. Short term, run long jobs in a container **compose does not manage** (`docker run --name gt-test ...`) so a redeploy cannot kill them, and write their output to a bind-mounted directory rather than `/tmp` inside the container.
+**Lesson**: when several unrelated checks fail at once with connection errors, suspect the infrastructure before the code. Comparing `docker inspect --format '{{.State.StartedAt}}'` across all containers against when the failures began tells you in one command whether the stack was recreated.
+**Date Logged**: 2026-10-07
