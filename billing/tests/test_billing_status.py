@@ -48,12 +48,20 @@ def make_customer(**kw):
     # test is about the BILLING axis, so it satisfies the guard the legitimate
     # way rather than weakening it.
     if status == "pending":
+        from django.contrib.auth import get_user_model
+
         from billing.models import ChecklistConfirmation
 
+        # confirmed_by is a FK to User, not a free-text column -- it records
+        # which staff member actually walked the applicant through the policy.
+        who, _ = get_user_model().objects.get_or_create(
+            username="checklist_staff",
+            defaults={"is_staff": True},
+        )
         ChecklistConfirmation.objects.create(
             applicant_phone=defaults.get("phone") or "",
             outcome="agreed",
-            confirmed_by="test",
+            confirmed_by=who,
         )
 
     return Customer.objects.create(pppoe_username=username, **defaults)

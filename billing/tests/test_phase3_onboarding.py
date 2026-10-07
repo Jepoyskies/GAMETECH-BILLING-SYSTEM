@@ -461,7 +461,11 @@ class Phase31RefinementTests(TestCase):
             role="Admin",
             status="Active",
         )
-        for perm_name in ["add_customer", "add_existing_subscriber", "change_customer_agent", "manage_prospects"]:
+        # create_customer is what add_customer() actually checks; without it the
+        # @permission_required(raise_exception=True) fires a 403 before the
+        # add_existing_subscriber branch under test is ever reached.
+        for perm_name in ["add_customer", "create_customer", "add_existing_subscriber",
+                          "change_customer_agent", "manage_prospects"]:
             p = Permission.objects.filter(codename=perm_name).first()
             if p:
                 self.override_staff.user_permissions.add(p)

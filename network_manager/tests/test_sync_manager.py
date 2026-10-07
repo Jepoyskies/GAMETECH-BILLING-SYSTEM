@@ -1,4 +1,4 @@
-﻿"""
+"""
 Sync Manager tests -- the bouncer, the comment format, and the write guards.
 
 WHY THIS FILE EXISTS
@@ -583,9 +583,10 @@ class SyncManagerPageTests(TestCase):
             "disabled": "false", "is_active": True, "is_suspicious": False,
         }])
 
-        with mock.patch("network_manager.sync_services.MikrotikAPI",
-                     return_value=api), mock.patch("network_manager.services.MikrotikAPI",
-                     return_value=api):
+        with mock.patch("network_manager.views.sync.MikrotikSyncAPI",
+ return_value=api), mock.patch("network_manager.sync_services.MikrotikAPI",
+ return_value=api), mock.patch("network_manager.services.MikrotikAPI",
+ return_value=api):
             response = self.client.get(
                 reverse("sync_manager_device", args=[self.device.id]))
 
@@ -601,9 +602,10 @@ class SyncManagerPageTests(TestCase):
             "disabled": "false", "is_active": True, "is_suspicious": False,
         }])
 
-        with mock.patch("network_manager.sync_services.MikrotikAPI",
-                     return_value=api), mock.patch("network_manager.services.MikrotikAPI",
-                     return_value=api):
+        with mock.patch("network_manager.views.sync.MikrotikSyncAPI",
+ return_value=api), mock.patch("network_manager.sync_services.MikrotikAPI",
+ return_value=api), mock.patch("network_manager.services.MikrotikAPI",
+ return_value=api):
             response = self.client.get(
                 reverse("sync_manager_device", args=[self.device.id]))
 
@@ -625,9 +627,10 @@ class SyncManagerPageTests(TestCase):
             "disabled": "false", "is_active": True, "is_suspicious": False,
         }])
 
-        with mock.patch("network_manager.sync_services.MikrotikAPI",
-                     return_value=api), mock.patch("network_manager.services.MikrotikAPI",
-                     return_value=api):
+        with mock.patch("network_manager.views.sync.MikrotikSyncAPI",
+ return_value=api), mock.patch("network_manager.sync_services.MikrotikAPI",
+ return_value=api), mock.patch("network_manager.services.MikrotikAPI",
+ return_value=api):
             response = self.client.get(
                 reverse("sync_manager_device", args=[self.device.id]))
 
@@ -649,9 +652,10 @@ class SyncManagerPageTests(TestCase):
             "disabled": "true", "is_active": False, "is_suspicious": False,
         }])
 
-        with mock.patch("network_manager.sync_services.MikrotikAPI",
-                     return_value=api), mock.patch("network_manager.services.MikrotikAPI",
-                     return_value=api):
+        with mock.patch("network_manager.views.sync.MikrotikSyncAPI",
+ return_value=api), mock.patch("network_manager.sync_services.MikrotikAPI",
+ return_value=api), mock.patch("network_manager.services.MikrotikAPI",
+ return_value=api):
             response = self.client.get(
                 reverse("sync_manager_device", args=[self.device.id]))
 
@@ -675,9 +679,10 @@ class SyncManagerPageTests(TestCase):
             "disabled": "false", "is_active": True, "is_suspicious": False,
         }])
 
-        with mock.patch("network_manager.sync_services.MikrotikAPI",
-                     return_value=api), mock.patch("network_manager.services.MikrotikAPI",
-                     return_value=api):
+        with mock.patch("network_manager.views.sync.MikrotikSyncAPI",
+ return_value=api), mock.patch("network_manager.sync_services.MikrotikAPI",
+ return_value=api), mock.patch("network_manager.services.MikrotikAPI",
+ return_value=api):
             response = self.client.get(
                 reverse("sync_manager_device", args=[self.device.id]))
 
@@ -697,9 +702,10 @@ class SyncManagerPageTests(TestCase):
             "disabled": "false", "is_active": True, "is_suspicious": False,
         }])
 
-        with mock.patch("network_manager.sync_services.MikrotikAPI",
-                     return_value=api), mock.patch("network_manager.services.MikrotikAPI",
-                     return_value=api):
+        with mock.patch("network_manager.views.sync.MikrotikSyncAPI",
+ return_value=api), mock.patch("network_manager.sync_services.MikrotikAPI",
+ return_value=api), mock.patch("network_manager.services.MikrotikAPI",
+ return_value=api):
             response = self.client.get(
                 reverse("sync_manager_device", args=[self.device.id]))
 
@@ -718,9 +724,10 @@ class SyncManagerPageTests(TestCase):
         fetch = mock.MagicMock()
         fetch.return_value = {"success": False, "error": "timed out"}
         api = mock.MagicMock(get_all_pppoe_users=fetch)
-        with mock.patch("network_manager.sync_services.MikrotikAPI",
-                     return_value=api), mock.patch("network_manager.services.MikrotikAPI",
-                     return_value=api):
+        with mock.patch("network_manager.views.sync.MikrotikSyncAPI",
+ return_value=api), mock.patch("network_manager.sync_services.MikrotikAPI",
+ return_value=api), mock.patch("network_manager.services.MikrotikAPI",
+ return_value=api):
             response = self.client.get(
                 reverse("sync_manager_device", args=[self.device.id]))
 

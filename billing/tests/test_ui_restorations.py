@@ -68,6 +68,16 @@ class UIRestorationsTestCase(TestCase):
             role="Viewer",
             password_hash="managed",
         )
+        # Mirror production. StaffRole.can_access_billing defaults to False, and
+        # the row the post_migrate setup creates carries that default -- but the
+        # live Role Editor has Viewer ticked for billing, which is what this test
+        # is about (a billing-visible Viewer must not get Edit/Delete buttons).
+        # Without this the view 302s and the test never reaches its assertions.
+        from billing.models import StaffRole
+
+        StaffRole.objects.update_or_create(
+            name="Viewer", defaults={"can_access_billing": True},
+        )
 
     def test_customer_directory_visible_buttons_for_admin(self):
         """Customers Directory displays direct visible buttons for View, Repair, Edit, Delete for Admin."""

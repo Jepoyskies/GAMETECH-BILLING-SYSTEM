@@ -61,13 +61,15 @@ class SingleInstallTicketTests(TestCase):
         )
         self.last_response = None
         self.last_detail = ""
-        # add_customer is behind @permission_required("billing.add_customer")
-        # as well as @role_required, so a role alone is not enough.
+        # add_customer is behind @permission_required("billing.create_customer")
+        # as well as @role_required, so a role alone is not enough. The view
+        # asks for create_customer specifically -- it does NOT accept
+        # add_customer in its place -- so grant that one.
         add_perm = Permission.objects.filter(
-            content_type__app_label="billing", codename="add_customer",
+            content_type__app_label="billing", codename="create_customer",
         ).first()
         self.assertIsNotNone(
-            add_perm, "billing.add_customer permission must exist.")
+            add_perm, "billing.create_customer permission must exist.")
         self.staff.user_permissions.add(add_perm)
         self.staff = User.objects.get(pk=self.staff.pk)
 

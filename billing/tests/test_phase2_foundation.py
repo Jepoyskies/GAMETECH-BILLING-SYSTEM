@@ -321,10 +321,24 @@ class Phase2FoundationTests(TestCase):
         self.assertNotIn(c_pending_install, due_customers)
         self.assertNotIn(c_closed, due_customers)
 
-        # Verify customer_list view executes cleanly with exclusions
-        req = self.rf.get("/customers/")
-        req.user = self.staff_user
-        resp = customer_list(req)
+        # Verify customer_list view executes cleanly with exclusions.
+        #
+        # Drive it through the test client rather than calling the view with a
+        # bare RequestFactory request: that skips MessageMiddleware, and the
+        # view's deny path calls messages.error(), which then blows up with
+        # AttributeError: 'WSGIRequest' object has no attribute '_messages'.
+        #
+        # staff_phase2 has no SystemAdmin row, so its role falls back to
+        # "Viewer". StaffRole.can_access_billing defaults to False, but the live
+        # Role Editor has Viewer ticked, so mirror production here -- otherwise
+        # the view correctly denies the user and there is nothing to assert.
+        from billing.models import StaffRole
+
+        StaffRole.objects.update_or_create(
+            name="Viewer", defaults={"can_access_billing": True},
+        )
+        self.client.force_login(self.staff_user)
+        resp = self.client.get("/customers/")
         self.assertEqual(resp.status_code, 200)
 
 
