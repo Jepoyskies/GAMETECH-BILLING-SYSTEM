@@ -1,4 +1,4 @@
-﻿from django.test import TestCase, Client
+from django.test import TestCase, Client
 from django.contrib.auth.models import User, Permission
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
@@ -100,6 +100,8 @@ class Phase3OnboardingAndChecklistTests(TestCase):
             "address": "Zone 1, Carmen",
             "barangay_id": self.barangay.id,
             "plan_id": self.plan.id,
+            "pppoe_username": "no_checklist_sub",
+            "pppoe_password": "nochecklist123",
             "installation_status": "pending",
             # Deliberately omit checklist checkboxes
         }
@@ -120,6 +122,8 @@ class Phase3OnboardingAndChecklistTests(TestCase):
         payload = {
             "full_name": "Juan Dela Cruz",
             "phone": "09123450002",
+            "pppoe_username": "juan_delacruz",
+            "pppoe_password": "juanpass123",
             "email": "juan.valid@gametech.local",
             "address": "Zone 2, Carmen",
             "barangay_id": self.barangay.id,
@@ -205,6 +209,8 @@ class Phase3OnboardingAndChecklistTests(TestCase):
         payload = {
             "full_name": "Legacy Existing Subscriber",
             "phone": "09123450004",
+            "pppoe_username": "legacy_sub",
+            "pppoe_password": "legacypass123",
             "email": "legacy@gametech.local",
             "address": "Zone 3, Carmen",
             "barangay_id": self.barangay.id,
@@ -512,7 +518,7 @@ class Phase31RefinementTests(TestCase):
         # Check agent snapshot
         agent_snap = setting.generate_policy_snapshot(plan_name="Turbo 100", price="1500.00", is_agent_referred=True)
         self.assertIn("Turbo 100", agent_snap["item_specific_plan"])
-        self.assertIn("â‚±1500.00/month", agent_snap["item_specific_plan"])
+        self.assertIn("₱1500.00/month", agent_snap["item_specific_plan"])
         self.assertIn("Not available for 60 days from your first payment", agent_snap["item_staggered_lock"])
 
         # Check walkin snapshot
@@ -535,6 +541,8 @@ class Phase31RefinementTests(TestCase):
         payload_chat = {
             "full_name": "Applicant Chat Test",
             "phone": "09180000001",
+            "pppoe_username": "chat_applicant",
+            "pppoe_password": "chatpass123",
             "address": "Zone 1 Bugo",
             "barangay_id": self.barangay.id,
             "plan_id": self.plan.id,
@@ -572,6 +580,8 @@ class Phase31RefinementTests(TestCase):
         override_payload = {
             "full_name": "Existing Sub Override Test",
             "phone": "09180000002",
+            "pppoe_username": "existing_sub",
+            "pppoe_password": "existpass123",
             "address": "Zone 2 Bugo",
             "barangay_id": self.barangay.id,
             "plan_id": self.plan.id,
@@ -747,6 +757,8 @@ class Phase31RefinementTests(TestCase):
         payload = {
             "full_name": "Single Conversion Prospect",
             "phone": "09181112233",
+            "pppoe_username": "single_conv_prospect",
+            "pppoe_password": "singleconv123",
             "address": "Zone 1",
             "barangay_id": self.barangay.id,
             "plan_id": self.plan.id,

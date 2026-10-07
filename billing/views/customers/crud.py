@@ -1,4 +1,4 @@
-﻿from django.contrib.auth.hashers import make_password
+from django.contrib.auth.hashers import make_password
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, FileResponse, HttpResponse
 import os
@@ -135,7 +135,7 @@ def add_customer(request):
         if not installation_status:
             installation_status = "pending"
 
-        # PPPoE credentials are mandatory â€” required for MikroTik router provisioning
+        # PPPoE credentials are mandatory — required for MikroTik router provisioning
         if not pppoe_username:
             messages.error(request, "PPPoE Username is required for router provisioning.")
             context = _get_add_customer_context(request, pppoe_username, prospect, agent_id_param)
@@ -573,7 +573,7 @@ def edit_customer(request, customer_id):
                 check_change("Expiration Date", curr_expires_str, "None")
                 customer.expires_at = None
 
-        # Handle ForeignKeys â€” resolve to human-readable names for clear audit logs
+        # Handle ForeignKeys — resolve to human-readable names for clear audit logs
         plan_id = request.POST.get("plan_id")
         if str(customer.plan_id or "") != str(plan_id or ""):
             old_plan_name = customer.plan.name if customer.plan else "None"
@@ -827,7 +827,7 @@ def view_customer(request, customer_id):
     # Combine logs
     all_logs = []
 
-    # 1. System Logs â€” pass the raw object so format_log_details can render it properly
+    # 1. System Logs — pass the raw object so format_log_details can render it properly
     sys_logs = SystemLog.objects.filter(
         record_id=str(customer.id), table_name="Customer"
     ).order_by("-changed_at")
@@ -849,7 +849,7 @@ def view_customer(request, customer_id):
             {
                 "type": "payment",
                 "date": p.created_at,
-                "title": f"Payment: â‚±{p.amount}",
+                "title": f"Payment: ₱{p.amount}",
                 "details": f"Method: {p.payment_method}",
                 "user": "System",
                 "log_obj": None,
@@ -993,7 +993,7 @@ def view_customer(request, customer_id):
             "type": "ticket",
             "date": t["created_at"],
             "title": f"Ticket: {t['ticket_number']}",
-            "details": f"{t['type_display']} â€” Status: {t['status_display']} | Concern: {t['concern'] or 'None'} | Tech: {tech_str}",
+            "details": f"{t['type_display']} — Status: {t['status_display']} | Concern: {t['concern'] or 'None'} | Tech: {tech_str}",
             "user": tech_str,
             "log_obj": None,
         })

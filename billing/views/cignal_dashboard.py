@@ -297,26 +297,26 @@ def process_cignal_payment(request):
         if payment_type == "box_and_load" or (payment_type != "load_only" and amount == Decimal("399.00") and subscription.hardware_payment_type == "installment" and (subscription.installments_paid or 0) < 12 and subscription.monthly_load_plan == "149"):
             if subscription.hardware_payment_type == "installment" and (subscription.installments_paid or 0) < 12:
                 subscription.installments_paid = (subscription.installments_paid or 0) + 1
-                installment_text = f" [Box Installment #{subscription.installments_paid}/12 (â‚±250) + Load (â‚±149)]"
+                installment_text = f" [Box Installment #{subscription.installments_paid}/12 (₱250) + Load (₱149)]"
                 # Auto-complete: upgrade to cashout on final installment
                 if subscription.installments_paid >= 12:
                     subscription.hardware_payment_type = "cashout"
-                    installment_text += " âœ… Hardware FULLY PAID â€” upgraded to Cashout"
+                    installment_text += " âœ… Hardware FULLY PAID — upgraded to Cashout"
             else:
-                installment_text = " [Box + Load: â‚±399]"
+                installment_text = " [Box + Load: ₱399]"
         elif payment_type in ("box_installment", "box_only") or (payment_type != "load_only" and amount == Decimal("250.00") and subscription.hardware_payment_type == "installment" and (subscription.installments_paid or 0) < 12):
             if subscription.hardware_payment_type == "installment" and (subscription.installments_paid or 0) < 12:
                 subscription.installments_paid = (subscription.installments_paid or 0) + 1
-                installment_text = f" [Box Installment #{subscription.installments_paid}/12 (â‚±250)]"
+                installment_text = f" [Box Installment #{subscription.installments_paid}/12 (₱250)]"
                 if subscription.installments_paid >= 12:
                     subscription.hardware_payment_type = "cashout"
-                    installment_text += " âœ… Hardware FULLY PAID â€” upgraded to Cashout"
+                    installment_text += " âœ… Hardware FULLY PAID — upgraded to Cashout"
             else:
-                installment_text = " [Box Installment: â‚±250]"
+                installment_text = " [Box Installment: ₱250]"
         elif payment_type == "box_cashout" or amount >= Decimal("3000.00"):
             subscription.hardware_payment_type = "cashout"
             subscription.installments_paid = 12
-            installment_text = " [Hardware Cashout â‚±3k Completed]"
+            installment_text = " [Hardware Cashout ₱3k Completed]"
 
         subscription.amount_paid = (subscription.amount_paid or Decimal("0.00")) + amount
         subscription.adjusted_by = request.user.username
@@ -349,13 +349,13 @@ def process_cignal_payment(request):
             admin_user=request.user,
             customer=customer,
             action_type="Cignal Payment Reload",
-            remarks=f"Amount: â‚±{amount:,.2f} | Type: {payment_type or 'load'} | HW: {subscription.hardware_payment_type} ({subscription.installments_paid}/12) | Ref: {reference_no or 'N/A'}{audit_notes} | Expiry: {new_expiration_date.strftime('%Y-%m-%d') if new_expiration_date else 'Unchanged'} | Acct: {subscription.account_number}",
+            remarks=f"Amount: ₱{amount:,.2f} | Type: {payment_type or 'load'} | HW: {subscription.hardware_payment_type} ({subscription.installments_paid}/12) | Ref: {reference_no or 'N/A'}{audit_notes} | Expiry: {new_expiration_date.strftime('%Y-%m-%d') if new_expiration_date else 'Unchanged'} | Acct: {subscription.account_number}",
         )
 
         # Notification
         Notification.objects.create(
             title="Cignal Reload Recorded",
-            message=f"â‚±{amount:,.2f} payment recorded for {customer.full_name} ({subscription.account_name or subscription.account_number}) by {request.user.username}.{installment_text}",
+            message=f"₱{amount:,.2f} payment recorded for {customer.full_name} ({subscription.account_name or subscription.account_number}) by {request.user.username}.{installment_text}",
             notification_type="cignal",
             link=f"/customer/{customer.id}/cignal-logs/",
         )
@@ -363,7 +363,7 @@ def process_cignal_payment(request):
     if request.headers.get("X-Requested-With") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", ""):
         return JsonResponse({
             "status": "success",
-            "message": f"Payment of â‚±{amount:,.2f} recorded successfully.{installment_text}",
+            "message": f"Payment of ₱{amount:,.2f} recorded successfully.{installment_text}",
             "subscription_id": subscription.id,
             "new_expiration": subscription.expiration_date.strftime("%Y-%m-%d") if subscription.expiration_date else "",
             "amount_paid": float(subscription.amount_paid),
@@ -374,7 +374,7 @@ def process_cignal_payment(request):
     inst_msg = f" (Box Installment #{subscription.installments_paid}/12)" if subscription.hardware_payment_type == 'installment' else ""
     messages.success(
         request,
-        f"Cignal reload of â‚±{amount:,.2f} successfully recorded for {customer.full_name} ({subscription.account_name or subscription.account_number}){inst_msg}.",
+        f"Cignal reload of ₱{amount:,.2f} successfully recorded for {customer.full_name} ({subscription.account_name or subscription.account_number}){inst_msg}.",
     )
     return redirect(request.META.get("HTTP_REFERER", "cignal_dashboard"))
 
@@ -482,7 +482,7 @@ def edit_cignal_subscription(request, sub_id=None):
         admin_user=request.user,
         customer=customer,
         action_type="Edit Cignal Subscription",
-        remarks=f"Updated Cignal #{subscription.id}: Label='{subscription.account_name}', Play='{cignal_play_no}', Box='{cignal_box_no}', HW='{subscription.hardware_payment_type}' ({subscription.installments_paid}/12), Load='â‚±{subscription.monthly_load_plan}', Expiry='{exp_str}'",
+        remarks=f"Updated Cignal #{subscription.id}: Label='{subscription.account_name}', Play='{cignal_play_no}', Box='{cignal_box_no}', HW='{subscription.hardware_payment_type}' ({subscription.installments_paid}/12), Load='₱{subscription.monthly_load_plan}', Expiry='{exp_str}'",
     )
 
     if request.headers.get("X-Requested-With") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", ""):
