@@ -52,6 +52,13 @@ def make_customer(**kw):
 
         from billing.models import ChecklistConfirmation
 
+        # The guard matches on applicant_phone=self.phone, so the confirmation
+        # and the customer must carry the SAME phone. This test does not pass
+        # one, so give it one and use it for both -- otherwise the confirmation
+        # is filed against "" while the customer has None and they never match.
+        phone = defaults.get("phone") or "0917000%04d" % next(_seq)
+        defaults["phone"] = phone
+
         # confirmed_by is a FK to User, not a free-text column -- it records
         # which staff member actually walked the applicant through the policy.
         who, _ = get_user_model().objects.get_or_create(
@@ -59,7 +66,7 @@ def make_customer(**kw):
             defaults={"is_staff": True},
         )
         ChecklistConfirmation.objects.create(
-            applicant_phone=defaults.get("phone") or "",
+            applicant_phone=phone,
             outcome="agreed",
             confirmed_by=who,
         )
