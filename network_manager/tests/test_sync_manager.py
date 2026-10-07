@@ -584,15 +584,37 @@ class SyncManagerPageTests(TestCase):
         }])
 
         with mock.patch("network_manager.sync_services.MikrotikAPI",
- return_value=api), mock.patch("network_manager.sync_services.MikrotikAPI",
- return_value=api), mock.patch("network_manager.services.MikrotikAPI",
- return_value=api):
+                     return_value=api), mock.patch("network_manager.services.MikrotikAPI",
+                     return_value=api):
             response = self.client.get(
                 reverse("sync_manager_device", args=[self.device.id]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("gt_queue", [u["name"] for u in response.context["needs_review"]])
-        self.assertNotIn("gt_queue", [u["name"] for u in response.context["synced"]])
+        by_name = {}
+        for bucket in ("needs_review", "synced"):
+            for u in response.context[bucket]:
+                by_name[u["name"]] = u
+
+        # THE BOUNCER: an account nobody has confirmed must never be presented
+        # as approved.
+        #
+        # The page routes on DISAGREEMENT, not on "not yet paired" (see the
+        # comment in views/sync.py): an account that agrees with the router
+        # belongs in Match & Pair whether or not a human has paired it, because
+        # routing it to Needs Review left the pairing card empty and pushed
+        # operators toward the one Approve button that writes to a router.
+        # These assertions pin the CURRENT routing, and then -- the part that
+        # actually matters -- that the row is still flagged as un-approved, so
+        # it cannot be mistaken for a verified account.
+        self.assertNotIn("gt_queue", [u["name"] for u in response.context["needs_review"]],
+                         "an account that agrees with the router belongs in Match & Pair")
+        self.assertIn("gt_queue", by_name)
+        self.assertTrue(
+            by_name["gt_queue"]["awaiting_approval"],
+            "An unverified account must still be flagged as awaiting a human "
+            "decision even though it is not in Needs Review.",
+        )
+        self.assertIn("awaiting_approval", by_name["gt_queue"]["reason_keys"])
 
     def test_synced_account_leaves_the_queue(self):
         make_customer("gt_ok", mikrotik_device=self.device, sync_status="Synced")
@@ -710,12 +732,23 @@ class SyncManagerPageTests(TestCase):
                 reverse("sync_manager_device", args=[self.device.id]))
 
         queued = {u["name"]: u for u in response.context["needs_review"]}
-        self.assertIn("gt_nolink", queued)
+        # Routed on disagreement, not on "not paired": this account agrees with
+        # the router, so it sits in Match & Pair. What must survive is the flag,
+        # so staff still know approving it will assign a router.
+        row = next((u for u in response.context["synced"] if u["name"] == "gt_nolink"), None)
+        self.assertIsNotNone(
+            row,
+            "An account with no router must still be listed so a human can "
+            "assign one; got needs_review=%r synced=%r" % (
+                sorted(queued), [u["name"] for u in response.context["synced"]],
+            ),
+        )
         self.assertTrue(
-            queued["gt_nolink"]["unlinked"],
+            row["unlinked"],
             "An account with no router must be flagged as unlinked so staff "
             "know approving will assign one.",
         )
+        self.assertIn("unlinked", row["reason_keys"])
 
     def test_router_outage_does_not_empty_the_queue(self):
         """A dead router must not read as 'everything is approved'."""
