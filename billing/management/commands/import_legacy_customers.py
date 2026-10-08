@@ -398,6 +398,35 @@ class Command(BaseCommand):
                             defaults["status"] = existing.status
                             preserved_count += 1
 
+                        # DO NOT UNDO A SYNC MANAGER PAIRING.
+                        #
+                        # The `sync_status = "Unverified"` above is deliberate and
+                        # correct for an account nobody has checked: imported
+                        # rows have never been compared against a router, and
+                        # claiming otherwise is what once made 2,041 unverified
+                        # accounts render as verified.
+                        #
+                        # But it must not apply to an account a human ALREADY
+                        # paired in Sync Manager. account_needs_approval() reads
+                        # sync_status as well as pair_approved, so resetting it
+                        # to "Unverified" drops a verified account back into the
+                        # approval queue. During a staged cutover that means a
+                        # fresh export from the legacy system silently discards
+                        # however much one-by-one verification staff had already
+                        # done -- exactly the messy takeover this project is
+                        # avoiding.
+                        #
+                        # So: a paired account keeps its sync_status. An
+                        # unpaired one is still reset, because that is the truth
+                        # about it.
+                        if existing is not None:
+                            try:
+                                already_paired = bool(existing.pair_approved)
+                            except Exception:
+                                already_paired = False
+                            if already_paired:
+                                defaults["sync_status"] = existing.sync_status
+
                         # PPPoE password: write it only when the export actually
                         # supplied one. On a re-import whose export omitted
                         # pppoe_users, this keeps the subscriber's working
