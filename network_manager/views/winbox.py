@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from billing.decorators import role_required
 from django.contrib import messages
 from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 from network_manager.models import MikrotikDevice
 from network_manager.services import MikrotikAPI
 
@@ -63,9 +64,21 @@ def winbox_dashboard(request, device_id):
     }
     return render(request, 'network_manager/winbox_dashboard.html', context)
 
-@role_required(['Admin', 'Technician', 'CSR'])
+# ADMIN ONLY. This was ['Admin', 'Technician', 'CSR'], which let a field
+# technician delete a PPP secret on a live router straight from this screen --
+# around Sync Manager, and therefore around the pairing check that every other
+# write path now passes through. Read-only browsing (winbox_routers,
+# winbox_dashboard) stays open to technicians; only the WRITE actions close.
+@role_required(['Admin'])
 @login_required
+@require_POST
 def winbox_secret_action(request, device_id):
+    """Add, edit or delete a PPP secret directly.
+
+    Per-customer writes are additionally stopped by MikrotikUsersMixin
+    ._pairing_block unless the account was paired in Sync Manager, so this
+    screen cannot write an unpaired account even for an Admin.
+    """
     if request.method == 'POST':
         device = get_object_or_404(MikrotikDevice, id=device_id)
         api = MikrotikAPI(device)
@@ -111,8 +124,13 @@ def winbox_secret_action(request, device_id):
                 
     return redirect(f"/devices/winbox/{device_id}/?tab=secrets")
 
-@role_required(['Admin', 'Technician', 'CSR'])
+# ADMIN ONLY + POST only, for the same reason as winbox_secret_action: these
+# are router-wide writes. Deleting a PPP profile cuts service for EVERY
+# subscriber on that profile, and it used to be reachable by a Technician or a
+# CSR from this screen.
+@role_required(['Admin'])
 @login_required
+@require_POST
 def winbox_profile_action(request, device_id):
     if request.method == 'POST':
         device = get_object_or_404(MikrotikDevice, id=device_id)
@@ -154,8 +172,13 @@ def winbox_profile_action(request, device_id):
                 
     return redirect(f"/devices/winbox/{device_id}/?tab=profiles")
 
-@role_required(['Admin', 'Technician', 'CSR'])
+# ADMIN only. This drops a LIVE session -- it interrupts a paying customer's
+# internet mid-use -- and it used to be reachable by a Technician or a CSR from
+# this screen, around Sync Manager. A kick is also a per-customer write, so
+# MikrotikUsersMixin._pairing_block refuses it for any account nobody paired.
+@role_required(['Admin'])
 @login_required
+@require_POST
 def winbox_kick_action(request, device_id):
     if request.method == 'POST':
         device = get_object_or_404(MikrotikDevice, id=device_id)

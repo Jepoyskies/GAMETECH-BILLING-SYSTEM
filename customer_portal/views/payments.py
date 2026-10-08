@@ -124,7 +124,20 @@ def portal_process_mock_payment(request):
                 paid_str = timezone.now().strftime("%b %d, %Y")
                 plan_name = customer.plan.name if customer.plan else "No Plan"
                 comment_text = f"paid {paid_str} exp {expiry_str} . {plan_name} . {payment_method} . Customer Portal . Paid Online"
-                api.set_pppoe_comment(customer.pppoe_username, comment_text)
+                # A subscriber pressing Pay must never write to a router. The
+                # payment is recorded either way -- that is our database and it
+                # is ours to own -- but the router comment is a write to shared
+                # hardware, and it goes out only for an account a human paired
+                # in Sync Manager. Otherwise it is refused and the reason is
+                # logged, so staff know a push is outstanding.
+                ok, msg = api.set_pppoe_comment(customer.pppoe_username, comment_text)
+                if not ok:
+                    logger.info(
+                        "Portal payment for %s recorded, but the router comment "
+                        "was not written (%s). Pair the account in Sync Manager "
+                        "and push if the router needs updating.",
+                        customer.pppoe_username, msg,
+                    )
             except Exception as e:
                 logger.error(f"Failed to sync portal renewal for {customer.pppoe_username}: {e}")
 
