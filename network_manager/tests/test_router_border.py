@@ -96,9 +96,10 @@ class PairingIsMandatoryTests(TestCase):
             changed_by="admin", target_name=c.full_name,
             old_data="", new_data="paired",
         )
-        # Re-read from the DB: pair_approved is derived from the audit log, and
-        # refresh_from_db() will not clear an already-evaluated property.
+        # Re-read from the DB: the Sync Manager page stamps pair_approved onto
+        # instances in bulk, and that stamped value would otherwise survive.
         c = Customer.objects.get(pk=c.pk)
+        c.__dict__.pop("_pair_approved_cache", None)
         self.assertTrue(getattr(c, "pair_approved", False), "pairing sign-off did not register")
         reasons = " ".join(c.push_blocked_reasons)
         self.assertNotIn("Not paired", reasons)

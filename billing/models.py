@@ -436,6 +436,41 @@ class Customer(models.Model):
         return bool(self.push_blocked_reasons)
 
     @property
+    def pair_approved(self):
+        """Has a human paired this account in the Sync Manager?
+
+        A pairing click is a pure sign-off: it READS the router, confirms the
+        secret is really there, and writes an audit entry that says so. It never
+        modifies the router. So this is the identity check -- "this row is the
+        same person as that PPPoE secret" -- and it is the precondition for
+        writing anything to a router.
+
+        It lives on the model rather than being stamped onto instances by the
+        Sync Manager page, because the gate that consults it runs in views where
+        the page helper never ran. A transient attribute would make
+        push_blocked_reasons answer "not paired" for a legitimately paired
+        account purely because of which code path asked.
+
+        The Sync Manager still stamps this in bulk to avoid one query per row;
+        the setter below keeps that stamped value, and it is derived from the
+        same audit log, so the two can never disagree.
+        """
+        cached = self.__dict__.get("_pair_approved_cache")
+        if cached is not None:
+            return cached
+        from billing.models import SystemLog
+
+        return SystemLog.objects.filter(
+            action="SYNC_PAIR_APPROVED",
+            table_name="Customer",
+            record_id=str(self.id),
+        ).exists()
+
+    @pair_approved.setter
+    def pair_approved(self, value):
+        self.__dict__["_pair_approved_cache"] = bool(value)
+
+    @property
     def pair_blocked_reasons(self):
         """Why this account cannot be PAIRED without an admin override.
 
