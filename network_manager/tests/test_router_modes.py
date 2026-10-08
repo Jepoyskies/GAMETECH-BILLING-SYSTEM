@@ -161,7 +161,9 @@ class RouterModeSafetyTests(TestCase):
             self.assertIn("Blocked by read_only mode", del_res["error"])
             mock_raw_secret.remove.assert_not_called()
 
-    @override_settings(ROUTER_MODE="live", ROUTER_DRY_RUN=False)
+    @override_settings(ROUTER_MODE="live", ROUTER_DRY_RUN=False,
+                       ROUTER_WRITE_TOKEN="armed",
+                       ROUTER_WRITE_TOKEN_EXPECTED="armed")
     def test_live_mode_pure_pass_through(self):
         """
         Verify that in live mode the router wrapper is a pure pass-through:

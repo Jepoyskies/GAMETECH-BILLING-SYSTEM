@@ -438,9 +438,9 @@ class SyncWriteActionTests(TestCase):
     def test_bulk_push_uses_the_same_comment_as_single_push(self):
         """DEFECT 1, the bulk half: this was the source of the bad comments."""
         make_customer("gt_bulk1", mikrotik_device=self.device)
-        self._pair("gt_bulk1", "gt_bulk2")
         make_customer("gt_bulk2", mikrotik_device=self.device,
                       full_name="Maria Reyes")
+        self._pair("gt_bulk1", "gt_bulk2")
         api = self._api_ok()
 
         with self._patch_api(api):
