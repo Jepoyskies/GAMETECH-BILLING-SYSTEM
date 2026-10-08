@@ -192,9 +192,15 @@ class ReImportReturnsEveryoneToTheBorderTests(TestCase):
         self.assertEqual(rows.first().changed_by, "Sir Rom")
 
     def test_repairing_after_a_reimport_sticks(self):
-        """The reviewer can pair again, and that pairing holds."""
-        from network_manager.sync_helpers import account_needs_approval
+        """The reviewer can pair again, and that pairing holds.
 
+        Note what pairing does NOT do: it does not set sync_status. Pairing
+        is the identity check ("this row is the same person as that secret");
+        pushing is the write that clears sync_status to Synced. So after a
+        re-import a re-paired account is correctly out of the UNAPPROVED
+        bucket but still awaiting its push -- which is the cutover working:
+        verify first, then write.
+        """
         c = self._customer("border_repair")
         self._pair(c)
         Customer.objects.update_or_create(
@@ -202,13 +208,22 @@ class ReImportReturnsEveryoneToTheBorderTests(TestCase):
         c = Customer.objects.get(pk=c.pk)
         self.assertFalse(c.pair_approved, "precondition: unpaired after re-import")
 
-        # A short pause so the new approval is unambiguously after the stamp.
-        stamped = c.legacy_reimported_at
         self._pair(Customer.objects.get(pk=c.pk), who="reviewer")
         c = Customer.objects.get(pk=c.pk)
-        c.legacy_reimported_at = stamped
-        self.assertTrue(c.pair_approved, "a fresh pairing must count")
-        self.assertFalse(account_needs_approval(c))
+        self.assertTrue(
+            c.pair_approved,
+            "a pairing made after the re-import must count",
+        )
+
+        # Still needs its push: that is the write, and it stays gated.
+        self.assertEqual(c.sync_status, "Unverified")
+
+        # Once pushed, it leaves the queue entirely.
+        Customer.objects.filter(pk=c.pk).update(sync_status="Synced")
+        self.assertFalse(
+            account_needs_approval(Customer.objects.get(pk=c.pk)),
+            "paired AND pushed means genuinely out of the queue",
+        )
 
     def test_a_brand_new_account_starts_unpaired(self):
         from network_manager.sync_helpers import account_needs_approval
