@@ -1,115 +1,192 @@
-# Cutover Runbook — Router Connection & Pairing Approval
+# CUTOVER RUNBOOK — disconnecting the legacy system
 
-**For:** the morning the mini PC is connected to the production MikroTik routers.
-**Rule for the whole session:** the Sync Manager is a border control. Nothing
-goes live because the system noticed it. Nothing goes live because you read a
-number. Everything goes live because **you clicked it**.
+**Read this before cutover day, not during it.**
 
----
+This is the procedure for the day Gametech Unli Fiber stops using the old PHP
+system and the new system becomes the sole authority on billing.
 
-## Before you start
-
-1. Take a backup — Settings → DB Backup (or `manage.py backup_db`)
-2. Confirm the old billing system is **read-only or stopped**. If it is still
-   running suspension jobs it can disable a secret you just approved, and you
-   will think the new system is broken.
-3. Set expiry dates on the **16 customers flagged "no expiry"** in
-   Settings → Import Data → View. They are live on the routers right now and
-   will never cut off on their own.
+Nothing in this runbook arms the router locks. That step is deliberately
+absent, and deliberately yours.
 
 ---
 
-## The five cards
+## What changes on cutover day
 
-| Card | Means | Action |
+Before cutover there are **two** authorities on whether a customer is paid:
+the legacy system, and this one. That duplication is the reason every safety
+rule in this project exists — our copy of an expiry can be stale, and acting
+on a stale date disconnects a subscriber somebody deliberately kept.
+
+After cutover there is **one** authority: us. The safety rules do not expire,
+but their *reason* changes:
+
+| rule | why it existed before | why it exists after |
 |---|---|---|
-| **Needs Review** | On router, PPPoE matches, but profile/comment differs | Already has internet. Check bandwidth, then Approve or Auto-Fix |
-| **Active Users** | On router, PPPoE matches, profile matches | Already has internet. **Approve** to record your sign-off |
-| **Mikrotik Router Users** | On router, no customer in our system | Orphans. Review, delete if stale |
-| **Suspicious** | Flagged oddities | Investigate individually |
-| **Missing on Router** | In our system, not on the router | **Push** — but read the warning first |
+| Nothing writes to a router unattended | the legacy system might disagree | a bulk action on wrong data is still a mass outage |
+| Pairing before any write | our data might be stale | pairing is now the only human check that remains |
+| Two independent locks | a stray config edit could open a router | unchanged — it protects against our own mistakes |
+
+The word that changes is **stale**. Before cutover the risk was *theirs*. After
+cutover the risk is *ours*, and the only defence left is the human review
+that Sync Manager already enforces.
 
 ---
 
-## Order of work
+## BEFORE THE DAY
 
-### 1. Read first. Click nothing.
+### 1. Get a fresh export and dry-run it
 
-Open **Network Ops → Mikrotik Devices → Sync Manager** on each router and
-write down the five counts. Send them before approving anything.
+Sir Rom's export is the input. Never import it live first.
 
-**The single most likely outcome:** Active Users ≈ 1,997 / 41 / 2. Those
-subscribers were live in the old system, their secrets are still on the
-routers, and your job is only to approve what you have reviewed.
+```bash
+python manage.py import_legacy_customers <his_export.sql> --dry-run
+```
 
-### 2. Approve the matches
+It writes nothing and prints what *would* happen. Confirm it reports a
+plausible customer count. **If it says "Parsed 0 rows", stop** — that is a
+format mismatch and you have a MySQL/phpMyAdmin dump problem, not a
+business one.
 
-On **Active Users**: tick the rows you have checked, then
-**Approve Selected**.
+### 2. Import for real
 
-- Reads the router to confirm each secret exists
-- **Never writes to the router** — approval cannot change a subscriber
-- `sync_status` moves `Unverified → Synced`
-- Your name, the secret, its enabled flag and its profile are written to
-  System Logs under `SYNC_PAIR_APPROVED`
+```bash
+python manage.py import_legacy_customers <his_export.sql>
+```
 
-### 3. Push the missing ones
+Every account returns to the pairing queue. This is intended: a pairing made
+against the previous export verified data you no longer hold.
 
-On **Missing on Router**:
+### 3. Work the verification queue
 
-- **Paid + has expiry** → Push. Creates the secret using the PPPoE username
-  already in our system. Never invents a new one.
-- **Unpaid or no expiry** → refused. Needs your **Admin password**, and it is
-  logged with both your name and the Admin's.
+Staff and Sir Rom go through Sync Manager account by account. For each one,
+confirm against the legacy system **while it is still available**:
 
-> **Read this before pushing a Missing customer.** If a customer is absent
-> from the router, pushing uses *our* PPPoE username. If their home modem was
-> configured with a different one, they will not connect and a technician will
-> have to visit. A customer missing because they are genuinely new is safe. A
-> customer missing because the router lost them, or the old system renamed
-> them, is **not** — check with them first.
+- does the name match?
+- does the PPPoE username match?
+- **is the expiry date correct?**
 
-### 4. Orphans
+That last one is the one that matters. Before cutover it is a cross-check
+against a live system. After cutover there is nothing to cross-check against.
 
-On **Mikrotik Router Users**, review each one. Watch for names with trailing
-spaces (e.g. `Jillian `) — those are real subscribers who cannot
-authenticate, and a technician visit is the likely fix. Delete only what you
-are confident is stale.
+### 4. Check readiness
 
----
+```bash
+python manage.py cutover_readiness
+```
 
-## What is deliberately blocked
-
-| Attempt | Result |
-|---|---|
-| CSR or Technician pushes an unpaid account | Refused |
-| Bulk-push selected to include unpaid | Those rows held back, rest proceed |
-| Override with wrong password | Refused |
-| Override by a non-Admin | Refused |
-| Override with blank Admin name | Refused |
-| Push while `ROUTER_MODE=read_only` | Refused, marked `Blocked` |
-| Delete a secret belonging to a known customer | Refused unless confirmed |
-
-Every override is in **System Logs** with the operator, the approving Admin, the
-reasons, and the exact credentials written.
+Report only — connects to no router, changes nothing. **0 blockers** is the
+bar. Warnings are expected and are listed there for tracking.
 
 ---
 
-## After you approve
+## ON THE DAY
 
-- Customers → filter **"Not pushed to router"** shows anything left
-- Every approval is auditable: System Logs, filter action `SYNC_PAIR_APPROVED`
-  and `SYNC_ADMIN_OVERRIDE`
+### 5. Confirm the legacy system is quiet
+
+Verify the old system has stopped writing to the routers before you take
+over. Two systems actively managing the same subscribers is exactly the
+conflict this project was built to avoid, and it is the one thing this
+runbook cannot undo for you.
+
+### 6. Cut over billing
+
+Point staff at the new system. Nothing technical changes — the site is
+already the live one.
+
+### 7. Verify from a staff account
+
+Log in as a real role (not superuser) and check:
+
+- the Customers Directory loads and counters look sane
+- Sync Manager opens for each of the three routers
+- a payment recorded against a test account appears correctly
+
+### 8. Confirm reads, not writes
+
+```bash
+python manage.py auto_suspend --dry-run
+```
+
+Expect the armable count to be **0** unless you have paired accounts that
+are also past due. This confirms the pairing gate still holds.
 
 ---
 
-## If something looks wrong
+## STILL ARMED OFF — ON PURPOSE
 
-Send me the five counts per router before acting. The two questions I cannot
-answer for you without seeing the routers are:
+After cutover, **nothing auto-suspends**. An expired customer keeps their
+internet until a human acts.
 
-1. Do the routers actually contain these PPPoE secrets?
-2. Do they have a matching bandwidth profile for every plan in use?
+That is a deliberate trade, and it is worth being explicit about it:
 
-Everything else has been verified against the live database and against
-MikroTik A.
+- being slow to suspend costs **revenue**
+- being wrong about a suspension costs **customers**
+
+For a short period after cutover, take the revenue risk.
+
+### The staged ramp
+
+Do not arm both locks on day one. When you are ready:
+
+1. Arm for a **small, verified batch** — accounts you personally confirmed.
+2. `auto_suspend --dry-run` and read the armable count.
+3. Run for real on that batch only.
+4. Watch what happened before going further.
+5. Ramp up as confidence grows.
+
+`auto_suspend` refuses to run above 50 armable accounts. That valve is
+there because a bulk import can leave hundreds of accounts flagged active
+with a long-past expiry, and disconnecting a third of the customer base at
+3am is an outage, not a collections action.
+
+---
+
+## IF SOMETHING GOES WRONG
+
+**A customer was suspended who should not have been.** Re-enable them in
+Sync Manager, then find the pairing that authorised it. `SystemLog` records
+who paired what and when, and the `SYNC_PAIR_APPROVED` audit row says
+exactly which router read was verified.
+
+**Too many suspended at once.** Immediately:
+
+```bash
+# Put the locks back. This is the fastest safe action.
+ROUTER_MODE=read_only
+# and unset ROUTER_WRITE_TOKEN
+docker restart gametech-web
+```
+
+Then use Sync Manager to re-enable, or `auto_suspend` in reverse for known
+accounts.
+
+**The readiness report shows a blocker.** Do not arm anything. Blockers mean
+either the router mode is already live, the tokens are armed, or an account
+has been pushed. Resolve that first.
+
+---
+
+## THE ONE THING NO PROCEDURE CAN FIX
+
+Our expiry dates are a **snapshot**. If Sir Rom extended an account over
+there after the export, our copy is wrong, and once the legacy system is
+gone nothing will contradict us.
+
+**This is why step 3 exists and why it must happen while the legacy system is
+still available.** Verification performed after cutover has nothing to check
+against.
+
+If your data is going to be wrong on the day, it will be wrong because
+somebody extended a subscriber's expiry in a system we can no longer see.
+The pairing queue is the last place that can be caught.
+
+---
+
+## COMMANDS
+
+```bash
+python manage.py cutover_readiness              # is it safe, report only
+python manage.py auto_suspend --dry-run         # who would be disconnected
+python manage.py import_legacy_customers f.sql --dry-run   # parse check
+python manage.py import_legacy_customers f.sql              # real import
+```
