@@ -220,6 +220,8 @@ class ReImportReturnsEveryoneToTheBorderTests(TestCase):
 
         # Once pushed, it leaves the queue entirely.
         Customer.objects.filter(pk=c.pk).update(sync_status="Synced")
+        from network_manager.sync_helpers import account_needs_approval
+
         self.assertFalse(
             account_needs_approval(Customer.objects.get(pk=c.pk)),
             "paired AND pushed means genuinely out of the queue",
