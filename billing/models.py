@@ -460,11 +460,17 @@ class Customer(models.Model):
             return cached
         from billing.models import SystemLog
 
-        return SystemLog.objects.filter(
+        approvals = SystemLog.objects.filter(
             action="SYNC_PAIR_APPROVED",
             table_name="Customer",
             record_id=str(self.id),
-        ).exists()
+        )
+        # A re-import returns the account to the border. An approval signed off
+        # against an OLDER export verified data we no longer hold, so it stops
+        # counting. The row stays in the log as history.
+        if self.legacy_reimported_at:
+            approvals = approvals.filter(changed_at__gte=self.legacy_reimported_at)
+        return approvals.exists()
 
     @pair_approved.setter
     def pair_approved(self, value):
@@ -552,6 +558,19 @@ class Customer(models.Model):
     # Cleared from the import page so a cutover-day import can refresh dates.
     legacy_reviewed_at = models.DateTimeField(null=True, blank=True)
     legacy_review_note = models.CharField(max_length=255, blank=True, default="")
+
+    # When this account last arrived from a legacy export. Stamped on EVERY
+    # re-import, for created and updated rows alike.
+    #
+    # Its only job is to invalidate stale pairings. Customer.pair_approved is
+    # derived from the SYNC_PAIR_APPROVED audit log, and that log is permanent,
+    # so a pairing made against an OLDER export would otherwise survive every
+    # re-import and quietly outrank the newer data. Any approval older than
+    # this timestamp stops counting.
+    #
+    # The audit rows themselves are never deleted: a reviewer can always see
+    # what was signed off before, and when.
+    legacy_reimported_at = models.DateTimeField(null=True, blank=True)
 
     CONNECTION_STATUS_CHOICES = (
         ("Offline", "Offline"),

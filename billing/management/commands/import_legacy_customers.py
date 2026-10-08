@@ -398,34 +398,27 @@ class Command(BaseCommand):
                             defaults["status"] = existing.status
                             preserved_count += 1
 
-                        # DO NOT UNDO A SYNC MANAGER PAIRING.
+                        # EVERY RE-IMPORT RETURNS EVERY ACCOUNT TO THE BORDER.
                         #
-                        # The `sync_status = "Unverified"` above is deliberate and
-                        # correct for an account nobody has checked: imported
-                        # rows have never been compared against a router, and
-                        # claiming otherwise is what once made 2,041 unverified
-                        # accounts render as verified.
+                        # This is deliberate and is the cutover rule: a fresh
+                        # export means the source data may have changed, so a
+                        # pairing made against the PREVIOUS export verified
+                        # data that is no longer what we hold. Staff and Sir Rom
+                        # re-check every account before it is admitted again.
                         #
-                        # But it must not apply to an account a human ALREADY
-                        # paired in Sync Manager. account_needs_approval() reads
-                        # sync_status as well as pair_approved, so resetting it
-                        # to "Unverified" drops a verified account back into the
-                        # approval queue. During a staged cutover that means a
-                        # fresh export from the legacy system silently discards
-                        # however much one-by-one verification staff had already
-                        # done -- exactly the messy takeover this project is
-                        # avoiding.
+                        # Two things happen, because neither alone is enough:
+                        #   * sync_status above is forced to "Unverified", which
+                        #     is what puts the account back in the queue.
+                        #   * legacy_reimported_at is stamped, and Customer
+                        #     .pair_approved ignores any SYNC_PAIR_APPROVED
+                        #     audit row older than it. Without that second half
+                        #     the pairing would survive, because pair_approved
+                        #     is derived from the audit log rather than a flag.
                         #
-                        # So: a paired account keeps its sync_status. An
-                        # unpaired one is still reset, because that is the truth
-                        # about it.
-                        if existing is not None:
-                            try:
-                                already_paired = bool(existing.pair_approved)
-                            except Exception:
-                                already_paired = False
-                            if already_paired:
-                                defaults["sync_status"] = existing.sync_status
+                        # Nothing is deleted. The old approval stays in the log
+                        # as history; it simply stops counting, so the pairing a
+                        # human signs off AFTER this import is recorded normally.
+                        defaults["legacy_reimported_at"] = timezone.now()
 
                         # PPPoE password: write it only when the export actually
                         # supplied one. On a re-import whose export omitted

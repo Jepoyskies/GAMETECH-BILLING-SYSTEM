@@ -163,13 +163,27 @@ def mark_pair_approvals(customers):
     ids = [str(c.id) for c in customers]
     approved = set()
     if ids:
-        approved = set(
-            SystemLog.objects.filter(
-                action="SYNC_PAIR_APPROVED",
-                table_name="Customer",
-                record_id__in=ids,
-            ).values_list("record_id", flat=True)
+        rows = SystemLog.objects.filter(
+            action="SYNC_PAIR_APPROVED",
+            table_name="Customer",
+            record_id__in=ids,
         )
+        # An approval older than the account's last re-import verified data we
+        # no longer hold, so it does not count. Without this the bulk stamp
+        # below would disagree with Customer.pair_approved, and the Sync
+        # Manager would show a card as APPROVED while the push gate refused it.
+        rows = [r for r in rows if r.record_id in ids]
+        by_id = {}
+        for r in rows:
+            by_id.setdefault(r.record_id, []).append(r)
+        stamp = {str(c.id): c.legacy_reimported_at for c in customers}
+        for rid, entries in by_id.items():
+            since = stamp.get(rid)
+            if since is None:
+                approved.add(rid)
+            elif any(e.changed_at >= since for e in entries):
+                approved.add(rid)
+
     for c in customers:
         c.pair_approved = str(c.id) in approved
     return customers
