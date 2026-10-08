@@ -25,6 +25,7 @@ from django.utils import timezone
 
 from billing.management.commands.import_legacy_customers import Command
 from billing.models import Customer, SubscriptionPlan, SystemLog
+from network_manager.models import MikrotikDevice
 
 
 class ReImportIsIdempotentTests(TestCase):
@@ -111,6 +112,10 @@ class ReImportPreservesSyncManagerPairingTests(TestCase):
         self.plan, _ = SubscriptionPlan.objects.get_or_create(
             name="IdemPlan2", defaults={"speed_up": "20 Mbps", "speed_down": "20 Mbps", "price": 999.0},
         )
+        self.device = MikrotikDevice.objects.create(
+            device_name="idem_router", ip_address="10.255.255.9",
+            api_username="nobody", api_password="nothing", api_port=8728,
+        )
 
     def _pair(self, customer, who="operator"):
         """Exactly what the Sync Manager writes when a human clicks PAIR."""
@@ -151,6 +156,7 @@ class ReImportPreservesSyncManagerPairingTests(TestCase):
             pppoe_password="x", status="active",
             installation_status="installed", plan=self.plan,
             sync_status="Synced", is_test_data=True,
+            mikrotik_device=self.device,
         )
         self.assertFalse(c.pair_approved, "precondition: never paired")
 
@@ -169,6 +175,7 @@ class ReImportPreservesSyncManagerPairingTests(TestCase):
             pppoe_password="x", status="active",
             installation_status="installed", plan=self.plan,
             sync_status="Synced", is_test_data=True,
+            mikrotik_device=self.device,
         )
         self._pair(c)
         c = Customer.objects.get(pk=c.pk)
@@ -201,6 +208,7 @@ class ReImportPreservesSyncManagerPairingTests(TestCase):
             pppoe_password="x", status="active",
             installation_status="installed", plan=self.plan,
             sync_status="Synced", is_test_data=True,
+            mikrotik_device=self.device,
         )
         self._pair(Customer.objects.get(pppoe_username="idem_roundtrip"))
 
