@@ -308,6 +308,25 @@ class SyncWriteActionTests(TestCase):
         self.operator = make_operator()
         self.client.force_login(self.operator)
 
+    def _pair(self, *usernames):
+        """Stamp the Sync Manager pairing sign-off these accounts would have.
+
+        Pairing is a human READ of the router plus an audit entry saying
+        "Router not modified" -- it is the identity check that must happen
+        before anything is written. Production refuses to push an account
+        nobody paired, so these push tests must pair first or they assert a
+        flow the system deliberately refuses.
+        """
+        from billing.models import SystemLog
+
+        for name in usernames:
+            c = Customer.objects.get(pppoe_username=name)
+            SystemLog.objects.create(
+                table_name="Customer", record_id=str(c.id),
+                action="SYNC_PAIR_APPROVED", changed_by="operator",
+                target_name=c.full_name, old_data="", new_data="paired",
+            )
+
     def _api_ok(self):
         # `return` is a reserved word, so the mock's return_value has to be set
         # after construction rather than as a keyword argument.
@@ -419,6 +438,7 @@ class SyncWriteActionTests(TestCase):
     def test_bulk_push_uses_the_same_comment_as_single_push(self):
         """DEFECT 1, the bulk half: this was the source of the bad comments."""
         make_customer("gt_bulk1", mikrotik_device=self.device)
+        self._pair("gt_bulk1", "gt_bulk2")
         make_customer("gt_bulk2", mikrotik_device=self.device,
                       full_name="Maria Reyes")
         api = self._api_ok()
@@ -441,6 +461,7 @@ class SyncWriteActionTests(TestCase):
         """DEFECT 2: writes succeeded but the DB kept saying Unverified."""
         make_customer("gt_b1", mikrotik_device=self.device,
                       sync_status="Unverified")
+        self._pair("gt_b1")
         with self._patch_api(self._api_ok()):
             self.client.post(
                 reverse("sync_bulk_action", args=[self.device.id]),
@@ -456,6 +477,7 @@ class SyncWriteActionTests(TestCase):
     def test_bulk_push_under_read_only_marks_blocked_not_synced(self):
         make_customer("gt_b2", mikrotik_device=self.device,
                       sync_status="Unverified")
+        self._pair("gt_b2")
         with self._patch_api(self._api_read_only()):
             self.client.post(
                 reverse("sync_bulk_action", args=[self.device.id]),
@@ -471,6 +493,7 @@ class SyncWriteActionTests(TestCase):
         add.return_value = {"success": False, "error": "Blocked by read_only mode"}
         api = mock.MagicMock(add_pppoe_user=add)
         make_customer("gt_b3", mikrotik_device=self.device)
+        self._pair("gt_b3")
         with self._patch_api(api):
             self.client.post(
                 reverse("sync_bulk_action", args=[self.device.id]),
