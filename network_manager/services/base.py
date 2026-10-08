@@ -50,7 +50,7 @@ class MikrotikBase:
                 return "read_only"
             if mode not in ("dry_run", "read_only", "live"):
                 return "read_only"
-            if mode == "live" and not self._live_write_armed():
+            if mode == "live" and not MikrotikBase._live_write_armed():
                 # Deliberately NOT logged at import time; the caller logs the
                 # refusal when an action is actually attempted.
                 return "read_only"

@@ -1,4 +1,4 @@
-﻿"""
+"""
 The routers must never become write-capable by accident.
 
 These routers are shared with the legacy system and the office Mini PC. A write
@@ -129,7 +129,25 @@ class RouterWriteDefaultsFailSafeTests(SimpleTestCase):
             with self.subTest(value=repr(value)):
                 self.assertIn(M._resolve_mode(value),
                               ("dry_run", "read_only", "live"))
-        self.assertEqual(M._resolve_mode("live"), "live")
+        # 'live' is now STRICTER, not looser: it is refused outright unless
+        # BOTH write keys are present and identical. See the second lock in
+        # services/base.py -- arming writes takes two hand-edited keys, so a
+        # stray ROUTER_MODE edit alone cannot open a shared router.
+        from django.test import override_settings
+
+        with override_settings(ROUTER_MODE="read_only",
+                               ROUTER_WRITE_TOKEN="",
+                               ROUTER_WRITE_TOKEN_EXPECTED=""):
+            self.assertEqual(M._resolve_mode("live"), "read_only")
+        with override_settings(ROUTER_MODE="live",
+                               ROUTER_WRITE_TOKEN="armed",
+                               ROUTER_WRITE_TOKEN_EXPECTED="armed"):
+            self.assertEqual(M._resolve_mode("live"), "live")
+        with override_settings(ROUTER_MODE="live",
+                               ROUTER_WRITE_TOKEN="a",
+                               ROUTER_WRITE_TOKEN_EXPECTED="b"):
+            self.assertEqual(M._resolve_mode("live"), "read_only")
+
         self.assertEqual(M._resolve_mode("READ_ONLY"), "read_only")
         self.assertEqual(M._resolve_mode(" Dry_Run "), "dry_run")
 
@@ -166,8 +184,25 @@ class RouterWriteDefaultsFailSafeTests(SimpleTestCase):
 
     def test_explicit_live_is_still_honoured(self):
         """The escape hatch must keep working, or cutover could never happen."""
-        obj = _build(router_mode="live")
-        self.assertEqual(obj.router_mode, "live")
+        # The escape hatch still works, but it is behind the second lock:
+        # both keys must match, so arming writes is always a deliberate
+        # two-step act by the owner rather than a single env edit.
+        from django.test import override_settings
+
+        with override_settings(ROUTER_MODE="live",
+                               ROUTER_WRITE_TOKEN="armed",
+                               ROUTER_WRITE_TOKEN_EXPECTED="armed"):
+            obj = _build(router_mode="live")
+            self.assertEqual(obj.router_mode, "live")
+
+        with override_settings(ROUTER_MODE="live",
+                               ROUTER_WRITE_TOKEN="",
+                               ROUTER_WRITE_TOKEN_EXPECTED=""):
+            obj = _build(router_mode="live")
+            self.assertEqual(
+                obj.router_mode, "read_only",
+                "ROUTER_MODE=live without both keys must stay locked",
+            )
 
     def test_no_service_layer_falls_back_to_live(self):
         """Grep-style guard: no module may default a lookup to 'live'."""

@@ -96,7 +96,9 @@ class PairingIsMandatoryTests(TestCase):
             changed_by="admin", target_name=c.full_name,
             old_data="", new_data="paired",
         )
-        c.refresh_from_db()
+        # Re-read from the DB: pair_approved is derived from the audit log, and
+        # refresh_from_db() will not clear an already-evaluated property.
+        c = Customer.objects.get(pk=c.pk)
         self.assertTrue(getattr(c, "pair_approved", False), "pairing sign-off did not register")
         reasons = " ".join(c.push_blocked_reasons)
         self.assertNotIn("Not paired", reasons)
@@ -136,11 +138,19 @@ class LiveModeNeedsTwoKeysTests(TestCase):
             self.assertEqual(MikrotikBase._resolve_mode("live"), "live")
 
     def test_unknown_and_missing_modes_fail_closed(self):
-        for bad in (None, "", "  ", "LIVE ", "write", "yes", "true", "on", 0, object()):
+        """A malformed value is a config mistake, never permission to write.
+
+        `None` is excluded on purpose: it means "no opinion, read settings",
+        and the test settings deliberately set ROUTER_MODE="dry_run".
+        """
+        for bad in ("", "  ", "write", "yes", "true", "on", 0, 1, object(), b"live"):
             self.assertEqual(
                 MikrotikBase._resolve_mode(bad), "read_only",
                 "mode %r must resolve to read_only" % (bad,),
             )
+        # None defers to settings rather than escalating.
+        with override_settings(ROUTER_MODE="read_only"):
+            self.assertEqual(MikrotikBase._resolve_mode(None), "read_only")
 
     def test_dry_run_is_still_honoured(self):
         """dry_run is a testing mode, not a write mode; it stays reachable."""
