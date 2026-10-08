@@ -3525,3 +3525,36 @@ The damage contains **no** U+FFFD, so a "replacement character" check misses it 
 **Fix / mitigation**: none available from inside the app; this needs a human decision. Short term, run long jobs in a container **compose does not manage** (`docker run --name gt-test ...`) so a redeploy cannot kill them, and write their output to a bind-mounted directory rather than `/tmp` inside the container.
 **Lesson**: when several unrelated checks fail at once with connection errors, suspect the infrastructure before the code. Comparing `docker inspect --format '{{.State.StartedAt}}'` across all containers against when the failures began tells you in one command whether the stack was recreated.
 **Date Logged**: 2026-10-07
+
+### ERR-133: PAIRING Was Not Actually Enforced -- The Gate Only Checked Billing
+**Symptom**: nobody reported a bug. This was found by asking "what would happen if our expiry dates were wrong?" and reading the gate. `Customer.push_blocked_reasons` -- the single source of truth for whether a router secret may be written -- refused an account on BILLING grounds only: unpaid, past due, or no expiry date. Nothing required the account to have been PAIRED. A paid, in-date account that no human had ever confirmed against the router could be pushed.
+**Why it matters**: the routers are shared with a legacy system that is still the billing authority. If Sir Rom extended an expiry over there, our copy is stale and our push/suspend would act on a lie. Pairing is the identity check that catches exactly this -- "this row is the same person as that PPPoE secret" -- and it was advisory rather than enforced.
+**Fix**: pairing is now a blocker, listed FIRST so the operator is told the account was never approved rather than being sent off to fix billing on an account that should never have been touched. It lives in the existing property, so the single-push guard, the bulk-push guard and the operator badge cannot disagree.
+**A trap worth recording**: `pair_approved` was NOT a model field. `mark_pair_approvals()` stamps a plain attribute onto whichever instances the Sync Manager page happened to build. In `sync_push_user`, where the customer is fetched fresh with `get_object_or_404`, the attribute is absent, so `getattr(self, "pair_approved", False)` is False and the new gate refused EVERY push -- including legitimate ones. A gate that cannot tell paired from unpaired is worse than no gate, because it looks like it is working. It is now a real property deriving from the `SYNC_PAIR_APPROVED` audit log, with a setter so the page can still stamp the bulk value; both read the same log.
+**Files**: `billing/models.py`, `network_manager/tests/test_router_border.py`
+**Date Logged**: 2026-10-08
+
+
+### ERR-134: ROUTER_MODE=live Was A Single Key -- One Env Edit Opened Every Router
+**Symptom**: one variable controlled everything. Setting `ROUTER_MODE=live` armed all 48 router write call sites at once, across billing, dispatch, customer_portal and network_manager. A stray `.env` edit, a copy-pasted config or a half-finished deploy was enough.
+**Fix**: `live` is now honoured only when `ROUTER_WRITE_TOKEN` also matches `ROUTER_WRITE_TOKEN_EXPECTED`, falling back to `read_only` otherwise. Both default to empty, i.e. unarmed. Arming writes takes two independent hand-edited keys. Nothing in the codebase, no management command, no button and no request parameter sets them -- per AGENTS.md Rule 40 no agent session may either.
+**Verified on the running process**: `writes armed? False`, and with `ROUTER_MODE` forced to `live` in a live shell, `_resolve_mode("live")` still returns `read_only`.
+**Also found**: the API user `lordkris5566` is in the router's `full` policy group on all three routers (`full` includes `write` and `policy`). So the router itself would accept a write from us and the application was the only barrier. There is a `read` group present on all three (`!write`, `!policy`, `!ftp`) -- moving the credential there is a router-side change only the owner can make, and would make the protection hardware-enforced.
+**Files**: `network_manager/services/base.py`, `gametech_core/settings.py`
+**Date Logged**: 2026-10-08
+
+
+### ERR-135: /auto-suspend/ Was A Second Door Around Sync Manager
+**Symptom**: the one page that disconnects paying subscribers in bulk, at once, was gated by `@login_required` alone. Any authenticated account -- including an Agent or a Technician -- could POST it. It selected victims purely from OUR expiry dates, with no `is_read_only` check, no role check and no confirmation.
+**Why it matters**: this is the stale-data conflict in its most concentrated form. Extensions applied in the legacy system are invisible here, so the page would cut off subscribers someone had deliberately kept, in bulk, on a single POST.
+**Fix**: Admin-only (`@role_required(["Admin"])`); refuses outright unless `ROUTER_MODE` is exactly `live`; and requires an explicit acknowledgement that the accounts were checked against the legacy system and the router first. With the second lock from ERR-134 in place, all three conditions must hold simultaneously.
+**Note**: the POST was already inside an `if request.method == "POST"` block, so a stray GET only rendered the list -- the exposure was unauthorised access, not GET-triggerability.
+**Files**: `billing/views/customers/tasks.py`, `billing/templates/billing/auto_suspend.html`
+**Date Logged**: 2026-10-08
+
+
+### ERR-136: Pairing Is A Read-Only Sign-Off -- Do Not Confuse It With A Write
+**Note for anyone auditing this project**: clicking PAIR in the Sync Manager does **not** modify a router. It reads the router to confirm the secret is present, then writes `sync_status="Synced"` to OUR database plus a `SystemLog` row whose text is literally "... verified present on &lt;router&gt; (enabled=..., profile=...). Router not modified." The status and the audit entry are written inside one `transaction.atomic()` so an approval can never exist without evidence of who made it.
+**The point**: pairing is the identity check, and the actual write is the separate Push action. This matters when auditing -- the Sync Manager looks like it has a big Approve button, and it is easy to assume that button talks to the router. It does not.
+**Files**: `network_manager/views/sync.py`, `network_manager/sync_helpers.py`
+**Date Logged**: 2026-10-08
