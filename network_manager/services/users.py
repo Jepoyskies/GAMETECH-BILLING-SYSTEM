@@ -6,6 +6,65 @@ from network_manager.models import MikrotikDevice
 logger = logging.getLogger(__name__)
 
 class MikrotikUsersMixin:
+
+    # ------------------------------------------------------------------
+    # THE BORDER -- pairing gate on every per-customer write
+    # ------------------------------------------------------------------
+    #
+    # Sync Manager is the border. Nothing reaches a router unless a human
+    # paired that specific account there. Rather than trust 48 call sites
+    # across billing, dispatch, the customer portal and network_manager to
+    # each remember that, the check lives HERE, in the primitives themselves.
+    # Every one of them takes a pppoe username, so this is the one place all
+    # of them pass through.
+    #
+    # This matters because the routers are shared with a legacy system that
+    # is still the billing authority: our copy of an expiry can be stale, and
+    # a write driven by a stale date disconnects a subscriber somebody
+    # deliberately kept.
+    #
+    # A username with NO matching Customer is allowed through. That is the
+    # orphan case -- a secret on the router with nobody in our database --
+    # and removing one is a deliberate, human Sync Manager action that has no
+    # pairing to check. What is refused is the dangerous direction: acting on
+    # an account we hold but have never confirmed.
+    #
+    # Profile-level writes (add_ppp_profile and friends) are router-wide
+    # configuration rather than per-customer state, so they are not gated
+    # here; they are gated by role and by the two router locks.
+    _PAIRING_GATE_SKIP = frozenset()
+
+    def _pairing_block(self, username):
+        """Return a refusal message if `username` may not be written, else None."""
+        if not username or username in self._PAIRING_GATE_SKIP:
+            return None
+        try:
+            from billing.models import Customer
+
+            customer = Customer.objects.filter(
+                pppoe_username=username
+            ).only("id", "pppoe_username", "full_name").first()
+        except Exception:
+            # Never let the guard itself become a way in. If the lookup cannot
+            # be trusted we do not know who this is, so we do not write.
+            logger.warning(
+                "ROUTER BORDER: could not verify pairing for %r; refusing write",
+                username,
+            )
+            return "could not verify that this account was paired; refusing to write"
+        if customer is None:
+            # Unknown secret (orphan). No pairing record can exist for it.
+            return None
+        try:
+            if not customer.pair_approved:
+                return (
+                    "'{}' has not been paired in Sync Manager. Nobody has "
+                    "confirmed it is the same account on the router, so "
+                    "nothing was written.".format(username)
+                )
+        except Exception:
+            return "could not verify pairing for '{}'; refusing to write".format(username)
+        return None
         def get_active_pppoe_users(self):
             """
             Connects via Mikrotik API and retrieves active PPPoE users.
@@ -30,6 +89,11 @@ class MikrotikUsersMixin:
                 return []
 
         def set_pppoe_comment(self, username, comment_text):
+            # THE BORDER: refuse to write an account nobody paired.
+            _blocked = self._pairing_block(username)
+            if _blocked:
+                logger.warning("ROUTER BORDER %s: %s", 'set_pppoe_comment', _blocked)
+                return False, _blocked
             """
             Updates the comment on a PPPoE secret.
             """
@@ -48,6 +112,11 @@ class MikrotikUsersMixin:
                 return False, f"API Error: {str(e)}"
 
         def remove_active_pppoe_user(self, name):
+            # THE BORDER: refuse to write an account nobody paired.
+            _blocked = self._pairing_block(name)
+            if _blocked:
+                logger.warning("ROUTER BORDER %s: %s", 'remove_active_pppoe_user', _blocked)
+                return False, _blocked
             """
             Forcibly disconnects an active PPPoE user from the Mikrotik device.
             Useful when a user's status changes to expired or suspended.
@@ -71,6 +140,11 @@ class MikrotikUsersMixin:
                 return False, f"Mikrotik API Error: {str(e)}"
 
         def kick_active_user(self, username):
+            # THE BORDER: refuse to write an account nobody paired.
+            _blocked = self._pairing_block(username)
+            if _blocked:
+                logger.warning("ROUTER BORDER %s: %s", 'kick_active_user', _blocked)
+                return False, _blocked
             """
             Queries /ppp/active using the RouterOS API, finds the entry where name == username,
             and issues a .remove command. This forces the client's modem to immediately redial.
@@ -105,6 +179,11 @@ class MikrotikUsersMixin:
                 return False, f"Mikrotik API Error: {str(e)}"
 
         def set_user_pppoe_profile(self, username, profile_name):
+            # THE BORDER: refuse to write an account nobody paired.
+            _blocked = self._pairing_block(username)
+            if _blocked:
+                logger.warning("ROUTER BORDER %s: %s", 'set_user_pppoe_profile', _blocked)
+                return False, _blocked
             """
             Finds the user in /ppp/secret and updates their profile attribute.
             """
@@ -134,6 +213,11 @@ class MikrotikUsersMixin:
                 return False, f"Mikrotik API Error: {str(e)}"
 
         def suspend_pppoe_user(self, name):
+            # THE BORDER: refuse to write an account nobody paired.
+            _blocked = self._pairing_block(name)
+            if _blocked:
+                logger.warning("ROUTER BORDER %s: %s", 'suspend_pppoe_user', _blocked)
+                return False, _blocked
             """
             Suspends a user using MAC-level bridge dropping.
             If MAC cannot be found, falls back to disabling the PPP secret.
@@ -205,6 +289,11 @@ class MikrotikUsersMixin:
                 return False, f"Mikrotik API Error: {str(e)}"
 
         def enable_pppoe_user(self, name):
+            # THE BORDER: refuse to write an account nobody paired.
+            _blocked = self._pairing_block(name)
+            if _blocked:
+                logger.warning("ROUTER BORDER %s: %s", 'enable_pppoe_user', _blocked)
+                return False, _blocked
             """
             Enables a user's PPP secret and removes any MAC-level bridge drops.
             """
@@ -242,6 +331,11 @@ class MikrotikUsersMixin:
                 return False, f"Mikrotik API Error: {str(e)}"
 
         def delete_pppoe_user(self, name, kick_active=True):
+            # THE BORDER: refuse to write an account nobody paired.
+            _blocked = self._pairing_block(name)
+            if _blocked:
+                logger.warning("ROUTER BORDER %s: %s", 'delete_pppoe_user', _blocked)
+                return False, _blocked
             """
             Deletes a PPPoE user from the Mikrotik device.
             """
@@ -279,6 +373,11 @@ class MikrotikUsersMixin:
                 return False, str(e)
 
         def add_pppoe_user(self, name, password, profile, service="pppoe", disabled="no", comment=None):
+            # THE BORDER: refuse to write an account nobody paired.
+            _blocked = self._pairing_block(name)
+            if _blocked:
+                logger.warning("ROUTER BORDER %s: %s", 'add_pppoe_user', _blocked)
+                return False, _blocked
             """
             Creates or updates a PPPoE user (secret) on the Mikrotik device.
             """
