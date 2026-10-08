@@ -412,6 +412,23 @@ class Customer(models.Model):
             )
         if self.expires_at is None:
             reasons.append("No expiry date — cannot auto-suspend")
+
+        # PAIRING IS MANDATORY -- THE BORDER
+        #
+        # Every other reason above is about BILLING. This one is about identity:
+        # nobody has yet confirmed that the account in our database is the same
+        # person as the PPPoE secret on the router. Until a human clicks PAIR in
+        # the Sync Manager, this account must not be written to a router at all.
+        #
+        # Pairing is a pure sign-off -- it reads the router and writes an audit
+        # entry saying "Router not modified" -- so it is safe to require it here
+        # without making the operator perform a write in order to get permission
+        # to write. Order matters: this is listed FIRST so the operator is told
+        # the account was never approved, rather than being sent off to fix
+        # billing reasons on an account that should never have been touched.
+        if not getattr(self, "pair_approved", False):
+            reasons.insert(0, "Not paired in Sync Manager — nobody has confirmed this is the same account on the router")
+
         return reasons
 
     @property

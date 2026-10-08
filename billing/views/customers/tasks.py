@@ -44,11 +44,49 @@ from billing.views.services import get_categorized_plans
 
 
 @login_required
+@role_required(["Admin"])
 def auto_suspend_view(request):
+    """Bulk-suspend past-due subscribers on the routers.
+
+    BORDER CONTROL. This is the single most dangerous page in the project: it
+    disconnects paying customers' internet, in bulk, from OUR expiry dates.
+
+    While the legacy system is still the authority on billing, our dates can be
+    stale -- an extension Sir Rom applied over there is invisible here, and this
+    page would cut off a subscriber someone deliberately kept. So it refuses to
+    act unless every one of these holds:
+
+      1. The operator is an Admin. It was @login_required alone, so any
+         authenticated Agent or Technician could POST it.
+      2. ROUTER_MODE is exactly "live". In read_only/dry_run it says so and
+         stops, instead of silently attempting writes that the wrapper will
+         block one account at a time.
+      3. The operator ticked an explicit acknowledgement that these accounts
+         were checked against the legacy system and the router first.
+    """
     if request.method == "POST":
         usernames = request.POST.getlist("usernames")
         if not usernames:
             messages.error(request, "No users selected for suspension.")
+            return redirect("auto_suspend")
+
+        if settings.ROUTER_MODE != "live":
+            messages.error(
+                request,
+                "Router writes are blocked: ROUTER_MODE is '%s', not 'live'. "
+                "Nothing was suspended. Bulk suspension stays closed until the "
+                "owner deliberately enables router writes, because our expiry "
+                "dates are not authoritative while the legacy system runs."
+                % settings.ROUTER_MODE,
+            )
+            return redirect("auto_suspend")
+
+        if request.POST.get("confirm_legacy_checked") != "yes":
+            messages.error(
+                request,
+                "Not suspended. You must confirm these accounts were checked "
+                "against the legacy system and the router first.",
+            )
             return redirect("auto_suspend")
 
         suspended_count = 0

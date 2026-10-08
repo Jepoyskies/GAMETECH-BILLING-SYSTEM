@@ -1,4 +1,5 @@
 ﻿import logging
+import secrets
 import socket
 import routeros_api
 from network_manager.models import MikrotikDevice
@@ -16,10 +17,27 @@ class MikrotikBase:
             """Coerce a router mode to a safe, usable value.
 
             Anything missing, blank, non-textual, or unrecognised resolves to
-            `read_only`. Only the exact string "live" -- supplied deliberately by
-            an operator -- can ever enable writes. The settings lookup is wrapped
-            because `ROUTER_MODE` may be absent or None in a partially-loaded
-            settings module, and that must not raise or escalate.
+            `read_only`. The settings lookup is wrapped because `ROUTER_MODE` may
+            be absent or None in a partially-loaded settings module, and that must
+            not raise or escalate.
+
+            SECOND LOCK -- "live" needs two independent keys
+            -----------------------------------------------------
+            Setting ROUTER_MODE=live is NOT sufficient to enable writes. It also
+            requires ROUTER_WRITE_TOKEN to match ROUTER_WRITE_TOKEN_EXPECTED.
+            Both are operator-controlled environment variables, so a single
+            mis-set variable, a stray edit to .env, a copy-pasted config or a
+            half-finished deploy cannot open the door on its own.
+
+            This matters because the routers are shared with a legacy system
+            that is still the authority on billing. If our expiry dates are
+            stale, a bulk action could disconnect a subscriber the legacy system
+            deliberately kept. Two keys means arming writes is always a
+            deliberate two-step act by a human, never a side effect.
+
+            Neither token is ever set by this codebase, by any management command,
+            by any button, or by any request parameter. Only the owner, editing
+            the environment by hand, can arm it -- and no agent session may.
             """
             if value is None:
                 try:
@@ -30,7 +48,28 @@ class MikrotikBase:
                 mode = str(value).strip().lower()
             except Exception:
                 return "read_only"
-            return mode if mode in ("dry_run", "read_only", "live") else "read_only"
+            if mode not in ("dry_run", "read_only", "live"):
+                return "read_only"
+            if mode == "live" and not self._live_write_armed():
+                # Deliberately NOT logged at import time; the caller logs the
+                # refusal when an action is actually attempted.
+                return "read_only"
+            return mode
+
+        @staticmethod
+        def _live_write_armed() -> bool:
+            """True only when BOTH write tokens are present and identical.
+
+            Fails closed on any error, including a missing settings module.
+            """
+            try:
+                expected = str(getattr(settings, "ROUTER_WRITE_TOKEN_EXPECTED", "") or "").strip()
+                supplied = str(getattr(settings, "ROUTER_WRITE_TOKEN", "") or "").strip()
+            except Exception:
+                return False
+            if not expected or not supplied:
+                return False
+            return secrets.compare_digest(expected, supplied)
 
         def __init__(self, device: MikrotikDevice, dry_run: bool = None, router_mode: str = None):
             self.device = device

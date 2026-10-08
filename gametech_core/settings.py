@@ -102,6 +102,25 @@ else:
     # Backward-compatibility alias
     ROUTER_DRY_RUN = (ROUTER_MODE == "dry_run")
 
+# SECOND LOCK ON ROUTER WRITES.
+#
+# ROUTER_MODE=live is NOT sufficient on its own. network_manager.services.base
+# refuses to honour "live" unless ROUTER_WRITE_TOKEN also matches
+# ROUTER_WRITE_TOKEN_EXPECTED, and it falls back to read_only when they do not.
+#
+# The point is that arming writes takes TWO independent, hand-edited keys, so a
+# single stray edit, a copy-pasted config or a half-finished deploy can never
+# open the door by accident. The routers are shared with a legacy system that is
+# still the authority on billing; if our dates are stale, a bulk action could
+# disconnect a subscriber the legacy system deliberately kept.
+#
+# Both default to EMPTY, which means UNARMED. Nothing in this codebase, no
+# management command, no button and no request parameter ever sets them. Only
+# the owner, editing the environment by hand, can arm them -- and per AGENTS.md
+# Rule 40 no agent session may.
+ROUTER_WRITE_TOKEN = env.str("ROUTER_WRITE_TOKEN", default="").strip()
+ROUTER_WRITE_TOKEN_EXPECTED = env.str("ROUTER_WRITE_TOKEN_EXPECTED", default="").strip()
+
 # Agent Incentive Engine Kill-Switch (Default: False)
 INCENTIVES_ENABLED = env.bool("INCENTIVES_ENABLED", default=False)
 
