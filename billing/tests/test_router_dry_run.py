@@ -216,6 +216,19 @@ class RouterDryRunTestCase(TestCase):
             barangay=bg,
         )
 
+        # Pair it first. The border now refuses to write any account nobody
+        # paired in Sync Manager, so an unpaired push is correctly refused and
+        # lands as "Failed" instead of "Synced". Pairing is the identity
+        # check -- it happens before any write, in any mode, dry_run included.
+        from billing.models import SystemLog
+
+        SystemLog.objects.create(
+            table_name="Customer", record_id=str(cust.id),
+            action="SYNC_PAIR_APPROVED", changed_by="operator",
+            target_name=cust.full_name, old_data="", new_data="paired",
+        )
+        cust = Customer.objects.get(pk=cust.pk)
+
         # Opt in to the actual router write (stubbed under dry_run).
         cust.push_to_router = True
         cust.save()
