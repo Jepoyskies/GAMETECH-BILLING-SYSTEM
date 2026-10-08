@@ -15,13 +15,91 @@ BULK_SUSPEND_THRESHOLD = 50
 class Command(BaseCommand):
     help = "Auto-suspends PPPoE users whose expiration date has passed, or auto-renews them if they have Advance Payment"
 
-    def handle(self, *args, **kwargs):
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help=(
+                "List exactly who would be suspended and why, then change "
+                "nothing. Safe to run on the day of cutover, and the only "
+                "honest way to preview a bulk suspension before arming the "
+                "router locks."
+            ),
+        )
+
+    def _report(self, due_customers, now):
+        """DRY RUN. Exactly who would be suspended, and why the rest would not.
+
+        The important split is not 'paid/unpaid' but 'armable or not'. An
+        account nobody paired cannot be written to at all, whatever the
+        router locks say, so counting it as 'would be suspended' would badly
+        overstate the blast radius. This is what an operator reads before
+        deciding to arm anything.
+        """
+        total = due_customers.count()
+
+        unpaired, no_router, armable = [], [], []
+        for c in due_customers:
+            if not c.mikrotik_device_id:
+                no_router.append(c)
+            elif not c.pair_approved:
+                unpaired.append(c)
+            else:
+                armable.append(c)
+
+        self.stdout.write(self.style.WARNING("=" * 72))
+        self.stdout.write(self.style.WARNING("AUTO-SUSPEND DRY RUN -- nothing was changed"))
+        self.stdout.write(self.style.WARNING("=" * 72))
+        self.stdout.write(f"  past-due active accounts        : {total}")
+
+        self.stdout.write(self.style.SUCCESS(
+            f"  WOULD BE SUSPENDED (paired)     : {len(armable)}"))
+        self.stdout.write(self.style.WARNING(
+            f"  blocked -- never paired         : {len(unpaired)}"))
+        self.stdout.write(self.style.WARNING(
+            f"  blocked -- no router assigned   : {len(no_router)}"))
+
+        if len(armable) > BULK_SUSPEND_THRESHOLD:
+            self.stdout.write(self.style.ERROR(
+                f"\n  ABORT CONDITION MET: {len(armable)} armable accounts exceeds the "
+                f"limit of {BULK_SUSPEND_THRESHOLD}.\n  Even with both router locks "
+                f"armed, this run would REFUSE and demand a human."))
+
+        if armable:
+            self.stdout.write(self.style.SUCCESS("\n  --- accounts that would be suspended ---"))
+            for c in armable[:200]:
+                self.stdout.write(
+                    "    %-28s %-22s expired %s" % (
+                        c.full_name[:28], c.pppoe_username[:22],
+                        timezone.localtime(c.expires_at).strftime("%Y-%m-%d"),
+                    ))
+            if len(armable) > 200:
+                self.stdout.write(self.style.WARNING(
+                    "    ... and %d more" % (len(armable) - 200)))
+
+        self.stdout.write(self.style.WARNING(
+            "\n  NOTE: pairing is an IDENTITY check, not an arming switch. Each of\n"
+            "  the above would still require a human to run this for real, with\n"
+            "  ROUTER_MODE=live AND ROUTER_WRITE_TOKEN armed."))
+        self.stdout.write(self.style.WARNING("=" * 72))
+        return None
+
+    def handle(self, *args, **options):
+        dry_run = bool(options.get("dry_run"))
         now = timezone.now()
 
         # Fetch all customers where expiration date is in the past and status is active
         due_customers = Customer.objects.filter(
             expires_at__lte=now, status="active", installation_status="installed"
         ).exclude(status__in=["pending", "closed_not_installed"])
+
+        # --- DRY RUN: SHOW, DO NOT DO -------------------------------------
+        # Added for cutover. Arming the router locks is a one-way door, and the
+        # question "exactly who would this disconnect?" has to be answerable
+        # BEFORE that happens, not after. This prints the full list, splits it
+        # by what would actually happen, and touches nothing.
+        if dry_run:
+            return self._report(due_customers, now)
 
         # --- SAFETY VALVE -------------------------------------------------
         # A legacy import can leave hundreds of accounts flagged 'active'
