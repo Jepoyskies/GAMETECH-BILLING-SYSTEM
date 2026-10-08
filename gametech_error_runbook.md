@@ -3558,3 +3558,36 @@ The damage contains **no** U+FFFD, so a "replacement character" check misses it 
 **The point**: pairing is the identity check, and the actual write is the separate Push action. This matters when auditing -- the Sync Manager looks like it has a big Approve button, and it is easy to assume that button talks to the router. It does not.
 **Files**: `network_manager/views/sync.py`, `network_manager/sync_helpers.py`
 **Date Logged**: 2026-10-08
+
+### ERR-137: Three Live Router-Write Doors Bypassed Sync Manager Entirely
+**Symptom**: while hardening the Sync Manager border, an enumeration of every router write primitive revealed `network_manager/views/winbox.py` -- a set of live, routed URLs that write directly to the routers and never touch Sync Manager at all:
+
+| endpoint | could do | was gated to |
+|---|---|---|
+| `/devices/winbox/<id>/secret-action/` | add, edit and **DELETE** a PPP secret | Admin, **Technician**, CSR |
+| `/devices/winbox/<id>/profile-action/` | add, edit and **DELETE** a PPP profile -- cuts service for **every subscriber** on that profile | Admin, **Technician**, CSR |
+| `/devices/winbox/<id>/kick-action/` | drop a **live** session mid-use | Admin, **Technician**, CSR |
+
+A field technician could therefore delete a subscriber's PPP secret, delete a bandwidth profile used by hundreds of accounts, or kick a paying customer off the internet, from a screen the pairing check knows nothing about.
+**Fix**: all three are now `@role_required(['Admin'])` and `@require_POST`. The two genuinely read-only views (`winbox_routers`, `winbox_dashboard`) stay open to technicians -- looking is not the problem, and closing them would remove a field tool for no safety gain.
+**Why it survived so long**: it was role-gated, so it never threw a 403 in casual testing, and nobody had enumerated write call sites -- the enforcement had only been reasoned about in the views the Sync Manager pages use.
+**Lesson**: when a gate is described as living "in the view", enumerate every caller of the underlying primitive. There were 48 call sites across four apps; the Sync Manager views consulted the gate and the rest did not.
+**Files**: `network_manager/views/winbox.py`
+**Date Logged**: 2026-10-08
+
+
+### ERR-138: A Subscriber Pressing Pay Triggered A Router Write From The Portal
+**Symptom**: `customer_portal/views/payments.py` called `api.set_pppoe_comment(...)` and discarded the return value. Once the primitive began refusing unpaired accounts (ERR-133), a customer paying online silently changed nothing on the router and nothing in the logs said so.
+**Why it matters**: the payment itself is recorded in OUR database, which is ours to own and must keep working. Only the write to shared hardware is gated. Conflating the two would either break online payments or leave a write path open.
+**Fix**: the return value is now checked and the refusal logged with the outstanding action ("pair in Sync Manager and push"). The payment still succeeds.
+**Files**: `customer_portal/views/payments.py`
+**Date Logged**: 2026-10-08
+
+
+### ERR-139: "Cannot See The Routers" After A Restart Is A Cold Cache, Not An Outage
+**Symptom**: after a container restart the Customers Directory showed a banner reading "Cannot see the routers right now", `STATUS UNKNOWN = 1,988`, and every connectivity counter at `0`. It looked like a serious outage.
+**Cause**: not an outage. The connectivity column reads the router poll cache, and immediately after a restart that cache is empty, so the page correctly refused to guess and rendered `Unknown` for every row. Roughly 30-60 seconds later the poll succeeded and the page showed 820 connected-unpaid, 530 connected-paid, 26 paid-but-offline, 0 unknown.
+**Verified**: the routers were reachable throughout -- a forced poll returned 1,695 live sessions in 5.3s with no `router_unreachable_*` flags set, while the page still showed `Unknown`.
+**Lesson**: `Unknown` in a connectivity column is the system declining to accuse a router it cannot currently see. It is the correct failure direction and it is not evidence of a pairing or security state. When it appears, force a poll and check `router_unreachable_<id>` before investigating anything else -- a stale-looking page after a restart is the expected cold-start state, not a fault.
+**Files**: `billing/views/customers/list.py`, `billing/utils.py`
+**Date Logged**: 2026-10-08
