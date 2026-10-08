@@ -1,4 +1,4 @@
-﻿"""Regression tests for the two billing-axis bugs found during cutover QA.
+"""Regression tests for the two billing-axis bugs found during cutover QA.
 
 Bug 1: payment_status keyed off status, so an applicant in 'pending' with a
        live expiry was badged Unpaid while demonstrably in date.
@@ -127,7 +127,33 @@ class PushGateTests(TestCase):
         self.assertIn("past due", joined)
 
     def test_in_date_active_account_is_not_blocked(self):
-        self.assertFalse(make_customer().is_push_blocked)
+        # An in-date, active account is clear on the BILLING axis -- that is
+        # what this test is about. It is still refused on the identity axis,
+        # because nobody paired it: no router secret may be written until a
+        # human confirms in Sync Manager that this row is the same person as
+        # that PPPoE secret. Pair it, and the billing axis is what remains.
+        c = make_customer()
+        self.assertEqual([r for r in c.push_blocked_reasons
+                          if "Unpaid" in r or "Past due" in r], [],
+                         "a paid, in-date account must be clear on billing")
+        self.assertIn("Not paired in Sync Manager",
+                      " ".join(c.push_blocked_reasons))
+        self.assertFalse(self._paired(c).is_push_blocked,
+                         "once paired, an in-date active account must push")
+
+    @staticmethod
+    def _paired(customer):
+        """Stamp the Sync Manager pairing sign-off and re-read the row."""
+        from billing.models import SystemLog
+
+        SystemLog.objects.create(
+            table_name="Customer", record_id=str(customer.id),
+            action="SYNC_PAIR_APPROVED", changed_by="operator",
+            target_name=customer.full_name, old_data="", new_data="paired",
+        )
+        c = Customer.objects.get(pk=customer.pk)
+        c.__dict__.pop("_pair_approved_cache", None)
+        return c
 
     def test_missing_expiry_is_still_blocked(self):
         self.assertTrue(make_customer(expires_at=None).is_push_blocked)
