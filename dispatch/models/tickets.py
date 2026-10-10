@@ -1,308 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import User
-from billing.models import Customer, Agent
 from django.utils import timezone
+from billing.models import Customer, Agent
 
-class Team(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return self.name
-
-class Technician(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    contact_number = models.CharField(max_length=20, null=True, blank=True)
-    target_per_day = models.IntegerField(default=0)
-    target_per_month = models.IntegerField(default=0)
-    team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True, blank=True, related_name='members')
-    is_available = models.BooleanField(default=True, help_text="Manual duty-status hint shown in the roster. Does NOT restrict assignment.")
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    # Optionally link to the Django User if they log in
-    user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True)
-
-    def __str__(self):
-        return self.name
-
-class ConfigOption(models.Model):
-    LIST_TYPE_CHOICES = (
-        ('STATUS', 'STATUS'),
-        ('TYPE', 'TYPE'),
-        ('CHAT_TYPE', 'CHAT_TYPE'),
-    )
-    MODULE_CHOICES = (
-        ('DISPATCH', 'DISPATCH'),
-        ('MONITORING', 'MONITORING'),
-    )
-    list_type = models.CharField(max_length=20, choices=LIST_TYPE_CHOICES)
-    module = models.CharField(max_length=20, choices=MODULE_CHOICES)
-    label = models.CharField(max_length=100)
-    color = models.CharField(max_length=50, default='gray')
-    sort_order = models.IntegerField(default=0)
-    active = models.BooleanField(default=True)
-    hardcoded = models.BooleanField(default=False)
-    
-    dispatch_equivalent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='equivalent_of')
-
-    class Meta:
-        unique_together = ('list_type', 'module', 'label')
-
-    def __str__(self):
-        return f"{self.module} - {self.list_type}: {self.label}"
-
-class DispatchRecord(models.Model):
-    SOURCE_TAB_CHOICES = (
-        ('INTERNET_INSTALL', 'INTERNET_INSTALL'),
-        ('CIGNAL_PLAY', 'CIGNAL_PLAY'),
-        ('CLIENT_CONCERNS', 'CLIENT_CONCERNS'),
-    )
-    date = models.DateField(default=timezone.now)
-    client_name = models.CharField(max_length=255)
-    address = models.TextField()
-    contact_number = models.CharField(max_length=50)
-    alternate_contact = models.CharField(max_length=150, null=True, blank=True)
-    facebook_account = models.CharField(max_length=255, null=True, blank=True)
-    concern = models.TextField()
-    sales_agent = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True, blank=True, related_name='dispatch_records')
-    is_test_data = models.BooleanField(default=False, help_text="Flags test dispatch records")
-    
-    chat_type_option = models.ForeignKey(ConfigOption, on_delete=models.RESTRICT, related_name='dispatch_chat_types', null=True, blank=True)
-    type_option = models.ForeignKey(ConfigOption, on_delete=models.RESTRICT, related_name='dispatch_types', null=True, blank=True)
-    status_option = models.ForeignKey(ConfigOption, on_delete=models.RESTRICT, related_name='dispatch_statuses', null=True, blank=True)
-    
-    latitude = models.FloatField(null=True, blank=True)
-    longitude = models.FloatField(null=True, blank=True)
-    remarks = models.TextField(null=True, blank=True)
-    
-    time_start = models.DateTimeField(null=True, blank=True)
-    time_accomplish = models.DateTimeField(null=True, blank=True)
-    duration = models.IntegerField(null=True, blank=True, help_text="Duration in minutes")
-    
-    done_at = models.DateTimeField(null=True, blank=True)
-    done_duration = models.IntegerField(null=True, blank=True)
-    
-    source_tab = models.CharField(max_length=30, choices=SOURCE_TAB_CHOICES)
-    ticket_number = models.CharField(max_length=100, null=True, blank=True)
-    actions_taken = models.TextField(null=True, blank=True)
-    
-    sla_rebates_given = models.IntegerField(default=0, help_text="Number of 24h SLA rebate days automatically given")
-
-    # Link to the MonitoringRecord that auto-created this dispatch (if applicable)
-    monitoring_record = models.OneToOneField('MonitoringRecord', on_delete=models.SET_NULL, null=True, blank=True, related_name='auto_dispatch_source')
-
-    # Job detail fields (copied from MonitoringRecord's JobDetail on auto-dispatch)
-    schedule_date = models.DateField(null=True, blank=True)
-    schedule_time = models.CharField(max_length=100, null=True, blank=True)
-    barangay_city = models.CharField(max_length=100, null=True, blank=True)
-    account_no = models.CharField(max_length=100, null=True, blank=True)
-    job_order = models.CharField(max_length=100, null=True, blank=True)
-    email_address = models.EmailField(null=True, blank=True)
-    nap_port = models.CharField(max_length=100, null=True, blank=True)
-    cable_length = models.CharField(max_length=100, null=True, blank=True)
-    nap_reading = models.CharField(max_length=100, null=True, blank=True)
-    pole_number = models.CharField(max_length=100, null=True, blank=True)
-    plan_package = models.CharField(max_length=100, null=True, blank=True)
-    ont_modem_sn = models.CharField(max_length=100, null=True, blank=True)
-    signal_level = models.CharField(max_length=100, null=True, blank=True)
-    facility = models.CharField(max_length=100, null=True, blank=True)
-    house_reading = models.CharField(max_length=100, null=True, blank=True)
-    special_instruction = models.TextField(null=True, blank=True)
-    technician_remarks = models.TextField(null=True, blank=True)
-    acknowledged_by = models.CharField(max_length=100, null=True, blank=True)
-
-    teams = models.ManyToManyField(Technician, related_name='dispatches')
-    csr = models.ForeignKey(User, on_delete=models.RESTRICT, related_name='handled_dispatches')
-    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True, related_name='dispatches')
-    mikrotik_device = models.ForeignKey('network_manager.MikrotikDevice', on_delete=models.SET_NULL, null=True, blank=True, related_name='dispatches')
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"{self.date} - {self.client_name} - {self.source_tab}"
-
-class MonitoringRecord(models.Model):
-    SOURCE_TAB_CHOICES = (
-        ('INTERNET_INSTALL', 'INTERNET_INSTALL'),
-        ('CIGNAL_PLAY', 'CIGNAL_PLAY'),
-        ('CLIENT_CONCERNS', 'CLIENT_CONCERNS'),
-    )
-    tab_type = models.CharField(max_length=30, choices=SOURCE_TAB_CHOICES)
-    date = models.DateField(default=timezone.now)
-    client_name = models.CharField(max_length=255)
-    address = models.TextField()
-    contact_number = models.CharField(max_length=50)
-    alternate_contact = models.CharField(max_length=150, null=True, blank=True)
-    facebook_account = models.CharField(max_length=255, null=True, blank=True)
-    concern = models.TextField()
-    sales_agent = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True, blank=True, related_name='monitoring_records')
-    is_test_data = models.BooleanField(default=False, help_text="Flags test monitoring records")
-    
-    latitude = models.FloatField(null=True, blank=True)
-    longitude = models.FloatField(null=True, blank=True)
-    
-    status_option = models.ForeignKey(ConfigOption, on_delete=models.RESTRICT, related_name='monitoring_statuses', null=True, blank=True)
-    type_option = models.ForeignKey(ConfigOption, on_delete=models.RESTRICT, related_name='monitoring_types', null=True, blank=True)
-    chat_type_option = models.ForeignKey(ConfigOption, on_delete=models.RESTRICT, related_name='monitoring_chat_types', null=True, blank=True)
-    
-    remarks = models.TextField(null=True, blank=True)
-    ticket_number = models.CharField(max_length=100, null=True, blank=True)
-    actions_taken = models.TextField(null=True, blank=True)
-    
-    time_start = models.DateTimeField(null=True, blank=True)
-    time_accomplish = models.DateTimeField(null=True, blank=True)
-    
-    done_at = models.DateTimeField(null=True, blank=True)
-    done_duration = models.IntegerField(null=True, blank=True)
-    
-    teams = models.ManyToManyField(Technician, related_name='monitoring_records')
-    dispatch = models.OneToOneField(DispatchRecord, on_delete=models.SET_NULL, null=True, blank=True, related_name='dispatch_record')
-    csr = models.ForeignKey(User, on_delete=models.RESTRICT, related_name='handled_monitoring_records')
-    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True, related_name='monitoring_records')
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"{self.date} - {self.client_name} - {self.tab_type}"
-
-class JobDetail(models.Model):
-    record = models.OneToOneField(MonitoringRecord, on_delete=models.CASCADE, related_name='job_detail')
-    
-    # Pending / Assignment fields
-    schedule_date = models.DateField(null=True, blank=True)
-    schedule_time = models.CharField(max_length=100, null=True, blank=True)
-    barangay_city = models.CharField(max_length=100, null=True, blank=True)
-    account_no = models.CharField(max_length=100, null=True, blank=True)
-    job_order = models.CharField(max_length=100, null=True, blank=True)
-    email_address = models.EmailField(null=True, blank=True)
-    
-    # Completion fields
-    nap_port = models.CharField(max_length=100, null=True, blank=True)
-    cable_length = models.CharField(max_length=100, null=True, blank=True)
-    nap_reading = models.CharField(max_length=100, null=True, blank=True)
-    pole_number = models.CharField(max_length=100, null=True, blank=True)
-    plan_package = models.CharField(max_length=100, null=True, blank=True)
-    ont_modem_sn = models.CharField(max_length=100, null=True, blank=True)
-    signal_level = models.CharField(max_length=100, null=True, blank=True)
-    facility = models.CharField(max_length=100, null=True, blank=True)
-    house_reading = models.CharField(max_length=100, null=True, blank=True)
-    special_instruction = models.TextField(null=True, blank=True)
-    
-    # Post-completion fields
-    technician_remarks = models.TextField(null=True, blank=True)
-    acknowledged_by = models.CharField(max_length=100, null=True, blank=True)
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"Job Detail for {self.record}"
-
-class AuditLog(models.Model):
-    ACTION_CHOICES = (
-        ('CREATE', 'CREATE'),
-        ('UPDATE', 'UPDATE'),
-        ('DELETE', 'DELETE'),
-    )
-    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
-    entity_type = models.CharField(max_length=100) # e.g. "DispatchRecord", "MonitoringRecord"
-    entity_id = models.IntegerField()
-    summary = models.CharField(max_length=255, null=True, blank=True)
-    before_data = models.JSONField(null=True, blank=True)
-    after_data = models.JSONField(null=True, blank=True)
-    actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='dispatch_audit_logs')
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.action} {self.entity_type} {self.entity_id} by {self.actor}"
-
-    @property
-    def diff_list(self):
-        diffs = []
-        before = self.before_data or {}
-        after = self.after_data or {}
-        if not isinstance(before, dict):
-            before = {}
-        if not isinstance(after, dict):
-            after = {}
-
-        DIFF_IGNORE_KEYS = {"created_at", "updated_at", "id", "pk", "deleted_at"}
-
-        FIELD_LABELS = {
-            "name": "Name",
-            "email": "Email",
-            "role": "Role",
-            "phone": "Phone",
-            "contact_number": "Contact #",
-            "address": "Address",
-            "barangay": "Barangay",
-            "barangay_city": "Barangay / City",
-            "client": "Client Name",
-            "client_name": "Client Name",
-            "account_no": "Account #",
-            "concern": "Concern / Issue",
-            "status": "Status",
-            "status_option": "Status",
-            "type_option": "Type",
-            "chat_type_option": "Chat Type",
-            "ticket_type": "Ticket Type",
-            "priority": "Priority",
-            "sales_agent": "Sales Agent",
-            "technicians": "Assigned Techs",
-            "teams": "Assigned Techs / Teams",
-            "remarks": "Remarks",
-            "actions_taken": "Actions Taken",
-            "ticket_number": "Ticket #",
-            "plan_package": "Plan Package",
-            "cable_length": "Cable Length (m)",
-            "signal_level": "Signal Level (dBm)",
-            "signal_dbm": "Signal (dBm)",
-            "nap_port": "NAP Port",
-            "pole_number": "Pole #",
-            "nap_reading": "NAP Reading (dBm)",
-            "house_reading": "House Reading (dBm)",
-            "ont_modem_sn": "ONT/Modem S/N",
-            "onu_sn_mac": "ONU SN / MAC",
-            "payment_method": "Payment Method",
-            "payment_collected": "Payment Collected",
-            "amount_paid": "Amount Paid",
-            "receipt_no": "Receipt #",
-            "facility": "Facility",
-            "special_instruction": "Special Instruction",
-            "technician_remarks": "Technician Remarks",
-            "qa_notes": "QA Notes",
-            "admin_notes": "Admin Notes",
-            "time_start": "Service Start",
-            "time_accomplish": "Service End",
-            "done_at": "Date Completed",
-            "color": "Color",
-            "label": "Label",
-            "active": "Active",
-            "sort_order": "Sort Order",
-        }
-
-        all_keys = sorted(set(before.keys()).union(set(after.keys())))
-        for k in all_keys:
-            if k.lower() in DIFF_IGNORE_KEYS:
-                continue
-            old_v = before.get(k)
-            new_v = after.get(k)
-            if old_v != new_v:
-                label = FIELD_LABELS.get(k, k.replace('_', ' ').title())
-                diffs.append({
-                    'field': k,
-                    'label': label,
-                    'old': str(old_v) if old_v is not None else '-',
-                    'new': str(new_v) if new_v is not None else '-',
-                    'is_change': (k in before and k in after),
-                    'is_addition': (k not in before),
-                    'is_deletion': (k not in after),
-                })
-        return diffs
+from .core import Team, Technician, ConfigOption
 
 
 class JobTicket(models.Model):
@@ -393,6 +94,10 @@ class JobTicket(models.Model):
     nap_reading = models.CharField(max_length=100, null=True, blank=True)
     pole_number = models.CharField(max_length=100, null=True, blank=True)
     ont_modem_sn = models.CharField(max_length=100, null=True, blank=True)
+    ont_modem_mac = models.CharField(
+        max_length=17, null=True, blank=True,
+        help_text="Home modem MAC captured by the technician at final submission (AA:BB:CC:DD:EE:FF)"
+    )
     signal_level = models.CharField(max_length=100, null=True, blank=True)
     facility = models.CharField(max_length=100, null=True, blank=True)
     house_reading = models.CharField(max_length=100, null=True, blank=True)
@@ -406,7 +111,7 @@ class JobTicket(models.Model):
     done_at = models.DateTimeField(null=True, blank=True)
     done_duration = models.IntegerField(null=True, blank=True)
     sla_rebates_given = models.IntegerField(default=0)
-    
+
     # New Fields for QA and Payment
     payment_method = models.CharField(max_length=30, choices=PAYMENT_METHOD_CHOICES, default='CASH', blank=True, null=True, db_index=True)
     payment_collected = models.CharField(max_length=50, blank=True, null=True)
@@ -438,6 +143,11 @@ class JobTicket(models.Model):
     bounce_count = models.PositiveIntegerField(default=0, help_text="Number of times this ticket has been bounced back")
     repeated_bounce_alert = models.BooleanField(default=False, help_text="Flagged when ticket bounces 2 or more times")
     is_flagged = models.BooleanField(default=False, help_text="Flagged for manual administrative review")
+
+    # Audit & Dispatcher Tracking
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='dispatched_tickets')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def can_transition_to(self, target_status):
         """
@@ -487,10 +197,44 @@ class JobTicket(models.Model):
         if len(distinct_stages) >= 2:
             self.same_person_flag = True
 
-    # Audit & Dispatcher Tracking
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='dispatched_tickets')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    # ── Job-order credit (Sir's rule, DERIVED — never stored) ─────────────
+    # A ticket only scores once it reaches APPROVED. The person who opened it
+    # earns 1; the person who closed it earns 1. Same person on both ends
+    # therefore earns 2, which is exactly the rule, with no counter to drift.
+    # Cancelled / still-open / bounced tickets score 0 on purpose: credit
+    # pays for work that was actually finished and signed off.
+
+    @property
+    def credit_earns(self):
+        """True only when this ticket has been closed and signed off."""
+        return self.status == 'APPROVED'
+
+    @property
+    def opener_credit(self):
+        return 1 if (self.credit_earns and self.created_by_id) else 0
+
+    @property
+    def closer_credit(self):
+        return 1 if (self.credit_earns and self.admin_approved_by_id) else 0
+
+    @property
+    def total_credit(self):
+        return self.opener_credit + self.closer_credit
+
+    @property
+    def credit_summary(self):
+        """Human-readable 'Opened by X → Closed by Y (2 pts)' for the ticket page."""
+        opened = self.created_by.get_full_name() or self.created_by.username if self.created_by_id else None
+        closed = (self.admin_approved_by.get_full_name() or self.admin_approved_by.username) if self.admin_approved_by_id else None
+        if not self.credit_earns:
+            return {'opened_by': opened, 'closed_by': closed, 'points': 0, 'same_person': False, 'earned': False}
+        return {
+            'opened_by': opened,
+            'closed_by': closed,
+            'points': self.total_credit,
+            'same_person': bool(self.created_by_id and self.created_by_id == self.admin_approved_by_id),
+            'earned': True,
+        }
 
     @property
     def staleness_hours(self):
@@ -533,8 +277,8 @@ class JobTicket(models.Model):
             if total_mins < 60:
                 return f"{total_mins}m"
             hours = total_mins // 60
+            rem_mins = total_mins % 60
             if hours < 24:
-                rem_mins = total_mins % 60
                 return f"{hours}h {rem_mins}m" if rem_mins else f"{hours}h"
             days = hours // 24
             rem_hours = hours % 24
@@ -575,6 +319,67 @@ class JobTicket(models.Model):
 
     def __str__(self):
         return f"{self.ticket_number} - {self.client_name} ({self.get_status_display()})"
+
+
+class TicketTechnicianAssignment(models.Model):
+    """
+    Ordered technician handover history for a job ticket.
+
+    JobTicket.technicians is a flat M2M: it cannot say who was first, who came
+    in next, or why. This table is the ordered record. `sequence` starts at 1;
+    the row with is_current=True is the technician(s) on the job right now. When
+    a tech is replaced the old row is closed off with replacement_reason (a
+    ConfigOption, mandatory) and the new tech gets the next sequence.
+    """
+
+    job_ticket = models.ForeignKey(JobTicket, on_delete=models.CASCADE, related_name='tech_assignments')
+    technician = models.ForeignKey(Technician, on_delete=models.CASCADE, related_name='ticket_assignments')
+    sequence = models.PositiveSmallIntegerField(default=1)
+    assigned_at = models.DateTimeField(default=timezone.now)
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    is_current = models.BooleanField(default=True, db_index=True)
+
+    # Set on the OUTGOING row when this technician is replaced.
+    replaced_by = models.ForeignKey(
+        Technician, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='replaces_assignments'
+    )
+    replacement_reason = models.ForeignKey(
+        ConfigOption, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='replacement_reasons'
+    )
+    replacement_note = models.TextField(
+        null=True, blank=True,
+        help_text="Required when the replacement reason is 'Other'."
+    )
+    replaced_by_user = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='technician_replacements_made'
+    )
+
+    class Meta:
+        ordering = ['job_ticket_id', 'sequence']
+        unique_together = ('job_ticket', 'technician', 'sequence')
+
+    def __str__(self):
+        return f"{self.job_ticket.ticket_number} #{self.sequence} {self.technician.name}"
+
+    @property
+    def stage_label(self):
+        if self.finished_at and self.replaced_by_id:
+            return "replaced"
+        if self.finished_at:
+            return "finished"
+        if self.started_at:
+            return "started"
+        return "assigned"
+
+    @property
+    def reason_display(self):
+        if self.replacement_reason_id:
+            return self.replacement_reason.label
+        return None
 
 
 class JobTicketHistory(models.Model):
@@ -634,4 +439,3 @@ class CallAttemptLog(models.Model):
 
     def __str__(self):
         return f"Attempt {self.attempt_number} for {self.ticket.ticket_number}: {self.get_result_display()}"
-

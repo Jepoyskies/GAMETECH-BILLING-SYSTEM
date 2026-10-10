@@ -1222,6 +1222,12 @@ class CustomerMacHistory(models.Model):
         Customer, on_delete=models.CASCADE, related_name="mac_history"
     )
     mac_address = models.CharField(max_length=100)
+    serial_number = models.CharField(max_length=100, null=True, blank=True)
+    replaced_reason = models.CharField(max_length=100, null=True, blank=True)
+    # Ticket NUMBER, not a FK to dispatch.JobTicket: dispatch already FKs into
+    # billing, so a reverse FK would close an import cycle. The number is
+    # unique on JobTicket and survives the ticket being purged.
+    source_ticket = models.CharField(max_length=50, null=True, blank=True, db_index=True)
     detected_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

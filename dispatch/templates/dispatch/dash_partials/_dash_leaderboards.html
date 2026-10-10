@@ -73,6 +73,9 @@
           <tr>
             <th style="width: 60px;">Rank</th>
             <th>CSR Representative</th>
+            <th class="text-center" title="1 point for opening a job order that reached Admin Approved">Opened</th>
+            <th class="text-center" title="1 point for closing a job order at Admin Approved">Closed</th>
+            <th class="text-center" title="Opened + Closed. Same staff on both ends scores 2.">Points</th>
             <th>Assigned</th>
             <th>Disp. Handled</th>
             <th>Disp. Closed</th>
@@ -93,6 +96,11 @@
               <td>
                 <div class="fw-semibold text-primary-emphasis">{{ row.name }}</div>
               </td>
+              <td class="text-center"><span class="status-badge status-badge--info">{{ row.points_opened }}</span></td>
+              <td class="text-center"><span class="status-badge status-badge--success">{{ row.points_closed }}</span></td>
+              <td class="text-center">
+                <span class="rank-badge {% if forloop.counter == 1 %}gold{% elif forloop.counter == 2 %}silver{% elif forloop.counter == 3 %}bronze{% endif %}">{{ row.points_total }}</span>
+              </td>
               <td><span class="text-muted">{{ row.total_handled }}</span></td>
               <td><span class="status-badge status-badge--info">{{ row.disp_handled }}</span></td>
               <td><span class="status-badge status-badge--success">{{ row.disp_closed }}</span></td>
@@ -111,7 +119,7 @@
             </tr>
           {% empty %}
             <tr>
-              <td colspan="9" class="text-center py-4">
+              <td colspan="12" class="text-center py-4">
                 <div class="gt-empty-state">
                   <i class="fas fa-headset text-muted"></i>
                   <div class="empty-title text-muted" style="font-size: 0.85rem;">No CSR activity recorded for this period.</div>

@@ -4,6 +4,7 @@ from . import views
 from . import views_queue
 from . import views_tech
 from . import views_approval
+from . import views_handover
 
 urlpatterns = [
     path('', views.dispatch_index_view, name='dispatch_index'),
@@ -47,6 +48,8 @@ urlpatterns = [
     path('api/technicians/<int:tech_id>/toggle-duty/', views_queue.api_toggle_technician_duty, name='api_dispatch_toggle_technician_duty'),
     path('api/tickets/<int:ticket_id>/arrived/', views_tech.api_ticket_arrived, name='api_dispatch_ticket_arrived'),
     path('api/tickets/<int:ticket_id>/done/', views_tech.api_ticket_done, name='api_dispatch_ticket_done'),
+    path('api/tickets/<int:ticket_id>/replace-technician/', views_handover.api_replace_technician, name='api_dispatch_replace_technician'),
+    path('api/tickets/replacement-reasons/', views_handover.api_ticket_replacement_reasons, name='api_dispatch_replacement_reasons'),
     path('api/tickets/<int:ticket_id>/location/', views.api_update_location, name='api_dispatch_update_location'),
     path('api/tickets/<int:ticket_id>/complete/', views_tech.api_ticket_done, name='api_dispatch_complete_job'),
     path('api/tickets/<int:ticket_id>/delete/', views.api_delete_ticket, name='api_dispatch_delete_ticket'),

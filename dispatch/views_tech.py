@@ -9,11 +9,41 @@ from django.db.models import Q
 from django.contrib.auth.views import PasswordChangeView
 from django.urls import reverse_lazy
 
-from dispatch.models import JobTicket, JobTicketHistory, Technician, CallAttemptLog, AuditLog
-from dispatch.utils import log_audit
-from billing.models import Customer, Notification
+from dispatch.models import JobTicket, JobTicketHistory, Technician, CallAttemptLog, AuditLog, TicketTechnicianAssignment
+from dispatch.utils import log_audit, normalize_mac, find_mac_conflict
+from billing.models import Customer, Notification, CustomerMacHistory
 
 logger = logging.getLogger(__name__)
+
+
+def _close_assignment_for_user(ticket, user, finished_at=None):
+    """
+    Mark the submitting technician's current assignment row as started/finished.
+
+    Tickets predating TicketTechnicianAssignment have no rows, so this is a
+    no-op for them rather than an error. Never raises: handover bookkeeping
+    must not be able to fail a technician's job submission.
+    """
+    try:
+        tech = Technician.objects.filter(user=user).first()
+        if not tech:
+            return None
+        assignment = ticket.tech_assignments.filter(technician=tech, is_current=True).first()
+        if not assignment:
+            return None
+        updates = []
+        if not assignment.started_at:
+            assignment.started_at = finished_at
+            updates.append('started_at')
+        if finished_at:
+            assignment.finished_at = finished_at
+            updates.append('finished_at')
+        if updates:
+            assignment.save(update_fields=updates)
+        return assignment
+    except Exception as e:
+        logger.warning(f"Could not close technician assignment on {ticket.ticket_number}: {e}")
+        return None
 
 
 @login_required
@@ -262,6 +292,18 @@ def api_ticket_done(request, ticket_id):
         ticket.pole_number = (data.get('pole_number') or '').strip()
         ticket.ont_modem_sn = (data.get('ont_modem_sn') or '').strip()
         ticket.signal_level = (data.get('signal_level') or '').strip()
+
+        # Home modem MAC (feature C). Normalised to AA:BB:CC:DD:EE:FF and
+        # recorded on the customer's profile + equipment history so a future
+        # replacement can be traced back to the job that installed this unit.
+        raw_mac = (data.get('ont_modem_mac') or '').strip()
+        mac_norm = normalize_mac(raw_mac) if raw_mac else None
+        if raw_mac and mac_norm is None:
+            return JsonResponse({
+                'success': False,
+                'error': f"'{raw_mac}' is not a valid MAC address. Use 12 hex digits, e.g. AA:BB:CC:DD:EE:FF."
+            }, status=400)
+        ticket.ont_modem_mac = mac_norm or None
         ticket.facility = (data.get('facility') or '').strip()
         ticket.house_reading = (data.get('house_reading') or '').strip()
         ticket.technician_report = (data.get('technician_report') or data.get('technician_remarks') or '').strip()
@@ -269,6 +311,51 @@ def api_ticket_done(request, ticket_id):
         ticket.status = 'COMPLETED'
         ticket.record_stage_action('FIELD_DONE', request.user)
         ticket.save()
+
+        # Close off this technician's row in the ordered handover history so the
+        # chain reads "who was on it, in what order, and who replaced whom".
+        _close_assignment_for_user(ticket, request.user, finished_at=now)
+
+        # ── Equipment ownership (feature C) ────────────────────────────────
+        # Write MAC + serial onto the customer profile and into the equipment
+        # history so "who owned which modem, installed by which job" is
+        # answerable years later without a ticket lookup.
+        mac_conflict = None
+        if mac_norm and ticket.customer_id:
+            customer = ticket.customer
+            previous_mac = (customer.mac_address or '').strip().upper()
+            same_mac = previous_mac == mac_norm
+
+            # Duplicate modem across two customers is a real field failure.
+            # Warn, don't block: the tech is on site and may be right.
+            conflict = find_mac_conflict(mac_norm, customer)
+            if conflict:
+                mac_conflict = conflict
+
+            if not same_mac:
+                # A different MAC than we had = a modem replacement.
+                CustomerMacHistory.objects.create(
+                    customer=customer,
+                    mac_address=mac_norm,
+                    serial_number=ticket.ont_modem_sn or None,
+                    replaced_reason=(
+                        'Initial install' if not previous_mac
+                        else f'Replaced previous modem {previous_mac}'
+                    ),
+                    source_ticket=ticket.ticket_number,
+                )
+                customer.mac_address = mac_norm
+                customer.save(update_fields=['mac_address'])
+            else:
+                # Same modem again — keep history clean rather than duplicate.
+                CustomerMacHistory.objects.update_or_create(
+                    customer=customer,
+                    mac_address=mac_norm,
+                    defaults={
+                        'serial_number': ticket.ont_modem_sn or None,
+                        'source_ticket': ticket.ticket_number,
+                    },
+                )
 
         # Wire SITE_VISIT (assign -> done)
         site_visit_note = " (Site Visit Complete)" if ticket.ticket_type == 'SITE_VISIT' else ""
@@ -293,11 +380,36 @@ def api_ticket_done(request, ticket_id):
         except Exception as e:
             logger.warning(f"Could not create completion notification: {e}")
 
+        if mac_conflict:
+            log_audit(
+                'UPDATE', 'JobTicket', ticket.id, request.user,
+                summary=(
+                    f"DUPLICATE MODEM MAC {mac_norm} submitted for {ticket.client_name}; "
+                    f"same MAC already on customer '{mac_conflict.full_name}' (ID {mac_conflict.id})."
+                ),
+            )
+            try:
+                Notification.objects.create(
+                    title=f"Duplicate Modem MAC: {ticket.ticket_number}",
+                    message=(
+                        f"Technician submitted MAC {mac_norm} for {ticket.client_name}, but that modem "
+                        f"is already recorded on {mac_conflict.full_name}. Verify before activation."
+                    ),
+                    notification_type="dispatch",
+                )
+            except Exception as e:
+                logger.warning(f"Could not create duplicate-MAC notification: {e}")
+
         return JsonResponse({
             'success': True,
             'status': ticket.status,
             'duration': ticket.duration,
             'ticket_number': ticket.ticket_number,
+            'mac_recorded': mac_norm or None,
+            'duplicate_mac_warning': (
+                f"Warning: MAC {mac_norm} is already registered to {mac_conflict.full_name}. Dispatch has been notified."
+                if mac_conflict else None
+            ),
         })
     except Exception as e:
         logger.error(f"Error in api_ticket_done: {e}")

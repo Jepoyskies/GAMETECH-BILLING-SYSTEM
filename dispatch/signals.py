@@ -169,9 +169,11 @@ def sync_ticket_completion_to_customer(sender, instance, created, **kwargs):
             customer.installed_at = instance.done_at or timezone.now()
             fields_to_update.append('installed_at')
 
-        if instance.ont_modem_sn and not customer.mac_address:
-            customer.mac_address = instance.ont_modem_sn
-            fields_to_update.append('mac_address')
+        # NOTE: this signal deliberately does NOT write customer.mac_address.
+        # It used to copy `ont_modem_sn` (a SERIAL number) into the MAC field,
+        # which is a different thing entirely and poisoned duplicate-MAC
+        # detection. Equipment ownership is written once, in
+        # views_tech.api_ticket_done, which also writes CustomerMacHistory.
 
         if fields_to_update:
             customer.save(update_fields=fields_to_update)

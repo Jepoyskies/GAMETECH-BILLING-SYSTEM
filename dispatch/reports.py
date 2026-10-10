@@ -78,18 +78,25 @@ def get_csr_performance_report(date_filter='all', date_from=None, date_to=None):
     it is strictly counted under Concerns Handled / Closed / Cancelled.
     Otherwise it is counted under Dispatches.
     Denominator excludes cancellations.
+
+    Job-order credit (Sir's rule) is counted HERE and is derived, not stored:
+    an APPROVED ticket gives its opener 1 point and its closer 1 point. Same
+    person on both ends therefore scores 2, which is the rule without a
+    counter that can drift. Anything not APPROVED scores 0 to everyone.
     """
-    tickets = get_date_filtered_tickets(date_filter, date_from, date_to).select_related('created_by')
-    
-    # Collect all users who created or handled tickets
+    tickets = get_date_filtered_tickets(date_filter, date_from, date_to).select_related('created_by', 'admin_approved_by')
+
+    # Collect all users who created or closed tickets
     user_ids = set()
     for t in tickets:
         if t.created_by_id:
             user_ids.add(t.created_by_id)
-            
+        if t.admin_approved_by_id:
+            user_ids.add(t.admin_approved_by_id)
+
     # Include all active staff users so zero-ticket CSRs are also visible
     staff_users = User.objects.filter(Q(is_staff=True) | Q(id__in=user_ids)).order_by('first_name', 'username')
-    
+
     csr_data = {}
     for user in staff_users:
         csr_data[user.id] = {
@@ -104,14 +111,12 @@ def get_csr_performance_report(date_filter='all', date_from=None, date_to=None):
             'total_handled': 0,
             'total_closed': 0,
             'total_cancelled': 0,
+            'points_opened': 0,
+            'points_closed': 0,
+            'points_total': 0,
         }
 
     for t in tickets:
-        u_id = t.created_by_id
-        if not u_id or u_id not in csr_data:
-            continue
-
-        entry = csr_data[u_id]
         is_closed = t.status in ['COMPLETED', 'QA_PASSED']
         is_cancelled = t.status == 'CANCELLED'
 
@@ -119,24 +124,39 @@ def get_csr_performance_report(date_filter='all', date_from=None, date_to=None):
         # If chat_type == 'Concern' or source_tab == 'CLIENT_CONCERNS', bucket as concern
         is_concern = (t.source_tab == 'CLIENT_CONCERNS' or (t.chat_type and 'concern' in t.chat_type.lower()))
 
-        entry['total_handled'] += 1
-        if is_closed:
-            entry['total_closed'] += 1
-        if is_cancelled:
-            entry['total_cancelled'] += 1
+        for u_id in {t.created_by_id, t.admin_approved_by_id} - {None}:
+            entry = csr_data.get(u_id)
+            if not entry:
+                continue
 
-        if is_concern:
-            entry['concern_handled'] += 1
-            if is_closed:
-                entry['concern_closed'] += 1
-            if is_cancelled:
-                entry['concern_cancelled'] += 1
-        else:
-            entry['disp_handled'] += 1
-            if is_closed:
-                entry['disp_closed'] += 1
-            if is_cancelled:
-                entry['disp_cancelled'] += 1
+            if u_id == t.created_by_id:
+                entry['total_handled'] += 1
+                if is_closed:
+                    entry['total_closed'] += 1
+                if is_cancelled:
+                    entry['total_cancelled'] += 1
+
+                if is_concern:
+                    entry['concern_handled'] += 1
+                    if is_closed:
+                        entry['concern_closed'] += 1
+                    if is_cancelled:
+                        entry['concern_cancelled'] += 1
+                else:
+                    entry['disp_handled'] += 1
+                    if is_closed:
+                        entry['disp_closed'] += 1
+                    if is_cancelled:
+                        entry['disp_cancelled'] += 1
+
+            # Job-order credit: settles only at APPROVED, both halves together.
+            # A closer who never opened it is NOT counted as having "handled"
+            # it for the throughput columns -- credit is tracked separately.
+            entry['points_opened'] += t.opener_credit if u_id == t.created_by_id else 0
+            entry['points_closed'] += t.closer_credit if u_id == t.admin_approved_by_id else 0
+
+    for entry in csr_data.values():
+        entry['points_total'] = entry['points_opened'] + entry['points_closed']
 
     # Calculate close rates and color tiers
     report_rows = []
@@ -144,6 +164,7 @@ def get_csr_performance_report(date_filter='all', date_from=None, date_to=None):
         'disp_handled': 0, 'disp_closed': 0, 'disp_cancelled': 0,
         'concern_handled': 0, 'concern_closed': 0, 'concern_cancelled': 0,
         'total_handled': 0, 'total_closed': 0, 'total_cancelled': 0,
+        'points_opened': 0, 'points_closed': 0, 'points_total': 0,
     }
 
     for row in csr_data.values():
@@ -164,8 +185,12 @@ def get_csr_performance_report(date_filter='all', date_from=None, date_to=None):
 
         report_rows.append(row)
 
-    # Sort rows by total closed descending, then total handled
-    report_rows.sort(key=lambda r: (r['total_closed'], r['total_rate']), reverse=True)
+    # Rank by job-order credit first (the new scoring), then existing throughput
+    # and close rate, so the leaderboard reorders when a ticket is closed.
+    report_rows.sort(
+        key=lambda r: (r['points_total'], r['total_closed'], r['total_rate']),
+        reverse=True,
+    )
 
     # Calculate overall totals close rates
     totals['disp_rate'] = calculate_close_rate(totals['disp_closed'], totals['disp_handled'], totals['disp_cancelled'])
