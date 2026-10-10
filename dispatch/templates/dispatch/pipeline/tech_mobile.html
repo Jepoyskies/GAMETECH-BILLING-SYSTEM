@@ -295,7 +295,24 @@
 
           <div class="row g-2 mb-3">
             <div class="col-md-6">
-              <label class="form-label small fw-bold">ONT / Modem S/N or MAC</label>
+              {% comment %}
+                Two fields, not one labelled "S/N or MAC".
+
+                The old single box sent whatever was typed as ont_modem_sn, so a
+                technician who typed a MAC stored it in the SERIAL column. That
+                is the same confusion that put a serial number into
+                customer.mac_address (ERR-142), and it is invisible afterwards:
+                the column name looks plausible and the value is simply wrong.
+                Two boxes, two columns, no judgement call at 7pm on a doorstep.
+              {% endcomment %}
+              <label class="form-label small fw-bold">Home Modem MAC Address <span class="text-danger">*</span></label>
+              <input type="text" id="doneOntMac" class="form-control form-control-sm"
+                     placeholder="AA:BB:CC:DD:EE:FF" autocomplete="off" autocapitalize="characters"
+                     inputmode="text">
+              <div class="form-text">Printed on the underside of the modem. Colons, dashes or nothing.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-bold">Modem Serial Number</label>
               <input type="text" id="doneOntSn" class="form-control form-control-sm" placeholder="e.g. ZTEGC1234567">
             </div>
             <div class="col-md-6">
@@ -398,7 +415,8 @@ function submitDoneJob(event) {
   const napPort = document.getElementById('doneNapPort').value;
   const cableLength = document.getElementById('doneCableLength').value;
   const signalLevel = document.getElementById('doneSignalLevel').value;
-  const ontSn = document.getElementById('doneOntSn').value;
+  const ontSn = document.getElementById('doneOntSn').value
+  const ontMac = document.getElementById('doneOntMac').value.trim();
   const poleNumber = document.getElementById('donePoleNumber').value;
   const report = document.getElementById('doneReport').value;
   const acknowledgedBy = document.getElementById('doneAcknowledgedBy').value;
@@ -418,6 +436,7 @@ function submitDoneJob(event) {
       cable_length: cableLength,
       signal_level: signalLevel,
       ont_modem_sn: ontSn,
+      ont_modem_mac: ontMac,
       pole_number: poleNumber,
       technician_report: report,
       acknowledged_by: acknowledgedBy,
@@ -428,6 +447,23 @@ function submitDoneJob(event) {
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-check me-1"></i> Submit Completion Report';
     if (data.success) {
+      // THE DUPLICATE-MODEM WARNING
+      //
+      // The server detects a MAC already recorded on a different customer and
+      // returns it here. Before this, that warning went only to the audit log
+      // and a staff notification -- so the technician who was standing on the
+      // doorstep, the one person who can actually check the label on the
+      // modem, saw a plain green tick and no reason to doubt anything.
+      //
+      // Deliberately NOT a blocking dialog. The tech may be right: the old
+      // record can be stale, or the customer may genuinely have swapped
+      // hardware. Ask, show the detail, let them continue.
+      if (data.duplicate_mac_warning) {
+        showMacConflictDialog(data.duplicate_mac_warning, function () {
+          window.location.reload();
+        });
+        return;
+      }
       window.location.reload();
     } else {
       alert(data.error || 'Failed to complete job.');
@@ -538,6 +574,46 @@ function getCookie(name) {
     }
   }
   return cookieValue;
+}
+
+/**
+ * Shown after a submission that recorded a modem MAC already held by another
+ * customer. Non-blocking on purpose: see the call site.
+ */
+function showMacConflictDialog(message, onAcknowledge) {
+  var backdrop = document.createElement('div');
+  backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.72);'
+    + 'z-index:1080;display:flex;align-items:center;justify-content:center;padding:1rem;';
+  var box = document.createElement('div');
+  box.style.cssText = 'background:#fff;border-radius:14px;max-width:460px;width:100%;'
+    + 'padding:1.25rem;box-shadow:0 20px 50px rgba(0,0,0,.35);';
+  box.innerHTML =
+      '<div style="display:flex;align-items:center;gap:.55rem;margin-bottom:.7rem;">'
+    + '<span style="font-size:1.4rem;">&#9888;</span>'
+    + '<strong style="font-size:1.02rem;color:#b45309;">Possible duplicate modem</strong></div>'
+    + '<p style="font-size:.9rem;color:#334155;line-height:1.5;margin:0 0 .9rem;">'
+    + 'This MAC is already recorded on another customer.</p>'
+    + '<p style="font-size:.9rem;font-weight:600;color:#0f172a;background:#fef3c7;'
+    + 'border:1px solid #fcd34d;border-radius:9px;padding:.6rem .7rem;margin:0 0 .9rem;">'
+    + String(message).replace(/[<>&]/g, function (c) {
+        return { '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c];
+      })
+    + '</p>'
+    + '<p style="font-size:.82rem;color:#64748b;line-height:1.5;margin:0 0 1rem;">'
+    + 'Read the label on the modem in front of you. If it matches what you '
+    + 'typed, the earlier record is probably wrong -- dispatch has been '
+    + 'notified and will correct it. If it does not match, you typed the '
+    + 'wrong modem; reopen the job and submit again.</p>'
+    + '<div style="display:flex;gap:.5rem;justify-content:flex-end;">'
+    + '<button type="button" id="macConflictOk" '
+    + 'style="background:#1136c2;color:#fff;border:0;border-radius:9px;'
+    + 'padding:.5rem 1rem;font-weight:600;">Got it</button></div>';
+  backdrop.appendChild(box);
+  document.body.appendChild(backdrop);
+  document.getElementById('macConflictOk').addEventListener('click', function () {
+    backdrop.remove();
+    onAcknowledge();
+  });
 }
 </script>
 {% endblock %}

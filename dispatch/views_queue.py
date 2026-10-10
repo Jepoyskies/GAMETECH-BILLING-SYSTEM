@@ -8,7 +8,10 @@ from django.utils import timezone
 from django.db.models import Q, Count
 from django.contrib.auth.models import User
 
-from dispatch.models import JobTicket, JobTicketHistory, Team, Technician, AuditLog
+from dispatch.models import (
+    JobTicket, JobTicketHistory, Team, Technician, AuditLog,
+    TicketTechnicianAssignment,
+)
 from dispatch.utils import log_audit
 from billing.models import Customer, Notification
 from billing.decorators import role_required
@@ -174,6 +177,31 @@ def api_assign_ticket(request, ticket_id):
             }, status=400)
 
         ticket.technicians.set(assigned_techs)
+
+        # Mirror into the ordered handover history.
+        #
+        # Without this the assignment table starts EMPTY and only fills in
+        # when somebody is later replaced: the replacement endpoint falls back
+        # from tech_assignments to the flat M2M to find the outgoing tech, so
+        # the flow still worked, but the ticket carried no record of who was
+        # originally assigned until a handover occurred. An assigned tech who
+        # simply finishes leaves no row to mark finished against.
+        #
+        # Two sources of truth for "who is on this job" is how a handover log
+        # quietly stops being trustworthy, so assignment writes both and the
+        # M2M stays the convenience mirror the templates already read.
+        for tech in assigned_techs:
+            TicketTechnicianAssignment.objects.get_or_create(
+                job_ticket=ticket,
+                technician=tech,
+                sequence=1,
+                defaults={'is_current': True, 'assigned_at': timezone.now()},
+            )
+        ticket.tech_assignments.filter(is_current=True).exclude(
+            technician__in=assigned_techs
+        ).update(is_current=False)
+        for tech in assigned_techs:
+            ticket.tech_assignments.filter(technician=tech).update(is_current=True)
 
         if scheduled_date:
             ticket.scheduled_date = scheduled_date

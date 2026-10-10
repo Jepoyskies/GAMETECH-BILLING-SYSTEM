@@ -47,6 +47,35 @@ def _parse_body(request):
     return request.POST
 
 
+def _text(data, key):
+    """Read a field as a stripped string, whatever type it arrived as.
+
+    _get_ids() already guards the QueryDict trap where get() returns only the
+    last value, but _parse_body() hands back a PLAIN dict for a JSON post, so
+    values keep their native JSON types. A JSON body of {"replacement_reason_id":
+    7} therefore yields the int 7, and the obvious `(value or '').strip()`
+    raises AttributeError on it -- an HTTP 500 in the middle of replacing a
+    technician on a live job.
+
+    The dispatch screens happen to post form data, where every value is
+    already a string, which is exactly why the tests passed and the API did
+    not. Anything speaking JSON to this endpoint -- the technician mobile
+    view, a script, a future integration -- gets the crash instead.
+
+    Coerce rather than validate: the field is validated properly a few lines
+    later, and a non-scalar here is a caller error worth surviving rather
+    than crashing on.
+    """
+    value = data.get(key)
+    if value is None:
+        return ''
+    if isinstance(value, (dict, list, tuple, set)):
+        return ''
+    if isinstance(value, bool):
+        return ''
+    return str(value).strip()
+
+
 def _get_ids(data, key):
     """
     Pull a list of ids out of either a QueryDict (form post) or a plain dict
@@ -100,8 +129,8 @@ def api_replace_technician(request, ticket_id):
 
     outgoing_ids = _get_ids(data, 'technician_ids')
     incoming_ids = _get_ids(data, 'replacement_technician_ids')
-    reason_id = (data.get('replacement_reason_id') or '').strip()
-    note = (data.get('replacement_note') or '').strip()
+    reason_id = _text(data, 'replacement_reason_id')
+    note = _text(data, 'replacement_note')
 
     if not incoming_ids:
         return JsonResponse({'success': False, 'error': 'Select at least one replacement technician.'}, status=400)
