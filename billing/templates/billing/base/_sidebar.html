@@ -32,6 +32,12 @@
                 </a>
                 <ul class="collapse list-unstyled {% if 'customer' in request.resolver_match.url_name or 'subscription' in request.resolver_match.url_name or 'plan' in request.resolver_match.url_name or 'payment' in request.resolver_match.url_name %}show{% endif %}" id="billingSubmenu" data-bs-parent="#sidebarNav">
                     {% if request.user.role_perms.subtabs.billing_customers %}<li><a href="{% url 'customer_list' %}" class="menu-link sub-menu-link {% if 'customer' in request.resolver_match.url_name %}active{% endif %}"><span>Customers</span></a></li>{% endif %}
+                      <li>
+                          <a href="{% url 'prospects_inbox' %}" class="menu-link sub-menu-link {% if 'prospect' in request.resolver_match.url_name %}active{% endif %}">
+                              <span>Prospects</span>
+                              {% if prospect_count %}<span class="badge bg-warning text-dark ms-1">{{ prospect_count }}</span>{% endif %}
+                          </a>
+                      </li>
                     {% if request.user.role_perms.subtabs.billing_subscriptions %}<li><a href="{% url 'subscription_plans' %}" class="menu-link sub-menu-link {% if 'subscription' in request.resolver_match.url_name %}active{% endif %}"><span>Subscriptions</span></a></li>{% endif %}
                     {% if request.user.role_perms.subtabs.billing_plans %}<li><a href="{% url 'plan_list' %}" class="menu-link sub-menu-link {% if 'plan' in request.resolver_match.url_name and 'subscription' not in request.resolver_match.url_name %}active{% endif %}"><span>Internet Plans</span></a></li>{% endif %}
                     {% if request.user.role_perms.subtabs.billing_payments %}<li><a href="{% url 'add_on_payments' %}" class="menu-link sub-menu-link {% if request.resolver_match.url_name == 'add_on_payments' %}active{% endif %}"><span>Payments</span></a></li>{% endif %}

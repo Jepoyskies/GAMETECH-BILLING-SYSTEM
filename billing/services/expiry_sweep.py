@@ -74,17 +74,47 @@ def sweep_expiry():
     remaining = total - renewed
 
     if remaining >= ALERT_THRESHOLD:
-        Notification.objects.create(
-            title=f"{remaining} subscriber(s) past due",
-            message=(
-                f"{online} of them are still online. Open Customers and work the "
-                f"\"Connected, Unpaid\" queue -- suspend deliberately, do not batch it."
-                + (f" {no_expiry} installed customer(s) still have no expiry date."
-                   if no_expiry else "")
-            ),
-            notification_type="billing",
-            link="/customers/",
+        # KEYED, NOT APPENDED.
+        #
+        # This is a repeating STATUS, not a series of events. Creating a new
+        # row every night produced one notification per night forever, all
+        # saying the same thing with a slightly different number, until the
+        # signal was buried -- which is the opposite of what an alert is for.
+        #
+        # So there is at most one "past due" notification at any time. It is
+        # refreshed in place and marked unread again if the count moved, so a
+        # genuine change still surfaces, while a quiet week does not add
+        # noise. When the backlog clears the notification is removed, because
+        # a resolved alert that lingers is itself misleading.
+        title = f"{remaining} subscriber(s) past due"
+        message = (
+            f"{online} of them are still online. Open Customers and work the "
+            f"\"Connected, Unpaid\" queue -- suspend deliberately, do not batch it."
+            + (f" {no_expiry} installed customer(s) still have no expiry date."
+               if no_expiry else "")
         )
+        existing = Notification.objects.filter(
+            notification_type="billing", title__startswith="subscriber(s) past due"
+        ).first()
+
+        if existing is None:
+            Notification.objects.create(
+                title=title, message=message,
+                notification_type="billing", link="/customers/",
+            )
+        else:
+            if existing.title != title or existing.message != message:
+                # Something actually moved. Re-alert, don't stay silent.
+                existing.is_read = False
+            existing.title = title
+            existing.message = message
+            existing.link = "/customers/"
+            existing.save(update_fields=["title", "message", "link", "is_read"])
+    else:
+        # Backlog cleared. A lingering alert would keep claiming work exists.
+        Notification.objects.filter(
+            notification_type="billing", title__startswith="subscriber(s) past due"
+        ).delete()
         SystemLog.objects.create(
             table_name="Customer", record_id="0", action="EXPIRY_SWEEP",
             changed_by="System (Expiry Sweep)", target_name="expiry_sweep",
