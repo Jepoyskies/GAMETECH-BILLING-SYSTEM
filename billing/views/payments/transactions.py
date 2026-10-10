@@ -46,113 +46,7 @@ from billing.views import calculate_new_expiration_date
 
 
 @login_required
-def create_payment_view(request, customer_id):
-    from django.shortcuts import get_object_or_404
 
-    customer = get_object_or_404(Customer, id=customer_id)
-
-    if request.method == "POST":
-        start_date = request.POST.get("start_date")
-        end_date = request.POST.get("end_date")
-        amount = request.POST.get("amount")
-        payment_method = request.POST.get("payment_method")
-        reference_no = request.POST.get("reference_no")
-        payment_date_received = request.POST.get("payment_date_received")
-        reason = request.POST.get("reason")
-
-        # Calculate days paid
-        try:
-            # Simple handling if provided in YYYY-MM-DDTHH:MM:SS format
-            sd = (
-                datetime.fromisoformat(start_date.replace("Z", ""))
-                if start_date
-                else timezone.now()
-            )
-            ed = (
-                datetime.fromisoformat(end_date.replace("Z", ""))
-                if end_date
-                else timezone.now()
-            )
-
-            # ensure aware datetime
-            if timezone.is_naive(sd):
-                sd = timezone.make_aware(sd)
-            if timezone.is_naive(ed):
-                ed = timezone.make_aware(ed)
-
-            days_paid = round((ed - sd).total_seconds() / (24 * 3600), 4)
-        except Exception as e:
-            messages.error(request, f"Invalid date format: {e}")
-            return render(request, "billing/pay.html", {"customer": customer})
-
-        try:
-            pdr = datetime.fromisoformat(payment_date_received.replace("Z", ""))
-            if timezone.is_naive(pdr):
-                pdr = timezone.make_aware(pdr)
-        except Exception:
-            pdr = timezone.now()
-
-        from django.db import transaction
-        with transaction.atomic():
-            Payment.objects.create(
-                customer=customer,
-                username=customer.pppoe_username or customer.full_name,
-                plan_name=customer.plan.name if customer.plan else "",
-                mikrotik_device_name=(
-                    customer.mikrotik_device.device_name if customer.mikrotik_device else ""
-                ),
-                amount=amount,
-                days_paid=days_paid,
-                payment_method=payment_method,
-                reference_no=reference_no,
-                reason=reason,
-                expires_at=ed,
-                payment_date_received=pdr,
-                paid_at=timezone.now(),
-                adjusted_by=(
-                    request.user.username if request.user.is_authenticated else "system"
-                ),
-            )
-
-            customer.expires_at = ed
-
-            # If the customer was previously inactive or suspended, auto-reactivate them
-            if customer.status in ["expired", "suspended", "inactive", "past_due"]:
-                customer.status = "active"
-
-            customer.save()
-
-        # "Processed successfully" was doing two jobs at once: it told staff the
-        # money was recorded AND, by implication, that the router now agrees.
-        # For a customer who is not CONNECTED it is only the first. Saying
-        # "success" unqualified is how staff come to believe a line was
-        # activated when nothing on the router changed.
-        #
-        # The money is real the moment it is handed over, so it is always
-        # recorded. What varies is whether the router was told -- and if it was
-        # not, the message says so and names the next step, because that next
-        # step (Connect in Sync Manager) is what unlocks activation.
-        who = customer.pppoe_username or customer.full_name
-        if not getattr(customer, "pair_approved", False):
-            messages.warning(
-                request,
-                "Payment of {} recorded for {} — but this customer is NOT "
-                "CONNECTED to the router, so the router was NOT updated. "
-                "Connect them in Sync Manager to activate the line."
-                .format(amount, who),
-            )
-        else:
-            messages.success(
-                request,
-                f"Payment for {who} processed successfully.",
-            )
-        return redirect("payment_logs")
-
-    return render(request, "billing/pay.html", {"customer": customer})
-
-
-@login_required
-@permission_required("billing.add_payment", raise_exception=True)
 def pay_customer_view(request, username):
     customer = get_object_or_404(Customer, pppoe_username=username)
 
@@ -306,12 +200,10 @@ def pay_customer_view(request, username):
                         locked_customer.plan.name if locked_customer.plan else None
                     ),
                     amount=amount,
-                    # days_paid was missing here while create_payment_view
-                    # recorded it, so the same payment made through the
-                    # customer's Pay button left the Statement of Account
-                    # showing a dash. Two code paths for one financial fact,
-                    # with different evidence recorded, is exactly how a
-                    # ledger stops reconciling.
+                    # days_paid was missing on this path, so every payment
+                    # made through the customer's Pay button left the
+                    # Statement of Account showing a dash. It is recorded
+                    # here now; see ERR-144.
                     days_paid=round(
                         (new_expiry - current_exp).total_seconds() / (24 * 3600), 4
                     ) if (current_exp and new_expiry) else None,
