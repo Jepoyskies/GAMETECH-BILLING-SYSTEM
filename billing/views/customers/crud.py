@@ -427,7 +427,7 @@ def add_customer(request):
                 else:
                     messages.info(
                         request,
-                        f"Don't forget to sync {customer.full_name} to the MikroTik router. Go to Network Ops â†’ Sync Manager â†’ Push to enable internet access.",
+                        f"Don't forget to sync {customer.full_name} to the MikroTik router. Go to Network Ops → Sync Manager → Push to enable internet access.",
                     )
 
             next_url = request.POST.get("next") or request.GET.get("next")
