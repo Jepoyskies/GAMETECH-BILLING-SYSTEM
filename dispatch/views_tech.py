@@ -6,6 +6,8 @@ from django.http import JsonResponse
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Q
+from django.contrib.auth.views import PasswordChangeView
+from django.urls import reverse_lazy
 
 from dispatch.models import JobTicket, JobTicketHistory, Technician, CallAttemptLog, AuditLog
 from dispatch.utils import log_audit
@@ -124,6 +126,35 @@ def technician_dashboard(request):
         ).order_by('-finished_at')[:5],
     }
     return render(request, "dispatch/pipeline/tech_dashboard.html", context)
+
+
+@login_required
+def technician_profile(request):
+    """
+    Field Portal profile page.
+
+    The shell tab bar used to point at billing `profile`, which extends the
+    desktop `billing/base.html`. On a phone that dropped the technician out of
+    the mobile Field Portal and into the sidebar layout. This keeps them inside
+    the shell they logged into. See DECISION_LOG 2026-10-01 (persona shells).
+    """
+    return render(
+        request,
+        "dispatch/pipeline/tech_profile.html",
+        {"technician": getattr(request.user, "technician", None)},
+    )
+
+
+class TechnicianPasswordChangeView(PasswordChangeView):
+    """
+    Billing's `change_password` rendered in `billing/base.html`. Subclassing
+    Django's stock PasswordChangeView keeps every validation rule (old-password
+    check, validators, confirmation match) and only swaps the shell, so the
+    success redirect lands back in the Field Portal instead of the desktop one.
+    """
+
+    template_name = "dispatch/pipeline/tech_change_password.html"
+    success_url = reverse_lazy("technician_profile")
 
 
 @login_required

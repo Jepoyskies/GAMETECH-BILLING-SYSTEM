@@ -1,0 +1,72 @@
+{% extends "dispatch/pipeline/portal_base_tech.html" %}
+
+{% block title %}My Profile | Gametech Unli Fiber{% endblock %}
+{% block tab_profile %}active{% endblock %}
+
+{% block content %}
+
+<!-- Identity Card -->
+<div class="card border-0 shadow-sm p-3 mb-3" style="background: var(--surface-card); border-radius: 16px; border: 1px solid var(--border-subtle) !important; border-left: 5px solid var(--gt-gold, #F9B233) !important;">
+    <div class="d-flex align-items-center gap-3">
+        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 52px; height: 52px; background: rgba(249, 178, 51, 0.15); color: var(--gt-gold, #F9B233); border: 1px solid rgba(249, 178, 51, 0.3);">
+            <i class="fas fa-screwdriver-wrench fs-4"></i>
+        </div>
+        <div>
+            <h5 class="fw-bold mb-0" style="color: var(--text-primary); font-family: 'Montserrat', sans-serif;">{{ technician.name|default:request.user.get_username }}</h5>
+            <small class="text-muted">
+                Field Technician &middot; {{ technician.team.name|default:"Unassigned Team" }}
+                {% if technician.is_available %}
+                    &middot; <span style="color: #22c55e; font-weight: 600;">On Duty</span>
+                {% else %}
+                    &middot; <span>Off Duty</span>
+                {% endif %}
+            </small>
+        </div>
+    </div>
+</div>
+
+<!-- Operator Account -->
+<div class="card border-0 shadow-sm p-3 mb-3" style="background: var(--surface-card); border-radius: 16px; border: 1px solid var(--border-subtle) !important;">
+    <h6 class="fw-bold mb-3" style="color: var(--text-primary); font-family: 'Montserrat', sans-serif;">
+        <i class="fas fa-id-card me-2" style="color: var(--gt-gold, #F9B233);"></i>Operator Account
+    </h6>
+    <div class="row g-2">
+        <div class="col-12 col-sm-6">
+            <div class="p-2 rounded-2 h-100" style="background: var(--surface-subtle); border: 1px solid var(--border-subtle);">
+                <small class="text-muted d-block text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.5px; font-weight: 600;">Username</small>
+                <strong style="color: var(--text-primary);">{{ request.user.get_username }}</strong>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6">
+            <div class="p-2 rounded-2 h-100" style="background: var(--surface-subtle); border: 1px solid var(--border-subtle);">
+                <small class="text-muted d-block text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.5px; font-weight: 600;">Email</small>
+                <strong style="color: var(--text-primary); word-break: break-word;">{{ request.user.email|default:"Not set" }}</strong>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6">
+            <div class="p-2 rounded-2 h-100" style="background: var(--surface-subtle); border: 1px solid var(--border-subtle);">
+                <small class="text-muted d-block text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.5px; font-weight: 600;">Access Role</small>
+                <strong style="color: var(--text-primary);">{{ request.user.role|default:"Technician" }}</strong>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6">
+            <div class="p-2 rounded-2 h-100" style="background: var(--surface-subtle); border: 1px solid var(--border-subtle);">
+                <small class="text-muted d-block text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.5px; font-weight: 600;">Last Login</small>
+                <strong style="color: var(--text-primary);">{{ request.user.last_login|date:"M d, Y H:i"|default:"First session" }}</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Security -->
+<div class="card border-0 shadow-sm p-3" style="background: var(--surface-card); border-radius: 16px; border: 1px solid var(--border-subtle) !important;">
+    <h6 class="fw-bold mb-2" style="color: var(--text-primary); font-family: 'Montserrat', sans-serif;">
+        <i class="fas fa-lock me-2" style="color: var(--gt-gold, #F9B233);"></i>Security
+    </h6>
+    <p class="text-muted mb-3" style="font-size: 0.82rem;">Your operator login is shared across the office system. Use a password only you know.</p>
+    <a href="{% url 'technician_change_password' %}" class="gt-btn-primary" style="width:auto;">
+        <i class="fas fa-key me-2"></i>Change Password
+    </a>
+</div>
+
+{% endblock %}
