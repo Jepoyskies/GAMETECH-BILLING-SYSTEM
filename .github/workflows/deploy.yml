@@ -16,10 +16,47 @@ jobs:
           host: 143.198.207.144
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # WHY THIS CHANGED (ERR-141)
+          #
+          # This used to be:
+          #
+          #     docker-compose build
+          #     docker-compose down      <-- stopped EVERY container
+          #     docker-compose up -d
+          #
+          # and it fired on every push to main. The `down` guaranteed a full
+          # outage, so every commit cost the company a minute of downtime and
+          # every long test run that happened to overlap a push died with
+          # "could not translate host name db". It looked like an unexplained
+          # timer tearing production down every ~40 minutes; it was simply
+          # every push, and we pushed a lot.
+          #
+          # Three fixes, all of them load-bearing:
+          #
+          # 1. NO `down`. `up -d --build` recreates only the services whose
+          #    image or config actually changed. Web goes down for the few
+          #    seconds it takes to restart instead of for the whole teardown.
+          #
+          # 2. Compose V2 (`docker compose`, space). Legacy `docker-compose`
+          #    v1.29 crashes on modern Docker with KeyError:
+          #    'ContainerConfig' -- see AGENTS.md Rule 32.
+          #
+          # 3. Through scripts/safe_compose.sh, which takes a flock around the
+          #    whole operation. Two pushes racing (two AI sessions, or a push
+          #    while a manual deploy runs) used to leave containers stuck in
+          #    `Created` state, which `restart: unless-stopped` does not
+          #    rescue -- the stack just stayed dark. ERR-069 / ERR-075.
+          #
+          # `git reset --hard origin/main` is kept deliberately: it makes the
+          # deploy deterministic and cannot half-apply a merge. It discards
+          # modifications to TRACKED files only -- untracked files on the
+          # droplet are untouched, so the debugging clutter in the project
+          # root survives it.
           script: |
             cd /root/GAMETECH-BILLING-SYSTEM
             git fetch origin main
             git reset --hard origin/main
-            docker-compose build
-            docker-compose down
-            docker-compose up -d
+            bash scripts/safe_compose.sh up -d --build
+            echo "--- deploy health ---"
+            docker ps --format '{{.Names}}  {{.Status}}'
+            curl -s -o /dev/null -w "public HTTP %{http_code}\n" http://127.0.0.1:8000/
