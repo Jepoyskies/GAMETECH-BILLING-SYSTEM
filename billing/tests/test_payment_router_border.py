@@ -35,6 +35,26 @@ from django.urls import reverse
 from django.utils import timezone
 
 from billing.models import Customer, Payment, SubscriptionPlan, SystemLog
+from network_manager.models import MikrotikDevice
+
+
+def _device():
+    """A router for the customer to sit on.
+
+    Without one the view skips the whole reactivation block, so every test
+    below passes VACUOUSLY -- the router is never called, for the right
+    reason or the wrong one. The first draft of this file had no device and
+    proved nothing; that is why it now exists and why the fixtures below all
+    attach it.
+    """
+    d, _ = MikrotikDevice.objects.get_or_create(
+        device_name="TEST-BORDER-ROUTER",
+        defaults={"ip_address": "192.0.2.1", "api_username": "x",
+                  "api_password": "x", "api_port": 8728},
+    )
+    d.ip_address = "192.0.2.1"   # TEST-NET-1: reserved, never routable
+    d.save()
+    return d
 
 
 class _TripwireAPI:
@@ -88,6 +108,7 @@ class PaymentCannotWriteToAnUnconnectedRouter(TestCase):
         self.client.login(username="payborder_admin",
                           password="payborder-admin-12345")
         self.customer = Customer.objects.create(
+            mikrotik_device=_device(),
             full_name="Payment Border",
             pppoe_username="payborder_%d" % Customer.objects.count(),
             pppoe_password="secret123",
@@ -117,6 +138,9 @@ class PaymentCannotWriteToAnUnconnectedRouter(TestCase):
     def test_paying_an_unconnected_customer_makes_no_router_write(self):
         """0 writes -- not 3. This is the assertion that matters."""
         self.customer.refresh_from_db()
+        self.assertIsNotNone(self.customer.mikrotik_device,
+                             "precondition: this customer must be on a router, "
+                             "or the test passes for the wrong reason")
         self.assertFalse(
             getattr(self.customer, "pair_approved", False),
             "precondition: a fresh account must NOT be connected",
@@ -165,6 +189,7 @@ class ConnectedCustomerPaymentStillReachesTheRouter(TestCase):
         self.admin.save()
         self.client.login(username="payok_admin", password="payok-admin-12345")
         self.customer = Customer.objects.create(
+            mikrotik_device=_device(),
             full_name="Payment OK",
             pppoe_username="payok_%d" % Customer.objects.count(),
             pppoe_password="secret123",
@@ -182,6 +207,8 @@ class ConnectedCustomerPaymentStillReachesTheRouter(TestCase):
         self.customer.refresh_from_db()
 
     def test_a_connected_customers_payment_does_reach_the_router(self):
+        self.assertIsNotNone(self.customer.mikrotik_device,
+                             "precondition: this customer must be on a router")
         self.assertTrue(getattr(self.customer, "pair_approved", False),
                         "precondition: this account IS connected")
         with patch("network_manager.services.MikrotikAPI", _TripwireAPI):
