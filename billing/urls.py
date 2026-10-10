@@ -31,6 +31,13 @@ urlpatterns = [
     path(
         "customers/view/<int:customer_id>/", views.view_customer, name="view_customer"
     ),
+    # File a repair straight from the subscriber record. Staff used to have
+    # to leave the customer, open Dispatch and re-type the same details.
+    path(
+        "customers/<int:customer_id>/file-repair/",
+        views.file_repair_request,
+        name="file_repair_request",
+    ),
     path(
         "customers/<int:customer_id>/reset-portal-password/",
         views.reset_customer_portal_password,

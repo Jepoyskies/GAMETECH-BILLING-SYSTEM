@@ -675,3 +675,64 @@ def mark_customer_installed(request, customer_id):
     messages.success(request, success_msg)
     return redirect("view_customer", customer_id=customer.id)
 
+@require_POST
+@role_required(["Admin", "Editor", "CSR"])
+@login_required
+def file_repair_request(request, customer_id):
+    """File a REPAIR ticket for an existing subscriber, from their record.
+
+    THE GAP THIS CLOSES
+    -------------------
+    The customer detail page could suspend, kick, edit a balance, edit an
+    expiry and mark someone installed, but had no way to send them to
+    dispatch. Staff had to leave the subscriber, go to Dispatch and re-enter
+    the same details by hand -- so repairs were raised inconsistently or not
+    at all, which is exactly the step the business runs on.
+
+    REPAIR tickets are already fully wired downstream (analytics, reports, QA,
+    technician mobile), so this only had to create the ticket.
+
+    Deliberately does NOT touch a router. Creating a ticket is our own
+    business record; dispatch assignment and any later action are separate,
+    human steps behind their own gates.
+    """
+    customer = get_object_or_404(Customer, id=customer_id)
+
+    issue = (request.POST.get("issue") or "").strip()
+    priority = request.POST.get("priority") or "medium"
+    if priority not in ("low", "medium", "high", "urgent"):
+        priority = "medium"
+
+    if not issue:
+        messages.error(
+            request,
+            "Describe the problem first -- a repair ticket with no issue text "
+            "is not something a technician can act on.",
+        )
+        return redirect("view_customer", customer_id=customer.id)
+
+    from dispatch.models import JobTicket
+    from dispatch.utils import generate_ticket_number
+
+    with transaction.atomic():
+        ticket = JobTicket.objects.create(
+            ticket_number=generate_ticket_number(),
+            ticket_type="REPAIR",
+            status="PENDING",
+            priority=priority,
+            customer=customer,
+            mikrotik_device=customer.mikrotik_device,
+            client_name=customer.full_name,
+            contact_number=customer.phone,
+            address=getattr(customer, "address", "") or "",
+            barangay=customer.barangay,
+            source_tab="CLIENT_CONCERNS",
+            is_test_data=getattr(customer, "is_test_data", False),
+        )
+
+    messages.success(
+        request,
+        "Repair request {} filed and sent to dispatch. Assign a technician "
+        " from the Dispatch queue.".format(ticket.ticket_number),
+    )
+    return redirect("view_customer", customer_id=customer.id)

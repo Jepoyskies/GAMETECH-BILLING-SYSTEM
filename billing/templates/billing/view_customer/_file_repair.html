@@ -1,0 +1,74 @@
+{% comment %}
+File a REPAIR from the subscriber's own record.
+
+WHY THIS EXISTS
+---------------
+The customer page could suspend, kick, edit a balance, edit an expiry, mark
+someone installed and reset a portal password -- but there was no way to send
+a customer to dispatch. Staff had to leave the record, open Dispatch and
+re-type the same name, number and address by hand, so repairs were raised
+inconsistently or not at all. That is the step the whole business runs on.
+
+It files a REPAIR ticket, which is already fully wired downstream: the
+dispatch queue, analytics, reports, technician mobile and QA all understand
+ticket_type='REPAIR'. Assigning a technician stays a separate, deliberate
+action in the dispatch queue.
+
+Filing a ticket is our own business record and touches no router.
+{% endcomment %}
+
+<div class="card mb-3" id="fileRepairCard">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span class="card-title mb-0"><i class="fas fa-screwdriver-wrench me-2"></i>Report a Problem</span>
+    <button class="btn btn-sm btn-outline-warning" type="button"
+            data-bs-toggle="collapse" data-bs-target="#fileRepairBody"
+            aria-expanded="false" aria-controls="fileRepairBody">
+      <i class="fas fa-plus me-1"></i> File Repair Request
+    </button>
+  </div>
+
+  <div class="collapse" id="fileRepairBody">
+    <div class="card-body">
+      <form method="POST" action="{% url 'file_repair_request' customer.id %}">
+        {% csrf_token %}
+
+        <div class="mb-3">
+          <label for="repairIssue" class="form-label fw-semibold">
+            What is the problem? <span class="text-danger">*</span>
+          </label>
+          <textarea class="form-control" id="repairIssue" name="issue" rows="3" required
+                    placeholder="e.g. No internet since 6am, light at the CPE is red"></textarea>
+          <div class="form-text">
+            Write it the way you would say it to the technician. A ticket with no
+            description cannot be worked.
+          </div>
+        </div>
+
+        <div class="mb-3" style="max-width:260px;">
+          <label for="repairPriority" class="form-label fw-semibold">Priority</label>
+          <select class="form-select" id="repairPriority" name="priority">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+          </select>
+        </div>
+
+        <div class="alert alert-info py-2 px-3 mb-3" style="font-size:.82rem;">
+          <i class="fas fa-info-circle me-1"></i>
+          This creates a repair ticket in <strong>Dispatch</strong>. It does not
+          change anything on the router, and no technician is sent until someone
+          assigns one from the dispatch queue.
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-warning">
+            <i class="fas fa-paper-plane me-1"></i> Send to Dispatch
+          </button>
+          <button type="button" class="btn btn-outline-secondary"
+                  data-bs-toggle="collapse" data-bs-target="#fileRepairBody">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
