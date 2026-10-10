@@ -3745,3 +3745,75 @@ explicitly. Verify before pushing:
 Committing the package alongside the deletion makes Git record it as a rename
 (`R053 dispatch/models.py -> dispatch/models/tickets.py`), so the two are no
 longer separable in history.
+
+### ERR-144: The Payment Screen Was The One Router Write That Bypassed The Pairing Border
+
+**Symptom.** None. That is the problem. Nothing was broken, nothing looked
+wrong, and 330 tests passed. The gap was only visible if you already knew
+to look.
+
+**What it was.** `pay_customer_view` -- the view behind a customer's own
+"Pay" button, `/customer/<username>/pay/` -- calls, directly:
+
+```
+api.enable_pppoe_user(...)
+api.set_user_pppoe_profile(...)
+api.kick_active_user(...)
+```
+
+The only thing in front of it was `ROUTER_MODE`. No pairing check.
+
+**Why it survived so long.** Every OTHER router write in this project goes
+through the Sync Manager pairing gate, so the system reads as though they
+all do. This one was the single exception, and an exception is invisible:
+you are looking for a missing guard, and what you find everywhere else is
+a guard. The one place without one looks like every other place, because
+you are not looking there.
+
+The customer's Pay button is also the most ordinary screen in the product.
+Nobody classifies it as "a router write".
+
+**What it would have done.** The moment the owner deliberately armed the
+router locks, paying a customer who had never been connected would have
+enabled their PPPoE secret, changed their profile, and kicked them off a
+live session -- reachable without ever opening Sync Manager, and with no
+UI anywhere suggesting a router was involved.
+
+**The fix, and what it deliberately does NOT do.** The payment is never
+blocked. Money handed over at the counter is real and is always recorded;
+refusing to bank it would mean taking cash with no receipt, which is
+strictly worse than the problem being solved. Only the router write waits,
+and the operator is told plainly that the router was NOT updated and that
+Connect in Sync Manager is what unlocks it.
+
+**How it was found.** Not by reading the view. By driving it with a stub
+that claims `is_read_only = False` -- i.e. simulating ARMED locks, the
+condition under which the old code wrote -- and recording every call.
+`['enable', 'set_profile', 'kick']` is what came back for an unconnected
+customer.
+
+**The lesson worth more than the fix.**
+
+A test is only worth what it can fail at. The first version of the
+regression test attached no `MikrotikDevice` to its fixture, so the view
+skipped the entire reactivation block -- and the test PASSED with the
+guard deliberately removed. It was green for the wrong reason, and would
+have stayed green forever.
+
+So the guard test was run twice on purpose:
+
+```
+A. with the fix              -> Ran 5 tests ... OK
+B. with the gate disabled    -> FAILED: ['enable','set_profile','kick'] != []
+```
+
+If B does not fail, A is decoration. Any safety test written from now on
+should be shown failing before it is shown passing -- especially any test
+whose stub is doing the work.
+
+**Related.** The same class of gap appeared twice more the same day: the
+technician replacement endpoint crashed on a JSON integer instead of a
+string (works from the form, 500 from the API), and the technician's
+completion form had no MAC field at all, so a feature that worked in tests
+was unreachable from the field. In all three cases the unit tests passed
+and only driving the real thing found them.
