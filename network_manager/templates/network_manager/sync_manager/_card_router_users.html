@@ -19,13 +19,18 @@
 
     <form method="POST" action="{% url 'sync_bulk_action' device.id %}">
         {% csrf_token %}
+        {% comment %}Empty until a human confirms. Bulk delete checks this
+        server-side; leaving it empty is what keeps the guard closed by
+        default, so the form is fail-safe rather than fail-open.{% endcomment %}
+        <input type="hidden" name="confirm_delete_subscribers" value="">
+
         <div class="sm-toolbar">
             <div class="d-flex align-items-center gap-2">
                 <span class="sm-muted small fw-bold">With Selected:</span>
                 <button type="submit" name="bulk_action" value="bulk_import" class="sm-btn sm-btn--sm sm-btn--ok">
                     <i class="fas fa-file-import"></i> Bulk Import
                 </button>
-                <button type="submit" name="bulk_action" value="bulk_delete" class="sm-btn sm-btn--sm sm-btn--danger" onclick="return confirm('Delete selected secrets from {{ device.device_name }}? This will terminate their connection.');">
+                <button type="submit" name="bulk_action" value="bulk_delete" class="sm-btn sm-btn--sm sm-btn--danger" onclick="return gtArmDeleteBulk(this, '{{ device.device_name|escapejs }}');">
                     <i class="fas fa-trash-alt"></i> Delete from Router
                 </button>
             </div>
@@ -67,7 +72,7 @@
                                 <input type="hidden" name="bulk_action" value="bulk_import">
                                 <i class="fas fa-file-import"></i> Import
                             </button>
-                            <button type="submit" formaction="{% url 'sync_delete_user' device.id %}" formmethod="POST" name="pppoe_username" value="{{ user.name }}" class="sm-btn sm-btn--sm sm-btn--danger-outline ms-1" onclick="return confirm('Delete secret {{ user.name|escapejs }} from {{ device.device_name }}?');">
+                            <button type="submit" formaction="{% url 'sync_delete_user' device.id %}" formmethod="POST" name="pppoe_username" value="{{ user.name }}" class="sm-btn sm-btn--sm sm-btn--danger-outline ms-1" onclick="return gtArmDelete(this, '{{ user.name|escapejs }}', '{{ device.device_name|escapejs }}');">
                                 <i class="fas fa-trash-alt"></i> Delete
                             </button>
                         </td>

@@ -231,4 +231,63 @@
         if (pane) { pane.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     });
     </script>
+    <!-- ============================================================
+         DELETE ARMING
+         A hidden confirmation field, empty by default, travels with the
+         export-gap forms. Server-side, an empty value means every delete
+         is refused -- the guard is closed until a human opens it.
+
+         That is the whole point. bulk_delete already asked for a
+         confirmation field that no template ever sent, so its escape hatch
+         was unreachable and its refusal message told staff to tick a box
+         that did not exist. These helpers close that loop: they are the
+         only thing that can fill the field, and they only do so after a
+         confirm() that names the account and the router.
+
+         "We have no record of it" is NOT the same as "nobody is using it".
+         After the cutover, an account absent from our database may still be
+         a paying subscriber added at the router or by the office machine.
+         So the wording says what actually happens to a person, not what
+         happened to a database row.
+         ============================================================ -->
+    <script>
+    function gtArmDelete(btn, username, deviceName) {
+        var msg = 'Delete the PPPoE secret "' + username + '" from ' + deviceName + '?\n\n'
+                + 'This immediately cuts that account\'s internet. If the account is\n'
+                + 'not in our system it may still belong to a paying customer.\n\n'
+                + 'This cannot be undone.';
+        if (!window.confirm(msg)) { return false; }
+        var form = btn.form || btn.closest('form');
+        if (!form) { return true; }
+        var f = form.querySelector('input[name="confirm_delete_subscribers"]');
+        if (!f) {
+            f = document.createElement('input');
+            f.type = 'hidden';
+            f.name = 'confirm_delete_subscribers';
+            form.appendChild(f);
+        }
+        f.value = 'yes';
+        return true;
+    }
+
+    function gtArmDeleteBulk(btn, deviceName) {
+        var form = btn.form || btn.closest('form');
+        var n = form ? form.querySelectorAll('input[name="selected_users"]:checked').length : 0;
+        var msg = 'Delete ' + (n || 'the selected') + ' secret(s) from ' + deviceName + '?\n\n'
+                + 'Every one of them immediately loses internet. Anyone not in\n'
+                + 'our system may still be a paying customer.\n\n'
+                + 'This cannot be undone.';
+        if (!window.confirm(msg)) { return false; }
+        if (!form) { return true; }
+        var f = form.querySelector('input[name="confirm_delete_subscribers"]');
+        if (!f) {
+            f = document.createElement('input');
+            f.type = 'hidden';
+            f.name = 'confirm_delete_subscribers';
+            form.appendChild(f);
+        }
+        f.value = 'yes';
+        return true;
+    }
+    </script>
 </script>

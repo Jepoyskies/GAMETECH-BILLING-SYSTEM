@@ -1,3 +1,4 @@
+from django.views.decorators.http import require_POST
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from billing.decorators import role_required
@@ -962,29 +963,91 @@ def sync_autofix_user(request, device_id):
             
     return redirect('sync_manager_device', device_id=device_id)
 
+@require_POST
 @role_required(['Admin', 'Editor', 'CSR'])
 @login_required
 def sync_delete_user(request, device_id):
-    if request.method == 'POST':
-        pppoe_username = request.POST.get('pppoe_username')
-        device = get_object_or_404(MikrotikDevice, id=device_id)
-        
-        from network_manager.sync_services import MikrotikAPI as MikrotikSyncAPI
-        
-        api = MikrotikSyncAPI(
-            ip_address=device.ip_address,
-            username=device.api_username,
-            password=device.api_password,
-            port=device.api_port
+    """Delete ONE router secret. Every delete here cuts a real person's internet.
+
+    This used to have none of the guards its bulk counterpart has. bulk_delete
+    refuses known subscribers without an explicit confirmation and caps the
+    batch; this single-item path did neither, so the careful, reviewed,
+    batched route was the only safe way to delete anything and the quick
+    single-row button was the unsafe one. That is backwards, and it is the
+    route an operator reaches for by reflex.
+
+    Three things now apply, all of them the same ones bulk_delete already had:
+
+    * POST only. Deleting a live secret is not something a link should do.
+    * Never delete an account we hold as a real subscriber without the
+      operator stating the intent explicitly.
+    * Always require the acknowledgement, even for an unknown account --
+      "unknown" only means WE have no record. During and after the cutover
+      an account missing from our database can still be a paying
+      subscriber, added at the router or by the office machine, and deleting
+      it takes their service down. The confirmation is the only thing
+      standing between a stale export and a cut-off customer.
+    """
+    pppoe_username = request.POST.get('pppoe_username')
+    if not pppoe_username:
+        messages.error(request, "No account was selected for deletion.")
+        return redirect('sync_manager_device', device_id=device_id)
+
+    device = get_object_or_404(MikrotikDevice, id=device_id)
+
+    from billing.models import Customer
+
+    # Acknowledgement required in every case. The message names the account,
+    # because "are you sure?" against a list of a thousand rows is a reflex,
+    # not a decision.
+    if request.POST.get('confirm_delete_subscribers') != 'yes':
+        from billing.models import Customer as _C
+        known = _C.objects.filter(pppoe_username=pppoe_username).exists()
+        messages.error(
+            request,
+            "Refused: deleting '{}' removes a live PPPoE secret from {} and "
+            "cuts that account's internet. {} Tick the confirmation and try "
+            "again.".format(
+                pppoe_username,
+                device.device_name,
+                ("We hold this one as a real subscriber, so it definitely "
+                 "will." if known else
+                 "We have no record of it, which does NOT mean nobody is "
+                 "using it -- it may have been added at the router or by the "
+                 "office machine."),
+            ),
         )
-        
-        result = api.delete_pppoe_user(name=pppoe_username)
-        
-        if result.get('success'):
-            messages.success(request, result.get('message'))
-        else:
-            messages.error(request, f"Failed to delete user: {result.get('error')}")
-            
+        return redirect('sync_manager_device', device_id=device_id)
+
+    from network_manager.sync_services import MikrotikAPI as MikrotikSyncAPI
+
+    api = MikrotikSyncAPI(
+        ip_address=device.ip_address,
+        username=device.api_username,
+        password=device.api_password,
+        port=device.api_port
+    )
+
+    result = api.delete_pppoe_user(name=pppoe_username)
+
+    if result.get('success'):
+        messages.success(
+            request,
+            "{} removed from {}.".format(pppoe_username, device.device_name),
+        )
+    elif 'read_only' in str(result.get('error', '')).lower():
+        messages.warning(
+            request,
+            "Refused by ROUTER_MODE=read_only -- '{}' was NOT deleted. "
+            "Nothing on the router was changed.".format(pppoe_username),
+        )
+    else:
+        messages.error(
+            request,
+            "Failed to delete '{}': {}".format(pppoe_username,
+                                               result.get('error')),
+        )
+
     return redirect('sync_manager_device', device_id=device_id)
 
 @role_required(['Admin', 'Editor', 'CSR'])
