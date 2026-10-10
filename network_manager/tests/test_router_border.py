@@ -69,7 +69,7 @@ class PairingIsMandatoryTests(TestCase):
             "precondition: a fresh account must not be paired",
         )
         self.assertIn(
-            "Not paired in Sync Manager",
+            "Not connected",
             " ".join(c.push_blocked_reasons),
             "A paid, in-date account that nobody paired must still be refused. "
             "Pairing is the identity check; billing state is not a substitute.",
@@ -78,7 +78,7 @@ class PairingIsMandatoryTests(TestCase):
     def test_pairing_reason_is_listed_first(self):
         """The operator must be told it was never approved, not sent to fix billing."""
         c = _customer(status="expired", expires_at=timezone.now() + timedelta(days=10))
-        self.assertTrue(c.push_blocked_reasons[0].startswith("Not paired in Sync Manager"))
+        self.assertTrue(c.push_blocked_reasons[0].startswith("Not connected"))
 
     def test_billing_reasons_still_apply_after_pairing(self):
         """Pairing is not a free pass around the billing checks."""

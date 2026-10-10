@@ -136,7 +136,7 @@ class PushGateTests(TestCase):
         self.assertEqual([r for r in c.push_blocked_reasons
                           if "Unpaid" in r or "Past due" in r], [],
                          "a paid, in-date account must be clear on billing")
-        self.assertIn("Not paired in Sync Manager",
+        self.assertIn("Not connected",
                       " ".join(c.push_blocked_reasons))
         self.assertFalse(self._paired(c).is_push_blocked,
                          "once paired, an in-date active account must push")
