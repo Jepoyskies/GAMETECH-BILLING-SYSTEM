@@ -3591,3 +3591,71 @@ A field technician could therefore delete a subscriber's PPP secret, delete a ba
 **Lesson**: `Unknown` in a connectivity column is the system declining to accuse a router it cannot currently see. It is the correct failure direction and it is not evidence of a pairing or security state. When it appears, force a poll and check `router_unreachable_<id>` before investigating anything else -- a stale-looking page after a restart is the expected cold-start state, not a fault.
 **Files**: `billing/views/customers/list.py`, `billing/utils.py`
 **Date Logged**: 2026-10-08
+
+### ERR-140: A Commit From One Session Took Production Down By Staging Another Session's Half-Finished Refactor
+
+**Symptom.** Production returned 502. `docker logs gametech-web` showed the
+container dying at boot:
+
+```
+File "/app/dispatch/admin.py", line 2, in <module>
+    from .models import (
+ModuleNotFoundError: No module named 'dispatch.models'
+```
+
+`dispatch/models.py` was missing from the repository entirely.
+
+**Cause.** Two AI sessions working in ONE working tree, on one branch, at the
+same time. One session was splitting `dispatch/models.py` into a
+`dispatch/models/` package: it had deleted the single file but had not yet
+written the replacement package. The other session then committed with
+
+```
+git add -A
+```
+
+`git add -A` stages EVERY change in the working tree, not just the caller's
+own. That captured the deletion, and none of the replacement files that did
+not exist yet. Pushed, pulled by production, site down.
+
+**Fix.** Restored the file byte-for-byte from the last good commit:
+
+```
+git checkout 94ae094 -- dispatch/models.py
+git add dispatch/models.py        # EXPLICIT PATH
+git commit && git push
+# on the droplet
+git pull origin main && docker restart gametech-web
+```
+
+Recovery took about 10 minutes from noticing to serving again. No data was
+lost: 2,038 customers and 12,560 payments were intact throughout.
+
+**Rule, now permanent.**
+
+1. **Never `git add -A` in this repo.** Stage explicit paths, always:
+   `git add path/a.py path/b.html`. If that is genuinely impractical, use
+   `git add -p` and read every hunk.
+2. **Never `git stash`, `git checkout -- .`, `git reset --hard`, or
+   `git clean`.** In a shared tree each of these can silently destroy
+   another session's work, which is unrecoverable if it was never staged.
+3. **Run `git log --oneline -5` before every push** and confirm both sets of
+   work are present. Cheap, and it catches the whole class of problem.
+4. **Before starting, run `git status --short`.** Anything already modified
+   belongs to someone else -- do not stage it, do not revert it.
+
+**Verification that the guard works.** Stage the intended paths, then assert:
+
+```python
+staged = subprocess.run(["git","diff","--cached","--name-only"],
+                        capture_output=True, text=True).stdout.split()
+assert set(staged) == set(INTENDED_FILES), "STAGING LEAK -- aborting"
+```
+
+That assertion is what turned this from a 10-minute production outage into a
+caught mistake before the commit was ever made.
+
+**Related.** ERR-132 (something external runs `docker-compose up -d` every
+~40 minutes and stops all containers) strikes at the worst possible moment:
+right after a restore, it makes the fix look like it did not work. Confirm
+`docker ps` and the process list before concluding a deploy failed.
