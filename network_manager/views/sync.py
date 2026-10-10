@@ -331,6 +331,24 @@ def sync_manager(request, device_id):
         if total_customers else 0
     )
 
+    # "Ready to connect" must mean STILL TO CONNECT.
+    #
+    # The synced list holds every account present on both sides that agrees,
+    # which deliberately includes the ones already connected -- staff need to
+    # see those to confirm the sign-off stuck. But counting the finished work
+    # as though it were outstanding made the tile lie: with 5 of 12 connected
+    # it read "Ready to connect 12", inviting an operator to click Connect on
+    # five accounts that were already done. Counting only the unconnected
+    # remainder turns the tile into the actual answer to "how much is left".
+    #
+    # Derived from the same stamped rows the badges already use, so it cannot
+    # disagree with them. An account that is connected AND drifted sits in
+    # needs_review rather than here, so it is not double-counted as ready.
+    count_ready = sum(
+        1 for ru in synced
+        if not getattr(ru.get("customer"), "pair_approved", False)
+    )
+
     context = {
         'device': device,
         'clean_orphans': clean_orphans,
@@ -353,6 +371,7 @@ def sync_manager(request, device_id):
         'count_connected': count_connected,
         'total_customers': total_customers,
         'connect_progress_pct': connect_progress_pct,
+        'count_ready': count_ready,
         # Plan-level problems that would otherwise show up as unexplained
         # drift: duplicate-priced plans at different speeds, and plans with no
         # MikroTik profile mapped. Surfaced here so staff see WHY a row drifts
@@ -460,7 +479,7 @@ def _cache_router_secrets(device, result):
 
 # Rows rendered per page for the review queue.
 #
-# The Needs Review card on ccr2116.v1 holds 1,051 rows. Rendering all of them
+# The Needs Attention card on ccr2116.v1 holds 1,051 rows. Rendering all of them
 # into the HTML made the page 6.5 MB and take 5.8 seconds, and the operator still
 # only ever worked through the 17 urgent ones at the top. Paginating in Django
 # keeps the client-side DataTable behaviour that already works (the reason
@@ -471,7 +490,7 @@ def _cache_router_secrets(device, result):
 # change to verify than server-side slicing. The chips already filter, and
 # paging a filtered set of at most one page is the honest behaviour here.
 REVIEW_PAGE_SIZE = 100
-# Same reasoning for the Match & Pair card, which held 944 rows. Together the
+# Same reasoning for the Ready to Connect card, which held 944 rows. Together the
 # two cards were 6.5 MB; slicing both brings the page to a usable size.
 PAIR_PAGE_SIZE = 100
 
