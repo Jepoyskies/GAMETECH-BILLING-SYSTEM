@@ -59,12 +59,67 @@ def settings_view(request):
 @login_required
 @require_POST
 def toggle_auto_sync(request):
+    """Arm or disarm automatic push-on-create.
+
+    THIS TOGGLE CAN WRITE TO A ROUTER, SO IT IS NOT A PLAIN SWITCH.
+
+    With it on, saving a new customer calls add_pppoe_user() immediately --
+    a real write to shared hardware, with nobody having reviewed the account.
+    That is fine once the legacy system is gone and the routers are ours alone.
+    It is not fine before, or ever while the router locks are half-armed,
+    because the two gates are independent and this switch did not know the
+    second one existed.
+
+    So turning it ON additionally requires both router locks to be open. That
+    makes arming writes a deliberate two-step act by the owner -- flip this,
+    then deliberately arm the router -- rather than one switch that quietly
+    does both. Turning it OFF is always allowed, instantly, with no ceremony:
+    there is never a reason to make disarming harder than arming.
+    """
     from billing.models import SystemConfig
+
     config = SystemConfig.get_config()
-    config.auto_sync_routers = not config.auto_sync_routers
+
+    if config.auto_sync_routers:
+        config.auto_sync_routers = False
+        config.save(update_fields=["auto_sync_routers"])
+        messages.success(
+            request,
+            "Auto-Sync to Routers is now OFF. New customers will no longer be "
+            "written to any router when they are created.",
+        )
+        return redirect("settings")
+
+    # Turning it ON. Show exactly why it is being refused.
+    reasons = []
+    try:
+        mode = str(getattr(settings, "ROUTER_MODE", "read_only")).strip().lower()
+    except Exception:
+        mode = "read_only"
+    if mode != "live":
+        reasons.append(
+            "ROUTER_MODE is '%s' -- router writes are still blocked." % mode
+        )
+    if not (getattr(settings, "ROUTER_WRITE_TOKEN", "")
+            and getattr(settings, "ROUTER_WRITE_TOKEN_EXPECTED", "")):
+        reasons.append("The router write keys are not armed.")
+
+    if reasons:
+        messages.error(
+            request,
+            "Auto-Sync stays OFF. This setting writes to real routers the "
+            "moment a customer is saved, so it cannot be armed until router "
+            "writes are deliberately enabled. " + " ".join(reasons),
+        )
+        return redirect("settings")
+
+    config.auto_sync_routers = True
     config.save(update_fields=["auto_sync_routers"])
-    status = "ON" if config.auto_sync_routers else "OFF"
-    messages.success(request, f"Auto-Sync to Routers is now {status}.")
+    messages.warning(
+        request,
+        "Auto-Sync to Routers is now ON. Every new customer will be written "
+        "to its router the instant it is saved, with no separate review.",
+    )
     return redirect("settings")
 
 
