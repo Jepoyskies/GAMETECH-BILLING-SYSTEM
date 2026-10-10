@@ -306,6 +306,15 @@ def pay_customer_view(request, username):
                         locked_customer.plan.name if locked_customer.plan else None
                     ),
                     amount=amount,
+                    # days_paid was missing here while create_payment_view
+                    # recorded it, so the same payment made through the
+                    # customer's Pay button left the Statement of Account
+                    # showing a dash. Two code paths for one financial fact,
+                    # with different evidence recorded, is exactly how a
+                    # ledger stops reconciling.
+                    days_paid=round(
+                        (new_expiry - current_exp).total_seconds() / (24 * 3600), 4
+                    ) if (current_exp and new_expiry) else None,
                     payment_method=payment_method,
                     reference_no=reference_no,
                     reason=payment_reason,
@@ -390,7 +399,30 @@ def pay_customer_view(request, username):
                             print(f"Email failed: {e}")
 
             # 5. Mikrotik API Reactivation
-            if customer.mikrotik_device:
+            #
+            # THE PAIRING GATE. This path writes to a router -- it ENABLES a
+            # secret, changes a profile and KICKS a live session -- and until
+            # now the only thing standing in front of it was ROUTER_MODE.
+            #
+            # That is not enough, and the gap was invisible: the Sync Manager
+            # border is enforced everywhere else, so it reads as though every
+            # router write passes through it. This one did not. The moment the
+            # owner deliberately arms the locks, pressing Pay on a customer
+            # who has never been connected would enable their secret and kick
+            # them off their live session -- precisely the accident the whole
+            # pairing model exists to prevent, reachable from the most ordinary
+            # screen in the system.
+            #
+            # The payment itself is NEVER blocked. Money handed over at the
+            # counter is real and is recorded; only the router write waits.
+            # An unconnected customer is simply not ours to touch yet.
+            _router_write_blocked_reason = None
+            if not getattr(customer, "pair_approved", False):
+                _router_write_blocked_reason = (
+                    "this customer is not connected to the router in Sync Manager"
+                )
+
+            if customer.mikrotik_device and not _router_write_blocked_reason:
                 try:
                     from network_manager.services import MikrotikAPI
 
@@ -435,6 +467,25 @@ def pay_customer_view(request, username):
                     )
 
             # 4. Success Output
+            #
+            # Never say "processed successfully" without qualifying it. For an
+            # unconnected customer the money was recorded and the router was
+            # NOT told, and that has to be unmissable -- it is the whole point
+            # of the warning added to create_payment_view, which this path
+            # never had.
+            _who = customer.pppoe_username or customer.full_name
+            if _router_write_blocked_reason:
+                messages.warning(
+                    request,
+                    "Payment of {} recorded for {} \u2014 but {}. The router was "
+                    "NOT updated. Connect them in Sync Manager to activate "
+                    "the line.".format(amount, _who, _router_write_blocked_reason),
+                )
+            else:
+                messages.success(
+                    request,
+                    "Payment for {} processed successfully.".format(_who),
+                )
 
             # Generate Text Template
             template_text = MessageTemplate.objects.filter(type="TEXT").first()
