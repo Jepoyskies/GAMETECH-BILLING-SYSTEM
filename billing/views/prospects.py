@@ -7,7 +7,7 @@ from django.core.paginator import Paginator
 from billing.models import Prospect, ChecklistConfirmation, Agent, Barangay, SubscriptionPlan, SystemLog
 from billing.decorators import has_dispatch_permission, role_required
 
-@role_required(['Admin', 'Editor', 'CSR', 'Viewer'])
+@role_required(['Admin', 'Editor', 'CSR'])
 
 @login_required
 def prospects_inbox(request):
@@ -71,7 +71,7 @@ def prospects_inbox(request):
     }
     return render(request, "billing/prospects/inbox.html", context)
 
-@role_required(['Admin', 'Editor', 'CSR', 'Viewer'])
+@role_required(['Admin', 'Editor', 'CSR'])
 
 @login_required
 def prospect_detail(request, prospect_id):
@@ -108,7 +108,7 @@ def prospect_detail(request, prospect_id):
     }
     return render(request, "billing/prospects/detail.html", context)
 
-@role_required(['Admin', 'Editor', 'CSR', 'Viewer'])
+@role_required(['Admin', 'Editor', 'CSR'])
 
 @login_required
 def prospect_decline(request, prospect_id):
@@ -164,7 +164,7 @@ def prospect_decline(request, prospect_id):
 
     return redirect("prospect_detail", prospect_id=prospect.id)
 
-@role_required(['Admin', 'Editor', 'CSR', 'Viewer'])
+@role_required(['Admin', 'Editor', 'CSR'])
 
 @login_required
 def prospect_reopen(request, prospect_id):
