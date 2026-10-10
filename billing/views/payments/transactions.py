@@ -122,10 +122,30 @@ def create_payment_view(request, customer_id):
 
             customer.save()
 
-        messages.success(
-            request,
-            f"Payment for {customer.pppoe_username or customer.full_name} processed successfully.",
-        )
+        # "Processed successfully" was doing two jobs at once: it told staff the
+        # money was recorded AND, by implication, that the router now agrees.
+        # For a customer who is not CONNECTED it is only the first. Saying
+        # "success" unqualified is how staff come to believe a line was
+        # activated when nothing on the router changed.
+        #
+        # The money is real the moment it is handed over, so it is always
+        # recorded. What varies is whether the router was told -- and if it was
+        # not, the message says so and names the next step, because that next
+        # step (Connect in Sync Manager) is what unlocks activation.
+        who = customer.pppoe_username or customer.full_name
+        if not getattr(customer, "pair_approved", False):
+            messages.warning(
+                request,
+                "Payment of {} recorded for {} — but this customer is NOT "
+                "CONNECTED to the router, so the router was NOT updated. "
+                "Connect them in Sync Manager to activate the line."
+                .format(amount, who),
+            )
+        else:
+            messages.success(
+                request,
+                f"Payment for {who} processed successfully.",
+            )
         return redirect("payment_logs")
 
     return render(request, "billing/pay.html", {"customer": customer})

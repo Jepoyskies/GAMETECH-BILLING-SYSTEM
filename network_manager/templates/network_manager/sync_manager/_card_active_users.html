@@ -15,8 +15,8 @@
         <div class="sm-queue-panel__notice sm-queue-panel__notice--ok" role="note">
             <i class="fas fa-handshake mt-1 text-success"></i>
             <div>
-                <strong>Match &amp; Pair Queue.</strong>
-                <span>These accounts exist in both the system and {{ device.device_name }}. Clicking <strong>Pair</strong> only records human sign-off; <strong>nothing is sent to or modified on the router</strong>.</span>
+                <strong>Match &amp; Connect Queue.</strong>
+                <span>These accounts exist in both the system and {{ device.device_name }}. Clicking <strong>Connect</strong> only records human sign-off; <strong>nothing is sent to or modified on the router</strong>.</span>
             </div>
         </div>
 
@@ -39,8 +39,8 @@
                         formaction="{% url 'sync_bulk_action' device.id %}"
                         formmethod="POST"
                         class="sm-btn sm-btn--sm sm-btn--ok"
-                        onclick="return confirm('Pair selected accounts?\n\nThis only records YOUR approval that each account matches the router. Router is untouched.');">
-                    <i class="fas fa-check-double"></i> Pair Selected
+                        onclick="return confirm('Connect selected accounts?\n\nThis only records YOUR approval that each account matches the router. Router is untouched.');">
+                    <i class="fas fa-check-double"></i> Connect Selected
                 </button>
 
                 <div class="vr mx-1 d-none d-md-block"></div>
@@ -131,14 +131,14 @@
                                         <i class="fas fa-lock"></i> Locked
                                     </button>
                                 {% elif user.customer.pair_approved %}
-                                    <span class="sm-pill sm-pill--ok" title="Pairing reviewed and approved"><i class="fas fa-check-double me-1"></i> Approved</span>
+                                    <span class="sm-pill sm-pill--ok" title="Confirmed connected to the router"><i class="fas fa-check-double me-1"></i> Approved</span>
                                 {% else %}
                                     <button type="submit" formnovalidate
                                             formaction="{% url 'sync_approve_match' device.id %}"
                                             formmethod="POST" name="pppoe_username" value="{{ user.name }}"
                                             class="sm-btn sm-btn--sm sm-btn--primary"
-                                            title="Confirm this account as paired.">
-                                        <i class="fas fa-handshake"></i> Pair
+                                            title="Confirm this customer is connected to the router.">
+                                        <i class="fas fa-link"></i> Connect
                                     </button>
                                 {% endif %}
                                 {% if user.is_suspicious %}
@@ -163,7 +163,7 @@
     </form>
 
     {% if pair_page.paginator.num_pages > 1 %}
-    <nav class="d-flex flex-wrap align-items-center justify-content-between gap-2 px-3 py-2 border-top" aria-label="Pairing queue pages">
+    <nav class="d-flex flex-wrap align-items-center justify-content-between gap-2 px-3 py-2 border-top" aria-label="Connecting queue pages">
         <span class="sm-muted small">
             Page {{ pair_page.number }} of {{ pair_page.paginator.num_pages }}
             &mdash; showing {{ synced_page|length }} of {{ count_synced }} accounts
