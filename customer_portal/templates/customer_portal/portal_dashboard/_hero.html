@@ -25,6 +25,27 @@
                     {{ plan.speed_down|default:'N/A' }} Down
                 </span>
                 {% endif %}
+                {% comment %}
+                    Shown ONLY once the line is connected, never as a negative.
+
+                    "Not connected yet" is our internal migration state, not a
+                    fault in the subscriber's service -- their internet may be
+                    working perfectly under the previous system while the
+                    cutover is still in progress. Printing it here would tell
+                    a customer their service is broken when it is not, and
+                    staff would spend the morning explaining a status the
+                    subscriber cannot act on and cannot see the sense of.
+
+                    Once the migration is done this reads as reassurance: the
+                    line is under Gametech management, and paying, reporting a
+                    fault or changing a plan now reaches the network directly.
+                {% endcomment %}
+                {% if is_connected %}
+                <span class="hero-chip" title="This line is connected to the Gametech network. Billing changes and service requests now reach the network directly.">
+                    <i class="fas fa-link" style="color:#34d399;"></i>
+                    Connected
+                </span>
+                {% endif %}
             </div>
         </div>
         <div class="hero-mascot">

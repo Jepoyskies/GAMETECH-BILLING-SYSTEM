@@ -53,6 +53,39 @@
         </div>
     </div>
 
+    {% comment %}
+        The global cutover position, in one glance.
+
+        The Sync Manager answers this for ONE router at a time, which is the
+        right answer when you are working on that router and useless when the
+        question is "which of the three is behind". Until every customer is
+        connected this row is the fastest way to see whether the remaining
+        work is one router's problem or the whole company's.
+    {% endcomment %}
+    <div class="gt-table-card mb-4">
+        <div class="p-3 d-flex flex-wrap align-items-center gap-3">
+            <div class="d-flex align-items-baseline gap-2">
+                <span class="fw-bold" style="font-size:1.6rem; color: var(--text-primary);">{{ connected_total }}</span>
+                <span class="text-muted">connected to a router</span>
+            </div>
+            <div class="vr d-none d-md-block opacity-25"></div>
+            <div class="d-flex align-items-baseline gap-2">
+                <span class="fw-bold" style="font-size:1.6rem; color: var(--text-primary);">{{ unconnected_total }}</span>
+                <span class="text-muted">not yet connected</span>
+            </div>
+            <div class="vr d-none d-md-block opacity-25"></div>
+            <div class="d-flex align-items-baseline gap-2">
+                <span class="text-muted small">of</span>
+                <span class="fw-bold" style="color: var(--text-primary);">{{ total_customers }}</span>
+                <span class="text-muted">subscribers</span>
+            </div>
+            <div class="ms-auto small text-muted">
+                <i class="fas fa-circle-info me-1"></i>A customer is connected once a human confirms
+                the account matches the router secret.
+            </div>
+        </div>
+    </div>
+
     <!-- Data Table Card -->
     <div class="gt-table-card mb-4">
         <div class="table-responsive p-3">
@@ -62,6 +95,7 @@
                         <th>Device Name</th>
                         <th>IP Address</th>
                         <th title="Assigned database customer count">Active Customers</th>
+                        <th title="Customers confirmed connected to this router in Sync Manager">Connected</th>
                         <th>API Port</th>
                         <th>Created At</th>
                         <th class="text-end pe-3">Actions</th>
@@ -80,6 +114,11 @@
                         <td>
                             <span class="status-badge status-badge--info">
                                 <i class="fas fa-users me-1"></i>{{ device.customer_count }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="status-badge status-badge--success">
+                                <i class="fas fa-link me-1"></i>{{ device.connected_count }}
                             </span>
                         </td>
                         <td><span class="font-monospace text-muted">{{ device.api_port }}</span></td>

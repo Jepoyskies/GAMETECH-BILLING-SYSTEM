@@ -10,11 +10,57 @@ from network_manager.services import MikrotikAPI
 
 @login_required
 def device_list(request):
+    """The router list, plus how much of the cutover each router has done.
+
+    This is the global answer to "how far along are we", which the Sync
+    Manager can only give one router at a time. During the migration an
+    operator's first question is not about a router they are already
+    looking at -- it is which of the three is behind, and whether any of
+    them is finished.
+
+    pair_approved is a property derived from the audit log rather than a
+    column, so it cannot be filtered in SQL. It is counted here with one
+    query for the whole set of approved ids and in-memory matching after,
+    which stays a fixed cost regardless of how many customers there are.
+    Anything that reaches for .filter(pair_approved=...) will not work.
+    """
     from django.db.models import Count, Q
+    from billing.models import Customer, SystemLog
+
     devices = MikrotikDevice.objects.annotate(
         customer_count=Count('customer', filter=Q(customer__status='active'))
     ).order_by('device_name')
-    return render(request, 'network_manager/device_list.html', {'devices': devices})
+
+    approved_ids = {
+        int(v) for v in SystemLog.objects.filter(
+            action="SYNC_PAIR_APPROVED", table_name="Customer",
+        ).values_list("record_id", flat=True) if str(v).isdigit()
+    }
+    billable = Customer.objects.exclude(
+        pppoe_username__isnull=True).exclude(pppoe_username='')
+
+    total_customers = billable.count()
+    connected_total = sum(1 for pk in billable.values_list('id', flat=True)
+                          if pk in approved_ids)
+
+    # Per router, so "which router is behind" is answerable at a glance.
+    connected_by_device = {}
+    if approved_ids:
+        for device_id, in (billable.filter(pk__in=approved_ids)
+                           .values_list('mikrotik_device_id')):
+            if device_id:
+                connected_by_device[device_id] = \
+                    connected_by_device.get(device_id, 0) + 1
+
+    for d in devices:
+        d.connected_count = connected_by_device.get(d.id, 0)
+
+    return render(request, 'network_manager/device_list.html', {
+        'devices': devices,
+        'total_customers': total_customers,
+        'connected_total': connected_total,
+        'unconnected_total': total_customers - connected_total,
+    })
 
 @role_required(['Admin', 'CSR'])
 @login_required

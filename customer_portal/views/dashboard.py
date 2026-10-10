@@ -115,6 +115,10 @@ def portal_dashboard(request):
         'total_tickets_count': total_tickets_count,
         'speed_down_val': speed_down_val,
         'speed_up_val': speed_up_val,
+        # Is this line under Gametech management yet? Read from the same
+        # pair_approved stamp the staff-side Sync Manager uses, so the portal
+        # and the operator can never disagree about the same account.
+        'is_connected': bool(getattr(customer, 'pair_approved', False)),
     }
     return render(request, 'customer_portal/portal_dashboard.html', context)
 
