@@ -3659,3 +3659,89 @@ caught mistake before the commit was ever made.
 ~40 minutes and stops all containers) strikes at the worst possible moment:
 right after a restore, it makes the fix look like it did not work. Confirm
 `docker ps` and the process list before concluding a deploy failed.
+
+---
+
+## ERR-141: `QueryDict.get()` silently truncates multi-digit technician IDs
+
+**Symptom.** The technician-replacement endpoint rejected valid input with
+`Duplicate technician selected` for technicians whose IDs had two digits,
+while single-digit IDs worked fine.
+
+**Cause.** Reading repeated form keys with `QueryDict.get()` returns only the
+LAST value. The code then iterated what it believed was a list:
+
+    outgoing_ids = [int(i) for i in (data.get('technician_ids') or [])]
+
+With a QueryDict, `get()` returns the string `"12"`, and iterating a string
+yields characters, so ID 12 became `[1, 2]`. Two "technicians" that are
+really one caused the false duplicate error. Single-digit IDs looked fine by
+pure luck -- and only because a stale test database had not pushed IDs past 9.
+
+**Fix.** Use `getlist()` on QueryDict, and never iterate a bare string:
+
+    def _get_ids(data, key):
+        if hasattr(data, 'getlist'):
+            raw = data.getlist(key)
+        else:
+            raw = data.get(key)
+            if raw is None: raw = []
+            elif not isinstance(raw, (list, tuple)): raw = [raw]
+        return [int(str(i).strip()) for i in raw if str(i).strip().isdigit()]
+
+**Lesson.** A multi-value field read through a single-value accessor is a
+silent data-corruption bug, not a crash. It is invisible until the data grows.
+
+**Also in this change.** The same endpoint JSON-parsed `request.body` for
+every request, which broke ordinary form posts (multipart bytes are not JSON).
+Branch on `request.content_type` first. See `dispatch/views_handover.py`.
+
+---
+
+## ERR-142: Serial number was being written into the MAC address field
+
+**Symptom.** `CustomerMacHistory` rows and duplicate-MAC warnings showed values
+like `ZTEGC1234567` -- clearly a device serial, not a MAC.
+
+**Cause.** `dispatch/signals.py::sync_ticket_completion_to_customer` did:
+
+    if instance.ont_modem_sn and not customer.mac_address:
+        customer.mac_address = instance.ont_modem_sn
+
+`ont_modem_sn` is a SERIAL. Copying it into the MAC field conflated two
+different identifiers that had been treated as interchangeable since the
+legacy JobDetail import. It would also have made duplicate-MAC detection
+report false collisions between two customers holding modems from the same
+production batch.
+
+**Fix.** Removed the write from the signal. Equipment ownership is now written
+once, in `views_tech.api_ticket_done`, which also writes `CustomerMacHistory`
+with the serial, the originating ticket number, and a replacement reason.
+
+**Lesson.** "It was already like that" is not a reason to preserve a wrong
+mapping, especially once a feature starts depending on the field's meaning.
+
+---
+
+## ERR-143: Never let `dispatch/models.py` and `dispatch/models/` coexist
+
+**Symptom.** Highest-risk state in this repo. The 638-line `dispatch/models.py`
+was split into a package (Rule 24). During the split the file was restored on
+disk from HEAD while the new `dispatch/models/` package was still untracked, so
+BOTH existed simultaneously.
+
+**Why it matters.** Python resolves a package before a same-named module, so
+the package wins and everything appears to work -- locally, in tests, and on a
+developer's machine. It fails only on a fresh clone or a deploy where the
+package did not travel with the deletion. That is ERR-140 exactly: production
+died with `ModuleNotFoundError: No module named 'dispatch.models'`.
+
+**Guard.** The file and its replacement must land in ONE commit, staged
+explicitly. Verify before pushing:
+
+    git ls-files dispatch/models.py        # must print nothing
+    git ls-files dispatch/models/          # must list all four files
+
+Committing the package alongside the deletion makes Git record it as a rename
+(`R053 dispatch/models.py -> dispatch/models/tickets.py`), so the two are no
+longer separable in history.
