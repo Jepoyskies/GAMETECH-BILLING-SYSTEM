@@ -21,6 +21,23 @@
             </li>
             {% endif %}
 
+            {% if request.user.technician %}
+            <!-- Field Technician Navigation: home link back to the Field Portal.
+                 Technicians log in to technician_dashboard, but the Role Editor
+                 also grants them Network Ops / Dispatch System. Without this pair
+                 they can enter the main shell and have no way back. -->
+            <li>
+                <a href="{% url 'technician_dashboard' %}" class="menu-link {% if request.resolver_match.url_name == 'technician_dashboard' %}active{% endif %}">
+                    <span class="icon"><i class="fas fa-screwdriver-wrench"></i></span> <span>Field Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'technician_my_jobs' %}" class="menu-link {% if request.resolver_match.url_name == 'technician_my_jobs' %}active{% endif %}">
+                    <span class="icon"><i class="fas fa-list-check"></i></span> <span>My Jobs</span>
+                </a>
+            </li>
+            {% endif %}
+
             {% if request.user.role_perms.can_access_billing %}
             {% if request.user.role_perms.subtabs.billing_dashboard %}
             <li><a href="{% url 'dashboard' %}" class="menu-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"><span class="icon"><i class="fas fa-chart-pie"></i></span> <span>Dashboard</span></a></li>
