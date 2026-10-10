@@ -1,0 +1,72 @@
+<!--
+  MIGRATION PROGRESS -- "the one number that matters"
+  ==================================================
+  Every other figure on this page is a diagnostic: why this account drifted,
+  why that orphan exists, what the router said. This band answers the only
+  question the owner actually has, which is "how much of the cutover is
+  done?".
+
+  It sits above the tabs because it is the reason the tabs exist. Before the
+  cutover it is a progress bar. Afterwards, when every customer is connected
+  and Sync Manager has been demoted to a single "connect a new customer"
+  action, it reads 100% and nobody needs to look at it again -- which is
+  exactly right. A permanent 100% bar that everyone ignores is better than a
+  permanent 0% one that looks like unfinished work.
+
+  Counts are per-router, not global: a three-router deployment shows three
+  honest bars rather than one number that hides which router is behind.
+-->
+<section class="sm-progress animate-fade-in" aria-label="Connection progress">
+
+    <div class="sm-progress__head">
+        <div class="sm-progress__titles">
+            <span class="sm-progress__label">Connected to this router</span>
+            <span class="sm-progress__count">
+                {{ count_connected }}<em>of {{ total_customers }}</em>
+            </span>
+        </div>
+        <span class="sm-progress__pct{% if connect_progress_pct == 100 %} sm-progress__pct--done{% endif %}">
+            {{ connect_progress_pct }}%
+        </span>
+    </div>
+
+    <div class="sm-progress__track"
+         role="progressbar"
+         aria-valuenow="{{ connect_progress_pct }}"
+         aria-valuemin="0"
+         aria-valuemax="100"
+         aria-label="{{ count_connected }} of {{ total_customers }} customers connected">
+        <div class="sm-progress__fill{% if connect_progress_pct == 100 %} sm-progress__fill--done{% endif %}"
+             style="width: {{ connect_progress_pct }}%"></div>
+    </div>
+
+    {% comment %}
+        Three tiles, not five tabs' worth of numbers.
+
+        The two diagnostic-only cases (on the router but not in our system,
+        and suspicious audit flags) are deliberately NOT here. They are not
+        part of the migration's progress -- they are evidence that an export
+        was incomplete, and promoting them to headline status made the page
+        look like it had five urgent problems instead of one job.
+    {% endcomment %}
+    <div class="sm-progress__tiles">
+        <a class="sm-tile sm-tile--ok" href="#connect" data-sm-goto="tab-btn-connect"
+           title="Connected. These customers are ours to manage: paying, disabling or reactivating them now reaches the router.">
+            <i class="fas fa-link"></i>
+            <span class="sm-tile__n">{{ count_connected }}</span>
+            <span class="sm-tile__l">Connected</span>
+        </a>
+        <a class="sm-tile sm-tile--info" href="#connect" data-sm-goto="tab-btn-connect"
+           title="Present in both systems and they agree. One click each and they become ours to manage.">
+            <i class="fas fa-handshake"></i>
+            <span class="sm-tile__n">{{ count_synced }}</span>
+            <span class="sm-tile__l">Ready to connect</span>
+        </a>
+        <a class="sm-tile sm-tile--warn" href="#attention" data-sm-goto="tab-btn-review"
+           title="Present in both systems but the two disagree. These cannot be connected until someone fixes the difference.">
+            <i class="fas fa-triangle-exclamation"></i>
+            <span class="sm-tile__n">{{ count_needs_review }}</span>
+            <span class="sm-tile__l">Needs attention</span>
+        </a>
+    </div>
+</section>

@@ -171,3 +171,109 @@
     .sm-page *, .sm-page *::before { animation: none !important; transition: none !important; }
 }
 </style>
+
+/* ===================================================================
+   MIGRATION PROGRESS BAND
+   The one number that matters: how much of the cutover is done.
+   Deliberately quiet. This is a status readout, not a call to action --
+   the tabs below carry the actions, and a banner that competes with them
+   for attention makes both harder to read.
+   =================================================================== */
+.sm-progress {
+    background: var(--sm-card);
+    border: 1px solid var(--sm-border);
+    border-radius: 16px;
+    box-shadow: var(--sm-shadow);
+    padding: 1.1rem 1.25rem 1rem;
+    margin-bottom: 1rem;
+}
+
+.sm-progress__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: .6rem;
+}
+
+.sm-progress__titles { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
+
+.sm-progress__label {
+    font-size: .74rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--sm-muted);
+}
+
+.sm-progress__count {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--sm-text);
+}
+.sm-progress__count em {
+    font-style: normal;
+    font-size: .5em;
+    font-weight: 600;
+    color: var(--sm-muted);
+    margin-left: .35rem;
+}
+
+.sm-progress__pct {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--sm-primary);
+    white-space: nowrap;
+}
+.sm-progress__pct--done { color: var(--sm-ok); }
+
+.sm-progress__track {
+    height: 10px;
+    border-radius: 999px;
+    background: var(--sm-subtle);
+    overflow: hidden;
+}
+
+.sm-progress__fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--sm-primary), var(--color-primary, #1136c2));
+    transition: width .35s ease;
+}
+.sm-progress__fill--done { background: var(--sm-ok); }
+
+/* Three tiles, never five. The two diagnostic-only cases stay in their tabs:
+   they are evidence an export was incomplete, not progress. */
+.sm-progress__tiles {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .6rem;
+    margin-top: .95rem;
+}
+
+.sm-tile {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas: "icon n" "icon l";
+    align-items: center;
+    column-gap: .6rem;
+    padding: .6rem .7rem;
+    border: 1px solid var(--sm-border);
+    border-radius: 12px;
+    background: var(--sm-subtle);
+    color: var(--sm-text);
+    text-decoration: none;
+    transition: transform .12s ease, border-color .12s ease;
+}
+.sm-tile:hover { transform: translateY(-1px); border-color: var(--sm-primary); color: var(--sm-text); }
+.sm-tile i { grid-area: icon; font-size: 1.05rem; }
+.sm-tile__n { grid-area: n; font-size: 1.2rem; font-weight: 800; line-height: 1.05; }
+.sm-tile__l { grid-area: l; font-size: .74rem; color: var(--sm-muted); }
+.sm-tile--ok i { color: var(--sm-ok); }
+.sm-tile--info i { color: var(--sm-info); }
+.sm-tile--warn i { color: var(--sm-warn); }
+
+@media (max-width: 576px) {
+    .sm-progress__tiles { grid-template-columns: 1fr; }
+}

@@ -427,7 +427,7 @@ class Customer(models.Model):
         # the account was never approved, rather than being sent off to fix
         # billing reasons on an account that should never have been touched.
         if not getattr(self, "pair_approved", False):
-            reasons.insert(0, "Not connected ? nobody has confirmed this customer in Sync Manager")
+            reasons.insert(0, "Not connected — nobody has confirmed this customer in Sync Manager")
 
         return reasons
 

@@ -292,7 +292,7 @@ def sync_manager(request, device_id):
     barangays = Barangay.objects.all().order_by('name')
 
     # Slice the review queue before it reaches the template. Slicing AFTER
-    # reason_counts/simple_summary is deliberate: the chips must keep counting
+    # reason_counts is deliberate: the chips must keep counting
     # the entire queue, otherwise "Connected, Unpaid 1016" would change every
     # time you turned the page and the numbers would mean nothing.
     from django.core.paginator import Paginator
@@ -312,6 +312,25 @@ def sync_manager(request, device_id):
         pair_page_obj = _pair_paginator.page(1)
     synced_page = list(pair_page_obj.object_list)
 
+    # THE ONE NUMBER THAT MATTERS
+    # -----------------------
+    # Every other figure on this page is a diagnostic: why this one drifted,
+    # why that orphan exists. This one is the business question -- how much of
+    # the migration is actually done.
+    #
+    # "Connected" is counted from the audit log via the pair_approved stamp
+    # that mark_pair_approvals() already applied to django_customers, so it
+    # costs no extra query and cannot disagree with the badges in the rows
+    # below. The percentage is of the customers assigned to THIS router, so a
+    # three-router deployment shows three honest bars rather than one
+    # meaningless total.
+    count_connected = sum(1 for dc in django_customers if dc.pair_approved)
+    total_customers = len(django_customers)
+    connect_progress_pct = (
+        int(round(100.0 * count_connected / total_customers))
+        if total_customers else 0
+    )
+
     context = {
         'device': device,
         'clean_orphans': clean_orphans,
@@ -330,6 +349,10 @@ def sync_manager(request, device_id):
         'count_missing': len(missing_on_router),
         'count_orphans': len(clean_orphans),
         'count_suspicious': len(suspicious_users),
+        # Migration heartbeat -- see "THE ONE NUMBER THAT MATTERS" above.
+        'count_connected': count_connected,
+        'total_customers': total_customers,
+        'connect_progress_pct': connect_progress_pct,
         # Plan-level problems that would otherwise show up as unexplained
         # drift: duplicate-priced plans at different speeds, and plans with no
         # MikroTik profile mapped. Surfaced here so staff see WHY a row drifts
@@ -339,7 +362,6 @@ def sync_manager(request, device_id):
         # narrowed to the handful that actually need a decision today.
         'reason_counts': reason_counts(needs_review),
         'review_total': len(needs_review),
-        'simple_summary': simple_summary(needs_review),
         # The queue is paginated server-side; counts and chips are still
         # computed over the WHOLE queue, never over one page.
         'review_page': review_page_obj,
@@ -525,35 +547,6 @@ SIMPLE_GROUPS = [
     },
 ]
 
-
-def simple_summary(rows):
-    """Bucket the review queue into the three plain-language questions.
-
-    Presentation only. A row can appear in two buckets when it genuinely is
-    two things (unpaid AND awaiting confirmation), which is honest -- it needs
-    both a collections follow-up and a signature.
-
-    filter_key is the reason-chip this card should activate when its "Show me
-    these" link is clicked. It is resolved from the data rather than hardcoded
-    in the template: a card can cover several reasons ('cut_off' and
-    'paid_expired_profile' are both "customer has no internet"), and only some
-    of them may currently have rows. A chip only renders when it has a non-zero
-    count, so picking a fixed key would aim the link at a chip that is not on
-    the page and the filter would silently do nothing. Falls back to the first
-    key with rows, else the group's own key.
-    """
-    out = []
-    for g in SIMPLE_GROUPS:
-        per_key = {
-            k: sum(1 for r in rows if k in (r.get('reason_keys') or []))
-            for k in g['count_keys']
-        }
-        n = sum(per_key.values())
-        if not n:
-            continue
-        live = [k for k in g['count_keys'] if per_key[k]]
-        out.append(dict(g, count=n, per_key=per_key, filter_key=live[0]))
-    return out
 
 
 def push_blockers(customer):

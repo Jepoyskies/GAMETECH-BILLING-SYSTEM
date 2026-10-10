@@ -17,56 +17,53 @@
         {% if not api_success %}
             {% include "network_manager/sync_manager/_router_offline.html" %}
         {% else %}
-            {% comment %} Plain-language supervisor overview and plan catalogue health banner {% endcomment %}
-            {% include "network_manager/sync_manager/_simple_overview.html" %}
+            {% comment %}
+                Migration progress first, then the tabs. The bar is the reason
+                the tabs exist; it was previously absent, so the page opened on
+                a diagnostics tab and the actual job sat hidden behind another.
+            {% endcomment %}
+            {% include "network_manager/sync_manager/_progress.html" %}
             {% include "network_manager/sync_manager/_plan_health_banner.html" %}
 
             <!-- Queue Navigation Tabs -->
             <nav class="sm-tabs-nav" id="syncTabs" role="tablist" aria-label="Sync Manager Queue Tabs">
-                <button class="sm-tab sm-tab--warn active" id="tab-btn-review" data-bs-toggle="tab" data-bs-target="#tab-needs-review" type="button" role="tab" aria-controls="tab-needs-review" aria-selected="true">
-                    <i class="fas fa-clipboard-check"></i>
-                    <span>Needs Review</span>
-                    <span class="sm-tab__count sm-tab--warn">{{ count_needs_review }}</span>
-                    <span class="sm-tab__sub d-none d-lg-inline text-warning">&bull; Writes to Router</span>
-                </button>
-                <button class="sm-tab sm-tab--ok" id="tab-btn-connect" data-bs-toggle="tab" data-bs-target="#tab-connect" type="button" role="tab" aria-controls="tab-connect" aria-selected="false">
+                <button class="sm-tab sm-tab--ok active" id="tab-btn-connect" data-bs-toggle="tab" data-bs-target="#tab-connect" type="button" role="tab" aria-controls="tab-connect" aria-selected="true">
                     <i class="fas fa-handshake"></i>
-                    <span>Match &amp; Connect</span>
+                    <span>Ready to Connect</span>
                     <span class="sm-tab__count sm-tab--ok">{{ count_synced }}</span>
-                    <span class="sm-tab__sub d-none d-lg-inline text-success">&bull; Sign-off Only</span>
+                    <span class="sm-tab__sub d-none d-lg-inline text-success">&bull; One Click Each</span>
+                </button>
+<button class="sm-tab sm-tab--warn" id="tab-btn-review" data-bs-toggle="tab" data-bs-target="#tab-needs-review" type="button" role="tab" aria-controls="tab-needs-review" aria-selected="false">
+                    <i class="fas fa-clipboard-check"></i>
+                    <span>Needs Attention</span>
+                    <span class="sm-tab__count sm-tab--warn">{{ count_needs_review }}</span>
+                    <span class="sm-tab__sub d-none d-lg-inline text-warning">&bull; Fix Before Connecting</span>
                 </button>
                 <button class="sm-tab sm-tab--info" id="tab-btn-router" data-bs-toggle="tab" data-bs-target="#tab-router-users" type="button" role="tab" aria-controls="tab-router-users" aria-selected="false">
                     <i class="fas fa-question-circle"></i>
-                    <span>Router Only</span>
-                    <span class="sm-tab__count sm-tab--info">{{ count_orphans }}</span>
-                    <span class="sm-tab__sub d-none d-lg-inline">&bull; Unregistered</span>
-                </button>
-                <button class="sm-tab sm-tab--danger" id="tab-btn-suspicious" data-bs-toggle="tab" data-bs-target="#tab-suspicious" type="button" role="tab" aria-controls="tab-suspicious" aria-selected="false">
-                    <i class="fas fa-user-secret"></i>
-                    <span>Suspicious</span>
-                    <span class="sm-tab__count sm-tab--danger">{{ count_suspicious }}</span>
-                    <span class="sm-tab__sub d-none d-lg-inline text-danger">&bull; Audit Flags</span>
+                    <span>Not In Our System</span>
+                    <span class="sm-tab__count sm-tab--info">{{ count_orphans|add:count_suspicious }}</span>
+                    <span class="sm-tab__sub d-none d-lg-inline">&bull; Export Gap</span>
                 </button>
                 <button class="sm-tab sm-tab--danger" id="tab-btn-missing" data-bs-toggle="tab" data-bs-target="#tab-missing" type="button" role="tab" aria-controls="tab-missing" aria-selected="false">
                     <i class="fas fa-cloud-arrow-down"></i>
-                    <span>Missing on Router</span>
+                    <span>Not Yet On Router</span>
                     <span class="sm-tab__count sm-tab--danger">{{ count_missing }}</span>
-                    <span class="sm-tab__sub d-none d-lg-inline">&bull; Needs Push</span>
+                    <span class="sm-tab__sub d-none d-lg-inline">&bull; Create on Router</span>
                 </button>
             </nav>
 
             <!-- Queue Tab Panes -->
             <div class="tab-content" id="syncTabsContent">
-                <div class="tab-pane fade show active" id="tab-needs-review" role="tabpanel" aria-labelledby="tab-btn-review">
-                    {% include "network_manager/sync_manager/_card_needs_review.html" %}
-                </div>
-                <div class="tab-pane fade" id="tab-connect" role="tabpanel" aria-labelledby="tab-btn-connect">
+                <div class="tab-pane fade show active" id="tab-connect" role="tabpanel" aria-labelledby="tab-btn-connect">
                     {% include "network_manager/sync_manager/_card_active_users.html" %}
                 </div>
-                <div class="tab-pane fade" id="tab-router-users" role="tabpanel" aria-labelledby="tab-btn-router">
-                    {% include "network_manager/sync_manager/_card_router_users.html" %}
+                <div class="tab-pane fade" id="tab-needs-review" role="tabpanel" aria-labelledby="tab-btn-review">
+                    {% include "network_manager/sync_manager/_card_needs_review.html" %}
                 </div>
-                <div class="tab-pane fade" id="tab-suspicious" role="tabpanel" aria-labelledby="tab-btn-suspicious">
+                <div class="tab-pane fade" id="tab-router-users" role="tabpanel" aria-labelledby="tab-btn-router">
+                    {% comment %}Both halves of "the export missed somebody" now share one tab: two cards, one destination. The ordinary ones and the flagged ones are the same problem at different urgencies.{% endcomment %}
+                    {% include "network_manager/sync_manager/_card_router_users.html" %}
                     {% include "network_manager/sync_manager/_card_suspicious.html" %}
                 </div>
                 <div class="tab-pane fade" id="tab-missing" role="tabpanel" aria-labelledby="tab-btn-missing">
